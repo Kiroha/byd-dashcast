@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- ===== BARRE DE STATUT DASHBOARD ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#1A237E"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_dashboard_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Dashboard : non connecté"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/btn_restore_byd"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="@string/btn_restore_byd"
+            android:textSize="12sp"
+            android:enabled="false"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
+
+        <Button
+            android:id="@+id/btn_diag"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="⚙"
+            android:textSize="16sp"
+            android:padding="0dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@string/btn_diag_desc"/>
+
+        <Button
+            android:id="@+id/btn_sysinfo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="📋"
+            android:textSize="16sp"
+            android:padding="0dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/btn_sysinfo_desc"/>
+
+        <Button
+            android:id="@+id/btn_language"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="🌐"
+            android:textSize="16sp"
+            android:padding="0dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/btn_language_desc"/>
+
+        <Button
+            android:id="@+id/btn_live"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="📊"
+            android:textSize="16sp"
+            android:padding="0dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="@string/btn_live_desc"/>
+    </LinearLayout>
+
+    <!-- ===== TITRE LISTE ===== -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/title_app_list"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:padding="12dp"
+        android:background="#F5F5F5"/>
+
+    <!-- ===== LISTE DES APPS ===== -->
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rv_apps"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="vertical"/>
+
+    <!-- ===== PANEL CONTRÔLE CLUSTER =====
+         Affiché uniquement quand une app tierce est active sur le dashboard.
+         Permet de piloter l'app depuis l'écran principal (cluster = non tactile). -->
+    <LinearLayout
+        android:id="@+id/panel_cluster_control"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#0D1117"
+        android:visibility="gone">
+
+        <!-- En-tête : nom de l'app + bouton masquer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:background="#161B22">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/cluster_control_title"
+                android:textColor="#4A9FDF"
+                android:textSize="12sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tv_control_app_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"/>
+
+            <Button
+                android:id="@+id/btn_control_hide"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="@string/cluster_control_hide"
+                android:textSize="10sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"/>
+        </LinearLayout>
+
+        <!-- Zone tactile : proportionnelle au cluster, capture les touches -->
+        <FrameLayout
+            android:id="@+id/cluster_touchpad"
+            android:layout_width="match_parent"
+            android:layout_height="110dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="6dp"
+            android:background="#090C10"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tv_touchpad_hint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/cluster_touchpad_hint"
+                android:textColor="#2A3A4A"
+                android:textSize="12sp"
+                android:gravity="center"/>
+        </FrameLayout>
+
+        <!-- Boutons de navigation et volume -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="6dp"
+            android:gravity="center_vertical">
+
+            <Button
+                android:id="@+id/btn_cluster_back"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="@string/btn_cluster_back"
+                android:textSize="10sp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_home"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="⌂"
+                android:textSize="15sp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_up"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="↑"
+                android:textSize="15sp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_down"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="↓"
+                android:textSize="15sp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_vol_up"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="@string/btn_cluster_vol_up"
+                android:textSize="10sp"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_vol_down"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="@string/btn_cluster_vol_down"
+                android:textSize="10sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.byd.myapp">
+
+    <!-- ===== PERMISSIONS BYD AUTO API ===== -->
+
+    <!-- Injection d'événements input (requis pour piloter l'app cluster depuis l'écran principal)
+         C'est une signature permission — accordée grâce à la signature platform.keystore BYD -->
+    <uses-permission android:name="android.permission.INJECT_EVENTS"/>
+
+    <!-- Carrosserie / Véhicule (COMMON = obligatoire en dynamique avant getInstance) -->
+    <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_GET"/>
+
+    <!-- Climatisation -->
+    <uses-permission android:name="android.permission.BYDAUTO_AC_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_AC_GET"/>
+    <uses-permission android:name="android.permission.BYDAUTO_AC_SET"/>
+
+    <!-- Vitesse -->
+    <uses-permission android:name="android.permission.BYDAUTO_SPEED_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_SPEED_GET"/>
+
+    <!-- Capteurs (luminosité, gyroscope…) -->
+    <uses-permission android:name="android.permission.BYDAUTO_SENSOR_GET"/>
+
+    <!-- Verrouillage des portes -->
+    <uses-permission android:name="android.permission.BYDAUTO_DOORLOCK_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_DOORLOCK_GET"/>
+    <uses-permission android:name="android.permission.BYDAUTO_DOORLOCK_SET"/>
+
+    <!-- Moteur -->
+    <uses-permission android:name="android.permission.BYDAUTO_ENGINE_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_ENGINE_GET"/>
+
+    <!-- Énergie (batterie, carburant) -->
+    <uses-permission android:name="android.permission.BYDAUTO_ENERGY_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_ENERGY_GET"/>
+
+    <!-- Boîte de vitesses -->
+    <uses-permission android:name="android.permission.BYDAUTO_GEARBOX_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_GEARBOX_GET"/>
+
+    <!-- Tableau de bord -->
+    <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_GET"/>
+
+    <!-- Éclairages -->
+    <uses-permission android:name="android.permission.BYDAUTO_LIGHT_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_LIGHT_GET"/>
+    <uses-permission android:name="android.permission.BYDAUTO_LIGHT_SET"/>
+
+    <!-- Pneus -->
+    <uses-permission android:name="android.permission.BYDAUTO_TYRE_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_TYRE_GET"/>
+
+    <!-- Radars de stationnement -->
+    <uses-permission android:name="android.permission.BYDAUTO_RADAR_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_RADAR_GET"/>
+
+    <!-- Ceintures de sécurité -->
+    <uses-permission android:name="android.permission.BYDAUTO_SAFETYBELT_COMMON"/>
+    <uses-permission android:name="android.permission.BYDAUTO_SAFETYBELT_GET"/>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+
+        <!-- Écran d'accueil : choix de langue (premier lancement uniquement) -->
+        <activity
+            android:name=".WelcomeActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Écran principal 15" -->
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"/>
+
+        <!-- Widget BYD sur le dashboard (instrument cluster)
+             resizeableActivity=true  : obligatoire pour les displays secondaires
+             launchMode=singleTop     : FLAG_SINGLE_TOP le ramène au premier plan
+             theme NoActionBar        : plein écran, pas de barre de titre -->
+        <activity
+            android:name=".dashboard.BYDDashboardActivity"
+            android:label="BYD Dashboard"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:resizeableActivity="true"
+            android:launchMode="singleTop"/>
+
+        <!-- Écran de diagnostic de compatibilité -->
+        <activity
+            android:name=".DiagActivity"
+            android:label="Diagnostic"/>
+
+        <!-- Rapport système complet -->
+        <activity
+            android:name=".SysInfoActivity"
+            android:label="Rapport système"/>
+
+        <!-- Tableau de bord développeur : données BYD live + journal -->
+        <activity
+            android:name=".BYDLiveActivity"
+            android:label="BYD Live"/>
+
+    </application>
+
+</manifest>

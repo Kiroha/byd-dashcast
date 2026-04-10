@@ -1,0 +1,27 @@
+# ── Build outputs ──────────────────────────────────────────
+/build/
+/app/build/
+/.gradle/
+*.iml
+
+# ── IDE ────────────────────────────────────────────────────
+.idea/
+*.DS_Store
+.vscode/
+
+# ── Config locale (chemin SDK propre à chaque machine) ─────
+local.properties
+
+# ── Keystore / secrets ─────────────────────────────────────
+# Ne pas committer la clé de signature.
+# Copier platform.keystore dans app/keystore/ avant de builder.
+# Voir README.md section "Signature".
+app/keystore/*.keystore
+app/keystore/*.jks
+
+# ── Fichiers générés Android Studio ────────────────────────
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab

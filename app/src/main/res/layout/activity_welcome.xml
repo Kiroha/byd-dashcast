@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#0D0D0D"
+    android:padding="40dp">
+
+    <!-- Logo / titre app -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/welcome_title"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/welcome_subtitle"
+        android:textColor="#4A9FDF"
+        android:textSize="14sp"
+        android:letterSpacing="0.2"
+        android:layout_marginBottom="60dp"/>
+
+    <!-- Invite bilingue -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Choisissez votre langue\nPlease select your language"
+        android:textColor="#888888"
+        android:textSize="15sp"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.5"
+        android:layout_marginBottom="40dp"/>
+
+    <!-- Bouton Français -->
+    <Button
+        android:id="@+id/btn_lang_fr"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:text="🇫🇷  Français"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Bouton English -->
+    <Button
+        android:id="@+id/btn_lang_en"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:text="🇬🇧  English"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"/>
+
+</LinearLayout>
