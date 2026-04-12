@@ -71,6 +71,13 @@
     <uses-permission android:name="android.permission.BYDAUTO_SAFETYBELT_COMMON"/>
     <uses-permission android:name="android.permission.BYDAUTO_SAFETYBELT_GET"/>
 
+    <!-- Confirmé requis pour lancer sur le display cluster (DiLink 3.0).
+         INTERNAL_SYSTEM_WINDOW conservé : signature permission accordée avec platform.keystore. -->
+    <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"/>
+    <!-- Miroir cluster : capture du display 1 via SurfaceControl.screenshot() -->
+    <uses-permission android:name="android.permission.READ_FRAME_BUFFER"/>
+    <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER"/>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -120,11 +127,35 @@
             android:name=".BYDLiveActivity"
             android:label="BYD Live"/>
 
+        <!-- Visualiseur de journal en temps réel -->
+        <activity
+            android:name=".LogActivity"
+            android:label="Journal"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:launchMode="singleTop"/>
+
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
+
+        <!-- Service overlay bouton journal flottant -->
+        <service
+            android:name=".FloatingLogButton"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
+
+        <!-- FileProvider : partage de fichiers .log avec les apps externes (email, messagerie…) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

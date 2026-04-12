@@ -19,8 +19,17 @@ android {
         applicationId "com.byd.myapp"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        versionCode 21
+        versionName "1.20"
+
+        // Azure Log Analytics — lu depuis local.properties (hors source control)
+        def props = new Properties()
+        def lp = rootProject.file('local.properties')
+        if (lp.exists()) props.load(lp.newDataInputStream())
+        buildConfigField 'String', 'AZURE_WORKSPACE_ID',
+            '"' + (props.getProperty('azure.workspace.id') ?: '') + '"'
+        buildConfigField 'String', 'AZURE_PRIMARY_KEY',
+            '"' + (props.getProperty('azure.primary.key') ?: '') + '"'
     }
 
     buildTypes {

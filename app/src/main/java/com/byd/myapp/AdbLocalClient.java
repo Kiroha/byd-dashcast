@@ -113,19 +113,28 @@ public class AdbLocalClient {
                 AdbShellResponse rUid = dadb.shell("id 2>&1");
                 sb.append("UID shell : ").append(rUid.getAllOutput().trim()).append("\n");
 
-                // _COMMON : si dangerous → grant OK ; si signature → même erreur que _GET
+                // _COMMON : dangerous confirmé → pm grant fonctionne (toutes accordées ici)
                 // _GET    : signature confirmés — toujours refusés via pm grant
                 String[] commonPerms = {
                     "android.permission.BYDAUTO_SPEED_COMMON",
                     "android.permission.BYDAUTO_ENERGY_COMMON",
                     "android.permission.BYDAUTO_GEARBOX_COMMON",
+                    "android.permission.BYDAUTO_BODYWORK_COMMON",
+                    "android.permission.BYDAUTO_AC_COMMON",
+                    "android.permission.BYDAUTO_DOOR_LOCK_COMMON",
+                    "android.permission.BYDAUTO_ENGINE_COMMON",
+                    "android.permission.BYDAUTO_INSTRUMENT_COMMON",
+                    "android.permission.BYDAUTO_LIGHT_COMMON",
+                    "android.permission.BYDAUTO_TYRE_COMMON",
+                    "android.permission.BYDAUTO_RADAR_COMMON",
+                    "android.permission.BYDAUTO_SAFETYBELT_COMMON",
                 };
                 String[] getPerms = {
                     "android.permission.BYDAUTO_SPEED_GET",
                     "android.permission.BYDAUTO_ENERGY_GET",
                     "android.permission.BYDAUTO_GEARBOX_GET",
                 };
-                sb.append("── pm grant _COMMON (test type dangerous vs signature) ──\n");
+                sb.append("── pm grant ALL _COMMON (dangerous confirmé) ──\n");
                 for (String perm : commonPerms) {
                     String shortName = perm.replace("android.permission.BYDAUTO_", "");
                     AdbShellResponse r = dadb.shell("pm grant " + pkg + " " + perm + " 2>&1 && echo GRANTED || echo DENIED");
@@ -182,7 +191,7 @@ public class AdbLocalClient {
 
             } catch (Exception e) {
                 String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                Log.e(TAG, "Échec ADB local", e);
+                AppLogger.e(TAG, "Échec ADB local", e);
                 AppLogger.log(TAG, "ADB local ERREUR — " + msg);
                 callback.onError(msg);
             }
@@ -201,43 +210,6 @@ public class AdbLocalClient {
             keyPair = AdbKeyPair.read(privateKey, publicKey);
         }
         return Dadb.create("localhost", ADB_PORT, keyPair);
-    }
-
-    // ── Activation du cluster (commandes extraites du DEX Freedom v1.9) ──────
-    /**
-     * Libère le cluster BYD en relançant com.byd.automap sur le display principal.
-     * Après ~2 s, le cluster apparaît comme display Presentation Android standard
-     * et DashboardDisplayHelper.onDashboardDisplayConnected() se déclenche.
-     */
-    public static void activateCluster(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    AppLogger.log(TAG, "Activation cluster → commandes Freedom...");
-                    Dadb dadb = connect(context);
-                    // Commandes extraites du DEX de Freedom v1.9
-                    dadb.shell("am start-activity -S -W"
-                            + " -n \"com.byd.automap/com.byd.automap.activity.StartupActivity\""
-                            + " 2>&1");
-                    dadb.shell("am start-activity -S -W"
-                            + " -n \"com.byd.launchermap/com.byd.automap.activity.MainActivity\""
-                            + " 2>&1");
-                    // Laisser le système enregistrer le nouveau display
-                    Thread.sleep(2500);
-                    AdbShellResponse rDisplays = dadb.shell(
-                            "dumpsys display 2>/dev/null | grep -E 'mDisplayId|uniqueId' | head -10");
-                    dadb.close();
-                    AppLogger.log(TAG, "Cluster libéré ✓ — attente détection Android...");
-                    callback.onSuccess("Cluster libéré ✓\n" + rDisplays.getAllOutput()
-                            + "\n→ Le display apparaît dans 2–3 secondes.");
-                } catch (Exception e) {
-                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "activateCluster ERREUR", e);
-                    AppLogger.log(TAG, "activateCluster ERREUR — " + msg);
-                    callback.onError(msg);
-                }
-            }
-        }, "adb-activate-thread").start();
     }
 
     // ── Lancement sur cluster en plein écran ──────────────────────────────────
@@ -267,7 +239,7 @@ public class AdbLocalClient {
                     else    callback.onError(r.getAllOutput());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "launchOnCluster ERREUR", e);
+                    AppLogger.e(TAG, "launchOnCluster ERREUR", e);
                     AppLogger.log(TAG, "launchOnCluster ERREUR — " + msg);
                     callback.onError(msg);
                 }
@@ -357,7 +329,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "runClusterProbe ERREUR", e);
+                    AppLogger.e(TAG, "runClusterProbe ERREUR", e);
                     callback.onError(msg);
                 }
             }
@@ -427,7 +399,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "runAutoServiceProbe ERREUR", e);
+                    AppLogger.e(TAG, "runAutoServiceProbe ERREUR", e);
                     callback.onError(msg);
                 }
             }
@@ -545,7 +517,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "runClusterActivation ERREUR", e);
+                    AppLogger.e(TAG, "runClusterActivation ERREUR", e);
                     callback.onError(msg);
                 }
             }
@@ -657,154 +629,131 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "runVirtualDisplayProbe ERREUR", e);
+                    AppLogger.e(TAG, "runVirtualDisplayProbe ERREUR", e);
                     callback.onError(msg);
                 }
             }
         }, "adb-vd-probe-thread").start();
     }
 
-    // ── TEST 10 : Lancement sur display 1 (cluster) via am + setLaunchDisplayId ──
+    // ── TEST 10 : Test de restauration du cluster ──────────────────────────────
     /**
-     * TEST 10 — Lancement BYDDashboardActivity sur display 1 (cluster)
+     * TEST 10 — Restauration du cluster BYD (sendInfo(1000,0))
      *
-     *   RÉSULTATS TEST 10 PHYSIQUE (11/04/2026) :
-     *     - cmd=16 = BONNE commande → Qt standby → display 1 RESTE dans IActivityManager
-     *     - Lancement OK (activité visible sur cluster)
-     *     - PROBLÈME 1 : --windowingMode 1 (FULLSCREEN) refusé par DiLink 3.0
-     *              → petite fenêtre flottante au lieu du plein écran
-     *     - PROBLÈME 2 : sendInfo(0) seul ne restaure pas BYD Qt
-     *              → l'activité est encore en premier plan sur display 1
+     * Le lancement d'apps sur le cluster fonctionne désormais.
+     * Ce test est focalisé sur la restauration : vérifier que sendInfo(0) + am force-stop
+     * libèrent correctement la surface pour que Qt reprenne le contrôle.
      *
-     *   FIX 1 (plein écran) :
-     *     → windowingMode=5 (FREEFORM) + am task resize <taskId> 0 0 <W> <H>
-     *     Technique identique à Byd Dashboard APK v1.10.5 (com.byd.mecanum.dashboard)
-     *
-     *   FIX 2 (restauration) :
-     *     → Lancer automap AVEC --display 1 pour déplacer notre activité
-     *     → Puis sendInfo(1000, 0) pour que Qt reprenne le contrôle
-     *
-     *   Séquence :
-     *   1. sendInfo(1000, 16) — Qt standby
-     *   2. am start-activity --windowingMode 5 --display 1 BYDDashboardActivity
-     *   3. am task resize <taskId> 0 0 <realW> <realH>
-     *   4. Restauration : automap --display 1, puis sendInfo(1000, 0)
+     * Séquence :
+     *   1. sendInfo(1000, 16) — met Qt en standby (simule l'état "app active sur cluster")
+     *   2. Attendre 2s
+     *   3. am force-stop com.byd.myapp — libère la surface
+     *   4. sendInfo(1000, 0)  — demande à Qt de reprendre
+     *   5. Vérifier stacks + logcat
      */
     public static void runDisplayOneLaunch(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                AppLogger.i(TAG, "runDisplayOneLaunch démarré [" + Thread.currentThread().getName() + "]");
                 try {
                     Dadb dadb = connect(context);
                     StringBuilder sb = new StringBuilder();
 
-                    // ── 1. Vérifier les stacks sur display 1 avant ───────────────
-                    sb.append("── am stack list | grep displayId (avant) ──\n");
-                    AdbShellResponse rStackPre = dadb.shell("am stack list 2>&1 | grep -i 'displayId\\|display_id\\|Stack #' | head -20");
-                    sb.append(rStackPre.getAllOutput().trim().isEmpty() ? "(aucun stack)" : rStackPre.getAllOutput().trim()).append("\n");
+                    // sendInfo via "service call AutoContainer" par ADB shell (uid=2000).
+                    // POURQUOI ADB et pas ClusterManager directement :
+                    //   xdja_AutoContainerService.checkSendPermissionAndAllowType() vérifie
+                    //   le package name de l'appelant. Notre package com.byd.myapp n'est pas
+                    //   dans /system/etc/container_comm_cfg.json → rejet "Not allowed package".
+                    //   L'ADB shell (uid=2000) est autorisé sans vérification de package.
 
-                    // ── 2. sendInfo(1000, 16) = Qt standby, display 1 reste dans IActivityManager ───────
-                    //    NE PAS utiliser cmd=1 : déconnecte Qt entièrement → display 1 disparaît
+                    // 1. Stacks avant
+                    sb.append("── [Avant] am stack list (display 1) ──\n");
+                    AdbShellResponse rPre = dadb.shell(
+                        "am stack list 2>&1 | grep -iE 'displayId=1|myapp|BYDDashboard' | head -15");
+                    sb.append(rPre.getAllOutput().trim().isEmpty() ? "(aucun stack display 1)" : rPre.getAllOutput().trim()).append("\n");
+
+                    // 2. sendInfo(16) — Qt standby via ADB shell
                     dadb.shell("logcat -c 2>&1");
-                    sb.append("\n── sendInfo(1000, 16) = 全屏投屏开启 (Qt standby) ──\n");
-                    AdbShellResponse rSend = dadb.shell("service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
-                    sb.append(rSend.getAllOutput().trim()).append("\n");
-                    dadb.shell("sleep 1");
+                    sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
+                    AdbShellResponse rSend16 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
+                    sb.append(rSend16.getAllOutput().trim()).append("\n");
+                    Thread.sleep(2000);
 
-                    // 3. Taille réelle du display 1 (regex sur mOverrideDisplayInfo)
-                    //    Technique identique à Byd Dashboard APK v1.10.5 (com.byd.mecanum.dashboard).
-                    AdbShellResponse rDispRaw = dadb.shell(
-                        "dumpsys display 2>&1 | grep -A20 'mDisplayId=1' | grep -oE 'real [0-9]+ x [0-9]+' | head -1");
-                    String dispLine = rDispRaw.getAllOutput().trim();
-                    if (dispLine.isEmpty()) {
-                        AdbShellResponse rFallback = dadb.shell(
-                            "dumpsys display 2>&1 | grep -oE 'real [0-9]+ x [0-9]+' | tail -1");
-                        dispLine = rFallback.getAllOutput().trim();
+                    // 3. Supprimer TOUS les tasks sur display 1 (pas seulement notre app).
+                    // Qt ne peut recapturer la surface que si AUCUNE Activity Android
+                    // ne la détient encore — y compris les apps tierces (Navigation, etc.)
+                    // qui ont été lancées lors d'une session précédente ou auto-relancées.
+                    sb.append("\n── Tasks sur display 1 (toutes apps) ──\n");
+                    AdbShellResponse rStack = dadb.shell("am stack list 2>&1");
+                    String stkOutput = rStack.getAllOutput();
+                    // Fenêtre ±8 lignes autour de chaque "displayId=1" :
+                    // sur API 29 le taskId peut apparaître AVANT ou APRÈS la ligne displayId.
+                    java.util.Set<String> tasksOnD1 = new java.util.LinkedHashSet<>();
+                    String[] stkLines = stkOutput.split("\\r?\\n");
+                    for (int si = 0; si < stkLines.length; si++) {
+                        if (!stkLines[si].contains("displayId=1")) continue;
+                        int lo = Math.max(0, si - 8), hi = Math.min(stkLines.length - 1, si + 8);
+                        for (int sj = lo; sj <= hi; sj++) {
+                            String lj = stkLines[sj];
+                            // Chercher "taskId=N", "Task id #N", "Task id N", "task #N"
+                            String[] triggers = {"taskId=", "Task id #", "Task id#", "task #", "taskid="};
+                            for (String tr : triggers) {
+                                int idx = lj.indexOf(tr);
+                                if (idx < 0) { String lc = lj.toLowerCase(); idx = lc.indexOf(tr.toLowerCase()); }
+                                if (idx >= 0) {
+                                    String after = lj.substring(idx + tr.length()).trim();
+                                    StringBuilder num = new StringBuilder();
+                                    for (int c = 0; c < after.length() && Character.isDigit(after.charAt(c)); c++)
+                                        num.append(after.charAt(c));
+                                    if (num.length() > 0) { tasksOnD1.add(num.toString()); break; }
+                                }
+                            }
+                        }
                     }
-                    int dispW = 1920, dispH = 480; // défaut BYD Seal cluster
-                    java.util.regex.Matcher mSize = java.util.regex.Pattern
-                        .compile("real (\\d+) x (\\d+)").matcher(dispLine);
-                    if (mSize.find()) {
-                        try { dispW = Integer.parseInt(mSize.group(1)); } catch (Exception ignored2) {}
-                        try { dispH = Integer.parseInt(mSize.group(2)); } catch (Exception ignored2) {}
-                    }
-                    sb.append("\n-- Dimensions display 1 --\n");
-                    sb.append(dispLine.isEmpty() ? "(non détecté, fallback " + dispW + "x" + dispH + ")" : dispLine)
-                      .append(" retenu : ").append(dispW).append("x").append(dispH).append("\n");
-
-                    // 4. Lancement en mode FREEFORM (5)
-                    //    windowingMode=1 (FULLSCREEN) refusé par DiLink 3.0 — petite fenêtre.
-                    //    windowingMode=5 (FREEFORM) + am task resize = plein écran Seal EU.
-                    dadb.shell("logcat -c 2>&1");
-                    sb.append("\n-- am start-activity --windowingMode 5 --display 1 (FREEFORM) --\n");
-                    AdbShellResponse rLaunch = dadb.shell(
-                        "am start-activity -W --windowingMode 5 --display 1"
-                        + " -n com.byd.myapp/.dashboard.BYDDashboardActivity 2>&1");
-                    sb.append(rLaunch.getAllOutput().trim()).append("\n");
-                    dadb.shell("sleep 1");
-
-                    // 5. Récupérer le taskId de BYDDashboardActivity
-                    sb.append("\n-- Task ID BYDDashboard sur display 1 --\n");
-                    AdbShellResponse rTask = dadb.shell(
-                        "am stack list 2>&1 | grep -B5 'BYDDashboard\\|com.byd.myapp' | grep -iE 'Task id|taskId' | tail -1");
-                    sb.append(rTask.getAllOutput().trim().isEmpty() ? "(Task non trouvé)" : rTask.getAllOutput().trim()).append("\n");
-                    String taskIdStr = rTask.getAllOutput().trim().replaceAll("[^0-9]", "").trim();
-
-                    if (!taskIdStr.isEmpty()) {
-                        // 6. am task resize → plein écran
-                        sb.append("\n-- am task resize ").append(taskIdStr)
-                          .append(" 0 0 ").append(dispW).append(" ").append(dispH).append(" --\n");
-                        AdbShellResponse rResize = dadb.shell(
-                            "am task resize " + taskIdStr + " 0 0 " + dispW + " " + dispH + " 2>&1");
-                        sb.append(rResize.getAllOutput().trim().isEmpty() ? "(OK)" : rResize.getAllOutput().trim()).append("\n");
-                        dadb.shell("sleep 1");
+                    if (!tasksOnD1.isEmpty()) {
+                        for (String tid : tasksOnD1) {
+                            sb.append("Task " + tid + " → am task remove\n");
+                            dadb.shell("am task remove " + tid + " 2>&1");
+                        }
+                        Thread.sleep(1000);
                     } else {
-                        sb.append("-> taskId non parsé, resize sauté\n");
+                        sb.append("(aucun task sur display 1)\n");
                     }
 
-                    // 7. Vérification stacks après resize
-                    sb.append("\n-- am stack list après resize --\n");
-                    AdbShellResponse rStackPost = dadb.shell(
-                        "am stack list 2>&1 | grep -iE 'displayId|Stack #|myapp|mBounds|taskBounds' | head -20");
-                    sb.append(rStackPost.getAllOutput().trim()).append("\n");
+                    // 4. sendInfo(0) — Qt reprend le contrôle via ADB shell
+                    sb.append("\n── sendInfo(1000, 0) = restauration Qt ──\n");
+                    AdbShellResponse rSend0 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                    sb.append(rSend0.getAllOutput().trim()).append("\n");
+                    Thread.sleep(2000);
 
-                    // 8. Logcat
-                    dadb.shell("sleep 0.5");
-                    sb.append("\n-- Logcat (windowing + myapp) --\n");
+                    // 5. Stacks après
+                    sb.append("\n── [Après] am stack list (display 1) ──\n");
+                    AdbShellResponse rPost = dadb.shell(
+                        "am stack list 2>&1 | grep -iE 'displayId=1|myapp|BYDDashboard' | head -10");
+                    sb.append(rPost.getAllOutput().trim().isEmpty() ? "(aucun stack display 1 ✓)" : rPost.getAllOutput().trim()).append("\n");
+
+                    // 6. Logcat
+                    sb.append("\n── Logcat (AutoContainer + myapp) ──\n");
                     AdbShellResponse rLog = dadb.shell(
-                        "logcat -d 2>&1 | grep -iE 'BYDDashboard|myapp|windowingMode|FREEFORM|resizeTask|addedDisplay' | tail -20");
+                        "logcat -d 2>&1 | grep -iE 'AutoContainer|sendInfo|BYDDashboard|myapp' | tail -15");
                     sb.append(rLog.getAllOutput().trim().isEmpty() ? "(aucune entrée)" : rLog.getAllOutput().trim()).append("\n");
 
-                    // 9. Restauration
-                    //    Seal EU : com.byd.automap N'EST PAS INSTALLÉ.
-                    //    sendInfo(0) seul ne restaure pas si BYDDashboardActivity est encore
-                    //    en premier plan sur display 1 (surface occupée).
-                    //    FIX : am task remove <taskId> libère la surface, PUIS sendInfo(0).
-                    dadb.shell("sleep 1");
-                    if (!taskIdStr.isEmpty()) {
-                        sb.append("\n-- Restauration : am task remove ").append(taskIdStr).append(" --\n");
-                        AdbShellResponse rRemove = dadb.shell(
-                            "am task remove " + taskIdStr + " 2>&1 && echo TASK_REMOVED");
-                        sb.append(rRemove.getAllOutput().trim()).append("\n");
-                        dadb.shell("sleep 1");
-                    } else {
-                        sb.append("\n-- Restauration : taskId inconnu, am task remove ignoré --\n");
-                    }
-                    sb.append("\n-- sendInfo(1000, 0) restauration Qt --\n");
-                    AdbShellResponse rRestore = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
-                    sb.append(rRestore.getAllOutput().trim()).append("\n");
-                    dadb.shell("sleep 1");
-
                     dadb.close();
+                    AppLogger.endTiming(TAG, t0, "runDisplayOneLaunch terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "runDisplayOneLaunch ERREUR", e);
+                    AppLogger.e(TAG, "runDisplayOneLaunch ERREUR : " + msg);
+                    AppLogger.e(TAG, "runDisplayOneLaunch ERREUR", e);
                     callback.onError(msg);
                 }
             }
         }, "adb-display1-thread").start();
     }
+
 
     /**
      * Restaure l'affichage BYD natif sur le cluster.
@@ -860,11 +809,41 @@ public class AdbLocalClient {
                     else    callback.onError(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    Log.e(TAG, "restoreBydOnCluster ERREUR", e);
+                    AppLogger.e(TAG, "restoreBydOnCluster ERREUR", e);
                     AppLogger.log(TAG, "restoreBydOnCluster ERREUR — " + msg);
                     callback.onError(msg);
                 }
             }
         }, "adb-restore-thread").start();
+    }
+
+    /**
+     * Force-stop d'une application via ADB.
+     * Appelé quand l'utilisateur tape "✕" dans la liste.
+     * Utilise "am force-stop" qui tue le processus entier + libère toutes ses surfaces.
+     */
+    public static void forceStopApp(final Context context, final String packageName,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    AppLogger.log(TAG, "forceStop " + packageName + " ...");
+                    Dadb dadb = connect(context);
+                    AdbShellResponse r = dadb.shell("am force-stop " + packageName + " 2>&1 && echo STOPPED");
+                    dadb.close();
+                    String out = r.getAllOutput().trim();
+                    AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
+                    if (out.contains("STOPPED") || out.isEmpty()) {
+                        callback.onSuccess("force-stop OK");
+                    } else {
+                        callback.onError(out);
+                    }
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "forceStopApp ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-forcestop-thread").start();
     }
 }

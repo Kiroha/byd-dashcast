@@ -78,6 +78,7 @@ public class DiagActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_diag);
+        AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
 
         tvPresentationResult = (TextView) findViewById(R.id.tv_presentation_result);
         tvReflectionResult   = (TextView) findViewById(R.id.tv_reflection_result);

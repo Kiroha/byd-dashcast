@@ -25,7 +25,24 @@ import com.byd.myapp.R;
  */
 public class BYDDashboardActivity extends AppCompatActivity {
 
-    private BYDAutoSpeedDevice  mSpeedDevice;
+    // Référence statique pour permettre à DashboardDisplayHelper.stop() de terminer
+    // cette Activity AVANT d'appeler restoreNative() — Qt ne peut recapturer la surface
+    // que si aucune Activity Android ne la détient.
+    private static java.lang.ref.WeakReference<BYDDashboardActivity> sInstance;
+
+    /** Appelé par DashboardDisplayHelper.stop() juste avant sendInfo(0). */
+    public static void finishIfActive() {
+        java.lang.ref.WeakReference<BYDDashboardActivity> ref = sInstance;
+        if (ref != null) {
+            BYDDashboardActivity act = ref.get();
+            if (act != null && !act.isFinishing() && !act.isDestroyed()) {
+                act.finish();
+            }
+            sInstance = null;
+        }
+    }
+
+    private BYDAutoSpeedDevice   mSpeedDevice;
     private BYDAutoEnergyDevice mEnergyDevice;
     private BYDAutoGearboxDevice mGearboxDevice;
 
@@ -37,6 +54,7 @@ public class BYDDashboardActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        sInstance = new java.lang.ref.WeakReference<>(this);
 
         // Figer la taille de la fenêtre AVANT setContentView().
         // En mode FREEFORM (windowingMode=5), le layout match_parent + l'absence de bornes
@@ -45,11 +63,11 @@ public class BYDDashboardActivity extends AppCompatActivity {
         // elle s'exécute (display 1 = cluster), pas du display principal.
         try {
             Display d = getWindowManager().getDefaultDisplay();
-            Point size = new Point(1920, 480); // défaut BYD Seal cluster
+            Point size = new Point(1920, 1080); // fallback VirtualDisplay AutoDisplayService (1920×1080)
             d.getRealSize(size);
             getWindow().setLayout(size.x, size.y);
         } catch (Exception ignored) {
-            getWindow().setLayout(1920, 480);
+            getWindow().setLayout(1920, 1080);
         }
 
         setContentView(R.layout.activity_dashboard);
@@ -158,4 +176,14 @@ public class BYDDashboardActivity extends AppCompatActivity {
             });
         }
     };
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Nettoyer la référence statique si c'est bien notre instance
+        java.lang.ref.WeakReference<BYDDashboardActivity> ref = sInstance;
+        if (ref != null && ref.get() == this) {
+            sInstance = null;
+        }
+    }
 }

@@ -54,7 +54,16 @@ public class BYDLiveActivity extends AppCompatActivity {
     private static final String[] COMMON_PERMS = {
         "android.permission.BYDAUTO_SPEED_COMMON",
         "android.permission.BYDAUTO_ENERGY_COMMON",
-        "android.permission.BYDAUTO_GEARBOX_COMMON"
+        "android.permission.BYDAUTO_GEARBOX_COMMON",
+        "android.permission.BYDAUTO_BODYWORK_COMMON",
+        "android.permission.BYDAUTO_AC_COMMON",
+        "android.permission.BYDAUTO_DOOR_LOCK_COMMON",
+        "android.permission.BYDAUTO_ENGINE_COMMON",
+        "android.permission.BYDAUTO_INSTRUMENT_COMMON",
+        "android.permission.BYDAUTO_LIGHT_COMMON",
+        "android.permission.BYDAUTO_TYRE_COMMON",
+        "android.permission.BYDAUTO_RADAR_COMMON",
+        "android.permission.BYDAUTO_SAFETYBELT_COMMON"
     };
 
     @Override
@@ -115,6 +124,7 @@ public class BYDLiveActivity extends AppCompatActivity {
         mRunning = true;
         mGetPermErrorLogged = false;
         mHandler.post(mPollRunnable);
+        AppLogger.lifecycle(getClass().getSimpleName(), "onResume");
         AppLogger.log(TAG, "Panneau live ouvert");
     }
 
@@ -123,6 +133,7 @@ public class BYDLiveActivity extends AppCompatActivity {
         super.onPause();
         mRunning = false;
         mHandler.removeCallbacks(mPollRunnable);
+        AppLogger.lifecycle(getClass().getSimpleName(), "onPause");
         AppLogger.log(TAG, "Panneau live fermé");
     }
 

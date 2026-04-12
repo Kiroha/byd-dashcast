@@ -240,6 +240,21 @@ public class SysInfoActivity extends AppCompatActivity {
                 "android.permission.BYDAUTO_INSTRUMENT_GET",
                 "android.permission.BYDAUTO_BODYWORK_COMMON",
                 "android.permission.BYDAUTO_BODYWORK_GET",
+                "android.permission.BYDAUTO_AC_COMMON",
+                "android.permission.BYDAUTO_AC_GET",
+                "android.permission.BYDAUTO_DOOR_LOCK_COMMON",
+                "android.permission.BYDAUTO_DOOR_LOCK_GET",
+                "android.permission.BYDAUTO_ENGINE_COMMON",
+                "android.permission.BYDAUTO_ENGINE_GET",
+                "android.permission.BYDAUTO_LIGHT_COMMON",
+                "android.permission.BYDAUTO_LIGHT_GET",
+                "android.permission.BYDAUTO_TYRE_COMMON",
+                "android.permission.BYDAUTO_TYRE_GET",
+                "android.permission.BYDAUTO_RADAR_COMMON",
+                "android.permission.BYDAUTO_RADAR_GET",
+                "android.permission.BYDAUTO_SAFETYBELT_COMMON",
+                "android.permission.BYDAUTO_SAFETYBELT_GET",
+                "android.permission.BYDAUTO_SENSOR_GET",
             };
             for (String perm : bydPerms) {
                 int result = checkSelfPermission(perm);

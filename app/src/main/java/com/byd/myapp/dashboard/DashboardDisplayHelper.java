@@ -4,6 +4,7 @@ import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.util.Log;
 import android.view.Display;
+import com.byd.myapp.AppLogger;
 
 /**
  * DashboardDisplayHelper — détecte le display secondaire (instrument cluster).
@@ -43,7 +44,7 @@ public class DashboardDisplayHelper {
                 @Override
                 public void onDisplayRemoved(int displayId) {
                     if (displayId != mKnownClusterDisplayId) return;
-                    Log.i(TAG, "Dashboard display supprimé : id=" + displayId);
+                    AppLogger.i(TAG, "Dashboard display supprimé : id=" + displayId);
                     mKnownClusterDisplayId = -1;
                     mListener.onDashboardDisplayDisconnected();
                 }
@@ -61,9 +62,14 @@ public class DashboardDisplayHelper {
 
     /**
      * Déclenche la séquence d'activation du cluster :
-     *   1. sendInfo(1000, 16) via Binder direct (Qt entre en standby, display 1 reste dans IActivityManager)
-     *   2. startService AutoDisplayService
-     *   3. Attend l'apparition du VirtualDisplay (polling + listener, timeout 8s)
+     *   1. Vérifie DISPLAY_CATEGORY_PRESENTATION (VirtualDisplay créé au BOOT par AutoDisplayService)
+     *   2. Si trouvé → sendInfo(1000, 16) pour mettre Qt en standby → callback immédiat
+     *   3. Si non trouvé → sendInfo(16) + polling 3s → fallback displayId=1 sur timeout
+     *
+     * ARCHITECTURE (confirmé analyse Freedom v1.9) :
+     *   AutoDisplayService crée le VirtualDisplay cluster au BOOT avec flags PUBLIC|PRESENTATION.
+     *   Le display est visible via DISPLAY_CATEGORY_PRESENTATION dès le démarrage du système.
+     *   sendInfo(1000, 16) ne crée PAS le display : il met Qt en standby (libère la surface).
      *
      * La callback onDashboardDisplayConnected / onDashboardDisplayDisconnected
      * sera appelée sur le main thread.
@@ -89,16 +95,17 @@ public class DashboardDisplayHelper {
                     Log.d(TAG, "onDisplayTimeout ignoré — stop() déjà appelé");
                     return;
                 }
-                Log.w(TAG, "Dashboard display non détecté après timeout — "
-                        + "fallback sur display ID 1 (IActivityManager path, DiLink 3.0)");
-                // Sur DiLink 3.0, le cluster = display 1 dans IActivityManager mais PAS dans DisplayManager.
+                // VirtualDisplay non trouvé via DISPLAY_CATEGORY_PRESENTATION (cas exceptionnel).
+                // Fallback : displayId=1 hardcodé (DiLink 3.0, Seal EU — IActivityManager path).
+                AppLogger.w(TAG, "Dashboard display non détecté après timeout — "
+                        + "fallback hardcodé displayId=1 (DiLink 3.0)");
                 mKnownClusterDisplayId = 1;
-                Display display1 = mDisplayManager.getDisplay(1); // peut retourner null
+                Display display1 = mDisplayManager.getDisplay(1); // peut retourner null sur certains ROMs
                 if (display1 != null) {
-                    Log.i(TAG, "getDisplay(1) retourné != null — display cluster disponible");
+                    Log.i(TAG, "getDisplay(1) != null — display cluster accessible");
                     mListener.onDashboardDisplayConnected(display1, 1);
                 } else {
-                    Log.i(TAG, "getDisplay(1) null — cluster via IActivityManager uniquement (displayId=1)");
+                    Log.i(TAG, "getDisplay(1) null — lancement via IActivityManager au displayId=1");
                     mListener.onDashboardDisplayConnected(null, 1);
                 }
             }
@@ -115,26 +122,25 @@ public class DashboardDisplayHelper {
 
         mDisplayManager.unregisterDisplayListener(mDisconnectListener);
 
-        // Arrêter AutoDisplayService + restaurer Qt uniquement si on a effectivement
-        // démarré la séquence de projection (sinon inutile et potentiellement perturbateur).
-        // Utiliser -2 comme sentinelle "stop() appelé", donc on vérifie l'état AVANT de le modifier.
-        try {
-            android.content.Intent stopIntent = new android.content.Intent();
-            stopIntent.setComponent(new android.content.ComponentName(
-                    "com.xdja.containerservice",
-                    "com.xdja.containerservice.AutoDisplayService"));
-            mContext.stopService(stopIntent);
-        } catch (Exception e) {
-            android.util.Log.w(TAG, "stopService AutoDisplayService : " + e.getMessage());
-        }
+        // NE PAS appeler stopService(AutoDisplayService) :
+        // Ce service système est démarré au BOOT et gère le VirtualDisplay cluster.
+        // L'arrêter détruirait le VirtualDisplay PRESENTATION pour TOUTE la session Android.
+
+        // Terminer BYDDashboardActivity AVANT sendInfo(0) :
+        // Qt ne peut recapturer la surface du VirtualDisplay que si aucune Activity Android
+        // ne la détient encore. finish() notifie le WindowManager de manière asynchrone ;
+        // sendInfo(0) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
+        BYDDashboardActivity.finishIfActive();
+
+        // Restaurer le rendu Qt natif via sendInfo(1000, 0).
         mClusterManager.restoreNative();
         // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
         mKnownClusterDisplayId = -1;
     }
 
-    /** Restaure le cluster BYD natif (sendInfo 1000/0). */
-    public void restoreNative() {
-        mClusterManager.restoreNative();
+    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby). */
+    public void enterProjectionMode() {
+        mClusterManager.enterProjectionMode();
     }
 
     public int getKnownClusterDisplayId() {
