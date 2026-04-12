@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#111111">
+
+    <!-- Barre de titre + actions -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#222222"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📋 Journal de bord"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/log_btn_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Effacer"
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:backgroundTint="#555555"/>
+
+        <Button
+            android:id="@+id/log_btn_export"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="☁ "
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="#00897B"/>
+
+        <Button
+            android:id="@+id/log_btn_share"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Partager"
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="#1565C0"/>
+
+    </LinearLayout>
+
+    <!-- Filtre + auto-scroll -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:background="#1C1C1C"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <EditText
+            android:id="@+id/log_filter"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:hint="Filtrer (tag / message / niveau)…"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#666666"
+            android:background="#2A2A2A"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:inputType="text"/>
+
+        <CheckBox
+            android:id="@+id/log_autoscroll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Auto↓"
+            android:textColor="#AAAAAA"
+            android:textSize="11sp"
+            android:layout_marginStart="8dp"/>
+
+    </LinearLayout>
+
+    <!-- Statut export  -->
+    <TextView
+        android:id="@+id/log_tv_export_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#AAAAAA"
+        android:textSize="11sp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:background="#161616"
+        android:visibility="visible"/>
+
+    <!-- Légende couleurs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="22dp"
+        android:orientation="horizontal"
+        android:background="#161616"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="DEBUG " android:textColor="#999999" android:textSize="10sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="INFO " android:textColor="#DDDDDD" android:textSize="10sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="WARN " android:textColor="#FFA040" android:textSize="10sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="ERROR" android:textColor="#FF4444" android:textSize="10sp"/>
+
+    </LinearLayout>
+
+    <!-- Zone de log scrollable -->
+    <ScrollView
+        android:id="@+id/log_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/log_tv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#1A1A1A"
+            android:textColor="#DDDDDD"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:lineSpacingExtra="2dp"
+            android:text="(aucune entrée)"/>
+
+    </ScrollView>
+
+</LinearLayout>

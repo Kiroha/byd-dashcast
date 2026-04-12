@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tap sur la ligne entière = envoyer sur le cluster -->
+<!-- Tap = envoyer sur le cluster | Long press = menu contextuel -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="68dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingStart="12dp"
-    android:paddingEnd="12dp"
+    android:paddingEnd="4dp"
     android:paddingTop="8dp"
     android:paddingBottom="8dp"
     android:clickable="true"
@@ -37,5 +37,29 @@
         android:background="#4CAF50"
         android:layout_marginStart="8dp"
         android:visibility="gone"/>
+
+    <!-- Bouton "← Écran principal" — visible uniquement si l'app est active sur le cluster -->
+    <Button
+        android:id="@+id/btn_to_main"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="← Principal"
+        android:textSize="11sp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:layout_marginStart="6dp"
+        android:visibility="gone"/>
+
+    <!-- Bouton "✕ Kill" — toujours visible, permet de tuer l'app même si elle est sur le cluster -->
+    <Button
+        android:id="@+id/btn_kill_app"
+        android:layout_width="44dp"
+        android:layout_height="40dp"
+        android:text="✕"
+        android:textSize="14sp"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp"
+        android:layout_marginStart="4dp"
+        android:backgroundTint="#F44336"/>
 
 </LinearLayout>

@@ -55,7 +55,7 @@ public class DashboardLauncher {
      */
     public boolean launchOnDashboard(String packageName) {
         if (!isDashboardAvailable()) {
-            Log.w(TAG, "Dashboard non disponible — lancement annulé pour " + packageName);
+            AppLogger.w(TAG, "Dashboard non disponible — lancement annulé pour " + packageName);
             AppLogger.log(TAG, "LAUNCH KO (pas de display) — " + packageName);
             return false;
         }
@@ -63,7 +63,7 @@ public class DashboardLauncher {
         Intent launchIntent = mContext.getPackageManager()
                 .getLaunchIntentForPackage(packageName);
         if (launchIntent == null) {
-            Log.e(TAG, "App non installée ou introuvable : " + packageName);
+            AppLogger.e(TAG, "App non installée ou introuvable : " + packageName);
             AppLogger.log(TAG, "LAUNCH KO (app introuvable) — " + packageName);
             return false;
         }
@@ -80,19 +80,6 @@ public class DashboardLauncher {
      * rend la main au launcher/cluster par défaut du display, ce qui
      * remet l'affichage BYD d'origine sans tuer l'app tierce.
      */
-    public boolean restoreSystemDashboard() {
-        if (!isDashboardAvailable()) {
-            Log.w(TAG, "Dashboard non disponible — restauration annulée");
-            return false;
-        }
-
-        Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-        homeIntent.addCategory(Intent.CATEGORY_HOME);
-        homeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        return launchWithDisplayId(homeIntent, mDashboardDisplayId);
-    }
-
     /**
      * Lance une app sur le display principal (display ID 0).
      * Restore en même temps le cluster BYD via restoreSystemDashboard().
@@ -101,17 +88,13 @@ public class DashboardLauncher {
         Intent launchIntent = mContext.getPackageManager()
                 .getLaunchIntentForPackage(packageName);
         if (launchIntent == null) {
-            Log.e(TAG, "App non installée ou introuvable : " + packageName);
+            AppLogger.e(TAG, "App non installée ou introuvable : " + packageName);
             return false;
         }
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         // Display 0 = écran principal
         boolean launched = launchWithDisplayId(launchIntent, 0);
-        if (launched && isDashboardAvailable()) {
-            // Restaurer le cluster BYD maintenant que l'app quitte le display secondaire
-            restoreSystemDashboard();
-        }
         return launched;
     }
 
@@ -119,11 +102,12 @@ public class DashboardLauncher {
      * Cœur du mécanisme : appel par réflexion à ActivityOptions.setLaunchDisplayId().
      * Accessible depuis une app signée platform.keystore sans permission supplémentaire.
      *
-     * INSIGHT (issu analyse WindowManagement 1.2 pour DiLink 3.0/4.0) :
-     *   Sur BYD Seal, le cluster = display ID 1 dans IActivityManager.
-     *   Il n'apparaît PAS dans DisplayManager.getDisplays() — géré par le kernel BYD.
-     *   Context.startActivity() avec setLaunchDisplayId est refusé sans platform key.
-     *   IActivityManager.startActivityAsUser() avec userId=-2 contourne ça.
+     * INSIGHT (confirmé analyse Freedom v1.9 + com.xdja.containerservice) :
+     *   Sur BYD Seal, le cluster = VirtualDisplay créé au BOOT par AutoDisplayService.
+     *   Il APPARAÎT dans DisplayManager via DISPLAY_CATEGORY_PRESENTATION (flags PUBLIC|PRESENTATION).
+     *   Dimensions : 1920×1080 (hardcodé dans AutoDisplayService.createVirtualDisplay()).
+     *   Context.startActivity() avec setLaunchDisplayId fonctionne si signé platform.keystore
+     *   + INTERNAL_SYSTEM_WINDOW dans le Manifest.
      *
      * Cette méthode essaie le path direct (Context.startActivity) PUIS le path IActivityManager.
      */
@@ -144,38 +128,38 @@ public class DashboardLauncher {
                         .getDeclaredMethod("setLaunchWindowingMode", int.class);
                 setWM.setAccessible(true);
                 setWM.invoke(options, 5); // WINDOWING_MODE_FREEFORM = 5
-                Log.i(TAG, "setLaunchWindowingMode(FREEFORM=5) appliqué");
+                AppLogger.i(TAG, "setLaunchWindowingMode(FREEFORM=5) appliqué");
             } catch (NoSuchMethodException ignored) {
-                Log.w(TAG, "setLaunchWindowingMode absent (ROM trop ancienne)");
+                AppLogger.w(TAG, "setLaunchWindowingMode absent (ROM trop ancienne)");
             }
             // Bounds = dimensions réelles du display → occupe tout le cluster
             try {
                 Method setLB = ActivityOptions.class
                         .getDeclaredMethod("setLaunchBounds", Rect.class);
                 setLB.setAccessible(true);
-                Point size = new Point(1920, 480); // défaut BYD Seal cluster
+                Point size = new Point(1920, 1080); // fallback VirtualDisplay AutoDisplayService: 1920×1080
                 DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
                 Display targetDisplay = (dm != null) ? dm.getDisplay(displayId) : null;
                 if (targetDisplay != null) {
                     targetDisplay.getRealSize(size);
-                    Log.i(TAG, "getRealSize display " + displayId + " → " + size.x + "×" + size.y);
+                    AppLogger.i(TAG, "getRealSize display " + displayId + " → " + size.x + "×" + size.y);
                 } else {
-                    Log.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×480");
+                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×1080");
                 }
                 setLB.invoke(options, new Rect(0, 0, size.x, size.y));
-                Log.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") appliqué");
+                AppLogger.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") appliqué");
             } catch (NoSuchMethodException ignored) {
-                Log.w(TAG, "setLaunchBounds absent");
+                AppLogger.w(TAG, "setLaunchBounds absent");
             }
 
             // Essai 1 : Context.startActivity (fonctionnel sur display 0, peut échouer sur display 1)
             try {
                 mContext.startActivity(intent, options.toBundle());
-                Log.i(TAG, "Context.startActivity OK display=" + displayId);
+                AppLogger.i(TAG, "Context.startActivity OK display=" + displayId);
                 AppLogger.log(TAG, "LAUNCH OK display=" + displayId);
                 return true;
             } catch (Exception e1) {
-                Log.w(TAG, "Context.startActivity échoué display=" + displayId + " — essai IActivityManager", e1);
+                AppLogger.w(TAG, "Context.startActivity échoué display=" + displayId + " — essai IActivityManager", e1);
             }
 
             // Essai 2 : IActivityManager.startActivityAsUser (path WindowManagement, userId=-2)
@@ -199,24 +183,24 @@ public class DashboardLauncher {
                 int result = (int) startActivity.invoke(iAm,
                         null, null, intent, null, null, null, 0, 0, null,
                         options.toBundle(), -2);
-                Log.i(TAG, "IActivityManager.startActivityAsUser result=" + result + " display=" + displayId);
+                AppLogger.i(TAG, "IActivityManager.startActivityAsUser result=" + result + " display=" + displayId);
                 AppLogger.log(TAG, "LAUNCH IActMgr result=" + result + " display=" + displayId);
                 return result == 0;
             } catch (Exception e2) {
-                Log.e(TAG, "IActivityManager.startActivityAsUser échoué", e2);
+                AppLogger.e(TAG, "IActivityManager.startActivityAsUser échoué", e2);
                 AppLogger.log(TAG, "LAUNCH IActMgr ECHEC — " + e2.getClass().getSimpleName() + ": " + e2.getMessage());
             }
 
             return false;
 
         } catch (NoSuchMethodException e) {
-            Log.e(TAG, "setLaunchDisplayId introuvable dans ce ROM — fallback display principal", e);
+            AppLogger.e(TAG, "setLaunchDisplayId introuvable dans ce ROM — fallback display principal", e);
             AppLogger.log(TAG, "LAUNCH FALLBACK — setLaunchDisplayId absent");
             mContext.startActivity(intent);
-            return false;
+            return true;
 
         } catch (Exception e) {
-            Log.e(TAG, "Erreur lors du lancement sur display " + displayId, e);
+            AppLogger.e(TAG, "Erreur lors du lancement sur display " + displayId, e);
             AppLogger.log(TAG, "LAUNCH EXCEPTION display=" + displayId + " — " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return false;
         }

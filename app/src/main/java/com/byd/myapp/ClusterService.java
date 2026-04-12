@@ -12,6 +12,8 @@ import androidx.core.app.NotificationCompat;
 import android.util.Log;
 import android.view.Display;
 
+import com.byd.myapp.dashboard.ClusterInputForwarder;
+import com.byd.myapp.dashboard.ClusterMirrorManager;
 import com.byd.myapp.dashboard.DashboardDisplayHelper;
 import com.byd.myapp.dashboard.DashboardLauncher;
 
@@ -54,6 +56,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // ── État ────────────────────────────────────────────────────────────────
     private DashboardDisplayHelper mDisplayHelper;
     private DashboardLauncher      mLauncher;
+    private ClusterMirrorManager   mMirrorManager;
+    private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
     private boolean                mProjectionActive = false;
 
@@ -62,8 +66,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     @Override
     public void onCreate() {
         super.onCreate();
-        mDisplayHelper = new DashboardDisplayHelper(this, this);
-        mLauncher      = new DashboardLauncher(this);
+        mDisplayHelper  = new DashboardDisplayHelper(this, this);
+        mLauncher       = new DashboardLauncher(this);
+        mMirrorManager  = new ClusterMirrorManager(this);
+        mInputForwarder = new ClusterInputForwarder(this);
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster : initialisation…"));
         AppLogger.log(TAG, "ClusterService créé — démarrage projection");
@@ -126,6 +132,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         return mLauncher;
     }
 
+    public ClusterMirrorManager getMirrorManager() {
+        return mMirrorManager;
+    }
+
+    public ClusterInputForwarder getInputForwarder() {
+        return mInputForwarder;
+    }
+
+    public interface LaunchCallback {
+        void onResult(boolean success);
+    }
+
+    /**
+     * Lance une app sur le cluster avec la séquence correcte (identique au TEST 10) :
+     *   1. sendInfo(1000, 16) — Qt standby (cluster en mode diffusion)
+     *   2. Attente 1,5 s    — laisser Qt basculer
+     *   3. Lancement de l'app sur le display cluster
+     * La callback est appelée sur le main thread.
+     */
+    public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
+        AppLogger.log(TAG, "launchOnDashboard — sendInfo(16) + délai → " + packageName);
+        mDisplayHelper.enterProjectionMode();
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                boolean ok = mLauncher.launchOnDashboard(packageName);
+                AppLogger.log(TAG, "launchOnDashboard result=" + ok + " — " + packageName);
+                if (callback != null) callback.onResult(ok);
+            }
+        }, 2000);
+    }
+
     public int getDisplayId() {
         return mDisplayHelper.getKnownClusterDisplayId();
     }
@@ -156,6 +193,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDashboardDisplayConnected(Display display, int displayId) {
         AppLogger.log(TAG, "Display cluster connecté : id=" + displayId);
         mLauncher.setDashboardDisplayId(displayId);
+        // Mettre à jour le forwarder avec les dimensions et l'ID réels du display
+        mInputForwarder.setClusterDisplay(display);
+        mInputForwarder.setClusterDisplayId(displayId);
         updateNotification("Cluster actif — display " + displayId);
         if (mListener != null) {
             mListener.onClusterDisplayConnected(display, displayId);

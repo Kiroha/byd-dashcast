@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
 import android.util.Log;
+import com.byd.myapp.AppLogger;
 import android.view.Display;
 
 import java.lang.reflect.Method;
@@ -53,11 +54,12 @@ public class ClusterManager {
     // Paramètres sendInfo(type, infoInt, infoStr)
     public static final int CLUSTER_TYPE      = 1000;
     public static final int CMD_PROJECTION_ON  = 16;   // Qt standby + display 1 reste dans IActivityManager
-    public static final int CMD_DISCONNECT_QT  = 1;    // Qt déconnecté complètement (Simple mode, display 1 disparaît)
+    // CMD=1 (Qt déconnecté complètement / Simple mode) NON EXPOSé : destroy display 1 — ne jamais utiliser
     public static final int CMD_RESTORE_NATIVE = 0;    // restaurer rendu BYD natif
 
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
-    private static final long VIRTUAL_DISPLAY_TIMEOUT_MS = 8000;
+    // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
+    private static final long VIRTUAL_DISPLAY_TIMEOUT_MS = 3000;
     // Polling interval pour détecter le virtual display
     private static final long POLL_INTERVAL_MS = 500;
 
@@ -96,13 +98,13 @@ public class ClusterManager {
             Method getService = sm.getDeclaredMethod("getService", String.class);
             mBinder = (IBinder) getService.invoke(null, SERVICE_NAME);
             if (mBinder == null) {
-                Log.w(TAG, "ServiceManager.getService(\"" + SERVICE_NAME + "\") = null");
+                AppLogger.w(TAG, "ServiceManager.getService(\"" + SERVICE_NAME + "\") = null");
                 return false;
             }
-            Log.i(TAG, "AutoContainer Binder obtenu : " + mBinder);
+            AppLogger.i(TAG, "AutoContainer Binder obtenu : " + mBinder);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "connect() échec : " + e.getMessage());
+            AppLogger.e(TAG, "connect() échec", e);
             return false;
         }
     }
@@ -111,13 +113,13 @@ public class ClusterManager {
      * Envoi d'une commande sendInfo (transaction #2) au service AutoContainer.
      *
      * @param type     toujours 1000 pour le cluster
-     * @param infoInt  commande : CMD_PROJECTION_ON(16), CMD_DISCONNECT_QT(1), CMD_RESTORE_NATIVE(0)
+     * @param infoInt  commande : CMD_PROJECTION_ON(16), CMD_RESTORE_NATIVE(0)
      * @param infoStr  payload string (généralement "")
      * @return true si l'appel Binder a réussi (pas d'exception, pas de RemoteException)
      */
     public boolean sendInfo(int type, int infoInt, String infoStr) {
         if (mBinder == null && !connect()) {
-            Log.e(TAG, "sendInfo : Binder non disponible");
+            AppLogger.e(TAG, "sendInfo : Binder non disponible");
             return false;
         }
         Parcel data  = Parcel.obtain();
@@ -130,10 +132,10 @@ public class ClusterManager {
             mBinder.transact(TX_SEND_INFO, data, reply, 0);
             // Lecture de l'exception distante (lance une exception Java si le Binder a retourné une erreur)
             reply.readException();
-            Log.i(TAG, "sendInfo(" + type + ", " + infoInt + ", \"" + infoStr + "\") OK");
+            AppLogger.i(TAG, "sendInfo(" + type + ", " + infoInt + ", \"" + infoStr + "\") OK");
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "sendInfo(" + type + ", " + infoInt + ") échec : " + e.getMessage());
+            AppLogger.e(TAG, "sendInfo(" + type + ", " + infoInt + ") échec", e);
             return false;
         } finally {
             data.recycle();
@@ -148,11 +150,6 @@ public class ClusterManager {
         return sendInfo(CLUSTER_TYPE, CMD_PROJECTION_ON, "");
     }
 
-    /** Déconnecte le flux Qt natif (surface disponible pour rendu Android). */
-    public boolean disconnectNative() {
-        return sendInfo(CLUSTER_TYPE, CMD_DISCONNECT_QT, "");
-    }
-
     /** Restaure le rendu BYD natif (fin du mode projection). */
     public boolean restoreNative() {
         return sendInfo(CLUSTER_TYPE, CMD_RESTORE_NATIVE, "");
@@ -161,56 +158,55 @@ public class ClusterManager {
     // ── Activation + attente du VirtualDisplay ───────────────────────────────
 
     /**
-     * Séquence complète : sendInfo(16) + démarrage AutoDisplayService
-     * + écoute de l'ajout d'un VirtualDisplay dans DisplayManager.
+     * Séquence complète :
+     *   1. Vérifie d'abord DISPLAY_CATEGORY_PRESENTATION (VirtualDisplay présent au boot)
+     *   2. Si trouvé → sendInfo(16) pour mettre Qt en standby → callback immédiat
+     *   3. Si non trouvé → sendInfo(16) → écoute DisplayManager + polling court (3s)
+     *   4. Timeout → onDisplayTimeout() → DashboardDisplayHelper fait le fallback displayId=1
+     *
+     * ARCHITECTURE CONFIRMÉE (analyse Freedom v1.9 + com.xdja.containerservice) :
+     *   AutoDisplayService crée le VirtualDisplay cluster au BOOT :
+     *     createVirtualDisplay("fission_testVirtualSurface", 1920, 1080, 320, qtSurface, 11)
+     *     flags 11 = PUBLIC | PRESENTATION | OWN_CONTENT_ONLY
+     *   → Le display est visible via DISPLAY_CATEGORY_PRESENTATION AVANT tout appel sendInfo.
+     *   → sendInfo(1000, 16) ne crée PAS le display : il met seulement Qt en standby
+     *     (libère la surface pour notre rendu Android).
+     *   → sendInfo(1000, 0) seul suffit à restaurer le cluster sur Seal EU
+     *     (Freedom confirme : pas besoin de relancer com.byd.automap, non installé).
      *
      * CONFIRMATION TEST 10 (11/04/2026) :
      *   cmd=1 = MAUVAISE COMMANDE : Qt se déconnecte entièrement → MCU reprend le contrôle
      *   (Simple mode visible) → display 1 DISPARAIT d'IActivityManager → lancement impossible.
-     *
-     *   cmd=16 = BONNE COMMANDE : Qt entre en standby, display 1 RESTE enregistré dans
-     *   IActivityManager. Le header/footer Qt restaient visibles uniquement parce que
-     *   setLaunchWindowingMode(FULLSCREEN) était absent (bug Freedom/WindowManagement).
-     *   Avec setLaunchWindowingMode(1), BYDDashboardActivity couvre l'intégralité du 1920×1080.
-     *
-     * INSIGHT WindowManagement : sur DiLink 3.0, le cluster = display 1 dans IActivityManager.
-     * Il ne s'ajoute PAS à DisplayManager. Le timeout est volontairement court (8s) — si après
-     * ce délai aucun display n'apparaît, le caller doit utiliser displayId=1 hardcodé.
-     *
-     * Restauration : appeler restoreNative() (sendInfo(1000,0)) quand l'activité se termine.
+     *   cmd=16 = BONNE COMMANDE : Qt entre en standby, display 1 reste enregistré.
      *
      * La callback est appelée sur le main thread.
      */
     public void activateClusterDisplay(final DisplayReadyCallback callback) {
-        // 1. Mettre Qt en mode projection standby (cmd=16) — display 1 reste dans IActivityManager
-        //    NE PAS utiliser disconnectNative() (cmd=1) : détruit display 1 complètement
-        boolean ok = enterProjectionMode();
-        Log.i(TAG, "enterProjectionMode (cmd=16) : " + (ok ? "OK" : "ÉCHEC"));
-
-        // 2. Démarrer AutoDisplayService (peut être déjà en cours — sans effet si redémarré)
-        try {
-            Intent svcIntent = new Intent();
-            svcIntent.setComponent(new ComponentName(
-                    "com.xdja.containerservice",
-                    "com.xdja.containerservice.AutoDisplayService"));
-            mContext.startService(svcIntent);
-            Log.i(TAG, "startService AutoDisplayService envoyé");
-        } catch (Exception e) {
-            Log.w(TAG, "startService AutoDisplayService : " + e.getMessage());
-        }
-
-        // 3. Écouter l'apparition d'un VirtualDisplay via DisplayManager
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
 
-        // Vérifier immédiatement si un display PRESENTATION existe déjà
+        // 1. Vérifier d'abord si le VirtualDisplay cluster est déjà présent (DISPLAY_CATEGORY_PRESENTATION)
+        //    AutoDisplayService le crée au BOOT → disponible immédiatement sans attente.
         Display found = findClusterDisplay(dm);
         if (found != null) {
-            Log.i(TAG, "VirtualDisplay déjà présent : id=" + found.getDisplayId());
+            Log.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
+                    + " name=" + found.getName());
+            // NE PAS appeler enterProjectionMode() ici.
+            // La séquence correcte (confirmée TEST 10) est :
+            //   état BYD natif  →  sendInfo(16)  →  2 s d'attente  →  lancement app.
+            // Si sendInfo(16) est envoyé une 2ème fois depuis launchOnDashboard alors
+            // que le cluster est DÉJÀ en mode projection (appel ici + appel launchOnDashboard),
+            // Qt toggle brevité active/standby et le timing 1,5 s devient insuffisant.
+            // launchOnDashboard() se charge d'appeler enterProjectionMode() juste avant le lancement.
             callback.onDisplayReady(found, found.getDisplayId());
             return;
         }
 
-        // Sinon : écouter les ajouts + timeout
+        // Display non trouvé immédiatement — sendInfo(16) d'abord, puis écoute
+        AppLogger.w(TAG, "VirtualDisplay non trouvé immédiatement — sendInfo(16) + polling");
+        boolean ok = enterProjectionMode();
+        AppLogger.i(TAG, "enterProjectionMode (cmd=16) : " + (ok ? "OK" : "ÉCHEC"));
+
+        // Écouter les ajouts de display + timeout
         final long[] pollCount = {0};
         final DisplayManager.DisplayListener[] listenerHolder = new DisplayManager.DisplayListener[1];
 
@@ -245,7 +241,7 @@ public class ClusterManager {
                 mActiveDisplayListener = null;
                 mActiveDisplayManager  = null;
                 mHandler.removeCallbacksAndMessages(null);
-                Log.w(TAG, "Timeout : VirtualDisplay cluster non détecté après "
+                AppLogger.w(TAG, "Timeout : VirtualDisplay cluster non détecté après "
                         + VIRTUAL_DISPLAY_TIMEOUT_MS + "ms");
                 callback.onDisplayTimeout();
             }

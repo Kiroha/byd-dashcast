@@ -26,6 +26,7 @@ public class WelcomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
 
         // Si déjà configuré → aller directement à MainActivity
         if (LocaleHelper.isSetupDone(this)) {

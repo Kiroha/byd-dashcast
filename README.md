@@ -2,7 +2,7 @@
 
 Application Android pour véhicules **BYD Seal / Atto / Han** permettant d'envoyer n'importe quelle app installée sur l'écran instrument cluster (derrière le volant), de la contrôler à distance, et de diagnostiquer les APIs BYD en temps réel.
 
-> **Testé sur** : BYD Seal 2024 — Android 7.1.2 (API 25)
+> **Testé sur** : BYD Seal EU 2024 — DiLink 3.0 — Android 10 (API 29)
 
 ---
 
@@ -15,11 +15,13 @@ Application Android pour véhicules **BYD Seal / Atto / Han** permettant d'envoy
 | 3 | **→ Écran principal** | Renvoie une app sur le display 0, restaure le cluster BYD automatiquement |
 | 4 | **Restaurer BYD** | HOME intent sur le display secondaire → rétablit l'interface BYD d'origine |
 | 5 | **Panel contrôle cluster** | Touchpad + boutons (←/⌂/↑/↓/Vol+/Vol−) via `InputManager.injectInputEvent()` |
-| 6 | **⚙ Diagnostic** | 4 tests — Presentation API, réflexion, ADB TCP, **lancement réel sur cluster** |
+| 6 | **⚙ Diagnostic** | 6 tests — Presentation API, réflexion, ADB TCP, sendInfo AutoContainer, lancement réel sur cluster |
 | 7 | **📋 Rapport système** | Rapport texte complet (displays, permissions, APIs BYD) + sauvegarde + partage |
 | 8 | **📊 BYD Live** | Données véhicule temps réel (vitesse, rapport, mode énergie, regen) + journal |
-| 9 | **Journal (AppLogger)** | Log horodaté de tous les événements, partageable sans câble ADB |
-| 10 | **Multilingue** | Français / Anglais, choix au premier lancement, modifiable via 🌐 |
+| 9 | **Journal (LogActivity)** | Log en temps réel par niveau (DEBUG/INFO/WARN/ERROR), filtres, auto-scroll |
+| 10 | **☁  Export** | Push log vers remote log analytics (HMAC-SHA256) — table `BYDAppLog_CL` |
+| 11 | **Partager .log** | Génère un fichier `.log` horodaté en pièce jointe + push  simultané |
+| 12 | **Multilingue** | Français / Anglais, choix au premier lancement, modifiable via 🌐 |
 
 ---
 
@@ -29,11 +31,14 @@ Application Android pour véhicules **BYD Seal / Atto / Han** permettant d'envoy
 app/src/main/java/com/byd/myapp/
 ├── MainActivity.java           — Écran principal 15", liste apps, barre statut
 ├── WelcomeActivity.java        — Premier lancement — choix de la langue
-├── DiagActivity.java           — 4 tests de compatibilité
+├── DiagActivity.java           — Tests de compatibilité et diagnostic cluster
 ├── SysInfoActivity.java        — Rapport système complet + partage
 ├── BYDLiveActivity.java        — Données BYD en temps réel + AppLogger
+├── LogActivity.java            — Journal temps réel (niveaux, filtres, )
+├── FloatingLogButton.java      — Service overlay flottant (tap=log, long press=clear)
+├── LogExporter.java       — Export HTTP Data Collector → remote log analytics
+├── AppLogger.java              — Journal singleton (niveaux, throwable, saveToFile, share)
 ├── AppListAdapter.java         — Adapter RecyclerView (2 actions par ligne)
-├── AppLogger.java              — Journal singleton, partageable sans ADB
 ├── LocaleHelper.java           — Persistance locale (SharedPreferences)
 ├── model/
 │   └── AppInfo.java
@@ -42,6 +47,8 @@ app/src/main/java/com/byd/myapp/
     ├── DashboardDisplayHelper.java  — Détection display secondaire
     ├── DashboardPresentation.java   — Presentation API (fallback)
     ├── BYDDashboardActivity.java    — Widget BYD (vitesse/batterie/rapport)
+    ├── ClusterManager.java          — Binder direct AutoContainer (AIDL)
+    ├── ClusterMirrorManager.java     — Capture screenshot display 1
     └── ClusterInputForwarder.java   — Injection MotionEvent/KeyEvent sur le cluster
 ```
 
@@ -163,9 +170,23 @@ Permission requise avant `getInstance()` :
 
 ## Diagnostic terrain (sans câble USB)
 
-1. Ouvrir **📊 BYD Live** → vérifier que les 3 devices retournent ✓
-2. Ouvrir **⚙ Diagnostic** → lancer le diagnostic → vérifier le Test 4 (lancement réel)
-3. Si problème → **📋 Rapport** → **📤 Partager** → envoyer par email/WhatsApp
+1. Ouvrir **⚙ Diagnostic** → lancer TEST 10 → vérifier que le cluster passe en mode app
+2. Ouvrir **📊 BYD Live** → vérifier que les 3 devices retournent ✓
+3. Ouvrir **Journal** (badge flottant ou menu) → vérifier les événements lifecycle
+4. Bouton **☁ ** → `"✅ N entrées envoyées (HTTP 200)"`
+5. Bouton **Partager** → share chooser + fichier `.log` en pièce jointe + push  simultané
+6. Si problème → **📋 Rapport** → **📤 Partager** → envoyer par email/WhatsApp
+
+### Récupérer les logs sans ouvrir l'app
+```bash
+adb pull /sdcard/Android/data/com.byd.myapp/files/
+```
+
+### Requêtes KQL  (portail `law-byd-app`)
+```kql
+BYDAppLog_CL | order by TimeGenerated desc | take 200
+BYDAppLog_CL | where Level_s in ("WARN","ERROR") | order by TimeGenerated desc
+```
 
 ---
 

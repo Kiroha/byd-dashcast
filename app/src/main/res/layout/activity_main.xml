@@ -27,9 +27,8 @@
             android:id="@+id/btn_restore_byd"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="@string/btn_restore_byd"
+            android:text="Activer cluster"
             android:textSize="12sp"
-            android:enabled="false"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"/>
 
@@ -114,28 +113,21 @@
                 android:paddingEnd="10dp"/>
         </LinearLayout>
 
-        <!-- Zone tactile : proportionnelle au cluster, capture les touches -->
-        <FrameLayout
-            android:id="@+id/cluster_touchpad"
+        <!-- Miroir live du cluster : ImageView mis à jour par ClusterMirrorManager.
+             Touch sur cette vue → coordonnées mappées → injectées sur display 1.
+             scaleType="fitCenter" pour respecter l'aspect ratio 1920×1080. -->
+        <ImageView
+            android:id="@+id/cluster_mirror"
             android:layout_width="match_parent"
-            android:layout_height="110dp"
+            android:layout_height="200dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginTop="6dp"
             android:background="#090C10"
+            android:scaleType="fitCenter"
             android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:id="@+id/tv_touchpad_hint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="@string/cluster_touchpad_hint"
-                android:textColor="#2A3A4A"
-                android:textSize="12sp"
-                android:gravity="center"/>
-        </FrameLayout>
+            android:focusable="true"
+            android:contentDescription="Miroir cluster"/>
 
         <!-- Boutons de navigation et volume -->
         <LinearLayout

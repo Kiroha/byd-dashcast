@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Display;
+import com.byd.myapp.AppLogger;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -33,8 +34,9 @@ public class ClusterInputForwarder {
     private static final String TAG = "ClusterInputForwarder";
     private static final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
 
-    private int mClusterWidth  = 480;
-    private int mClusterHeight = 240;
+    private int mClusterWidth      = 1920;
+    private int mClusterHeight     = 1080;
+    private int mClusterDisplayId  = 1;   // ID du display cluster (routage API 29)
 
     private Object mInputManager;
     private Method mInjectMethod;
@@ -55,20 +57,27 @@ public class ClusterInputForwarder {
             mInjectMethod.setAccessible(true);
 
             mAvailable = true;
-            Log.i(TAG, "InputManager injection: disponible");
+            AppLogger.i(TAG, "InputManager injection: disponible");
         } catch (Exception e) {
-            Log.e(TAG, "Init échouée (permission INJECT_EVENTS absente ?): " + e.getMessage());
+            AppLogger.e(TAG, "Init échouée (permission INJECT_EVENTS absente ?)", e);
         }
     }
 
-    /** Appelé quand le display cluster est détecté, pour connaître ses dimensions. */
+    /** Appelé quand le display cluster est détecté, pour connaître ses dimensions et son ID. */
     public void setClusterDisplay(Display display) {
         if (display == null) return;
         android.graphics.Point size = new android.graphics.Point();
         display.getSize(size);
-        mClusterWidth  = size.x;
-        mClusterHeight = size.y;
-        Log.i(TAG, "Cluster dimensions: " + mClusterWidth + "x" + mClusterHeight);
+        mClusterWidth     = size.x;
+        mClusterHeight    = size.y;
+        mClusterDisplayId = display.getDisplayId();
+        AppLogger.i(TAG, "Cluster dimensions: " + mClusterWidth + "x" + mClusterHeight
+                + " displayId=" + mClusterDisplayId);
+    }
+
+    /** Met à jour l'ID du display cluster (utilisé quand Display est null mais l'ID est connu). */
+    public void setClusterDisplayId(int displayId) {
+        mClusterDisplayId = displayId;
     }
 
     /**
@@ -90,10 +99,19 @@ public class ClusterInputForwarder {
         long now = SystemClock.uptimeMillis();
         MotionEvent event = MotionEvent.obtain(now, now, action, clusterX, clusterY, 0);
         event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        // API 29 : router l'event vers le display cluster.
+        // setDisplayId() est @hide → accessible via réflexion avec platform.keystore.
+        try {
+            java.lang.reflect.Method setDisplayId =
+                    MotionEvent.class.getMethod("setDisplayId", int.class);
+            setDisplayId.invoke(event, mClusterDisplayId);
+        } catch (Exception ignored) {
+            // ROM trop ancienne ou méthode absente — l'event ira au display principal
+        }
         try {
             mInjectMethod.invoke(mInputManager, event, INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception e) {
-            Log.e(TAG, "Touch inject échoué: " + e.getMessage());
+            AppLogger.e(TAG, "Touch inject échoué", e);
         } finally {
             event.recycle();
         }
@@ -113,7 +131,7 @@ public class ClusterInputForwarder {
             mInjectMethod.invoke(mInputManager, down, INJECT_INPUT_EVENT_MODE_ASYNC);
             mInjectMethod.invoke(mInputManager, up,   INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception e) {
-            Log.e(TAG, "Key inject échoué: " + e.getMessage());
+            AppLogger.e(TAG, "Key inject échoué", e);
         }
     }
 
