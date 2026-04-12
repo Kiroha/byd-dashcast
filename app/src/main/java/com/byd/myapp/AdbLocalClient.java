@@ -5,12 +5,9 @@ import android.util.Log;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
-import dadb.AdbStream;
 import dadb.Dadb;
 
 import java.io.File;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * AdbLocalClient — se connecte au daemon ADB local (localhost:5555) depuis l'intérieur
@@ -108,35 +105,45 @@ public class AdbLocalClient {
                 }
                 sb.append("\n");
 
-                // ── PASSE 2 : abb_exec (Binder direct) ────────────────────────────────
+                // ── PASSE 2 : test pm grant sur _COMMON (dangerous?) et _GET (signature) ──
                 boolean abbSupported = dadb.supportsFeature("abb_exec");
                 sb.append("=== [2] abb_exec disponible : ").append(abbSupported).append(" ===\n");
 
-                if (abbSupported) {
-                    // Vérifier l'UID effectif via abb_exec (≠ pm shell)
-                    AdbShellResponse rUid = dadb.shell("id 2>&1");
-                    sb.append("UID shell : ").append(rUid.getAllOutput().trim()).append("\n");
+                // Vérifier l'UID effectif
+                AdbShellResponse rUid = dadb.shell("id 2>&1");
+                sb.append("UID shell : ").append(rUid.getAllOutput().trim()).append("\n");
 
-                    // Tenter grant via abb_exec (code path Binder, potentiellement différent)
-                    String[] testPerms = {
-                        "android.permission.BYDAUTO_SPEED_GET",
-                        "android.permission.BYDAUTO_ENERGY_GET",
-                        "android.permission.BYDAUTO_GEARBOX_GET",
-                    };
-                    for (String perm : testPerms) {
-                        String shortName = perm.replace("android.permission.BYDAUTO_", "");
-                        try {
-                            AdbStream stream = dadb.abbExec("package", "grant", pkg, perm);
-                            InputStream is = stream.getSource().inputStream();
-                            byte[] buf = new byte[2048];
-                            int n = is.read(buf);
-                            String result = n > 0 ? new String(buf, 0, n, StandardCharsets.UTF_8).trim() : "";
-                            stream.close();
-                            sb.append(shortName).append(": ").append(result.isEmpty() ? "OK ✓" : result).append("\n");
-                        } catch (Exception e) {
-                            sb.append(shortName).append(": ").append(e.getMessage()).append("\n");
-                        }
-                    }
+                // _COMMON : si dangerous → grant OK ; si signature → même erreur que _GET
+                // _GET    : signature confirmés — toujours refusés via pm grant
+                String[] commonPerms = {
+                    "android.permission.BYDAUTO_SPEED_COMMON",
+                    "android.permission.BYDAUTO_ENERGY_COMMON",
+                    "android.permission.BYDAUTO_GEARBOX_COMMON",
+                };
+                String[] getPerms = {
+                    "android.permission.BYDAUTO_SPEED_GET",
+                    "android.permission.BYDAUTO_ENERGY_GET",
+                    "android.permission.BYDAUTO_GEARBOX_GET",
+                };
+                sb.append("── pm grant _COMMON (test type dangerous vs signature) ──\n");
+                for (String perm : commonPerms) {
+                    String shortName = perm.replace("android.permission.BYDAUTO_", "");
+                    AdbShellResponse r = dadb.shell("pm grant " + pkg + " " + perm + " 2>&1 && echo GRANTED || echo DENIED");
+                    String out = r.getAllOutput().trim();
+                    sb.append(shortName).append(": ").append(
+                        out.contains("GRANTED") ? "OK ✓ (dangerous — accordée)" :
+                        out.contains("not a changeable") ? "SIGNATURE — non accordable via pm" :
+                        out).append("\n");
+                }
+                sb.append("── pm grant _GET (signature confirmés — pour référence) ──\n");
+                for (String perm : getPerms) {
+                    String shortName = perm.replace("android.permission.BYDAUTO_", "");
+                    AdbShellResponse r = dadb.shell("pm grant " + pkg + " " + perm + " 2>&1 && echo GRANTED || echo DENIED");
+                    String out = r.getAllOutput().trim();
+                    sb.append(shortName).append(": ").append(
+                        out.contains("GRANTED") ? "OK ✓ (inattendu)" :
+                        out.contains("not a changeable") ? "SIGNATURE (attendu)" :
+                        out).append("\n");
                 }
                 sb.append("\n");
 
@@ -154,13 +161,20 @@ public class AdbLocalClient {
                 }
                 sb.append("\n");
 
-                // ── État final des permissions ─────────────────────────────────────────
+                // ── État final des permissions (dump brut + grep large) ───────────────
+                // Le format BYD ROM peut différer du AOSP standard — on dump la section
+                // "declared permissions" + "install permissions" + "runtime permissions"
                 AdbShellResponse rFinal = dadb.shell(
-                        "dumpsys package " + pkg + " 2>/dev/null | grep -E 'bydauto.*(GET|COMMON)' | grep -v '#'");
-                sb.append("=== Permissions actuelles (GET + COMMON) ===\n");
-                for (String line : rFinal.getAllOutput().split("\n")) {
-                    if (!line.trim().isEmpty()) sb.append(line.trim()).append("\n");
+                        "dumpsys package " + pkg + " 2>/dev/null | grep -iE 'bydauto|BYDAUTO|requested perm|install perm|runtime perm|grantedPermissions' | head -40");
+                sb.append("=== Permissions actuelles (dump brut) ===\n");
+                String finalOut = rFinal.getAllOutput().trim();
+                if (finalOut.isEmpty()) {
+                    // Fallback : dump complet de la section permissions
+                    AdbShellResponse rFull = dadb.shell(
+                            "dumpsys package " + pkg + " 2>/dev/null | grep -A2 -E 'permission|Permission' | grep -iE 'byd|granted|denied' | head -30");
+                    finalOut = rFull.getAllOutput().trim();
                 }
+                sb.append(finalOut.isEmpty() ? "(aucune entrée — vérifier APK installé)" : finalOut).append("\n");
 
                 dadb.close();
                 AppLogger.log(TAG, "ADB local terminé ✓");
