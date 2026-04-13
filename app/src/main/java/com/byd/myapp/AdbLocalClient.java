@@ -681,6 +681,18 @@ public class AdbLocalClient {
                     sb.append(rSend16.getAllOutput().trim()).append("\n");
                     Thread.sleep(2000);
 
+                    // 2b. sendInfo(13) — masquer overlay ADAS (cmd confirmée clusterdebug "13:关闭Adas")
+                    sb.append("\n── sendInfo(1000, 13) = masquer ADAS ──\n");
+                    AdbShellResponse rHideAdas = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 13 s16 \"\" 2>&1");
+                    String hideResult = rHideAdas.getAllOutput().trim();
+                    sb.append(hideResult).append("\n");
+                    boolean adasHideOk = hideResult.contains("00000000");
+                    sb.append(adasHideOk
+                        ? "✅ ADAS CACHÉ — vérifier sur le cluster que la fenêtre ADAS a disparu\n"
+                        : "⚠️  Résultat inattendu — ADAS peut-être non masqué\n");
+                    Thread.sleep(3000); // Laisser le temps d'observer le cluster
+
                     // 3. Supprimer TOUS les tasks sur display 1 (pas seulement notre app).
                     // Qt ne peut recapturer la surface que si AUCUNE Activity Android
                     // ne la détient encore — y compris les apps tierces (Navigation, etc.)
@@ -728,6 +740,18 @@ public class AdbLocalClient {
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append(rSend0.getAllOutput().trim()).append("\n");
                     Thread.sleep(2000);
+
+                    // 4b. sendInfo(12) — restaurer overlay ADAS (cmd "12:显示Adas")
+                    sb.append("\n── sendInfo(1000, 12) = restaurer ADAS ──\n");
+                    AdbShellResponse rShowAdas = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 12 s16 \"\" 2>&1");
+                    String showResult = rShowAdas.getAllOutput().trim();
+                    sb.append(showResult).append("\n");
+                    boolean adasShowOk = showResult.contains("00000000");
+                    sb.append(adasShowOk
+                        ? "✅ ADAS RESTAURÉ — vérifier sur le cluster que la fenêtre ADAS est revenue\n"
+                        : "⚠️  Résultat inattendu — ADAS peut-être non restauré\n");
+                    Thread.sleep(1000);
 
                     // 5. Stacks après
                     sb.append("\n── [Après] am stack list (display 1) ──\n");
