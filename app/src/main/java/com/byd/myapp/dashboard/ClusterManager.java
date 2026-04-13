@@ -68,9 +68,6 @@ public class ClusterManager {
     public static final int CMD_STOP_PROJECTION  = 18;  // 投屏关闭 — FERMER la projection (CONFIRMÉ 13/04/2026)
     public static final int CMD_RESTORE_NATIVE   = 0;   // 主机恢复付表视频流 — rafraîchir flux Qt (après cmd 18)
     // CMD=1 : déconnecte Qt complètement — NE JAMAIS UTILISER (détruit display 1)
-    // Commandes ADAS : sans effet sur cluster 2D Seal EU (prévues pour cluster 3D)
-    public static final int CMD_ADAS_SHOW = 12;  // 显示Adas — sans effet Seal EU 2D
-    public static final int CMD_ADAS_HIDE = 13;  // 关闭Adas — sans effet Seal EU 2D
     // Commande ADAS 2D (Seal EU) — TOGGLE : alterne entre affiché et masqué
     // À appeler UNE fois avant activation (masque ADAS) et UNE fois après restauration (rétablit ADAS).
     public static final int CMD_ADAS_2D_TOGGLE = 53; // 2D ADAS切換 — cluster 2D Seal EU
@@ -176,16 +173,6 @@ public class ClusterManager {
     /** Rafraîchit le flux vidéo Qt (主机恢复仪表视频流) — à appeler après stopProjection(). */
     public boolean restoreNative() {
         return sendInfo(CLUSTER_TYPE, CMD_RESTORE_NATIVE, "");
-    }
-
-    /** Masque l'overlay ADAS Qt — sans effet visible sur cluster 2D Seal EU. */
-    public boolean hideAdas() {
-        return sendInfo(CLUSTER_TYPE, CMD_ADAS_HIDE, "");
-    }
-
-    /** Restaure l'overlay ADAS Qt — sans effet visible sur cluster 2D Seal EU. */
-    public boolean showAdas() {
-        return sendInfo(CLUSTER_TYPE, CMD_ADAS_SHOW, "");
     }
 
     /**
