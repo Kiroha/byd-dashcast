@@ -81,6 +81,8 @@ public class MainActivity extends AppCompatActivity
             // Sans ça, onSendToDashboard() croirait le cluster disponible et appellerait
             // mClusterService.launchOnDashboard() → NullPointerException.
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
+            mCurrentDashboardApp = null;
+            if (mAdapter != null) mAdapter.setCurrentPackage(null);
             AppLogger.log(TAG, "ClusterService déconnecté");
         }
     };
@@ -156,11 +158,11 @@ public class MainActivity extends AppCompatActivity
         btnRestoreByd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mDashboardLauncher == null || !mDashboardLauncher.isDashboardAvailable()) {
-                    // Cluster pas connecté → activer
+                if (mCurrentDashboardApp == null) {
+                    // Aucune app projetée → activer
                     activateCluster();
                 } else {
-                    // Cluster connecté → restaurer BYD
+                    // App projetée → restaurer BYD
                     restoreBydDashboard();
                 }
             }
@@ -609,7 +611,8 @@ public class MainActivity extends AppCompatActivity
             mAdapter.setCurrentPackage(null);
             panelClusterControl.setVisibility(View.GONE);
             stopClusterMirror();
-            tvDashboardStatus.setText("Dashboard : arrêté");
+            updateDashboardStatus(null);
+            btnRestoreByd.setEnabled(true);
             AppLogger.log(TAG, "BYD restauré via stopProjection() ✓");
             return;
         }
