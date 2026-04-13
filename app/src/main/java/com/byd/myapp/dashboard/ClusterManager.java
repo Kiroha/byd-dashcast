@@ -56,6 +56,9 @@ public class ClusterManager {
     public static final int CMD_PROJECTION_ON  = 16;   // Qt standby + display 1 reste dans IActivityManager
     // CMD=1 (Qt déconnecté complètement / Simple mode) NON EXPOSé : destroy display 1 — ne jamais utiliser
     public static final int CMD_RESTORE_NATIVE = 0;    // restaurer rendu BYD natif
+    // Commandes ADAS (confirmées com.byd.clusterdebug SecondActivity)
+    public static final int CMD_ADAS_SHOW = 12;   // 显示Adas — afficher l'overlay ADAS sur le cluster
+    public static final int CMD_ADAS_HIDE = 13;   // 关闭Adas — masquer l'overlay ADAS sur le cluster
 
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
@@ -153,6 +156,16 @@ public class ClusterManager {
     /** Restaure le rendu BYD natif (fin du mode projection). */
     public boolean restoreNative() {
         return sendInfo(CLUSTER_TYPE, CMD_RESTORE_NATIVE, "");
+    }
+
+    /** Masque l'overlay ADAS Qt sur le cluster (évite qu'il s'agrandisse en mode projection). */
+    public boolean hideAdas() {
+        return sendInfo(CLUSTER_TYPE, CMD_ADAS_HIDE, "");
+    }
+
+    /** Restaure l'overlay ADAS Qt sur le cluster (à appeler quand la projection s'arrête). */
+    public boolean showAdas() {
+        return sendInfo(CLUSTER_TYPE, CMD_ADAS_SHOW, "");
     }
 
     // ── Activation + attente du VirtualDisplay ───────────────────────────────

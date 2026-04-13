@@ -132,15 +132,21 @@ public class DashboardDisplayHelper {
         // sendInfo(0) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
         BYDDashboardActivity.finishIfActive();
 
+        // Restaurer l'overlay ADAS avant de rendre la main à Qt.
+        mClusterManager.showAdas();
+
         // Restaurer le rendu Qt natif via sendInfo(1000, 0).
         mClusterManager.restoreNative();
         // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
         mKnownClusterDisplayId = -1;
     }
 
-    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby). */
+    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby) et masque l'overlay ADAS. */
     public void enterProjectionMode() {
         mClusterManager.enterProjectionMode();
+        // Masquer l'overlay ADAS Qt : il s'agrandissait anormalement lors de l'activation
+        // de la projection. sendInfo(1000, 13) le cache ; showAdas() dans stop() le restaure.
+        mClusterManager.hideAdas();
     }
 
     public int getKnownClusterDisplayId() {
