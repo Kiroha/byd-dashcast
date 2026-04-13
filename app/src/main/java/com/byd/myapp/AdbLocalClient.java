@@ -640,18 +640,18 @@ public class AdbLocalClient {
 
     // ── TEST 10 : Test de restauration du cluster ──────────────────────────────
     /**
-     * TEST 10 — Restauration du cluster BYD (sendInfo(1000,0))
+     * TEST 10 — Séquence complète activation + restauration cluster avec fixes v1.27
      *
-     * Le lancement d'apps sur le cluster fonctionne désormais.
-     * Ce test est focalisé sur la restauration : vérifier que sendInfo(0) + am force-stop
-     * libèrent correctement la surface pour que Qt reprenne le contrôle.
-     *
-     * Séquence :
-     *   1. sendInfo(1000, 16) — met Qt en standby (simule l'état "app active sur cluster")
-     *   2. Attendre 2s
-     *   3. am force-stop com.byd.myapp — libère la surface
-     *   4. sendInfo(1000, 0)  — demande à Qt de reprendre
-     *   5. Vérifier stacks + logcat
+     * Séquence testée (identique au flow bouton "Envoyer app") :
+     *   1. [Avant] am stack list display 1
+     *   2. sendInfo(1000, 53) — ADAS 2D toggle (masquer ADAS pendant transition) [FIX v1.27]
+     *   3. sendInfo(1000, 16) — Qt standby
+     *   4. [Stack display 1 après activation]
+     *   5. sendInfo(1000, 18) — fermer projection (投屏关闭)
+     *   6. sendInfo(1000,  0) — rafraîchir flux Qt
+     *   7. sendInfo(1000, 53) — ADAS 2D toggle (rétablir ADAS) [FIX v1.27]
+     *   8. [Après] am stack list display 1
+     *   9. Logcat AutoContainer
      */
     public static void runDisplayOneLaunch(final Context context, final Callback callback) {
         new Thread(new Runnable() {
@@ -675,8 +675,18 @@ public class AdbLocalClient {
                         "am stack list 2>&1 | grep -iE 'displayId=1|myapp|BYDDashboard' | head -15");
                     sb.append(rPre.getAllOutput().trim().isEmpty() ? "(aucun stack display 1)" : rPre.getAllOutput().trim()).append("\n");
 
-                    // 2. sendInfo(16) — Qt standby via ADB shell
+                    // 2. sendInfo(53) — ADAS 2D toggle AVANT Qt standby [FIX v1.27]
+                    // Cmd 53 = "2D ADAS切換" : masque l'overlay ADAS sur cluster 2D Seal EU
+                    // pendant que la transition vers le mode projection a lieu.
+                    // Si cmd 53 n'a pas d'effet sur cette ROM → résultat nul (parcel vide OK).
                     dadb.shell("logcat -c 2>&1");
+                    sb.append("\n── sendInfo(1000, 53) = toggle ADAS 2D AVANT activation [FIX v1.27] ──\n");
+                    AdbShellResponse rSend53a = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 53 s16 \"\" 2>&1");
+                    sb.append(rSend53a.getAllOutput().trim()).append("\n");
+                    Thread.sleep(500);
+
+                    // 3. sendInfo(16) — Qt standby via ADB shell
                     sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
                     AdbShellResponse rSend16 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
@@ -734,21 +744,28 @@ public class AdbLocalClient {
                         sb.append("(aucun task tiers sur display 1)\n");
                     }
 
-                    // 4. sendInfo(1000, 18) — FERMER la projection (投屏关闭)
-                    // CORRECTION : on utilisait cmd=0 (rafraîchir flux) qui ne ferme PAS le mode projection.
-                    // cmd=18 est la commande correcte (confirmée clusterdebug "18:投屏关闭").
+                    // 5. sendInfo(1000, 18) — FERMER la projection (投屏关闭)
                     sb.append("\n── sendInfo(1000, 18) = fermer projection (投屏关闭) ──\n");
                     AdbShellResponse rSend18 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append(rSend18.getAllOutput().trim()).append("\n");
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
 
-                    // 4b. sendInfo(1000, 0) — rafraîchir flux vidéo Qt (主机恢复仪表视频流)
+                    // 5b. sendInfo(1000, 0) — rafraîchir flux vidéo Qt
                     sb.append("\n── sendInfo(1000, 0) = rafraîchir flux Qt ──\n");
                     AdbShellResponse rSend0 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append(rSend0.getAllOutput().trim()).append("\n");
-                    Thread.sleep(2000);
+                    Thread.sleep(500);
+
+                    // 5c. sendInfo(53) — ADAS 2D toggle APRÈS restauration [FIX v1.27]
+                    // Rétablit l'overlay ADAS (toggle retour à l'état visible initial).
+                    // Attendu : parcel(00000000 00000000) si accepté, erreur si cmd ignorée.
+                    sb.append("\n── sendInfo(1000, 53) = toggle ADAS 2D APRÈS restauration [FIX v1.27] ──\n");
+                    AdbShellResponse rSend53b = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 53 s16 \"\" 2>&1");
+                    sb.append(rSend53b.getAllOutput().trim()).append("\n");
+                    Thread.sleep(500);
 
                     // 5. Stacks après
                     sb.append("\n── [Après] am stack list (display 1) ──\n");
