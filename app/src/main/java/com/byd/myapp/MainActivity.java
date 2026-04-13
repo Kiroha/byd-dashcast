@@ -12,8 +12,6 @@ import com.byd.myapp.AppLogger;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -100,23 +98,6 @@ public class MainActivity extends AppCompatActivity
     private TextView     tvControlAppName;
     private ImageView    clusterMirror;
 
-    private static final int REQ_COMMON_PERMS = 43;
-    private static final String[] COMMON_PERMS = {
-        "android.permission.BYDAUTO_SPEED_COMMON",
-        "android.permission.BYDAUTO_ENERGY_COMMON",
-        "android.permission.BYDAUTO_GEARBOX_COMMON",
-        "android.permission.BYDAUTO_BODYWORK_COMMON",
-        "android.permission.BYDAUTO_AC_COMMON",
-        "android.permission.BYDAUTO_DOOR_LOCK_COMMON",
-        "android.permission.BYDAUTO_ENGINE_COMMON",
-        "android.permission.BYDAUTO_INSTRUMENT_COMMON",
-        "android.permission.BYDAUTO_LIGHT_COMMON",
-        "android.permission.BYDAUTO_TYRE_COMMON",
-        "android.permission.BYDAUTO_RADAR_COMMON"
-        // SAFETYBELT_COMMON : Unknown permission sur ROM Seal EU — retirée du runtime request
-        // (provoque checkSelfPermission() toujours DENIED → dialog repeated chaque onCreate)
-    };
-
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -129,19 +110,6 @@ public class MainActivity extends AppCompatActivity
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
         // Démarrer le bouton flottant dès que l'app est lancée
         startService(new Intent(this, FloatingLogButton.class));
-
-        // Demander les permissions COMMON au démarrage (obligatoire sur ROM BYD)
-        // afin qu'elles soient déjà accordées quand BYDDashboardActivity démarre.
-        boolean allGranted = true;
-        for (String perm : COMMON_PERMS) {
-            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-                allGranted = false;
-                break;
-            }
-        }
-        if (!allGranted) {
-            ActivityCompat.requestPermissions(this, COMMON_PERMS, REQ_COMMON_PERMS);
-        }
 
         tvDashboardStatus  = (TextView)    findViewById(R.id.tv_dashboard_status);
         btnRestoreByd      = (Button)      findViewById(R.id.btn_restore_byd);

@@ -1,22 +1,17 @@
 package com.byd.myapp.dashboard;
 
 import android.graphics.Point;
-import android.hardware.bydauto.energy.BYDAutoEnergyDevice;
-import android.hardware.bydauto.gearbox.BYDAutoGearboxDevice;
-import android.hardware.bydauto.speed.AbsBYDAutoSpeedListener;
-import android.hardware.bydauto.speed.BYDAutoSpeedDevice;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.Display;
-import android.widget.TextView;
 
 import com.byd.myapp.R;
 
 /**
- * BYDDashboardActivity — s'exécute sur l'écran dashboard (instrument cluster).
+ * BYDDashboardActivity — surface de projection sur le cluster (display 1).
  *
- * Lancée via setLaunchDisplayId() sur le display secondaire. Elle s'y affiche
- * en plein écran et affiche les données véhicule en temps réel.
+ * Lancée via setLaunchDisplayId() sur le display secondaire. Elle occupe la totalité
+ * de la surface du cluster et sert de fond neutre quand aucune app tierce n'est projetée.
  *
  * "Restaurer BYD" depuis MainActivity = relancer cette Activity sur le même display
  * avec FLAG_ACTIVITY_SINGLE_TOP → elle revient au premier plan, repoussant l'app tierce.
@@ -39,15 +34,6 @@ public class BYDDashboardActivity extends AppCompatActivity {
             sInstance = null;
         }
     }
-
-    private BYDAutoSpeedDevice   mSpeedDevice;
-    private BYDAutoEnergyDevice mEnergyDevice;
-    private BYDAutoGearboxDevice mGearboxDevice;
-
-    private TextView tvSpeed;
-    private TextView tvBattery;
-    private TextView tvRange;
-    private TextView tvGear;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,106 +65,7 @@ public class BYDDashboardActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_dashboard);
-
-        tvSpeed   = (TextView) findViewById(R.id.dash_speed);
-        tvBattery = (TextView) findViewById(R.id.dash_battery);
-        tvRange   = (TextView) findViewById(R.id.dash_range);
-        tvGear    = (TextView) findViewById(R.id.dash_gear);
-
-        initDevices();
     }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // (re)connecter les listeners quand l'activity revient au premier plan
-        if (mSpeedDevice != null) {
-            mSpeedDevice.registerListener(mSpeedListener);
-        }
-        refreshAll();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        // Déconnecter les listeners quand on passe en arrière-plan
-        // (une app tierce prend le dessus sur le dashboard)
-        if (mSpeedDevice != null) {
-            mSpeedDevice.unregisterListener(mSpeedListener);
-        }
-    }
-
-    private void initDevices() {
-        // Sur Seal EU ROM, pm grant retourne "OK" silencieusement pour certaines _COMMON
-        // (ex: SPEED, GEARBOX) mais checkSelfPermission retourne NOT_GRANTED (elles n'apparaissent
-        // pas dans dumpsys granted=true). Cause probable : protection level différent sur cette ROM.
-        // Fix : appel getInstance() directement dans try/catch SecurityException.
-        // Si l'APK est signé platform.keystore ET que la ROM accorde implicitement la permission,
-        // getInstance() retourne l'objet. Si vraiment refusé, SecurityException → device reste null.
-        try { mSpeedDevice   = BYDAutoSpeedDevice.getInstance(this);   } catch (Exception ignored) {}
-        try { mEnergyDevice  = BYDAutoEnergyDevice.getInstance(this);  } catch (Exception ignored) {}
-        try { mGearboxDevice = BYDAutoGearboxDevice.getInstance(this); } catch (Exception ignored) {}
-    }
-
-    private void refreshAll() {
-        if (mSpeedDevice != null) {
-            updateSpeed(mSpeedDevice.getCurrentSpeed());
-        }
-        if (mEnergyDevice != null) {
-            updateEnergyMode(mEnergyDevice.getEnergyMode());
-            updatePowerGen(mEnergyDevice.getPowerGenerationValue());
-        }
-        if (mGearboxDevice != null) {
-            updateGear(mGearboxDevice.getGearboxAutoModeType());
-        }
-    }
-
-    private void updateSpeed(double speedKmh) {
-        tvSpeed.setText(String.valueOf((int) speedKmh));
-    }
-
-    private void updateEnergyMode(int mode) {
-        String label;
-        switch (mode) {
-            case BYDAutoEnergyDevice.ENERGY_MODE_EV:       label = "EV";   break;
-            case BYDAutoEnergyDevice.ENERGY_MODE_FORCE_EV: label = "EV+";  break;
-            case BYDAutoEnergyDevice.ENERGY_MODE_HEV:      label = "HEV";  break;
-            case BYDAutoEnergyDevice.ENERGY_MODE_FUEL:     label = "FUEL"; break;
-            case BYDAutoEnergyDevice.ENERGY_MODE_KEEP:     label = "KEEP"; break;
-            default:                                        label = "--";   break;
-        }
-        tvBattery.setText(label);
-    }
-
-    private void updatePowerGen(int kw) {
-        tvRange.setText(kw + " kW");
-    }
-
-    private void updateGear(int gearMode) {
-        String label;
-        switch (gearMode) {
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_P: label = "P"; break;
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_R: label = "R"; break;
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_N: label = "N"; break;
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_D: label = "D"; break;
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_S: label = "S"; break;
-            case BYDAutoGearboxDevice.GEARBOX_AUTO_MODE_M: label = "M"; break;
-            default: label = "-";
-        }
-        tvGear.setText(label);
-    }
-
-    private final AbsBYDAutoSpeedListener mSpeedListener = new AbsBYDAutoSpeedListener() {
-        @Override
-        public void onSpeedChanged(final double speed) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    updateSpeed(speed);
-                }
-            });
-        }
-    };
 
     @Override
     protected void onDestroy() {
