@@ -62,6 +62,12 @@ public class FloatingLogButton extends Service {
     // ── Overlay ───────────────────────────────────────────────────────────────
 
     private void createOverlay() {
+        // Guard : SYSTEM_ALERT_WINDOW doit être accordée avant d'appeler addView().
+        // Sans ce check, addView() lève BadTokenException → crash du processus au lancement.
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW non accordée — overlay ignoré");
+            return;
+        }
         mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         // Badge textuel compact
@@ -134,7 +140,12 @@ public class FloatingLogButton extends Service {
         });
 
         mFloatView = badge;
-        mWindowManager.addView(mFloatView, params);
+        try {
+            mWindowManager.addView(mFloatView, params);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "addView overlay échoué — permission refusée ?", e);
+            mFloatView = null;
+        }
     }
 
     // ── Foreground service (obligatoire API 26+) ──────────────────────────────
