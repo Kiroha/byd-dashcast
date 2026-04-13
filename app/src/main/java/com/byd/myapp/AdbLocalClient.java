@@ -127,7 +127,8 @@ public class AdbLocalClient {
                     "android.permission.BYDAUTO_LIGHT_COMMON",
                     "android.permission.BYDAUTO_TYRE_COMMON",
                     "android.permission.BYDAUTO_RADAR_COMMON",
-                    "android.permission.BYDAUTO_SAFETYBELT_COMMON",
+                    // SAFETYBELT_COMMON retirée : Unknown permission sur ROM Seal EU
+                    // "android.permission.BYDAUTO_SAFETYBELT_COMMON",
                 };
                 String[] getPerms = {
                     "android.permission.BYDAUTO_SPEED_GET",
@@ -142,6 +143,7 @@ public class AdbLocalClient {
                     sb.append(shortName).append(": ").append(
                         out.contains("GRANTED") ? "OK ✓ (dangerous — accordée)" :
                         out.contains("not a changeable") ? "SIGNATURE — non accordable via pm" :
+                        out.contains("Unknown permission") ? "⚠️ Non disponible sur cette ROM" :
                         out).append("\n");
                 }
                 sb.append("── pm grant _GET (signature confirmés — pour référence) ──\n");

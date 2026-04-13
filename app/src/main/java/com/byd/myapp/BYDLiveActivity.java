@@ -62,8 +62,8 @@ public class BYDLiveActivity extends AppCompatActivity {
         "android.permission.BYDAUTO_INSTRUMENT_COMMON",
         "android.permission.BYDAUTO_LIGHT_COMMON",
         "android.permission.BYDAUTO_TYRE_COMMON",
-        "android.permission.BYDAUTO_RADAR_COMMON",
-        "android.permission.BYDAUTO_SAFETYBELT_COMMON"
+        "android.permission.BYDAUTO_RADAR_COMMON"
+        // SAFETYBELT_COMMON : Unknown permission sur ROM Seal EU
     };
 
     @Override
