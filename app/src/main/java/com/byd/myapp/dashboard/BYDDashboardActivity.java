@@ -1,13 +1,11 @@
 package com.byd.myapp.dashboard;
 
-import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.hardware.bydauto.energy.BYDAutoEnergyDevice;
 import android.hardware.bydauto.gearbox.BYDAutoGearboxDevice;
 import android.hardware.bydauto.speed.AbsBYDAutoSpeedListener;
 import android.hardware.bydauto.speed.BYDAutoSpeedDevice;
 import android.os.Bundle;
-import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.Display;
 import android.widget.TextView;
@@ -111,20 +109,15 @@ public class BYDDashboardActivity extends AppCompatActivity {
     }
 
     private void initDevices() {
-        // Chaque permission COMMON est vérifiée indépendamment avant son getInstance().
-        // getInstance() retourne null si la permission n'est pas accordée → affichage "--".
-        if (ContextCompat.checkSelfPermission(this,
-                "android.permission.BYDAUTO_SPEED_COMMON") == PackageManager.PERMISSION_GRANTED) {
-            mSpeedDevice = BYDAutoSpeedDevice.getInstance(this);
-        }
-        if (ContextCompat.checkSelfPermission(this,
-                "android.permission.BYDAUTO_ENERGY_COMMON") == PackageManager.PERMISSION_GRANTED) {
-            mEnergyDevice = BYDAutoEnergyDevice.getInstance(this);
-        }
-        if (ContextCompat.checkSelfPermission(this,
-                "android.permission.BYDAUTO_GEARBOX_COMMON") == PackageManager.PERMISSION_GRANTED) {
-            mGearboxDevice = BYDAutoGearboxDevice.getInstance(this);
-        }
+        // Sur Seal EU ROM, pm grant retourne "OK" silencieusement pour certaines _COMMON
+        // (ex: SPEED, GEARBOX) mais checkSelfPermission retourne NOT_GRANTED (elles n'apparaissent
+        // pas dans dumpsys granted=true). Cause probable : protection level différent sur cette ROM.
+        // Fix : appel getInstance() directement dans try/catch SecurityException.
+        // Si l'APK est signé platform.keystore ET que la ROM accorde implicitement la permission,
+        // getInstance() retourne l'objet. Si vraiment refusé, SecurityException → device reste null.
+        try { mSpeedDevice   = BYDAutoSpeedDevice.getInstance(this);   } catch (Exception ignored) {}
+        try { mEnergyDevice  = BYDAutoEnergyDevice.getInstance(this);  } catch (Exception ignored) {}
+        try { mGearboxDevice = BYDAutoGearboxDevice.getInstance(this); } catch (Exception ignored) {}
     }
 
     private void refreshAll() {
