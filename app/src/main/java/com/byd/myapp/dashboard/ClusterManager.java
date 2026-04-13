@@ -71,6 +71,9 @@ public class ClusterManager {
     // Commandes ADAS : sans effet sur cluster 2D Seal EU (prévues pour cluster 3D)
     public static final int CMD_ADAS_SHOW = 12;  // 显示Adas — sans effet Seal EU 2D
     public static final int CMD_ADAS_HIDE = 13;  // 关闭Adas — sans effet Seal EU 2D
+    // Commande ADAS 2D (Seal EU) — TOGGLE : alterne entre affiché et masqué
+    // À appeler UNE fois avant activation (masque ADAS) et UNE fois après restauration (rétablit ADAS).
+    public static final int CMD_ADAS_2D_TOGGLE = 53; // 2D ADAS切換 — cluster 2D Seal EU
 
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
@@ -183,6 +186,18 @@ public class ClusterManager {
     /** Restaure l'overlay ADAS Qt — sans effet visible sur cluster 2D Seal EU. */
     public boolean showAdas() {
         return sendInfo(CLUSTER_TYPE, CMD_ADAS_SHOW, "");
+    }
+
+    /**
+     * Bascule l'affichage ADAS sur cluster 2D (Seal EU) — cmd 53.
+     * Appeler UNE fois avant activation (masque ADAS pendant la transition)
+     * et UNE fois après restauration (rétablit ADAS).
+     * Pré-condition : état initial ADAS = visible (toujours le cas en conduite).
+     */
+    public boolean toggleAdas2D() {
+        boolean ok = sendInfo(CLUSTER_TYPE, CMD_ADAS_2D_TOGGLE, "");
+        AppLogger.i(TAG, "toggleAdas2D (cmd=53) : " + (ok ? "OK" : "ÉCHEC"));
+        return ok;
     }
 
     // ── Activation + attente du VirtualDisplay ───────────────────────────────

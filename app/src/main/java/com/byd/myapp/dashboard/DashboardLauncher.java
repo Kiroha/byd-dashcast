@@ -112,8 +112,12 @@ public class DashboardLauncher {
      * Cette méthode essaie le path direct (Context.startActivity) PUIS le path IActivityManager.
      */
     private boolean launchWithDisplayId(Intent intent, int displayId) {
+        // Supprimer l'animation FREEFORM "grow-from-zero" qui cause l'étirement visuel du cluster.
+        // makeCustomAnimation(ctx, 0, 0) = aucune animation enter/exit.
+        // FLAG_ACTIVITY_NO_ANIMATION = supprime également l'animation système de transition.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         try {
-            ActivityOptions options = ActivityOptions.makeBasic();
+            ActivityOptions options = ActivityOptions.makeCustomAnimation(mContext, 0, 0);
 
             Method setLaunchDisplayId = ActivityOptions.class
                     .getDeclaredMethod("setLaunchDisplayId", int.class);

@@ -56,6 +56,16 @@ public class BYDDashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         sInstance = new java.lang.ref.WeakReference<>(this);
 
+        // Supprimer les animations et décorations FREEFORM AVANT setContentView().
+        // FLAG_LAYOUT_IN_SCREEN : empêche le WM de repositionner la fenêtre hors des bornes display.
+        // FLAG_LAYOUT_NO_LIMITS : désactive les contraintes de taille imposées par le WM en FREEFORM.
+        // FLAG_FULLSCREEN       : supprime la barre de caption FREEFORM (déco resize-handle).
+        // Ces 3 flags combinés stoppent l'animation "grow-from-zero" du mode FREEFORM.
+        getWindow().addFlags(
+            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            | android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         // Figer la taille de la fenêtre AVANT setContentView().
         // En mode FREEFORM (windowingMode=5), le layout match_parent + l'absence de bornes
         // fixes causent un agrandissement progressif du rectangle visible sur le cluster.
