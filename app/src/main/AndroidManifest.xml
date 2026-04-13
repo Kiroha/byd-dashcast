@@ -122,11 +122,6 @@
             android:name=".SysInfoActivity"
             android:label="Rapport système"/>
 
-        <!-- Tableau de bord développeur : données BYD live + journal -->
-        <activity
-            android:name=".BYDLiveActivity"
-            android:label="BYD Live"/>
-
         <!-- Visualiseur de journal en temps réel -->
         <activity
             android:name=".LogActivity"

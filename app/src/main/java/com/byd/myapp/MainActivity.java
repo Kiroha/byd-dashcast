@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity
         startService(new Intent(this, FloatingLogButton.class));
 
         // Demander les permissions COMMON au démarrage (obligatoire sur ROM BYD)
-        // afin qu'elles soient déjà accordées quand BYDDashboardActivity / BYDLiveActivity démarrent.
+        // afin qu'elles soient déjà accordées quand BYDDashboardActivity démarre.
         boolean allGranted = true;
         for (String perm : COMMON_PERMS) {
             if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
@@ -578,7 +578,6 @@ public class MainActivity extends AppCompatActivity
         popup.getMenu().add(0, 1, 0, "🖥 Activer cluster");
         popup.getMenu().add(0, 2, 0, "⚙ Diagnostic");
         popup.getMenu().add(0, 3, 0, "📋 Rapport système");
-        popup.getMenu().add(0, 4, 0, "📊 Données live BYD");
         popup.getMenu().add(0, 5, 0, "🌐 Langue");
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -587,7 +586,6 @@ public class MainActivity extends AppCompatActivity
                     case 1: activateCluster(); return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
-                    case 4: startActivity(new Intent(MainActivity.this, BYDLiveActivity.class)); return true;
                     case 5:
                         android.content.SharedPreferences p = getSharedPreferences(
                                 LocaleHelper.PREF_FILE, MODE_PRIVATE);
