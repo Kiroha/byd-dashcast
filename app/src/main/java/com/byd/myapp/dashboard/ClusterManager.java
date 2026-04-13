@@ -30,14 +30,25 @@ import java.lang.reflect.Method;
  *   #3 sendInfo2(int type, byte[] data)
  *   #4 registerCallback(IAutoContainerCallback cb)
  *
- * COMMANDES CLUSTER (type=1000) :
- *   infoInt=16  → mode projection plein écran : Qt entre en standby et laisse display 1 enregistré
- *                  dans IActivityManager. Header/footer Qt restent visibles SAUF si
- *                  setLaunchWindowingMode(FULLSCREEN=1) est utilisé → app couvre tout.
+ * COMMANDES CLUSTER (type=1000) — CONFIRMÉES EN VOITURE (13/04/2026, BYD Seal EU) :
+ *
+ *   infoInt=16  → 全屏投屏开启 = ACTIVER projection plein écran :
+ *                  Qt entre en standby, display 1 reste enregistré dans IActivityManager.
  *                  C'EST LA BONNE COMMANDE pour lancer une app sur display 1.
- *   infoInt= 1  → déconnecte Qt ENTIÈREMENT → MCU prend le contrôle (Simple mode)
+ *                  Séquence : sendInfo(16) → attente 2s → startActivity sur display 1.
+ *
+ *   infoInt=18  → 投屏关闭 = FERMER la projection :
+ *                  C'EST LA BONNE COMMANDE de restauration (cmd=0 seul ne suffit PAS).
+ *                  Séquence : finishIfActive() → sendInfo(18) → sendInfo(0).
+ *
+ *   infoInt= 0  → 主机恢复付表视频流 = rafraîchir le flux vidéo Qt.
+ *                  À appeler APRÈS sendInfo(18) pour compléter la restauration.
+ *
+ *   infoInt= 1  → déconnecte Qt ENTiÈREMENT → MCU prend le contrôle (Simple mode)
  *                  display 1 DISPARAIT d'IActivityManager → NE PAS UTILISER pour lancer des apps
- *   infoInt= 0  → restaurer rendu BYD natif
+ *
+ *   infoInt=12  → 显示Adas — SANS EFFET sur cluster 2D Seal EU (prévu pour cluster 3D)
+ *   infoInt=13  → 关闭Adas — SANS EFFET sur cluster 2D Seal EU (prévu pour cluster 3D)
  */
 public class ClusterManager {
 
@@ -53,15 +64,13 @@ public class ClusterManager {
 
     // Paramètres sendInfo(type, infoInt, infoStr)
     public static final int CLUSTER_TYPE      = 1000;
-    public static final int CMD_PROJECTION_ON  = 16;   // Qt standby + display 1 reste dans IActivityManager
-    // CMD=1 (Qt déconnecté complètement / Simple mode) NON EXPOSé : destroy display 1 — ne jamais utiliser
-    public static final int CMD_STOP_PROJECTION = 18;  // 投屏关闭 — FERMER la projection (correct pour restauration)
-    public static final int CMD_RESTORE_NATIVE = 0;    // 主机恢复仪表视频流 — rafraîchir le flux Qt (après cmd 18)
-    // Commandes ADAS (confirmées com.byd.clusterdebug SecondActivity)
-    // ATTENTION : ces commandes n'ont pas d'effet visible sur le cluster 2D Seal EU.
-    // Elles semblent cibler un modèle de cluster 3D différent.
-    public static final int CMD_ADAS_SHOW = 12;   // 显示Adas — sans effet sur Seal EU 2D
-    public static final int CMD_ADAS_HIDE = 13;   // 关闭Adas — sans effet sur Seal EU 2D
+    public static final int CMD_PROJECTION_ON   = 16;  // 全屏投屏开启 — ACTIVER projection (CONFIRMÉ 13/04/2026)
+    public static final int CMD_STOP_PROJECTION  = 18;  // 投屏关闭 — FERMER la projection (CONFIRMÉ 13/04/2026)
+    public static final int CMD_RESTORE_NATIVE   = 0;   // 主机恢复付表视频流 — rafraîchir flux Qt (après cmd 18)
+    // CMD=1 : déconnecte Qt complètement — NE JAMAIS UTILISER (détruit display 1)
+    // Commandes ADAS : sans effet sur cluster 2D Seal EU (prévues pour cluster 3D)
+    public static final int CMD_ADAS_SHOW = 12;  // 显示Adas — sans effet Seal EU 2D
+    public static final int CMD_ADAS_HIDE = 13;  // 关闭Adas — sans effet Seal EU 2D
 
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
