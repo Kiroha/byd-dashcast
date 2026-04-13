@@ -138,16 +138,18 @@ public class DashboardDisplayHelper {
         mClusterManager.stopProjection();
         // Rafraîchir le flux Qt après fermeture de la projection.
         mClusterManager.restoreNative();
+        // Rétablir l'overlay ADAS 2D (cmd 53 = toggle retour à l'état visible).
+        mClusterManager.toggleAdas2D();
         // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
         mKnownClusterDisplayId = -1;
     }
 
     /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby). */
     public void enterProjectionMode() {
+        // Masquer ADAS 2D (cmd 53) AVANT Qt standby pour éviter l'étirement visuel de l'overlay.
+        // Pré-condition : ADAS est visible (toujours vrai en conduite) — cmd 53 = toggle.
+        mClusterManager.toggleAdas2D();
         mClusterManager.enterProjectionMode();
-        // NOTE : hideAdas() (cmd 13) n'a pas d'effet sur le cluster 2D Seal EU.
-        // L'agrandissement de la fenêtre ADAS est causé par le mode FREEFORM du WM Android,
-        // non par Qt. Le fix est dans l'utilisation de cmd=18 pour la restauration.
     }
 
     public int getKnownClusterDisplayId() {
