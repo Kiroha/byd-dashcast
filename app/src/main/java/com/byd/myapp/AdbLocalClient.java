@@ -683,27 +683,13 @@ public class AdbLocalClient {
                     sb.append(rSend16.getAllOutput().trim()).append("\n");
                     Thread.sleep(2000);
 
-                    // 2b. sendInfo(13) — masquer overlay ADAS (cmd confirmée clusterdebug "13:关闭Adas")
-                    sb.append("\n── sendInfo(1000, 13) = masquer ADAS ──\n");
-                    AdbShellResponse rHideAdas = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 13 s16 \"\" 2>&1");
-                    String hideResult = rHideAdas.getAllOutput().trim();
-                    sb.append(hideResult).append("\n");
-                    boolean adasHideOk = hideResult.contains("00000000");
-                    sb.append(adasHideOk
-                        ? "✅ ADAS CACHÉ — vérifier sur le cluster que la fenêtre ADAS a disparu\n"
-                        : "⚠️  Résultat inattendu — ADAS peut-être non masqué\n");
-                    Thread.sleep(3000); // Laisser le temps d'observer le cluster
-
-                    // 3. Supprimer TOUS les tasks sur display 1 (pas seulement notre app).
-                    // Qt ne peut recapturer la surface que si AUCUNE Activity Android
-                    // ne la détient encore — y compris les apps tierces (Navigation, etc.)
-                    // qui ont été lancées lors d'une session précédente ou auto-relancées.
-                    sb.append("\n── Tasks sur display 1 (toutes apps) ──\n");
+                    // 3. Supprimer les tasks TIERCES sur display 1 (PAS notre propre app).
+                    // Bug précédent : la fenêtre ±8 lignes autour de "displayId=1" capturait
+                    // notre propre tâche (com.byd.myapp) présente dans le stack list complet.
+                    // Fix : exclure explicitement "com.byd.myapp" + afficher le stack brut pour debug.
+                    sb.append("\n── am stack list (display 1) — brut ──\n");
                     AdbShellResponse rStack = dadb.shell("am stack list 2>&1");
                     String stkOutput = rStack.getAllOutput();
-                    // Fenêtre ±8 lignes autour de chaque "displayId=1" :
-                    // sur API 29 le taskId peut apparaître AVANT ou APRÈS la ligne displayId.
                     java.util.Set<String> tasksOnD1 = new java.util.LinkedHashSet<>();
                     String[] stkLines = stkOutput.split("\\r?\\n");
                     for (int si = 0; si < stkLines.length; si++) {
@@ -711,7 +697,8 @@ public class AdbLocalClient {
                         int lo = Math.max(0, si - 8), hi = Math.min(stkLines.length - 1, si + 8);
                         for (int sj = lo; sj <= hi; sj++) {
                             String lj = stkLines[sj];
-                            // Chercher "taskId=N", "Task id #N", "Task id N", "task #N"
+                            // Exclure notre propre app — elle est sur display 0
+                            if (lj.contains("com.byd.myapp")) continue;
                             String[] triggers = {"taskId=", "Task id #", "Task id#", "task #", "taskid="};
                             for (String tr : triggers) {
                                 int idx = lj.indexOf(tr);
@@ -726,34 +713,42 @@ public class AdbLocalClient {
                             }
                         }
                     }
+                    // Afficher le stack brut (filtré display 1) pour diagnostic
+                    boolean d1Found = false;
+                    for (String l : stkLines) {
+                        if (l.contains("displayId=1") || (d1Found && (l.contains("taskId=") || l.contains("bounds=")))) {
+                            sb.append(l).append("\n");
+                            d1Found = l.contains("displayId=1");
+                        }
+                    }
+                    if (sb.toString().endsWith("── am stack list (display 1) — brut ──\n")) {
+                        sb.append("(aucun stack displayId=1 trouvé)\n");
+                    }
                     if (!tasksOnD1.isEmpty()) {
+                        sb.append("→ Tasks à retirer : " + tasksOnD1 + "\n");
                         for (String tid : tasksOnD1) {
-                            sb.append("Task " + tid + " → am task remove\n");
                             dadb.shell("am task remove " + tid + " 2>&1");
                         }
                         Thread.sleep(1000);
                     } else {
-                        sb.append("(aucun task sur display 1)\n");
+                        sb.append("(aucun task tiers sur display 1)\n");
                     }
 
-                    // 4. sendInfo(0) — Qt reprend le contrôle via ADB shell
-                    sb.append("\n── sendInfo(1000, 0) = restauration Qt ──\n");
+                    // 4. sendInfo(1000, 18) — FERMER la projection (投屏关闭)
+                    // CORRECTION : on utilisait cmd=0 (rafraîchir flux) qui ne ferme PAS le mode projection.
+                    // cmd=18 est la commande correcte (confirmée clusterdebug "18:投屏关闭").
+                    sb.append("\n── sendInfo(1000, 18) = fermer projection (投屏关闭) ──\n");
+                    AdbShellResponse rSend18 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                    sb.append(rSend18.getAllOutput().trim()).append("\n");
+                    Thread.sleep(2000);
+
+                    // 4b. sendInfo(1000, 0) — rafraîchir flux vidéo Qt (主机恢复仪表视频流)
+                    sb.append("\n── sendInfo(1000, 0) = rafraîchir flux Qt ──\n");
                     AdbShellResponse rSend0 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append(rSend0.getAllOutput().trim()).append("\n");
                     Thread.sleep(2000);
-
-                    // 4b. sendInfo(12) — restaurer overlay ADAS (cmd "12:显示Adas")
-                    sb.append("\n── sendInfo(1000, 12) = restaurer ADAS ──\n");
-                    AdbShellResponse rShowAdas = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 12 s16 \"\" 2>&1");
-                    String showResult = rShowAdas.getAllOutput().trim();
-                    sb.append(showResult).append("\n");
-                    boolean adasShowOk = showResult.contains("00000000");
-                    sb.append(adasShowOk
-                        ? "✅ ADAS RESTAURÉ — vérifier sur le cluster que la fenêtre ADAS est revenue\n"
-                        : "⚠️  Résultat inattendu — ADAS peut-être non restauré\n");
-                    Thread.sleep(1000);
 
                     // 5. Stacks après
                     sb.append("\n── [Après] am stack list (display 1) ──\n");

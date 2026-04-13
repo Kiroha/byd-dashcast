@@ -126,27 +126,28 @@ public class DashboardDisplayHelper {
         // Ce service système est démarré au BOOT et gère le VirtualDisplay cluster.
         // L'arrêter détruirait le VirtualDisplay PRESENTATION pour TOUTE la session Android.
 
-        // Terminer BYDDashboardActivity AVANT sendInfo(0) :
+        // Terminer BYDDashboardActivity AVANT sendInfo(18) :
         // Qt ne peut recapturer la surface du VirtualDisplay que si aucune Activity Android
         // ne la détient encore. finish() notifie le WindowManager de manière asynchrone ;
-        // sendInfo(0) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
+        // sendInfo(18) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
         BYDDashboardActivity.finishIfActive();
 
-        // Restaurer l'overlay ADAS avant de rendre la main à Qt.
-        mClusterManager.showAdas();
-
-        // Restaurer le rendu Qt natif via sendInfo(1000, 0).
+        // Fermer le mode projection via sendInfo(1000, 18) = 投屏关闭.
+        // CORRECTION : on utilisait cmd=0 (rafraîchir flux) au lieu de cmd=18 (fermer projection)
+        // → cmd=18 enumère correctement le mode projection et permet à Qt de reprendre le display.
+        mClusterManager.stopProjection();
+        // Rafraîchir le flux Qt après fermeture de la projection.
         mClusterManager.restoreNative();
         // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
         mKnownClusterDisplayId = -1;
     }
 
-    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby) et masque l'overlay ADAS. */
+    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby). */
     public void enterProjectionMode() {
         mClusterManager.enterProjectionMode();
-        // Masquer l'overlay ADAS Qt : il s'agrandissait anormalement lors de l'activation
-        // de la projection. sendInfo(1000, 13) le cache ; showAdas() dans stop() le restaure.
-        mClusterManager.hideAdas();
+        // NOTE : hideAdas() (cmd 13) n'a pas d'effet sur le cluster 2D Seal EU.
+        // L'agrandissement de la fenêtre ADAS est causé par le mode FREEFORM du WM Android,
+        // non par Qt. Le fix est dans l'utilisation de cmd=18 pour la restauration.
     }
 
     public int getKnownClusterDisplayId() {

@@ -55,10 +55,13 @@ public class ClusterManager {
     public static final int CLUSTER_TYPE      = 1000;
     public static final int CMD_PROJECTION_ON  = 16;   // Qt standby + display 1 reste dans IActivityManager
     // CMD=1 (Qt déconnecté complètement / Simple mode) NON EXPOSé : destroy display 1 — ne jamais utiliser
-    public static final int CMD_RESTORE_NATIVE = 0;    // restaurer rendu BYD natif
+    public static final int CMD_STOP_PROJECTION = 18;  // 投屏关闭 — FERMER la projection (correct pour restauration)
+    public static final int CMD_RESTORE_NATIVE = 0;    // 主机恢复仪表视频流 — rafraîchir le flux Qt (après cmd 18)
     // Commandes ADAS (confirmées com.byd.clusterdebug SecondActivity)
-    public static final int CMD_ADAS_SHOW = 12;   // 显示Adas — afficher l'overlay ADAS sur le cluster
-    public static final int CMD_ADAS_HIDE = 13;   // 关闭Adas — masquer l'overlay ADAS sur le cluster
+    // ATTENTION : ces commandes n'ont pas d'effet visible sur le cluster 2D Seal EU.
+    // Elles semblent cibler un modèle de cluster 3D différent.
+    public static final int CMD_ADAS_SHOW = 12;   // 显示Adas — sans effet sur Seal EU 2D
+    public static final int CMD_ADAS_HIDE = 13;   // 关闭Adas — sans effet sur Seal EU 2D
 
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
@@ -153,17 +156,22 @@ public class ClusterManager {
         return sendInfo(CLUSTER_TYPE, CMD_PROJECTION_ON, "");
     }
 
-    /** Restaure le rendu BYD natif (fin du mode projection). */
+    /** Ferme proprement le mode projection (投屏关闭) — Qt reprend le contrôle du display. */
+    public boolean stopProjection() {
+        return sendInfo(CLUSTER_TYPE, CMD_STOP_PROJECTION, "");
+    }
+
+    /** Rafraîchit le flux vidéo Qt (主机恢复仪表视频流) — à appeler après stopProjection(). */
     public boolean restoreNative() {
         return sendInfo(CLUSTER_TYPE, CMD_RESTORE_NATIVE, "");
     }
 
-    /** Masque l'overlay ADAS Qt sur le cluster (évite qu'il s'agrandisse en mode projection). */
+    /** Masque l'overlay ADAS Qt — sans effet visible sur cluster 2D Seal EU. */
     public boolean hideAdas() {
         return sendInfo(CLUSTER_TYPE, CMD_ADAS_HIDE, "");
     }
 
-    /** Restaure l'overlay ADAS Qt sur le cluster (à appeler quand la projection s'arrête). */
+    /** Restaure l'overlay ADAS Qt — sans effet visible sur cluster 2D Seal EU. */
     public boolean showAdas() {
         return sendInfo(CLUSTER_TYPE, CMD_ADAS_SHOW, "");
     }
