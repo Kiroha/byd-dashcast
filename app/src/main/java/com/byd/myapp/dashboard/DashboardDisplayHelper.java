@@ -4,6 +4,7 @@ import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.util.Log;
 import android.view.Display;
+import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
 
 /**
@@ -132,23 +133,36 @@ public class DashboardDisplayHelper {
         // sendInfo(18) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
         BYDDashboardActivity.finishIfActive();
 
-        // Fermer le mode projection via sendInfo(1000, 18) = 投屏关闭.
-        // CORRECTION : on utilisait cmd=0 (rafraîchir flux) au lieu de cmd=18 (fermer projection)
-        // → cmd=18 enumère correctement le mode projection et permet à Qt de reprendre le display.
-        mClusterManager.stopProjection();
-        // Rafraîchir le flux Qt après fermeture de la projection.
-        mClusterManager.restoreNative();
-        // NOTE : toggleAdas2D() (cmd=53) retiré — non testé en voiture, perturbe la
-        // machine d'état Qt quand l'ADAS n'est pas dans l'état attendu (toggle sans état).
+        // Fermer le mode projection via sendInfo(1000, 18) = 投屏关闭 + sendInfo(1000, 0) = rafraîchir Qt.
+        // Envoyé via ADB relay (uid=2000) car com.byd.myapp est bloqué par SecurityException Binder.
+        // Chaîné : cmd=18 d'abord, puis cmd=0 dans le callback pour garantir l'ordre d'éxécution.
+        AdbLocalClient.sendInfo(mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "stopProjection ADB(cmd=18): " + out);
+                    AdbLocalClient.sendInfo(mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_RESTORE_NATIVE, "",
+                        new AdbLocalClient.Callback() {
+                            @Override public void onSuccess(String o) { AppLogger.i(TAG, "restoreNative ADB(cmd=0): " + o); }
+                            @Override public void onError(String e) { AppLogger.e(TAG, "restoreNative ADB ERREUR: " + e); }
+                        });
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "stopProjection ADB ERREUR: " + err);
+                }
+            });
         // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
         mKnownClusterDisplayId = -1;
     }
 
-    /** Re-passe le cluster en mode projection (sendInfo 1000/16 — Qt standby). */
+    /** Re-passe le cluster en mode projection (sendInfo 1000/16 via ADB relay). */
     public void enterProjectionMode() {
         // NOTE : toggleAdas2D() (cmd=53) retiré — non testé en voiture, perturbe la
         // transition Qt→Android quand l'état ADAS initial est incertain (toggle sans état).
-        mClusterManager.enterProjectionMode();
+        AdbLocalClient.sendInfo(mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_PROJECTION_ON, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) { AppLogger.i(TAG, "enterProjectionMode ADB(16): " + out); }
+                @Override public void onError(String err) { AppLogger.e(TAG, "enterProjectionMode ADB ERREUR: " + err); }
+            });
     }
 
     public int getKnownClusterDisplayId() {

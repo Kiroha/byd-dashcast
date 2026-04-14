@@ -917,6 +917,46 @@ public class AdbLocalClient {
         }, "adb-whitelist-thread").start();
     }
 
+    // ──────────────────────────────────────────────────────────────────────────────────────────────
+    // sendInfo ADB relay — contourne la SecurityException (uid=10100 non listé dans whitelist JSON)
+    // dm-verity empêche de patcher /system/etc/container_comm_cfg.json sur ce hardware.
+    // uid=2000 (shell ADB) passe le checkSignatures() dans AutoContainerService.
+    // ──────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Envoie sendInfo(type, infoInt, infoStr) au service AutoContainer via ADB shell relay.
+     *
+     * Équivalent de : service call AutoContainer 2 i32 <type> i32 <infoInt> s16 "<infoStr>"
+     * uid=2000 (shell) passe le checkSignatures → pas de SecurityException.
+     *
+     * La callback est appelée depuis un thread background — utiliser runOnUiThread si nécessaire.
+     */
+    public static void sendInfo(final Context context,
+                                final int type, final int infoInt, final String infoStr,
+                                final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Dadb dadb = connect(context);
+                    String safeStr = (infoStr != null ? infoStr : "").replace("\"", "\\\"");
+                    String cmd = "service call AutoContainer 2 i32 " + type
+                               + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
+                    AppLogger.log(TAG, "sendInfo ADB: " + cmd);
+                    AdbShellResponse r = dadb.shell(cmd);
+                    dadb.close();
+                    String out = r.getAllOutput().trim();
+                    AppLogger.log(TAG, "sendInfo ADB(" + type + "," + infoInt + ") → " + out);
+                    if (callback != null) callback.onSuccess(out);
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "sendInfo ADB ERREUR", e);
+                    if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-sendinfo-thread").start();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────────────────────────
+
     static final String SDCARD_BACKUP =
         "/sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json";
 
