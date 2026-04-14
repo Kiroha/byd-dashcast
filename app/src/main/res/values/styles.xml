@@ -6,7 +6,7 @@
         <item name="colorAccent">#00BCD4</item>
     </style>
 
-    <!-- Pour BYDDashboardActivity : plein écran sans barre de titre -->
+
     <style name="AppTheme.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

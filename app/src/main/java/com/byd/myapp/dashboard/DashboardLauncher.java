@@ -77,9 +77,6 @@ public class DashboardLauncher {
      * Restaure l'affichage d'origine BYD sur le dashboard.
      *
      * Envoie un intent HOME sur le display secondaire. Le système Android
-     * rend la main au launcher/cluster par défaut du display, ce qui
-     * remet l'affichage BYD d'origine sans tuer l'app tierce.
-     */
     /**
      * Lance une app sur le display principal (display ID 0).
      * Restore en même temps le cluster BYD via restoreSystemDashboard().

@@ -128,12 +128,6 @@ public class DashboardDisplayHelper {
         // Ce service système est démarré au BOOT et gère le VirtualDisplay cluster.
         // L'arrêter détruirait le VirtualDisplay PRESENTATION pour TOUTE la session Android.
 
-        // Terminer BYDDashboardActivity AVANT sendInfo(18) :
-        // Qt ne peut recapturer la surface du VirtualDisplay que si aucune Activity Android
-        // ne la détient encore. finish() notifie le WindowManager de manière asynchrone ;
-        // sendInfo(18) est envoyé en Binder — Qt réessaiera jusqu'à ce que la surface soit libre.
-        BYDDashboardActivity.finishIfActive();
-
         // Fermer le mode projection via sendInfo(1000, 18) = 投屏关闭 + sendInfo(1000, 0) = rafraîchir Qt.
         // Envoyé via ADB relay (uid=2000) car com.byd.myapp est bloqué par SecurityException Binder.
         // Chaîné : cmd=18 d'abord, puis cmd=0 dans le callback pour garantir l'ordre d'éxécution.
@@ -153,17 +147,6 @@ public class DashboardDisplayHelper {
             });        // Réinitialiser à -1 se fait dans start() — PAS ici.
         // Garder la sentinel -2 jusqu'au prochain start() pour bloquer les callbacks
         // ADB orphelins (thread background peut poster sur mHandler après cancel()).
-    }
-
-    /** Re-passe le cluster en mode projection (sendInfo 1000/16 via ADB relay). */
-    public void enterProjectionMode() {
-        // NOTE : toggleAdas2D() (cmd=53) retiré — non testé en voiture, perturbe la
-        // transition Qt→Android quand l'état ADAS initial est incertain (toggle sans état).
-        AdbLocalClient.sendInfo(mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_PROJECTION_ON, "",
-            new AdbLocalClient.Callback() {
-                @Override public void onSuccess(String out) { AppLogger.i(TAG, "enterProjectionMode ADB(16): " + out); }
-                @Override public void onError(String err) { AppLogger.e(TAG, "enterProjectionMode ADB ERREUR: " + err); }
-            });
     }
 
     public int getKnownClusterDisplayId() {
