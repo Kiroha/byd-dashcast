@@ -222,13 +222,12 @@ public class ClusterManager {
         if (found != null) {
             Log.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
                     + " name=" + found.getName());
-            // NE PAS appeler enterProjectionMode() ici.
-            // La séquence correcte (confirmée TEST 10) est :
-            //   état BYD natif  →  sendInfo(16)  →  2 s d'attente  →  lancement app.
-            // Si sendInfo(16) est envoyé une 2ème fois depuis launchOnDashboard alors
-            // que le cluster est DÉJÀ en mode projection (appel ici + appel launchOnDashboard),
-            // Qt toggle brevité active/standby et le timing 1,5 s devient insuffisant.
-            // launchOnDashboard() se charge d'appeler enterProjectionMode() juste avant le lancement.
+            // sendInfo(16) = Qt standby — identique à la séquence TEST 10.
+            // À appeler ICI (pas dans launchOnDashboard()) pour éviter le double-appel :
+            // activateClusterDisplay → enterProjectionMode() une fois → callback →
+            // launchOnDashboard() lance directement sans renvoyer sendInfo(16).
+            boolean ok = enterProjectionMode();
+            AppLogger.i(TAG, "enterProjectionMode (cmd=16) : " + (ok ? "OK" : "ÉCHEC"));
             callback.onDisplayReady(found, found.getDisplayId());
             return;
         }

@@ -152,8 +152,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * La callback est appelée sur le main thread.
      */
     public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
-        AppLogger.log(TAG, "launchOnDashboard — sendInfo(16) + délai → " + packageName);
-        mDisplayHelper.enterProjectionMode();
+        // sendInfo(16) déjà envoyé par activateClusterDisplay() — ne pas rappeler ici
+        // (risque de toggle Qt si cmd=16 n'est pas idempotent).
+        // Pour le chemin direct (tap app sans passage par activateCluster),
+        // activateClusterDisplay() a été appelé lors du démarrage du service → Qt déjà en standby.
+        AppLogger.log(TAG, "launchOnDashboard — délai 2s → " + packageName);
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override public void run() {
                 boolean ok = mLauncher.launchOnDashboard(packageName);
