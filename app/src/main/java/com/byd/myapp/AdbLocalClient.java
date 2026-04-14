@@ -840,6 +840,90 @@ public class AdbLocalClient {
     }
 
     /**
+     * TEST 11 — Whitelist AutoContainer : pourquoi com.byd.myapp est rejeté par sendInfo()
+     *
+     * xdja_AutoContainerService.checkSendPermissionAndAllowType() refuse tout appel
+     * dont le callingUid != uid système (1000) ou uid shell (2000), OU qui ne figure pas
+     * dans /system/etc/container_comm_cfg.json.
+     *
+     * Ce test collecte via ADB shell (uid=2000, donc autorisé) :
+     *   1. Contenu de container_comm_cfg.json (liste des packages whitelistés)
+     *   2. sharedUserId + userId de com.xdja.clusterdemo (le seul whitelisté)
+     *   3. sharedUserId + userId de com.byd.myapp (notre app — probablement uid 10100)
+     *   4. Vérification si com.byd.myapp peut être ajouté à la whitelist par pm/setprop
+     *   5. aapt dump permissions de com.xdja.clusterdemo (permissions déclarées)
+     */
+    public static void runAutoContainerWhitelistProbe(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    AppLogger.log(TAG, "runAutoContainerWhitelistProbe démarré");
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("════ TEST 11 — AutoContainer Whitelist ════\n\n");
+
+                    // 1. container_comm_cfg.json
+                    sb.append("── 1. /system/etc/container_comm_cfg.json ──\n");
+                    AdbShellResponse rCfg = dadb.shell(
+                        "cat /system/etc/container_comm_cfg.json 2>&1 || " +
+                        "find /system /vendor -name 'container_comm_cfg*' 2>/dev/null | head -3");
+                    sb.append(rCfg.getAllOutput().trim()).append("\n\n");
+
+                    // 2. sharedUserId + uid de com.xdja.clusterdemo
+                    sb.append("── 2. com.xdja.clusterdemo — sharedUserId + uid ──\n");
+                    AdbShellResponse rDemo = dadb.shell(
+                        "dumpsys package com.xdja.clusterdemo 2>&1 | " +
+                        "grep -E 'userId|sharedUser|codePath|versionName|declared permissions' | head -10");
+                    sb.append(rDemo.getAllOutput().trim()).append("\n");
+                    // aapt si dispo
+                    AdbShellResponse rAapt = dadb.shell(
+                        "PM_PATH=$(pm path com.xdja.clusterdemo 2>/dev/null | cut -d: -f2 | tr -d ' ') && " +
+                        "[ -n \"$PM_PATH\" ] && aapt dump permissions \"$PM_PATH\" 2>/dev/null | head -20 " +
+                        "|| echo 'aapt non dispo ou chemin vide'");
+                    sb.append("\n[aapt permissions clusterdemo]\n");
+                    sb.append(rAapt.getAllOutput().trim()).append("\n\n");
+
+                    // 3. com.byd.myapp uid
+                    sb.append("── 3. com.byd.myapp — userId ──\n");
+                    AdbShellResponse rMyApp = dadb.shell(
+                        "dumpsys package com.byd.myapp 2>&1 | " +
+                        "grep -E 'userId|sharedUser|codePath|versionName' | head -6");
+                    sb.append(rMyApp.getAllOutput().trim()).append("\n\n");
+
+                    // 4. com.byd.clusterdebug uid
+                    sb.append("── 4. com.byd.clusterdebug — userId ──\n");
+                    AdbShellResponse rDbg = dadb.shell(
+                        "dumpsys package com.byd.clusterdebug 2>&1 | " +
+                        "grep -E 'userId|sharedUser|codePath|versionName' | head -6");
+                    sb.append(rDbg.getAllOutput().trim()).append("\n\n");
+
+                    // 5. Lister tous les packages partageant android.uid.system ou relevant du cluster
+                    sb.append("── 5. Packages avec sharedUserId système ou xdja ──\n");
+                    AdbShellResponse rShared = dadb.shell(
+                        "dumpsys package packages 2>/dev/null | grep -A2 -B2 'sharedUser' | " +
+                        "grep -E 'sharedUser=|pkg=.*xdja|pkg=.*cluster' | head -20");
+                    sb.append(rShared.getAllOutput().trim()).append("\n\n");
+
+                    // 6. service call AutoContainer depuis shell (uid=2000) — référence positif
+                    sb.append("── 6. service call AutoContainer depuis shell (uid=2000 — doit passer) ──\n");
+                    AdbShellResponse rSvcCall = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                    sb.append(rSvcCall.getAllOutput().trim()).append("\n\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "runAutoContainerWhitelistProbe terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "runAutoContainerWhitelistProbe ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-whitelist-thread").start();
+    }
+
+    /**
      * Force-stop d'une application via ADB.
      * Appelé quand l'utilisateur tape "✕" dans la liste.
      * Utilise "am force-stop" qui tue le processus entier + libère toutes ses surfaces.

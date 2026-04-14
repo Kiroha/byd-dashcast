@@ -69,6 +69,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplay1;
     private Button   btnDisplay1Share;
 
+    // TEST 11
+    private TextView tvWhitelistResult;
+    private Button   btnWhitelist;
+    private Button   btnWhitelistShare;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -108,6 +113,10 @@ public class DiagActivity extends AppCompatActivity {
         tvDisplay1Result      = (TextView) findViewById(R.id.tv_display1_result);
         btnDisplay1           = (Button)   findViewById(R.id.btn_display1);
         btnDisplay1Share      = (Button)   findViewById(R.id.btn_display1_share);
+
+        tvWhitelistResult     = (TextView) findViewById(R.id.tv_whitelist_result);
+        btnWhitelist          = (Button)   findViewById(R.id.btn_whitelist);
+        btnWhitelistShare     = (Button)   findViewById(R.id.btn_whitelist_share);
 
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -253,6 +262,61 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 runDisplayOneLaunch();
+            }
+        });
+
+        // TEST 11 — AutoContainer Whitelist
+        btnWhitelistShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT,
+                        tvWhitelistResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 11"));
+            }
+        });
+
+        btnWhitelist.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runAutoContainerWhitelistProbe();
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 11 : AutoContainer Whitelist — sharedUserId + container_comm_cfg
+    // -------------------------------------------------------------------------
+
+    private void runAutoContainerWhitelistProbe() {
+        btnWhitelist.setEnabled(false);
+        tvWhitelistResult.setText("⏳ Analyse whitelist AutoContainer…");
+        AppLogger.log("DiagWhitelist", "Whitelist probe démarré");
+
+        AdbLocalClient.runAutoContainerWhitelistProbe(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvWhitelistResult.setBackgroundColor(0xFF1A1A2A);
+                        tvWhitelistResult.setText(report);
+                        btnWhitelist.setEnabled(true);
+                        AppLogger.log("DiagWhitelist", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvWhitelistResult.setBackgroundColor(0xFF2A1A1A);
+                        tvWhitelistResult.setText("❌ " + error
+                                + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                        btnWhitelist.setEnabled(true);
+                        AppLogger.log("DiagWhitelist", "ERREUR: " + error);
+                    }
+                });
             }
         });
     }

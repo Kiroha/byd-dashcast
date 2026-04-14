@@ -491,5 +491,46 @@
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 
+        <!-- TEST 11 : AutoContainer Whitelist — sharedUserId + container_comm_cfg -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 11 — AutoContainer Whitelist (sharedUserId + container_comm_cfg)"
+            android:textColor="#FFCC00"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
+            android:id="@+id/btn_whitelist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Lancer TEST 11"
+            android:textSize="13sp"
+            android:backgroundTint="#4A148C"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_whitelist_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat TEST 11)"
+            android:textColor="#CCCCCC"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#111111"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
+            android:id="@+id/btn_whitelist_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:text="Partager le résultat TEST 11"
+            android:layout_marginBottom="16dp"/>
+
     </LinearLayout>
 </ScrollView>
