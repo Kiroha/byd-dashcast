@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
 import android.util.Log;
+import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
 import android.view.Display;
 
@@ -222,20 +223,41 @@ public class ClusterManager {
         if (found != null) {
             Log.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
                     + " name=" + found.getName());
-            // sendInfo(16) = Qt standby — identique à la séquence TEST 10.
-            // À appeler ICI (pas dans launchOnDashboard()) pour éviter le double-appel :
-            // activateClusterDisplay → enterProjectionMode() une fois → callback →
-            // launchOnDashboard() lance directement sans renvoyer sendInfo(16).
-            boolean ok = enterProjectionMode();
-            AppLogger.i(TAG, "enterProjectionMode (cmd=16) : " + (ok ? "OK" : "ÉCHEC"));
-            callback.onDisplayReady(found, found.getDisplayId());
+            // sendInfo(1000, 16) via ADB relay (uid=2000) — le Binder direct échoue avec
+            // SecurityException car com.byd.myapp n'est pas dans container_comm_cfg.json,
+            // et dm-verity empêche de patcher /system sur ce hardware.
+            // La callback est appelée APRES que Qt est en standby (onSuccess) ou en cas
+            // d'erreur ADB (on tente quand même le lancement).
+            final Display displayFound = found;
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "enterProjectionMode ADB(cmd=16) : " + out);
+                        mHandler.post(new Runnable() {
+                            @Override public void run() {
+                                callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                            }
+                        });
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e(TAG, "enterProjectionMode ADB ERREUR: " + err);
+                        mHandler.post(new Runnable() {
+                            @Override public void run() {
+                                callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                            }
+                        });
+                    }
+                });
             return;
         }
 
-        // Display non trouvé immédiatement — sendInfo(16) d'abord, puis écoute
-        AppLogger.w(TAG, "VirtualDisplay non trouvé immédiatement — sendInfo(16) + polling");
-        boolean ok = enterProjectionMode();
-        AppLogger.i(TAG, "enterProjectionMode (cmd=16) : " + (ok ? "OK" : "ÉCHEC"));
+        // Display non trouvé immédiatement — sendInfo(16) via ADB relay d'abord, puis écoute
+        AppLogger.w(TAG, "VirtualDisplay non trouvé immédiatement — sendInfo(16) ADB + polling");
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) { AppLogger.i(TAG, "enterProjectionMode ADB(cmd=16) slow path: " + out); }
+                @Override public void onError(String err) { AppLogger.e(TAG, "enterProjectionMode ADB slow path ERREUR: " + err); }
+            });
 
         // Écouter les ajouts de display + timeout
         final long[] pollCount = {0};
