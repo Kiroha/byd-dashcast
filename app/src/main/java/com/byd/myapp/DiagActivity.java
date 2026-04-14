@@ -51,20 +51,7 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnClusterProbe;
     private Button   btnClusterProbeShare;
 
-    // TEST 7
-    private TextView tvAutoServiceResult;
-    private Button   btnAutoServiceProbe;
-    private Button   btnAutoServiceShare;
-
-    // TEST 8
-    private TextView tvClusterActivResult;
-    private Button   btnClusterActiv;
-    private Button   btnClusterActivShare;
-
-    private TextView tvVdProbeResult;
-    private Button   btnVdProbe;
-    private Button   btnVdProbeShare;
-
+    // TEST 10
     private TextView tvDisplay1Result;
     private Button   btnDisplay1;
     private Button   btnDisplay1Share;
@@ -73,15 +60,6 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvWhitelistResult;
     private Button   btnWhitelist;
     private Button   btnWhitelistShare;
-
-    // TEST 12
-    private TextView tvWhitelistBackupResult;
-    private Button   btnWhitelistBackup;
-    private Button   btnWhitelistBackupShare;
-    private TextView tvWhitelistPatchResult;
-    private Button   btnWhitelistPatch;
-    private Button   btnWhitelistPatchShare;
-    private Button   btnWhitelistRestore;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -107,18 +85,6 @@ public class DiagActivity extends AppCompatActivity {
         btnClusterProbe       = (Button)   findViewById(R.id.btn_cluster_probe);
         btnClusterProbeShare  = (Button)   findViewById(R.id.btn_cluster_probe_share);
 
-        tvAutoServiceResult   = (TextView) findViewById(R.id.tv_autoservice_result);
-        btnAutoServiceProbe   = (Button)   findViewById(R.id.btn_autoservice_probe);
-        btnAutoServiceShare   = (Button)   findViewById(R.id.btn_autoservice_share);
-
-        tvClusterActivResult  = (TextView) findViewById(R.id.tv_cluster_activ_result);
-        btnClusterActiv       = (Button)   findViewById(R.id.btn_cluster_activ);
-        btnClusterActivShare  = (Button)   findViewById(R.id.btn_cluster_activ_share);
-
-        tvVdProbeResult       = (TextView) findViewById(R.id.tv_vd_probe_result);
-        btnVdProbe            = (Button)   findViewById(R.id.btn_vd_probe);
-        btnVdProbeShare       = (Button)   findViewById(R.id.btn_vd_probe_share);
-
         tvDisplay1Result      = (TextView) findViewById(R.id.tv_display1_result);
         btnDisplay1           = (Button)   findViewById(R.id.btn_display1);
         btnDisplay1Share      = (Button)   findViewById(R.id.btn_display1_share);
@@ -126,15 +92,6 @@ public class DiagActivity extends AppCompatActivity {
         tvWhitelistResult      = (TextView) findViewById(R.id.tv_whitelist_result);
         btnWhitelist           = (Button)   findViewById(R.id.btn_whitelist);
         btnWhitelistShare      = (Button)   findViewById(R.id.btn_whitelist_share);
-
-        tvWhitelistBackupResult = (TextView) findViewById(R.id.tv_whitelist_backup_result);
-        btnWhitelistBackup      = (Button)   findViewById(R.id.btn_whitelist_backup);
-        btnWhitelistBackupShare = (Button)   findViewById(R.id.btn_whitelist_backup_share);
-
-        tvWhitelistPatchResult = (TextView) findViewById(R.id.tv_whitelist_patch_result);
-        btnWhitelistPatch      = (Button)   findViewById(R.id.btn_whitelist_patch);
-        btnWhitelistPatchShare = (Button)   findViewById(R.id.btn_whitelist_patch_share);
-        btnWhitelistRestore    = (Button)   findViewById(R.id.btn_whitelist_restore);
 
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -207,63 +164,6 @@ public class DiagActivity extends AppCompatActivity {
             }
         });
 
-        // TEST 7 — Sonder autoservice (android.gui.BYDAutoServer)
-        btnAutoServiceShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(android.content.Intent.EXTRA_TEXT,
-                        tvAutoServiceResult.getText().toString());
-                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 7"));
-            }
-        });
-
-        btnAutoServiceProbe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runAutoServiceProbe();
-            }
-        });
-
-        // TEST 8 — Activer la projection cluster
-        btnClusterActivShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(android.content.Intent.EXTRA_TEXT,
-                        tvClusterActivResult.getText().toString());
-                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 8"));
-            }
-        });
-
-        btnClusterActiv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runClusterActivation();
-            }
-        });
-
-        // TEST 9 — Sonde VirtualDisplay
-        btnVdProbeShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(android.content.Intent.EXTRA_TEXT,
-                        tvVdProbeResult.getText().toString());
-                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 9"));
-            }
-        });
-
-        btnVdProbe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runVirtualDisplayProbe();
-            }
-        });
-
         // TEST 10 — Lancement sur display 1 (cluster)
         btnDisplay1Share.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -299,160 +199,6 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 runAutoContainerWhitelistProbe();
-            }
-        });
-
-        // TEST 12a — Sauvegarde whitelist
-        btnWhitelistBackupShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(android.content.Intent.EXTRA_TEXT,
-                        tvWhitelistBackupResult.getText().toString());
-                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 12a"));
-            }
-        });
-
-        btnWhitelistBackup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runWhitelistBackup();
-            }
-        });
-
-        // TEST 12b/12c — Patch et Restauration whitelist
-        btnWhitelistPatchShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(android.content.Intent.EXTRA_TEXT,
-                        tvWhitelistPatchResult.getText().toString());
-                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 12"));
-            }
-        });
-
-        btnWhitelistPatch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runWhitelistPatch();
-            }
-        });
-
-        btnWhitelistRestore.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runWhitelistRestore();
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 12a : Sauvegarde container_comm_cfg.json (lecture seule)
-    // -------------------------------------------------------------------------
-
-    private void runWhitelistBackup() {
-        btnWhitelistBackup.setEnabled(false);
-        tvWhitelistBackupResult.setText("⏳ Sauvegarde en cours…");
-        AppLogger.log("DiagWhitelistBackup", "Backup whitelist démarré");
-
-        AdbLocalClient.runWhitelistBackup(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        boolean ok = report.contains("BAK_B_OK") || report.contains("✅");
-                        tvWhitelistBackupResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
-                        tvWhitelistBackupResult.setText(report);
-                        btnWhitelistBackup.setEnabled(true);
-                        AppLogger.log("DiagWhitelistBackup", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvWhitelistBackupResult.setBackgroundColor(0xFF2A1A1A);
-                        tvWhitelistBackupResult.setText("❌ " + error);
-                        btnWhitelistBackup.setEnabled(true);
-                        AppLogger.log("DiagWhitelistBackup", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 12c : Restauration container_comm_cfg.json depuis backup sdcard
-    // -------------------------------------------------------------------------
-
-    private void runWhitelistRestore() {
-        btnWhitelistRestore.setEnabled(false);
-        tvWhitelistPatchResult.setText("⏳ Restauration du fichier original…");
-        AppLogger.log("DiagWhitelistRestore", "Restauration whitelist démarrée");
-
-        AdbLocalClient.runWhitelistRestore(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        boolean ok = report.contains("RESTORE_OK") || report.contains("✅");
-                        tvWhitelistPatchResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
-                        tvWhitelistPatchResult.setText(report);
-                        btnWhitelistRestore.setEnabled(true);
-                        AppLogger.log("DiagWhitelistRestore", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvWhitelistPatchResult.setBackgroundColor(0xFF2A1A1A);
-                        tvWhitelistPatchResult.setText("❌ " + error);
-                        btnWhitelistRestore.setEnabled(true);
-                        AppLogger.log("DiagWhitelistRestore", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 12 : Patch container_comm_cfg.json — ajouter com.byd.myapp à la whitelist
-    // -------------------------------------------------------------------------
-
-    private void runWhitelistPatch() {
-        btnWhitelistPatch.setEnabled(false);
-        tvWhitelistPatchResult.setText("⏳ Tentative de patch whitelist AutoContainer…");
-        AppLogger.log("DiagWhitelistPatch", "Patch whitelist démarré");
-
-        AdbLocalClient.runWhitelistPatch(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        boolean ok = report.contains("PATCH_OK") || report.contains("✅");
-                        tvWhitelistPatchResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF1A1A2A);
-                        tvWhitelistPatchResult.setText(report);
-                        btnWhitelistPatch.setEnabled(true);
-                        AppLogger.log("DiagWhitelistPatch", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvWhitelistPatchResult.setBackgroundColor(0xFF2A1A1A);
-                        tvWhitelistPatchResult.setText("❌ " + error
-                                + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
-                        btnWhitelistPatch.setEnabled(true);
-                        AppLogger.log("DiagWhitelistPatch", "ERREUR: " + error);
-                    }
-                });
             }
         });
     }
@@ -494,79 +240,6 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // TEST 8 : Activer la projection cluster (AutoContainerManager)
-    // -------------------------------------------------------------------------
-
-    private void runClusterActivation() {
-        btnClusterActiv.setEnabled(false);
-        tvClusterActivResult.setText("⏳ Activation cluster…");
-        AppLogger.log("DiagClusterActiv", "Activation projection démarrée");
-
-        AdbLocalClient.runClusterActivation(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvClusterActivResult.setBackgroundColor(0xFF1A2A1A);
-                        tvClusterActivResult.setText(report);
-                        btnClusterActiv.setEnabled(true);
-                        AppLogger.log("DiagClusterActiv", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvClusterActivResult.setBackgroundColor(0xFF2A1A1A);
-                        tvClusterActivResult.setText("\u274C " + error
-                                + "\n\n\u2192 Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
-                        btnClusterActiv.setEnabled(true);
-                        AppLogger.log("DiagClusterActiv", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 9 : Sonde VirtualDisplay (polling + registerCallback)
-    // -------------------------------------------------------------------------
-
-    private void runVirtualDisplayProbe() {
-        btnVdProbe.setEnabled(false);
-        tvVdProbeResult.setText("⏳ Sonde VirtualDisplay…");
-        AppLogger.log("DiagVDProbe", "Sonde VirtualDisplay démarrée");
-
-        AdbLocalClient.runVirtualDisplayProbe(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        boolean found = report.contains("VIRTUAL TROUVÉ") || report.contains("⚡");
-                        tvVdProbeResult.setBackgroundColor(found ? 0xFF1A2A1A : 0xFF1A1A2A);
-                        tvVdProbeResult.setText(report);
-                        btnVdProbe.setEnabled(true);
-                        AppLogger.log("DiagVDProbe", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvVdProbeResult.setBackgroundColor(0xFF2A1A1A);
-                        tvVdProbeResult.setText("\u274C " + error
-                                + "\n\n\u2192 Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
-                        btnVdProbe.setEnabled(true);
-                        AppLogger.log("DiagVDProbe", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
     // TEST 10 : Lancement sur display 1 (cluster) — insight WindowManagement
     // -------------------------------------------------------------------------
 
@@ -597,42 +270,6 @@ public class DiagActivity extends AppCompatActivity {
                                 + "\n\n\u2192 Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
                         btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 7 : Sonder autoservice (android.gui.BYDAutoServer)
-    // -------------------------------------------------------------------------
-
-    private void runAutoServiceProbe() {
-        btnAutoServiceProbe.setEnabled(false);
-        tvAutoServiceResult.setText("⏳ Connexion ADB…");
-        AppLogger.log("DiagAutoSvc", "Sondage autoservice démarré");
-
-        AdbLocalClient.runAutoServiceProbe(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvAutoServiceResult.setBackgroundColor(0xFF1A2A1A);
-                        tvAutoServiceResult.setText(report);
-                        btnAutoServiceProbe.setEnabled(true);
-                        AppLogger.log("DiagAutoSvc", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvAutoServiceResult.setBackgroundColor(0xFF2A1A1A);
-                        tvAutoServiceResult.setText("\u274C " + error
-                                + "\n\n\u2192 Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
-                        btnAutoServiceProbe.setEnabled(true);
-                        AppLogger.log("DiagAutoSvc", "ERREUR: " + error);
                     }
                 });
             }
