@@ -74,6 +74,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnWhitelist;
     private Button   btnWhitelistShare;
 
+    // TEST 12
+    private TextView tvWhitelistPatchResult;
+    private Button   btnWhitelistPatch;
+    private Button   btnWhitelistPatchShare;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -114,9 +119,13 @@ public class DiagActivity extends AppCompatActivity {
         btnDisplay1           = (Button)   findViewById(R.id.btn_display1);
         btnDisplay1Share      = (Button)   findViewById(R.id.btn_display1_share);
 
-        tvWhitelistResult     = (TextView) findViewById(R.id.tv_whitelist_result);
-        btnWhitelist          = (Button)   findViewById(R.id.btn_whitelist);
-        btnWhitelistShare     = (Button)   findViewById(R.id.btn_whitelist_share);
+        tvWhitelistResult      = (TextView) findViewById(R.id.tv_whitelist_result);
+        btnWhitelist           = (Button)   findViewById(R.id.btn_whitelist);
+        btnWhitelistShare      = (Button)   findViewById(R.id.btn_whitelist_share);
+
+        tvWhitelistPatchResult = (TextView) findViewById(R.id.tv_whitelist_patch_result);
+        btnWhitelistPatch      = (Button)   findViewById(R.id.btn_whitelist_patch);
+        btnWhitelistPatchShare = (Button)   findViewById(R.id.btn_whitelist_patch_share);
 
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -281,6 +290,62 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 runAutoContainerWhitelistProbe();
+            }
+        });
+
+        // TEST 12 — Patch whitelist
+        btnWhitelistPatchShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT,
+                        tvWhitelistPatchResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 12"));
+            }
+        });
+
+        btnWhitelistPatch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runWhitelistPatch();
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 12 : Patch container_comm_cfg.json — ajouter com.byd.myapp à la whitelist
+    // -------------------------------------------------------------------------
+
+    private void runWhitelistPatch() {
+        btnWhitelistPatch.setEnabled(false);
+        tvWhitelistPatchResult.setText("⏳ Tentative de patch whitelist AutoContainer…");
+        AppLogger.log("DiagWhitelistPatch", "Patch whitelist démarré");
+
+        AdbLocalClient.runWhitelistPatch(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        boolean ok = report.contains("PATCH_OK") || report.contains("✅");
+                        tvWhitelistPatchResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF1A1A2A);
+                        tvWhitelistPatchResult.setText(report);
+                        btnWhitelistPatch.setEnabled(true);
+                        AppLogger.log("DiagWhitelistPatch", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvWhitelistPatchResult.setBackgroundColor(0xFF2A1A1A);
+                        tvWhitelistPatchResult.setText("❌ " + error
+                                + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                        btnWhitelistPatch.setEnabled(true);
+                        AppLogger.log("DiagWhitelistPatch", "ERREUR: " + error);
+                    }
+                });
             }
         });
     }

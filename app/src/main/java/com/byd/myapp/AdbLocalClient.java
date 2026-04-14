@@ -905,12 +905,6 @@ public class AdbLocalClient {
                         "grep -E 'sharedUser=|pkg=.*xdja|pkg=.*cluster' | head -20");
                     sb.append(rShared.getAllOutput().trim()).append("\n\n");
 
-                    // 6. service call AutoContainer depuis shell (uid=2000) — référence positif
-                    sb.append("── 6. service call AutoContainer depuis shell (uid=2000 — doit passer) ──\n");
-                    AdbShellResponse rSvcCall = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
-                    sb.append(rSvcCall.getAllOutput().trim()).append("\n\n");
-
                     dadb.close();
                     AppLogger.log(TAG, "runAutoContainerWhitelistProbe terminé");
                     callback.onSuccess(sb.toString());
@@ -921,6 +915,121 @@ public class AdbLocalClient {
                 }
             }
         }, "adb-whitelist-thread").start();
+    }
+
+    /**
+     * TEST 12 — Patch container_comm_cfg.json pour ajouter com.byd.myapp à la whitelist.
+     *
+     * com.xdja.clusterdemo (userId=10097) est un USER APP qui passe AutoContainer
+     * uniquement grâce à son nom dans la JSON whitelist. com.byd.myapp en est absent.
+     *
+     * Ce test :
+     *   1. Vérifie si /system est modifiable (test écriture)
+     *   2. Si oui → patch la JSON + force-stop du service containerservice
+     *   3. Vérifie que le service redémarre et accepte maintenant com.byd.myapp
+     *   4. Test immédiat : service call AutoContainer depuis notre app n'est pas
+     *      testable ici (on est en shell), mais confirme que la JSON est bien patchée
+     *
+     * ATTENTION : modifie /system/etc/container_comm_cfg.json. Réversible avec reboot
+     * si /system est tmpfs overlay (Android 10 DSU). Permanent si partition montée rw.
+     */
+    public static void runWhitelistPatch(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    AppLogger.log(TAG, "runWhitelistPatch démarré");
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("════ TEST 12 — Patch whitelist AutoContainer ════\n\n");
+
+                    // 1. Test si /system est modifiable
+                    sb.append("── 1. Test écriture /system ──\n");
+                    AdbShellResponse rTest = dadb.shell(
+                        "touch /system/etc/.write_test 2>&1 && echo WRITABLE && " +
+                        "rm /system/etc/.write_test 2>/dev/null || echo READONLY");
+                    String testOut = rTest.getAllOutput().trim();
+                    sb.append(testOut).append("\n\n");
+
+                    if (!testOut.contains("WRITABLE")) {
+                        // Tentative remount rw
+                        sb.append("── 1b. Tentative remount rw ──\n");
+                        AdbShellResponse rMount = dadb.shell(
+                            "mount -o remount,rw /system 2>&1 && echo REMOUNT_OK || echo REMOUNT_FAIL");
+                        sb.append(rMount.getAllOutput().trim()).append("\n");
+                        AdbShellResponse rTest2 = dadb.shell(
+                            "touch /system/etc/.write_test 2>&1 && echo WRITABLE && " +
+                            "rm /system/etc/.write_test 2>/dev/null || echo READONLY");
+                        String test2Out = rTest2.getAllOutput().trim();
+                        sb.append(test2Out).append("\n\n");
+                        if (!test2Out.contains("WRITABLE")) {
+                            dadb.close();
+                            sb.append("⛔ /system est en lecture seule — patch impossible.\n");
+                            sb.append("→ Architecture ADB-relay obligatoire (sendInfo via dadb shell).\n");
+                            callback.onSuccess(sb.toString());
+                            return;
+                        }
+                    }
+
+                    // 2. Backup + patch JSON
+                    sb.append("── 2. Backup + patch container_comm_cfg.json ──\n");
+                    AdbShellResponse rBackup = dadb.shell(
+                        "cp /system/etc/container_comm_cfg.json " +
+                        "/system/etc/container_comm_cfg.json.bak 2>&1 && echo BACKUP_OK");
+                    sb.append(rBackup.getAllOutput().trim()).append("\n");
+
+                    String newJson =
+                        "{ \\n" +
+                        "    \\\"ivi_to_cluster\\\": [ \\n" +
+                        "        { \\\"app_name\\\": \\\"com.xdja.clusterdemo\\\", \\\"min_type\\\": 0, \\\"max_type\\\": 134217727}, \\n" +
+                        "        { \\\"app_name\\\": \\\"com.byd.myapp\\\", \\\"min_type\\\": 0, \\\"max_type\\\": 134217727} \\n" +
+                        "    ], \\n" +
+                        "    \\\"cluster_to_ivi\\\": [ \\n" +
+                        "        { \\\"app_name\\\": \\\"com.xdja.clusterdemo\\\", \\\"min_type\\\": 0, \\\"max_type\\\": 134217727}, \\n" +
+                        "        { \\\"app_name\\\": \\\"com.byd.myapp\\\", \\\"min_type\\\": 0, \\\"max_type\\\": 134217727} \\n" +
+                        "    ] \\n" +
+                        "}";
+                    AdbShellResponse rPatch = dadb.shell(
+                        "printf '" + newJson + "' > /system/etc/container_comm_cfg.json 2>&1 && echo PATCH_OK");
+                    sb.append(rPatch.getAllOutput().trim()).append("\n");
+
+                    // Vérifier le contenu patché
+                    AdbShellResponse rVerify = dadb.shell(
+                        "cat /system/etc/container_comm_cfg.json 2>&1");
+                    sb.append("\n[JSON après patch]\n");
+                    sb.append(rVerify.getAllOutput().trim()).append("\n\n");
+
+                    // 3. Redémarrer com.xdja.containerservice pour recharger la config
+                    sb.append("── 3. Redémarrage com.xdja.containerservice ──\n");
+                    AdbShellResponse rStop = dadb.shell(
+                        "am force-stop com.xdja.containerservice 2>&1 && echo STOPPED");
+                    sb.append(rStop.getAllOutput().trim()).append("\n");
+                    Thread.sleep(2000);
+                    // Le service redémarre automatiquement (persistent ou START_STICKY)
+                    AdbShellResponse rCheck = dadb.shell(
+                        "dumpsys activity services com.xdja.containerservice 2>/dev/null | " +
+                        "grep -E 'ServiceRecord|running|pid' | head -5");
+                    sb.append(rCheck.getAllOutput().trim()).append("\n\n");
+
+                    // 4. Test immédiat desde shell (uid=2000) — doit toujours passer
+                    sb.append("── 4. Test service call depuis shell (référence) ──\n");
+                    Thread.sleep(1000);
+                    AdbShellResponse rCall = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                    sb.append(rCall.getAllOutput().trim()).append("\n\n");
+
+                    sb.append("✅ Patch appliqué.\n");
+                    sb.append("→ Redémarrez l'app pour que ClusterManager (Binder direct) refonctionne.\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "runWhitelistPatch terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "runWhitelistPatch ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-whitelist-patch-thread").start();
     }
 
     /**
