@@ -552,6 +552,15 @@
             android:backgroundTint="#B71C1C"
             android:layout_marginBottom="4dp"/>
 
+        <Button
+            android:id="@+id/btn_whitelist_restore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="↩ Restaurer fichier original (depuis backup sdcard)"
+            android:textSize="13sp"
+            android:backgroundTint="#4E342E"
+            android:layout_marginBottom="4dp"/>
+
         <TextView
             android:id="@+id/tv_whitelist_patch_result"
             android:layout_width="match_parent"
