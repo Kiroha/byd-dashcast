@@ -366,5 +366,59 @@
             android:text="Partager le résultat TEST 11"
             android:layout_marginBottom="16dp"/>
 
+        <!-- ======================== TEST 12 — DISPLAY SIZE ======================== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 12 — Taille display cluster (résolution Qt)"
+            android:textColor="#80DEEA"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Teste les commandes de changement de taille d&#39;écran Qt (cmd 29=8.8&quot; / 30=12.3&quot; / 31=10.25&quot;) + force la résolution logique Android via wm size 1920x480. Objectif : trouver comment corriger l&#39;étirement vertical sur le cluster (VirtualDisplay 1920×1080 → panel physique ~1920×480)."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_display_size"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Lancer TEST 12 (~8s)"
+            android:textSize="14sp"
+            android:backgroundTint="#00695C"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_display_size_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Appuyez sur le bouton (ADB doit être autorisé — TEST 5 d&#39;abord)."
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="12dp"
+            android:background="#111A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_display_size_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Partager le résultat TEST 12"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="16dp"/>
+
     </LinearLayout>
 </ScrollView>

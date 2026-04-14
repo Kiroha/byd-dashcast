@@ -61,6 +61,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnWhitelist;
     private Button   btnWhitelistShare;
 
+    // TEST 12
+    private TextView tvDisplaySizeResult;
+    private Button   btnDisplaySize;
+    private Button   btnDisplaySizeShare;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -92,6 +97,10 @@ public class DiagActivity extends AppCompatActivity {
         tvWhitelistResult      = (TextView) findViewById(R.id.tv_whitelist_result);
         btnWhitelist           = (Button)   findViewById(R.id.btn_whitelist);
         btnWhitelistShare      = (Button)   findViewById(R.id.btn_whitelist_share);
+
+        tvDisplaySizeResult    = (TextView) findViewById(R.id.tv_display_size_result);
+        btnDisplaySize         = (Button)   findViewById(R.id.btn_display_size);
+        btnDisplaySizeShare    = (Button)   findViewById(R.id.btn_display_size_share);
 
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -199,6 +208,63 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 runAutoContainerWhitelistProbe();
+            }
+        });
+
+        // TEST 12 — Taille display cluster
+        btnDisplaySizeShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT,
+                        tvDisplaySizeResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 12"));
+            }
+        });
+
+        btnDisplaySize.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runClusterDisplaySizeTest();
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 12 : Taille display cluster — cmd 29/30/31 + wm size
+    // -------------------------------------------------------------------------
+
+    private void runClusterDisplaySizeTest() {
+        btnDisplaySize.setEnabled(false);
+        tvDisplaySizeResult.setText("⏳ Test dimensions display cluster en cours…\n"
+                + "Essai cmd=29 / cmd=30 / cmd=31 / wm size…\n"
+                + "(~8 secondes)");
+        AppLogger.log("DiagDisplaySize", "Lancement TEST 12");
+
+        AdbLocalClient.runClusterDisplaySizeTest(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvDisplaySizeResult.setBackgroundColor(0xFF1A2A1A);
+                        tvDisplaySizeResult.setText(report);
+                        btnDisplaySize.setEnabled(true);
+                        AppLogger.log("DiagDisplaySize", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
+                        tvDisplaySizeResult.setText("❌ " + error
+                                + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                        btnDisplaySize.setEnabled(true);
+                        AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
+                    }
+                });
             }
         });
     }

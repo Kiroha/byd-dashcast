@@ -661,6 +661,136 @@ public class AdbLocalClient {
         }, "adb-sendinfo-thread").start();
     }
 
+    // ── TEST 12 : Sonde taille display cluster + essais cmd 29/30/31 + wm size ──
+
+    /**
+     * Teste les différentes approches pour corriger la résolution du display cluster.
+     *
+     * Le VirtualDisplay d'AutoDisplayService est créé en 1920×1080 (valeurs par défaut
+     * dans le code décompilé de com.xdja.containerservice), mais le panel physique est
+     * ~1920×480 (ratio ~4:1). Résultat : étirement vertical.
+     *
+     * Ce test essaie séquentiellement :
+     *   1. Dump l'état actuel du display 1 (wm size, dumpsys display)
+     *   2. sendInfo(1000, 29) — 切换到8.8寸屏 (pourrait changer la surface Qt)
+     *   3. Re-dump le display 1 pour voir si les dimensions ont changé
+     *   4. sendInfo(1000, 30) — 切换到12.3寸屏 (rétablit la config d'origine)
+     *   5. Essai wm size 1920x480 -d 1 (forcer la résolution logique)
+     *   6. Dump post-wm size
+     *   7. wm size reset -d 1 (nettoyer)
+     *
+     * Le résultat est un rapport texte avec les dumps avant/après chaque commande.
+     */
+    public static void runClusterDisplaySizeTest(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    // ── 1. État initial ──────────────────────────────────────
+                    sb.append("=== [1] ÉTAT INITIAL DU DISPLAY CLUSTER ===\n");
+
+                    AdbShellResponse rSize = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 : ").append(rSize.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rDensity = dadb.shell("wm density -d 1 2>&1");
+                    sb.append("wm density -d 1 : ").append(rDensity.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rDump = dadb.shell(
+                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
+                    String dumpOut = rDump.getAllOutput().trim();
+                    sb.append("dumpsys display id=1 :\n").append(
+                            dumpOut.isEmpty() ? "  (non trouvé dans dumpsys)" : dumpOut).append("\n");
+
+                    // Surface info via SurfaceFlinger
+                    AdbShellResponse rSf = dadb.shell(
+                            "dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'fission|virtual|cluster' | head -5");
+                    String sfOut = rSf.getAllOutput().trim();
+                    if (!sfOut.isEmpty()) {
+                        sb.append("SurfaceFlinger :\n").append(sfOut).append("\n");
+                    }
+                    sb.append("\n");
+
+                    // ── 2. sendInfo(1000, 29) — switch 8.8 pouces ────────────
+                    sb.append("=== [2] sendInfo(1000, 29) — 切换到8.8寸屏 ===\n");
+                    AdbShellResponse r29 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 29 s16 \"\" 2>&1");
+                    sb.append("Résultat : ").append(r29.getAllOutput().trim()).append("\n");
+
+                    // Attendre que Qt applique le changement
+                    Thread.sleep(1500);
+
+                    AdbShellResponse rPost29 = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 après cmd=29 : ").append(rPost29.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rDump29 = dadb.shell(
+                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
+                    String dump29 = rDump29.getAllOutput().trim();
+                    sb.append("dumpsys display id=1 après cmd=29 :\n").append(
+                            dump29.isEmpty() ? "  (non trouvé)" : dump29).append("\n\n");
+
+                    // ── 3. sendInfo(1000, 30) — switch 12.3 pouces (rétablir) ─
+                    sb.append("=== [3] sendInfo(1000, 30) — 切换到12.3寸屏 (rétablir) ===\n");
+                    AdbShellResponse r30 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append("Résultat : ").append(r30.getAllOutput().trim()).append("\n");
+                    Thread.sleep(1500);
+
+                    AdbShellResponse rPost30 = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 après cmd=30 : ").append(rPost30.getAllOutput().trim()).append("\n");
+                    sb.append("\n");
+
+                    // ── 4. sendInfo(1000, 31) — switch 10.25 pouces ───────────
+                    sb.append("=== [4] sendInfo(1000, 31) — 切换到10.25寸屏 ===\n");
+                    AdbShellResponse r31 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 31 s16 \"\" 2>&1");
+                    sb.append("Résultat : ").append(r31.getAllOutput().trim()).append("\n");
+                    Thread.sleep(1500);
+
+                    AdbShellResponse rPost31 = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 après cmd=31 : ").append(rPost31.getAllOutput().trim()).append("\n");
+                    sb.append("\n");
+
+                    // Rétablir 12.3"
+                    dadb.shell("service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    Thread.sleep(500);
+
+                    // ── 5. wm size 1920x480 -d 1 (forcer la résolution) ───────
+                    sb.append("=== [5] wm size 1920x480 -d 1 ===\n");
+                    AdbShellResponse rWm = dadb.shell("wm size 1920x480 -d 1 2>&1");
+                    sb.append("Résultat cmd : ").append(rWm.getAllOutput().trim()).append("\n");
+                    Thread.sleep(500);
+
+                    AdbShellResponse rPostWm = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 après : ").append(rPostWm.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rDumpWm = dadb.shell(
+                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
+                    String dumpWm = rDumpWm.getAllOutput().trim();
+                    sb.append("dumpsys display id=1 après :\n").append(
+                            dumpWm.isEmpty() ? "  (non trouvé)" : dumpWm).append("\n\n");
+
+                    // ── 6. Reset ──────────────────────────────────────────────
+                    sb.append("=== [6] wm size reset -d 1 (nettoyage) ===\n");
+                    AdbShellResponse rReset = dadb.shell("wm size reset -d 1 2>&1");
+                    sb.append("Résultat : ").append(rReset.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 final : ").append(rFinal.getAllOutput().trim()).append("\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "TEST 12 terminé ✓");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "TEST 12 ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-display-size-test").start();
+    }
+
     /**
      * Force-stop d'une application via ADB.
      * Appelé quand l'utilisateur tape "✕" dans la liste.
