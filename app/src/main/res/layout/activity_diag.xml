@@ -532,31 +532,73 @@
             android:text="Partager le résultat TEST 11"
             android:layout_marginBottom="16dp"/>
 
-        <!-- TEST 12 : Patch container_comm_cfg.json — ajouter com.byd.myapp -->
+        <!-- TEST 12a : Sauvegarde container_comm_cfg.json (lecture seule) -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 12 — Patch whitelist AutoContainer (ajouter com.byd.myapp)"
-            android:textColor="#FF6600"
+            android:text="TEST 12a — Sauvegarder whitelist (lecture seule, AVANT de patcher)"
+            android:textColor="#66BB6A"
             android:textStyle="bold"
             android:textSize="13sp"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="4dp"/>
 
         <Button
+            android:id="@+id/btn_whitelist_backup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ TEST 12a — Sauvegarder (aucune modification)"
+            android:textSize="13sp"
+            android:backgroundTint="#1B5E20"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_whitelist_backup_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat TEST 12a)"
+            android:textColor="#CCCCCC"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#111111"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
+            android:id="@+id/btn_whitelist_backup_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:text="Partager le résultat TEST 12a"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- TEST 12b : Patch container_comm_cfg.json — ajouter com.byd.myapp -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 12b — Patcher whitelist (MODIFIE /system — nécessite 12a)"
+            android:textColor="#FF6600"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
             android:id="@+id/btn_whitelist_patch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Lancer TEST 12 (MODIFIE /system)"
+            android:text="▶ TEST 12b — Patcher (nécessite sauvegarde 12a)"
             android:textSize="13sp"
             android:backgroundTint="#B71C1C"
             android:layout_marginBottom="4dp"/>
 
+        <!-- TEST 12c : Restauration depuis backup -->
         <Button
             android:id="@+id/btn_whitelist_restore"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="↩ Restaurer fichier original (depuis backup sdcard)"
+            android:text="↩ TEST 12c — Restaurer fichier original (depuis backup sdcard)"
             android:textSize="13sp"
             android:backgroundTint="#4E342E"
             android:layout_marginBottom="4dp"/>
@@ -565,7 +607,7 @@
             android:id="@+id/tv_whitelist_patch_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat TEST 12)"
+            android:text="(résultat TEST 12b / 12c)"
             android:textColor="#CCCCCC"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -579,7 +621,7 @@
             android:layout_height="wrap_content"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
-            android:text="Partager le résultat TEST 12"
+            android:text="Partager le résultat TEST 12b/12c"
             android:layout_marginBottom="16dp"/>
 
     </LinearLayout>

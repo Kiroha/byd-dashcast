@@ -917,20 +917,74 @@ public class AdbLocalClient {
         }, "adb-whitelist-thread").start();
     }
 
+    static final String SDCARD_BACKUP =
+        "/sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json";
+
     /**
-     * TEST 12 — Patch container_comm_cfg.json pour ajouter com.byd.myapp à la whitelist.
+     * TEST 12a — Sauvegarde container_comm_cfg.json (LECTURE SEULE, aucune modification).
      *
-     * BACKUPS (double sécurité) :
-     *   A. /system/etc/container_comm_cfg.json.bak  — même partition, restauration rapide
+     * Double backup :
+     *   A. /system/etc/container_comm_cfg.json.bak  — même partition
      *   B. /sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json
-     *      — partition différente (/data), récupérable via adb pull même si /system corrompu
+     *      — partition /data séparée, récupérable via : adb pull [chemin B]
      *
-     * Restauration depuis B en cas de problème grave :
-     *   adb pull /sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json
-     *   adb root && adb remount
-     *   adb push container_comm_cfg_original.json /system/etc/container_comm_cfg.json
+     * Affiche le contenu du fichier pour vérification avant tout patch.
+     */
+    public static void runWhitelistBackup(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    AppLogger.log(TAG, "runWhitelistBackup démarré");
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("════ TEST 12a — Sauvegarde whitelist ════\n\n");
+
+                    // Backup A : même partition /system
+                    sb.append("── Backup A : /system/etc/container_comm_cfg.json.bak ──\n");
+                    AdbShellResponse rBakA = dadb.shell(
+                        "cp /system/etc/container_comm_cfg.json " +
+                        "/system/etc/container_comm_cfg.json.bak 2>&1 && echo BAK_A_OK || echo BAK_A_FAIL");
+                    sb.append(rBakA.getAllOutput().trim()).append("\n\n");
+
+                    // Backup B : /sdcard (partition séparée)
+                    sb.append("── Backup B : ").append(SDCARD_BACKUP).append(" ──\n");
+                    AdbShellResponse rBakB = dadb.shell(
+                        "mkdir -p /sdcard/Android/data/com.byd.myapp/files 2>/dev/null; " +
+                        "cp /system/etc/container_comm_cfg.json \"" + SDCARD_BACKUP + "\" 2>&1 " +
+                        "&& echo BAK_B_OK || echo BAK_B_FAIL");
+                    sb.append(rBakB.getAllOutput().trim()).append("\n");
+                    AdbShellResponse rSize = dadb.shell(
+                        "wc -c < \"" + SDCARD_BACKUP + "\" 2>&1");
+                    sb.append("taille : ").append(rSize.getAllOutput().trim()).append(" octets\n");
+                    sb.append("récupérable via : adb pull ").append(SDCARD_BACKUP).append("\n\n");
+
+                    // Afficher le contenu actuel pour vérification
+                    sb.append("── Contenu actuel (à vérifier avant de patcher) ──\n");
+                    AdbShellResponse rCat = dadb.shell(
+                        "cat /system/etc/container_comm_cfg.json 2>&1");
+                    sb.append(rCat.getAllOutput().trim()).append("\n\n");
+
+                    boolean ok = sb.toString().contains("BAK_B_OK");
+                    sb.append(ok ? "✅ Sauvegarde OK — vous pouvez lancer TEST 12b (Patch).\n"
+                                 : "⚠️ Backup B échoué — vérifiez les permissions sdcard.\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "runWhitelistBackup terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "runWhitelistBackup ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-whitelist-backup-thread").start();
+    }
+
+    /**
+     * TEST 12b — Patch container_comm_cfg.json (ajoute com.byd.myapp à la whitelist).
      *
-     * ATTENTION : modifie /system/etc/container_comm_cfg.json.
+     * Vérifie que le backup sdcard existe AVANT de modifier quoi que ce soit.
+     * Si le backup est absent, refuse d'opérer et demande de lancer 12a d'abord.
      */
     public static void runWhitelistPatch(final Context context, final Callback callback) {
         new Thread(new Runnable() {
@@ -939,34 +993,21 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "runWhitelistPatch démarré");
                     Dadb dadb = connect(context);
                     StringBuilder sb = new StringBuilder();
-                    sb.append("════ TEST 12 — Patch whitelist AutoContainer ════\n\n");
+                    sb.append("════ TEST 12b — Patch whitelist AutoContainer ════\n\n");
 
-                    // 0. Double backup AVANT toute modification
-                    sb.append("── 0. Double backup du fichier original ──\n");
-
-                    // Backup A : même partition /system (restauration rapide)
-                    AdbShellResponse rBakA = dadb.shell(
-                        "cp /system/etc/container_comm_cfg.json " +
-                        "/system/etc/container_comm_cfg.json.bak 2>&1 && echo BAK_SYSTEM_OK || echo BAK_SYSTEM_FAIL");
-                    sb.append("[A] /system/etc/container_comm_cfg.json.bak : ")
-                      .append(rBakA.getAllOutput().trim()).append("\n");
-
-                    // Backup B : /sdcard (partition séparée — survit si /system corrompu)
-                    // Le répertoire existe car signé platform.keystore → accès externe garanti
-                    String sdcardBackup = "/sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json";
-                    AdbShellResponse rBakB = dadb.shell(
-                        "mkdir -p /sdcard/Android/data/com.byd.myapp/files 2>/dev/null; " +
-                        "cp /system/etc/container_comm_cfg.json \"" + sdcardBackup + "\" 2>&1 " +
-                        "&& echo BAK_SDCARD_OK || echo BAK_SDCARD_FAIL");
-                    sb.append("[B] ").append(sdcardBackup).append(" : ")
-                      .append(rBakB.getAllOutput().trim()).append("\n");
-
-                    // Vérifier que le backup B est lisible
+                    // Garde : refuser si le backup sdcard n'existe pas
+                    sb.append("── 0. Vérification backup préalable ──\n");
                     AdbShellResponse rBakCheck = dadb.shell(
-                        "wc -c < \"" + sdcardBackup + "\" 2>&1");
-                    sb.append("    taille backup B : ").append(rBakCheck.getAllOutput().trim()).append(" octets\n");
-                    sb.append("    → Récupérable via : adb pull ")
-                      .append(sdcardBackup).append("\n\n");
+                        "ls \"" + SDCARD_BACKUP + "\" 2>&1 && echo BAK_EXISTS || echo BAK_MISSING");
+                    String bakCheckOut = rBakCheck.getAllOutput().trim();
+                    sb.append(bakCheckOut).append("\n\n");
+                    if (bakCheckOut.contains("BAK_MISSING")) {
+                        dadb.close();
+                        sb.append("⛔ Backup sdcard absent.\n");
+                        sb.append("→ Lancez d'abord TEST 12a (Sauvegarder) et vérifiez le contenu.\n");
+                        callback.onSuccess(sb.toString());
+                        return;
+                    }
 
                     // 1. Test si /system est modifiable
                     sb.append("── 1. Test écriture /system ──\n");
@@ -977,7 +1018,6 @@ public class AdbLocalClient {
                     sb.append(testOut).append("\n\n");
 
                     if (!testOut.contains("WRITABLE")) {
-                        // Tentative remount rw
                         sb.append("── 1b. Tentative remount rw ──\n");
                         AdbShellResponse rMount = dadb.shell(
                             "mount -o remount,rw /system 2>&1 && echo REMOUNT_OK || echo REMOUNT_FAIL");
@@ -990,7 +1030,6 @@ public class AdbLocalClient {
                         if (!test2Out.contains("WRITABLE")) {
                             dadb.close();
                             sb.append("⛔ /system est en lecture seule — patch impossible.\n");
-                            sb.append("✅ Backup B sauvegardé sur sdcard.\n");
                             sb.append("→ Architecture ADB-relay obligatoire (sendInfo via dadb shell).\n");
                             callback.onSuccess(sb.toString());
                             return;
@@ -1014,13 +1053,12 @@ public class AdbLocalClient {
                         "printf '" + newJson + "' > /system/etc/container_comm_cfg.json 2>&1 && echo PATCH_OK");
                     sb.append(rPatch.getAllOutput().trim()).append("\n");
 
-                    // Vérifier le contenu patché
                     AdbShellResponse rVerify = dadb.shell(
                         "cat /system/etc/container_comm_cfg.json 2>&1");
                     sb.append("\n[JSON après patch]\n");
                     sb.append(rVerify.getAllOutput().trim()).append("\n\n");
 
-                    // 3. Redémarrer com.xdja.containerservice pour recharger la config
+                    // 3. Redémarrer containerservice pour recharger la config
                     sb.append("── 3. Redémarrage com.xdja.containerservice ──\n");
                     AdbShellResponse rStop = dadb.shell(
                         "am force-stop com.xdja.containerservice 2>&1 && echo STOPPED");
@@ -1031,17 +1069,16 @@ public class AdbLocalClient {
                         "grep -E 'ServiceRecord|running|pid' | head -5");
                     sb.append(rCheck.getAllOutput().trim()).append("\n\n");
 
-                    // 4. Test service call depuis shell (référence — doit toujours passer)
+                    // 4. Test service call depuis shell (référence)
                     sb.append("── 4. Test service call depuis shell (référence) ──\n");
                     Thread.sleep(1000);
                     AdbShellResponse rCall = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append(rCall.getAllOutput().trim()).append("\n\n");
 
-                    sb.append("✅ Patch appliqué. Backups disponibles :\n");
-                    sb.append("  A : /system/etc/container_comm_cfg.json.bak\n");
-                    sb.append("  B : ").append(sdcardBackup).append(" (adb pull pour récupérer)\n");
+                    sb.append("✅ Patch appliqué.\n");
                     sb.append("→ Redémarrez l'app pour que ClusterManager (Binder direct) refonctionne.\n");
+                    sb.append("→ En cas de problème : bouton Restaurer (TEST 12c).\n");
 
                     dadb.close();
                     AppLogger.log(TAG, "runWhitelistPatch terminé");
@@ -1056,11 +1093,7 @@ public class AdbLocalClient {
     }
 
     /**
-     * TEST 12b — Restaure container_comm_cfg.json depuis le backup sdcard.
-     *
-     * Utilise le backup B (hors-partition /sdcard) créé par runWhitelistPatch().
-     * Plus sûr que le backup A (/system/.bak) car sur une partition différente.
-     * Redémarre com.xdja.containerservice après restauration.
+     * TEST 12c — Restaure container_comm_cfg.json depuis le backup sdcard (B en priorité, A en fallback).
      */
     public static void runWhitelistRestore(final Context context, final Callback callback) {
         new Thread(new Runnable() {
@@ -1069,57 +1102,49 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "runWhitelistRestore démarré");
                     Dadb dadb = connect(context);
                     StringBuilder sb = new StringBuilder();
-                    sb.append("════ TEST 12b — Restauration whitelist ════\n\n");
+                    sb.append("════ TEST 12c — Restauration whitelist ════\n\n");
 
-                    String sdcardBackup = "/sdcard/Android/data/com.byd.myapp/files/container_comm_cfg_original.json";
-
-                    // Vérifier que le backup existe
-                    sb.append("── 1. Vérification backup sdcard ──\n");
-                    AdbShellResponse rCheck = dadb.shell(
-                        "ls -la \"" + sdcardBackup + "\" 2>&1");
-                    sb.append(rCheck.getAllOutput().trim()).append("\n");
+                    // Vérifier backup B (sdcard)
+                    sb.append("── 1. Vérification backup sdcard (B) ──\n");
                     AdbShellResponse rCat = dadb.shell(
-                        "cat \"" + sdcardBackup + "\" 2>&1");
-                    sb.append("[contenu]\n").append(rCat.getAllOutput().trim()).append("\n\n");
+                        "cat \"" + SDCARD_BACKUP + "\" 2>&1");
+                    String catOut = rCat.getAllOutput();
+                    sb.append(catOut.trim()).append("\n\n");
 
-                    if (rCat.getAllOutput().contains("No such file")) {
+                    if (catOut.contains("No such file") || catOut.trim().isEmpty()) {
                         // Fallback sur backup A
-                        sb.append("⚠️ Backup sdcard absent — tentative backup A (/system/.bak)\n");
+                        sb.append("⚠️ Backup B absent — tentative backup A (/system/.bak)\n");
                         AdbShellResponse rBakA = dadb.shell(
                             "ls -la /system/etc/container_comm_cfg.json.bak 2>&1");
                         sb.append(rBakA.getAllOutput().trim()).append("\n\n");
                         if (rBakA.getAllOutput().contains("No such file")) {
                             dadb.close();
-                            sb.append("⛔ Aucun backup disponible (ni sdcard ni .bak).\n");
-                            sb.append("→ Fichier original introuvable — restauration manuelle requise.\n");
+                            sb.append("⛔ Aucun backup disponible — restauration manuelle requise.\n");
                             callback.onSuccess(sb.toString());
                             return;
                         }
-                        // Restaurer depuis .bak
                         sb.append("── Restauration depuis backup A ──\n");
+                        AdbShellResponse rMount = dadb.shell("mount -o remount,rw /system 2>&1; echo DONE");
+                        sb.append(rMount.getAllOutput().trim()).append("\n");
                         AdbShellResponse rRestore = dadb.shell(
                             "cp /system/etc/container_comm_cfg.json.bak " +
                             "/system/etc/container_comm_cfg.json 2>&1 && echo RESTORE_OK");
                         sb.append(rRestore.getAllOutput().trim()).append("\n\n");
                     } else {
-                        // Restaurer depuis backup B (sdcard)
-                        sb.append("── 2. Restauration depuis backup sdcard ──\n");
-                        AdbShellResponse rMount = dadb.shell(
-                            "mount -o remount,rw /system 2>&1; echo MOUNT_DONE");
+                        sb.append("── 2. Restauration depuis backup B (sdcard) ──\n");
+                        AdbShellResponse rMount = dadb.shell("mount -o remount,rw /system 2>&1; echo DONE");
                         sb.append(rMount.getAllOutput().trim()).append("\n");
                         AdbShellResponse rRestore = dadb.shell(
-                            "cp \"" + sdcardBackup + "\" /system/etc/container_comm_cfg.json 2>&1 " +
+                            "cp \"" + SDCARD_BACKUP + "\" /system/etc/container_comm_cfg.json 2>&1 " +
                             "&& echo RESTORE_OK || echo RESTORE_FAIL");
                         sb.append(rRestore.getAllOutput().trim()).append("\n\n");
                     }
 
-                    // Vérifier le contenu restauré
                     sb.append("── 3. Vérification fichier restauré ──\n");
                     AdbShellResponse rVerify = dadb.shell(
                         "cat /system/etc/container_comm_cfg.json 2>&1");
                     sb.append(rVerify.getAllOutput().trim()).append("\n\n");
 
-                    // Redémarrer le service
                     sb.append("── 4. Redémarrage com.xdja.containerservice ──\n");
                     AdbShellResponse rStop = dadb.shell(
                         "am force-stop com.xdja.containerservice 2>&1 && echo STOPPED");
@@ -1130,8 +1155,7 @@ public class AdbLocalClient {
                         "grep -E 'ServiceRecord|running|pid' | head -3");
                     sb.append(rSvcCheck.getAllOutput().trim()).append("\n\n");
 
-                    sb.append("✅ Restauration terminée.\n");
-                    sb.append("→ com.byd.myapp est de nouveau bloqué par AutoContainer (état d'origine).\n");
+                    sb.append("✅ Restauration terminée — état d'origine rétabli.\n");
 
                     dadb.close();
                     AppLogger.log(TAG, "runWhitelistRestore terminé");

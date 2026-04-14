@@ -75,6 +75,9 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnWhitelistShare;
 
     // TEST 12
+    private TextView tvWhitelistBackupResult;
+    private Button   btnWhitelistBackup;
+    private Button   btnWhitelistBackupShare;
     private TextView tvWhitelistPatchResult;
     private Button   btnWhitelistPatch;
     private Button   btnWhitelistPatchShare;
@@ -123,6 +126,10 @@ public class DiagActivity extends AppCompatActivity {
         tvWhitelistResult      = (TextView) findViewById(R.id.tv_whitelist_result);
         btnWhitelist           = (Button)   findViewById(R.id.btn_whitelist);
         btnWhitelistShare      = (Button)   findViewById(R.id.btn_whitelist_share);
+
+        tvWhitelistBackupResult = (TextView) findViewById(R.id.tv_whitelist_backup_result);
+        btnWhitelistBackup      = (Button)   findViewById(R.id.btn_whitelist_backup);
+        btnWhitelistBackupShare = (Button)   findViewById(R.id.btn_whitelist_backup_share);
 
         tvWhitelistPatchResult = (TextView) findViewById(R.id.tv_whitelist_patch_result);
         btnWhitelistPatch      = (Button)   findViewById(R.id.btn_whitelist_patch);
@@ -295,7 +302,26 @@ public class DiagActivity extends AppCompatActivity {
             }
         });
 
-        // TEST 12 — Patch whitelist
+        // TEST 12a — Sauvegarde whitelist
+        btnWhitelistBackupShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT,
+                        tvWhitelistBackupResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 12a"));
+            }
+        });
+
+        btnWhitelistBackup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runWhitelistBackup();
+            }
+        });
+
+        // TEST 12b/12c — Patch et Restauration whitelist
         btnWhitelistPatchShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -323,7 +349,43 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // TEST 12b : Restauration container_comm_cfg.json depuis backup sdcard
+    // TEST 12a : Sauvegarde container_comm_cfg.json (lecture seule)
+    // -------------------------------------------------------------------------
+
+    private void runWhitelistBackup() {
+        btnWhitelistBackup.setEnabled(false);
+        tvWhitelistBackupResult.setText("⏳ Sauvegarde en cours…");
+        AppLogger.log("DiagWhitelistBackup", "Backup whitelist démarré");
+
+        AdbLocalClient.runWhitelistBackup(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        boolean ok = report.contains("BAK_B_OK") || report.contains("✅");
+                        tvWhitelistBackupResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                        tvWhitelistBackupResult.setText(report);
+                        btnWhitelistBackup.setEnabled(true);
+                        AppLogger.log("DiagWhitelistBackup", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvWhitelistBackupResult.setBackgroundColor(0xFF2A1A1A);
+                        tvWhitelistBackupResult.setText("❌ " + error);
+                        btnWhitelistBackup.setEnabled(true);
+                        AppLogger.log("DiagWhitelistBackup", "ERREUR: " + error);
+                    }
+                });
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 12c : Restauration container_comm_cfg.json depuis backup sdcard
     // -------------------------------------------------------------------------
 
     private void runWhitelistRestore() {
