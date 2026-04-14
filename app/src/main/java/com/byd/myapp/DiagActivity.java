@@ -78,6 +78,7 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvWhitelistPatchResult;
     private Button   btnWhitelistPatch;
     private Button   btnWhitelistPatchShare;
+    private Button   btnWhitelistRestore;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -126,6 +127,7 @@ public class DiagActivity extends AppCompatActivity {
         tvWhitelistPatchResult = (TextView) findViewById(R.id.tv_whitelist_patch_result);
         btnWhitelistPatch      = (Button)   findViewById(R.id.btn_whitelist_patch);
         btnWhitelistPatchShare = (Button)   findViewById(R.id.btn_whitelist_patch_share);
+        btnWhitelistRestore    = (Button)   findViewById(R.id.btn_whitelist_restore);
 
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -309,6 +311,49 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 runWhitelistPatch();
+            }
+        });
+
+        btnWhitelistRestore.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runWhitelistRestore();
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 12b : Restauration container_comm_cfg.json depuis backup sdcard
+    // -------------------------------------------------------------------------
+
+    private void runWhitelistRestore() {
+        btnWhitelistRestore.setEnabled(false);
+        tvWhitelistPatchResult.setText("⏳ Restauration du fichier original…");
+        AppLogger.log("DiagWhitelistRestore", "Restauration whitelist démarrée");
+
+        AdbLocalClient.runWhitelistRestore(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        boolean ok = report.contains("RESTORE_OK") || report.contains("✅");
+                        tvWhitelistPatchResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                        tvWhitelistPatchResult.setText(report);
+                        btnWhitelistRestore.setEnabled(true);
+                        AppLogger.log("DiagWhitelistRestore", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvWhitelistPatchResult.setBackgroundColor(0xFF2A1A1A);
+                        tvWhitelistPatchResult.setText("❌ " + error);
+                        btnWhitelistRestore.setEnabled(true);
+                        AppLogger.log("DiagWhitelistRestore", "ERREUR: " + error);
+                    }
+                });
             }
         });
     }
