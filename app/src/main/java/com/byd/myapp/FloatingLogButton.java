@@ -62,10 +62,30 @@ public class FloatingLogButton extends Service {
     // ── Overlay ───────────────────────────────────────────────────────────────
 
     private void createOverlay() {
-        // Guard : SYSTEM_ALERT_WINDOW doit être accordée avant d'appeler addView().
-        // Sans ce check, addView() lève BadTokenException → crash du processus au lancement.
+        // Guard : SYSTEM_ALERT_WINDOW (AppOp) doit être accordée avant addView().
+        // Sur Android 10+, même avec platform.keystore, l'AppOp n'est pas accordé
+        // automatiquement pour une app en /data/app.  On tente un auto-grant via le
+        // shell ADB local (dadb), puis on relance createOverlay() sur le main thread.
         if (!android.provider.Settings.canDrawOverlays(this)) {
-            AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW non accordée — overlay ignoré");
+            AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW non accordée — tentative auto-grant via ADB…");
+            final android.os.Handler mainHandler =
+                    new android.os.Handler(getMainLooper());
+            AdbLocalClient.grantOverlayPermission(this, new AdbLocalClient.Callback() {
+                @Override
+                public void onSuccess(String report) {
+                    AppLogger.i(TAG, "SYSTEM_ALERT_WINDOW accordée via ADB ✓");
+                    mainHandler.post(new Runnable() {
+                        @Override public void run() {
+                            createOverlay(); // relance — canDrawOverlays() est désormais true
+                        }
+                    });
+                }
+                @Override
+                public void onError(String error) {
+                    AppLogger.e(TAG, "Auto-grant SYSTEM_ALERT_WINDOW échoué: " + error
+                            + " — badge LOG non affiché");
+                }
+            });
             return;
         }
         mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);

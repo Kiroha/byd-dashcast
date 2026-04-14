@@ -214,6 +214,39 @@ public class AdbLocalClient {
         return Dadb.create("localhost", ADB_PORT, keyPair);
     }
 
+    // ── Grant SYSTEM_ALERT_WINDOW via appops ─────────────────────────────────────
+    /**
+     * Accorde l'AppOp SYSTEM_ALERT_WINDOW au package courant via le shell ADB local.
+     *
+     * Sur Android 10+ une app non-system ne bénéficie pas de cet AppOp même si
+     * SYSTEM_ALERT_WINDOW est dans le manifest et l'APK est signé platform.
+     * La commande "appops set <pkg> SYSTEM_ALERT_WINDOW allow" (uid shell = 2000)
+     * est suffisante pour que Settings.canDrawOverlays() renvoie true sans redémarrage.
+     *
+     * Callback appelé sur le thread background dadb — penser à poster sur le main thread
+     * si on veut modifier l'UI suite au succès.
+     */
+    public static void grantOverlayPermission(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Dadb dadb = connect(context);
+                    String cmd = "appops set " + context.getPackageName()
+                            + " SYSTEM_ALERT_WINDOW allow";
+                    AdbShellResponse r = dadb.shell(cmd + " 2>&1");
+                    dadb.close();
+                    AppLogger.i(TAG, "grantOverlayPermission → " + cmd
+                            + " → '" + r.getAllOutput().trim() + "'");
+                    callback.onSuccess(r.getAllOutput().trim());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "grantOverlayPermission ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-overlay-grant").start();
+    }
+
     // ── TEST 6 : Sonde le cluster pour identifier le process propriétaire ──────
     /**
      * Interroge le système via ADB pour répondre à la question :
