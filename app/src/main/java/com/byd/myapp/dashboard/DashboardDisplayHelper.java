@@ -76,6 +76,7 @@ public class DashboardDisplayHelper {
      * sera appelée sur le main thread.
      */
     public void start() {
+        mKnownClusterDisplayId = -1; // réinitialiser avant chaque activation
         mDisplayManager.registerDisplayListener(mDisconnectListener, null);
 
         mClusterManager.activateClusterDisplay(new ClusterManager.DisplayReadyCallback() {
@@ -149,9 +150,9 @@ public class DashboardDisplayHelper {
                 @Override public void onError(String err) {
                     AppLogger.e(TAG, "stopProjection ADB ERREUR: " + err);
                 }
-            });
-        // Réinitialiser à -1 (état "déconnecté normal" après stop complet)
-        mKnownClusterDisplayId = -1;
+            });        // Réinitialiser à -1 se fait dans start() — PAS ici.
+        // Garder la sentinel -2 jusqu'au prochain start() pour bloquer les callbacks
+        // ADB orphelins (thread background peut poster sur mHandler après cancel()).
     }
 
     /** Re-passe le cluster en mode projection (sendInfo 1000/16 via ADB relay). */

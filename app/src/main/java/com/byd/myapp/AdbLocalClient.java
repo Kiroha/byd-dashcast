@@ -817,12 +817,16 @@ public class AdbLocalClient {
                         AppLogger.log(TAG, "taskId non trouvé — am task remove ignoré");
                     }
 
-                    // 3. Restaurer le rendu Qt BYD natif
+                    // 3. Restaurer le rendu Qt BYD natif (séquence correcte : cmd=18 puis cmd=0)
+                    AdbShellResponse rStop = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                    sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
+                    dadb.shell("sleep 1");
                     AdbShellResponse rRestore = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
-                    sb.append("sendInfo(0) : ").append(rRestore.getAllOutput().trim()).append("\n");
+                    sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
                     dadb.shell("sleep 1");
-                    AppLogger.log(TAG, "sendInfo(0) -> " + rRestore.getAllOutput().trim());
+                    AppLogger.log(TAG, "sendInfo(18+0) -> " + rRestore.getAllOutput().trim());
 
                     dadb.close();
                     boolean ok = !taskIdStr.isEmpty() || rRestore.getAllOutput().contains("00000000");
@@ -942,9 +946,13 @@ public class AdbLocalClient {
                     String cmd = "service call AutoContainer 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
-                    AdbShellResponse r = dadb.shell(cmd);
-                    dadb.close();
-                    String out = r.getAllOutput().trim();
+                    String out;
+                    try {
+                        AdbShellResponse r = dadb.shell(cmd);
+                        out = r.getAllOutput().trim();
+                    } finally {
+                        dadb.close();
+                    }
                     AppLogger.log(TAG, "sendInfo ADB(" + type + "," + infoInt + ") → " + out);
                     if (callback != null) callback.onSuccess(out);
                 } catch (Exception e) {

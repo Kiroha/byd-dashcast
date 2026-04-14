@@ -1,19 +1,13 @@
 package com.byd.myapp.dashboard;
 
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
-import android.os.Parcel;
 import android.util.Log;
 import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
 import android.view.Display;
-
-import java.lang.reflect.Method;
 
 /**
  * ClusterManager — contrôle direct du cluster BYD Seal via le service Binder "AutoContainer".
@@ -57,11 +51,6 @@ public class ClusterManager {
 
     // Nom exact dans ServiceManager (case-sensitive, confirmé par `service list`)
     public static final String SERVICE_NAME = "AutoContainer";
-    // Token AIDL (interface descriptor)
-    private static final String INTERFACE_TOKEN = "android.os.IAutoContainer";
-
-    // Numéros de transaction AIDL
-    private static final int TX_SEND_INFO = 2;
 
     // Paramètres sendInfo(type, infoInt, infoStr)
     public static final int CLUSTER_TYPE      = 1000;
@@ -90,7 +79,6 @@ public class ClusterManager {
     // ─────────────────────────────────────────────────────────────────────────
 
     private final Context mContext;
-    private IBinder mBinder;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     // Référence au DisplayListener en cours d'activateClusterDisplay(), afin que cancel()
@@ -102,91 +90,6 @@ public class ClusterManager {
         mContext = context.getApplicationContext();
     }
 
-    // ── Binder ──────────────────────────────────────────────────────────────
-
-    /**
-     * Obtient le Binder AutoContainer via réflexion ServiceManager.
-     * @return true si le service est disponible.
-     */
-    public boolean connect() {
-        try {
-            Class<?> sm = Class.forName("android.os.ServiceManager");
-            Method getService = sm.getDeclaredMethod("getService", String.class);
-            mBinder = (IBinder) getService.invoke(null, SERVICE_NAME);
-            if (mBinder == null) {
-                AppLogger.w(TAG, "ServiceManager.getService(\"" + SERVICE_NAME + "\") = null");
-                return false;
-            }
-            AppLogger.i(TAG, "AutoContainer Binder obtenu : " + mBinder);
-            return true;
-        } catch (Exception e) {
-            AppLogger.e(TAG, "connect() échec", e);
-            return false;
-        }
-    }
-
-    /**
-     * Envoi d'une commande sendInfo (transaction #2) au service AutoContainer.
-     *
-     * @param type     toujours 1000 pour le cluster
-     * @param infoInt  commande : CMD_PROJECTION_ON(16), CMD_RESTORE_NATIVE(0)
-     * @param infoStr  payload string (généralement "")
-     * @return true si l'appel Binder a réussi (pas d'exception, pas de RemoteException)
-     */
-    public boolean sendInfo(int type, int infoInt, String infoStr) {
-        if (mBinder == null && !connect()) {
-            AppLogger.e(TAG, "sendInfo : Binder non disponible");
-            return false;
-        }
-        Parcel data  = Parcel.obtain();
-        Parcel reply = Parcel.obtain();
-        try {
-            data.writeInterfaceToken(INTERFACE_TOKEN);
-            data.writeInt(type);
-            data.writeInt(infoInt);
-            data.writeString(infoStr != null ? infoStr : "");
-            mBinder.transact(TX_SEND_INFO, data, reply, 0);
-            // Lecture de l'exception distante (lance une exception Java si le Binder a retourné une erreur)
-            reply.readException();
-            AppLogger.i(TAG, "sendInfo(" + type + ", " + infoInt + ", \"" + infoStr + "\") OK");
-            return true;
-        } catch (Exception e) {
-            AppLogger.e(TAG, "sendInfo(" + type + ", " + infoInt + ") échec", e);
-            return false;
-        } finally {
-            data.recycle();
-            reply.recycle();
-        }
-    }
-
-    // ── Commandes haut niveau ────────────────────────────────────────────────
-
-    /** Met le cluster en mode projection plein écran. */
-    public boolean enterProjectionMode() {
-        return sendInfo(CLUSTER_TYPE, CMD_PROJECTION_ON, "");
-    }
-
-    /** Ferme proprement le mode projection (投屏关闭) — Qt reprend le contrôle du display. */
-    public boolean stopProjection() {
-        return sendInfo(CLUSTER_TYPE, CMD_STOP_PROJECTION, "");
-    }
-
-    /** Rafraîchit le flux vidéo Qt (主机恢复仪表视频流) — à appeler après stopProjection(). */
-    public boolean restoreNative() {
-        return sendInfo(CLUSTER_TYPE, CMD_RESTORE_NATIVE, "");
-    }
-
-    /**
-     * Bascule l'affichage ADAS sur cluster 2D (Seal EU) — cmd 53.
-     * Appeler UNE fois avant activation (masque ADAS pendant la transition)
-     * et UNE fois après restauration (rétablit ADAS).
-     * Pré-condition : état initial ADAS = visible (toujours le cas en conduite).
-     */
-    public boolean toggleAdas2D() {
-        boolean ok = sendInfo(CLUSTER_TYPE, CMD_ADAS_2D_TOGGLE, "");
-        AppLogger.i(TAG, "toggleAdas2D (cmd=53) : " + (ok ? "OK" : "ÉCHEC"));
-        return ok;
-    }
 
     // ── Activation + attente du VirtualDisplay ───────────────────────────────
 
