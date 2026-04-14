@@ -792,6 +792,97 @@ public class AdbLocalClient {
     }
 
     /**
+     * Envoie une commande de changement de taille d'écran Qt vers le cluster.
+     *   cmd 29 = 切换到8.8寸屏  (8.8 pouces)
+     *   cmd 30 = 切换到12.3寸屏 (12.3 pouces — état par défaut AutoDisplayService)
+     *   cmd 31 = 切换到10.25寸屏 (10.25 pouces)
+     * Retourne un rapport wm size -d 1 avant/après la commande.
+     */
+    public static void sendClusterScreenSize(final Context context, final int sizeCmd,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
+                    sb.append("sendInfo(1000, ").append(sizeCmd).append(") → ").append(label).append("\n\n");
+
+                    AdbShellResponse rBefore = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("Avant  : ").append(rBefore.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rCmd = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 " + sizeCmd + " s16 \"\" 2>&1");
+                    sb.append("Cmd    : ").append(rCmd.getAllOutput().trim()).append("\n");
+
+                    Thread.sleep(1500);
+
+                    AdbShellResponse rAfter = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("Après  : ").append(rAfter.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rDump = dadb.shell(
+                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -8");
+                    String dump = rDump.getAllOutput().trim();
+                    if (!dump.isEmpty())
+                        sb.append("\ndumpsys display id=1 :\n").append(dump).append("\n");
+
+                    AdbShellResponse rSf = dadb.shell(
+                            "dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'fission|virtual' | head -3");
+                    String sf = rSf.getAllOutput().trim();
+                    if (!sf.isEmpty())
+                        sb.append("\nSurfaceFlinger :\n").append(sf).append("\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "sendClusterScreenSize(" + sizeCmd + ") ✓");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "sendClusterScreenSize(" + sizeCmd + ") ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-screen-size-" + sizeCmd).start();
+    }
+
+    /**
+     * Restaure la taille d'écran cluster par défaut :
+     *   1. sendInfo(1000, 30) — 切换到12.3寸屏 (état Qt par défaut, 1920×1080)
+     *   2. wm size reset -d 1 — annule tout override logique Android
+     * À utiliser après un essai de cmd 29/31 qui aurait perturbé l'affichage.
+     */
+    public static void resetClusterDisplaySize(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("🔄 Restauration taille par défaut\n\n");
+
+                    AdbShellResponse r30 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append("sendInfo(1000,30) 切换到12.3寸屏 : ")
+                      .append(r30.getAllOutput().trim()).append("\n");
+                    Thread.sleep(500);
+
+                    AdbShellResponse rReset = dadb.shell("wm size reset -d 1 2>&1");
+                    sb.append("wm size reset -d 1 : ").append(rReset.getAllOutput().trim()).append("\n");
+                    Thread.sleep(300);
+
+                    AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
+                    sb.append("wm size -d 1 final : ").append(rFinal.getAllOutput().trim()).append("\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "resetClusterDisplaySize ✓");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "resetClusterDisplaySize ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-display-reset").start();
+    }
+
+    /**
      * Force-stop d'une application via ADB.
      * Appelé quand l'utilisateur tape "✕" dans la liste.
      * Utilise "am force-stop" qui tue le processus entier + libère toutes ses surfaces.
