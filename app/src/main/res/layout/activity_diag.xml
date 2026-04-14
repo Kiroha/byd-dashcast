@@ -532,5 +532,46 @@
             android:text="Partager le résultat TEST 11"
             android:layout_marginBottom="16dp"/>
 
+        <!-- TEST 12 : Patch container_comm_cfg.json — ajouter com.byd.myapp -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 12 — Patch whitelist AutoContainer (ajouter com.byd.myapp)"
+            android:textColor="#FF6600"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
+            android:id="@+id/btn_whitelist_patch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Lancer TEST 12 (MODIFIE /system)"
+            android:textSize="13sp"
+            android:backgroundTint="#B71C1C"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_whitelist_patch_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat TEST 12)"
+            android:textColor="#CCCCCC"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#111111"
+            android:layout_marginBottom="4dp"/>
+
+        <Button
+            android:id="@+id/btn_whitelist_patch_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:text="Partager le résultat TEST 12"
+            android:layout_marginBottom="16dp"/>
+
     </LinearLayout>
 </ScrollView>
