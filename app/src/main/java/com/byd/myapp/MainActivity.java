@@ -543,7 +543,6 @@ public class MainActivity extends AppCompatActivity
     /** Menu ⋮ — outils développeur accessibles sans encombrer la barre. */
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 1, 0, "🖥 Activer cluster");
         popup.getMenu().add(0, 2, 0, "⚙ Diagnostic");
         popup.getMenu().add(0, 3, 0, "📋 Rapport système");
         popup.getMenu().add(0, 5, 0, "🌐 Langue");
@@ -551,7 +550,6 @@ public class MainActivity extends AppCompatActivity
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
-                    case 1: activateCluster(); return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
                     case 5:
