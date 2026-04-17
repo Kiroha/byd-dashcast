@@ -58,8 +58,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterMirrorManager   mMirrorManager;
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
-    private boolean                mProjectionActive = false;
-
+    private boolean                mProjectionActive = false;    // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
+    private final android.os.Handler mMainHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
     // ────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -153,7 +154,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Pour le chemin direct (tap app sans passage par activateCluster),
         // activateClusterDisplay() a été appelé lors du démarrage du service → Qt déjà en standby.
         AppLogger.log(TAG, "launchOnDashboard — délai 2s → " + packageName);
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+        mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 boolean ok = mLauncher.launchOnDashboard(packageName);
                 AppLogger.log(TAG, "launchOnDashboard result=" + ok + " — " + packageName);
@@ -172,8 +173,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     @Override public void onSuccess(String report) {
                         AppLogger.log(TAG, "ADB launch OK — " + packageName);
                         if (callback != null) {
-                            new android.os.Handler(android.os.Looper.getMainLooper())
-                                    .post(new Runnable() {
+                            mMainHandler.post(new Runnable() {
                                 @Override public void run() { callback.onResult(true); }
                             });
                         }
@@ -181,8 +181,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     @Override public void onError(String error) {
                         AppLogger.e(TAG, "ADB launch ÉCHEC — " + error);
                         if (callback != null) {
-                            new android.os.Handler(android.os.Looper.getMainLooper())
-                                    .post(new Runnable() {
+                            mMainHandler.post(new Runnable() {
                                 @Override public void run() { callback.onResult(false); }
                             });
                         }

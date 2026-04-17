@@ -38,7 +38,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     /** Met à jour l'indicateur de l'app actuellement sur le cluster. */
     public void setCurrentPackage(String packageName) {
         mCurrentPackage = packageName;
-        notifyDataSetChanged();
+        // notifyItemRangeChanged plutôt que notifyDataSetChanged : seules les lignes
+        // dont la visibilité de l'indicateur change sont redessinées.
+        notifyItemRangeChanged(0, mApps.size());
     }
 
     @Override

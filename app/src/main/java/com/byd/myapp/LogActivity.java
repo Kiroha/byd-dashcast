@@ -3,6 +3,7 @@ package com.byd.myapp;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -56,7 +57,7 @@ public class LogActivity extends AppCompatActivity {
     private String mFilter = "";
     private boolean mRunning = false;
 
-    private final Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mRefreshRunnable = new Runnable() {
         @Override
         public void run() {
