@@ -12,7 +12,7 @@ import com.byd.myapp.AppLogger;
  *
  * COMPORTEMENT SUR BYD SEAL :
  *   Le cluster n'est PAS exposé comme un display Android visible natif.
- *   Il faut d'abord appeler ClusterManager.enterProjectionMode() (sendInfo 1000/16)
+ *   Il faut d'abord appeler ClusterManager.activateClusterDisplay() (sendInfo 1000/30+16)
  *   pour que AutoDisplayService crée son VirtualDisplay, puis écouter son apparition.
  *
  *   Ce helper délègue aujourd'hui toute la logique à ClusterManager.activateClusterDisplay()

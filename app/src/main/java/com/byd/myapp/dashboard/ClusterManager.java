@@ -67,10 +67,6 @@ public class ClusterManager {
     public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMÉ 16/04/2026)
     public static final int CMD_SCREEN_SIZE_88       = 29; // 切换到8.8寸屏  — Atto3/Dolphin etc.
     public static final int CMD_SCREEN_SIZE_1025     = 31; // 切换到10.25寸屏 — autres modèles
-    // Commande ADAS 2D (Seal EU) — TOGGLE : alterne entre affiché et masqué
-    // À appeler UNE fois avant activation (masque ADAS) et UNE fois après restauration (rétablit ADAS).
-    public static final int CMD_ADAS_2D_TOGGLE = 53; // 2D ADAS切換 — cluster 2D Seal EU
-
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
     private static final long VIRTUAL_DISPLAY_TIMEOUT_MS = 3000;

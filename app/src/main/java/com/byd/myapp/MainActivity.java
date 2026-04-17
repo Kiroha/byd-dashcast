@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.util.Log;
 import android.content.pm.ResolveInfo;
 
 import com.byd.myapp.AppLogger;
@@ -274,7 +273,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onClusterDisplayConnected(Display display, int displayId) {
-        Log.i(TAG, "Dashboard display connecté : id=" + displayId);
         AppLogger.log(TAG, "Dashboard connecté — displayId=" + displayId
                 + " nom=" + (display != null ? display.getName() : "IActivityManager/fallback"));
         if (mServiceBound && mClusterService != null) {

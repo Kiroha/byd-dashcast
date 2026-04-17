@@ -768,6 +768,7 @@ public class DiagActivity extends AppCompatActivity {
     private void setAdasBtnsEnabled(boolean enabled) {
         btnAdas32.setEnabled(enabled);
         btnAdas33.setEnabled(enabled);
+        btnAdasShare.setEnabled(enabled);
     }
 
     private void sendAdasCommand(final int adasCmd) {
@@ -810,6 +811,7 @@ public class DiagActivity extends AppCompatActivity {
         btnAutoHide.setEnabled(enabled);
         btnAutoShow.setEnabled(enabled);
         btnAutoReflect.setEnabled(enabled);
+        btnAutoShare.setEnabled(enabled);
     }
 
     private void runAutoServiceList() {
@@ -909,18 +911,20 @@ public class DiagActivity extends AppCompatActivity {
                         // Essayer transact direct comme dans c0/d.java case default
                         // setInt(1038, 944767020, 0) = 3 ints envoyés via transact
                         for (int code = 1; code <= 6; code++) {
+                            android.os.Parcel req = android.os.Parcel.obtain();
+                            android.os.Parcel rep = android.os.Parcel.obtain();
                             try {
-                                android.os.Parcel req = android.os.Parcel.obtain();
-                                android.os.Parcel rep = android.os.Parcel.obtain();
                                 req.writeInt(1038);
                                 req.writeInt(944767020);
                                 req.writeInt(0);
                                 boolean ok = binder.transact(code, req, rep, 0);
                                 sb.append("transact(").append(code).append(") → ok=")
                                   .append(ok).append("\n");
-                                req.recycle(); rep.recycle();
                             } catch (Exception ex) {
                                 sb.append("transact(").append(code).append(") → ❌ ").append(ex.getMessage()).append("\n");
+                            } finally {
+                                req.recycle();
+                                rep.recycle();
                             }
                         }
                     }

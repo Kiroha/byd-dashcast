@@ -57,19 +57,13 @@ public class AdbLocalClient {
             try {
                 File privateKey = new File(context.getFilesDir(), "adb.key");
                 File publicKey  = new File(context.getFilesDir(), "adb.pub");
+                boolean newKey  = !privateKey.exists() || !publicKey.exists();
 
-                AdbKeyPair keyPair;
-                if (privateKey.exists() && publicKey.exists()) {
-                    keyPair = AdbKeyPair.read(privateKey, publicKey);
-                    AppLogger.log(TAG, "Clé ADB existante rechargée");
-                } else {
-                    AdbKeyPair.generate(privateKey, publicKey);
-                    keyPair = AdbKeyPair.read(privateKey, publicKey);
-                    AppLogger.log(TAG, "Nouvelle clé ADB générée → popup attendu");
-                }
-
+                AppLogger.log(TAG, newKey
+                        ? "Nouvelle clé ADB générée → popup attendu"
+                        : "Clé ADB existante rechargée");
                 AppLogger.log(TAG, "Connexion dadb → localhost:" + ADB_PORT + " …");
-                Dadb dadb = Dadb.create("localhost", ADB_PORT, keyPair);
+                try (Dadb dadb = connect(context)) {
                 AppLogger.log(TAG, "Connexion ADB établie ✓");
 
                 StringBuilder sb = new StringBuilder();
@@ -187,9 +181,9 @@ public class AdbLocalClient {
                 }
                 sb.append(finalOut.isEmpty() ? "(aucune entrée — vérifier APK installé)" : finalOut).append("\n");
 
-                dadb.close();
                 AppLogger.log(TAG, "ADB local terminé ✓");
                 callback.onSuccess(sb.toString());
+                }
 
             } catch (Exception e) {
                 String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
@@ -229,12 +223,10 @@ public class AdbLocalClient {
     public static void grantOverlayPermission(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     String cmd = "appops set " + context.getPackageName()
                             + " SYSTEM_ALERT_WINDOW allow";
                     AdbShellResponse r = dadb.shell(cmd + " 2>&1");
-                    dadb.close();
                     AppLogger.i(TAG, "grantOverlayPermission → " + cmd
                             + " → '" + r.getAllOutput().trim() + "'");
                     callback.onSuccess(r.getAllOutput().trim());
@@ -262,8 +254,7 @@ public class AdbLocalClient {
     public static void runClusterProbe(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     // 1. Packages BYD/xdja installés
@@ -325,7 +316,6 @@ public class AdbLocalClient {
                     }
                     sb.append("\n→ Récupérez les APK avec le gestionnaire de fichiers BYD (/sdcard/)");
 
-                    dadb.close();
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
@@ -349,8 +339,7 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     sb.append("── sendInfo(1000, 30) = 12.3\" (ADAS non étiré) ──\n");
@@ -364,7 +353,6 @@ public class AdbLocalClient {
                         "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
                     sb.append(r16.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.endTiming(TAG, t0, "activateClusterDisplay terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -394,8 +382,7 @@ public class AdbLocalClient {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
                 AppLogger.i(TAG, "runDisplayOneLaunch démarré [" + Thread.currentThread().getName() + "]");
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
                     dadb.shell("logcat -c 2>&1");
 
@@ -433,12 +420,10 @@ public class AdbLocalClient {
                         "logcat -d 2>&1 | grep -iE 'AutoContainer|sendInfo' | tail -20");
                     sb.append(rLog.getAllOutput().trim().isEmpty() ? "(aucune entrée)" : rLog.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.endTiming(TAG, t0, "runDisplayOneLaunch terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "runDisplayOneLaunch ERREUR : " + msg);
                     AppLogger.e(TAG, "runDisplayOneLaunch ERREUR", e);
                     callback.onError(msg);
                 }
@@ -464,9 +449,8 @@ public class AdbLocalClient {
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    AppLogger.log(TAG, "Restauration BYD cluster");
-                    Dadb dadb = connect(context);
+                AppLogger.log(TAG, "Restauration BYD cluster");
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     // Séquence restauration (confirmé fonctionnel — TEST 10 étapes 3+4) :
@@ -481,7 +465,6 @@ public class AdbLocalClient {
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "restoreBydOnCluster -> OK");
                     callback.onSuccess("BYD restauré \u2713\n" + sb);
                 } catch (Exception e) {
@@ -507,9 +490,8 @@ public class AdbLocalClient {
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd);
-                    Dadb dadb = connect(context);
+                AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     AdbShellResponse rSize = dadb.shell(
@@ -525,7 +507,6 @@ public class AdbLocalClient {
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "restoreOriginCluster -> OK");
                     callback.onSuccess("Cluster d'origine restauré \u2713\n" + sb);
                 } catch (Exception e) {
@@ -554,9 +535,8 @@ public class AdbLocalClient {
     public static void runAutoContainerWhitelistProbe(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    AppLogger.log(TAG, "runAutoContainerWhitelistProbe démarré");
-                    Dadb dadb = connect(context);
+                AppLogger.log(TAG, "runAutoContainerWhitelistProbe démarré");
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     sb.append("════ TEST 11 — AutoContainer Whitelist ════\n\n");
@@ -603,7 +583,6 @@ public class AdbLocalClient {
                         "grep -E 'sharedUser=|pkg=.*xdja|pkg=.*cluster' | head -20");
                     sb.append(rShared.getAllOutput().trim()).append("\n\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "runAutoContainerWhitelistProbe terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -680,8 +659,7 @@ public class AdbLocalClient {
     public static void runClusterDisplaySizeTest(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     // ── 1. État initial ──────────────────────────────────────
@@ -775,7 +753,6 @@ public class AdbLocalClient {
                     AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
                     sb.append("wm size -d 1 final : ").append(rFinal.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "TEST 12 terminé ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -798,8 +775,7 @@ public class AdbLocalClient {
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
@@ -829,7 +805,6 @@ public class AdbLocalClient {
                     if (!sf.isEmpty())
                         sb.append("\nSurfaceFlinger :\n").append(sf).append("\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "sendClusterScreenSize(" + sizeCmd + ") ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -849,8 +824,7 @@ public class AdbLocalClient {
     public static void resetClusterDisplaySize(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
                     sb.append("🔄 Restauration taille par défaut\n\n");
 
@@ -867,7 +841,6 @@ public class AdbLocalClient {
                     AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
                     sb.append("wm size -d 1 final : ").append(rFinal.getAllOutput().trim()).append("\n");
 
-                    dadb.close();
                     AppLogger.log(TAG, "resetClusterDisplaySize ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -887,11 +860,9 @@ public class AdbLocalClient {
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    AppLogger.log(TAG, "forceStop " + packageName + " ...");
-                    Dadb dadb = connect(context);
+                AppLogger.log(TAG, "forceStop " + packageName + " ...");
+                try (Dadb dadb = connect(context)) {
                     AdbShellResponse r = dadb.shell("am force-stop " + packageName + " 2>&1 && echo STOPPED");
-                    dadb.close();
                     String out = r.getAllOutput().trim();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
                     if (out.contains("STOPPED") || out.isEmpty()) {
@@ -908,7 +879,7 @@ public class AdbLocalClient {
         }, "adb-forcestop-thread").start();
     }
 
-    // ── TEST 13 : Commandes ADAS cluster (cmd 12 / 13 / 53) ───────────────────
+    // ── TEST 13 : Commandes ADAS cluster (cmd 32 / 33) ────────────────────────
 
     /**
      * Envoie une commande ADAS via sendInfo(1000, cmd) et retourne le résultat.
@@ -923,8 +894,7 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     String label = adasCmd == 32 ? "3d adas自刷新开启 (auto-refresh ON)"
@@ -953,7 +923,6 @@ public class AdbLocalClient {
                         sb.append("\n── Logcat AutoContainer/ADAS ──\n").append(log).append("\n");
                     }
 
-                    dadb.close();
                     AppLogger.endTiming(TAG, t0, "runAdasCommand(" + adasCmd + ") terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -976,8 +945,7 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     sb.append("── service list | grep -iE 'auto|byd|cluster|adas' ──\n");
@@ -986,7 +954,6 @@ public class AdbLocalClient {
                     String list = rList.getAllOutput().trim();
                     sb.append(list.isEmpty() ? "(aucun résultat)" : list).append("\n");
 
-                    dadb.close();
                     AppLogger.endTiming(TAG, t0, "runAutoServiceList terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -1015,8 +982,7 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
                     int val = showAdas ? 1 : 0;
@@ -1034,7 +1000,6 @@ public class AdbLocalClient {
                         Thread.sleep(300);
                     }
 
-                    dadb.close();
                     AppLogger.endTiming(TAG, t0, "runAutoServiceCall terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
@@ -1084,20 +1049,20 @@ public class AdbLocalClient {
                         return;
                     }
 
-                    Dadb dadb = connect(context);
+                    try (Dadb dadb = connect(context)) {
                     String component = packageName + "/" + actName;
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
                             + " -n " + component + " 2>&1";
                     AppLogger.i(TAG, "ADB launchOnDisplay: " + cmd);
                     AdbShellResponse r = dadb.shell(cmd);
-                    dadb.close();
                     String out = r.getAllOutput().trim();
                     AppLogger.i(TAG, "ADB launchOnDisplay result: " + out);
                     if (out.contains("Error") || out.contains("Exception")) {
                         callback.onError(out);
                     } else {
                         callback.onSuccess(out);
+                    }
                     }
                 } catch (Exception e) {
                     AppLogger.e(TAG, "launchOnDisplay ADB échoué", e);
