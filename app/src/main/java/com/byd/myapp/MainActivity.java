@@ -249,7 +249,11 @@ public class MainActivity extends AppCompatActivity
     protected void onStop() {
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
-        // Retirer le listener mais garder le service actif : la projection continue
+        // Retirer le listener mais garder le service actif : la projection continue.
+        // Arrêter le miroir : le HandlerThread ne doit pas capturer des frames en background.
+        // Le miroir redémarre automatiquement via le mécanisme savedItem dans
+        // onClusterDisplayConnected() quand l'Activity revient au premier plan.
+        stopClusterMirror();
         if (mServiceBound && mClusterService != null) {
             mClusterService.setListener(null);
         }

@@ -101,6 +101,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         mListener = null;
+        // Arrêter le miroir dans tous les cas : si le service est tué par le système
+        // alors que HandlerThread tourne, on évite un leak de thread + bitmap.
+        mMirrorManager.stop();
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
