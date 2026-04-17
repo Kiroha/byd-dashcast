@@ -185,6 +185,7 @@ public class AdbLocalClient {
                 }
 
             } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                 AppLogger.e(TAG, "Échec ADB local", e);
                 AppLogger.log(TAG, "ADB local ERREUR — " + msg);
@@ -235,6 +236,7 @@ public class AdbLocalClient {
                             + " → '" + r.getAllOutput().trim() + "'");
                     callback.onSuccess(r.getAllOutput().trim());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "grantOverlayPermission ERREUR", e);
                     callback.onError(msg);
@@ -322,6 +324,7 @@ public class AdbLocalClient {
 
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "runClusterProbe ERREUR", e);
                     callback.onError(msg);
@@ -360,6 +363,7 @@ public class AdbLocalClient {
                     AppLogger.endTiming(TAG, t0, "activateClusterDisplay terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "activateClusterDisplay ERREUR", e);
                     callback.onError(msg);
@@ -427,6 +431,7 @@ public class AdbLocalClient {
                     AppLogger.endTiming(TAG, t0, "runDisplayOneLaunch terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "runDisplayOneLaunch ERREUR", e);
                     callback.onError(msg);
@@ -472,6 +477,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "restoreBydOnCluster -> OK");
                     callback.onSuccess("BYD restauré \u2713\n" + sb);
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "restoreBydOnCluster ERREUR", e);
                     callback.onError(msg);
@@ -514,6 +520,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "restoreOriginCluster -> OK");
                     callback.onSuccess("Cluster d'origine restauré \u2713\n" + sb);
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "restoreOriginCluster ERREUR", e);
                     callback.onError(msg);
@@ -590,6 +597,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "runAutoContainerWhitelistProbe terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "runAutoContainerWhitelistProbe ERREUR", e);
                     callback.onError(msg);
@@ -627,6 +635,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "sendInfo ADB(" + type + "," + infoInt + ") → " + out);
                     if (callback != null) callback.onSuccess(out);
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "sendInfo ADB ERREUR", e);
                     if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
@@ -754,6 +763,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "TEST 12 terminé ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "TEST 12 ERREUR", e);
                     callback.onError(msg);
@@ -806,6 +816,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "sendClusterScreenSize(" + sizeCmd + ") ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "sendClusterScreenSize(" + sizeCmd + ") ERREUR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
@@ -842,6 +853,7 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "resetClusterDisplaySize ✓");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "resetClusterDisplaySize ERREUR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
@@ -869,6 +881,7 @@ public class AdbLocalClient {
                         callback.onError(out);
                     }
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
                     callback.onError(msg);
@@ -924,6 +937,7 @@ public class AdbLocalClient {
                     AppLogger.endTiming(TAG, t0, "runAdasCommand(" + adasCmd + ") terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "runAdasCommand(" + adasCmd + ") ERREUR", e);
                     callback.onError(msg);
@@ -955,6 +969,7 @@ public class AdbLocalClient {
                     AppLogger.endTiming(TAG, t0, "runAutoServiceList terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "runAutoServiceList ERREUR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
@@ -1001,6 +1016,7 @@ public class AdbLocalClient {
                     AppLogger.endTiming(TAG, t0, "runAutoServiceCall terminé");
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "runAutoServiceCall ERREUR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
@@ -1063,6 +1079,7 @@ public class AdbLocalClient {
                     }
                     }
                 } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     AppLogger.e(TAG, "launchOnDisplay ADB échoué", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
