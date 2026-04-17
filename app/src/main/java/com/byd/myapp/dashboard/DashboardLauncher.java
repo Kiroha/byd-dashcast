@@ -37,7 +37,6 @@ public class DashboardLauncher {
 
     public void setDashboardDisplayId(int displayId) {
         mDashboardDisplayId = displayId;
-        AppLogger.d(TAG, "Dashboard display ID enregistré : " + displayId);
         AppLogger.log(TAG, "Display cluster enregistré : id=" + displayId);
     }
 

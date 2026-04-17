@@ -58,7 +58,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterMirrorManager   mMirrorManager;
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
-    private boolean                mProjectionActive = false;    // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
+    private boolean                mProjectionActive = false;
+    // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     // ────────────────────────────────────────────────────────────────────────
@@ -90,9 +91,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     @Override
     public boolean onUnbind(Intent intent) {
-        // Garder le listener null pour éviter les leaks si MainActivity est détruite
+        // Garder le listener null pour éviter les leaks si MainActivity est détruite.
+        // return false : chaque nouveau bindService() passe par onBind() normalement.
         mListener = null;
-        return true; // onRebind() sera appelé quand MainActivity se rebind
+        return false;
     }
 
     @Override
