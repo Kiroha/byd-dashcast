@@ -56,6 +56,8 @@ public class LogActivity extends AppCompatActivity {
 
     private String mFilter = "";
     private boolean mRunning = false;
+    private int    mLastEntryCount = -1;   // perf: skip rebuild si rien de nouveau
+    private String mLastFilter    = null; // perf: invalider si filtre change
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mRefreshRunnable = new Runnable() {
@@ -208,6 +210,10 @@ public class LogActivity extends AppCompatActivity {
     private void refreshLog() {
         List<AppLogger.Entry> entries = AppLogger.getEntries();
         String filter = mFilter.toLowerCase(Locale.getDefault());
+        // Évite de reconstruire le SpannableString si ni le buffer ni le filtre n'ont changé.
+        if (entries.size() == mLastEntryCount && filter.equals(mLastFilter)) return;
+        mLastEntryCount = entries.size();
+        mLastFilter     = filter;
 
         // Construire un SpannableString coloré
         SpannableString span = buildSpannable(entries, filter);

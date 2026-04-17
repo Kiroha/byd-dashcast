@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.view.Display;
@@ -35,6 +36,9 @@ public class ClusterMirrorManager {
 
     private final Context       mContext;
     private final Handler       mMainHandler = new Handler(Looper.getMainLooper());
+    // Thread de capture persistant : évite de créer un nouveau Thread toutes les 400 ms.
+    private HandlerThread       mCaptureThread;
+    private Handler             mCaptureHandler;
     private volatile boolean    mRunning     = false;
     private int                 mDisplayId   = -1;
     private int                 mClusterW    = 1920;
@@ -69,12 +73,22 @@ public class ClusterMirrorManager {
         }
         AppLogger.i(TAG, "Miroir démarré — display=" + displayId
                 + " " + mClusterW + "×" + mClusterH);
+        // Démarrer le thread de capture persistant
+        mCaptureThread  = new HandlerThread("cluster-mirror-cap");
+        mCaptureThread.start();
+        mCaptureHandler = new Handler(mCaptureThread.getLooper());
         scheduleCapture(callback, thisSession);
     }
 
     /** Arrête la boucle de capture et libère les ressources. */
     public void stop() {
         mRunning = false;
+        // Arrêter le HandlerThread de capture avant de vider le main handler
+        if (mCaptureThread != null) {
+            mCaptureThread.quitSafely();
+            mCaptureThread  = null;
+            mCaptureHandler = null;
+        }
         mMainHandler.removeCallbacksAndMessages(null);
         if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
             mLastBitmap.recycle();
@@ -88,30 +102,29 @@ public class ClusterMirrorManager {
     // ── Boucle de capture ────────────────────────────────────────────────────
 
     private void scheduleCapture(final FrameCallback callback, final int session) {
-        mMainHandler.postDelayed(() -> {
+        // Planifié sur mCaptureHandler (HandlerThread dédié) — aucun new Thread() à chaque frame.
+        mCaptureHandler.postDelayed(() -> {
             if (!mRunning || mSession != session) return;
-            new Thread(() -> {
-                final Bitmap bmp = captureDisplay(mDisplayId);
-                mMainHandler.post(() -> {
-                    // Double-check : stop()/start() peut avoir été appelé pendant la capture
-                    if (!mRunning || mSession != session) {
-                        if (bmp != null) bmp.recycle();
-                        return;
+            final Bitmap bmp = captureDisplay(mDisplayId);
+            mMainHandler.post(() -> {
+                // Double-check : stop()/start() peut avoir été appelé pendant la capture
+                if (!mRunning || mSession != session) {
+                    if (bmp != null) bmp.recycle();
+                    return;
+                }
+                if (bmp != null) {
+                    // Recycler le bitmap précédent AVANT d'afficher le nouveau
+                    // pour éviter l'accumulation en mémoire (~500 KB/frame à 2.5 fps).
+                    if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
+                        mLastBitmap.recycle();
                     }
-                    if (bmp != null) {
-                        // Recycler le bitmap précédent AVANT d'afficher le nouveau
-                        // pour éviter l'accumulation en mémoire (~500 KB/frame à 2.5 fps).
-                        if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
-                            mLastBitmap.recycle();
-                        }
-                        mLastBitmap = bmp;
-                        callback.onFrame(bmp, mClusterW, mClusterH);
-                    } else {
-                        callback.onError("SurfaceControl.screenshot() null");
-                    }
-                    scheduleCapture(callback, session);
-                });
-            }, "cluster-mirror-cap").start();
+                    mLastBitmap = bmp;
+                    callback.onFrame(bmp, mClusterW, mClusterH);
+                } else {
+                    callback.onError("SurfaceControl.screenshot() null");
+                }
+                scheduleCapture(callback, session);
+            });
         }, INTERVAL_MS);
     }
 
