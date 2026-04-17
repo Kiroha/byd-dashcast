@@ -97,8 +97,6 @@ public class ClusterMirrorManager {
         AppLogger.i(TAG, "Miroir arrêté");
     }
 
-    public boolean isRunning() { return mRunning; }
-
     // ── Boucle de capture ────────────────────────────────────────────────────
 
     private void scheduleCapture(final FrameCallback callback, final int session) {

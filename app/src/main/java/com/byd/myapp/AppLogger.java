@@ -130,6 +130,11 @@ public class AppLogger {
 
     // ── Accès au buffer ───────────────────────────────────────────────────────
 
+    /** Retourne le nombre d'entrées dans le buffer sans allouer de copie. */
+    public static int getEntriesCount() {
+        return sEntries.size();
+    }
+
     /** Retourne une copie immuable du buffer (pour LogActivity). */
     public static List<Entry> getEntries() {
         return Collections.unmodifiableList(new ArrayList<>(sEntries));

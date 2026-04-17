@@ -208,10 +208,12 @@ public class LogActivity extends AppCompatActivity {
             new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
 
     private void refreshLog() {
-        List<AppLogger.Entry> entries = AppLogger.getEntries();
+        // Évite d'allouer la copie du buffer si ni le compte ni le filtre n'ont changé.
+        int currentCount = AppLogger.getEntriesCount();
         String filter = mFilter.toLowerCase(Locale.getDefault());
-        // Évite de reconstruire le SpannableString si ni le buffer ni le filtre n'ont changé.
-        if (entries.size() == mLastEntryCount && filter.equals(mLastFilter)) return;
+        if (currentCount == mLastEntryCount && filter.equals(mLastFilter)) return;
+        // Le buffer ou le filtre a changé : faire la copie et reconstruire.
+        List<AppLogger.Entry> entries = AppLogger.getEntries();
         mLastEntryCount = entries.size();
         mLastFilter     = filter;
 

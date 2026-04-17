@@ -236,6 +236,11 @@ public class MainActivity extends AppCompatActivity
             // Activity revenue au premier plan : ré-attacher le listener
             // (onStop l'avait mis à null pour éviter les leaks pendant le background)
             mClusterService.setListener(this);
+            // Redémarrer le miroir si une app était active sur le cluster.
+            // onStop() l'a arrêté pour ne pas capturer inutilement en background.
+            if (mCurrentDashboardApp != null) {
+                startClusterMirror();
+            }
         } else if (!mBindRequested) {
             // Premier démarrage ou après onDestroy : lancer + binder le service
             mBindRequested = true;
