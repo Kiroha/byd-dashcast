@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 18/04/2026 — v1.62
+> Dernière mise à jour : 18/04/2026 — v1.64
 
 ---
 
@@ -55,7 +55,9 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|-----|
-| **1.62** | **63** | `24fcad7` | Sanity check 3 — `Log.*` → `AppLogger` dans ClusterManager/DashboardDisplayHelper/DashboardLauncher (journal in-app), `sendInfo` try-with-resources, imports MainActivity |
+| **1.64** | **65** | `4f0f199` | Perf — `HandlerThread` dédié `ClusterMirrorManager` (plus de `new Thread()` par frame à 400 ms), `LogActivity.refreshLog()` skip rebuild si compte entrées + filtre inchangés |
+| 1.63 | 64 | `07b428c` | Sanity check 4 — `Handler(Looper.main)` LogActivity+ClusterService, `InterruptedException` restauré AdbLocalClient (×17 catch), `notifyItemRangeChanged` AppListAdapter |
+| 1.62 | 63 | `24fcad7` | Sanity check 3 — `Log.*` → `AppLogger` dans ClusterManager/DashboardDisplayHelper/DashboardLauncher (journal in-app), `sendInfo` try-with-resources, imports MainActivity |
 | 1.61 | 62 | `e8b0eee` | Sanity check 2 — race `ClusterMirrorManager`, boucle infinie `FloatingLogButton`, TOCTOU clés ADB, dead code `onRebind`, imports orphelins |
 | 1.60 | 61 | `2687936` (tag: `apres-sanity-check`) | Sanity check 1 — dadb leak `connectAndGrant`, `LogExporter` thread-safety + JSON escaping + `conn.disconnect` finally, `MainActivity` Log.i doublon, manifest `screenOrientation` |
 | 1.59 | 60 | `7d26f79` (tag: `v1.59`) | Bouton 'Cluster d'origine' + settings taille cluster + fix restore sequence + suppression auto-activation |
