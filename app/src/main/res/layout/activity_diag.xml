@@ -385,7 +385,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Envoie la commande de changement de taille Qt (cmd 29=8.8&quot; / 30=12.3&quot; / 31=10.25&quot;). Si ça bogue, &#171;Rétablir&#187; remet cmd30 + wm reset. Le diagnostic complet teste tout séquentiellement."
+            android:text="Taille écran cluster : cmd 29=8.8&quot; (Atto3/Dolphin) / cmd 30=12.3&quot; (Seal EU ✅) / cmd 31=10.25&quot;. Confirmé 16/04/2026 : cmd 30 = bonne résolution Seal EU. Rétablir : cmd30 + wm reset."
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -402,7 +402,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 8.8&quot;\n(cmd 29)"
+                android:text="▶ 8.8&quot;\n(cmd 29)\nAtto3/Dolphin"
                 android:textSize="12sp"
                 android:backgroundTint="#00695C"
                 android:layout_marginEnd="4dp"/>
@@ -412,7 +412,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 12.3&quot;\n(cmd 30)"
+                android:text="▶ 12.3&quot;\n(cmd 30)\nSeal EU ✅"
                 android:textSize="12sp"
                 android:backgroundTint="#1B5E20"
                 android:layout_marginStart="4dp"
@@ -423,7 +423,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 10.25&quot;\n(cmd 31)"
+                android:text="▶ 10.25&quot;\n(cmd 31)\nautres modèles"
                 android:textSize="12sp"
                 android:backgroundTint="#00695C"
                 android:layout_marginStart="4dp"/>
@@ -467,6 +467,163 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Partager le résultat TEST 12"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- TEST 13 — Commandes ADAS cluster (cmd 12 / 13 / 53)            -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 13 — Commandes ADAS cluster"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="cmd 32 = 3d adas自刷新开启 (auto-refresh 3D ON) | cmd 33 = 3d adas自刷新关闭 (auto-refresh 3D OFF). Clusters 3D BYD uniquement."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btn_adas_32"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="▶ cmd 32\n3D ADAS ON"
+                android:textSize="12sp"
+                android:backgroundTint="#1B5E20"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btn_adas_33"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="▶ cmd 33\n3D ADAS OFF"
+                android:textSize="12sp"
+                android:backgroundTint="#B71C1C"
+                android:layout_marginStart="4dp"/>
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_adas_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Appuyez sur un bouton (TEST 5 d&#39;abord)."
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="12dp"
+            android:background="#111A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_adas_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Partager le résultat TEST 13"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- TEST 14 — Masquage fenêtre ADAS (service "auto" BYD VHAL privé)   -->
+        <!-- RE byd_dashboard/c0/d.java case default:                           -->
+        <!--   getSystemService("auto").setInt(1038, 944767020, 0)              -->
+        <!-- Option A : via ADB shell service call                              -->
+        <!-- Option B : via reflection depuis l'app                             -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 14 — Masquage fenêtre ADAS"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#E0E0E0"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RE byd_dashboard: turnOffAdas() -&gt; getSystemService(&apos;auto&apos;).setInt(1038, 944767020, 0). Essai A (ADB service call) + B (reflection app). 1038 = type, 944767020 = 0x385B9B2C = VHAL prop masquage ADAS."
+            android:textSize="11sp"
+            android:textColor="#9E9E9E"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_auto_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="A1 — Lister services auto/byd (service list)"
+            android:textSize="13sp"
+            android:backgroundTint="#37474F"
+            android:layout_marginBottom="4dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="4dp">
+            <Button
+                android:id="@+id/btn_auto_hide"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="A2 — Masquer ADAS (val=0)"
+                android:textSize="12sp"
+                android:backgroundTint="#B71C1C"
+                android:layout_marginEnd="4dp"/>
+            <Button
+                android:id="@+id/btn_auto_show"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="A2 — Ré-afficher ADAS (val=1)"
+                android:textSize="12sp"
+                android:backgroundTint="#1B5E20"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_auto_reflect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="B — Reflection app (ServiceManager + transact direct)"
+            android:textSize="13sp"
+            android:backgroundTint="#4A148C"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_auto_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat TEST 14)"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:textColor="#B0BEC5"
+            android:background="#0D1117"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_auto_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Partager le résultat TEST 14"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>

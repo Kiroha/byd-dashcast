@@ -145,10 +145,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     }
 
     /**
-     * Lance une app sur le cluster avec la séquence correcte (identique au TEST 10) :
-     *   1. sendInfo(1000, 16) — Qt standby (cluster en mode diffusion)
-     *   2. Attente 1,5 s    — laisser Qt basculer
-     *   3. Lancement de l'app sur le display cluster
+     * Lance une app sur le cluster.
+     * Séquence d'activation :
+     *   1. sendInfo(1000, 30) — Seal EU screen size (CONFIRMÉ 16/04/2026)
+     *   2. sendInfo(1000, 16) — Qt standby
+     * Ces deux commandes sont déjà envoyées par activateClusterDisplay() au démarrage du service.
+     * Ce méthode ajoute le délai post-activation puis lance l'app.
      * La callback est appelée sur le main thread.
      */
     public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
@@ -161,7 +163,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             @Override public void run() {
                 boolean ok = mLauncher.launchOnDashboard(packageName);
                 AppLogger.log(TAG, "launchOnDashboard result=" + ok + " — " + packageName);
-                if (callback != null) callback.onResult(ok);
+                if (ok) {
+                    if (callback != null) callback.onResult(true);
+                    return;
+                }
+                // Fallback ADB : am start --display N — uid=2000 contourne
+                // SecurityException: Permission Denial: launchDisplayId=N (uid=10100 refusé)
+                AppLogger.w(TAG, "Fallback ADB launch — " + packageName);
+                int di = mDisplayHelper.getKnownClusterDisplayId();
+                if (di < 0) di = 1; // Seal EU hardcode
+                final int fDisplayId = di;
+                AdbLocalClient.launchOnDisplay(ClusterService.this, packageName, fDisplayId,
+                        new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        AppLogger.log(TAG, "ADB launch OK — " + packageName);
+                        if (callback != null) {
+                            new android.os.Handler(android.os.Looper.getMainLooper())
+                                    .post(new Runnable() {
+                                @Override public void run() { callback.onResult(true); }
+                            });
+                        }
+                    }
+                    @Override public void onError(String error) {
+                        AppLogger.e(TAG, "ADB launch ÉCHEC — " + error);
+                        if (callback != null) {
+                            new android.os.Handler(android.os.Looper.getMainLooper())
+                                    .post(new Runnable() {
+                                @Override public void run() { callback.onResult(false); }
+                            });
+                        }
+                    }
+                });
             }
         }, 2000);
     }
@@ -185,6 +217,20 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AppLogger.log(TAG, "stopProjection demandé");
         mProjectionActive = false;
         mDisplayHelper.stop();
+        mLauncher.setDashboardDisplayId(-1);
+        updateNotification("Cluster : arrêté");
+        stopSelf();
+    }
+
+    /**
+     * Synchronise l'état du service SANS renvoyer les commandes ADB de restauration.
+     * À utiliser quand la restauration ADB a déjà été faite en amont (ex: restoreBydDashboard).
+     * Évite le double envoi de sendInfo(18+0).
+     */
+    public void stopProjectionNoAdb() {
+        AppLogger.log(TAG, "stopProjectionNoAdb demandé (ADB déjà envoyé)");
+        mProjectionActive = false;
+        mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
         updateNotification("Cluster : arrêté");
         stopSelf();

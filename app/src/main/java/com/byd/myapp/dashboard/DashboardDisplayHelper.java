@@ -149,6 +149,18 @@ public class DashboardDisplayHelper {
         // ADB orphelins (thread background peut poster sur mHandler après cancel()).
     }
 
+    /**
+     * Variante de stop() sans envoi des commandes ADB de restauration.
+     * À utiliser quand la restauration a déjà été faite en amont (ex: restoreBydDashboard)
+     * pour éviter le double envoi de sendInfo(18+0).
+     */
+    public void stopWithoutAdb() {
+        mKnownClusterDisplayId = -2;
+        mClusterManager.cancel();
+        mDisplayManager.unregisterDisplayListener(mDisconnectListener);
+        AppLogger.i(TAG, "stopWithoutAdb — ADB déjà envoyé en amont");
+    }
+
     public int getKnownClusterDisplayId() {
         return mKnownClusterDisplayId;
     }

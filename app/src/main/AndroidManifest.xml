@@ -68,8 +68,12 @@
     <uses-permission android:name="android.permission.BYDAUTO_RADAR_GET"/>
 
     <!-- Confirmé requis pour lancer sur le display cluster (DiLink 3.0).
-         INTERNAL_SYSTEM_WINDOW conservé : signature permission accordée avec platform.keystore. -->
+         INTERNAL_SYSTEM_WINDOW : signature permission accordée avec platform.keystore.
+         MANAGE_ACTIVITY_STACKS (signature|privileged) : requis pour setLaunchDisplayId()
+           vers une app TIERCE (Navigation = com.telenav.app.arp) sur display non-default.
+           Accordée automatiquement avec platform.keystore (confirmé : INJECT_EVENTS OK). -->
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"/>
+    <uses-permission android:name="android.permission.MANAGE_ACTIVITY_STACKS"/>
     <!-- Miroir cluster : capture du display 1 via SurfaceControl.screenshot() -->
     <uses-permission android:name="android.permission.READ_FRAME_BUFFER"/>
     <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER"/>

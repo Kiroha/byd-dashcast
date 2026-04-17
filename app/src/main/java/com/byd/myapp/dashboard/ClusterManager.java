@@ -25,12 +25,17 @@ import android.view.Display;
  *   #3 sendInfo2(int type, byte[] data)
  *   #4 registerCallback(IAutoContainerCallback cb)
  *
- * COMMANDES CLUSTER (type=1000) — CONFIRMÉES EN VOITURE (13/04/2026, BYD Seal EU) :
+ * COMMANDES CLUSTER (type=1000) — CONFIRMÉES EN VOITURE (13/04/2026 + 16/04/2026, BYD Seal EU) :
+ *
+ *   infoInt=30  → 切换到12.3寸屏 = PASSER EN MODE Seal EU (bonne résolution) :
+ *                  DOIT être envoyé AVANT infoInt=16 sur Seal EU.
+ *                  Corrige le bug fenêtre ADAS et l'étirement UI.
+ *                  Séquence complète : sendInfo(30) → attente 1s → sendInfo(16) → attente 2s → startActivity.
  *
  *   infoInt=16  → 全屏投屏开启 = ACTIVER projection plein écran :
  *                  Qt entre en standby, display 1 reste enregistré dans IActivityManager.
  *                  C'EST LA BONNE COMMANDE pour lancer une app sur display 1.
- *                  Séquence : sendInfo(16) → attente 2s → startActivity sur display 1.
+ *                  Séquence : sendInfo(30) → sendInfo(16) → attente 2s → startActivity sur display 1.
  *
  *   infoInt=18  → 投屏关闭 = FERMER la projection :
  *                  C'EST LA BONNE COMMANDE de restauration (cmd=0 seul ne suffit PAS).
@@ -58,6 +63,10 @@ public class ClusterManager {
     public static final int CMD_STOP_PROJECTION  = 18;  // 投屏关闭 — FERMER la projection (CONFIRMÉ 13/04/2026)
     public static final int CMD_RESTORE_NATIVE   = 0;   // 主机恢复付表视频流 — rafraîchir flux Qt (après cmd 18)
     // CMD=1 : déconnecte Qt complètement — NE JAMAIS UTILISER (détruit display 1)
+    // Commandes taille d'écran cluster (DiLink 3.0/Di4.0) :
+    public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMÉ 16/04/2026)
+    public static final int CMD_SCREEN_SIZE_88       = 29; // 切换到8.8寸屏  — Atto3/Dolphin etc.
+    public static final int CMD_SCREEN_SIZE_1025     = 31; // 切换到10.25寸屏 — autres modèles
     // Commande ADAS 2D (Seal EU) — TOGGLE : alterne entre affiché et masqué
     // À appeler UNE fois avant activation (masque ADAS) et UNE fois après restauration (rétablit ADAS).
     public static final int CMD_ADAS_2D_TOGGLE = 53; // 2D ADAS切換 — cluster 2D Seal EU
@@ -126,40 +135,92 @@ public class ClusterManager {
         if (found != null) {
             Log.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
                     + " name=" + found.getName());
-            // sendInfo(1000, 16) via ADB relay (uid=2000) — le Binder direct échoue avec
-            // SecurityException car com.byd.myapp n'est pas dans container_comm_cfg.json,
-            // et dm-verity empêche de patcher /system sur ce hardware.
-            // La callback est appelée APRES que Qt est en standby (onSuccess) ou en cas
-            // d'erreur ADB (on tente quand même le lancement).
+            // Séquence Seal EU (CONFIRMÉE 16/04/2026) :
+            //   1. sendInfo(1000, 30) — passer cluster en mode Seal EU (12.3") → résolution correcte
+            //   2. sendInfo(1000, 16) — Qt standby → on peut afficher notre app
+            // sendInfo via ADB relay (uid=2000) — le Binder direct échoue :
+            //   com.byd.myapp absent de container_comm_cfg.json → SecurityException.
             final Display displayFound = found;
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String out) {
-                        AppLogger.i(TAG, "enterProjectionMode ADB(cmd=16) : " + out);
-                        mHandler.post(new Runnable() {
+                        AppLogger.i(TAG, "activateCluster ADB(cmd=30, Seal EU screen) : " + out);
+                        // Attendre 1s que le cluster adopte la nouvelle résolution
+                        mHandler.postDelayed(new Runnable() {
                             @Override public void run() {
-                                callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                                    new AdbLocalClient.Callback() {
+                                        @Override public void onSuccess(String out2) {
+                                            AppLogger.i(TAG, "activateCluster ADB(cmd=16) : " + out2);
+                                            mHandler.post(new Runnable() {
+                                                @Override public void run() {
+                                                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                                                }
+                                            });
+                                        }
+                                        @Override public void onError(String err) {
+                                            AppLogger.e(TAG, "activateCluster ADB(cmd=16) ERREUR: " + err);
+                                            mHandler.post(new Runnable() {
+                                                @Override public void run() {
+                                                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                                                }
+                                            });
+                                        }
+                                    });
                             }
-                        });
+                        }, 1000);
                     }
                     @Override public void onError(String err) {
-                        AppLogger.e(TAG, "enterProjectionMode ADB ERREUR: " + err);
-                        mHandler.post(new Runnable() {
-                            @Override public void run() {
-                                callback.onDisplayReady(displayFound, displayFound.getDisplayId());
-                            }
-                        });
+                        AppLogger.e(TAG, "activateCluster ADB(cmd=30) ERREUR: " + err);
+                        // Même en cas d'erreur cmd=30, on tente cmd=16
+                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                            new AdbLocalClient.Callback() {
+                                @Override public void onSuccess(String out2) {
+                                    AppLogger.i(TAG, "activateCluster ADB(cmd=16) fallback : " + out2);
+                                    mHandler.post(new Runnable() {
+                                        @Override public void run() {
+                                            callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                                        }
+                                    });
+                                }
+                                @Override public void onError(String err2) {
+                                    AppLogger.e(TAG, "activateCluster ADB(cmd=16) fallback ERREUR: " + err2);
+                                    mHandler.post(new Runnable() {
+                                        @Override public void run() {
+                                            callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                                        }
+                                    });
+                                }
+                            });
                     }
                 });
             return;
         }
 
-        // Display non trouvé immédiatement — sendInfo(16) via ADB relay d'abord, puis écoute
-        AppLogger.w(TAG, "VirtualDisplay non trouvé immédiatement — sendInfo(16) ADB + polling");
-        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+        // Display non trouvé immédiatement — cmd30 + cmd16 via ADB relay, puis écoute
+        AppLogger.w(TAG, "VirtualDisplay non trouvé immédiatement — sendInfo(30+16) ADB + polling");
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
             new AdbLocalClient.Callback() {
-                @Override public void onSuccess(String out) { AppLogger.i(TAG, "enterProjectionMode ADB(cmd=16) slow path: " + out); }
-                @Override public void onError(String err) { AppLogger.e(TAG, "enterProjectionMode ADB slow path ERREUR: " + err); }
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "activateCluster slow path ADB(cmd=30) : " + out);
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                                new AdbLocalClient.Callback() {
+                                    @Override public void onSuccess(String out2) { AppLogger.i(TAG, "activateCluster slow path ADB(cmd=16) : " + out2); }
+                                    @Override public void onError(String err) { AppLogger.e(TAG, "activateCluster slow path ADB(cmd=16) ERREUR: " + err); }
+                                });
+                        }
+                    }, 1000);
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "activateCluster slow path ADB(cmd=30) ERREUR: " + err);
+                    AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                        new AdbLocalClient.Callback() {
+                            @Override public void onSuccess(String out2) { AppLogger.i(TAG, "activateCluster slow path ADB(cmd=16) fallback : " + out2); }
+                            @Override public void onError(String err2) { AppLogger.e(TAG, "activateCluster slow path ADB(cmd=16) fallback ERREUR: " + err2); }
+                        });
+                }
             });
 
         // Écouter les ajouts de display + timeout

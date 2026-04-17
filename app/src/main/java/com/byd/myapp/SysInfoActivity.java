@@ -252,8 +252,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 "android.permission.BYDAUTO_TYRE_GET",
                 "android.permission.BYDAUTO_RADAR_COMMON",
                 "android.permission.BYDAUTO_RADAR_GET",
-                "android.permission.BYDAUTO_SAFETYBELT_COMMON",
-                "android.permission.BYDAUTO_SAFETYBELT_GET",
+                // SAFETYBELT_COMMON/_GET retirées : "Unknown permission" sur ROM Seal EU
                 "android.permission.BYDAUTO_SENSOR_GET",
             };
             for (String perm : bydPerms) {

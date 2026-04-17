@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 13/04/2026 — v1.29
+> Dernière mise à jour : 16/04/2026 — v1.50
 
 ---
 
@@ -55,11 +55,14 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|-----|
-| **1.29** | **30** | `8da5160` | Speed/gear `--`/ERR : suppr. checkSelfPermission guard + getInstance() direct en try/catch |
+| **1.50** | **51** | — | `MANAGE_ACTIVITY_STACKS` dans manifest → setLaunchDisplayId pour apps TIERCES (Navigation) |
+| 1.46 | 47 | — | Séquence Seal EU : cmd30 (screen size) AVANT cmd16 → corrige stretching + bug ADAS (confirmé voiture) |
+| 1.44 | 45 | — | TEST 12 : sonde taille display cluster (cmd 29/30/31 + wm size) |
+| 1.43 | 44 | `0c3e4c1` | Sanity check, dead code removal |
+| 1.34 | 35 | `1ffe19e` | TEST 10 validé ✅ : retrait sendInfo(53), séquence simplifiée |
+| 1.29 | 30 | `8da5160` | Speed/gear `--`/ERR : suppr. checkSelfPermission guard + getInstance() direct en try/catch |
 | 1.28 | 29 | `037cc0c` | TEST 10 : ajout sendInfo(53) avant/après projection |
 | 1.27 | 28 | `0973ace` | ADAS window stretching : makeCustomAnimation(0,0) + FLAG_NO_ANIMATION + window flags + CMD 53 |
-| 1.26 | 27 | `1d5dd23` | Boutons Activer/Restaurer : isDashboardAvailable() → mCurrentDashboardApp != null |
-| 1.25 | 26 | `e1aeb31` | Docs : figer commandes AutoContainer confirmées en voiture |
 
 ---
 
@@ -100,24 +103,28 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 | 16  | 全屏投屏开启 — **ACTIVER projection plein écran** | ✅ Confirmé en voiture |
 | 17  | 半屏投屏开启 — activer demi-écran | Non testé |
 | 18  | 投屏关闭 — **FERMER la projection** | ✅ Confirmé en voiture |
-| 53  | 2D ADAS切換 — toggle ADAS 2D Seal EU | Non testé en voiture (v1.27) |
+| 29  | 切换到8.8寸屏 — cluster 8.8" (Atto3, Dolphin...) | ❌ pas le Seal EU |
+| 30  | 切换到12.3寸屏 — cluster 12.3" **Seal EU** | ✅ CONFIRMÉ 16/04/2026 |
+| 31  | 切换到10.25寸屏 — cluster 10.25" (Seal U DMI...) | Non testé sur Seal EU |
 
-### Séquence ACTIVATION
+### Séquence ACTIVATION — CONFIRMÉE Seal EU (16/04/2026)
 
 ```
-sendInfo(1000, 53)   → toggle ADAS (masquer overlay ADAS pendant transition)
-sendInfo(1000, 16)   → Qt standby
+sendInfo(1000, 30)   → passer cluster en mode Seal EU 12.3" (bonne résolution)
+attendre ~1s
+sendInfo(1000, 16)   → Qt standby (全屏投屏开启)
 attendre ~2s
 startActivity sur display 1 (FREEFORM mode, ActivityOptions.setLaunchDisplayId)
 ```
 
-### Séquence RESTAURATION
+Implémenté dans `ClusterManager.activateClusterDisplay()` + `AdbLocalClient.runDisplayOneLaunch()`.
+
+### Séquence RESTAURATION — CONFIRMÉE
 
 ```
 BYDDashboardActivity.finishIfActive()   → libère la surface
-sendInfo(1000, 18)   → fermer projection ✅
-sendInfo(1000, 0)    → rafraîchir flux Qt ✅
-sendInfo(1000, 53)   → restaurer ADAS
+sendInfo(1000, 18)   → 投屏关闭 — fermer projection ✅
+sendInfo(1000, 0)    → 主机恢复仪表视频流 — rafraîchir flux Qt ✅
 ```
 
 ### Équivalent shell (debug)
@@ -138,6 +145,7 @@ service call AutoContainer 2 i32 1000 i32 18 s16 ""   # restaurer
 - `_GET` : type **signature** → `pm grant` refusé (expected)
 - `INJECT_EVENTS` : signature — accordée si APK signé avec platform.keystore ✓
 - `INTERNAL_SYSTEM_WINDOW` : signature — accordée avec platform.keystore (requis pour lancer sur display 1)
+- `MANAGE_ACTIVITY_STACKS` : signature|privileged — accordée avec platform.keystore ; **requis pour setLaunchDisplayId sur apps tierces** (v1.50+)
 - **setprop `persist.sys.acc.whitelist`** : refusé sur ROM Seal EU (propriété protégée)
 
 ### 12 permissions COMMON à accorder
@@ -162,6 +170,8 @@ AC, BODYWORK, DOOR_LOCK, ENGINE, ENERGY, GEARBOX, INSTRUMENT, LIGHT, RADAR, SAFE
 | 13/04 | ADAS stretch/expand pendant projection | `makeCustomAnimation(0,0)` + `FLAG_NO_ANIMATION` + window flags (v1.27) |
 | 13/04 | Boutons Activer/Restaurer | `isDashboardAvailable()` → `mCurrentDashboardApp != null` (v1.26) |
 | 13/04 | Speed `--`, Gear `ERR` | Suppr. checkSelfPermission guard, getInstance() direct try/catch (v1.29) |
+| 16/04 | ADAS overlay stretch + mauvaise résolution cluster | cmd30 AVANT cmd16 dans séquence activation (v1.46) |
+| 16/04 | SecurityException pour apps tierces (Navigation) sur display 1 | `MANAGE_ACTIVITY_STACKS` permission ajoutée au manifest (v1.50) |
 
 ---
 
@@ -229,19 +239,20 @@ Context sysCtx = (Context) at.getMethod("getSystemContext").invoke(thread);
 | TEST 7 | `runAutoServiceProbe()` — sonder android.gui.BYDAutoServer | — |
 | TEST 8 | `runClusterActivation()` — sendInfo via ClusterManager | — |
 | TEST 9 | `runVirtualDisplayProbe()` — polling DisplayManager | — |
-| TEST 10 | `runDisplayOneLaunch()` — sendInfo(53+16) + am start --display 1 | Fixé v1.27/v1.28 |
+| TEST 10 | `runDisplayOneLaunch()` — sendInfo(30+16) + startActivity display 1 | **✅ VALIDÉ en voiture** (v1.34+) |
 
-### TEST 10 séquence (v1.28)
+### TEST 10 séquence actuelle (v1.46+)
 
-1. `[Avant]` dump stack display 1
-2. `sendInfo(53)` — toggle ADAS 2D *avant* activation
-3. `sendInfo(16)` — Qt standby
-4. stack display 1 brut
-5. `sendInfo(18)` — fermer projection
-6. `sendInfo(0)` — rafraîchir flux Qt
-7. `sendInfo(53)` — toggle ADAS 2D *après* restauration
-8. `[Après]` dump stack display 1
-9. Logcat
+1. `sendInfo(1000, 30)` — passer cluster en mode Seal EU 12.3"
+2. Attendre ~1s
+3. `sendInfo(1000, 16)` — Qt standby
+4. Attendre ~2s
+5. `startActivity` + `setLaunchDisplayId(displayId)` → lancement sur cluster
+
+**Restauration :**
+1. `BYDDashboardActivity.finishIfActive()`
+2. `sendInfo(1000, 18)` — fermer projection
+3. `sendInfo(1000, 0)` — rafraîchir flux Qt
 
 ---
 
@@ -253,6 +264,8 @@ Context sysCtx = (Context) at.getMethod("getSystemContext").invoke(thread);
 4. Listeners : register dans `onResume()`, unregister dans `onPause()`
 5. `ctrl_source` AC : `AC_CTRL_SOURCE_VOICE` ou `AC_CTRL_SOURCE_UI_KEY`
 6. Ne jamais utiliser `cmd=1` (AutoContainer) → détruit display 1
+7. Toujours envoyer `cmd=30` (taille écran Seal EU) AVANT `cmd=16` (projection)
+8. `MANAGE_ACTIVITY_STACKS` est obligatoire pour lancer des apps tierces sur display 1
 
 ---
 
