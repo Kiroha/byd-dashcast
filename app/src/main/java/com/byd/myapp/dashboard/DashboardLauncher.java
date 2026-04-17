@@ -22,8 +22,8 @@ import java.lang.reflect.Method;
  * une app signée avec la platform key (c'est notre cas avec platform.keystore).
  *
  * Deux usages :
- *  - launchOnDashboard(packageName) : lance une app tierce (Waze, Maps…)
- *  - launchBydDashboard()           : restaure le widget BYD (BYDDashboardActivity)
+ *  - launchOnDashboard(packageName) : lance une app tierce (Waze, Maps…) sur le cluster
+ *  - launchOnMainDisplay(packageName): envoie une app sur l'écran principal (display 0)
  */
 public class DashboardLauncher {
 
@@ -52,6 +52,11 @@ public class DashboardLauncher {
 
     /**
      * Lance une app tierce (identifiée par son package) sur le dashboard.
+     *
+     * Stratégie :
+     *  1. getLaunchIntentForPackage() — intent MAIN/LAUNCHER standard
+     *  2. Fallback : première Activity déclarée dans le package (apps système BYD
+     *     sans catégorie LAUNCHER, ex. Navigation, Paramètres BYD…)
      */
     public boolean launchOnDashboard(String packageName) {
         if (!isDashboardAvailable()) {
@@ -60,11 +65,31 @@ public class DashboardLauncher {
             return false;
         }
 
-        Intent launchIntent = mContext.getPackageManager()
-                .getLaunchIntentForPackage(packageName);
+        PackageManager pm = mContext.getPackageManager();
+        Intent launchIntent = pm.getLaunchIntentForPackage(packageName);
+
+        // Fallback : apps système sans MAIN/LAUNCHER (Navigation BYD, etc.)
         if (launchIntent == null) {
-            AppLogger.e(TAG, "App non installée ou introuvable : " + packageName);
-            AppLogger.log(TAG, "LAUNCH KO (app introuvable) — " + packageName);
+            AppLogger.w(TAG, "getLaunchIntentForPackage null pour " + packageName
+                    + " — fallback première Activity du package");
+            try {
+                android.content.pm.PackageInfo pi =
+                        pm.getPackageInfo(packageName, android.content.pm.PackageManager.GET_ACTIVITIES);
+                if (pi.activities != null && pi.activities.length > 0) {
+                    android.content.pm.ActivityInfo ai = pi.activities[0];
+                    launchIntent = new Intent();
+                    launchIntent.setComponent(
+                            new android.content.ComponentName(packageName, ai.name));
+                    AppLogger.i(TAG, "Fallback Activity : " + ai.name);
+                }
+            } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+                AppLogger.e(TAG, "Package introuvable : " + packageName);
+            }
+        }
+
+        if (launchIntent == null) {
+            AppLogger.e(TAG, "Aucune Activity trouvée pour : " + packageName);
+            AppLogger.log(TAG, "LAUNCH KO (aucune Activity) — " + packageName);
             return false;
         }
 
@@ -74,12 +99,7 @@ public class DashboardLauncher {
     }
 
     /**
-     * Restaure l'affichage d'origine BYD sur le dashboard.
-     *
-     * Envoie un intent HOME sur le display secondaire. Le système Android
-    /**
      * Lance une app sur le display principal (display ID 0).
-     * Restore en même temps le cluster BYD via restoreSystemDashboard().
      */
     public boolean launchOnMainDisplay(String packageName) {
         Intent launchIntent = mContext.getPackageManager()

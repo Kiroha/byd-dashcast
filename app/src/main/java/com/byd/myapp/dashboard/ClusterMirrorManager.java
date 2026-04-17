@@ -40,6 +40,8 @@ public class ClusterMirrorManager {
     private int                 mDisplayId   = -1;
     private int                 mClusterW    = 1920;
     private int                 mClusterH    = 1080;
+    // Dernier bitmap rendu — recyclé avant d'afficher le suivant pour éviter la fuite mémoire.
+    private Bitmap              mLastBitmap  = null;
 
     public ClusterMirrorManager(Context context) {
         mContext = context.getApplicationContext();
@@ -70,6 +72,10 @@ public class ClusterMirrorManager {
     public void stop() {
         mRunning = false;
         mMainHandler.removeCallbacksAndMessages(null);
+        if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
+            mLastBitmap.recycle();
+            mLastBitmap = null;
+        }
         AppLogger.i(TAG, "Miroir arrêté");
     }
 
@@ -88,6 +94,12 @@ public class ClusterMirrorManager {
                         return;
                     }
                     if (bmp != null) {
+                        // Recycler le bitmap précédent AVANT d'afficher le nouveau
+                        // pour éviter l'accumulation en mémoire (~500 KB/frame à 2.5 fps).
+                        if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
+                            mLastBitmap.recycle();
+                        }
+                        mLastBitmap = bmp;
                         callback.onFrame(bmp, mClusterW, mClusterH);
                     } else {
                         callback.onError("SurfaceControl.screenshot() null");

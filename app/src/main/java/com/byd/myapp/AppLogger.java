@@ -63,7 +63,11 @@ public class AppLogger {
 
     public static void log(Level level, String tag, String msg) {
         sEntries.add(new Entry(level, tag, msg));
-        while (sEntries.size() > MAX_ENTRIES) sEntries.remove(0);
+        // Trimmer le surplus en une seule opération (évite N copies sur CopyOnWriteArrayList)
+        int excess = sEntries.size() - MAX_ENTRIES;
+        if (excess > 0) {
+            sEntries.subList(0, excess).clear();
+        }
         // Miroir logcat
         switch (level) {
             case DEBUG: Log.d(tag, msg); break;
@@ -88,7 +92,8 @@ public class AppLogger {
                 ? msg + " [" + t.getClass().getSimpleName() + ": " + t.getMessage() + "]"
                 : msg;
         sEntries.add(new Entry(Level.ERROR, tag, full));
-        while (sEntries.size() > MAX_ENTRIES) sEntries.remove(0);
+        int excessE = sEntries.size() - MAX_ENTRIES;
+        if (excessE > 0) sEntries.subList(0, excessE).clear();
         Log.e(tag, msg, t); // stacktrace complète dans logcat
     }
 
@@ -97,7 +102,8 @@ public class AppLogger {
                 ? msg + " [" + t.getClass().getSimpleName() + ": " + t.getMessage() + "]"
                 : msg;
         sEntries.add(new Entry(Level.WARN, tag, full));
-        while (sEntries.size() > MAX_ENTRIES) sEntries.remove(0);
+        int excessW = sEntries.size() - MAX_ENTRIES;
+        if (excessW > 0) sEntries.subList(0, excessW).clear();
         Log.w(tag, msg, t);
     }
 
@@ -160,15 +166,13 @@ public class AppLogger {
         if (outDir == null) outDir = context.getFilesDir();
         if (!outDir.exists()) outDir.mkdirs();
         File outFile = new File(outDir, filename);
-        try {
-            FileWriter fw = new FileWriter(outFile);
+        try (FileWriter fw = new FileWriter(outFile)) {
             fw.write(get());
-            fw.close();
-            return outFile;
         } catch (IOException ex) {
             Log.e("AppLogger", "saveToFile échec", ex);
             return null;
         }
+        return outFile;
     }
 
     // ── Partage ───────────────────────────────────────────────────────────────

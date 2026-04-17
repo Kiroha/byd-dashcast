@@ -338,16 +338,56 @@ public class AdbLocalClient {
 
     // ── TEST 10 : Test de restauration du cluster ──────────────────────────────
     /**
-     * TEST 10 — Séquence complète activation + restauration cluster
+     * Active le cluster en mode présentation (sendInfo 30 + 16 uniquement).
      *
-     * Séquence testée (identique au flow bouton "Envoyer app") :
-     *   1. [Avant] am stack list display 1
-     *   2. sendInfo(1000, 16) — Qt standby
-     *   3. [Stack display 1 après activation]
-     *   4. sendInfo(1000, 18) — fermer projection (投屏关闭)
-     *   5. sendInfo(1000,  0) — rafraîchir flux Qt
-     *   6. [Après] am stack list display 1
-     *   7. Logcat AutoContainer
+     *   1. sendInfo(1000, 30) — taille 12.3" TOUJOURS : seul mode où l'écran ADAS n'est pas étiré
+     *   2. sendInfo(1000, 16) — Qt standby → libère le display pour la projection
+     *
+     * Ne contient PAS sendInfo(18) ni sendInfo(0) qui sont des commandes de restauration.
+     */
+    public static void activateClusterDisplay(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("── sendInfo(1000, 30) = 12.3\" (ADAS non étiré) ──\n");
+                    AdbShellResponse r30 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append(r30.getAllOutput().trim()).append("\n");
+                    Thread.sleep(1000);
+
+                    sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
+                    AdbShellResponse r16 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
+                    sb.append(r16.getAllOutput().trim()).append("\n");
+
+                    dadb.close();
+                    AppLogger.endTiming(TAG, t0, "activateClusterDisplay terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "activateClusterDisplay ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-activate-cluster-thread").start();
+    }
+
+    /**
+     * TEST 10 — Séquence activation + restauration cluster (Seal EU)
+     *
+     * Séquence :
+     *   1. sendInfo(1000, 30) — Seal EU screen size (CONFIRMÉ 16/04/2026)
+     *   2. attente 1s
+     *   3. sendInfo(1000, 16) — Qt standby
+     *   4. attente 2s
+     *   5. sendInfo(1000, 18) — fermer projection (投屏关闭)
+     *   6. attente 1s
+     *   7. sendInfo(1000,  0) — rafraîchir flux Qt
+     *   8. Logcat AutoContainer
      */
     public static void runDisplayOneLaunch(final Context context, final Callback callback) {
         new Thread(new Runnable() {
@@ -357,108 +397,40 @@ public class AdbLocalClient {
                 try {
                     Dadb dadb = connect(context);
                     StringBuilder sb = new StringBuilder();
-
-                    // sendInfo via "service call AutoContainer" par ADB shell (uid=2000).
-                    // POURQUOI ADB et pas ClusterManager directement :
-                    //   xdja_AutoContainerService.checkSendPermissionAndAllowType() vérifie
-                    //   le package name de l'appelant. Notre package com.byd.myapp n'est pas
-                    //   dans /system/etc/container_comm_cfg.json → rejet "Not allowed package".
-                    //   L'ADB shell (uid=2000) est autorisé sans vérification de package.
-
-                    // 1. Stacks avant
-                    sb.append("── [Avant] am stack list (display 1) ──\n");
-                    AdbShellResponse rPre = dadb.shell(
-                        "am stack list 2>&1 | grep -iE 'displayId=1|myapp|BYDDashboard' | head -15");
-                    sb.append(rPre.getAllOutput().trim().isEmpty() ? "(aucun stack display 1)" : rPre.getAllOutput().trim()).append("\n");
-
-                    // 2. sendInfo(53) — ADAS 2D toggle AVANT Qt standby [FIX v1.27]
-                    // Cmd 53 = "2D ADAS切換" : masque l'overlay ADAS sur cluster 2D Seal EU
-                    // pendant que la transition vers le mode projection a lieu.
-                    // Si cmd 53 n'a pas d'effet sur cette ROM → résultat nul (parcel vide OK).
                     dadb.shell("logcat -c 2>&1");
 
-                    // 2. sendInfo(16) — Qt standby via ADB shell
+                    // ── 1. sendInfo(30) — Seal EU screen size ─────────────────
+                    sb.append("── sendInfo(1000, 30) = Seal EU screen size (12.3\") ──\n");
+                    AdbShellResponse rSend30 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append(rSend30.getAllOutput().trim()).append("\n");
+                    Thread.sleep(1000);
+
+                    // ── 2. sendInfo(16) — Qt standby ─────────────────────────
                     sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
                     AdbShellResponse rSend16 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
                     sb.append(rSend16.getAllOutput().trim()).append("\n");
                     Thread.sleep(2000);
 
-                    // 3. Supprimer les tasks TIERCES sur display 1 (PAS notre propre app).
-                    // Bug précédent : la fenêtre ±8 lignes autour de "displayId=1" capturait
-                    // notre propre tâche (com.byd.myapp) présente dans le stack list complet.
-                    // Fix : exclure explicitement "com.byd.myapp" + afficher le stack brut pour debug.
-                    sb.append("\n── am stack list (display 1) — brut ──\n");
-                    AdbShellResponse rStack = dadb.shell("am stack list 2>&1");
-                    String stkOutput = rStack.getAllOutput();
-                    java.util.Set<String> tasksOnD1 = new java.util.LinkedHashSet<>();
-                    String[] stkLines = stkOutput.split("\\r?\\n");
-                    for (int si = 0; si < stkLines.length; si++) {
-                        if (!stkLines[si].contains("displayId=1")) continue;
-                        int lo = Math.max(0, si - 8), hi = Math.min(stkLines.length - 1, si + 8);
-                        for (int sj = lo; sj <= hi; sj++) {
-                            String lj = stkLines[sj];
-                            // Exclure notre propre app — elle est sur display 0
-                            if (lj.contains("com.byd.myapp")) continue;
-                            String[] triggers = {"taskId=", "Task id #", "Task id#", "task #", "taskid="};
-                            for (String tr : triggers) {
-                                int idx = lj.indexOf(tr);
-                                if (idx < 0) { String lc = lj.toLowerCase(); idx = lc.indexOf(tr.toLowerCase()); }
-                                if (idx >= 0) {
-                                    String after = lj.substring(idx + tr.length()).trim();
-                                    StringBuilder num = new StringBuilder();
-                                    for (int c = 0; c < after.length() && Character.isDigit(after.charAt(c)); c++)
-                                        num.append(after.charAt(c));
-                                    if (num.length() > 0) { tasksOnD1.add(num.toString()); break; }
-                                }
-                            }
-                        }
-                    }
-                    // Afficher le stack brut (filtré display 1) pour diagnostic
-                    boolean d1Found = false;
-                    for (String l : stkLines) {
-                        if (l.contains("displayId=1") || (d1Found && (l.contains("taskId=") || l.contains("bounds=")))) {
-                            sb.append(l).append("\n");
-                            d1Found = l.contains("displayId=1");
-                        }
-                    }
-                    if (sb.toString().endsWith("── am stack list (display 1) — brut ──\n")) {
-                        sb.append("(aucun stack displayId=1 trouvé)\n");
-                    }
-                    if (!tasksOnD1.isEmpty()) {
-                        sb.append("→ Tasks à retirer : " + tasksOnD1 + "\n");
-                        for (String tid : tasksOnD1) {
-                            dadb.shell("am task remove " + tid + " 2>&1");
-                        }
-                        Thread.sleep(1000);
-                    } else {
-                        sb.append("(aucun task tiers sur display 1)\n");
-                    }
-
-                    // 5. sendInfo(1000, 18) — FERMER la projection (投屏关闭)
+                    // ── 3. sendInfo(18) — fermer projection ──────────────────
                     sb.append("\n── sendInfo(1000, 18) = fermer projection (投屏关闭) ──\n");
                     AdbShellResponse rSend18 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append(rSend18.getAllOutput().trim()).append("\n");
                     Thread.sleep(1000);
 
-                    // 5b. sendInfo(1000, 0) — rafraîchir flux vidéo Qt
+                    // ── 4. sendInfo(0) — rafraîchir flux Qt ──────────────────
                     sb.append("\n── sendInfo(1000, 0) = rafraîchir flux Qt ──\n");
                     AdbShellResponse rSend0 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append(rSend0.getAllOutput().trim()).append("\n");
                     Thread.sleep(500);
 
-                    // 5. Stacks après
-                    sb.append("\n── [Après] am stack list (display 1) ──\n");
-                    AdbShellResponse rPost = dadb.shell(
-                        "am stack list 2>&1 | grep -iE 'displayId=1|myapp|BYDDashboard' | head -10");
-                    sb.append(rPost.getAllOutput().trim().isEmpty() ? "(aucun stack display 1 ✓)" : rPost.getAllOutput().trim()).append("\n");
-
-                    // 6. Logcat
-                    sb.append("\n── Logcat (AutoContainer + myapp) ──\n");
+                    // ── 5. Logcat ─────────────────────────────────────────────
+                    sb.append("\n── Logcat (AutoContainer) ──\n");
                     AdbShellResponse rLog = dadb.shell(
-                        "logcat -d 2>&1 | grep -iE 'AutoContainer|sendInfo|BYDDashboard|myapp' | tail -15");
+                        "logcat -d 2>&1 | grep -iE 'AutoContainer|sendInfo' | tail -20");
                     sb.append(rLog.getAllOutput().trim().isEmpty() ? "(aucune entrée)" : rLog.getAllOutput().trim()).append("\n");
 
                     dadb.close();
@@ -488,57 +460,81 @@ public class AdbLocalClient {
      *
      * @param displayId  ID du display cluster (1 sur DiLink 3.0)
      */
-    public static void restoreBydOnCluster(final Context context, final int displayId,
+    public static void restoreBydOnCluster(final Context context,
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    AppLogger.log(TAG, "Restauration BYD display=" + displayId + " ...");
+                    AppLogger.log(TAG, "Restauration BYD cluster");
                     Dadb dadb = connect(context);
                     StringBuilder sb = new StringBuilder();
 
-                    // 1. Trouver le taskId de notre app sur le display cluster
-                    AdbShellResponse rTask = dadb.shell(
-                        "am stack list 2>&1 | grep -B5 'com.byd.myapp' | grep -iE 'Task id|taskId' | tail -1");
-                    String taskIdStr = rTask.getAllOutput().trim().replaceAll("[^0-9]", "").trim();
-                    AppLogger.log(TAG, "taskId com.byd.myapp : '" + taskIdStr + "'");
-
-                    if (!taskIdStr.isEmpty()) {
-                        // 2. Retirer la task de display 1 sans tuer le processus
-                        AdbShellResponse rRemove = dadb.shell(
-                            "am task remove " + taskIdStr + " 2>&1 && echo TASK_REMOVED");
-                        sb.append(rRemove.getAllOutput().trim()).append("\n");
-                        dadb.shell("sleep 1");
-                        AppLogger.log(TAG, "am task remove " + taskIdStr + " -> " + rRemove.getAllOutput().trim());
-                    } else {
-                        sb.append("(taskId com.byd.myapp non trouvé — am task remove ignoré)\n");
-                        AppLogger.log(TAG, "taskId non trouvé — am task remove ignoré");
-                    }
-
-                    // 3. Restaurer le rendu Qt BYD natif (séquence correcte : cmd=18 puis cmd=0)
+                    // Séquence restauration (confirmé fonctionnel — TEST 10 étapes 3+4) :
+                    //   sendInfo(18) — fermer projection (投屏关闭)
+                    //   sendInfo(0)  — rafraîchir flux Qt
                     AdbShellResponse rStop = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
-                    dadb.shell("sleep 1");
+                    Thread.sleep(1000);
+
                     AdbShellResponse rRestore = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
-                    dadb.shell("sleep 1");
-                    AppLogger.log(TAG, "sendInfo(18+0) -> " + rRestore.getAllOutput().trim());
 
                     dadb.close();
-                    boolean ok = !taskIdStr.isEmpty() || rRestore.getAllOutput().contains("00000000");
-                    AppLogger.log(TAG, "restoreBydOnCluster -> " + (ok ? "OK" : "ÉCHEC"));
-                    if (ok) callback.onSuccess("BYD restauré \u2713\n" + sb);
-                    else    callback.onError(sb.toString());
+                    AppLogger.log(TAG, "restoreBydOnCluster -> OK");
+                    callback.onSuccess("BYD restauré \u2713\n" + sb);
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "restoreBydOnCluster ERREUR", e);
-                    AppLogger.log(TAG, "restoreBydOnCluster ERREUR — " + msg);
                     callback.onError(msg);
                 }
             }
         }, "adb-restore-thread").start();
+    }
+
+    /**
+     * Cluster d'origine — remet le cluster Qt dans la taille d'écran configurée par l'utilisateur.
+     *
+     * Séquence :
+     *   1. sendInfo(1000, screenSizeCmd) — passer Qt dans la bonne résolution
+     *   2. sendInfo(1000, 18)            — fermer la projection (投屏关闭)
+     *   3. sendInfo(1000,  0)            — rafraîchir le flux Qt
+     *
+     * @param screenSizeCmd  code taille : 29=8.8", 30=12.3" (Seal EU), 31=10.25"
+     */
+    public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd);
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    AdbShellResponse rSize = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
+                    sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
+                    sb.append(rSize.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rStop = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                    sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
+
+                    AdbShellResponse rRefresh = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                    sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
+
+                    dadb.close();
+                    AppLogger.log(TAG, "restoreOriginCluster -> OK");
+                    callback.onSuccess("Cluster d'origine restauré \u2713\n" + sb);
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "restoreOriginCluster ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-origin-cluster-thread").start();
     }
 
     /**
@@ -730,8 +726,8 @@ public class AdbLocalClient {
                     sb.append("dumpsys display id=1 après cmd=29 :\n").append(
                             dump29.isEmpty() ? "  (non trouvé)" : dump29).append("\n\n");
 
-                    // ── 3. sendInfo(1000, 30) — switch 12.3 pouces (rétablir) ─
-                    sb.append("=== [3] sendInfo(1000, 30) — 切换到12.3寸屏 (rétablir) ===\n");
+                    // ── 3. sendInfo(1000, 30) — Seal EU mode (12.3", mode par défaut Seal EU) ─
+                    sb.append("=== [3] sendInfo(1000, 30) — Seal EU (12.3\") — CONFIRMÉ 16/04/2026 ===\n");
                     AdbShellResponse r30 = dadb.shell(
                             "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
                     sb.append("Résultat : ").append(r30.getAllOutput().trim()).append("\n");
@@ -910,5 +906,204 @@ public class AdbLocalClient {
                 }
             }
         }, "adb-forcestop-thread").start();
+    }
+
+    // ── TEST 13 : Commandes ADAS cluster (cmd 12 / 13 / 53) ───────────────────
+
+    /**
+     * Envoie une commande ADAS via sendInfo(1000, cmd) et retourne le résultat.
+     *
+     *   cmd 32 = 3d adas自刷新开启 — auto-refresh 3D ADAS ON
+     *   cmd 33 = 3d adas自刷新关闭 — auto-refresh 3D ADAS OFF
+     *
+     * Retourne un rapport avec le résultat parcel + logcat post-commande.
+     */
+    public static void runAdasCommand(final Context context, final int adasCmd,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    String label = adasCmd == 32 ? "3d adas自刷新开启 (auto-refresh ON)"
+                                 : "3d adas自刷新关闭 (auto-refresh OFF)";
+                    sb.append("── sendInfo(1000, ").append(adasCmd)
+                      .append(") — ").append(label).append(" ──\n");
+
+                    dadb.shell("logcat -c 2>&1");
+
+                    AdbShellResponse rCmd = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 " + adasCmd + " s16 \"\" 2>&1");
+                    String parcel = rCmd.getAllOutput().trim();
+                    sb.append("Parcel : ").append(parcel).append("\n");
+
+                    // Un parcel "Result: Parcel(00000000    '....'" = succès (rien à retourner)
+                    boolean ok = parcel.contains("00000000") || parcel.isEmpty();
+                    sb.append("État   : ").append(ok ? "✅ OK" : "⚠ Résultat inattendu").append("\n");
+
+                    Thread.sleep(800);
+
+                    // Logcat post-commande pour voir si Qt réagit
+                    AdbShellResponse rLog = dadb.shell(
+                        "logcat -d 2>&1 | grep -iE 'AutoContainer|ADAS|adas|sendInfo' | tail -10");
+                    String log = rLog.getAllOutput().trim();
+                    if (!log.isEmpty()) {
+                        sb.append("\n── Logcat AutoContainer/ADAS ──\n").append(log).append("\n");
+                    }
+
+                    dadb.close();
+                    AppLogger.endTiming(TAG, t0, "runAdasCommand(" + adasCmd + ") terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    AppLogger.e(TAG, "runAdasCommand(" + adasCmd + ") ERREUR", e);
+                    callback.onError(msg);
+                }
+            }
+        }, "adb-adas-cmd-thread").start();
+    }
+
+    // ── TEST 14 : Masquage fenêtre ADAS — service "auto" (BYD VHAL privé) ─────
+
+    /**
+     * Sous-test A : Liste les services Binder dont le nom contient "auto" ou "byd".
+     * Permet de vérifier que le service "auto" (BYD VHAL privé) est accessible via
+     * ADB et de trouver le nom exact à utiliser dans service call.
+     */
+    public static void runAutoServiceList(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("── service list | grep -iE 'auto|byd|cluster|adas' ──\n");
+                    AdbShellResponse rList = dadb.shell(
+                        "service list 2>&1 | grep -iE 'auto|byd|cluster|adas|ADAS'");
+                    String list = rList.getAllOutput().trim();
+                    sb.append(list.isEmpty() ? "(aucun résultat)" : list).append("\n");
+
+                    dadb.close();
+                    AppLogger.endTiming(TAG, t0, "runAutoServiceList terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "runAutoServiceList ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-autolist-thread").start();
+    }
+
+    /**
+     * Sous-test A2 : Tente d'appeler service call auto N i32 1038 i32 944767020 i32 0
+     * pour codes de transaction N = 1 à 6.
+     *
+     * Contexte RE :
+     *   Dans byd_dashboard/c0/d.java case default :
+     *     getSystemService("auto").setInt(1038, 944767020, 0)
+     *   → 1038 = type (int), 944767020 = 0x385B9B2C (propriété VHAL masquage ADAS),
+     *     0 = valeur (0 = masqué)
+     *   La commande inverse devrait être setInt(1038, 944767020, 1) pour ré-afficher.
+     *
+     * @param showAdas true = ré-afficher (valeur 1), false = masquer (valeur 0)
+     */
+    public static void runAutoServiceCall(final Context context, final boolean showAdas,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                try {
+                    Dadb dadb = connect(context);
+                    StringBuilder sb = new StringBuilder();
+
+                    int val = showAdas ? 1 : 0;
+                    String action = showAdas ? "ré-afficher" : "masquer";
+                    sb.append("── service call auto N i32 1038 i32 944767020 i32 ").append(val)
+                      .append(" (").append(action).append(" ADAS) ──\n\n");
+
+                    // Essayer codes de transaction 1 à 6 (setInt inconnu)
+                    for (int n = 1; n <= 6; n++) {
+                        String cmd = "service call auto " + n
+                                + " i32 1038 i32 944767020 i32 " + val + " 2>&1";
+                        AdbShellResponse r = dadb.shell(cmd);
+                        String out = r.getAllOutput().trim();
+                        sb.append("code ").append(n).append(" → ").append(out).append("\n");
+                        Thread.sleep(300);
+                    }
+
+                    dadb.close();
+                    AppLogger.endTiming(TAG, t0, "runAutoServiceCall terminé");
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "runAutoServiceCall ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-autocall-thread").start();
+    }
+
+    // ── Fallback : lancer une app sur un display secondaire via ADB shell ────
+
+    /**
+     * Lance une app sur un display secondaire via ADB shell (am start --display N).
+     *
+     * Utilisé quand Context.startActivity et IActivityManager.startActivityAsUser
+     * échouent avec SecurityException: Permission Denial: starting Intent with
+     * launchDisplayId=N depuis uid=10100.
+     *
+     * ADB shell (uid=2000) n'est pas soumis à cette restriction → contournement légitime.
+     * La callback est appelée sur le thread ADB (background).
+     */
+    public static void launchOnDisplay(final Context context, final String packageName,
+            final int displayId, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    // Résoudre le nom de l'Activity (même logique que DashboardLauncher)
+                    android.content.pm.PackageManager pm = context.getPackageManager();
+                    String actName = null;
+                    android.content.Intent li = pm.getLaunchIntentForPackage(packageName);
+                    if (li != null && li.getComponent() != null) {
+                        actName = li.getComponent().getClassName();
+                    }
+                    if (actName == null) {
+                        try {
+                            android.content.pm.PackageInfo pi = pm.getPackageInfo(
+                                    packageName,
+                                    android.content.pm.PackageManager.GET_ACTIVITIES);
+                            if (pi.activities != null && pi.activities.length > 0) {
+                                actName = pi.activities[0].name;
+                            }
+                        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {}
+                    }
+                    if (actName == null) {
+                        callback.onError("Aucune Activity trouvée pour " + packageName);
+                        return;
+                    }
+
+                    Dadb dadb = connect(context);
+                    String component = packageName + "/" + actName;
+                    String cmd = "am start --display " + displayId
+                            + " --windowingMode 5"
+                            + " -n " + component + " 2>&1";
+                    AppLogger.i(TAG, "ADB launchOnDisplay: " + cmd);
+                    AdbShellResponse r = dadb.shell(cmd);
+                    dadb.close();
+                    String out = r.getAllOutput().trim();
+                    AppLogger.i(TAG, "ADB launchOnDisplay result: " + out);
+                    if (out.contains("Error") || out.contains("Exception")) {
+                        callback.onError(out);
+                    } else {
+                        callback.onSuccess(out);
+                    }
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "launchOnDisplay ADB échoué", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-launch-thread").start();
     }
 }

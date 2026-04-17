@@ -34,6 +34,6 @@
 
     <!-- Toasts -->
     <string name="toast_dashboard_unavailable">Dashboard non disponible</string>
-    <string name="toast_app_incompatible">%1$s : non installée ou incompatible multi-display</string>
+    <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
     <string name="toast_main_error">%1$s : impossible de lancer sur l\'écran principal</string>
 </resources>

@@ -15,6 +15,9 @@ import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MenuItem;
@@ -56,8 +59,11 @@ public class MainActivity extends AppCompatActivity
     private DashboardLauncher       mDashboardLauncher; // référence locale mise à jour après bind
 
     // savedItem : package de la dernière app envoyée sur le cluster
-    private static final String PREFS_NAME      = "byd_app_prefs";
-    private static final String PREF_LAST_APP   = "last_app_package";
+    private static final String PREFS_NAME         = "byd_app_prefs";
+    private static final String PREF_LAST_APP      = "last_app_package";
+    /** Code sendInfo pour la taille d'écran du cluster : 29=8.8", 30=12.3" (défaut Seal EU), 31=10.25" */
+    private static final String PREF_CLUSTER_TYPE  = "cluster_screen_size_cmd";
+    private static final int    CLUSTER_TYPE_DEFAULT = 30;
     // App en attente d'envoi pendant l'auto-activation du cluster
     private String mPendingLaunchPackage = null;
 
@@ -88,7 +94,9 @@ public class MainActivity extends AppCompatActivity
 
     // UI — barre statut
     private TextView tvDashboardStatus;
-    private Button   btnRestoreByd;
+    private Button   btnActivateCluster;
+    private Button   btnRestoreCluster;
+    private Button   btnOriginCluster;
     private Button   btnOverflow;
     private RecyclerView rvApps;
     private AppListAdapter mAdapter;
@@ -111,9 +119,11 @@ public class MainActivity extends AppCompatActivity
         // Démarrer le bouton flottant dès que l'app est lancée
         startService(new Intent(this, FloatingLogButton.class));
 
-        tvDashboardStatus  = (TextView)    findViewById(R.id.tv_dashboard_status);
-        btnRestoreByd      = (Button)      findViewById(R.id.btn_restore_byd);
-        btnOverflow        = (Button)      findViewById(R.id.btn_overflow);
+        tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
+        btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
+        btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
+        btnOriginCluster    = (Button)   findViewById(R.id.btn_origin_cluster);
+        btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
         rvApps             = (RecyclerView) findViewById(R.id.rv_apps);
 
         // Liste des apps
@@ -121,19 +131,22 @@ public class MainActivity extends AppCompatActivity
         rvApps.setLayoutManager(new LinearLayoutManager(this));
         rvApps.setAdapter(mAdapter);
 
-        // Bouton principal : "Activer cluster" quand déconnecté, "Restaurer BYD" quand actif
-        btnRestoreByd.setEnabled(true);
-        btnRestoreByd.setOnClickListener(new View.OnClickListener() {
+        // Bouton « Activer cluster » — toujours déclenche activateCluster()
+        btnActivateCluster.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                if (mCurrentDashboardApp == null) {
-                    // Aucune app projetée → activer
-                    activateCluster();
-                } else {
-                    // App projetée → restaurer BYD
-                    restoreBydDashboard();
-                }
-            }
+            public void onClick(View v) { activateCluster(); }
+        });
+
+        // Bouton « Restaurer cluster » — toujours déclenche restoreBydDashboard()
+        btnRestoreCluster.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { restoreBydDashboard(); }
+        });
+
+        // Bouton « Cluster d'origine » — remet la taille d'écran configurée et restaure Qt
+        btnOriginCluster.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { originCluster(); }
         });
 
         // Bouton ⋮ overflow — outils dev + activation manuelle
@@ -283,13 +296,23 @@ public class MainActivity extends AppCompatActivity
 
                 if (toSend != null) {
                     final String pkg = toSend;
+                    // Résoudre le nom lisible pour la status bar
+                    String resolvedName;
+                    try {
+                        resolvedName = getPackageManager()
+                                .getApplicationLabel(
+                                    getPackageManager().getApplicationInfo(pkg, 0)).toString();
+                    } catch (Exception ignored) {
+                        resolvedName = pkg; // fallback au package si l'app est désinstallée
+                    }
+                    final String appDisplayName = resolvedName;
                     AppLogger.log(TAG, "savedItem : relance auto → " + pkg);
                     mClusterService.launchOnDashboard(pkg, new ClusterService.LaunchCallback() {
                         @Override public void onResult(boolean launched) {
                             if (launched) {
-                                mCurrentDashboardApp = pkg;
+                                mCurrentDashboardApp = appDisplayName;
                                 mAdapter.setCurrentPackage(pkg);
-                                updateDashboardStatus(pkg);
+                                updateDashboardStatus(appDisplayName);
                                 AppLogger.log(TAG, "savedItem relancé ✓ → " + pkg);
                             }
                         }
@@ -308,8 +331,6 @@ public class MainActivity extends AppCompatActivity
                 mCurrentDashboardApp = null;
                 mAdapter.setCurrentPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                btnRestoreByd.setText("Activer cluster");
-                btnRestoreByd.setEnabled(true);
                 panelClusterControl.setVisibility(View.GONE);
             }
         });
@@ -320,11 +341,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onSendToDashboard(AppInfo app) {
         if (!mDashboardLauncher.isDashboardAvailable()) {
-            // Cluster pas encore prêt : auto-activation + mise en attente de l'app
-            AppLogger.log(TAG, "Cluster non prêt — auto-activation pour " + app.packageName);
-            mPendingLaunchPackage = app.packageName;
-            activateCluster();
-            Toast.makeText(this, "Activation du cluster…", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Activez d'abord le cluster", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -500,60 +517,74 @@ public class MainActivity extends AppCompatActivity
     // ---- Restaurer l'affichage BYD d'origine ----
 
     private void activateCluster() {
+        btnActivateCluster.setEnabled(false);
+        tvDashboardStatus.setText("Activation cluster…");
+        AppLogger.log(TAG, "activateCluster()");
+
         if (!mServiceBound || mClusterService == null) {
-            // Service arrêté (stopProjection() l'a tué) → le redémarrer.
-            // ClusterService.onCreate() appelle mDisplayHelper.start() automatiquement,
-            // qui envoie sendInfo(16) + attend le VirtualDisplay → onClusterDisplayConnected.
+            // Service arrêté (ex: après stopProjection via kill app).
+            // Le redémarrer : ClusterService.onCreate() → mDisplayHelper.start() → sendInfo(30+16).
+            // onClusterDisplayConnected() se déclenchera → mPendingLaunchPackage consommé.
             if (!mBindRequested) {
                 mBindRequested = true;
                 Intent svcIntent = new Intent(this, ClusterService.class);
                 startForegroundService(svcIntent);
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
             }
-            tvDashboardStatus.setText("Activation cluster…");
-            AppLogger.log(TAG, "Activation cluster — redémarrage ClusterService");
-            // Timeout fallback : si le display ne répond pas sous 9s
-            tvDashboardStatus.postDelayed(new Runnable() {
-                @Override public void run() {
-                    if (!mServiceBound || mClusterService == null
-                            || mClusterService.getDisplayId() < 0) {
-                        mPendingLaunchPackage = null;
-                        tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                    }
-                }
-            }, 9000);
+            tvDashboardStatus.setText("Démarrage cluster…");
+            btnActivateCluster.setEnabled(true);
             return;
         }
-        tvDashboardStatus.setText("Activation cluster…");
-        AppLogger.log(TAG, "Activation cluster — ClusterService.restartProjection()");
-        mClusterService.restartProjection();
 
-        // Afficher un message d'échec si le display ne répond pas sous 9s
-        tvDashboardStatus.postDelayed(new Runnable() {
-            @Override public void run() {
-                if (!mServiceBound || mClusterService == null
-                        || mClusterService.getDisplayId() < 0) {
-                    mPendingLaunchPackage = null; // annuler l'envoi en attente
-                    tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                }
+        // Service déjà bindé → envoyer les commandes ADB directement (ré-activation manuelle)
+        AdbLocalClient.activateClusterDisplay(this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvDashboardStatus.setText("Cluster activé ✓");
+                        btnActivateCluster.setEnabled(true);
+                        AppLogger.log(TAG, "activateCluster OK — " + report);
+                    }
+                });
             }
-        }, 9000);
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvDashboardStatus.setText(getString(R.string.status_disconnected));
+                        btnActivateCluster.setEnabled(true);
+                        Toast.makeText(MainActivity.this,
+                                "Activation échouée : " + error, Toast.LENGTH_LONG).show();
+                        AppLogger.log(TAG, "activateCluster ÉCHEC — " + error);
+                    }
+                });
+            }
+        });
+    }
+
+    /** Retourne le code sendInfo pour la taille d'écran choisie dans les paramètres. */
+    private int getClusterTypeCmd() {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getInt(PREF_CLUSTER_TYPE, CLUSTER_TYPE_DEFAULT);
     }
 
     /** Menu ⋮ — outils développeur accessibles sans encombrer la barre. */
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 2, 0, "⚙ Diagnostic");
+        popup.getMenu().add(0, 1, 0, "⚙️ Paramètres");
+        popup.getMenu().add(0, 2, 0, "🔧 Diagnostic");
         popup.getMenu().add(0, 3, 0, "📋 Rapport système");
         popup.getMenu().add(0, 5, 0, "🌐 Langue");
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
+                    case 1: showClusterTypeSettings(); return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
                     case 5:
-                        android.content.SharedPreferences p = getSharedPreferences(
+                        SharedPreferences p = getSharedPreferences(
                                 LocaleHelper.PREF_FILE, MODE_PRIVATE);
                         p.edit().remove(LocaleHelper.PREF_SETUP_DONE).apply();
                         Intent intent = new Intent(MainActivity.this, WelcomeActivity.class);
@@ -567,37 +598,68 @@ public class MainActivity extends AppCompatActivity
         popup.show();
     }
 
-    private void restoreBydDashboard() {
-        btnRestoreByd.setEnabled(false);
-        if (mServiceBound && mClusterService != null) {
-            mClusterService.stopProjection();
-            mCurrentDashboardApp = null;
-            mAdapter.setCurrentPackage(null);
-            panelClusterControl.setVisibility(View.GONE);
-            stopClusterMirror();
-            updateDashboardStatus(null);
-            btnRestoreByd.setEnabled(true);
-            AppLogger.log(TAG, "BYD restauré via stopProjection() ✓");
-            return;
+    /** Dialog de sélection du type de cluster (taille d'écran). */
+    private void showClusterTypeSettings() {
+        final int[] cmds    = { 29, 30, 31 };
+        final String[] labels = {
+            "8.8 pouces  (cmd=29)",
+            "12.3 pouces (cmd=30) — Seal EU",
+            "10.25 pouces (cmd=31)"
+        };
+        int current = getClusterTypeCmd();
+        int checked = 1; // défaut 12.3"
+        for (int i = 0; i < cmds.length; i++) {
+            if (cmds[i] == current) { checked = i; break; }
         }
+        final int[] selected = { checked };
+        new AlertDialog.Builder(this)
+            .setTitle("Type de cluster")
+            .setSingleChoiceItems(labels, checked, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    selected[0] = which;
+                }
+            })
+            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    int cmd = cmds[selected[0]];
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .edit().putInt(PREF_CLUSTER_TYPE, cmd).apply();
+                    Toast.makeText(MainActivity.this,
+                            "Cluster : " + labels[selected[0]], Toast.LENGTH_SHORT).show();
+                    AppLogger.log(TAG, "Cluster type → sendInfo cmd=" + cmd);
+                }
+            })
+            .setNegativeButton("Annuler", null)
+            .show();
+    }
 
-        // Path 2 : service non bindé → fallback ADB (sendInfo(0) via shell)
-        final int displayId = mDashboardLauncher != null ? mDashboardLauncher.getDashboardDisplayId() : -1;
-        if (displayId < 0) {
-            Toast.makeText(this, getString(R.string.toast_dashboard_unavailable), Toast.LENGTH_SHORT).show();
-            btnRestoreByd.setEnabled(true);
-            return;
-        }
-        AdbLocalClient.restoreBydOnCluster(this, displayId, new AdbLocalClient.Callback() {
+    private void restoreBydDashboard() {
+        btnRestoreCluster.setEnabled(false);
+        tvDashboardStatus.setText("Restauration cluster…");
+        AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
+
+        AdbLocalClient.restoreBydOnCluster(this, new AdbLocalClient.Callback() {
             @Override
-            public void onSuccess(String report) {
+            public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        // Synchroniser ClusterService : invalider mDashboardDisplayId.
+                        // Sans ça, isDashboardAvailable() resterait true et le prochain tap
+                        // d'app tenterait launchOnDashboard() sur un VirtualDisplay dont Qt
+                        // a repris la surface.
+                        // stopProjectionNoAdb() car restoreBydOnCluster() a déjà envoyé
+                        // sendInfo(18+0) — on évite le double envoi de commandes ADB.
+                        if (mServiceBound && mClusterService != null) {
+                            mClusterService.stopProjectionNoAdb();
+                        }
                         mCurrentDashboardApp = null;
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         panelClusterControl.setVisibility(View.GONE);
                         stopClusterMirror();
+                        btnRestoreCluster.setEnabled(true);
                         AppLogger.log(TAG, "BYD restauré via ADB ✓");
                     }
                 });
@@ -606,7 +668,7 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        btnRestoreByd.setEnabled(true);
+                        btnRestoreCluster.setEnabled(true);
                         Toast.makeText(MainActivity.this,
                                 "Restauration échouée: " + error, Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "Restauration ÉCHEC: " + error);
@@ -619,14 +681,48 @@ public class MainActivity extends AppCompatActivity
     private void updateDashboardStatus(String appName) {
         if (appName == null) {
             tvDashboardStatus.setText("Dashboard : affichage BYD");
-            btnRestoreByd.setText("Activer cluster");
-            // Toujours activé : re-déclenche activateCluster() si besoin
-            btnRestoreByd.setEnabled(true);
         } else {
             tvDashboardStatus.setText("Dashboard : " + appName);
-            btnRestoreByd.setText(getString(R.string.btn_restore_byd));
-            btnRestoreByd.setEnabled(true);
         }
+        btnRestoreCluster.setEnabled(true);
+    }
+
+    /** Cluster d'origine — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
+    private void originCluster() {
+        btnOriginCluster.setEnabled(false);
+        tvDashboardStatus.setText("Cluster d'origine…");
+        AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
+
+        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (mServiceBound && mClusterService != null) {
+                            mClusterService.stopProjectionNoAdb();
+                        }
+                        mCurrentDashboardApp = null;
+                        mAdapter.setCurrentPackage(null);
+                        updateDashboardStatus(null);
+                        panelClusterControl.setVisibility(View.GONE);
+                        stopClusterMirror();
+                        btnOriginCluster.setEnabled(true);
+                        AppLogger.log(TAG, "Cluster d'origine restauré ✓");
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        btnOriginCluster.setEnabled(true);
+                        Toast.makeText(MainActivity.this,
+                                "Cluster d'origine échoué : " + error, Toast.LENGTH_LONG).show();
+                        AppLogger.log(TAG, "originCluster ÉCHEC : " + error);
+                    }
+                });
+            }
+        });
     }
 
     // ---- Chargement async de la liste des apps ----

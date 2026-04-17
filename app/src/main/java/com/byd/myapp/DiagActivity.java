@@ -70,6 +70,20 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplaySizeFull;     // diagnostic complet
     private Button   btnDisplaySizeShare;
 
+    // TEST 13 — ADAS cluster
+    private TextView tvAdasResult;
+    private Button   btnAdas32;    // cmd 32 — 3D ADAS auto-refresh ON
+    private Button   btnAdas33;    // cmd 33 — 3D ADAS auto-refresh OFF
+    private Button   btnAdasShare;
+
+    // TEST 14 — Masquage fenêtre ADAS (service "auto" BYD VHAL privé)
+    private TextView tvAutoResult;
+    private Button   btnAutoList;    // A1 : lister services auto/byd
+    private Button   btnAutoHide;    // A2 : service call auto N hide (val=0)
+    private Button   btnAutoShow;    // A2 : service call auto N show (val=1)
+    private Button   btnAutoReflect; // B  : reflection depuis l'app
+    private Button   btnAutoShare;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -251,6 +265,56 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) { runClusterDisplaySizeTest(); }
         });
+
+        // TEST 13 — ADAS cluster
+        tvAdasResult  = (TextView) findViewById(R.id.tv_adas_result);
+        btnAdas32     = (Button)   findViewById(R.id.btn_adas_32);
+        btnAdas33     = (Button)   findViewById(R.id.btn_adas_33);
+        btnAdasShare  = (Button)   findViewById(R.id.btn_adas_share);
+
+        btnAdas32.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { sendAdasCommand(32); }
+        });
+        btnAdas33.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { sendAdasCommand(33); }
+        });
+        btnAdasShare.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT, tvAdasResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 13"));
+            }
+        });
+
+        // TEST 14 — Masquage fenêtre ADAS (service "auto" BYD VHAL privé)
+        tvAutoResult   = (TextView) findViewById(R.id.tv_auto_result);
+        btnAutoList    = (Button)   findViewById(R.id.btn_auto_list);
+        btnAutoHide    = (Button)   findViewById(R.id.btn_auto_hide);
+        btnAutoShow    = (Button)   findViewById(R.id.btn_auto_show);
+        btnAutoReflect = (Button)   findViewById(R.id.btn_auto_reflect);
+        btnAutoShare   = (Button)   findViewById(R.id.btn_auto_share);
+
+        btnAutoList.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAutoServiceList(); }
+        });
+        btnAutoHide.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAutoServiceCall(false); }
+        });
+        btnAutoShow.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAutoServiceCall(true); }
+        });
+        btnAutoReflect.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { runAutoReflect(); }
+        });
+        btnAutoShare.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(android.content.Intent.EXTRA_TEXT, tvAutoResult.getText().toString());
+                startActivity(android.content.Intent.createChooser(intent, "Partager résultat TEST 14"));
+            }
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -405,7 +469,12 @@ public class DiagActivity extends AppCompatActivity {
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        boolean ok = report.contains("Starting:") && !report.contains("Error");
+                        // TEST 10 ne lance plus am start — vérifier les réponses parcel AutoContainer.
+                        // Une réponse parcel valide contient "00000000" (parcel vide = succès).
+                        // S'il n'y a pas d'erreur explicite dans le rapport → succès.
+                        boolean ok = !report.contains("Exception")
+                                && !report.contains("Error:")
+                                && !report.contains("FAILED");
                         tvDisplay1Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF1A1A2A);
                         tvDisplay1Result.setText(report);
                         btnDisplay1.setEnabled(true);
@@ -690,5 +759,182 @@ public class DiagActivity extends AppCompatActivity {
         tv.setText(message);
         tv.setBackgroundColor(success ? 0xFF2E7D32 : 0xFFC62828);
         tv.setTextColor(0xFFFFFFFF);
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 13 : Commandes ADAS cluster
+    // -------------------------------------------------------------------------
+
+    private void setAdasBtnsEnabled(boolean enabled) {
+        btnAdas32.setEnabled(enabled);
+        btnAdas33.setEnabled(enabled);
+    }
+
+    private void sendAdasCommand(final int adasCmd) {
+        setAdasBtnsEnabled(false);
+        String label = adasCmd == 32 ? "3d adas自刷新开启 — auto-refresh ON"
+                     : "3d adas自刷新关闭 — auto-refresh OFF";
+        tvAdasResult.setText("⏳ sendInfo(1000, " + adasCmd + ") → " + label + "…");
+        tvAdasResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagAdas", "sendAdasCommand(" + adasCmd + ")");
+
+        AdbLocalClient.runAdasCommand(DiagActivity.this, adasCmd,
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    boolean ok = report.contains("✅");
+                    tvAdasResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A2A1A);
+                    tvAdasResult.setText(report);
+                    setAdasBtnsEnabled(true);
+                    AppLogger.log("DiagAdas", report);
+                }});
+            }
+            @Override public void onError(final String error) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAdasResult.setBackgroundColor(0xFF2A1A1A);
+                    tvAdasResult.setText("❌ " + error
+                            + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                    setAdasBtnsEnabled(true);
+                    AppLogger.log("DiagAdas", "ERREUR: " + error);
+                }});
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 14 : Masquage fenêtre ADAS — service "auto" BYD VHAL privé
+    // -------------------------------------------------------------------------
+
+    private void setAutoBtnsEnabled(boolean enabled) {
+        btnAutoList.setEnabled(enabled);
+        btnAutoHide.setEnabled(enabled);
+        btnAutoShow.setEnabled(enabled);
+        btnAutoReflect.setEnabled(enabled);
+    }
+
+    private void runAutoServiceList() {
+        setAutoBtnsEnabled(false);
+        tvAutoResult.setText("⏳ Listage services auto/byd…");
+        tvAutoResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagAuto", "runAutoServiceList()");
+
+        AdbLocalClient.runAutoServiceList(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAutoResult.setBackgroundColor(0xFF1A1A2A);
+                    tvAutoResult.setText(report);
+                    setAutoBtnsEnabled(true);
+                    AppLogger.log("DiagAuto", report);
+                }});
+            }
+            @Override public void onError(final String error) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAutoResult.setBackgroundColor(0xFF2A1A1A);
+                    tvAutoResult.setText("❌ " + error
+                            + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                    setAutoBtnsEnabled(true);
+                }});
+            }
+        });
+    }
+
+    private void runAutoServiceCall(final boolean showAdas) {
+        setAutoBtnsEnabled(false);
+        String action = showAdas ? "ré-afficher" : "masquer";
+        tvAutoResult.setText("⏳ service call auto N i32 1038 i32 944767020 i32 "
+                + (showAdas ? 1 : 0) + " (" + action + ")…");
+        tvAutoResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagAuto", "runAutoServiceCall(showAdas=" + showAdas + ")");
+
+        AdbLocalClient.runAutoServiceCall(DiagActivity.this, showAdas, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAutoResult.setBackgroundColor(0xFF1A2A1A);
+                    tvAutoResult.setText(report);
+                    setAutoBtnsEnabled(true);
+                    AppLogger.log("DiagAuto", report);
+                }});
+            }
+            @Override public void onError(final String error) {
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAutoResult.setBackgroundColor(0xFF2A1A1A);
+                    tvAutoResult.setText("❌ " + error
+                            + "\n\n→ Lancez d'abord TEST 5 pour autoriser la connexion ADB.");
+                    setAutoBtnsEnabled(true);
+                }});
+            }
+        });
+    }
+
+    /** Option B : tentative de reflection depuis notre app (sans ADB). */
+    private void runAutoReflect() {
+        setAutoBtnsEnabled(false);
+        tvAutoResult.setText("⏳ Reflection getSystemService(\"auto\").setInt(1038, 944767020, 0)…");
+        tvAutoResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagAuto", "runAutoReflect()");
+
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final StringBuilder sb = new StringBuilder();
+                sb.append("── Option B : reflection app ──\n\n");
+
+                // Tentative 1 : getSystemService("auto")
+                try {
+                    Object autoSvc = getSystemService("auto");
+                    sb.append("getSystemService(\"auto\") → ")
+                      .append(autoSvc == null ? "null (non dispo)" : autoSvc.getClass().getName())
+                      .append("\n");
+
+                    if (autoSvc != null) {
+                        java.lang.reflect.Method setInt = autoSvc.getClass()
+                                .getMethod("setInt", int.class, int.class, int.class);
+                        int result = (int) setInt.invoke(autoSvc, 1038, 944767020, 0);
+                        sb.append("setInt(1038, 944767020, 0) → ").append(result).append(" ✅\n");
+                    }
+                } catch (Exception e1) {
+                    sb.append("Erreur getSystemService: ").append(e1).append("\n");
+                }
+
+                // Tentative 2 : ServiceManager.getService("auto") via reflection
+                try {
+                    Class<?> sm = Class.forName("android.os.ServiceManager");
+                    android.os.IBinder binder = (android.os.IBinder)
+                            sm.getMethod("getService", String.class).invoke(null, "auto");
+                    sb.append("\nServiceManager.getService(\"auto\") → ")
+                      .append(binder == null ? "null (service introuvable)"
+                              : "IBinder[" + binder.getInterfaceDescriptor() + "]")
+                      .append("\n");
+
+                    if (binder != null) {
+                        // Essayer transact direct comme dans c0/d.java case default
+                        // setInt(1038, 944767020, 0) = 3 ints envoyés via transact
+                        for (int code = 1; code <= 6; code++) {
+                            try {
+                                android.os.Parcel req = android.os.Parcel.obtain();
+                                android.os.Parcel rep = android.os.Parcel.obtain();
+                                req.writeInt(1038);
+                                req.writeInt(944767020);
+                                req.writeInt(0);
+                                boolean ok = binder.transact(code, req, rep, 0);
+                                sb.append("transact(").append(code).append(") → ok=")
+                                  .append(ok).append("\n");
+                                req.recycle(); rep.recycle();
+                            } catch (Exception ex) {
+                                sb.append("transact(").append(code).append(") → ❌ ").append(ex.getMessage()).append("\n");
+                            }
+                        }
+                    }
+                } catch (Exception e2) {
+                    sb.append("Erreur ServiceManager: ").append(e2).append("\n");
+                }
+
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    tvAutoResult.setBackgroundColor(0xFF1A1A2A);
+                    tvAutoResult.setText(sb.toString());
+                    setAutoBtnsEnabled(true);
+                    AppLogger.log("DiagAuto", sb.toString());
+                }});
+            }
+        }, "auto-reflect-thread").start();
     }
 }

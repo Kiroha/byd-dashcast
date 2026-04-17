@@ -24,13 +24,36 @@
             android:textStyle="bold"/>
 
         <Button
-            android:id="@+id/btn_restore_byd"
+            android:id="@+id/btn_activate_cluster"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Activer cluster"
             android:textSize="12sp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"/>
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:backgroundTint="#1565C0"/>
+
+        <Button
+            android:id="@+id/btn_restore_cluster"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Restaurer cluster"
+            android:textSize="12sp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="#B71C1C"/>
+
+        <Button
+            android:id="@+id/btn_origin_cluster"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Cluster d'origine"
+            android:textSize="12sp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="#2E7D32"/>
 
         <!-- ⋮ : accès aux outils dev (Activer, Diag, Rapport, Langue, Live) -->
         <Button
