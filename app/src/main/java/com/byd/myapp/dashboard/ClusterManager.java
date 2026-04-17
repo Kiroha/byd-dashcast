@@ -4,7 +4,6 @@ import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
 import android.view.Display;
@@ -129,7 +128,7 @@ public class ClusterManager {
         //    AutoDisplayService le crée au BOOT → disponible immédiatement sans attente.
         Display found = findClusterDisplay(dm);
         if (found != null) {
-            Log.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
+            AppLogger.i(TAG, "VirtualDisplay cluster présent au boot : id=" + found.getDisplayId()
                     + " name=" + found.getName());
             // Séquence Seal EU (CONFIRMÉE 16/04/2026) :
             //   1. sendInfo(1000, 30) — passer cluster en mode Seal EU (12.3") → résolution correcte
@@ -226,13 +225,13 @@ public class ClusterManager {
         listenerHolder[0] = new DisplayManager.DisplayListener() {
             @Override public void onDisplayAdded(int displayId) {
                 Display d = dm.getDisplay(displayId);
-                Log.i(TAG, "onDisplayAdded id=" + displayId + " display=" + d);
+                AppLogger.i(TAG, "onDisplayAdded id=" + displayId + " display=" + d);
                 if (isClusterDisplay(dm, d)) {
                     mHandler.removeCallbacksAndMessages(null);
                     dm.unregisterDisplayListener(listenerHolder[0]);
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
-                    Log.i(TAG, "VirtualDisplay cluster détecté : id=" + displayId);
+                    AppLogger.i(TAG, "VirtualDisplay cluster détecté : id=" + displayId);
                     callback.onDisplayReady(d, displayId);
                 }
             }
@@ -278,7 +277,7 @@ public class ClusterManager {
                     dm.unregisterDisplayListener(listenerHolder[0]);
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
-                    Log.i(TAG, "VirtualDisplay trouvé par polling : id=" + found.getDisplayId());
+                    AppLogger.i(TAG, "VirtualDisplay trouvé par polling : id=" + found.getDisplayId());
                     callback.onDisplayReady(found, found.getDisplayId());
                 } else {
                     scheduleDisplayPoll(dm, listenerHolder, callback, pollCount, POLL_INTERVAL_MS);
@@ -300,7 +299,7 @@ public class ClusterManager {
         if (presentations != null) {
             for (Display d : presentations) {
                 if (d.getDisplayId() != 0) {
-                    Log.d(TAG, "Candidat PRESENTATION : id=" + d.getDisplayId() + " name=" + d.getName());
+                    AppLogger.d(TAG, "Candidat PRESENTATION : id=" + d.getDisplayId() + " name=" + d.getName());
                     return d;
                 }
             }
@@ -310,7 +309,7 @@ public class ClusterManager {
         if (all != null) {
             for (Display d : all) {
                 if (d.getDisplayId() != 0) {
-                    Log.d(TAG, "Candidat non-default : id=" + d.getDisplayId() + " name=" + d.getName());
+                    AppLogger.d(TAG, "Candidat non-default : id=" + d.getDisplayId() + " name=" + d.getName());
                     return d;
                 }
             }
@@ -336,6 +335,6 @@ public class ClusterManager {
             mActiveDisplayListener = null;
             mActiveDisplayManager  = null;
         }
-        Log.d(TAG, "cancel() — Handler et DisplayListener annulés");
+        AppLogger.d(TAG, "cancel() — Handler et DisplayListener annulés");
     }
 }

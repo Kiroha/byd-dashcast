@@ -617,19 +617,13 @@ public class AdbLocalClient {
                                 final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    Dadb dadb = connect(context);
+                try (Dadb dadb = connect(context)) {
                     String safeStr = (infoStr != null ? infoStr : "").replace("\"", "\\\"");
                     String cmd = "service call AutoContainer 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
-                    String out;
-                    try {
-                        AdbShellResponse r = dadb.shell(cmd);
-                        out = r.getAllOutput().trim();
-                    } finally {
-                        dadb.close();
-                    }
+                    AdbShellResponse r = dadb.shell(cmd);
+                    String out = r.getAllOutput().trim();
                     AppLogger.log(TAG, "sendInfo ADB(" + type + "," + infoInt + ") → " + out);
                     if (callback != null) callback.onSuccess(out);
                 } catch (Exception e) {

@@ -2,7 +2,6 @@ package com.byd.myapp.dashboard;
 
 import android.content.Context;
 import android.hardware.display.DisplayManager;
-import android.util.Log;
 import android.view.Display;
 import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
@@ -85,7 +84,7 @@ public class DashboardDisplayHelper {
                 // Guard : si stop() a déjà été appelé, ignorer le callback
                 if (mKnownClusterDisplayId == -2) return;
                 mKnownClusterDisplayId = displayId;
-                Log.i(TAG, "Dashboard display prêt : id=" + displayId
+                AppLogger.i(TAG, "Dashboard display prêt : id=" + displayId
                         + " name=" + (display != null ? display.getName() : "null"));
                 mListener.onDashboardDisplayConnected(display, displayId);
             }
@@ -94,7 +93,7 @@ public class DashboardDisplayHelper {
             public void onDisplayTimeout() {
                 // Guard : si stop() a déjà été appelé, ignorer le callback orphelin
                 if (mKnownClusterDisplayId == -2) {
-                    Log.d(TAG, "onDisplayTimeout ignoré — stop() déjà appelé");
+                    AppLogger.d(TAG, "onDisplayTimeout ignoré — stop() déjà appelé");
                     return;
                 }
                 // VirtualDisplay non trouvé via DISPLAY_CATEGORY_PRESENTATION (cas exceptionnel).
@@ -104,10 +103,10 @@ public class DashboardDisplayHelper {
                 mKnownClusterDisplayId = 1;
                 Display display1 = mDisplayManager.getDisplay(1); // peut retourner null sur certains ROMs
                 if (display1 != null) {
-                    Log.i(TAG, "getDisplay(1) != null — display cluster accessible");
+                    AppLogger.i(TAG, "getDisplay(1) != null — display cluster accessible");
                     mListener.onDashboardDisplayConnected(display1, 1);
                 } else {
-                    Log.i(TAG, "getDisplay(1) null — lancement via IActivityManager au displayId=1");
+                    AppLogger.i(TAG, "getDisplay(1) null — lancement via IActivityManager au displayId=1");
                     mListener.onDashboardDisplayConnected(null, 1);
                 }
             }

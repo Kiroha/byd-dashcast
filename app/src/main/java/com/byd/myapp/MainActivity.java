@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-
-import com.byd.myapp.AppLogger;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -31,7 +29,6 @@ import android.widget.Toast;
 
 import com.byd.myapp.dashboard.DashboardLauncher;
 import com.byd.myapp.model.AppInfo;
-import com.byd.myapp.FloatingLogButton;
 
 import java.util.ArrayList;
 import java.util.Collections;

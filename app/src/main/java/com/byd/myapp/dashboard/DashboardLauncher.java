@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
-import android.util.Log;
 import android.view.Display;
 
 import com.byd.myapp.AppLogger;
@@ -38,7 +37,7 @@ public class DashboardLauncher {
 
     public void setDashboardDisplayId(int displayId) {
         mDashboardDisplayId = displayId;
-        Log.d(TAG, "Dashboard display ID enregistré : " + displayId);
+        AppLogger.d(TAG, "Dashboard display ID enregistré : " + displayId);
         AppLogger.log(TAG, "Display cluster enregistré : id=" + displayId);
     }
 

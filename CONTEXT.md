@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 16/04/2026 — v1.50
+> Dernière mise à jour : 18/04/2026 — v1.61
 
 ---
 
@@ -55,7 +55,12 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|-----|
-| **1.50** | **51** | — | `MANAGE_ACTIVITY_STACKS` dans manifest → setLaunchDisplayId pour apps TIERCES (Navigation) |
+| **1.61** | **62** | `e8b0eee` | Sanity check 2 — race `ClusterMirrorManager`, boucle infinie `FloatingLogButton`, TOCTOU clés ADB, dead code `onRebind`, imports orphelins |
+| 1.60 | 61 | `2687936` (tag: `apres-sanity-check`) | Sanity check 1 — dadb leak `connectAndGrant`, `AzureLogExporter` thread-safety + JSON escaping + `conn.disconnect` finally, `MainActivity` Log.i doublon, manifest `screenOrientation` |
+| 1.59 | 60 | `7d26f79` (tag: `v1.59`) | Bouton 'Cluster d'origine' + settings taille cluster + fix restore sequence + suppression auto-activation |
+| ~1.52 | — | `dd5edcb` | TEST 12 — boutons individuels 8.8"/12.3"/10.25" + restauration |
+| ~1.51 | — | `b8107f7` | fix(log) — auto-grant `SYSTEM_ALERT_WINDOW` via ADB relay si non accordée |
+| 1.50 | 51 | — | `MANAGE_ACTIVITY_STACKS` dans manifest → setLaunchDisplayId pour apps TIERCES (Navigation) |
 | 1.46 | 47 | — | Séquence Seal EU : cmd30 (screen size) AVANT cmd16 → corrige stretching + bug ADAS (confirmé voiture) |
 | 1.44 | 45 | — | TEST 12 : sonde taille display cluster (cmd 29/30/31 + wm size) |
 | 1.43 | 44 | `0c3e4c1` | Sanity check, dead code removal |
