@@ -336,23 +336,21 @@ public class SysInfoActivity extends AppCompatActivity {
         if (!outDir.exists()) outDir.mkdirs();
 
         File outFile = new File(outDir, filename);
-        try {
-            FileWriter fw = new FileWriter(outFile);
+        try (FileWriter fw = new FileWriter(outFile)) {
             fw.write(mReport.toString());
-            fw.close();
-
-            Toast.makeText(this,
-                    "Rapport sauvegardé :\n" + outFile.getAbsolutePath(),
-                    Toast.LENGTH_LONG).show();
-
-            // Afficher le chemin dans le rapport lui-même
-            tvReport.append("\n\nFichier : " + outFile.getAbsolutePath()
-                    + "\nCommande ADB : adb pull \"" + outFile.getAbsolutePath() + "\"");
-
         } catch (IOException e) {
             Toast.makeText(this, "Erreur écriture : " + e.getMessage(),
                     Toast.LENGTH_LONG).show();
+            return;
         }
+
+        Toast.makeText(this,
+                "Rapport sauvegardé :\n" + outFile.getAbsolutePath(),
+                Toast.LENGTH_LONG).show();
+
+        // Afficher le chemin dans le rapport lui-même
+        tvReport.append("\n\nFichier : " + outFile.getAbsolutePath()
+                + "\nCommande ADB : adb pull \"" + outFile.getAbsolutePath() + "\"");
     }
 
     // =========================================================================

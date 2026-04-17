@@ -88,6 +88,7 @@
         <activity
             android:name=".WelcomeActivity"
             android:label="@string/app_name"
+            android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -98,22 +99,26 @@
         <!-- Écran principal 15" -->
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name"/>
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"/>
 
         <!-- Écran de diagnostic de compatibilité -->
         <activity
             android:name=".DiagActivity"
-            android:label="Diagnostic"/>
+            android:label="Diagnostic"
+            android:screenOrientation="landscape"/>
 
         <!-- Rapport système complet -->
         <activity
             android:name=".SysInfoActivity"
-            android:label="Rapport système"/>
+            android:label="Rapport système"
+            android:screenOrientation="landscape"/>
 
         <!-- Visualiseur de journal en temps réel -->
         <activity
             android:name=".LogActivity"
             android:label="Journal"
+            android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
 

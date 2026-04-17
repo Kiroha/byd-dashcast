@@ -202,16 +202,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         return mDisplayHelper.getKnownClusterDisplayId();
     }
 
-    /** Relance la séquence d'activation (bouton ACTIVER dans MainActivity). */
-    public void restartProjection() {
-        AppLogger.log(TAG, "restartProjection demandé");
-        mLauncher.setDashboardDisplayId(-1);
-        mDisplayHelper.stop();
-        mDisplayHelper.start();
-        mProjectionActive = true;
-        updateNotification("Cluster : activation…");
-    }
-
     /** Arrête proprement la projection (sendInfo(0) + stopService AutoDisplayService). */
     public void stopProjection() {
         AppLogger.log(TAG, "stopProjection demandé");

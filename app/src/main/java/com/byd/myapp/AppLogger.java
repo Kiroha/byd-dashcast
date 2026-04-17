@@ -54,20 +54,24 @@ public class AppLogger {
     // ── Buffer circulaire ─────────────────────────────────────────────────────
     private static final int MAX_ENTRIES = 3000;
     private static final List<Entry> sEntries = new CopyOnWriteArrayList<>();
-    private static final SimpleDateFormat sFmt =
-            new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
 
     private AppLogger() {}
 
-    // ── Méthodes principales ──────────────────────────────────────────────────
+    // ── Helper interne ────────────────────────────────────────────────────────
 
-    public static void log(Level level, String tag, String msg) {
+    /** Ajoute une entrée dans le buffer et taille si nécessaire (opération unique sur COWAL). */
+    private static void addEntry(Level level, String tag, String msg) {
         sEntries.add(new Entry(level, tag, msg));
-        // Trimmer le surplus en une seule opération (évite N copies sur CopyOnWriteArrayList)
         int excess = sEntries.size() - MAX_ENTRIES;
         if (excess > 0) {
             sEntries.subList(0, excess).clear();
         }
+    }
+
+    // ── Méthodes principales ──────────────────────────────────────────────────
+
+    public static void log(Level level, String tag, String msg) {
+        addEntry(level, tag, msg);
         // Miroir logcat
         switch (level) {
             case DEBUG: Log.d(tag, msg); break;
@@ -91,9 +95,7 @@ public class AppLogger {
         String full = t != null
                 ? msg + " [" + t.getClass().getSimpleName() + ": " + t.getMessage() + "]"
                 : msg;
-        sEntries.add(new Entry(Level.ERROR, tag, full));
-        int excessE = sEntries.size() - MAX_ENTRIES;
-        if (excessE > 0) sEntries.subList(0, excessE).clear();
+        addEntry(Level.ERROR, tag, full);
         Log.e(tag, msg, t); // stacktrace complète dans logcat
     }
 
@@ -101,9 +103,7 @@ public class AppLogger {
         String full = t != null
                 ? msg + " [" + t.getClass().getSimpleName() + ": " + t.getMessage() + "]"
                 : msg;
-        sEntries.add(new Entry(Level.WARN, tag, full));
-        int excessW = sEntries.size() - MAX_ENTRIES;
-        if (excessW > 0) sEntries.subList(0, excessW).clear();
+        addEntry(Level.WARN, tag, full);
         Log.w(tag, msg, t);
     }
 
@@ -137,9 +137,10 @@ public class AppLogger {
 
     /** Retourne le buffer complet en String formatée (pour partage texte). */
     public static String get() {
+        SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
         StringBuilder sb = new StringBuilder();
         for (Entry e : sEntries) {
-            sb.append("[").append(sFmt.format(new Date(e.timestamp))).append("]")
+            sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
               .append("[").append(e.level.name()).append("]")
               .append("[").append(e.tag).append("] ")
               .append(e.message).append("\n");

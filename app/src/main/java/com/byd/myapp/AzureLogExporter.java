@@ -98,13 +98,12 @@ public class AzureLogExporter {
 
     // ── Construction du JSON ──────────────────────────────────────────────────
 
-    private static final SimpleDateFormat ISO_FMT;
-    static {
-        ISO_FMT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-        ISO_FMT.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
-
     private static String buildJsonBody(List<AppLogger.Entry> entries) {
+        // SimpleDateFormat est instancié localement (non thread-safe si statique — deux exports simultanés
+        // corrompraient mutuellement le formatage des dates).
+        SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        iso.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         String deviceModel  = Build.MANUFACTURER + " " + Build.MODEL;
         String appVersion   = BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
 
@@ -113,7 +112,7 @@ public class AzureLogExporter {
             AppLogger.Entry e = entries.get(i);
             if (i > 0) sb.append(",");
             sb.append("{");
-            appendField(sb, "TimeGenerated",  ISO_FMT.format(new Date(e.timestamp)),  true);
+            appendField(sb, "TimeGenerated",  iso.format(new Date(e.timestamp)),  true);
             appendField(sb, "Level",          e.level.name(),                          false);
             appendField(sb, "Tag",            e.tag,                                   false);
             appendField(sb, "Message",        e.message,                               false);
@@ -133,7 +132,10 @@ public class AzureLogExporter {
           .append(value.replace("\\", "\\\\")
                        .replace("\"", "\\\"")
                        .replace("\n", "\\n")
-                       .replace("\r", ""))
+                       .replace("\r", "")
+                       .replace("\t", "\\t")
+                       .replace("\b", "\\b")
+                       .replace("\f", "\\f"))
           .append("\"");
     }
 
@@ -186,8 +188,14 @@ public class AzureLogExporter {
             os.write(bodyBytes);
         }
 
-        int status = conn.getResponseCode();
-        conn.disconnect();
+        // conn.disconnect() dans finally pour garantir la libération du socket même si
+        // getResponseCode() lève une exception (timeout, reset serveur…).
+        int status;
+        try {
+            status = conn.getResponseCode();
+        } finally {
+            conn.disconnect();
+        }
         return status;
     }
 }
