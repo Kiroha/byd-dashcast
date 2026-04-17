@@ -7,7 +7,6 @@ import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.util.Log;
 import android.view.Display;
 import com.byd.myapp.AppLogger;
 
@@ -40,6 +39,9 @@ public class ClusterMirrorManager {
     private int                 mDisplayId   = -1;
     private int                 mClusterW    = 1920;
     private int                 mClusterH    = 1080;
+    // Compteur de session : incrémenté à chaque start() pour invalider les callbacks
+    // de l'ancienne session de capture (thread starté avant stop() qui poste après start()).
+    private int                 mSession     = 0;
     // Dernier bitmap rendu — recyclé avant d'afficher le suivant pour éviter la fuite mémoire.
     private Bitmap              mLastBitmap  = null;
 
@@ -52,6 +54,8 @@ public class ClusterMirrorManager {
         if (mRunning) stop();
         mDisplayId = displayId;
         mRunning   = true;
+        mSession++;                // invalide les callbacks de l'ancienne session
+        final int thisSession = mSession;
         // Récupérer les dimensions réelles du display
         DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
         if (dm != null) {
@@ -65,7 +69,7 @@ public class ClusterMirrorManager {
         }
         AppLogger.i(TAG, "Miroir démarré — display=" + displayId
                 + " " + mClusterW + "×" + mClusterH);
-        scheduleCapture(callback);
+        scheduleCapture(callback, thisSession);
     }
 
     /** Arrête la boucle de capture et libère les ressources. */
@@ -83,13 +87,14 @@ public class ClusterMirrorManager {
 
     // ── Boucle de capture ────────────────────────────────────────────────────
 
-    private void scheduleCapture(final FrameCallback callback) {
+    private void scheduleCapture(final FrameCallback callback, final int session) {
         mMainHandler.postDelayed(() -> {
-            if (!mRunning) return;
+            if (!mRunning || mSession != session) return;
             new Thread(() -> {
                 final Bitmap bmp = captureDisplay(mDisplayId);
                 mMainHandler.post(() -> {
-                    if (!mRunning) {
+                    // Double-check : stop()/start() peut avoir été appelé pendant la capture
+                    if (!mRunning || mSession != session) {
                         if (bmp != null) bmp.recycle();
                         return;
                     }
@@ -104,7 +109,7 @@ public class ClusterMirrorManager {
                     } else {
                         callback.onError("SurfaceControl.screenshot() null");
                     }
-                    scheduleCapture(callback);
+                    scheduleCapture(callback, session);
                 });
             }, "cluster-mirror-cap").start();
         }, INTERVAL_MS);

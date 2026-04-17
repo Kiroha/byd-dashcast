@@ -1,7 +1,6 @@
 package com.byd.myapp;
 
 import android.content.Context;
-import android.util.Log;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
@@ -195,14 +194,19 @@ public class AdbLocalClient {
     }
 
     // ── Helper privé — connexion dadb (clé déjà autorisée, pas de popup) ───────────
+
+    /** Verrou pour la génération des clés : évite le TOCTOU si deux méthodes ADB sont appelées
+     *  simultanément au premier lancement (avant que les fichiers .key/.pub existent). */
+    private static final Object sKeyLock = new Object();
+
     private static Dadb connect(Context context) throws Exception {
         File privateKey = new File(context.getFilesDir(), "adb.key");
         File publicKey  = new File(context.getFilesDir(), "adb.pub");
         AdbKeyPair keyPair;
-        if (privateKey.exists() && publicKey.exists()) {
-            keyPair = AdbKeyPair.read(privateKey, publicKey);
-        } else {
-            AdbKeyPair.generate(privateKey, publicKey);
+        synchronized (sKeyLock) {
+            if (!privateKey.exists() || !publicKey.exists()) {
+                AdbKeyPair.generate(privateKey, publicKey);
+            }
             keyPair = AdbKeyPair.read(privateKey, publicKey);
         }
         return Dadb.create("localhost", ADB_PORT, keyPair);

@@ -111,8 +111,7 @@ public class DashboardLauncher {
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         // Display 0 = écran principal
-        boolean launched = launchWithDisplayId(launchIntent, 0);
-        return launched;
+        return launchWithDisplayId(launchIntent, 0);
     }
 
     /**

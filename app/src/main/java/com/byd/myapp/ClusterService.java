@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
-import android.util.Log;
 import android.view.Display;
 
 import com.byd.myapp.dashboard.ClusterInputForwarder;
@@ -93,11 +92,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Garder le listener null pour éviter les leaks si MainActivity est détruite
         mListener = null;
         return true; // onRebind() sera appelé quand MainActivity se rebind
-    }
-
-    @Override
-    public void onRebind(Intent intent) {
-        super.onRebind(intent);
     }
 
     @Override

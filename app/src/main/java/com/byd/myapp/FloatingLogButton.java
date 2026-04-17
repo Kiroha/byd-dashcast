@@ -36,6 +36,9 @@ public class FloatingLogButton extends Service {
 
     private WindowManager mWindowManager;
     private View          mFloatView;
+    // Guard contre la boucle infinie : si canDrawOverlays() reste false après le grant ADB
+    // (ex. l'AppOp ne prend pas effet immédiatement), on ne réessaie qu'une seule fois.
+    private boolean       mGrantAttempted = false;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -67,6 +70,12 @@ public class FloatingLogButton extends Service {
         // automatiquement pour une app en /data/app.  On tente un auto-grant via le
         // shell ADB local (dadb), puis on relance createOverlay() sur le main thread.
         if (!android.provider.Settings.canDrawOverlays(this)) {
+            if (mGrantAttempted) {
+                // Une tentative a déjà eu lieu sans succès — ne pas boucler indéfiniment.
+                AppLogger.e(TAG, "SYSTEM_ALERT_WINDOW toujours refusée après tentative ADB — badge LOG non affiché");
+                return;
+            }
+            mGrantAttempted = true;
             AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW non accordée — tentative auto-grant via ADB…");
             final android.os.Handler mainHandler =
                     new android.os.Handler(getMainLooper());
@@ -88,6 +97,7 @@ public class FloatingLogButton extends Service {
             });
             return;
         }
+        mGrantAttempted = false; // reset pour les redémarrages du service
         mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         // Badge textuel compact

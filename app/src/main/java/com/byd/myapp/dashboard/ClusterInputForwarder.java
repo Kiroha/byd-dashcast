@@ -2,7 +2,6 @@ package com.byd.myapp.dashboard;
 
 import android.content.Context;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.Display;
 import com.byd.myapp.AppLogger;
 import android.view.InputDevice;
