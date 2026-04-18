@@ -344,8 +344,13 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSendToDashboard(AppInfo app) {
-        if (!mDashboardLauncher.isDashboardAvailable()) {
-            Toast.makeText(this, "Activez d'abord le cluster", Toast.LENGTH_SHORT).show();
+        // Le displayId Java peut ne pas être résolu même quand le cluster est actif
+        // (état interne non fiable sur DiLink 3.0). On ne bloque plus ici :
+        // ClusterService.launchOnDashboard() essaie le Binder direct puis l'ADB relay
+        // avec displayId=1 hardcodé (Seal EU) en fallback → toujours fonctionnel.
+        if (mClusterService == null) {
+            AppLogger.e(TAG, "ClusterService null — envoi annulé pour " + app.packageName);
+            Toast.makeText(this, "Service cluster non disponible", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -353,12 +358,6 @@ public class MainActivity extends AppCompatActivity
                 + " display=" + mDashboardLauncher.getDashboardDisplayId());
         final String appName = app.appName;
         final String pkgName = app.packageName;
-        // Guard : mClusterService peut être null si onServiceDisconnected() s'est déclenché
-        // entre le isDashboardAvailable() ci-dessus et cet appel.
-        if (mClusterService == null) {
-            AppLogger.e(TAG, "ClusterService null — envoi annulé pour " + pkgName);
-            return;
-        }
         // Séquence : sendInfo(16) → délai 1,5 s → lancement (même logique que TEST 10)
         mClusterService.launchOnDashboard(pkgName, new ClusterService.LaunchCallback() {
             @Override public void onResult(boolean launched) {
