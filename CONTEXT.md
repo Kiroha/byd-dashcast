@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 18/04/2026 — v1.68
+> Dernière mise à jour : 18/04/2026 — v1.69
 
 ---
 
@@ -55,7 +55,8 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|-----|
-| **1.68** | **69** | `` | Suppression du check `isDashboardAvailable()` dans `onSendToDashboard()` — l'état interne displayId n'est pas fiable sur DiLink 3.0 ; le fallback ADB relay display=1 gère tous les cas |
+| **1.69** | **70** | `` | Fix lancement apps tierces sur display 1 : `pm grant MANAGE_ACTIVITY_STACKS` via ADB avant retry `setLaunchDisplayId` — `am start --display 1` (uid=2000) et `setLaunchDisplayId` (uid=10100) échouaient tous deux sans cette permission |
+| 1.68 | 69 | `8393ffd` | Suppression du check `isDashboardAvailable()` dans `onSendToDashboard()` — l'état interne displayId n'est pas fiable sur DiLink 3.0 ; le fallback ADB relay display=1 gère tous les cas |
 | 1.67 | 68 | `746aee2` | Sanity check 7 |
 | 1.62 | 63 | `24fcad7` | Sanity check 3 — `Log.*` → `AppLogger` dans ClusterManager/DashboardDisplayHelper/DashboardLauncher (journal in-app), `sendInfo` try-with-resources, imports MainActivity |
 | 1.61 | 62 | `e8b0eee` | Sanity check 2 — race `ClusterMirrorManager`, boucle infinie `FloatingLogButton`, TOCTOU clés ADB, dead code `onRebind`, imports orphelins |
