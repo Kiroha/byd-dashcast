@@ -167,24 +167,29 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     if (callback != null) callback.onResult(true);
                     return;
                 }
-                // Fallback ADB : am start --display N — uid=2000 contourne
-                // SecurityException: Permission Denial: launchDisplayId=N (uid=10100 refusé)
-                AppLogger.w(TAG, "Fallback ADB launch — " + packageName);
-                int di = mDisplayHelper.getKnownClusterDisplayId();
-                if (di < 0) di = 1; // Seal EU hardcode
-                final int fDisplayId = di;
-                AdbLocalClient.launchOnDisplay(ClusterService.this, packageName, fDisplayId,
+                // Fallback : pm grant MANAGE_ACTIVITY_STACKS via ADB, puis retry Context.startActivity
+                // Note : am start --display N depuis uid=2000 (ADB shell) échoue aussi (uid=2000
+                // n'a pas MANAGE_ACTIVITY_STACKS). Seule solution : accorder la permission à notre
+                // app (uid=10100) via pm grant, puis relancer depuis notre process.
+                AppLogger.w(TAG, "Fallback: pm grant MANAGE_ACTIVITY_STACKS → retry — " + packageName);
+                AdbLocalClient.grantManageActivityStacks(ClusterService.this,
                         new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String report) {
-                        AppLogger.log(TAG, "ADB launch OK — " + packageName);
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(true); }
-                            });
-                        }
+                        AppLogger.i(TAG, "pm grant MANAGE_ACTIVITY_STACKS: "
+                                + report.trim().replace("\n", " "));
+                        // Retry le lancement depuis le main thread : maintenant que la permission
+                        // est accordée, Context.startActivity + setLaunchDisplayId doit passer.
+                        mMainHandler.post(new Runnable() {
+                            @Override public void run() {
+                                boolean ok2 = mLauncher.launchOnDashboard(packageName);
+                                AppLogger.log(TAG, "Retry launch après grant: "
+                                        + (ok2 ? "OK" : "ÉCHEC") + " — " + packageName);
+                                if (callback != null) callback.onResult(ok2);
+                            }
+                        });
                     }
                     @Override public void onError(String error) {
-                        AppLogger.e(TAG, "ADB launch ÉCHEC — " + error);
+                        AppLogger.e(TAG, "pm grant MANAGE_ACTIVITY_STACKS ERREUR — " + error);
                         if (callback != null) {
                             mMainHandler.post(new Runnable() {
                                 @Override public void run() { callback.onResult(false); }

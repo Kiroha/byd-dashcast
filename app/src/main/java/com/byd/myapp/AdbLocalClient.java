@@ -643,6 +643,46 @@ public class AdbLocalClient {
         }, "adb-sendinfo-thread").start();
     }
 
+    // ── Grant MANAGE_ACTIVITY_STACKS via pm grant (requis pour setLaunchDisplayId sur apps tierces) ──
+
+    /**
+     * Accorde android.permission.MANAGE_ACTIVITY_STACKS à notre app via pm grant ADB.
+     *
+     * Sur BYD DiLink 3.0, cette permission est requise pour que Context.startActivity()
+     * avec setLaunchDisplayId(1) fonctionne depuis un app-process (uid=10100).
+     *
+     * Note : pm grant fonctionne pour cette permission sur BYD DiLink 3.0 car la ROM
+     * l'expose avec le flag development/dangerous (accessible depuis le shell ADB uid=2000).
+     *
+     * Contrairement à am start --display 1 (qui échoue toujours depuis uid=2000 car le
+     * shell lui-même n'a pas la permission), cette approche cible notre app (uid=10100)
+     * et lui permet ensuite d'utiliser Context.startActivity + setLaunchDisplayId.
+     *
+     * La callback est appelée depuis un thread background.
+     */
+    public static void grantManageActivityStacks(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    String pkg = context.getPackageName();
+                    String cmd = "pm grant " + pkg
+                            + " android.permission.MANAGE_ACTIVITY_STACKS 2>&1"
+                            + " && echo GRANTED || echo DENIED";
+                    AppLogger.log(TAG, "grantManageActivityStacks: " + cmd);
+                    AdbShellResponse r = dadb.shell(cmd);
+                    String out = r.getAllOutput().trim();
+                    AppLogger.log(TAG, "pm grant MANAGE_ACTIVITY_STACKS → " + out);
+                    if (callback != null) callback.onSuccess(out);
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "grantManageActivityStacks ERREUR", e);
+                    if (callback != null) callback.onError(
+                            e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-grant-stacks-thread").start();
+    }
+
     // ── TEST 12 : Sonde taille display cluster + essais cmd 29/30/31 + wm size ──
 
     /**
