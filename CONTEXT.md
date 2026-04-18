@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 18/04/2026 — v1.66
+> Dernière mise à jour : 18/04/2026 — v1.67
 
 ---
 
@@ -55,8 +55,8 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|-----|
-| **1.66** | **67** | `d386ea0` | Sanity check 6 — `stopClusterMirror()` dans `MainActivity.onStop()` (HandlerThread ne capture plus en background), `mMirrorManager.stop()` dans `ClusterService.onDestroy()` (leak thread+bitmap sur kill système) |
-| 1.65 | 66 | `101aa0e` | Sanity check 5 — `onUnbind()→false`, double log retiré `DashboardLauncher`, commentaire déplacé `ClusterService` |
+| **1.67** | **68** | `746aee2` | Sanity check 7 — `startClusterMirror()` dans `onStart()` (régression v1.66 : panel vide au retour au premier plan), `AppLogger.getEntriesCount()` évite copie ArrayList avant early-exit LogActivity (500ms), `isRunning()` dead code supprimé |
+| 1.66 | 67 | `d386ea0` | Sanity check 6 — `stopClusterMirror()` dans `MainActivity.onStop()`, `mMirrorManager.stop()` dans `ClusterService.onDestroy()` |
 | 1.62 | 63 | `24fcad7` | Sanity check 3 — `Log.*` → `AppLogger` dans ClusterManager/DashboardDisplayHelper/DashboardLauncher (journal in-app), `sendInfo` try-with-resources, imports MainActivity |
 | 1.61 | 62 | `e8b0eee` | Sanity check 2 — race `ClusterMirrorManager`, boucle infinie `FloatingLogButton`, TOCTOU clés ADB, dead code `onRebind`, imports orphelins |
 | 1.60 | 61 | `2687936` (tag: `apres-sanity-check`) | Sanity check 1 — dadb leak `connectAndGrant`, `AzureLogExporter` thread-safety + JSON escaping + `conn.disconnect` finally, `MainActivity` Log.i doublon, manifest `screenOrientation` |
