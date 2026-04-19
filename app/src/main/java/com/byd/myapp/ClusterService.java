@@ -246,6 +246,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void resizeTaskOnDashboard(final String packageName,
             final int left, final int top, final int right, final int bottom,
             final AdbLocalClient.Callback callback) {
+        AppLogger.i(TAG, "resizeTaskOnDashboard → " + packageName
+                + " [" + left + "," + top + "," + right + "," + bottom + "]");
         AdbLocalClient.resizeTask(this, packageName, left, top, right, bottom, callback);
     }
 

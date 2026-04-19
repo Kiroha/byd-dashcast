@@ -975,27 +975,42 @@ public class AdbLocalClient {
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
+                AppLogger.i(TAG, "resizeTask pkg=" + packageName
+                        + " bounds=[" + left + "," + top + "," + right + "," + bottom + "]"
+                        + " [" + Thread.currentThread().getName() + "]");
                 try (Dadb dadb = connect(context)) {
                     // 1. Trouver le taskId du package
+                    // am stack list donne : "  taskId=N: <pkg>/<activity>"
+                    AppLogger.d(TAG, "resizeTask : am stack list grep " + packageName);
                     AdbShellResponse rList = dadb.shell(
                             "am stack list 2>/dev/null | grep 'taskId=.*" + packageName + "' | head -1");
                     String line = rList.getAllOutput().trim();
-                    AppLogger.i(TAG, "resizeTask grep " + packageName + " → '" + line + "'");
+                    AppLogger.i(TAG, "resizeTask stack grep → '" + line + "'");
+                    if (line.isEmpty()) {
+                        // Fallback : dump stack complet pour aider le debug
+                        String allStacks = dadb.shell(
+                                "am stack list 2>/dev/null | head -40").getAllOutput().trim();
+                        AppLogger.w(TAG, "resizeTask : taskId introuvable. Stacks complets:\n" + allStacks);
+                        callback.onError("taskId introuvable pour " + packageName);
+                        return;
+                    }
                     java.util.regex.Matcher m = java.util.regex.Pattern
                             .compile("taskId=(\\d+)").matcher(line);
                     if (!m.find()) {
+                        AppLogger.e(TAG, "resizeTask : regex taskId=(\\d+) no match sur: '" + line + "'");
                         callback.onError("taskId introuvable pour " + packageName);
                         return;
                     }
                     int taskId = Integer.parseInt(m.group(1));
+                    AppLogger.i(TAG, "resizeTask taskId=" + taskId);
 
                     // 2. Redimensionner
                     String cmd = "am task resize " + taskId
                             + " " + left + " " + top + " " + right + " " + bottom + " 2>&1";
-                    AppLogger.i(TAG, "am task resize: " + cmd);
+                    AppLogger.i(TAG, "resizeTask cmd: " + cmd);
                     AdbShellResponse rResize = dadb.shell(cmd);
                     String out = rResize.getAllOutput().trim();
-                    AppLogger.i(TAG, "am task resize → '" + out + "'");
+                    AppLogger.i(TAG, "resizeTask result → '" + out + "'");
                     if (out.toLowerCase().contains("error") || out.toLowerCase().contains("exception")) {
                         callback.onError(out);
                     } else {

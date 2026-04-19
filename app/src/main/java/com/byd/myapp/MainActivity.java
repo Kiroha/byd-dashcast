@@ -415,6 +415,8 @@ public class MainActivity extends AppCompatActivity
         if (mCurrentSplitSlot != 0 && mCurrentDashboardPkg != null) {
             // Même app que le slot principal ou secondaire déjà présent : ignorer
             if (pkgName.equals(mCurrentDashboardPkg) || pkgName.equals(mSecondDashboardPkg)) {
+                AppLogger.w(TAG, "split : doublon ignoré pkg=" + pkgName
+                        + " (main=" + mCurrentDashboardPkg + " second=" + mSecondDashboardPkg + ")");
                 Toast.makeText(this, "App déjà sur le cluster", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -423,8 +425,9 @@ public class MainActivity extends AppCompatActivity
             // Slot complémentaire (1=gauche → droite ; 2=droite → gauche)
             final int newLeft  = (mCurrentSplitSlot == 1) ? W / 2 : 0;
             final int newRight = (mCurrentSplitSlot == 1) ? W     : W / 2;
-            AppLogger.log(TAG, "split — slot " + (mCurrentSplitSlot == 1 ? "droit" : "gauche")
-                    + " bounds=[" + newLeft + ",0," + newRight + "," + H + "] → " + pkgName);
+            AppLogger.log(TAG, "split — slot courant=" + mCurrentSplitSlot
+                    + " → slot complémentaire bounds=[" + newLeft + ",0," + newRight + "," + H + "]"
+                    + " pkg=" + pkgName);
             // Force-stop l'ancien slot secondaire si déjà occupé
             if (mSecondDashboardPkg != null) {
                 AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
@@ -563,20 +566,38 @@ public class MainActivity extends AppCompatActivity
      * Peut être appelé depuis surfaceCreated, surfaceChanged, ou onClusterDisplayConnected.
      */
     private void attemptStartMirrorWithCurrentHolder() {
-        if (!mServiceBound || mClusterService == null) return;
-        if (mMirrorHolder == null || !mMirrorHolder.getSurface().isValid()) return;
+        if (!mServiceBound || mClusterService == null) {
+            AppLogger.d(TAG, "attemptStartMirror : service non disponible");
+            return;
+        }
+        if (mMirrorHolder == null || !mMirrorHolder.getSurface().isValid()) {
+            AppLogger.d(TAG, "attemptStartMirror : surface invalide");
+            return;
+        }
         int displayId = mClusterService.getDisplayId();
-        if (displayId < 0) return;
+        if (displayId < 0) {
+            AppLogger.d(TAG, "attemptStartMirror : displayId=" + displayId + " (non connecté)");
+            return;
+        }
 
         DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         if (dm == null) return;
         Display clusterDisplay = dm.getDisplay(displayId);
-        if (clusterDisplay == null) return;
+        if (clusterDisplay == null) {
+            AppLogger.w(TAG, "attemptStartMirror : getDisplay(" + displayId + ") null");
+            return;
+        }
 
         int viewW = clusterMirror.getWidth();
         int viewH = clusterMirror.getHeight();
-        if (viewW <= 0 || viewH <= 0) return;
+        if (viewW <= 0 || viewH <= 0) {
+            AppLogger.d(TAG, "attemptStartMirror : vue pas encore mesurée "
+                    + viewW + "×" + viewH);
+            return;
+        }
 
+        AppLogger.d(TAG, "attemptStartMirror → display=" + displayId
+                + " view=" + viewW + "×" + viewH);
         mClusterService.getMirrorManager().startMirror(
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
     }
@@ -586,16 +607,17 @@ public class MainActivity extends AppCompatActivity
      * Appelé depuis onSendToDashboard après un lancement réussi.
      */
     private void startClusterMirror() {
+        AppLogger.d(TAG, "startClusterMirror app=" + mCurrentDashboardApp);
         panelClusterControl.setVisibility(View.VISIBLE);
-        // La Surface peut ne pas encore être créée (premier affichage du panel).
-        // Dans ce cas, surfaceCreated() appellera attemptStartMirrorWithCurrentHolder().
         attemptStartMirrorWithCurrentHolder();
     }
 
     /** Arrête le miroir SurfaceControl et masque le panel. */
     private void stopClusterMirror() {
         if (mServiceBound && mClusterService != null) {
+            boolean wasActive = mClusterService.getMirrorManager().isMirrorActive();
             mClusterService.getMirrorManager().stopMirror();
+            if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
         }
     }
 
@@ -639,7 +661,9 @@ public class MainActivity extends AppCompatActivity
     private void activateCluster() {
         btnActivateCluster.setEnabled(false);
         tvDashboardStatus.setText("Activation cluster…");
-        AppLogger.log(TAG, "activateCluster()");
+        AppLogger.log(TAG, "activateCluster() — serviceBound=" + mServiceBound
+                + " bindRequested=" + mBindRequested
+                + " displayId=" + (mClusterService != null ? mClusterService.getDisplayId() : "N/A"));
 
         if (!mServiceBound || mClusterService == null) {
             // Service arrêté (ex: après stopProjection via kill app).
@@ -863,9 +887,15 @@ public class MainActivity extends AppCompatActivity
     /** Affiche le menu de mise en page du cluster (plein écran / gauche 50% / droite 50%). */
     private void showSplitMenu(View anchor) {
         if (!mServiceBound || mClusterService == null || mCurrentDashboardPkg == null) {
+            AppLogger.w(TAG, "showSplitMenu ignoré — serviceBound=" + mServiceBound
+                    + " clusterService=" + (mClusterService != null)
+                    + " currentPkg=" + mCurrentDashboardPkg);
             Toast.makeText(this, "Aucune app sur le cluster", Toast.LENGTH_SHORT).show();
             return;
         }
+        AppLogger.d(TAG, "showSplitMenu — app=" + mCurrentDashboardPkg
+                + " slot=" + mCurrentSplitSlot
+                + " second=" + mSecondDashboardPkg);
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, "⬜ Plein écran");
         popup.getMenu().add(0, 2, 0, "⬜⬛ Gauche (50%)");
@@ -891,8 +921,13 @@ public class MainActivity extends AppCompatActivity
      * slot 0 = plein écran, 1 = gauche (0..W/2), 2 = droite (W/2..W).
      */
     private void applySplitSlot(final int slot, final int l, final int t, final int r, final int b) {
+        AppLogger.i(TAG, "applySplitSlot slot=" + slot
+                + " bounds=[" + l + "," + t + "," + r + "," + b + "]"
+                + " pkg=" + mCurrentDashboardPkg
+                + " second=" + mSecondDashboardPkg);
         // Retour en plein écran : force-stop la seconde app si présente
         if (slot == 0 && mSecondDashboardPkg != null) {
+            AppLogger.i(TAG, "split → plein écran : force-stop second=" + mSecondDashboardPkg);
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
             mSecondDashboardApp = null;
             mSecondDashboardPkg = null;
@@ -924,6 +959,10 @@ public class MainActivity extends AppCompatActivity
 
     /** Réinitialise l'état split (slot + second app). */
     private void clearSplitState() {
+        if (mCurrentSplitSlot != 0 || mSecondDashboardPkg != null) {
+            AppLogger.d(TAG, "clearSplitState — slot=" + mCurrentSplitSlot
+                    + " second=" + mSecondDashboardPkg);
+        }
         mSecondDashboardApp = null;
         mSecondDashboardPkg = null;
         mCurrentSplitSlot   = 0;
@@ -937,9 +976,13 @@ public class MainActivity extends AppCompatActivity
         if (mServiceBound && mClusterService != null) {
             int w = mClusterService.getMirrorManager().getClusterWidth();
             int h = mClusterService.getMirrorManager().getClusterHeight();
-            if (w > 0 && h > 0) return new int[]{w, h};
+            if (w > 0 && h > 0) {
+                AppLogger.d(TAG, "getClusterDimensions → miroir " + w + "×" + h);
+                return new int[]{w, h};
+            }
         }
-        return new int[]{1920, 720}; // fallback DiLink 3.0 Seal EU
+        AppLogger.w(TAG, "getClusterDimensions → fallback 1920×720 (miroir non disponible)");
+        return new int[]{1920, 720};
     }
 
     /** Met à jour le label d'app dans le panel cluster (supporte "App A  |  App B" en split). */
