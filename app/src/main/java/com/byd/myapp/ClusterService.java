@@ -74,9 +74,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster : initialisation…"));
         AppLogger.log(TAG, "ClusterService créé — démarrage projection");
-        // Diagnostic v1.72 : dump signatures + permissions effectives au boot
-        // pour confirmer/infirmer le mismatch keystore (CN=Android testkey vs CN=auto_api BYD).
-        AdbLocalClient.dumpSignatureAndPermissions(this);
+        // Diagnostic signatures + permissions — debug uniquement (ouvre une connexion ADB).
+        if (BuildConfig.DEBUG) {
+            AdbLocalClient.dumpSignatureAndPermissions(this);
+        }
         mDisplayHelper.start();
         mProjectionActive = true;
     }
@@ -113,7 +114,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
-        com.byd.myapp.dashboard.ClusterSurfaceProbe.release();
         AppLogger.log(TAG, "ClusterService détruit");
     }
 

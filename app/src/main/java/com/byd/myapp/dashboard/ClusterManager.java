@@ -252,7 +252,7 @@ public class ClusterManager {
             @Override public void onDisplayAdded(int displayId) {
                 Display d = dm.getDisplay(displayId);
                 AppLogger.i(TAG, "onDisplayAdded id=" + displayId + " display=" + d);
-                if (isClusterDisplay(dm, d)) {
+                if (isClusterDisplay(d)) {
                     mHandler.removeCallbacksAndMessages(null);
                     dm.unregisterDisplayListener(listenerHolder[0]);
                     mActiveDisplayListener = null;
@@ -343,7 +343,7 @@ public class ClusterManager {
         return null;
     }
 
-    private boolean isClusterDisplay(DisplayManager dm, Display d) {
+    private boolean isClusterDisplay(Display d) {
         // Un display est considéré cluster si ce n'est pas le display principal (id=0)
         return d != null && d.getDisplayId() != 0;
     }
