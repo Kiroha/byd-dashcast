@@ -1,222 +1,138 @@
 package com.byd.myapp.dashboard;
 
-import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Point;
-import android.hardware.display.DisplayManager;
-import android.os.Handler;
-import android.os.HandlerThread;
+import android.graphics.Rect;
 import android.os.IBinder;
-import android.os.Looper;
 import android.view.Display;
+import android.view.Surface;
 import com.byd.myapp.AppLogger;
 
 import java.lang.reflect.Method;
 
 /**
- * Capture périodique du display cluster (display 1) via SurfaceControl.screenshot().
+ * Miroir temps réel du display cluster (display 1) vers une SurfaceView sur l'écran principal.
+ *
+ * Mécanisme : SurfaceControl.createDisplay() crée un display virtuel dont le layerStack
+ * est configuré pour être identique à celui du display cluster. Tout ce qui est rendu
+ * sur le cluster apparaît instantanément dans la SurfaceView (aucun screenshot, aucune latence).
  *
  * Requiert android.permission.READ_FRAME_BUFFER (signature-level, accordée avec platform.keystore).
  *
- * Taux de rafraîchissement : ~2,5 fps (400 ms) — suffisant pour navigation/GPS.
- * Résolution capturée : 1/4 des dimensions réelles du cluster (ex. 480×270 pour 1920×1080)
- * afin de réduire la charge mémoire et le temps de transfert.
+ * Usage :
+ *   // Dans SurfaceHolder.Callback.surfaceCreated / surfaceChanged :
+ *   mirrorManager.startMirror(clusterDisplay, holder.getSurface(), viewW, viewH);
+ *   // Dans SurfaceHolder.Callback.surfaceDestroyed :
+ *   mirrorManager.stopMirror();
  */
 public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
-    private static final long INTERVAL_MS = 400;
 
-    public interface FrameCallback {
-        /** Appelé sur le main thread avec le nouveau Bitmap cluster. */
-        void onFrame(Bitmap bitmap, int clusterW, int clusterH);
-        /** Appelé sur le main thread en cas d'erreur de capture. */
-        void onError(String reason);
-    }
+    private IBinder mMirrorToken  = null;
+    private boolean mMirrorActive = false;
+    private int     mClusterW     = 1920;
+    private int     mClusterH     = 720;
 
-    private final Context       mContext;
-    private final Handler       mMainHandler = new Handler(Looper.getMainLooper());
-    // Thread de capture persistant : évite de créer un nouveau Thread toutes les 400 ms.
-    private HandlerThread       mCaptureThread;
-    private Handler             mCaptureHandler;
-    private volatile boolean    mRunning     = false;
-    private int                 mDisplayId   = -1;
-    private int                 mClusterW    = 1920;
-    private int                 mClusterH    = 1080;
-    // Compteur de session : incrémenté à chaque start() pour invalider les callbacks
-    // de l'ancienne session de capture (thread starté avant stop() qui poste après start()).
-    private int                 mSession     = 0;
-    // Dernier bitmap rendu — recyclé avant d'afficher le suivant pour éviter la fuite mémoire.
-    private Bitmap              mLastBitmap  = null;
-
-    public ClusterMirrorManager(Context context) {
-        mContext = context.getApplicationContext();
-    }
-
-    /** Lance la boucle de capture pour le display donné. */
-    public void start(int displayId, FrameCallback callback) {
-        if (mRunning) stop();
-        mDisplayId = displayId;
-        mRunning   = true;
-        mSession++;                // invalide les callbacks de l'ancienne session
-        final int thisSession = mSession;
-        // Récupérer les dimensions réelles du display
-        DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
-        if (dm != null) {
-            Display d = dm.getDisplay(displayId);
-            if (d != null) {
-                Point sz = new Point(1920, 1080);
-                d.getRealSize(sz);
-                mClusterW = sz.x;
-                mClusterH = sz.y;
-            }
-        }
-        AppLogger.i(TAG, "Miroir démarré — display=" + displayId
-                + " " + mClusterW + "×" + mClusterH);
-        // Démarrer le thread de capture persistant
-        mCaptureThread  = new HandlerThread("cluster-mirror-cap");
-        mCaptureThread.start();
-        mCaptureHandler = new Handler(mCaptureThread.getLooper());
-        scheduleCapture(callback, thisSession);
-    }
-
-    /** Arrête la boucle de capture et libère les ressources. */
-    public void stop() {
-        mRunning = false;
-        // Arrêter le HandlerThread de capture avant de vider le main handler
-        if (mCaptureThread != null) {
-            mCaptureThread.quitSafely();
-            mCaptureThread  = null;
-            mCaptureHandler = null;
-        }
-        mMainHandler.removeCallbacksAndMessages(null);
-        if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
-            mLastBitmap.recycle();
-            mLastBitmap = null;
-        }
-        AppLogger.i(TAG, "Miroir arrêté");
-    }
-
-    // ── Boucle de capture ────────────────────────────────────────────────────
-
-    private void scheduleCapture(final FrameCallback callback, final int session) {
-        // Planifié sur mCaptureHandler (HandlerThread dédié) — aucun new Thread() à chaque frame.
-        mCaptureHandler.postDelayed(() -> {
-            if (!mRunning || mSession != session) return;
-            final Bitmap bmp = captureDisplay(mDisplayId);
-            mMainHandler.post(() -> {
-                // Double-check : stop()/start() peut avoir été appelé pendant la capture
-                if (!mRunning || mSession != session) {
-                    if (bmp != null) bmp.recycle();
-                    return;
-                }
-                if (bmp != null) {
-                    // Recycler le bitmap précédent AVANT d'afficher le nouveau
-                    // pour éviter l'accumulation en mémoire (~500 KB/frame à 2.5 fps).
-                    if (mLastBitmap != null && !mLastBitmap.isRecycled()) {
-                        mLastBitmap.recycle();
-                    }
-                    mLastBitmap = bmp;
-                    callback.onFrame(bmp, mClusterW, mClusterH);
-                } else {
-                    callback.onError("SurfaceControl.screenshot() null");
-                }
-                scheduleCapture(callback, session);
-            });
-        }, INTERVAL_MS);
-    }
-
-    // ── Capture d'un frame ───────────────────────────────────────────────────
-
-    private Bitmap captureDisplay(int displayId) {
-        try {
-            DisplayManager dm =
-                    (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
-            if (dm == null) return null;
-            Display display = dm.getDisplay(displayId);
-            if (display == null) return null;
-
-            IBinder token = getDisplayToken(display);
-            if (token == null) {
-                AppLogger.w(TAG, "getDisplayToken() null pour display=" + displayId);
-                return null;
-            }
-
-            // Capturer à ¼ de la résolution pour économiser la mémoire
-            int capW = mClusterW / 4;
-            int capH = mClusterH / 4;
-            return screenshotBitmap(token, capW, capH);
-
-        } catch (Exception e) {
-            AppLogger.e(TAG, "captureDisplay " + displayId + " échec", e);
-            return null;
-        }
-    }
+    public int  getClusterWidth()   { return mClusterW; }
+    public int  getClusterHeight()  { return mClusterH; }
+    public boolean isMirrorActive() { return mMirrorActive; }
 
     /**
-     * Récupère le token IBinder du display via la méthode cachée Display.getDisplayToken().
-     * Accessible sur API 29 avec platform.keystore.
-     */
-    private IBinder getDisplayToken(Display display) {
-        try {
-            Method m = Display.class.getDeclaredMethod("getDisplayToken");
-            m.setAccessible(true);
-            return (IBinder) m.invoke(display);
-        } catch (Exception e) {
-            AppLogger.e(TAG, "getDisplayToken échec", e);
-            return null;
-        }
-    }
-
-    /**
-     * Capture un Bitmap via android.view.SurfaceControl (méthode cachée).
-     * Requiert READ_FRAME_BUFFER — accordée avec platform.keystore (confirmé API 29).
+     * Démarre le miroir SurfaceControl du display cluster vers la surface cible.
      *
-     * Plusieurs signatures possibles selon la version ROM — essayées dans l'ordre.
+     * @param clusterDisplay  Display cluster (obtenu via DisplayManager, id=1)
+     * @param targetSurface   Surface de la SurfaceView sur l'écran principal
+     * @param viewW           Largeur actuelle de la SurfaceView (pixels)
+     * @param viewH           Hauteur actuelle de la SurfaceView (pixels)
+     * @return true si le miroir a démarré avec succès
      */
-    private Bitmap screenshotBitmap(IBinder token, int w, int h) {
-        Class<?> sc;
-        try {
-            sc = Class.forName("android.view.SurfaceControl");
-        } catch (ClassNotFoundException e) {
-            AppLogger.e(TAG, "SurfaceControl introuvable");
-            return null;
+    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
+                               int viewW, int viewH) {
+        stopMirror();
+        if (clusterDisplay == null) {
+            AppLogger.e(TAG, "startMirror : clusterDisplay null");
+            return false;
+        }
+        if (targetSurface == null || !targetSurface.isValid()) {
+            AppLogger.e(TAG, "startMirror : targetSurface invalide");
+            return false;
         }
 
-        // Signature 1 : screenshot(IBinder, int, int, boolean, int) → Bitmap  (API 29 courant)
         try {
-            Method m = sc.getDeclaredMethod("screenshot",
-                    IBinder.class, int.class, int.class, boolean.class, int.class);
-            m.setAccessible(true);
-            return (Bitmap) m.invoke(null, token, w, h, false, 0);
-        } catch (NoSuchMethodException ignored) {
+            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+
+            // ── 1. Obtenir le layerStack du display cluster ──────────────────
+            Method getLayerStack = Display.class.getDeclaredMethod("getLayerStack");
+            getLayerStack.setAccessible(true);
+            int layerStack = (int) getLayerStack.invoke(clusterDisplay);
+
+            // ── 2. Dimensions réelles du cluster ─────────────────────────────
+            Point sz = new Point(1920, 720);
+            clusterDisplay.getRealSize(sz);
+            mClusterW = sz.x;
+            mClusterH = sz.y;
+
+            // ── 3. Créer un display miroir (non sécurisé) ─────────────────────
+            Method createDisplay = scClass.getMethod("createDisplay",
+                    String.class, boolean.class);
+            IBinder mirrorToken = (IBinder) createDisplay.invoke(null,
+                    "byd_cluster_mirror", false);
+
+            // ── 4. Calculer le rectangle destination (ratio préservé) ─────────
+            float scale   = Math.min((float) viewW / mClusterW, (float) viewH / mClusterH);
+            int   drawW   = Math.round(mClusterW * scale);
+            int   drawH   = Math.round(mClusterH * scale);
+            int   offsetX = (viewW - drawW) / 2;
+            int   offsetY = (viewH - drawH) / 2;
+            Rect srcRect  = new Rect(0, 0, mClusterW, mClusterH);
+            Rect dstRect  = new Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH);
+
+            // ── 5. Transaction SurfaceControl ──────────────────────────────────
+            Method openTransaction      = scClass.getMethod("openTransaction");
+            Method closeTransaction     = scClass.getMethod("closeTransaction");
+            Method setDisplaySurface    = scClass.getMethod("setDisplaySurface",
+                    IBinder.class, Surface.class);
+            Method setDisplayLayerStack = scClass.getMethod("setDisplayLayerStack",
+                    IBinder.class, int.class);
+            Method setDisplayProjection = scClass.getMethod("setDisplayProjection",
+                    IBinder.class, int.class, Rect.class, Rect.class);
+
+            openTransaction.invoke(null);
+            try {
+                setDisplaySurface.invoke(null, mirrorToken, targetSurface);
+                setDisplayLayerStack.invoke(null, mirrorToken, layerStack);
+                setDisplayProjection.invoke(null, mirrorToken,
+                        Surface.ROTATION_0, srcRect, dstRect);
+            } finally {
+                closeTransaction.invoke(null);
+            }
+
+            mMirrorToken  = mirrorToken;
+            mMirrorActive = true;
+            AppLogger.i(TAG, "Miroir SurfaceControl démarré — layerStack=" + layerStack
+                    + " cluster=" + mClusterW + "×" + mClusterH
+                    + " view=" + viewW + "×" + viewH + " dst=" + dstRect);
+            return true;
+
         } catch (Exception e) {
-            AppLogger.w(TAG, "screenshot sig1 échec", e);
+            AppLogger.e(TAG, "startMirror SurfaceControl ERREUR", e);
+            return false;
         }
+    }
 
-        // Signature 2 : screenshot(IBinder, int, int) → Bitmap
-        try {
-            Method m = sc.getDeclaredMethod("screenshot",
-                    IBinder.class, int.class, int.class);
-            m.setAccessible(true);
-            return (Bitmap) m.invoke(null, token, w, h);
-        } catch (NoSuchMethodException ignored) {
-        } catch (Exception e) {
-            AppLogger.w(TAG, "screenshot sig2 échec", e);
+    /** Arrête le miroir et libère le display SurfaceControl. */
+    public void stopMirror() {
+        if (mMirrorToken != null) {
+            try {
+                Class<?> scClass = Class.forName("android.view.SurfaceControl");
+                Method destroyDisplay = scClass.getMethod("destroyDisplay", IBinder.class);
+                destroyDisplay.invoke(null, mMirrorToken);
+                AppLogger.i(TAG, "Miroir SurfaceControl détruit");
+            } catch (Exception e) {
+                AppLogger.e(TAG, "destroyDisplay ERREUR", e);
+            }
+            mMirrorToken  = null;
+            mMirrorActive = false;
         }
-
-        // Signature 3 : screenshot(Rect, int, int, boolean, int) → Bitmap (display principal)
-        // (fallback si token non supporté — montrera l'écran principal, moins idéal)
-        try {
-            Method m = sc.getDeclaredMethod("screenshot",
-                    android.graphics.Rect.class, int.class, int.class, boolean.class, int.class);
-            m.setAccessible(true);
-            return (Bitmap) m.invoke(null,
-                    new android.graphics.Rect(0, 0, mClusterW, mClusterH), w, h, false, 0);
-        } catch (Exception e) {
-            AppLogger.e(TAG, "screenshot sig3 échec", e);
-        }
-
-        return null;
     }
 }

@@ -3,7 +3,6 @@ package com.byd.myapp.dashboard;
 import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
@@ -20,9 +19,7 @@ import java.lang.reflect.Method;
  * est marquée @hide. On l'appelle par réflexion, ce qui fonctionne sans root dans
  * une app signée avec la platform key (c'est notre cas avec platform.keystore).
  *
- * Deux usages :
- *  - launchOnDashboard(packageName) : lance une app tierce (Waze, Maps…) sur le cluster
- *  - launchOnMainDisplay(packageName): envoie une app sur l'écran principal (display 0)
+ * Méthode principale : launchOnMainDisplay(packageName) — envoie une app sur l'écran principal (display 0).
  */
 public class DashboardLauncher {
 
@@ -46,54 +43,6 @@ public class DashboardLauncher {
 
     public int getDashboardDisplayId() {
         return mDashboardDisplayId;
-    }
-
-    /**
-     * Lance une app tierce (identifiée par son package) sur le dashboard.
-     *
-     * Stratégie :
-     *  1. getLaunchIntentForPackage() — intent MAIN/LAUNCHER standard
-     *  2. Fallback : première Activity déclarée dans le package (apps système BYD
-     *     sans catégorie LAUNCHER, ex. Navigation, Paramètres BYD…)
-     */
-    public boolean launchOnDashboard(String packageName) {
-        if (!isDashboardAvailable()) {
-            AppLogger.w(TAG, "Dashboard non disponible — lancement annulé pour " + packageName);
-            AppLogger.log(TAG, "LAUNCH KO (pas de display) — " + packageName);
-            return false;
-        }
-
-        PackageManager pm = mContext.getPackageManager();
-        Intent launchIntent = pm.getLaunchIntentForPackage(packageName);
-
-        // Fallback : apps système sans MAIN/LAUNCHER (Navigation BYD, etc.)
-        if (launchIntent == null) {
-            AppLogger.w(TAG, "getLaunchIntentForPackage null pour " + packageName
-                    + " — fallback première Activity du package");
-            try {
-                android.content.pm.PackageInfo pi =
-                        pm.getPackageInfo(packageName, android.content.pm.PackageManager.GET_ACTIVITIES);
-                if (pi.activities != null && pi.activities.length > 0) {
-                    android.content.pm.ActivityInfo ai = pi.activities[0];
-                    launchIntent = new Intent();
-                    launchIntent.setComponent(
-                            new android.content.ComponentName(packageName, ai.name));
-                    AppLogger.i(TAG, "Fallback Activity : " + ai.name);
-                }
-            } catch (android.content.pm.PackageManager.NameNotFoundException e) {
-                AppLogger.e(TAG, "Package introuvable : " + packageName);
-            }
-        }
-
-        if (launchIntent == null) {
-            AppLogger.e(TAG, "Aucune Activity trouvée pour : " + packageName);
-            AppLogger.log(TAG, "LAUNCH KO (aucune Activity) — " + packageName);
-            return false;
-        }
-
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        return launchWithDisplayId(launchIntent, mDashboardDisplayId);
     }
 
     /**

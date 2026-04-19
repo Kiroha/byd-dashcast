@@ -245,6 +245,52 @@ public class AdbLocalClient {
         }, "adb-overlay-grant").start();
     }
 
+    // ── Freedom : démarrage automatique ─────────────────────────────────────
+    /**
+     * Configure Freedom (com.xdja.clusterdemo) en mode "全屏导航" (plein écran), puis le
+     * démarre via ADB shell.
+     *
+     * Mécanisme : Freedom persiste son mode navigation dans
+     *   /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
+     * sous la clé "navigationType" (int) : 0=全屏, 1=小屏, 2=关闭.
+     * La valeur par défaut (fichier absent) est 0 = 全屏.
+     *
+     * Séquence :
+     *   1. force-stop Freedom (s'il tourne avec une mauvaise config, il enverrait sendInfo(18))
+     *   2. supprimer properties.xml → reset vers les défauts (navigationType=0 = 全屏)
+     *   3. am start Freedom → démarre avec 全屏导航, envoie sendInfo(16) de son côté
+     *
+     * La callback est appelée sur un thread ADB (background).
+     */
+    public static void startFreedom(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    // 1. Force-stop Freedom pour qu'il relise ses préférences au prochain démarrage
+                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
+                    AppLogger.i(TAG, "startFreedom : force-stop Freedom");
+                    Thread.sleep(500);
+
+                    // 2. Supprimer le fichier de préférences → Freedom démarrera avec navigationType=0 (全屏)
+                    dadb.shell("rm -f /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml 2>&1");
+                    AppLogger.i(TAG, "startFreedom : properties.xml supprimé (reset → 全屏导航)");
+
+                    // 3. Démarrer Freedom
+                    AppLogger.i(TAG, "startFreedom : démarrage via am start");
+                    String startOut = safeOut(dadb.shell(
+                            "am start -n com.xdja.clusterdemo/.activities.MainActivity 2>&1"
+                    ).getAllOutput()).trim();
+                    AppLogger.i(TAG, "startFreedom am start → " + startOut);
+                    callback.onSuccess(startOut);
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "startFreedom ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-start-freedom").start();
+    }
+
     // ── TEST 6 : Sonde le cluster pour identifier le process propriétaire ──────
     /**
      * Interroge le système via ADB pour répondre à la question :
@@ -455,16 +501,34 @@ public class AdbLocalClient {
      * @param displayId  ID du display cluster (1 sur DiLink 3.0)
      */
     public static void restoreBydOnCluster(final Context context,
+            final String targetPackage, // nullable : package à force-stoper avant la restauration
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                AppLogger.log(TAG, "Restauration BYD cluster");
+                AppLogger.log(TAG, "Restauration BYD cluster"
+                        + (targetPackage != null ? " (cible=" + targetPackage + ")" : ""));
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
-                    // Séquence restauration (confirmé fonctionnel — TEST 10 étapes 3+4) :
-                    //   sendInfo(18) — fermer projection (投屏关闭)
-                    //   sendInfo(0)  — rafraîchir flux Qt
+                    // 0. Force-stop du package cible AVANT sendInfo(18).
+                    // Sans ça, la task de l'app (lancée via trampoline sur display 1) reste
+                    // enregistrée dans ActivityManager : quand sendInfo(18) libère la surface
+                    // Qt, Android relocalise la task orpheline sur display 0 → l'app apparaît
+                    // sur l'écran principal du tablet.
+                    if (targetPackage != null && !targetPackage.isEmpty()) {
+                        dadb.shell("am force-stop " + targetPackage + " 2>&1");
+                        sb.append("force-stop ").append(targetPackage).append("\n");
+                        Thread.sleep(500);
+                    }
+
+                    // 1. Force-stop Freedom (com.xdja.clusterdemo).
+                    //    Freedom est démarré automatiquement au lancement de notre app (v1.86).
+                    //    S'il tourne encore, il re-prend le display immédiatement après sendInfo(18)
+                    //    et annule la restauration. On doit l'arrêter d'abord.
+                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
+                    sb.append("force-stop Freedom\n");
+                    Thread.sleep(500);
+
                     AdbShellResponse rStop = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
@@ -497,12 +561,22 @@ public class AdbLocalClient {
      * @param screenSizeCmd  code taille : 29=8.8", 30=12.3" (Seal EU), 31=10.25"
      */
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
+            final String targetPackage, // nullable : package à force-stoper avant la restauration
             final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd);
+                AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
+                        + (targetPackage != null ? " cible=" + targetPackage : ""));
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
+
+                    // Force-stop du package cible avant la restauration (même raison que
+                    // restoreBydOnCluster : éviter la relocalisation de la task sur display 0).
+                    if (targetPackage != null && !targetPackage.isEmpty()) {
+                        dadb.shell("am force-stop " + targetPackage + " 2>&1");
+                        sb.append("force-stop ").append(targetPackage).append("\n");
+                        Thread.sleep(500);
+                    }
 
                     AdbShellResponse rSize = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
@@ -643,45 +717,81 @@ public class AdbLocalClient {
         }, "adb-sendinfo-thread").start();
     }
 
-    // ── Grant MANAGE_ACTIVITY_STACKS via pm grant (requis pour setLaunchDisplayId sur apps tierces) ──
+    // ── Diagnostic : signature + permissions effectivement accordées ──────────
 
     /**
-     * Accorde android.permission.MANAGE_ACTIVITY_STACKS à notre app via pm grant ADB.
+     * Dump l'état réel des signatures et permissions pour notre app via ADB
+     * (uid=2000, vue système). Permet de répondre à la question :
+     * "L'APK est-il vraiment signé avec la même clé que la ROM ?"
      *
-     * Sur BYD DiLink 3.0, cette permission est requise pour que Context.startActivity()
-     * avec setLaunchDisplayId(1) fonctionne depuis un app-process (uid=10100).
-     *
-     * Note : pm grant fonctionne pour cette permission sur BYD DiLink 3.0 car la ROM
-     * l'expose avec le flag development/dangerous (accessible depuis le shell ADB uid=2000).
-     *
-     * Contrairement à am start --display 1 (qui échoue toujours depuis uid=2000 car le
-     * shell lui-même n'a pas la permission), cette approche cible notre app (uid=10100)
-     * et lui permet ensuite d'utiliser Context.startActivity + setLaunchDisplayId.
-     *
-     * La callback est appelée depuis un thread background.
+     * Sortie loggée (AppLogger INFO, tag "SigDump") :
+     *   - ro.build.tags / ro.build.version.security_patch
+     *   - dumpsys package com.byd.myapp | grep -E "Signature|signatures|version"
+     *   - dumpsys package com.xdja.containerservice | grep -E "Signature|signatures"
+     *   - pm dump com.byd.myapp | grep -E "INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS"
+     *   - dumpsys package com.byd.myapp | grep -A 1 "install permissions:"
+     *   - id (uid courant du shell)
      */
-    public static void grantManageActivityStacks(final Context context, final Callback callback) {
+    public static void dumpSignatureAndPermissions(final Context context) {
         new Thread(new Runnable() {
             @Override public void run() {
+                final String dTag = "SigDump";
                 try (Dadb dadb = connect(context)) {
                     String pkg = context.getPackageName();
-                    String cmd = "pm grant " + pkg
-                            + " android.permission.MANAGE_ACTIVITY_STACKS 2>&1"
-                            + " && echo GRANTED || echo DENIED";
-                    AppLogger.log(TAG, "grantManageActivityStacks: " + cmd);
-                    AdbShellResponse r = dadb.shell(cmd);
-                    String out = r.getAllOutput().trim();
-                    AppLogger.log(TAG, "pm grant MANAGE_ACTIVITY_STACKS → " + out);
-                    if (callback != null) callback.onSuccess(out);
+
+                    AppLogger.i(dTag, "=== Build & shell uid ===");
+                    AppLogger.i(dTag, "id: " + dadb.shell("id 2>&1").getAllOutput().trim());
+                    AppLogger.i(dTag, "build.tags: " + dadb.shell(
+                            "getprop ro.build.tags 2>&1").getAllOutput().trim());
+                    AppLogger.i(dTag, "build.fingerprint: " + dadb.shell(
+                            "getprop ro.build.fingerprint 2>&1").getAllOutput().trim());
+
+                    AppLogger.i(dTag, "=== Notre APK (" + pkg + ") signature & version ===");
+                    String ourSig = dadb.shell(
+                            "dumpsys package " + pkg
+                            + " | grep -E 'versionCode|versionName|signatures' "
+                            + "| head -10 2>&1").getAllOutput().trim();
+                    for (String line : ourSig.split("\n")) AppLogger.i(dTag, "  " + line);
+
+                    AppLogger.i(dTag, "=== ROM/AutoContainer signature (com.xdja.containerservice) ===");
+                    String romSig = dadb.shell(
+                            "dumpsys package com.xdja.containerservice "
+                            + "| grep -E 'signatures|sharedUser' | head -5 2>&1").getAllOutput().trim();
+                    for (String line : romSig.split("\n")) AppLogger.i(dTag, "  " + line);
+
+                    AppLogger.i(dTag, "=== Permissions accordées à notre app ===");
+                    String perms = dadb.shell(
+                            "dumpsys package " + pkg
+                            + " | grep -E "
+                            + "'INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS|"
+                            + "BYDAUTO_SPEED|BYDAUTO_GEARBOX|granted=true|granted=false' "
+                            + "| head -30 2>&1").getAllOutput().trim();
+                    for (String line : perms.split("\n")) AppLogger.i(dTag, "  " + line);
+
+                    AppLogger.i(dTag, "=== Appels signature checks (test direct) ===");
+                    // Tente un am start --display 1 minimal pour confirmer le verdict
+                    AppLogger.i(dTag, "uid=2000 am start --display 1 (notre activity, dry run):");
+                    String testLaunch = dadb.shell(
+                            "am start-activity -W --display 1 --windowingMode 5 "
+                            + "-n " + pkg + "/.dashboard.ClusterTrampolineActivity 2>&1 "
+                            + "| head -20").getAllOutput().trim();
+                    for (String line : testLaunch.split("\n")) AppLogger.i(dTag, "  " + line);
+
+                    AppLogger.i(dTag, "=== FIN dump ===");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "grantManageActivityStacks ERREUR", e);
-                    if (callback != null) callback.onError(
-                            e.getClass().getSimpleName() + ": " + e.getMessage());
+                    AppLogger.e(dTag, "dumpSignatureAndPermissions ERREUR", e);
                 }
             }
-        }, "adb-grant-stacks-thread").start();
+        }, "adb-sigdump-thread").start();
     }
+
+    // ── DIAG v1.74 : SUPPRIMÉ (v1.75.1) ──
+    // La méthode dumpClusterRoutingState() effectuait un brute-force sendInfo(1000, N)
+    // pour identifier le routing display Freedom. Inutile désormais : la vraie cause
+    // (OWN_CONTENT_ONLY sur le VirtualDisplay créé par AutoDisplayService) est
+    // identifiée et corrigée par v1.75 (ClusterSurfaceProbe).
+    // Suppression demandée par l'utilisateur pour éviter tout impact sur la voiture.
 
     // ── TEST 12 : Sonde taille display cluster + essais cmd 29/30/31 + wm size ──
 
@@ -1064,66 +1174,388 @@ public class AdbLocalClient {
         }, "adb-autocall-thread").start();
     }
 
-    // ── Fallback : lancer une app sur un display secondaire via ADB shell ────
-
     /**
-     * Lance une app sur un display secondaire via ADB shell (am start --display N).
+     * Lance NOTRE TRAMPOLINE sur display N via ADB shell, avec le package cible en extra.
      *
-     * Utilisé quand Context.startActivity et IActivityManager.startActivityAsUser
-     * échouent avec SecurityException: Permission Denial: starting Intent with
-     * launchDisplayId=N depuis uid=10100.
+     * Pourquoi ce chemin (v1.73+) :
+     *   - Notre APK n'est PAS signé avec la clé BYD (CN=Android testkey vs CN=auto_api)
+     *     → INTERNAL_SYSTEM_WINDOW non accordée
+     *     → setLaunchDisplayId(N!=0) toujours refusé depuis uid=10100
+     *   - ADB shell (uid=2000) sur cette ROM POSSÈDE INTERNAL_SYSTEM_WINDOW
+     *     (présent dans /system/etc/permissions/platform.xml, contexte SELinux shell:s0)
+     *   - Le trampoline est exporté → ADB shell peut le lancer
+     *   - Une fois sur display 1, le trampoline lance le tiers via Activity.startActivity()
+     *     SANS setLaunchDisplayId → la nouvelle task hérite du display source.
      *
-     * ADB shell (uid=2000) n'est pas soumis à cette restriction → contournement légitime.
-     * La callback est appelée sur le thread ADB (background).
+     * C'est le pattern qui fonctionnait le 12 avril (BYDDashboardActivity exported=true
+     * lancée depuis ADB shell uid=2000 via am start --display 1).
      */
-    public static void launchOnDisplay(final Context context, final String packageName,
+    public static void launchTrampolineViaAdb(final Context context, final String targetPackage,
             final int displayId, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
-                try {
-                    // Résoudre le nom de l'Activity (même logique que DashboardLauncher)
-                    android.content.pm.PackageManager pm = context.getPackageManager();
-                    String actName = null;
-                    android.content.Intent li = pm.getLaunchIntentForPackage(packageName);
-                    if (li != null && li.getComponent() != null) {
-                        actName = li.getComponent().getClassName();
-                    }
-                    if (actName == null) {
-                        try {
-                            android.content.pm.PackageInfo pi = pm.getPackageInfo(
-                                    packageName,
-                                    android.content.pm.PackageManager.GET_ACTIVITIES);
-                            if (pi.activities != null && pi.activities.length > 0) {
-                                actName = pi.activities[0].name;
-                            }
-                        } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {}
-                    }
-                    if (actName == null) {
-                        callback.onError("Aucune Activity trouvée pour " + packageName);
-                        return;
-                    }
-
-                    try (Dadb dadb = connect(context)) {
-                    String component = packageName + "/" + actName;
+                try (Dadb dadb = connect(context)) {
+                    String pkg = context.getPackageName();
+                    // --es target_package <pkg>  → passé à ClusterTrampolineActivity.onCreate()
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
-                            + " -n " + component + " 2>&1";
-                    AppLogger.i(TAG, "ADB launchOnDisplay: " + cmd);
+                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
+                            + " --es target_package " + targetPackage
+                            + " 2>&1";
+                    AppLogger.i(TAG, "ADB launchTrampoline: " + cmd);
                     AdbShellResponse r = dadb.shell(cmd);
                     String out = r.getAllOutput().trim();
-                    AppLogger.i(TAG, "ADB launchOnDisplay result: " + out);
-                    if (out.contains("Error") || out.contains("Exception")) {
+                    AppLogger.i(TAG, "ADB launchTrampoline result: " + out);
+                    if (out.contains("Error") || out.contains("Exception")
+                            || out.contains("Permission Denial")) {
                         callback.onError(out);
                     } else {
                         callback.onSuccess(out);
                     }
-                    }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchOnDisplay ADB échoué", e);
+                    AppLogger.e(TAG, "launchTrampolineViaAdb échoué", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-launch-thread").start();
+        }, "adb-trampoline-thread").start();
     }
+
+    // ── DIAGNOSTIC v1.77 : capture A+B — transition OFF→ON + args sendInfo ──
+    /**
+     * Capture passive (read-only) ENRICHIE :
+     *   - SNAPSHOT AVANT  : dumpsys display id=1 + flags + owner, SF layers fission,
+     *                       window displays, dumpsys activity service AutoContainer
+     *   - logcat -c
+     *   - attente waitSecs s : l'utilisateur fait la TRANSITION Freedom OFF→ON
+     *   - LOGCAT élargi : tags BYD/XDJA + Binder + ServiceManager + tags génériques
+     *     'I am_proc_*' / 'IAutoContainer' avec -B2 -A8 pour récupérer les args
+     *     `sendInfo type=… infoInt=…` autour des checkSendPermissionAndAllowType
+     *   - SNAPSHOT APRÈS : mêmes dumpsys → diff visible
+     *   - dumpsys activity service AutoContainer après pour voir les bindings actifs
+     *
+     * Aucune commande sendInfo / am start / service call n'est envoyée → strictement
+     * passif (lecture seule).
+     */
+    public static void captureFreedomActivation(final Context context, final int waitSecs,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("⏱ Fenêtre de capture : ").append(waitSecs)
+                      .append("s — pendant ce temps, fais la transition Freedom OFF→ON\n\n");
+
+                    // ── 1. SNAPSHOT AVANT ────────────────────────────────────
+                    sb.append("============ SNAPSHOT AVANT ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    sb.append("── dumpsys activity service AutoContainer ──\n");
+                    AdbShellResponse rSvcA = dadb.shell(
+                            "dumpsys activity service AutoContainer 2>/dev/null "
+                            + "| head -80");
+                    sb.append(safeOut(rSvcA.getAllOutput())).append("\n");
+
+                    sb.append("── ps Freedom (com.xdja.clusterdemo) ──\n");
+                    AdbShellResponse rPsA = dadb.shell(
+                            "ps -A 2>/dev/null | grep -E 'clusterdemo|containerservice|"
+                            + "windowmanages' | head -10");
+                    sb.append(safeOut(rPsA.getAllOutput())).append("\n");
+
+                    // ── 2. CLEAR LOGCAT ──────────────────────────────────────
+                    AppLogger.i(TAG, "captureFreedomActivation: logcat -c puis attente "
+                            + waitSecs + "s");
+                    dadb.shell("logcat -c 2>&1");
+
+                    // ── 3. ATTENTE — l'utilisateur active Freedom ────────────
+                    Thread.sleep(waitSecs * 1000L);
+                    AppLogger.i(TAG, "captureFreedomActivation: récupération du buffer + dumpsys après");
+
+                    // ── 4. LOGCAT FILTRÉ ÉLARGI (tags + contexte ±) ──────────
+                    sb.append("============ LOGCAT (").append(waitSecs).append("s) ============\n");
+                    AdbShellResponse rLog = dadb.shell(
+                            "logcat -d 2>&1 "
+                            + "| grep -iE -B2 -A8 "
+                            + "'xdja_AutoContainerService|AutoDisplayService|FissionWindow|"
+                            + "fission_|setLaunchDisplay|launchDisplayId|VirtualDisplayAdapter|"
+                            + "AppDisplayManager|createVirtualDisplay|VIRTUAL_DISPLAY_FLAG|"
+                            + "IAutoContainer|sendInfo|sendJson|ClusterDemo|clusterdemo|"
+                            + "windowmanages|am_proc_start|am_create_task|am_focused_activity|"
+                            + "Binder.*AutoContainer|ServiceManager.*AutoContainer' "
+                            + "| head -1500");
+                    sb.append(safeOut(rLog.getAllOutput())).append("\n");
+
+                    // ── 5. SNAPSHOT APRÈS ────────────────────────────────────
+                    sb.append("============ SNAPSHOT APRÈS ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    sb.append("── dumpsys activity service AutoContainer (APRÈS) ──\n");
+                    AdbShellResponse rSvcB = dadb.shell(
+                            "dumpsys activity service AutoContainer 2>/dev/null "
+                            + "| head -80");
+                    sb.append(safeOut(rSvcB.getAllOutput())).append("\n");
+
+                    sb.append("── ps Freedom (com.xdja.clusterdemo) (APRÈS) ──\n");
+                    AdbShellResponse rPsB = dadb.shell(
+                            "ps -A 2>/dev/null | grep -E 'clusterdemo|containerservice|"
+                            + "windowmanages' | head -10");
+                    sb.append(safeOut(rPsB.getAllOutput())).append("\n");
+
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "captureFreedomActivation ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-freedom-capture").start();
+    }
+
+    /** Snapshots dumpsys partagés AVANT/APRÈS. Lecture seule. */
+    private static void appendDumpsysSnapshot(Dadb dadb, StringBuilder sb) throws Exception {
+        sb.append("── dumpsys display (id=1, flags, owner) ──\n");
+        AdbShellResponse r1 = dadb.shell(
+                "dumpsys display 2>/dev/null "
+                + "| grep -E 'mDisplayId=1|mBaseDisplayInfo|uniqueId|name=|owner|FLAG_|state=' "
+                + "| head -30");
+        sb.append(safeOut(r1.getAllOutput())).append("\n");
+
+        sb.append("── SurfaceFlinger : layers fission/cluster ──\n");
+        AdbShellResponse r2 = dadb.shell(
+                "dumpsys SurfaceFlinger --list 2>/dev/null "
+                + "| grep -iE 'fission|cluster|virtual' | head -20");
+        sb.append(safeOut(r2.getAllOutput())).append("\n");
+
+        sb.append("── dumpsys window displays (focus, owner) ──\n");
+        AdbShellResponse r3 = dadb.shell(
+                "dumpsys window displays 2>/dev/null "
+                + "| grep -E 'Display:|mDisplayId|mFocused|mOwnerUid|mPrivate|mType' "
+                + "| head -40");
+        sb.append(safeOut(r3.getAllOutput())).append("\n");
+    }
+
+    private static String safeOut(String s) {
+        if (s == null) return "(null)";
+        s = s.trim();
+        return s.isEmpty() ? "(vide)" : s;
+    }
+
+    // ── TEST 16 : reproduire la séquence Freedom pour créer le display 1 ────
+
+    /**
+     * TEST 16 — Bootstrap actif du cluster sans Freedom.
+     *
+     * Reproduit la séquence observée dans le log Freedom v1.77 (20:57:24) :
+     *   1. sendInfo(1000, 30) — Seal EU screen size
+     *   2. sendInfo(1000, 16) — Qt standby (réveille la Surface Qt natif)
+     *   3. am startservice -n com.xdja.containerservice/.AutoDisplayService
+     *      → AutoDisplayService.onStart() poste MSG=1 → updateDisplay() dans
+     *        son HandlerThread (uid 1000) → ContainerService.getQtProjectionDispInfo(0)
+     *        retourne la Surface (cette fois valide car appel depuis uid 1000)
+     *      → DisplayManager.createVirtualDisplay(...) crée display id=1
+     *
+     * Pré-requis :
+     *   - Freedom doit être DÉSACTIVÉ avant le test (sinon on ne sait pas si le display
+     *     vient de nous ou de lui).
+     *
+     * Critère de succès :
+     *   - "fission_bg_xdjaVirtualSurface" présent dans le SNAPSHOT APRÈS
+     *     ET absent dans le SNAPSHOT AVANT.
+     *
+     * Strictement actif côté shell (uid=2000), pas de modification système.
+     */
+    public static void bootstrapClusterDisplay(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("🧪 TEST 16 — Bootstrap actif du cluster (sans Freedom)\n");
+                    sb.append("Pré-requis : Freedom OFF avant ce test.\n\n");
+
+                    // ── 1. SNAPSHOT AVANT ────────────────────────────────────
+                    sb.append("============ SNAPSHOT AVANT ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    // ── 2. CLEAR LOGCAT pour ne capter que notre tentative ───
+                    dadb.shell("logcat -c 2>&1");
+
+                    // ── 3. SÉQUENCE BOOTSTRAP ────────────────────────────────
+                    sb.append("============ SÉQUENCE BOOTSTRAP ============\n");
+
+                    sb.append("── [1/3] sendInfo(1000, 30) — Seal EU screen size ──\n");
+                    AdbShellResponse r1 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append(safeOut(r1.getAllOutput())).append("\n");
+                    Thread.sleep(500);
+
+                    sb.append("── [2/3] sendInfo(1000, 16) — Qt standby (réveille Surface) ──\n");
+                    AdbShellResponse r2 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
+                    sb.append(safeOut(r2.getAllOutput())).append("\n");
+                    Thread.sleep(1500);
+
+                    sb.append("── [3/3] startservice AutoDisplayService → updateDisplay() ──\n");
+                    AdbShellResponse r3 = dadb.shell(
+                            "am startservice -n "
+                            + "com.xdja.containerservice/.AutoDisplayService 2>&1");
+                    sb.append(safeOut(r3.getAllOutput())).append("\n");
+
+                    // ── 4. ATTENTE — création du display côté system ─────────
+                    Thread.sleep(3000);
+
+                    // ── 5. LOGCAT CIBLÉ ──────────────────────────────────────
+                    sb.append("\n============ LOGCAT (5s) ============\n");
+                    AdbShellResponse rLog = dadb.shell(
+                            "logcat -d 2>&1 "
+                            + "| grep -iE -B1 -A3 "
+                            + "'xdja_AutoContainerService|xdja_AutoDisplayService|"
+                            + "xdja_ContainerServiceJni|getQtProjectionDispInfo|"
+                            + "createVirtualDisplay|fission_|FissionWindow|"
+                            + "DisplayManagerService.*Display device added|"
+                            + "ssc_skip startServiceLocked.*containerservice' "
+                            + "| head -300");
+                    sb.append(safeOut(rLog.getAllOutput())).append("\n");
+
+                    // ── 6. SNAPSHOT APRÈS ────────────────────────────────────
+                    sb.append("============ SNAPSHOT APRÈS ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    // ── 7. VERDICT RAPIDE ────────────────────────────────────
+                    sb.append("============ VERDICT ============\n");
+                    AdbShellResponse rV = dadb.shell(
+                            "dumpsys display 2>/dev/null "
+                            + "| grep -c 'fission_bg_xdjaVirtualSurface' || echo 0");
+                    String count = safeOut(rV.getAllOutput());
+                    sb.append("Occurrences 'fission_bg_xdjaVirtualSurface' : ").append(count).append("\n");
+                    if (count.startsWith("0")) {
+                        sb.append("❌ ÉCHEC : display 1 non créé. Voir LOGCAT ci-dessus.\n");
+                    } else {
+                        sb.append("✅ SUCCÈS : display 1 présent dans DisplayManager !\n");
+                        sb.append("→ Tester maintenant un launchOnDisplay(1) depuis l'UI.\n");
+                    }
+
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "bootstrapClusterDisplay ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-bootstrap-cluster").start();
+    }
+
+    // ── TEST 17 : Lancement d'une app sur display 1 avec Freedom actif ───────
+
+    /**
+     * TEST 17 — Vérifie que notre trampoline peut placer une app tierce sur
+     * display 1 quand Freedom est en cours d'exécution (= display 1 déjà créé).
+     *
+     * Séquence :
+     *   1. Vérifie que display 1 existe (Freedom doit être ON)
+     *   2. sendInfo(1000, 30) + sendInfo(1000, 16) → Qt standby
+     *   3. am start --display 1 ClusterTrampolineActivity --es target_package <pkg>
+     *   4. Attente 3s + logcat
+     *   5. Verdict : app visible sur display 1 (dumpsys window displays) ?
+     *
+     * La callback est appelée sur le thread ADB (background).
+     */
+    public static void launchOnFreedomDisplay(final Context context,
+            final String targetPackage, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("🧪 TEST 17 — Lancement sur display 1 (Freedom ON)\n");
+                    sb.append("Cible : ").append(targetPackage).append("\n\n");
+
+                    // ── 1. PRÉ-REQUIS : display 1 présent ? ────────────────
+                    sb.append("============ PRÉ-REQUIS ============\n");
+                    AdbShellResponse rChk = dadb.shell(
+                            "dumpsys display 2>/dev/null"
+                            + " | grep -c 'fission_bg_xdjaVirtualSurface' || echo 0");
+                    String cnt = safeOut(rChk.getAllOutput());
+                    boolean display1Exists = !cnt.trim().equals("0");
+                    sb.append("Display 1 (fission_bg_xdjaVirtualSurface) : ")
+                      .append(display1Exists ? "✅ PRÉSENT\n" : "❌ ABSENT — Freedom OFF ?\n");
+                    if (!display1Exists) {
+                        sb.append("\n⚠ Prérequis non rempli : démarrez Freedom d'abord.\n");
+                        callback.onSuccess(sb.toString());
+                        return;
+                    }
+
+                    // ── 2. SNAPSHOT AVANT ──────────────────────────────────
+                    sb.append("\n============ SNAPSHOT AVANT ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    // ── 3. ACTIVATION QT STANDBY ──────────────────────────
+                    sb.append("\n============ ACTIVATION QT STANDBY ============\n");
+                    sb.append("── sendInfo(1000, 30) — Seal EU screen size ──\n");
+                    AdbShellResponse r30 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
+                    sb.append("Result: ").append(safeOut(r30.getAllOutput())).append("\n");
+                    Thread.sleep(500);
+
+                    sb.append("── sendInfo(1000, 16) — Qt standby ──\n");
+                    AdbShellResponse r16 = dadb.shell(
+                            "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
+                    sb.append("Result: ").append(safeOut(r16.getAllOutput())).append("\n");
+                    Thread.sleep(1500);
+
+                    // ── 4. LANCEMENT TRAMPOLINE SUR DISPLAY 1 ──────────────
+                    sb.append("\n============ LANCEMENT TRAMPOLINE ============\n");
+                    String trampolineCmd = "am start --display 1 --windowingMode 5"
+                            + " -n com.byd.myapp/.dashboard.ClusterTrampolineActivity"
+                            + " --es target_package " + targetPackage + " 2>&1";
+                    sb.append("Cmd : ").append(trampolineCmd).append("\n");
+                    AdbShellResponse rLaunch = dadb.shell(trampolineCmd);
+                    sb.append("Result: ").append(safeOut(rLaunch.getAllOutput())).append("\n");
+
+                    // ── 5. ATTENTE + LOGCAT ────────────────────────────────
+                    Thread.sleep(3000);
+                    sb.append("\n============ LOGCAT (3s post-lancement) ============\n");
+                    AdbShellResponse rLog = dadb.shell(
+                            "logcat -d -t 80 2>/dev/null | grep -E '"
+                            + "ClusterTrampolineActivity"
+                            + "|ActivityManager.*display=1"
+                            + "|ActivityManager.*" + targetPackage
+                            + "|START.*display"
+                            + "|xdja_Auto"
+                            + "' | tail -30");
+                    sb.append(safeOut(rLog.getAllOutput())).append("\n");
+
+                    // ── 6. SNAPSHOT APRÈS ─────────────────────────────────
+                    sb.append("\n============ SNAPSHOT APRÈS ============\n");
+                    appendDumpsysSnapshot(dadb, sb);
+
+                    // ── 7. VERDICT ─────────────────────────────────────────
+                    sb.append("\n============ VERDICT ============\n");
+                    AdbShellResponse rW = dadb.shell(
+                            "dumpsys window displays 2>/dev/null | grep -A 30 'mDisplayId=1'");
+                    String windowDump = safeOut(rW.getAllOutput());
+                    sb.append("── window display=1 ──\n").append(windowDump).append("\n");
+
+                    boolean trampolineOk = windowDump.contains("ClusterTrampolineActivity");
+                    boolean targetOk     = windowDump.contains(targetPackage);
+                    if (targetOk) {
+                        sb.append("✅ SUCCÈS TOTAL : ").append(targetPackage)
+                          .append(" visible sur display 1 !\n");
+                    } else if (trampolineOk) {
+                        sb.append("⚠ PARTIEL : trampoline présent sur display 1,\n")
+                          .append("  mais ").append(targetPackage)
+                          .append(" non encore détecté (timing ?).\n");
+                    } else {
+                        sb.append("❌ ÉCHEC : ni le trampoline ni ").append(targetPackage)
+                          .append(" détectés sur display 1.\n");
+                    }
+
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "launchOnFreedomDisplay ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-freedom-launch").start();
+    }
+
 }

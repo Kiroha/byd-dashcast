@@ -15,13 +15,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.hardware.display.DisplayManager;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -100,7 +102,8 @@ public class MainActivity extends AppCompatActivity
     // UI — panel contrôle cluster
     private LinearLayout panelClusterControl;
     private TextView     tvControlAppName;
-    private ImageView    clusterMirror;
+    private SurfaceView  clusterMirror;
+    private SurfaceHolder mMirrorHolder;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -112,8 +115,10 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
-        // Démarrer le bouton flottant dès que l'app est lancée
-        startService(new Intent(this, FloatingLogButton.class));
+        // Bouton flottant LOG — debug uniquement (absent en release)
+        if (BuildConfig.DEBUG) {
+            startService(new Intent(this, FloatingLogButton.class));
+        }
 
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
@@ -159,7 +164,26 @@ public class MainActivity extends AppCompatActivity
         // Panel contrôle cluster
         panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
-        clusterMirror       = (ImageView)    findViewById(R.id.cluster_mirror);
+        clusterMirror       = (SurfaceView)  findViewById(R.id.cluster_mirror);
+
+        // SurfaceHolder.Callback : démarre/arrête le miroir SurfaceControl quand la Surface est disponible.
+        mMirrorHolder = clusterMirror.getHolder();
+        mMirrorHolder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                // La surface est prête — démarrer le miroir si le display cluster est connu
+                attemptStartMirrorWithCurrentHolder();
+            }
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                // Dimensions changées : reconfigurer la projection
+                attemptStartMirrorWithCurrentHolder();
+            }
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+                stopClusterMirror();
+            }
+        });
 
         // Masquer le panel
         Button btnControlHide = (Button) findViewById(R.id.btn_control_hide);
@@ -236,14 +260,26 @@ public class MainActivity extends AppCompatActivity
             // Activity revenue au premier plan : ré-attacher le listener
             // (onStop l'avait mis à null pour éviter les leaks pendant le background)
             mClusterService.setListener(this);
-            // Redémarrer le miroir si une app était active sur le cluster.
-            // onStop() l'a arrêté pour ne pas capturer inutilement en background.
-            if (mCurrentDashboardApp != null) {
-                startClusterMirror();
+            // Si une app était active et le panel visible, relancer le miroir.
+            if (mCurrentDashboardApp != null
+                    && panelClusterControl != null
+                    && panelClusterControl.getVisibility() == View.VISIBLE) {
+                attemptStartMirrorWithCurrentHolder();
             }
         } else if (!mBindRequested) {
             // Premier démarrage ou après onDestroy : lancer + binder le service
             mBindRequested = true;
+            // Démarrer Freedom en arrière-plan immédiatement (fire-and-forget)
+            // pour que le VirtualDisplay cluster soit prêt quand ClusterService en a besoin.
+            tvDashboardStatus.setText("Démarrage cluster…");
+            AdbLocalClient.startFreedom(this, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String result) {
+                    AppLogger.i(TAG, "Freedom auto-start : " + result.trim().replace("\n", " "));
+                }
+                @Override public void onError(String error) {
+                    AppLogger.w(TAG, "Freedom auto-start ERREUR : " + error);
+                }
+            });
             Intent svcIntent = new Intent(this, ClusterService.class);
             startForegroundService(svcIntent);
             bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
@@ -289,6 +325,11 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 updateDashboardStatus(null);
+
+                // Si le panel est visible (app déjà active), démarrer/reconfigurer le miroir
+                if (panelClusterControl.getVisibility() == View.VISIBLE) {
+                    attemptStartMirrorWithCurrentHolder();
+                }
 
                 // Auto-envoi : app en attente (tap pendant l'activation) ou savedItem
                 String toSend = mPendingLaunchPackage;
@@ -369,7 +410,6 @@ public class MainActivity extends AppCompatActivity
                             .edit().putString(PREF_LAST_APP, pkgName).apply();
                     updateDashboardStatus(appName);
                     tvControlAppName.setText(appName);
-                    panelClusterControl.setVisibility(View.VISIBLE);
                     startClusterMirror();
                 } else {
                     Toast.makeText(MainActivity.this,
@@ -455,24 +495,71 @@ public class MainActivity extends AppCompatActivity
         if (mServiceBound && mClusterService != null) {
             return mClusterService.getInputForwarder();
         }
-        // Pas de fallback local : le service est toujours démarré avant tout usage
         return null;
     }
 
     /**
-     * Mappe les coordonnées touch depuis l'ImageView miroir vers le display cluster.
-     * Tient compte du scaleType=fitCenter : l'image est centrée, des bandes peuvent être présentes.
+     * Démarre le miroir SurfaceControl si la Surface est prête ET le display cluster connu.
+     * Peut être appelé depuis surfaceCreated, surfaceChanged, ou onClusterDisplayConnected.
+     */
+    private void attemptStartMirrorWithCurrentHolder() {
+        if (!mServiceBound || mClusterService == null) return;
+        if (mMirrorHolder == null || !mMirrorHolder.getSurface().isValid()) return;
+        int displayId = mClusterService.getDisplayId();
+        if (displayId < 0) return;
+
+        DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (dm == null) return;
+        Display clusterDisplay = dm.getDisplay(displayId);
+        if (clusterDisplay == null) return;
+
+        int viewW = clusterMirror.getWidth();
+        int viewH = clusterMirror.getHeight();
+        if (viewW <= 0 || viewH <= 0) return;
+
+        mClusterService.getMirrorManager().startMirror(
+                clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+    }
+
+    /**
+     * Signale à MainActivity qu'une app a été lancée sur le cluster → afficher le panel + démarrer miroir.
+     * Appelé depuis onSendToDashboard après un lancement réussi.
+     */
+    private void startClusterMirror() {
+        panelClusterControl.setVisibility(View.VISIBLE);
+        // La Surface peut ne pas encore être créée (premier affichage du panel).
+        // Dans ce cas, surfaceCreated() appellera attemptStartMirrorWithCurrentHolder().
+        attemptStartMirrorWithCurrentHolder();
+    }
+
+    /** Arrête le miroir SurfaceControl et masque le panel. */
+    private void stopClusterMirror() {
+        if (mServiceBound && mClusterService != null) {
+            mClusterService.getMirrorManager().stopMirror();
+        }
+    }
+
+    /**
+     * Mappe les coordonnées touch depuis la SurfaceView miroir vers le display cluster.
+     * La projection SurfaceControl respecte le ratio (letterboxing), donc on recalcule
+     * l'offset de la même façon que setDisplayProjection l'a fait.
      */
     private void forwardTouchFromMirror(View mirrorView, MotionEvent event) {
         com.byd.myapp.dashboard.ClusterInputForwarder forwarder = getInputForwarder();
         if (forwarder == null) return;
-        int clusterW = forwarder.getClusterWidth();
-        int clusterH = forwarder.getClusterHeight();
+
+        com.byd.myapp.dashboard.ClusterMirrorManager mirror =
+                mServiceBound && mClusterService != null
+                        ? mClusterService.getMirrorManager() : null;
+        if (mirror == null) return;
+
+        int clusterW = mirror.getClusterWidth();
+        int clusterH = mirror.getClusterHeight();
         int viewW    = mirrorView.getWidth();
         int viewH    = mirrorView.getHeight();
         if (viewW <= 0 || viewH <= 0 || clusterW <= 0 || clusterH <= 0) return;
 
-        // Calculer le rectangle réel de l'image dans la vue (fitCenter)
+        // Même calcul que ClusterMirrorManager.startMirror (ratio préservé)
         float scale   = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
         float drawW   = clusterW * scale;
         float drawH   = clusterH * scale;
@@ -481,40 +568,10 @@ public class MainActivity extends AppCompatActivity
 
         float clusterX = (event.getX() - offsetX) / scale;
         float clusterY = (event.getY() - offsetY) / scale;
-        // Clips aux bornes du display
         clusterX = Math.max(0, Math.min(clusterX, clusterW - 1));
         clusterY = Math.max(0, Math.min(clusterY, clusterH - 1));
 
-        // Réutiliser forwardTouch avec des coordonnées déjà converties (pad = cluster size)
         forwarder.forwardTouch(clusterX, clusterY, clusterW, clusterH, event.getAction());
-    }
-
-    /** Démarre la boucle de capture miroir du cluster. */
-    private void startClusterMirror() {
-        if (!mServiceBound || mClusterService == null) return;
-        int displayId = mClusterService.getDisplayId();
-        if (displayId < 0) return;
-        mClusterService.getMirrorManager().start(displayId,
-                new com.byd.myapp.dashboard.ClusterMirrorManager.FrameCallback() {
-            @Override
-            public void onFrame(android.graphics.Bitmap bitmap, int w, int h) {
-                if (clusterMirror != null) {
-                    clusterMirror.setImageBitmap(bitmap);
-                }
-            }
-            @Override
-            public void onError(String reason) {
-                AppLogger.log(TAG, "Miroir erreur : " + reason);
-            }
-        });
-    }
-
-    /** Arrête la boucle de capture miroir. */
-    private void stopClusterMirror() {
-        if (mServiceBound && mClusterService != null) {
-            mClusterService.getMirrorManager().stop();
-        }
-        if (clusterMirror != null) clusterMirror.setImageBitmap(null);
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----
@@ -643,7 +700,7 @@ public class MainActivity extends AppCompatActivity
         tvDashboardStatus.setText("Restauration cluster…");
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
 
-        AdbLocalClient.restoreBydOnCluster(this, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreBydOnCluster(this, mCurrentDashboardApp, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -696,7 +753,7 @@ public class MainActivity extends AppCompatActivity
         tvDashboardStatus.setText("Cluster d'origine…");
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
 
-        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), mCurrentDashboardApp, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {

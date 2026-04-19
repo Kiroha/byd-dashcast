@@ -122,6 +122,21 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
 
+        <!-- Trampoline display 1 : permet de lancer une app tierce sur le cluster
+             en passant par notre propre uid (isCallerAllowedToLaunchOnDisplay
+             retourne true quand targetUid == callingUid).
+             EXPORTED=TRUE : le lancement se fait via ADB shell uid=2000
+             qui possède INTERNAL_SYSTEM_WINDOW dans platform.xml de cette ROM.
+             C'est exactement le pattern qui fonctionnait le 12 avril avec
+             BYDDashboardActivity (aussi exported=true). -->
+        <activity
+            android:name=".dashboard.ClusterTrampolineActivity"
+            android:exported="true"
+            android:launchMode="standard"
+            android:taskAffinity="com.byd.myapp.cluster"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"

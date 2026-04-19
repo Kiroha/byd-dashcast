@@ -69,11 +69,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         super.onCreate();
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
         mLauncher       = new DashboardLauncher(this);
-        mMirrorManager  = new ClusterMirrorManager(this);
+        mMirrorManager  = new ClusterMirrorManager();
         mInputForwarder = new ClusterInputForwarder(this);
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster : initialisation…"));
         AppLogger.log(TAG, "ClusterService créé — démarrage projection");
+        // Diagnostic v1.72 : dump signatures + permissions effectives au boot
+        // pour confirmer/infirmer le mismatch keystore (CN=Android testkey vs CN=auto_api BYD).
+        AdbLocalClient.dumpSignatureAndPermissions(this);
         mDisplayHelper.start();
         mProjectionActive = true;
     }
@@ -101,12 +104,16 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         mListener = null;
-        // Arrêter le miroir dans tous les cas : si le service est tué par le système
-        // alors que HandlerThread tourne, on évite un leak de thread + bitmap.
-        mMirrorManager.stop();
+        // Annuler tous les Runnable en attente sur mMainHandler AVANT release() :
+        // le launchOnDashboard (postDelayed 2s) pourrait poster une callback
+        // sur un service détruit (NPE / leak de thread ADB).
+        mMainHandler.removeCallbacksAndMessages(null);
+        // Arrêter le miroir SurfaceControl si actif.
+        mMirrorManager.stopMirror();
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
+        com.byd.myapp.dashboard.ClusterSurfaceProbe.release();
         AppLogger.log(TAG, "ClusterService détruit");
     }
 
@@ -161,35 +168,31 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AppLogger.log(TAG, "launchOnDashboard — délai 2s → " + packageName);
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
-                boolean ok = mLauncher.launchOnDashboard(packageName);
-                AppLogger.log(TAG, "launchOnDashboard result=" + ok + " — " + packageName);
-                if (ok) {
-                    if (callback != null) callback.onResult(true);
-                    return;
-                }
-                // Fallback : pm grant MANAGE_ACTIVITY_STACKS via ADB, puis retry Context.startActivity
-                // Note : am start --display N depuis uid=2000 (ADB shell) échoue aussi (uid=2000
-                // n'a pas MANAGE_ACTIVITY_STACKS). Seule solution : accorder la permission à notre
-                // app (uid=10100) via pm grant, puis relancer depuis notre process.
-                AppLogger.w(TAG, "Fallback: pm grant MANAGE_ACTIVITY_STACKS → retry — " + packageName);
-                AdbLocalClient.grantManageActivityStacks(ClusterService.this,
+                // v1.73+ : lancement direct via ADB shell (uid=2000) qui possède
+                // INTERNAL_SYSTEM_WINDOW sur cette ROM. ADB shell lance notre trampoline
+                // exporté sur display 1 avec --es target_package=<tier>, le trampoline
+                // démarre ensuite le tiers depuis son propre contexte (display 1).
+                //
+                // On NE PASSE PLUS par mLauncher.launchOnDashboard() (Context.startActivity)
+                // qui échoue toujours faute de INTERNAL_SYSTEM_WINDOW (mismatch keystore
+                // confirmé par dump v1.72 : notre sig=b4addb29 ≠ ROM sig=22216e4d).
+                final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+                AppLogger.i(TAG, "launch via ADB trampoline: display=" + displayId
+                        + " → " + packageName);
+                AdbLocalClient.launchTrampolineViaAdb(ClusterService.this, packageName, displayId,
                         new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String report) {
-                        AppLogger.i(TAG, "pm grant MANAGE_ACTIVITY_STACKS: "
+                        AppLogger.i(TAG, "ADB trampoline OK: "
                                 + report.trim().replace("\n", " "));
-                        // Retry le lancement depuis le main thread : maintenant que la permission
-                        // est accordée, Context.startActivity + setLaunchDisplayId doit passer.
-                        mMainHandler.post(new Runnable() {
-                            @Override public void run() {
-                                boolean ok2 = mLauncher.launchOnDashboard(packageName);
-                                AppLogger.log(TAG, "Retry launch après grant: "
-                                        + (ok2 ? "OK" : "ÉCHEC") + " — " + packageName);
-                                if (callback != null) callback.onResult(ok2);
-                            }
-                        });
+                        if (callback != null) {
+                            mMainHandler.post(new Runnable() {
+                                @Override public void run() { callback.onResult(true); }
+                            });
+                        }
                     }
                     @Override public void onError(String error) {
-                        AppLogger.e(TAG, "pm grant MANAGE_ACTIVITY_STACKS ERREUR — " + error);
+                        AppLogger.e(TAG, "ADB trampoline ÉCHEC — "
+                                + error.replace("\n", " | "));
                         if (callback != null) {
                             mMainHandler.post(new Runnable() {
                                 @Override public void run() { callback.onResult(false); }

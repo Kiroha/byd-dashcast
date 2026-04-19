@@ -220,4 +220,43 @@ public class AppLogger {
         intent.putExtra(Intent.EXTRA_TEXT, combined);
         context.startActivity(Intent.createChooser(intent, "Partager le rapport…"));
     }
+
+    /**
+     * Sauvegarde un texte arbitraire dans un fichier .log horodaté puis ouvre
+     * le share chooser avec le fichier en pièce jointe (content:// via
+     * FileProvider). Préfixe le nom du fichier par `prefix`.
+     * Fallback texte brut si l'écriture échoue.
+     */
+    public static void shareTextAsFile(Context context, String prefix, String content,
+            String chooserTitle) {
+        if (content == null) content = "";
+        String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
+                Locale.getDefault()).format(new Date());
+        String filename = prefix + "_" + stamp + ".log";
+        File outDir = context.getExternalFilesDir(null);
+        if (outDir == null) outDir = context.getFilesDir();
+        if (!outDir.exists()) outDir.mkdirs();
+        File outFile = new File(outDir, filename);
+        boolean fileOk = false;
+        try (FileWriter fw = new FileWriter(outFile)) {
+            fw.write(content);
+            fileOk = true;
+        } catch (IOException ex) {
+            Log.e("AppLogger", "shareTextAsFile écriture échec", ex);
+        }
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "MyBYDApp — " + prefix);
+        if (fileOk) {
+            Uri uri = FileProvider.getUriForFile(
+                    context, context.getPackageName() + ".fileprovider", outFile);
+            intent.putExtra(Intent.EXTRA_STREAM, uri);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } else {
+            intent.putExtra(Intent.EXTRA_TEXT,
+                    content.isEmpty() ? "(contenu vide)" : content);
+        }
+        context.startActivity(Intent.createChooser(intent,
+                chooserTitle != null ? chooserTitle : "Partager…"));
+    }
 }

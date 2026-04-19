@@ -136,10 +136,9 @@
                 android:paddingEnd="10dp"/>
         </LinearLayout>
 
-        <!-- Miroir live du cluster : ImageView mis à jour par ClusterMirrorManager.
-             Touch sur cette vue → coordonnées mappées → injectées sur display 1.
-             scaleType="fitCenter" pour respecter l'aspect ratio 1920×1080. -->
-        <ImageView
+        <!-- SurfaceView miroir du cluster : contenu affiché en temps réel via SurfaceControl.
+             Touch sur cette vue → coordonnées mappées → injectées sur display 1. -->
+        <SurfaceView
             android:id="@+id/cluster_mirror"
             android:layout_width="match_parent"
             android:layout_height="200dp"
@@ -147,7 +146,6 @@
             android:layout_marginEnd="8dp"
             android:layout_marginTop="6dp"
             android:background="#090C10"
-            android:scaleType="fitCenter"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="Miroir cluster"/>

@@ -118,7 +118,7 @@ public class DashboardDisplayHelper {
         mKnownClusterDisplayId = -2;
 
         // Annuler TOUS les callbacks Handler en attente (polls + timeout) dans ClusterManager.
-        // SANS ça, le timeout de 8s se déclenche après stop() et appelle onDashboardDisplayConnected(null,1) → NPE.
+        // SANS ça, le timeout de 3s se déclenche après stop() et appelle onDashboardDisplayConnected(null,1) → NPE.
         mClusterManager.cancel();
 
         mDisplayManager.unregisterDisplayListener(mDisconnectListener);

@@ -28,157 +28,11 @@
             android:textSize="13sp"
             android:layout_marginBottom="20dp"/>
 
-        <!-- ======================== TEST 1 ======================== -->
+        <!-- ======================== TEST 1 — ADB LOCAL ======================== -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 1 — Presentation API (méthode recommandée)"
-            android:textColor="#90CAF9"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Détecte si le cluster est exposé comme un display Android standard (DISPLAY_CATEGORY_PRESENTATION). C'est la méthode propre qui ne nécessite pas ADB."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_presentation_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="En attente du diagnostic…"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:padding="12dp"
-            android:background="#333333"
-            android:layout_marginBottom="20dp"/>
-
-        <!-- ======================== TEST 2 ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 2 — Réflexion setLaunchDisplayId"
-            android:textColor="#90CAF9"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Vérifie que ActivityOptions.setLaunchDisplayId() (méthode @hide AOSP) est accessible par réflexion Java à l'exécution. Nécessaire pour lancer n'importe quelle app tierce sur le display."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_reflection_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="En attente du diagnostic…"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:padding="12dp"
-            android:background="#333333"
-            android:layout_marginBottom="20dp"/>
-
-        <!-- ======================== TEST 3 ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 3 — ADB TCP local (méthode Freedom)"
-            android:textColor="#90CAF9"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tente une connexion sur 127.0.0.1:5037 et 127.0.0.1:5555 pour savoir si le daemon ADB local est joignable. Nécessite 'Débogage sans fil' activé dans les paramètres développeur."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_adb_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="En attente du diagnostic…"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:padding="12dp"
-            android:background="#333333"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- ======================== TEST 4 ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 4 — Lancement effectif sur le cluster"
-            android:textColor="#90CAF9"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tente réellement de lancer les Paramètres Android sur le display secondaire via setLaunchDisplayId(). Confirme que toute la chaîne fonctionne sur ce véhicule précis. L'app apparaîtra momentanément sur le cluster."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_launch_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="En attente du diagnostic…"
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:padding="12dp"
-            android:background="#333333"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- ======================== BOUTON ======================== -->
-        <Button
-            android:id="@+id/btn_run_diag"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Lancer le diagnostic"
-            android:textSize="15sp"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- ======================== CONCLUSION ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="CONCLUSION"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_conclusion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Lancez le diagnostic pour voir la conclusion."
-            android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:padding="16dp"
-            android:background="#333333"
-            android:layout_marginBottom="32dp"/>
-
-        <!-- ======================== TEST 5 — ADB LOCAL ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 5 — Connexion ADB locale (dadb)"
+            android:text="TEST 1 — Connexion ADB locale (dadb)"
             android:textColor="#A5D6A7"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -217,70 +71,16 @@
             android:id="@+id/btn_adb_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 5"
+            android:text="Partager le résultat TEST 1"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 
-        <!-- ======================== TEST 6 — CLUSTER PROCESS ======================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
+        <!-- TEST 2 : Restauration cluster -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 6 — Quel process occupe le cluster ?"
-            android:textColor="#FFCC80"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Interroge le système via ADB pour savoir quels packages BYD sont installés, lequel est actif sur le display secondaire (cluster), et vérifie si com.byd.automap et com.byd.launchermap existent bien sur ce véhicule. Copie aussi les APK cluster trouvés sur /sdcard pour analyse."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_cluster_probe"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Sonder le cluster + extraire APK (ADB requis)"
-            android:textSize="14sp"
-            android:backgroundTint="#E65100"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_cluster_probe_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Appuyez sur le bouton (ADB doit être autorisé — TEST 5 d&#39;abord)."
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:background="#1A1A2A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_cluster_probe_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 6"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- TEST 10 : Lancement sur display ID 1 (cluster) — WindowManagement insight -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 10 — Lancement sur Display 1 (Cluster)"
+            android:text="TEST 2 — Restauration cluster"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
             android:textSize="14sp"
@@ -299,7 +99,7 @@
             android:id="@+id/btn_display1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Lancer TEST 10"
+            android:text="▶ Lancer TEST 2"
             android:textSize="15sp"
             android:backgroundTint="#E65100"
             android:layout_marginBottom="8dp"/>
@@ -308,7 +108,7 @@
             android:id="@+id/tv_display1_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat TEST 10)"
+            android:text="(résultat TEST 2)"
             android:textColor="#CCCCCC"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -320,53 +120,12 @@
             android:id="@+id/btn_display1_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 10"
+            android:text="Partager le résultat TEST 2"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 
-        <!-- TEST 11 : AutoContainer Whitelist — sharedUserId + container_comm_cfg -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 11 — AutoContainer Whitelist (sharedUserId + container_comm_cfg)"
-            android:textColor="#FFCC00"
-            android:textStyle="bold"
-            android:textSize="13sp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="4dp"/>
-
-        <Button
-            android:id="@+id/btn_whitelist"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="▶ Lancer TEST 11"
-            android:textSize="13sp"
-            android:backgroundTint="#4A148C"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:id="@+id/tv_whitelist_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="(résultat TEST 11)"
-            android:textColor="#CCCCCC"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="8dp"
-            android:background="#111111"
-            android:layout_marginBottom="4dp"/>
-
-        <Button
-            android:id="@+id/btn_whitelist_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:text="Partager le résultat TEST 11"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ======================== TEST 12 — DISPLAY SIZE ======================== -->
+        <!-- ======================== TEST 3 — DISPLAY SIZE ======================== -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -376,7 +135,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 12 — Taille display cluster (résolution Qt)"
+            android:text="TEST 3 — Taille display cluster (résolution Qt)"
             android:textColor="#80DEEA"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -454,7 +213,7 @@
             android:id="@+id/tv_display_size_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Appuyez sur un bouton (ADB doit être autorisé — TEST 5 d&#39;abord)."
+            android:text="Appuyez sur un bouton (ADB doit être autorisé — TEST 1 d&#39;abord)."
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -466,164 +225,7 @@
             android:id="@+id/btn_display_size_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 12"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-        <!-- TEST 13 — Commandes ADAS cluster (cmd 12 / 13 / 53)            -->
-        <!-- ═══════════════════════════════════════════════════════════════ -->
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 13 — Commandes ADAS cluster"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="cmd 32 = 3d adas自刷新开启 (auto-refresh 3D ON) | cmd 33 = 3d adas自刷新关闭 (auto-refresh 3D OFF). Clusters 3D BYD uniquement."
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <Button
-                android:id="@+id/btn_adas_32"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="▶ cmd 32\n3D ADAS ON"
-                android:textSize="12sp"
-                android:backgroundTint="#1B5E20"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btn_adas_33"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="▶ cmd 33\n3D ADAS OFF"
-                android:textSize="12sp"
-                android:backgroundTint="#B71C1C"
-                android:layout_marginStart="4dp"/>
-
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tv_adas_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Appuyez sur un bouton (TEST 5 d&#39;abord)."
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:background="#111A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_adas_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 13"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- TEST 14 — Masquage fenêtre ADAS (service "auto" BYD VHAL privé)   -->
-        <!-- RE byd_dashboard/c0/d.java case default:                           -->
-        <!--   getSystemService("auto").setInt(1038, 944767020, 0)              -->
-        <!-- Option A : via ADB shell service call                              -->
-        <!-- Option B : via reflection depuis l'app                             -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TEST 14 — Masquage fenêtre ADAS"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#E0E0E0"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="6dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="RE byd_dashboard: turnOffAdas() -&gt; getSystemService(&apos;auto&apos;).setInt(1038, 944767020, 0). Essai A (ADB service call) + B (reflection app). 1038 = type, 944767020 = 0x385B9B2C = VHAL prop masquage ADAS."
-            android:textSize="11sp"
-            android:textColor="#9E9E9E"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_auto_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="A1 — Lister services auto/byd (service list)"
-            android:textSize="13sp"
-            android:backgroundTint="#37474F"
-            android:layout_marginBottom="4dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="4dp">
-            <Button
-                android:id="@+id/btn_auto_hide"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="A2 — Masquer ADAS (val=0)"
-                android:textSize="12sp"
-                android:backgroundTint="#B71C1C"
-                android:layout_marginEnd="4dp"/>
-            <Button
-                android:id="@+id/btn_auto_show"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="A2 — Ré-afficher ADAS (val=1)"
-                android:textSize="12sp"
-                android:backgroundTint="#1B5E20"/>
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btn_auto_reflect"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="B — Reflection app (ServiceManager + transact direct)"
-            android:textSize="13sp"
-            android:backgroundTint="#4A148C"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_auto_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="(résultat TEST 14)"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:textColor="#B0BEC5"
-            android:background="#0D1117"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_auto_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 14"
+            android:text="Partager le résultat TEST 3"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
