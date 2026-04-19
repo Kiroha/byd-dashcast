@@ -59,11 +59,12 @@ public class AppLogger {
 
     // ── Helper interne ────────────────────────────────────────────────────────
 
-    /** Ajoute une entrée dans le buffer et taille si nécessaire (opération unique sur COWAL). */
+    /** Ajoute une entrée dans le buffer et taille par lot si nécessaire. */
     private static void addEntry(Level level, String tag, String msg) {
         sEntries.add(new Entry(level, tag, msg));
-        int excess = sEntries.size() - MAX_ENTRIES;
-        if (excess > 0) {
+        // Tailler par lot de 100 pour éviter un clear O(n) à chaque entrée.
+        if (sEntries.size() > MAX_ENTRIES + 100) {
+            int excess = sEntries.size() - MAX_ENTRIES;
             sEntries.subList(0, excess).clear();
         }
     }

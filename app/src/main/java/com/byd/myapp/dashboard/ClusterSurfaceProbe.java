@@ -99,43 +99,6 @@ public final class ClusterSurfaceProbe {
     }
 
     /**
-     * Énumère toutes les Qt projection surfaces et logue leurs propriétés.
-     * Utile en diagnostic avant de tenter la création du VirtualDisplay.
-     */
-    public static QtDisplayInfo[] dumpAllQtSurfaces() {
-        if (!ensureLibLoaded()) return new QtDisplayInfo[0];
-        QtDisplayInfo[] all;
-        try {
-            all = ContainerService.getQtProjectionDispInfoArrayNative();
-        } catch (Throwable t) {
-            AppLogger.e(TAG, "getQtProjectionDispInfoArrayNative() exception", t);
-            // Fallback : essais individuels id=0..3
-            all = null;
-        }
-        if (all == null) {
-            // Fallback énumération individuelle
-            java.util.List<QtDisplayInfo> list = new java.util.ArrayList<>();
-            for (int id = 0; id < 4; id++) {
-                try {
-                    QtDisplayInfo info = ContainerService.getQtProjectionDispInfoNative(id);
-                    if (info != null) list.add(info);
-                    AppLogger.i(TAG, "  id=" + id + " → " + info);
-                } catch (Throwable t) {
-                    AppLogger.e(TAG, "  id=" + id + " exception", t);
-                    break;
-                }
-            }
-            all = list.toArray(new QtDisplayInfo[0]);
-        } else {
-            AppLogger.i(TAG, "getQtProjectionDispInfoArray() = " + all.length + " surfaces");
-            for (int i = 0; i < all.length; i++) {
-                AppLogger.i(TAG, "  [" + i + "] " + all[i]);
-            }
-        }
-        return all;
-    }
-
-    /**
      * Crée un VirtualDisplay owned par notre app autour de la première Surface
      * Qt valide trouvée. Retourne le `Display.getDisplayId()` ou -1 en cas
      * d'échec.

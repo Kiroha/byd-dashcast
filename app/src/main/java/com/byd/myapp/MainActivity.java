@@ -84,11 +84,13 @@ public class MainActivity extends AppCompatActivity
             // mClusterService.launchOnDashboard() → NullPointerException.
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
             mCurrentDashboardApp = null;
+            mCurrentDashboardPkg = null;
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
             AppLogger.log(TAG, "ClusterService déconnecté");
         }
     };
-    private String mCurrentDashboardApp = null;
+    private String mCurrentDashboardApp = null;  // nom lisible (affiché dans la status bar)
+    private String mCurrentDashboardPkg = null;   // package name (pour am force-stop)
 
     // UI — barre statut
     private TextView tvDashboardStatus;
@@ -269,17 +271,10 @@ public class MainActivity extends AppCompatActivity
         } else if (!mBindRequested) {
             // Premier démarrage ou après onDestroy : lancer + binder le service
             mBindRequested = true;
-            // Démarrer Freedom en arrière-plan immédiatement (fire-and-forget)
-            // pour que le VirtualDisplay cluster soit prêt quand ClusterService en a besoin.
             tvDashboardStatus.setText("Démarrage cluster…");
-            AdbLocalClient.startFreedom(this, new AdbLocalClient.Callback() {
-                @Override public void onSuccess(String result) {
-                    AppLogger.i(TAG, "Freedom auto-start : " + result.trim().replace("\n", " "));
-                }
-                @Override public void onError(String error) {
-                    AppLogger.w(TAG, "Freedom auto-start ERREUR : " + error);
-                }
-            });
+            // Freedom est démarré automatiquement par ClusterManager.activateClusterDisplay()
+            // si le VirtualDisplay n'est pas encore présent — pas besoin de le lancer ici
+            // (évite un double force-stop/restart Freedom pendant l'initialisation du service).
             Intent svcIntent = new Intent(this, ClusterService.class);
             startForegroundService(svcIntent);
             bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
@@ -356,6 +351,7 @@ public class MainActivity extends AppCompatActivity
                         @Override public void onResult(boolean launched) {
                             if (launched) {
                                 mCurrentDashboardApp = appDisplayName;
+                                mCurrentDashboardPkg = pkg;
                                 mAdapter.setCurrentPackage(pkg);
                                 updateDashboardStatus(appDisplayName);
                                 AppLogger.log(TAG, "savedItem relancé ✓ → " + pkg);
@@ -374,6 +370,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 mCurrentDashboardApp = null;
+                mCurrentDashboardPkg = null;
                 mAdapter.setCurrentPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
                 panelClusterControl.setVisibility(View.GONE);
@@ -405,6 +402,7 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.log(TAG, "launchOnDashboard " + pkgName + " → " + (launched ? "OK" : "ÉCHEC"));
                 if (launched) {
                     mCurrentDashboardApp = appName;
+                    mCurrentDashboardPkg = pkgName;
                     mAdapter.setCurrentPackage(pkgName);
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .edit().putString(PREF_LAST_APP, pkgName).apply();
@@ -425,6 +423,7 @@ public class MainActivity extends AppCompatActivity
         // Nettoyer l'état cluster avant le lancement : launchOnMainDisplay peut retourner
         // false même si l'app part bien (fallback startActivity sans reflection).
         mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
         mAdapter.setCurrentPackage(null);
         updateDashboardStatus(null);
         panelClusterControl.setVisibility(View.GONE);
@@ -465,6 +464,7 @@ public class MainActivity extends AppCompatActivity
                                 .edit().remove(PREF_LAST_APP).apply();
                         }
                         mCurrentDashboardApp = null;
+                        mCurrentDashboardPkg = null;
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         panelClusterControl.setVisibility(View.GONE);
@@ -700,7 +700,7 @@ public class MainActivity extends AppCompatActivity
         tvDashboardStatus.setText("Restauration cluster…");
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
 
-        AdbLocalClient.restoreBydOnCluster(this, mCurrentDashboardApp, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreBydOnCluster(this, mCurrentDashboardPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -715,6 +715,7 @@ public class MainActivity extends AppCompatActivity
                             mClusterService.stopProjectionNoAdb();
                         }
                         mCurrentDashboardApp = null;
+                        mCurrentDashboardPkg = null;
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         panelClusterControl.setVisibility(View.GONE);
@@ -753,7 +754,7 @@ public class MainActivity extends AppCompatActivity
         tvDashboardStatus.setText("Cluster d'origine…");
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
 
-        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), mCurrentDashboardApp, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), mCurrentDashboardPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -762,6 +763,7 @@ public class MainActivity extends AppCompatActivity
                             mClusterService.stopProjectionNoAdb();
                         }
                         mCurrentDashboardApp = null;
+                        mCurrentDashboardPkg = null;
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         panelClusterControl.setVisibility(View.GONE);
