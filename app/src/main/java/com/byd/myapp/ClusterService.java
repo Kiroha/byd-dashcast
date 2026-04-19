@@ -204,6 +204,51 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         }, 2000);
     }
 
+    /**
+     * Lance une app sur le cluster avec des bounds FREEFORM explicites (mode split).
+     * Le display étant déjà actif, le délai est réduit à 500 ms.
+     */
+    public void launchOnDashboardWithBounds(final String packageName,
+            final int left, final int top, final int right, final int bottom,
+            final LaunchCallback callback) {
+        AppLogger.log(TAG, "launchOnDashboardWithBounds 500ms → " + packageName
+                + " bounds=[" + left + "," + top + "," + right + "," + bottom + "]");
+        mMainHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+                AdbLocalClient.launchTrampolineWithBounds(ClusterService.this, packageName,
+                        displayId, left, top, right, bottom,
+                        new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        AppLogger.i(TAG, "ADB trampoline bounds OK: "
+                                + report.trim().replace("\n", " "));
+                        if (callback != null) {
+                            mMainHandler.post(new Runnable() {
+                                @Override public void run() { callback.onResult(true); }
+                            });
+                        }
+                    }
+                    @Override public void onError(String error) {
+                        AppLogger.e(TAG, "ADB trampoline bounds ÉCHEC — "
+                                + error.replace("\n", " | "));
+                        if (callback != null) {
+                            mMainHandler.post(new Runnable() {
+                                @Override public void run() { callback.onResult(false); }
+                            });
+                        }
+                    }
+                });
+            }
+        }, 500);
+    }
+
+    /** Redimensionne la task d'un package déjà lancé sur le cluster. */
+    public void resizeTaskOnDashboard(final String packageName,
+            final int left, final int top, final int right, final int bottom,
+            final AdbLocalClient.Callback callback) {
+        AdbLocalClient.resizeTask(this, packageName, left, top, right, bottom, callback);
+    }
+
     public int getDisplayId() {
         return mDisplayHelper.getKnownClusterDisplayId();
     }

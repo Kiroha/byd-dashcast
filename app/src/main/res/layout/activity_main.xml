@@ -127,6 +127,17 @@
                 android:maxLines="1"/>
 
             <Button
+                android:id="@+id/btn_cluster_split"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="⬛⬛ Split"
+                android:textSize="10sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#5C6BC0"/>
+
+            <Button
                 android:id="@+id/btn_control_hide"
                 android:layout_width="wrap_content"
                 android:layout_height="30dp"

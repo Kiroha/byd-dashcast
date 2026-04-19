@@ -860,16 +860,18 @@ public class AdbLocalClient {
                     AdbShellResponse r = dadb.shell("am force-stop " + packageName + " 2>&1 && echo STOPPED");
                     String out = r.getAllOutput().trim();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
-                    if (out.contains("STOPPED") || out.isEmpty()) {
-                        callback.onSuccess("force-stop OK");
-                    } else {
-                        callback.onError(out);
+                    if (callback != null) {
+                        if (out.contains("STOPPED") || out.isEmpty()) {
+                            callback.onSuccess("force-stop OK");
+                        } else {
+                            callback.onError(out);
+                        }
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
-                    callback.onError(msg);
+                    if (callback != null) callback.onError(msg);
                 }
             }
         }, "adb-forcestop-thread").start();
@@ -920,6 +922,92 @@ public class AdbLocalClient {
                 }
             }
         }, "adb-trampoline-thread").start();
+    }
+
+    /**
+     * Variante de launchTrampolineViaAdb avec des bounds FREEFORM explicites.
+     * Permet de positionner une app dans un demi-écran cluster au lancement.
+     *
+     * @param left   coordonnée gauche (pixels display cluster)
+     * @param top    coordonnée haute
+     * @param right  coordonnée droite
+     * @param bottom coordonnée basse
+     */
+    public static void launchTrampolineWithBounds(final Context context,
+            final String targetPackage, final int displayId,
+            final int left, final int top, final int right, final int bottom,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    String pkg = context.getPackageName();
+                    String cmd = "am start --display " + displayId
+                            + " --windowingMode 5"
+                            + " --bounds \"" + left + " " + top + " " + right + " " + bottom + "\""
+                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
+                            + " --es target_package " + targetPackage
+                            + " 2>&1";
+                    AppLogger.i(TAG, "ADB launchTrampolineWithBounds: " + cmd);
+                    AdbShellResponse r = dadb.shell(cmd);
+                    String out = r.getAllOutput().trim();
+                    AppLogger.i(TAG, "ADB launchTrampolineWithBounds result: " + out);
+                    if (out.contains("Error") || out.contains("Exception")
+                            || out.contains("Permission Denial")) {
+                        callback.onError(out);
+                    } else {
+                        callback.onSuccess(out);
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "launchTrampolineWithBounds échoué", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-trampoline-bounds-thread").start();
+    }
+
+    /**
+     * Redimensionne la task d'un package déjà lancé sur le cluster via "am task resize".
+     * Cherche le taskId dans la sortie de "am stack list".
+     */
+    public static void resizeTask(final Context context, final String packageName,
+            final int left, final int top, final int right, final int bottom,
+            final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    // 1. Trouver le taskId du package
+                    AdbShellResponse rList = dadb.shell(
+                            "am stack list 2>/dev/null | grep 'taskId=.*" + packageName + "' | head -1");
+                    String line = rList.getAllOutput().trim();
+                    AppLogger.i(TAG, "resizeTask grep " + packageName + " → '" + line + "'");
+                    java.util.regex.Matcher m = java.util.regex.Pattern
+                            .compile("taskId=(\\d+)").matcher(line);
+                    if (!m.find()) {
+                        callback.onError("taskId introuvable pour " + packageName);
+                        return;
+                    }
+                    int taskId = Integer.parseInt(m.group(1));
+
+                    // 2. Redimensionner
+                    String cmd = "am task resize " + taskId
+                            + " " + left + " " + top + " " + right + " " + bottom + " 2>&1";
+                    AppLogger.i(TAG, "am task resize: " + cmd);
+                    AdbShellResponse rResize = dadb.shell(cmd);
+                    String out = rResize.getAllOutput().trim();
+                    AppLogger.i(TAG, "am task resize → '" + out + "'");
+                    if (out.toLowerCase().contains("error") || out.toLowerCase().contains("exception")) {
+                        callback.onError(out);
+                    } else {
+                        callback.onSuccess("taskId=" + taskId + " resize OK\n" + out);
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "resizeTask ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-resize-task-thread").start();
     }
 
     private static String safeOut(String s) {
