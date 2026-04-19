@@ -98,6 +98,7 @@ public class MainActivity extends AppCompatActivity
 
     // UI — barre statut
     private TextView tvDashboardStatus;
+    private TextView     tvAppListTitle;
     private Button   btnActivateCluster;
     private Button   btnRestoreCluster;
     private Button   btnOriginCluster;
@@ -171,6 +172,7 @@ public class MainActivity extends AppCompatActivity
         // Panel contrôle cluster
         panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
+        tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
         clusterMirror       = (SurfaceView)  findViewById(R.id.cluster_mirror);
 
         // SurfaceHolder.Callback : démarre/arrête le miroir SurfaceControl quand la Surface est disponible.
@@ -192,13 +194,12 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        // Masquer le panel
+        // Masquer → retour à la liste
         Button btnControlHide = (Button) findViewById(R.id.btn_control_hide);
         btnControlHide.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                panelClusterControl.setVisibility(View.GONE);
-                stopClusterMirror();
+                showAppList();
             }
         });
 
@@ -387,7 +388,7 @@ public class MainActivity extends AppCompatActivity
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                panelClusterControl.setVisibility(View.GONE);
+                showAppList();
             }
         });
     }
@@ -484,8 +485,7 @@ public class MainActivity extends AppCompatActivity
         clearSplitState();
         mAdapter.setCurrentPackage(null);
         updateDashboardStatus(null);
-        panelClusterControl.setVisibility(View.GONE);
-        stopClusterMirror();
+        showAppList();
         // Effacer PREF_LAST_APP : sinon onKillApp croirait que l'app est encore sur
         // le cluster et appellerait stopProjection() inutilement, détruisant le service.
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_LAST_APP).apply();
@@ -530,8 +530,7 @@ public class MainActivity extends AppCompatActivity
                         clearSplitState();
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
-                        panelClusterControl.setVisibility(View.GONE);
-                        stopClusterMirror();
+                        showAppList();
                         Toast.makeText(MainActivity.this,
                                 app.appName + " arrêté", Toast.LENGTH_SHORT).show();
                         AppLogger.log(TAG, "forceStop " + app.packageName + " OK");
@@ -603,12 +602,35 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Signale à MainActivity qu'une app a été lancée sur le cluster → afficher le panel + démarrer miroir.
+     * Cache la liste d'apps et affiche le miroir cluster en plein espace.
+     * Appelé depuis startClusterMirror().
+     */
+    private void showMirrorView() {
+        tvAppListTitle.setVisibility(View.GONE);
+        rvApps.setVisibility(View.GONE);
+        clusterMirror.setVisibility(View.VISIBLE);
+        panelClusterControl.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Cache le miroir et restaure la liste d'apps.
+     * Appelé depuis showAppList().
+     */
+    private void showAppList() {
+        stopClusterMirror();
+        clusterMirror.setVisibility(View.GONE);
+        panelClusterControl.setVisibility(View.GONE);
+        tvAppListTitle.setVisibility(View.VISIBLE);
+        rvApps.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Signale à MainActivity qu'une app a été lancée sur le cluster → afficher le miroir.
      * Appelé depuis onSendToDashboard après un lancement réussi.
      */
     private void startClusterMirror() {
         AppLogger.d(TAG, "startClusterMirror app=" + mCurrentDashboardApp);
-        panelClusterControl.setVisibility(View.VISIBLE);
+        showMirrorView();
         attemptStartMirrorWithCurrentHolder();
     }
 
@@ -808,8 +830,7 @@ public class MainActivity extends AppCompatActivity
                         clearSplitState();
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
-                        panelClusterControl.setVisibility(View.GONE);
-                        stopClusterMirror();
+                        showAppList();
                         btnRestoreCluster.setEnabled(true);
                         AppLogger.log(TAG, "BYD restauré via ADB ✓");
                     }
@@ -861,8 +882,7 @@ public class MainActivity extends AppCompatActivity
                         clearSplitState();
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
-                        panelClusterControl.setVisibility(View.GONE);
-                        stopClusterMirror();
+                        showAppList();
                         btnOriginCluster.setEnabled(true);
                         AppLogger.log(TAG, "Cluster d'origine restauré ✓");
                     }

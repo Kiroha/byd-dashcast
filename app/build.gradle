@@ -19,8 +19,8 @@ android {
         applicationId "com.byd.myapp"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 100
-        versionName "1.94"
+        versionCode 101
+        versionName "1.96"
 
         // Azure Log Analytics — lu depuis local.properties (hors source control)
         def props = new Properties()

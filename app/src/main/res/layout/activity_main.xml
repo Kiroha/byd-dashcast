@@ -69,6 +69,7 @@
 
     <!-- ===== TITRE LISTE ===== -->
     <TextView
+        android:id="@+id/tv_app_list_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/title_app_list"
@@ -84,6 +85,21 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:scrollbars="vertical"/>
+
+    <!-- ===== MIROIR CLUSTER =====
+         Caché quand aucune app n'est sur le cluster.
+         Quand actif, remplace la liste pour afficher en temps réel
+         le contenu du cluster via SurfaceControl. Touch → cluster. -->
+    <SurfaceView
+        android:id="@+id/cluster_mirror"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#090C10"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Miroir cluster"/>
 
     <!-- ===== PANEL CONTRÔLE CLUSTER =====
          Affiché uniquement quand une app tierce est active sur le dashboard.
@@ -146,20 +162,6 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"/>
         </LinearLayout>
-
-        <!-- SurfaceView miroir du cluster : contenu affiché en temps réel via SurfaceControl.
-             Touch sur cette vue → coordonnées mappées → injectées sur display 1. -->
-        <SurfaceView
-            android:id="@+id/cluster_mirror"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginTop="6dp"
-            android:background="#090C10"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="Miroir cluster"/>
 
         <!-- Boutons de navigation et volume -->
         <LinearLayout
