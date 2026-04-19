@@ -366,6 +366,7 @@ public class MainActivity extends AppCompatActivity
                                 mCurrentDashboardPkg = pkg;
                                 mAdapter.setCurrentPackage(pkg);
                                 updateDashboardStatus(appDisplayName);
+                                updateControlLabel();
                                 AppLogger.log(TAG, "savedItem relancé ✓ → " + pkg);
                             }
                         }
@@ -412,6 +413,11 @@ public class MainActivity extends AppCompatActivity
 
         // ── Mode split : une app occupe déjà un slot → la nouvelle app va dans l'autre ──
         if (mCurrentSplitSlot != 0 && mCurrentDashboardPkg != null) {
+            // Même app que le slot principal ou secondaire déjà présent : ignorer
+            if (pkgName.equals(mCurrentDashboardPkg) || pkgName.equals(mSecondDashboardPkg)) {
+                Toast.makeText(this, "App déjà sur le cluster", Toast.LENGTH_SHORT).show();
+                return;
+            }
             int[] dims = getClusterDimensions();
             final int W = dims[0], H = dims[1];
             // Slot complémentaire (1=gauche → droite ; 2=droite → gauche)
