@@ -229,17 +229,16 @@ public class LogActivity extends AppCompatActivity {
         }
     }
 
+    /** Cache statique — évite d'allouer un Level[] à chaque itération dans buildSpannable. */
+    private static final AppLogger.Level[] LEVEL_VALUES = AppLogger.Level.values();
+
     private SpannableString buildSpannable(List<AppLogger.Entry> entries, String filter) {
         StringBuilder sb = new StringBuilder();
-        // On mémorise les positions de chaque ligne pour colorier
-        int[] lineStarts  = new int[entries.size()];
-        int[] lineEnds    = new int[entries.size()];
-        AppLogger.Level[]  levels     = new AppLogger.Level[entries.size()];
-        int[] timeStarts   = new int[entries.size()];
-        int[] timeEnds     = new int[entries.size()];
-        int[] tagStarts    = new int[entries.size()];
-        int[] tagEnds      = new int[entries.size()];
-        int count = 0;
+        // Stocke uniquement les positions des entrées qui passent le filtre :
+        //   {lineStart, lineEnd, timeStart, timeEnd, tagStart, tagEnd, level.ordinal()}
+        // Évite d'allouer 7×entries.size() éléments quand le filtre ne retient qu'une
+        // fraction des entrées (ex. 10/3000 → économise ~84 Ko par rebuild).
+        java.util.ArrayList<int[]> spanData = new java.util.ArrayList<>();
 
         for (AppLogger.Entry e : entries) {
             // Filtre
@@ -250,18 +249,18 @@ public class LogActivity extends AppCompatActivity {
                 if (!match) continue;
             }
 
-            lineStarts[count] = sb.length();
+            int lineStart = sb.length();
 
             // "[HH:mm:ss.SSS]"
-            timeStarts[count] = sb.length();
+            int timeStart = sb.length();
             sb.append("[").append(mTimeFmt.format(new Date(e.timestamp))).append("]");
-            timeEnds[count] = sb.length();
+            int timeEnd = sb.length();
 
             // "[LEVEL][TAG] "
             sb.append("[").append(e.level.name()).append("] ");
-            tagStarts[count] = sb.length();
+            int tagStart = sb.length();
             sb.append("[").append(e.tag).append("] ");
-            tagEnds[count] = sb.length();
+            int tagEnd = sb.length();
 
             sb.append(e.message);
             // Thread si pas main
@@ -270,24 +269,24 @@ public class LogActivity extends AppCompatActivity {
             }
             sb.append("\n");
 
-            lineEnds[count] = sb.length();
-            levels[count] = e.level;
-            count++;
+            int lineEnd = sb.length();
+            spanData.add(new int[]{lineStart, lineEnd, timeStart, timeEnd, tagStart, tagEnd,
+                    e.level.ordinal()});
         }
 
         SpannableString span = new SpannableString(sb.toString());
 
-        for (int i = 0; i < count; i++) {
-            int msgColor = levelColor(levels[i]);
+        for (int[] d : spanData) {
+            int msgColor = levelColor(LEVEL_VALUES[d[6]]);
             // Ligne entière : couleur du niveau
             span.setSpan(new ForegroundColorSpan(msgColor),
-                    lineStarts[i], lineEnds[i], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    d[0], d[1], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             // Timestamp en gris discret
             span.setSpan(new ForegroundColorSpan(COLOR_TIME),
-                    timeStarts[i], timeEnds[i], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    d[2], d[3], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             // Tag en bleu clair
             span.setSpan(new ForegroundColorSpan(COLOR_TAG),
-                    tagStarts[i], tagEnds[i], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    d[4], d[5], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
 
         return span;
