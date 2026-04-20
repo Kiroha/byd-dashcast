@@ -346,7 +346,7 @@ public class AdbLocalClient {
                     AppLogger.i(TAG, "TEST4 après : " + (after.isEmpty() ? "vide" : after));
 
                     // Conclusion
-                    boolean created = !after.isEmpty();
+                    boolean created = !after.isEmpty() && after.contains("fission");
                     sb.append(created
                             ? "✅ VirtualDisplay créé ! Broadcast seul suffit → Freedom headless possible."
                             : "❌ VirtualDisplay absent. Le BootReceiver seul ne suffit pas.");
