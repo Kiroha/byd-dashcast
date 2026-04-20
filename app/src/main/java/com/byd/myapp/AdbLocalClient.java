@@ -291,7 +291,79 @@ public class AdbLocalClient {
         }, "adb-start-freedom").start();
     }
 
-    // ── TEST 10 : Test de restauration du cluster ──────────────────────────────
+    // ── TEST 4 : Broadcast BOOT_COMPLETED vers le BootReceiver de Freedom ──────
+    /**
+     * Envoie BOOT_COMPLETED directement au BootReceiver de Freedom sans ouvrir son UI.
+     *
+     * Séquence :
+     *   1. am broadcast BOOT_COMPLETED → com.xdja.clusterdemo/.BootReceiver
+     *   2. Attendre 5s pour laisser le temps au VirtualDisplay d'apparaître
+     *   3. dumpsys display | grep fission → vérifie si le VirtualDisplay cluster est créé
+     *
+     * Si le VirtualDisplay est créé → startFreedom() peut être remplacé par ce broadcast
+     * (headless, pas d'UI Freedom visible).
+     */
+    public static void sendBootReceiverBroadcast(final Context context, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                long t0 = AppLogger.startTiming();
+                try (Dadb dadb = connect(context)) {
+                    StringBuilder sb = new StringBuilder();
+
+                    // Snapshot AVANT
+                    sb.append("── AVANT broadcast ──\n");
+                    String before = safeOut(dadb.shell(
+                            "dumpsys display 2>&1 | grep -i fission"
+                    ).getAllOutput()).trim();
+                    sb.append(before.isEmpty() ? "(aucun display fission)" : before).append("\n\n");
+                    AppLogger.i(TAG, "TEST4 avant : " + (before.isEmpty() ? "vide" : before));
+
+                    // Force-stop Freedom au préalable pour repartir d'un état propre
+                    sb.append("── Force-stop Freedom ──\n");
+                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
+                    Thread.sleep(500);
+                    sb.append("OK\n\n");
+
+                    // Broadcast BOOT_COMPLETED ciblé
+                    sb.append("── am broadcast BOOT_COMPLETED → BootReceiver ──\n");
+                    String broadcastOut = safeOut(dadb.shell(
+                            "am broadcast -a android.intent.action.BOOT_COMPLETED" +
+                            " -n com.xdja.clusterdemo/com.byd.windowmanager.receivers.BootReceiver 2>&1"
+                    ).getAllOutput()).trim();
+                    sb.append(broadcastOut).append("\n\n");
+                    AppLogger.i(TAG, "TEST4 broadcast → " + broadcastOut);
+
+                    // Attendre 5s pour que le VirtualDisplay soit créé
+                    sb.append("── Attente 5s (création VirtualDisplay) ──\n");
+                    Thread.sleep(5000);
+
+                    // Snapshot APRÈS
+                    sb.append("── APRÈS broadcast ──\n");
+                    String after = safeOut(dadb.shell(
+                            "dumpsys display 2>&1 | grep -i fission"
+                    ).getAllOutput()).trim();
+                    sb.append(after.isEmpty() ? "(aucun display fission)" : after).append("\n\n");
+                    AppLogger.i(TAG, "TEST4 après : " + (after.isEmpty() ? "vide" : after));
+
+                    // Conclusion
+                    boolean created = !after.isEmpty();
+                    sb.append(created
+                            ? "✅ VirtualDisplay créé ! Broadcast seul suffit → Freedom headless possible."
+                            : "❌ VirtualDisplay absent. Le BootReceiver seul ne suffit pas.");
+                    long ms = System.currentTimeMillis() - t0;
+                    sb.append("\n\n(").append(ms).append(" ms)");
+
+                    callback.onSuccess(sb.toString());
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "sendBootReceiverBroadcast ERREUR", e);
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "adb-test4-boot-receiver").start();
+    }
+
+
     /**
      * Active le cluster en mode présentation (sendInfo 30 + 16 uniquement).
      *

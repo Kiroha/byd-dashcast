@@ -13,6 +13,7 @@ import android.content.Intent;
  * TEST 1 — Connexion ADB locale (prérequis, à faire une seule fois)
  * TEST 2 — Restauration cluster (sendInfo 30→16→18→0)
  * TEST 3 — Taille display cluster (cmd 29 / 30 / 31)
+ * TEST 4 — Broadcast BOOT_COMPLETED vers BootReceiver Freedom (headless, sans UI)
  */
 public class DiagActivity extends AppCompatActivity {
 
@@ -34,6 +35,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplaySizeRestore;  // restauration
     private Button   btnDisplaySizeFull;     // diagnostic complet
     private Button   btnDisplaySizeShare;
+
+    // TEST 4 — Broadcast BootReceiver Freedom
+    private TextView tvBootReceiverResult;
+    private Button   btnBootReceiver;
+    private Button   btnBootReceiverShare;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -61,6 +67,10 @@ public class DiagActivity extends AppCompatActivity {
         btnDisplaySizeRestore  = (Button)   findViewById(R.id.btn_display_size_restore);
         btnDisplaySizeFull     = (Button)   findViewById(R.id.btn_display_size_full);
         btnDisplaySizeShare    = (Button)   findViewById(R.id.btn_display_size_share);
+
+        tvBootReceiverResult  = (TextView) findViewById(R.id.tv_boot_receiver_result);
+        btnBootReceiver       = (Button)   findViewById(R.id.btn_boot_receiver);
+        btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
 
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -153,6 +163,23 @@ public class DiagActivity extends AppCompatActivity {
         btnDisplaySizeFull.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) { runClusterDisplaySizeTest(); }
+        });
+
+        // TEST 4 — Broadcast BootReceiver Freedom
+        btnBootReceiverShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, tvBootReceiverResult.getText().toString());
+                startActivity(Intent.createChooser(intent, "Partager résultat TEST 4"));
+            }
+        });
+        btnBootReceiver.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runBootReceiverTest();
+            }
         });
     }
 
@@ -295,6 +322,46 @@ public class DiagActivity extends AppCompatActivity {
                                 + "\n\n\u2192 Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
                         btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", "ERREUR: " + error);
+                    }
+                });
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 4 : Broadcast BOOT_COMPLETED → BootReceiver Freedom (headless)
+    // -------------------------------------------------------------------------
+
+    private void runBootReceiverTest() {
+        btnBootReceiver.setEnabled(false);
+        tvBootReceiverResult.setText(
+                "⏳ Force-stop Freedom puis broadcast BOOT_COMPLETED → BootReceiver…\n"
+                + "Attente 5s pour création VirtualDisplay…");
+        tvBootReceiverResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagBootReceiver", "Lancement TEST 4");
+
+        AdbLocalClient.sendBootReceiverBroadcast(DiagActivity.this, new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        boolean ok = report.contains("✅");
+                        tvBootReceiverResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                        tvBootReceiverResult.setText(report);
+                        btnBootReceiver.setEnabled(true);
+                        AppLogger.log("DiagBootReceiver", report);
+                    }
+                });
+            }
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        tvBootReceiverResult.setBackgroundColor(0xFF2A1A1A);
+                        tvBootReceiverResult.setText("❌ " + error
+                                + "\n\n→ Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
+                        btnBootReceiver.setEnabled(true);
+                        AppLogger.log("DiagBootReceiver", "ERREUR: " + error);
                     }
                 });
             }

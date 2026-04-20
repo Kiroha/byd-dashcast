@@ -230,5 +230,54 @@
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 
+        <!-- ======================== TEST 4 — BOOT RECEIVER ======================== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 4 — BootReceiver Freedom (sans UI)"
+            android:textColor="#FFCC00"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Envoie BOOT_COMPLETED directement au BootReceiver de Freedom (com.xdja.clusterdemo) via ADB, sans ouvrir son UI. Si ça crée le VirtualDisplay cluster → Freedom peut être lancé en headless."
+            android:textColor="#AAAAAA"
+            android:textSize="11sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_boot_receiver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Lancer TEST 4 — Broadcast BootReceiver"
+            android:textSize="13sp"
+            android:backgroundTint="#4A1580"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_boot_receiver_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat TEST 4)"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="12dp"
+            android:background="#111A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_boot_receiver_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Partager le résultat TEST 4"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="16dp"/>
+
     </LinearLayout>
 </ScrollView>
