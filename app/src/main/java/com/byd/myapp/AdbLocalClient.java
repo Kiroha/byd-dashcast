@@ -1,12 +1,16 @@
 package com.byd.myapp;
 
 import android.content.Context;
+import android.util.Base64;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
 import dadb.Dadb;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.ObjectOutputStream;
+import java.util.HashMap;
 
 /**
  * AdbLocalClient — se connecte au daemon ADB local (localhost:5555) depuis l'intérieur
@@ -266,16 +270,20 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // 1. Force-stop Freedom pour qu'il relise ses préférences au prochain démarrage
+                    // 1. Force-stop Freedom pour repartir d'un état propre
                     dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
                     AppLogger.i(TAG, "startFreedom : force-stop Freedom");
                     Thread.sleep(500);
 
-                    // 2. Supprimer le fichier de préférences → Freedom démarrera avec navigationType=0 (全屏)
-                    dadb.shell("rm -f /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml 2>&1");
-                    AppLogger.i(TAG, "startFreedom : properties.xml supprimé (reset → 全屏导航)");
+                    // 2. Écrire properties.xml avec navigationType=1 (全屏导航)
+                    //    IMPORTANT : ne PAS supprimer le fichier — navigationType=0 (défaut sans fichier)
+                    //    déclenche le retour immédiat dans BootReceiver.setup() sans créer le VirtualDisplay.
+                    //    Le fichier est un HashMap Java sérialisé (ObjectOutputStream).
+                    writeNavigationTypeFile(dadb);
+                    AppLogger.i(TAG, "startFreedom : properties.xml écrit (navigationType=1 → 全屏导航)");
 
-                    // 3. Démarrer Freedom
+                    // 3. Démarrer Freedom → BootReceiver/setup() voit navigationType=1 > 0
+                    //    → exécute la séquence de projection → VirtualDisplay créé
                     AppLogger.i(TAG, "startFreedom : démarrage via am start");
                     String startOut = safeOut(dadb.shell(
                             "am start -n com.xdja.clusterdemo/.activities.MainActivity 2>&1"
@@ -290,6 +298,38 @@ public class AdbLocalClient {
             }
         }, "adb-start-freedom").start();
     }
+
+    /**
+     * Écrit /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
+     * avec navigationType=1 (全屏导航 — projection plein écran).
+     *
+     * Freedom lit ce fichier via ObjectInputStream → HashMap<String, Object>.
+     * BootReceiver.setup() vérifie navigationType > 0 pour déclencher la création
+     * du VirtualDisplay. Avec la valeur par défaut 0 (fichier absent), setup() retourne
+     * immédiatement sans rien faire.
+     */
+    private static void writeNavigationTypeFile(Dadb dadb) throws Exception {
+        // Sérialiser HashMap {"navigationType": Integer(1)} avec Java ObjectOutputStream
+        HashMap<String, Object> prefs = new HashMap<>();
+        prefs.put("navigationType", Integer.valueOf(1));
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(prefs);
+        oos.close();
+        byte[] bytes = baos.toByteArray();
+
+        // Encoder en Base64 et écrire via shell ADB (base64 disponible dans Android toybox)
+        String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+        String dir  = "/sdcard/Android/data/com.xdja.clusterdemo/data";
+        String path = dir + "/properties.xml";
+        dadb.shell("mkdir -p " + dir + " 2>&1");
+        String writeResult = safeOut(dadb.shell(
+                "echo '" + b64 + "' | base64 -d > " + path + " 2>&1"
+        ).getAllOutput()).trim();
+        AppLogger.i(TAG, "writeNavigationTypeFile → '" + writeResult + "' (" + bytes.length + " bytes)");
+    }
+
 
     // ── TEST 4 : Broadcast BOOT_COMPLETED vers le BootReceiver de Freedom ──────
     /**
