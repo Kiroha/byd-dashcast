@@ -194,55 +194,55 @@ public class ClusterManager {
             return;
         }
 
-        // Display non trouvé immédiatement — démarrer Freedom si absent, puis sendInfo(30+16)
-        AppLogger.w(TAG, "VirtualDisplay non trouvé — démarrage Freedom + sendInfo(30+16) ADB + polling");
+        // Display non trouvé immédiatement.
+        // Séquence sans Freedom :
+        //   1. sendInfo(1000, 30) — taille Seal EU, déclenche l'enregistrement surface Qt
+        //   2. Attendre 2s que Qt traite la commande et enregistre sa surface JNI
+        //   3. am startservice AutoDisplayService → updateDisplay() → crée le VirtualDisplay
+        //   4. sendInfo(1000, 16) — Qt standby → libère le display pour notre app
+        //   5. Polling détecte le display (onDisplayAdded ou scheduleDisplayPoll)
+        AppLogger.w(TAG, "VirtualDisplay non trouvé — startAutoDisplayService + sendInfo(30+16) ADB + polling");
 
-        // Timeout étendu : Freedom peut prendre ~5s à créer le display au premier démarrage.
         final long timeoutMs = FREEDOM_STARTUP_TIMEOUT_MS;
 
-        // 1. Démarrer Freedom (com.xdja.clusterdemo) si absent → crée le VirtualDisplay cluster.
-        //    Après son démarrage on envoie sendInfo(30+16) pour libérer la surface Qt.
-        AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String result) {
-                AppLogger.i(TAG, "startFreedom : " + result.trim().replace("\n", " "));
-                // Délai pour laisser le temps à Freedom / AutoDisplayService de créer le display
-                mHandler.postDelayed(new Runnable() {
-                    @Override public void run() {
-                        sendActivationSequence();
-                    }
-                }, 3000);
-            }
-            @Override public void onError(String err) {
-                AppLogger.w(TAG, "startFreedom ERREUR (on continue quand même) : " + err);
-                sendActivationSequence();
-            }
-
-            private void sendActivationSequence() {
-                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
-                    new AdbLocalClient.Callback() {
-                        @Override public void onSuccess(String out) {
-                            AppLogger.i(TAG, "slow path ADB(cmd=30) : " + out);
-                            mHandler.postDelayed(new Runnable() {
-                                @Override public void run() {
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "slow path ADB(cmd=30) : " + out);
+                    // Attendre 2s pour que le Qt cluster traite la commande
+                    // et enregistre sa surface dans le JNI de containerservice.
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            AdbLocalClient.startAutoDisplayService(mContext, new AdbLocalClient.Callback() {
+                                @Override public void onSuccess(String r) {
+                                    AppLogger.i(TAG, "startAutoDisplayService : " + r.trim().replace("\n", " "));
                                     AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                         new AdbLocalClient.Callback() {
                                             @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) : " + out2); }
-                                            @Override public void onError(String err) { AppLogger.e(TAG, "slow path ADB(cmd=16) ERREUR: " + err); }
+                                            @Override public void onError(String err)   { AppLogger.e(TAG, "slow path ADB(cmd=16) ERREUR: " + err); }
                                         });
                                 }
-                            }, 1000);
+                                @Override public void onError(String err) {
+                                    AppLogger.e(TAG, "startAutoDisplayService ERREUR : " + err);
+                                    // Fallback : sendInfo(16) quand même
+                                    AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                                        new AdbLocalClient.Callback() {
+                                            @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) fallback : " + out2); }
+                                            @Override public void onError(String e2)    { AppLogger.e(TAG, "slow path ADB(cmd=16) fallback ERREUR: " + e2); }
+                                        });
+                                }
+                            });
                         }
-                        @Override public void onError(String err) {
-                            AppLogger.e(TAG, "slow path ADB(cmd=30) ERREUR: " + err);
-                            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                                new AdbLocalClient.Callback() {
-                                    @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) fallback : " + out2); }
-                                    @Override public void onError(String err2) { AppLogger.e(TAG, "slow path ADB(cmd=16) fallback ERREUR: " + err2); }
-                                });
-                        }
+                    }, 2000);
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "slow path ADB(cmd=30) ERREUR: " + err);
+                    AdbLocalClient.startAutoDisplayService(mContext, new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String r) { AppLogger.i(TAG, "startAutoDisplayService fallback : " + r); }
+                        @Override public void onError(String e)   { AppLogger.e(TAG, "startAutoDisplayService fallback ERREUR : " + e); }
                     });
-            }
-        });
+                }
+            });
 
         // Écouter les ajouts de display + timeout
         final long[] pollCount = {0};
