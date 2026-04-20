@@ -262,31 +262,6 @@ public class AdbLocalClient {
      *
      * La callback est appelée sur un thread ADB (background).
      */
-    /**
-     * Redémarre AutoDisplayService de com.xdja.containerservice via ADB.
-     * AutoDisplayService.onStart() appelle updateDisplay() → getQtProjectionDispInfoNative(0).
-     * Si la surface Qt est disponible (après sendInfo(30)), crée le VirtualDisplay cluster.
-     *
-     * À appeler APRÈS sendInfo(30) + délai 2s.
-     */
-    public static void startAutoDisplayService(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    String out = safeOut(dadb.shell(
-                            "am startservice -n com.xdja.containerservice/.AutoDisplayService 2>&1"
-                    ).getAllOutput()).trim();
-                    AppLogger.i(TAG, "startAutoDisplayService → " + out);
-                    callback.onSuccess(out);
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "startAutoDisplayService ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }, "adb-start-autodisplay").start();
-    }
-
     public static void startFreedom(final Context context, final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
