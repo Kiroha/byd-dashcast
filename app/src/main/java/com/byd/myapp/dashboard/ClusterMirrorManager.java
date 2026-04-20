@@ -13,11 +13,15 @@ import java.lang.reflect.Method;
 /**
  * Miroir temps réel du display cluster (display 1) vers une SurfaceView sur l'écran principal.
  *
- * Deux stratégies testées en cascade :
- *   A) SurfaceControl.Transaction (API Android 10 recommandée)
- *   B) SurfaceControl.openTransaction() / closeTransaction() (méthodes statiques, dépréciées API 29)
+ * Mécanisme : SurfaceControl.createDisplay() + Transaction (identique à WindowManagement v1.2).
  *
- * Requiert android.permission.ACCESS_SURFACE_FLINGER + READ_FRAME_BUFFER (signature BYD).
+ * Pré-requis : appeler unlockHiddenApis() au démarrage de l'application (Application.onCreate()
+ * ou avant le premier appel à startMirror()). Sans cela, createDisplay() retourne null même
+ * avec les permissions INTERNAL_SYSTEM_WINDOW car le DiLink 3.0 ROM vérifie la whitelist
+ * des APIs cachées (VMRuntime.setHiddenApiExemptions).
+ *
+ * Paramètre secure : on essaie d'abord secure=false (ne nécessite pas AID_GRAPHICS sur AOSP),
+ * puis secure=true en fallback (WindowManagement utilise true — fonctionne sur DiLink 3.0).
  */
 public class ClusterMirrorManager {
 
@@ -33,6 +37,36 @@ public class ClusterMirrorManager {
     public boolean isMirrorActive()   { return mMirrorActive; }
 
     // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Déverrouille les APIs cachées Android via VMRuntime.setHiddenApiExemptions().
+     *
+     * Sur Android 10 (DiLink 3.0), SurfaceControl est une API @hide (UnsupportedAppUsage).
+     * Sans ce contournement, createDisplay() retourne null même si l'appel de réflexion aboutit,
+     * car le JVM bloque silencieusement certaines API cachées.
+     *
+     * WindowManagement v1.2 utilise exactement ce mécanisme via com.swift.sandhook.utils.ReflectionUtils.
+     * À appeler une seule fois au démarrage (Application.onCreate()).
+     */
+    public static void unlockHiddenApis() {
+        try {
+            Method getDeclaredMethod = Class.class.getDeclaredMethod(
+                    "getDeclaredMethod", String.class, Class[].class);
+            Method forNameMethod = Class.class.getDeclaredMethod("forName", String.class);
+            Class<?> vmRuntimeClass = (Class<?>) forNameMethod.invoke(null, "dalvik.system.VMRuntime");
+            Method getRuntimeMethod = (Method) getDeclaredMethod.invoke(vmRuntimeClass, "getRuntime", null);
+            Object vmRuntime = getRuntimeMethod.invoke(null);
+            Method setExemptions = (Method) getDeclaredMethod.invoke(vmRuntimeClass,
+                    "setHiddenApiExemptions", new Class[]{String[].class});
+            // Déverrouiller tout android.* (inclut android.view.SurfaceControl)
+            setExemptions.invoke(vmRuntime, new Object[]{
+                    new String[]{"Landroid/", "Lcom/android/", "Ljava/lang/"}
+            });
+            AppLogger.i(TAG, "unlockHiddenApis OK — SurfaceControl accessible");
+        } catch (Exception e) {
+            AppLogger.w(TAG, "unlockHiddenApis ERREUR : " + e.getMessage());
+        }
+    }
 
     public boolean startMirror(Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
@@ -72,10 +106,18 @@ public class ClusterMirrorManager {
             // ── 3. createDisplay ─────────────────────────────────────────────
             Method createDisplay = scClass.getMethod("createDisplay",
                     String.class, boolean.class);
+            // Essai 1 : secure=false (AOSP : ne requiert pas AID_GRAPHICS)
             IBinder mirrorToken = (IBinder) createDisplay.invoke(null,
                     "byd_cluster_mirror", false);
             if (mirrorToken == null) {
-                AppLogger.e(TAG, "createDisplay → null (permission ACCESS_SURFACE_FLINGER ?)");
+                // Essai 2 : secure=true (WindowManagement v1.2 utilise true sur DiLink 3.0)
+                AppLogger.w(TAG, "createDisplay(false) → null, essai secure=true");
+                mirrorToken = (IBinder) createDisplay.invoke(null,
+                        "byd_cluster_mirror", true);
+            }
+            if (mirrorToken == null) {
+                AppLogger.e(TAG, "createDisplay → null (permission ACCESS_SURFACE_FLINGER ?"
+                        + " appeler unlockHiddenApis() au démarrage)");
                 return false;
             }
             AppLogger.i(TAG, "mirrorToken=" + mirrorToken);
