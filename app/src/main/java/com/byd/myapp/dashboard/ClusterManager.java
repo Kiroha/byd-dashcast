@@ -1,11 +1,13 @@
 package com.byd.myapp.dashboard;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.Looper;
 import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
+import com.byd.myapp.MainActivity;
 import android.view.Display;
 
 /**
@@ -205,7 +207,24 @@ public class ClusterManager {
         AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String result) {
                 AppLogger.i(TAG, "startFreedom : " + result.trim().replace("\n", " "));
-                // Délai pour laisser le temps à Freedom / AutoDisplayService de créer le display
+
+                // Ramener notre app au premier plan 1s après le démarrage de Freedom,
+                // pendant que Freedom initialise le VirtualDisplay en arrière-plan.
+                mHandler.postDelayed(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            Intent front = new Intent(mContext, MainActivity.class);
+                            front.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                         | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                            mContext.startActivity(front);
+                            AppLogger.i(TAG, "startFreedom : retour au premier plan");
+                        } catch (Exception e) {
+                            AppLogger.w(TAG, "startFreedom : impossible de revenir au 1er plan : " + e.getMessage());
+                        }
+                    }
+                }, 1000);
+
+                // Après 3s : envoyer sendInfo(30+16) pour activer le cluster
                 mHandler.postDelayed(new Runnable() {
                     @Override public void run() {
                         sendActivationSequence();
