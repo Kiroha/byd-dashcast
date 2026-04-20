@@ -1090,65 +1090,6 @@ public class AdbLocalClient {
         }, "adb-trampoline-bounds-thread").start();
     }
 
-    /**
-     * Redimensionne la task d'un package déjà lancé sur le cluster via "am task resize".
-     * Cherche le taskId dans la sortie de "am stack list".
-     */
-    public static void resizeTask(final Context context, final String packageName,
-            final int left, final int top, final int right, final int bottom,
-            final Callback callback) {
-        new Thread(new Runnable() {
-            @Override public void run() {
-                AppLogger.i(TAG, "resizeTask pkg=" + packageName
-                        + " bounds=[" + left + "," + top + "," + right + "," + bottom + "]"
-                        + " [" + Thread.currentThread().getName() + "]");
-                try (Dadb dadb = connect(context)) {
-                    // 1. Trouver le taskId du package
-                    // am stack list donne : "  taskId=N: <pkg>/<activity>"
-                    AppLogger.d(TAG, "resizeTask : am stack list grep " + packageName);
-                    AdbShellResponse rList = dadb.shell(
-                            "am stack list 2>/dev/null | grep 'taskId=.*" + packageName + "' | head -1");
-                    String line = rList.getAllOutput().trim();
-                    AppLogger.i(TAG, "resizeTask stack grep → '" + line + "'");
-                    if (line.isEmpty()) {
-                        // Fallback : dump stack complet pour aider le debug
-                        String allStacks = dadb.shell(
-                                "am stack list 2>/dev/null | head -40").getAllOutput().trim();
-                        AppLogger.w(TAG, "resizeTask : taskId introuvable. Stacks complets:\n" + allStacks);
-                        callback.onError("taskId introuvable pour " + packageName);
-                        return;
-                    }
-                    java.util.regex.Matcher m = java.util.regex.Pattern
-                            .compile("taskId=(\\d+)").matcher(line);
-                    if (!m.find()) {
-                        AppLogger.e(TAG, "resizeTask : regex taskId=(\\d+) no match sur: '" + line + "'");
-                        callback.onError("taskId introuvable pour " + packageName);
-                        return;
-                    }
-                    int taskId = Integer.parseInt(m.group(1));
-                    AppLogger.i(TAG, "resizeTask taskId=" + taskId);
-
-                    // 2. Redimensionner
-                    String cmd = "am task resize " + taskId
-                            + " " + left + " " + top + " " + right + " " + bottom + " 2>&1";
-                    AppLogger.i(TAG, "resizeTask cmd: " + cmd);
-                    AdbShellResponse rResize = dadb.shell(cmd);
-                    String out = rResize.getAllOutput().trim();
-                    AppLogger.i(TAG, "resizeTask result → '" + out + "'");
-                    if (out.toLowerCase().contains("error") || out.toLowerCase().contains("exception")) {
-                        callback.onError(out);
-                    } else {
-                        callback.onSuccess("taskId=" + taskId + " resize OK\n" + out);
-                    }
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "resizeTask ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }, "adb-resize-task-thread").start();
-    }
-
     private static String safeOut(String s) {
         if (s == null) return "(null)";
         s = s.trim();

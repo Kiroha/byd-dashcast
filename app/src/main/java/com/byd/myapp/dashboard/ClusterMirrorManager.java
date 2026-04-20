@@ -262,10 +262,17 @@ public class ClusterMirrorManager {
             AppLogger.w(TAG, "getLayerStack() reflection échoué: " + e.getMessage());
         }
 
-        // Tentative 2 : utiliser displayId comme proxy du layerStack
-        // Sur la plupart des ROMs Android BYD, layerStack = displayId * 0x10000 ou displayId
+        // Tentative 2 : displayId * 0x10000 (Android SurfaceFlinger multi-display convention)
+        // Sur DiLink 3.0 et AOSP ≥ 29, layerStack = displayId << 16 pour les displays secondaires.
         int displayId = display.getDisplayId();
-        AppLogger.w(TAG, "Fallback layerStack = displayId=" + displayId);
+        if (displayId > 0) {
+            int layerStackCandidate = displayId << 16; // = displayId * 0x10000
+            AppLogger.w(TAG, "Fallback layerStack = displayId<<16=" + layerStackCandidate
+                    + " (displayId=" + displayId + ")");
+            return layerStackCandidate;
+        }
+        // Dernier recours : utiliser directement displayId
+        AppLogger.w(TAG, "Fallback final layerStack = displayId=" + displayId);
         return displayId;
     }
 

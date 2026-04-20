@@ -86,7 +86,6 @@ public class MainActivity extends AppCompatActivity
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
             mMainDisplayPkg      = null;
-            mMainDisplayApp      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
             if (mAdapter != null) mAdapter.setMainPackage(null);
@@ -99,7 +98,6 @@ public class MainActivity extends AppCompatActivity
     private String mSecondDashboardPkg  = null;   // package name du slot secondaire (split)
     private int    mCurrentSplitSlot    = 0;      // 0=plein écran, 1=gauche, 2=droite
     private String mMainDisplayPkg      = null;   // package envoyé sur l'écran principal (bouton "→ Cluster")
-    private String mMainDisplayApp      = null;   // nom lisible de l'app sur l'écran principal
 
     // UI — barre statut
     private TextView tvDashboardStatus;
@@ -400,7 +398,6 @@ public class MainActivity extends AppCompatActivity
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 mMainDisplayPkg = null;
-                mMainDisplayApp = null;
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
                 mAdapter.setMainPackage(null);
@@ -432,7 +429,6 @@ public class MainActivity extends AppCompatActivity
         // Si cette app était sur l'écran principal, effacer cet état immédiatement
         if (pkgName != null && pkgName.equals(mMainDisplayPkg)) {
             mMainDisplayPkg = null;
-            mMainDisplayApp = null;
             mAdapter.setMainPackage(null);
         }
 
@@ -509,7 +505,6 @@ public class MainActivity extends AppCompatActivity
         clearSplitState();
         // Mémoriser que l'app est sur l'écran principal → affiche bouton "→ Cluster" dans la liste
         mMainDisplayPkg = app.packageName;
-        mMainDisplayApp = app.appName;
         mAdapter.setCurrentPackage(null);
         mAdapter.setMainPackage(app.packageName);
         updateDashboardStatus(null);
@@ -559,7 +554,6 @@ public class MainActivity extends AppCompatActivity
                         // Si l'app tuée était sur l'écran principal, effacer cet état
                         if (app.packageName != null && app.packageName.equals(mMainDisplayPkg)) {
                             mMainDisplayPkg = null;
-                            mMainDisplayApp = null;
                             mAdapter.setMainPackage(null);
                         }
                         mAdapter.setCurrentPackage(null);

@@ -242,15 +242,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         }, 500);
     }
 
-    /** Redimensionne la task d'un package déjà lancé sur le cluster. */
-    public void resizeTaskOnDashboard(final String packageName,
-            final int left, final int top, final int right, final int bottom,
-            final AdbLocalClient.Callback callback) {
-        AppLogger.i(TAG, "resizeTaskOnDashboard → " + packageName
-                + " [" + left + "," + top + "," + right + "," + bottom + "]");
-        AdbLocalClient.resizeTask(this, packageName, left, top, right, bottom, callback);
-    }
-
     public int getDisplayId() {
         return mDisplayHelper.getKnownClusterDisplayId();
     }
