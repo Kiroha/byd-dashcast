@@ -270,23 +270,35 @@ public class AdbLocalClient {
         new Thread(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // 1. Force-stop Freedom pour repartir d'un état propre
+                    // 1. Vérifier si le VirtualDisplay cluster (fission_bg_xdjaVirtualSurface) existe déjà.
+                    //    Si oui : Freedom tourne déjà en mode 全屏导航 → ne pas le toucher.
+                    //    Si on le force-stop alors qu'il tourne bien, on détruit le VirtualDisplay
+                    //    et Freedom perd sa configuration (état "fraîchement installé").
+                    String displayCheck = safeOut(dadb.shell(
+                            "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
+                    if (displayCheck.contains("fission")) {
+                        AppLogger.i(TAG, "startFreedom : VirtualDisplay déjà présent → pas de redémarrage");
+                        callback.onSuccess("VirtualDisplay déjà présent");
+                        return;
+                    }
+
+                    // 2. VirtualDisplay absent → force-stop Freedom (repartir d'un état propre)
                     dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
                     AppLogger.i(TAG, "startFreedom : force-stop Freedom");
                     Thread.sleep(500);
 
-                    // 2. Écrire properties.xml avec navigationType=1 (全屏导航)
+                    // 3. Écrire properties.xml avec navigationType=1 (全屏导航)
                     //    IMPORTANT : ne PAS supprimer le fichier — navigationType=0 (défaut sans fichier)
                     //    déclenche le retour immédiat dans BootReceiver.setup() sans créer le VirtualDisplay.
                     //    Le fichier est un HashMap Java sérialisé (ObjectOutputStream).
                     writeNavigationTypeFile(dadb);
                     AppLogger.i(TAG, "startFreedom : properties.xml écrit (navigationType=1 → 全屏导航)");
 
-                    // 3. Démarrer Freedom → BootReceiver/setup() voit navigationType=1 > 0
-                    //    → exécute la séquence de projection → VirtualDisplay créé
+                    // 4. Démarrer Freedom — activité confirmée dans AndroidManifest.xml de Freedom :
+                    //    com.byd.windowmanager.activities.MainActivity (package com.xdja.clusterdemo)
                     AppLogger.i(TAG, "startFreedom : démarrage via am start");
                     String startOut = safeOut(dadb.shell(
-                            "am start -n com.xdja.clusterdemo/.activities.MainActivity 2>&1"
+                            "am start -n com.xdja.clusterdemo/com.byd.windowmanager.activities.MainActivity 2>&1"
                     ).getAllOutput()).trim();
                     AppLogger.i(TAG, "startFreedom am start → " + startOut);
                     callback.onSuccess(startOut);

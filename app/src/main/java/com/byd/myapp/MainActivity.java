@@ -85,8 +85,11 @@ public class MainActivity extends AppCompatActivity
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
+            mMainDisplayPkg      = null;
+            mMainDisplayApp      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
+            if (mAdapter != null) mAdapter.setMainPackage(null);
             AppLogger.log(TAG, "ClusterService déconnecté");
         }
     };
@@ -95,6 +98,8 @@ public class MainActivity extends AppCompatActivity
     private String mSecondDashboardApp  = null;   // nom lisible du slot secondaire (split)
     private String mSecondDashboardPkg  = null;   // package name du slot secondaire (split)
     private int    mCurrentSplitSlot    = 0;      // 0=plein écran, 1=gauche, 2=droite
+    private String mMainDisplayPkg      = null;   // package envoyé sur l'écran principal (bouton "→ Cluster")
+    private String mMainDisplayApp      = null;   // nom lisible de l'app sur l'écran principal
 
     // UI — barre statut
     private TextView tvDashboardStatus;
@@ -110,7 +115,9 @@ public class MainActivity extends AppCompatActivity
     // UI — panel contrôle cluster
     private LinearLayout panelClusterControl;
     private TextView     tvControlAppName;
+    private android.widget.FrameLayout frameMirror;
     private SurfaceView  clusterMirror;
+    private TextView     tvMirrorPlaceholder;
     private SurfaceHolder mMirrorHolder;
 
     @Override
@@ -173,7 +180,9 @@ public class MainActivity extends AppCompatActivity
         panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
         tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
+        frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
         clusterMirror       = (SurfaceView)  findViewById(R.id.cluster_mirror);
+        tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
 
         // SurfaceHolder.Callback : démarre/arrête le miroir SurfaceControl quand la Surface est disponible.
         mMirrorHolder = clusterMirror.getHolder();
@@ -385,8 +394,11 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
+                mMainDisplayPkg = null;
+                mMainDisplayApp = null;
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
+                mAdapter.setMainPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
                 showAppList();
             }
@@ -411,6 +423,13 @@ public class MainActivity extends AppCompatActivity
                 + " display=" + mDashboardLauncher.getDashboardDisplayId());
         final String appName = app.appName;
         final String pkgName = app.packageName;
+
+        // Si cette app était sur l'écran principal, effacer cet état immédiatement
+        if (pkgName != null && pkgName.equals(mMainDisplayPkg)) {
+            mMainDisplayPkg = null;
+            mMainDisplayApp = null;
+            mAdapter.setMainPackage(null);
+        }
 
         // ── Mode split : une app occupe déjà un slot → la nouvelle app va dans l'autre ──
         if (mCurrentSplitSlot != 0 && mCurrentDashboardPkg != null) {
@@ -483,7 +502,11 @@ public class MainActivity extends AppCompatActivity
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
         }
         clearSplitState();
+        // Mémoriser que l'app est sur l'écran principal → affiche bouton "→ Cluster" dans la liste
+        mMainDisplayPkg = app.packageName;
+        mMainDisplayApp = app.appName;
         mAdapter.setCurrentPackage(null);
+        mAdapter.setMainPackage(app.packageName);
         updateDashboardStatus(null);
         showAppList();
         // Effacer PREF_LAST_APP : sinon onKillApp croirait que l'app est encore sur
@@ -528,6 +551,12 @@ public class MainActivity extends AppCompatActivity
                             AdbLocalClient.forceStopApp(MainActivity.this, mSecondDashboardPkg, null);
                         }
                         clearSplitState();
+                        // Si l'app tuée était sur l'écran principal, effacer cet état
+                        if (app.packageName != null && app.packageName.equals(mMainDisplayPkg)) {
+                            mMainDisplayPkg = null;
+                            mMainDisplayApp = null;
+                            mAdapter.setMainPackage(null);
+                        }
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         showAppList();
@@ -597,8 +626,12 @@ public class MainActivity extends AppCompatActivity
 
         AppLogger.d(TAG, "attemptStartMirror → display=" + displayId
                 + " view=" + viewW + "×" + viewH);
-        mClusterService.getMirrorManager().startMirror(
+        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+
+        // Afficher le SurfaceView si le miroir fonctionne, sinon le placeholder texte
+        clusterMirror.setVisibility(mirrorOk ? View.VISIBLE : View.GONE);
+        tvMirrorPlaceholder.setVisibility(mirrorOk ? View.GONE : View.VISIBLE);
     }
 
     /**
@@ -608,7 +641,7 @@ public class MainActivity extends AppCompatActivity
     private void showMirrorView() {
         tvAppListTitle.setVisibility(View.GONE);
         rvApps.setVisibility(View.GONE);
-        clusterMirror.setVisibility(View.VISIBLE);
+        frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
     }
 
@@ -618,7 +651,7 @@ public class MainActivity extends AppCompatActivity
      */
     private void showAppList() {
         stopClusterMirror();
-        clusterMirror.setVisibility(View.GONE);
+        frameMirror.setVisibility(View.GONE);
         panelClusterControl.setVisibility(View.GONE);
         tvAppListTitle.setVisibility(View.VISIBLE);
         rvApps.setVisibility(View.VISIBLE);
@@ -953,24 +986,52 @@ public class MainActivity extends AppCompatActivity
             mSecondDashboardPkg = null;
         }
         mCurrentSplitSlot = slot;
-        mClusterService.resizeTaskOnDashboard(mCurrentDashboardPkg, l, t, r, b,
-                new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        AppLogger.i(TAG, "split slot " + slot + " OK ["
-                                + l + "," + t + "," + r + "," + b + "]");
-                        updateControlLabel();
+        // am task resize est bloqué sur DiLink 3.0 ("resizeTask not allowed" pour StackId != FREEFORM).
+        // Alternative : force-stop l'app puis la relancer avec les bounds désirés au lancement.
+        final String splitPkg = mCurrentDashboardPkg;
+        final String splitApp = mCurrentDashboardApp;
+        final int    splitL = l, splitT = t, splitR = r, splitB = b;
+        AdbLocalClient.forceStopApp(this, splitPkg, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String ignored) {
+                mClusterService.launchOnDashboardWithBounds(splitPkg, splitL, splitT, splitR, splitB,
+                        new ClusterService.LaunchCallback() {
+                    @Override public void onResult(boolean launched) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (launched) {
+                                    mCurrentDashboardApp = splitApp;
+                                    mCurrentDashboardPkg = splitPkg;
+                                    AppLogger.i(TAG, "split slot " + slot + " OK ["
+                                            + splitL + "," + splitT + "," + splitR + "," + splitB + "]");
+                                    updateControlLabel();
+                                } else {
+                                    AppLogger.e(TAG, "split relaunch ÉCHEC slot=" + slot);
+                                    Toast.makeText(MainActivity.this,
+                                            getString(R.string.toast_app_incompatible, splitApp),
+                                            Toast.LENGTH_SHORT).show();
+                                    mCurrentSplitSlot = 0;
+                                }
+                            }
+                        });
                     }
                 });
             }
             @Override public void onError(String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        AppLogger.e(TAG, "split resize ÉCHEC: " + error);
-                        Toast.makeText(MainActivity.this,
-                                "Redimensionnement échoué : " + error, Toast.LENGTH_SHORT).show();
-                        mCurrentSplitSlot = 0; // revert
+                // force-stop échoué : tenter le relancement quand même
+                mClusterService.launchOnDashboardWithBounds(splitPkg, splitL, splitT, splitR, splitB,
+                        new ClusterService.LaunchCallback() {
+                    @Override public void onResult(boolean launched) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (launched) {
+                                    mCurrentDashboardApp = splitApp;
+                                    mCurrentDashboardPkg = splitPkg;
+                                    updateControlLabel();
+                                } else {
+                                    mCurrentSplitSlot = 0;
+                                }
+                            }
+                        });
                     }
                 });
             }

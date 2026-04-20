@@ -25,6 +25,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private final OnSendToDashboardListener mListener;
     // Package actuellement affiché sur le cluster (indicateur vert)
     private String mCurrentPackage = null;
+    // Package actuellement sur l'écran principal (bouton "→ Cluster" visible)
+    private String mMainPackage = null;
 
     public AppListAdapter(OnSendToDashboardListener listener) {
         mListener = listener;
@@ -38,8 +40,12 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     /** Met à jour l'indicateur de l'app actuellement sur le cluster. */
     public void setCurrentPackage(String packageName) {
         mCurrentPackage = packageName;
-        // notifyItemRangeChanged plutôt que notifyDataSetChanged : seules les lignes
-        // dont la visibilité de l'indicateur change sont redessinées.
+        notifyItemRangeChanged(0, mApps.size());
+    }
+
+    /** Met à jour l'indicateur de l'app actuellement sur l'écran principal. */
+    public void setMainPackage(String packageName) {
+        mMainPackage = packageName;
         notifyItemRangeChanged(0, mApps.size());
     }
 
@@ -56,11 +62,13 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         holder.ivIcon.setImageDrawable(app.icon);
         holder.tvName.setText(app.appName);
 
-        // Indicateur vert + boutons "← Principal" et "✕" : visibles uniquement si l'app est active sur le cluster
+        // Indicateur vert + boutons : gérés selon l'état (cluster ou écran principal)
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
-        holder.viewActiveIndicator.setVisibility(isActive ? View.VISIBLE : View.GONE);
+        boolean isOnMain = app.packageName != null && app.packageName.equals(mMainPackage);
+        holder.viewActiveIndicator.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
         holder.btnToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        holder.btnKill.setVisibility(isActive ? View.VISIBLE : View.GONE);
+        holder.btnToCluster.setVisibility(isOnMain ? View.VISIBLE : View.GONE);
+        holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
 
         // Tap sur la ligne entière = envoyer sur le cluster
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -75,6 +83,14 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             @Override
             public void onClick(View v) {
                 mListener.onSendToMain(app);
+            }
+        });
+
+        // Bouton "→ Cluster"
+        holder.btnToCluster.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mListener.onSendToDashboard(app);
             }
         });
 
@@ -97,6 +113,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final TextView  tvName;
         final View      viewActiveIndicator;
         final Button    btnToMain;
+        final Button    btnToCluster;
         final Button    btnKill;
 
         ViewHolder(View itemView) {
@@ -105,6 +122,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
             viewActiveIndicator = itemView.findViewById(R.id.view_active_indicator);
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
+            btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
             btnKill             = (Button)    itemView.findViewById(R.id.btn_kill_app);
         }
     }

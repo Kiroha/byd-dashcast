@@ -87,19 +87,37 @@
         android:scrollbars="vertical"/>
 
     <!-- ===== MIROIR CLUSTER =====
-         Caché quand aucune app n'est sur le cluster.
-         Quand actif, remplace la liste pour afficher en temps réel
-         le contenu du cluster via SurfaceControl. Touch → cluster. -->
-    <SurfaceView
-        android:id="@+id/cluster_mirror"
+         Wrapper FrameLayout contenant le SurfaceView miroir ET un placeholder texte.
+         Le SurfaceView nécessite ACCESS_SURFACE_FLINGER (permission système) :
+         si indisponible, le placeholder est affiché à la place. -->
+    <FrameLayout
+        android:id="@+id/frame_cluster_mirror"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#090C10"
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true"
-        android:contentDescription="Miroir cluster"/>
+        android:visibility="gone">
+
+        <SurfaceView
+            android:id="@+id/cluster_mirror"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#090C10"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Miroir cluster"/>
+
+        <TextView
+            android:id="@+id/tv_mirror_placeholder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="Affichage actif sur le cluster ✓"
+            android:textColor="#4A9FDF"
+            android:textSize="18sp"
+            android:background="#090C10"
+            android:visibility="gone"/>
+
+    </FrameLayout>
 
     <!-- ===== PANEL CONTRÔLE CLUSTER =====
          Affiché uniquement quand une app tierce est active sur le dashboard.

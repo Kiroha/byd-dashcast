@@ -50,6 +50,19 @@
         android:layout_marginStart="6dp"
         android:visibility="gone"/>
 
+    <!-- Bouton "→ Cluster" — visible uniquement si l'app est sur l'écran principal -->
+    <Button
+        android:id="@+id/btn_to_cluster"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="→ Cluster"
+        android:textSize="11sp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:layout_marginStart="6dp"
+        android:backgroundTint="#1565C0"
+        android:visibility="gone"/>
+
     <!-- Bouton "✕ Kill" — toujours visible, permet de tuer l'app même si elle est sur le cluster -->
     <Button
         android:id="@+id/btn_kill_app"
