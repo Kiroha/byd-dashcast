@@ -130,6 +130,11 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
+
+        // Déverrouiller les APIs cachées Android (SurfaceControl, etc.)
+        // Doit être appelé avant tout appel à ClusterMirrorManager.startMirror().
+        // Même mécanisme que WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
+        com.byd.myapp.dashboard.ClusterMirrorManager.unlockHiddenApis();
         // Bouton flottant LOG — debug uniquement (absent en release)
         if (BuildConfig.DEBUG) {
             startService(new Intent(this, FloatingLogButton.class));
