@@ -53,7 +53,11 @@ public class AppLogger {
 
     // ── Buffer circulaire ─────────────────────────────────────────────────────
     private static final int MAX_ENTRIES = 3000;
-    private static final List<Entry> sEntries = new CopyOnWriteArrayList<>();
+    // Utilisation d'un ArrayDeque synchronisé au lieu de CopyOnWriteArrayList pour
+    // éviter une copie O(N) de 3000 éléments à chaque log, réduisant drastiquement la pression GC.
+    private static final java.util.ArrayDeque<Entry> sEntries = new java.util.ArrayDeque<>(MAX_ENTRIES + 1);
+    private static final Object LOCK = new Object();
+
     // SimpleDateFormat n'est pas thread-safe — un ThreadLocal par thread évite les allocations
     // répétées sans risque de corruption.
     private static final ThreadLocal<SimpleDateFormat> sFmt = new ThreadLocal<SimpleDateFormat>() {
@@ -70,13 +74,14 @@ public class AppLogger {
 
     // ── Helper interne ────────────────────────────────────────────────────────
 
-    /** Ajoute une entrée dans le buffer et taille par lot si nécessaire. */
+    /** Ajoute une entrée dans le buffer circulaire avec allocation O(1). */
     private static void addEntry(Level level, String tag, String msg) {
-        sEntries.add(new Entry(level, tag, msg));
-        // Tailler par lot de 100 pour éviter un clear O(n) à chaque entrée.
-        if (sEntries.size() > MAX_ENTRIES + 100) {
-            int excess = sEntries.size() - MAX_ENTRIES;
-            sEntries.subList(0, excess).clear();
+        Entry e = new Entry(level, tag, msg);
+        synchronized (LOCK) {
+            if (sEntries.size() >= MAX_ENTRIES) {
+                sEntries.pollFirst(); // Retire le plus ancien
+            }
+            sEntries.addLast(e);
         }
     }
 
@@ -144,29 +149,37 @@ public class AppLogger {
 
     /** Retourne le nombre d'entrées dans le buffer sans allouer de copie. */
     public static int getEntriesCount() {
-        return sEntries.size();
+        synchronized (LOCK) {
+            return sEntries.size();
+        }
     }
 
     /** Retourne une copie immuable du buffer (pour LogActivity). */
     public static List<Entry> getEntries() {
-        return Collections.unmodifiableList(new ArrayList<>(sEntries));
+        synchronized (LOCK) {
+            return Collections.unmodifiableList(new ArrayList<>(sEntries));
+        }
     }
 
     /** Retourne le buffer complet en String formatée (pour partage texte). */
     public static String get() {
         SimpleDateFormat fmt = sFmt.get();
         StringBuilder sb = new StringBuilder();
-        for (Entry e : sEntries) {
-            sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
-              .append("[").append(e.level.name()).append("]")
-              .append("[").append(e.tag).append("] ")
-              .append(e.message).append("\n");
+        synchronized (LOCK) {
+            for (Entry e : sEntries) {
+                sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
+                  .append("[").append(e.level.name()).append("]")
+                  .append("[").append(e.tag).append("] ")
+                  .append(e.message).append("\n");
+            }
         }
         return sb.toString();
     }
 
     public static void clear() {
-        sEntries.clear();
+        synchronized (LOCK) {
+            sEntries.clear();
+        }
     }
 
     // ── Sauvegarde fichier ────────────────────────────────────────────────────

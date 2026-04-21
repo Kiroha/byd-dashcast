@@ -210,7 +210,7 @@ public class ClusterManager {
             AppLogger.i(TAG, "activateClusterDisplay : Freedom déjà lancé par ClusterService — skip startFreedom()");
             // Envoyer quand même sendInfo(30+16) pour libérer la surface Qt
             mHandler.postDelayed(new Runnable() {
-                @Override public void run() { sendActivationSequence(callback); }
+                @Override public void run() { sendActivationSequence(); }
             }, 2000);
         } else {
             AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
@@ -235,13 +235,13 @@ public class ClusterManager {
                     // Après 3s : envoyer sendInfo(30+16) pour activer le cluster
                     mHandler.postDelayed(new Runnable() {
                         @Override public void run() {
-                            sendActivationSequence(callback);
+                            sendActivationSequence();
                         }
                     }, 3000);
                 }
                 @Override public void onError(String err) {
                     AppLogger.w(TAG, "startFreedom ERREUR (on continue quand même) : " + err);
-                    sendActivationSequence(callback);
+                    sendActivationSequence();
                 }
             });
         }
@@ -323,7 +323,7 @@ public class ClusterManager {
      * Le callback DisplayReadyCallback n'est PAS appelé ici : c'est le DisplayListener /
      * polling qui le déclenche quand le VirtualDisplay apparaît.
      */
-    private void sendActivationSequence(final DisplayReadyCallback ignoredCallback) {
+    private void sendActivationSequence() {
         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
             new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {

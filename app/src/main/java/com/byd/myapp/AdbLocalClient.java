@@ -31,7 +31,11 @@ import java.util.HashMap;
  * La paire de clés est persistée → le popup n'apparaît qu'une seule fois (ou après
  * révocation manuelle dans les paramètres développeur du véhicule).
  */
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class AdbLocalClient {
+    private static final ExecutorService sExecutor = Executors.newCachedThreadPool();
 
     private static final String TAG = "AdbLocalClient";
 
@@ -79,7 +83,7 @@ public class AdbLocalClient {
      * En cas d'erreur ADB, on retourne INACTIVE (déclenchera startFreedom en fallback).
      */
     public static void checkFreedomState(final Context context, final FreedomStateCallback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     // 1. Freedom installé ?
@@ -106,7 +110,7 @@ public class AdbLocalClient {
                     callback.onResult(FreedomStatus.INACTIVE); // fallback → startFreedom tenté
                 }
             }
-        }, "adb-check-freedom").start();
+        }); // adb-check-freedom
     }
 
     // -------------------------------------------------------------------------
@@ -120,7 +124,7 @@ public class AdbLocalClient {
      *  3. Énumération des services BYD disponibles via service list (pour un futur proxy)
      */
     public static void connectAndGrant(final Context context, final Callback callback) {
-        new Thread(() -> {
+        sExecutor.execute(() -> {
             try {
                 File privateKey = new File(context.getFilesDir(), "adb.key");
                 File publicKey  = new File(context.getFilesDir(), "adb.pub");
@@ -259,7 +263,7 @@ public class AdbLocalClient {
                 AppLogger.log(TAG, "ADB local ERREUR — " + msg);
                 callback.onError(msg);
             }
-        }, "adb-local-thread").start();
+        }); // adb-local-thread
     }
 
     // ── Helper privé — connexion dadb (clé déjà autorisée, pas de popup) ───────────
@@ -294,7 +298,7 @@ public class AdbLocalClient {
      * si on veut modifier l'UI suite au succès.
      */
     public static void grantOverlayPermission(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     String cmd = "appops set " + context.getPackageName()
@@ -310,7 +314,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-overlay-grant").start();
+        }); // adb-overlay-grant
     }
 
     // ── Freedom : démarrage automatique ─────────────────────────────────────
@@ -341,7 +345,7 @@ public class AdbLocalClient {
      */
     public static void startFreedom(final Context context, final boolean skipDisplayCheck,
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     // 1. Vérifier si le VirtualDisplay cluster (fission_bg_xdjaVirtualSurface) existe déjà.
@@ -384,7 +388,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-start-freedom").start();
+        }); // adb-start-freedom
     }
 
     /**
@@ -432,7 +436,7 @@ public class AdbLocalClient {
      * (headless, pas d'UI Freedom visible).
      */
     public static void sendBootReceiverBroadcast(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
                 try (Dadb dadb = connect(context)) {
@@ -488,7 +492,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-test4-boot-receiver").start();
+        }); // adb-test4-boot-receiver
     }
 
 
@@ -501,7 +505,7 @@ public class AdbLocalClient {
      * Ne contient PAS sendInfo(18) ni sendInfo(0) qui sont des commandes de restauration.
      */
     public static void activateClusterDisplay(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
                 try (Dadb dadb = connect(context)) {
@@ -527,7 +531,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-activate-cluster-thread").start();
+        }); // adb-activate-cluster-thread
     }
 
     /**
@@ -544,7 +548,7 @@ public class AdbLocalClient {
      *   8. Logcat AutoContainer
      */
     public static void runDisplayOneLaunch(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
                 AppLogger.i(TAG, "runDisplayOneLaunch démarré [" + Thread.currentThread().getName() + "]");
@@ -595,7 +599,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-display1-thread").start();
+        }); // adb-display1-thread
     }
 
 
@@ -615,7 +619,7 @@ public class AdbLocalClient {
     public static void restoreBydOnCluster(final Context context,
             final String targetPackage, // nullable : package à force-stoper avant la restauration
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "Restauration BYD cluster"
                         + (targetPackage != null ? " (cible=" + targetPackage + ")" : ""));
@@ -659,7 +663,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-restore-thread").start();
+        }); // adb-restore-thread
     }
 
     /**
@@ -675,7 +679,7 @@ public class AdbLocalClient {
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
             final String targetPackage, // nullable : package à force-stoper avant la restauration
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
                         + (targetPackage != null ? " cible=" + targetPackage : ""));
@@ -712,7 +716,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-origin-cluster-thread").start();
+        }); // adb-origin-cluster-thread
     }
 
     // ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -732,7 +736,7 @@ public class AdbLocalClient {
     public static void sendInfo(final Context context,
                                 final int type, final int infoInt, final String infoStr,
                                 final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     String safeStr = (infoStr != null ? infoStr : "").replace("\"", "\\\"");
@@ -749,7 +753,7 @@ public class AdbLocalClient {
                     if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-sendinfo-thread").start();
+        }); // adb-sendinfo-thread
     }
 
     // ── Diagnostic : signature + permissions effectivement accordées ──────────
@@ -768,7 +772,7 @@ public class AdbLocalClient {
      *   - id (uid courant du shell)
      */
     public static void dumpSignatureAndPermissions(final Context context) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 final String dTag = "SigDump";
                 try (Dadb dadb = connect(context)) {
@@ -818,7 +822,7 @@ public class AdbLocalClient {
                     AppLogger.e(dTag, "dumpSignatureAndPermissions ERREUR", e);
                 }
             }
-        }, "adb-sigdump-thread").start();
+        }); // adb-sigdump-thread
     }
 
     // ── DIAG v1.74 : SUPPRIMÉ (v1.75.1) ──
@@ -849,7 +853,7 @@ public class AdbLocalClient {
      * Le résultat est un rapport texte avec les dumps avant/après chaque commande.
      */
     public static void runClusterDisplaySizeTest(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
@@ -954,7 +958,7 @@ public class AdbLocalClient {
                     callback.onError(msg);
                 }
             }
-        }, "adb-display-size-test").start();
+        }); // adb-display-size-test
     }
 
     /**
@@ -966,7 +970,7 @@ public class AdbLocalClient {
      */
     public static void sendClusterScreenSize(final Context context, final int sizeCmd,
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
@@ -1006,7 +1010,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-screen-size-" + sizeCmd).start();
+        });
     }
 
     /**
@@ -1016,7 +1020,7 @@ public class AdbLocalClient {
      * À utiliser après un essai de cmd 29/31 qui aurait perturbé l'affichage.
      */
     public static void resetClusterDisplaySize(final Context context, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
@@ -1043,7 +1047,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-display-reset").start();
+        }); // adb-display-reset
     }
 
     /**
@@ -1053,7 +1057,7 @@ public class AdbLocalClient {
      */
     public static void forceStopApp(final Context context, final String packageName,
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
                 try (Dadb dadb = connect(context)) {
@@ -1074,7 +1078,7 @@ public class AdbLocalClient {
                     if (callback != null) callback.onError(msg);
                 }
             }
-        }, "adb-forcestop-thread").start();
+        }); // adb-forcestop-thread
     }
 
     /**
@@ -1095,7 +1099,7 @@ public class AdbLocalClient {
      */
     public static void launchTrampolineViaAdb(final Context context, final String targetPackage,
             final int displayId, final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     String pkg = context.getPackageName();
@@ -1121,7 +1125,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-trampoline-thread").start();
+        }); // adb-trampoline-thread
     }
 
     /**
@@ -1138,7 +1142,7 @@ public class AdbLocalClient {
             final String targetPackage, final int displayId,
             final int left, final int top, final int right, final int bottom,
             final Callback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     String pkg = context.getPackageName();
@@ -1169,7 +1173,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "adb-trampoline-bounds-thread").start();
+        }); // adb-trampoline-bounds-thread
     }
 
     /**
@@ -1179,7 +1183,7 @@ public class AdbLocalClient {
      */
     public static void captureClusterDisplay(final Context context,
             final int displayId, final BitmapCallback callback) {
-        new Thread(new Runnable() {
+        sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     File cacheDir = context.getExternalCacheDir();
@@ -1201,7 +1205,7 @@ public class AdbLocalClient {
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
-        }, "screenshot-mirror-thread").start();
+        }); // screenshot-mirror-thread
     }
 
     private static String safeOut(String s) {
