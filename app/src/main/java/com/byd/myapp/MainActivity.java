@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
@@ -34,6 +33,7 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.dashboard.DashboardLauncher;
 import com.byd.myapp.model.AppInfo;
 
@@ -127,7 +127,10 @@ public class MainActivity extends AppCompatActivity
 
     // Screenshot mirror loop (fallback quand SurfaceControl.createDisplay() échoue)
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
-    private Runnable       mScreenshotRunnable = null;
+    // volatile : lu depuis le thread ADB background (captureClusterDisplay callback),
+    // écrit depuis le main thread (stopScreenshotLoop). Sans volatile, le thread ADB
+    // pourrait voir la vieille valeur non-null après que stopScreenshotLoop() ait mis null.
+    private volatile Runnable mScreenshotRunnable = null;
     private static final int SCREENSHOT_INTERVAL_MS = 800;
 
     @Override
@@ -304,7 +307,7 @@ public class MainActivity extends AppCompatActivity
                 });
 
         // Charger la liste des apps (async pour ne pas bloquer l'UI)
-        new LoadAppsTask().execute();
+        loadAppsAsync();
     }
 
     @Override
@@ -434,6 +437,30 @@ public class MainActivity extends AppCompatActivity
                 mAdapter.setMainPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
                 showAppList();
+            }
+        });
+    }
+
+    @Override
+    public void onFreedomStatus(final AdbLocalClient.FreedomStatus status) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                final String msg;
+                switch (status) {
+                    case ACTIVE:
+                        msg = "Freedom actif ✓ — cluster prêt";
+                        break;
+                    case INACTIVE:
+                        msg = "Freedom démarrage…";
+                        break;
+                    case NOT_INSTALLED:
+                        msg = "⚠ Freedom non installé — diffusion impossible";
+                        break;
+                    default:
+                        msg = "Freedom : état inconnu";
+                }
+                tvDashboardStatus.setText(msg);
+                AppLogger.i(TAG, "onFreedomStatus: " + status + " → " + msg);
             }
         });
     }
@@ -713,6 +740,10 @@ public class MainActivity extends AppCompatActivity
     private void startScreenshotLoop(final int displayId) {
         stopScreenshotLoop();
         clusterMirrorScreenshot.setVisibility(View.VISIBLE);
+        // WeakReference : si l'Activity est stoppée/détruite pendant qu'une capture ADB est
+        // en vol, le callback ne mettra pas à jour une vue appartenant à une Activity morte.
+        final java.lang.ref.WeakReference<MainActivity> weakSelf =
+                new java.lang.ref.WeakReference<>(this);
         mScreenshotRunnable = new Runnable() {
             @Override public void run() {
                 AdbLocalClient.captureClusterDisplay(MainActivity.this, displayId,
@@ -720,8 +751,10 @@ public class MainActivity extends AppCompatActivity
                     @Override public void onBitmap(final Bitmap bm) {
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
-                                if (clusterMirrorScreenshot != null) {
-                                    clusterMirrorScreenshot.setImageBitmap(bm);
+                                MainActivity self = weakSelf.get();
+                                if (self != null && !self.isFinishing()
+                                        && self.clusterMirrorScreenshot != null) {
+                                    self.clusterMirrorScreenshot.setImageBitmap(bm);
                                 }
                             }
                         });
@@ -1160,40 +1193,83 @@ public class MainActivity extends AppCompatActivity
 
     // ---- Chargement async de la liste des apps ----
 
-    private class LoadAppsTask extends AsyncTask<Void, Void, List<AppInfo>> {
-        @Override
-        protected List<AppInfo> doInBackground(Void... voids) {
-            PackageManager pm = getPackageManager();
-            Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
-            launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+    /**
+     * Charge la liste des apps installées dans un thread background, puis publie
+     * le résultat sur le main thread via Handler.
+     *
+     * HISTORIQUE : avant v2.07 ce code utilisait AsyncTask (API dépréciée en API 30).
+     * La cible hardware étant Android 10 (API 29 — BYD DiLink 3.0), AsyncTask
+     * fonctionnait encore, mais son usage génère un warning et crée une référence
+     * implicite forte sur MainActivity (risque de leak si la liste prend du temps à charger).
+     *
+     * ── ROLLBACK vers AsyncTask (si nécessaire) ─────────────────────────────────
+     * 1. Remplacer cet appel dans onCreate() :
+     *        loadAppsAsync();
+     *    par :
+     *        new LoadAppsTask().execute();
+     *
+     * 2. Supprimer cette méthode (loadAppsAsync) et la remplacer par la classe interne :
+     *
+     *    private class LoadAppsTask extends android.os.AsyncTask<Void, Void, List<AppInfo>> {
+     *        @Override
+     *        protected List<AppInfo> doInBackground(Void... voids) {
+     *            PackageManager pm = getPackageManager();
+     *            Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
+     *            launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+     *            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
+     *            List<AppInfo> apps = new ArrayList<>();
+     *            for (ResolveInfo ri : resolveInfos) {
+     *                String pkg = ri.activityInfo.packageName;
+     *                if (pkg.equals(getPackageName())) continue;
+     *                apps.add(new AppInfo(pkg, ri.loadLabel(pm).toString(), ri.loadIcon(pm)));
+     *            }
+     *            Collections.sort(apps, new Comparator<AppInfo>() {
+     *                @Override public int compare(AppInfo a, AppInfo b) {
+     *                    return a.appName.compareToIgnoreCase(b.appName);
+     *                }
+     *            });
+     *            return apps;
+     *        }
+     *        @Override
+     *        protected void onPostExecute(List<AppInfo> apps) {
+     *            mAdapter.setApps(apps);
+     *        }
+     *    }
+     *
+     * 3. Réajouter l'import :  import android.os.AsyncTask;
+     * ────────────────────────────────────────────────────────────────────────────
+     */
+    private void loadAppsAsync() {
+        java.util.concurrent.Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override public void run() {
+                PackageManager pm = getPackageManager();
+                Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
+                launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
 
-            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
-            List<AppInfo> apps = new ArrayList<>();
+                List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
+                List<AppInfo> apps = new ArrayList<>();
+                final String ownPackage = getPackageName();
 
-            for (ResolveInfo ri : resolveInfos) {
-                String pkg = ri.activityInfo.packageName;
-                // Exclure notre propre app
-                if (pkg.equals(getPackageName())) continue;
-
-                String name = ri.loadLabel(pm).toString();
-                apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
-            }
-
-            // Trier par nom
-            Collections.sort(apps, new Comparator<AppInfo>() {
-                @Override
-                public int compare(AppInfo a, AppInfo b) {
-                    return a.appName.compareToIgnoreCase(b.appName);
+                for (ResolveInfo ri : resolveInfos) {
+                    String pkg = ri.activityInfo.packageName;
+                    if (pkg.equals(ownPackage)) continue;
+                    String name = ri.loadLabel(pm).toString();
+                    apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
                 }
-            });
 
-            return apps;
-        }
+                Collections.sort(apps, new Comparator<AppInfo>() {
+                    @Override
+                    public int compare(AppInfo a, AppInfo b) {
+                        return a.appName.compareToIgnoreCase(b.appName);
+                    }
+                });
 
-        @Override
-        protected void onPostExecute(List<AppInfo> apps) {
-            mAdapter.setApps(apps);
-        }
+                final List<AppInfo> result = apps;
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() { mAdapter.setApps(result); }
+                });
+            }
+        });
     }
 
 }

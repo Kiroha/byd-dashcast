@@ -43,6 +43,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public interface Listener {
         void onClusterDisplayConnected(Display display, int displayId);
         void onClusterDisplayDisconnected();
+        /** État de Freedom vérifié au démarrage du service (appelé sur le main thread). */
+        void onFreedomStatus(AdbLocalClient.FreedomStatus status);
     }
 
     // ── Binder ──────────────────────────────────────────────────────────────
@@ -59,6 +61,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
     private boolean                mProjectionActive = false;
+    // Dernier état Freedom connu — mis en cache pour replay dans setListener()
+    private AdbLocalClient.FreedomStatus mFreedomStatus = null;
     // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -73,13 +77,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mInputForwarder = new ClusterInputForwarder(this);
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster : initialisation…"));
-        AppLogger.log(TAG, "ClusterService créé — démarrage projection");
+        AppLogger.log(TAG, "ClusterService créé — vérification état Freedom");
+        mProjectionActive = true;
         // Diagnostic signatures + permissions — debug uniquement (ouvre une connexion ADB).
         if (BuildConfig.DEBUG) {
             AdbLocalClient.dumpSignatureAndPermissions(this);
         }
-        mDisplayHelper.start();
-        mProjectionActive = true;
+        checkAndStartWithFreedom();
     }
 
     @Override
@@ -119,8 +123,53 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     // ── API publique (appelée depuis MainActivity via le binder) ────────────
 
+    /**
+     * Vérifie l'état de Freedom via ADB, puis :
+     *   ACTIVE      → mDisplayHelper.start() directement
+     *   INACTIVE    → startFreedom() (force-stop + navigationType=1 + am start) → délai 2s → start()
+     *   NOT_INSTALLED → mDisplayHelper.start() quand même (let activateClusterDisplay gérer le fallback)
+     */
+    private void checkAndStartWithFreedom() {
+        AppLogger.i(TAG, "Freedom : vérification état avant activation cluster");
+        AdbLocalClient.checkFreedomState(this, new AdbLocalClient.FreedomStateCallback() {
+            @Override public void onResult(final AdbLocalClient.FreedomStatus status) {
+                mMainHandler.post(new Runnable() {
+                    @Override public void run() {
+                        mFreedomStatus = status;
+                        AppLogger.i(TAG, "Freedom state: " + status);
+                        if (mListener != null) mListener.onFreedomStatus(status);
+                        if (status == AdbLocalClient.FreedomStatus.INACTIVE) {
+                            // Freedom installé mais inactif → démarrer en mode 全屏導航 d'abord
+                            AppLogger.i(TAG, "Freedom INACTIVE → startFreedom() avant activation cluster");
+                            AdbLocalClient.startFreedom(ClusterService.this, true, new AdbLocalClient.Callback() {
+                                @Override public void onSuccess(String r) {
+                                    AppLogger.i(TAG, "startFreedom pré-check OK → " + r.trim().replace("\n", " "));
+                                    // Délai 2s : laisser Freedom créer le VirtualDisplay fission
+                                    mMainHandler.postDelayed(new Runnable() {
+                                        @Override public void run() { mDisplayHelper.start(); }
+                                    }, 2000);
+                                }
+                                @Override public void onError(String err) {
+                                    AppLogger.w(TAG, "startFreedom pré-check ERREUR (on continue) : " + err);
+                                    mDisplayHelper.start();
+                                }
+                            });
+                        } else {
+                            // ACTIVE (fast path) ou NOT_INSTALLED (fallback dans activateClusterDisplay)
+                            mDisplayHelper.start();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     public void setListener(Listener listener) {
         mListener = listener;
+        // Rejouer l'état Freedom en cache si disponible (check lancé avant le bind)
+        if (mFreedomStatus != null && mListener != null) {
+            mListener.onFreedomStatus(mFreedomStatus);
+        }
         // Si le display est déjà connu, notifier immédiatement (reconnexion de l'Activity)
         int knownId = mDisplayHelper.getKnownClusterDisplayId();
         if (knownId > 0 && mListener != null) {

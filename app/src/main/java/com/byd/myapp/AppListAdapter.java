@@ -11,6 +11,7 @@ import android.widget.TextView;
 import com.byd.myapp.model.AppInfo;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolder> {
@@ -27,6 +28,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private String mCurrentPackage = null;
     // Package actuellement sur l'écran principal (bouton "→ Cluster" visible)
     private String mMainPackage = null;
+    // Cache packageName → index dans mApps pour notifyItemChanged() O(1)
+    private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
 
     public AppListAdapter(OnSendToDashboardListener listener) {
         mListener = listener;
@@ -34,19 +37,37 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
     public void setApps(List<AppInfo> apps) {
         mApps = apps;
+        // Reconstruire l'index pour notifyPackageChanged() O(1)
+        mPackageIndexMap.clear();
+        for (int i = 0; i < apps.size(); i++) {
+            mPackageIndexMap.put(apps.get(i).packageName, i);
+        }
         notifyDataSetChanged();
     }
 
     /** Met à jour l'indicateur de l'app actuellement sur le cluster. */
     public void setCurrentPackage(String packageName) {
+        String old = mCurrentPackage;
         mCurrentPackage = packageName;
-        notifyItemRangeChanged(0, mApps.size());
+        notifyPackageChanged(old);
+        notifyPackageChanged(packageName);
     }
 
     /** Met à jour l'indicateur de l'app actuellement sur l'écran principal. */
     public void setMainPackage(String packageName) {
+        String old = mMainPackage;
         mMainPackage = packageName;
-        notifyItemRangeChanged(0, mApps.size());
+        notifyPackageChanged(old);
+        notifyPackageChanged(packageName);
+    }
+
+    /**
+     * Notifie uniquement l'item correspondant au package donné — O(1) via HashMap.
+     */
+    private void notifyPackageChanged(String packageName) {
+        if (packageName == null) return;
+        Integer idx = mPackageIndexMap.get(packageName);
+        if (idx != null) notifyItemChanged(idx);
     }
 
     @Override

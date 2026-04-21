@@ -129,14 +129,37 @@ public class AzureLogExporter {
                                     String key, String value, boolean first) {
         if (!first) sb.append(",");
         sb.append("\"").append(key).append("\":\"")
-          .append(value.replace("\\", "\\\\")
-                       .replace("\"", "\\\"")
-                       .replace("\n", "\\n")
-                       .replace("\r", "")
-                       .replace("\t", "\\t")
-                       .replace("\b", "\\b")
-                       .replace("\f", "\\f"))
+          .append(escapeJson(value))
           .append("\"");
+    }
+
+    /**
+     * Échappe une valeur pour l'inclure dans une chaîne JSON.
+     * Gère les caractères obligatoires (RFC 8259 §7) : \, ", et U+0000–U+001F.
+     */
+    private static String escapeJson(String value) {
+        if (value == null) return "";
+        StringBuilder sb = new StringBuilder(value.length() + 8);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\': sb.append("\\\\"); break;
+                case '"':  sb.append("\\\""); break;
+                case '\n': sb.append("\\n");  break;
+                case '\r': /* ignore CR */    break;
+                case '\t': sb.append("\\t");  break;
+                case '\b': sb.append("\\b");  break;
+                case '\f': sb.append("\\f");  break;
+                default:
+                    if (c < 0x20) {
+                        // Autres caractères de contrôle U+0001..U+001F
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.toString();
     }
 
     // ── Appel HTTP ────────────────────────────────────────────────────────────

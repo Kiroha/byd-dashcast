@@ -31,6 +31,8 @@ public class ClusterMirrorManager {
     private boolean mMirrorActive = false;
     private int     mClusterW     = 1920;
     private int     mClusterH     = 720;
+    // Classe SurfaceControl mise en cache après la première résolution (réflexion coûteuse).
+    private static Class<?> sSurfaceControlClass = null;
 
     public int     getClusterWidth()  { return mClusterW; }
     public int     getClusterHeight() { return mClusterH; }
@@ -86,7 +88,10 @@ public class ClusterMirrorManager {
         }
 
         try {
-            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+            if (sSurfaceControlClass == null) {
+                sSurfaceControlClass = Class.forName("android.view.SurfaceControl");
+            }
+            Class<?> scClass = sSurfaceControlClass;
             AppLogger.d(TAG, "SurfaceControl class OK");
 
             // ── 1. layerStack ────────────────────────────────────────────────
@@ -282,7 +287,9 @@ public class ClusterMirrorManager {
     public void stopMirror() {
         if (mMirrorToken != null) {
             try {
-                Class<?> scClass = Class.forName("android.view.SurfaceControl");
+                Class<?> scClass = sSurfaceControlClass != null
+                        ? sSurfaceControlClass
+                        : Class.forName("android.view.SurfaceControl");
                 Method destroyDisplay = scClass.getMethod("destroyDisplay", IBinder.class);
                 destroyDisplay.invoke(null, mMirrorToken);
                 AppLogger.i(TAG, "Miroir SurfaceControl détruit");

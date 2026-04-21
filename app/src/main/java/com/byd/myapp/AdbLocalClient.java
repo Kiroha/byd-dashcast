@@ -52,6 +52,63 @@ public class AdbLocalClient {
         void onError(String error);
     }
 
+    // ── Freedom state ─────────────────────────────────────────────────────────
+
+    /** État de Freedom (com.xdja.clusterdemo) — prérequis à toute diffusion cluster. */
+    public enum FreedomStatus {
+        /** com.xdja.clusterdemo n'est pas installé sur le système. */
+        NOT_INSTALLED,
+        /** Installé mais inactif : fission VirtualDisplay absent — display 1 inaccessible. */
+        INACTIVE,
+        /** Actif en mode 全屏导航 : fission VirtualDisplay présent — display 1 accessible. */
+        ACTIVE
+    }
+
+    public interface FreedomStateCallback {
+        void onResult(FreedomStatus status);
+    }
+
+    /**
+     * Vérifie l'état de Freedom via ADB (thread background).
+     *
+     * Deux tests en séquence :
+     *   1. pm list packages com.xdja.clusterdemo → NOT_INSTALLED si absent
+     *   2. dumpsys display | grep -i fission      → ACTIVE si présent, INACTIVE sinon
+     *
+     * Rappel : Freedom OFF = display 1 absent de DisplayManager (confirmé 18/04/2026).
+     * En cas d'erreur ADB, on retourne INACTIVE (déclenchera startFreedom en fallback).
+     */
+    public static void checkFreedomState(final Context context, final FreedomStateCallback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    // 1. Freedom installé ?
+                    String pkgOut = safeOut(dadb.shell(
+                            "pm list packages com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
+                    if (!pkgOut.contains("com.xdja.clusterdemo")) {
+                        AppLogger.w(TAG, "checkFreedomState: non installé");
+                        callback.onResult(FreedomStatus.NOT_INSTALLED);
+                        return;
+                    }
+                    // 2. VirtualDisplay fission présent ?
+                    String dispOut = safeOut(dadb.shell(
+                            "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
+                    if (dispOut.contains("fission")) {
+                        AppLogger.i(TAG, "checkFreedomState: ACTIVE (" + dispOut.replace("\n", " | ") + ")");
+                        callback.onResult(FreedomStatus.ACTIVE);
+                    } else {
+                        AppLogger.i(TAG, "checkFreedomState: INACTIVE (fission absent)");
+                        callback.onResult(FreedomStatus.INACTIVE);
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "checkFreedomState ERREUR", e);
+                    callback.onResult(FreedomStatus.INACTIVE); // fallback → startFreedom tenté
+                }
+            }
+        }, "adb-check-freedom").start();
+    }
+
     // -------------------------------------------------------------------------
 
     /**
@@ -274,19 +331,31 @@ public class AdbLocalClient {
      * La callback est appelée sur un thread ADB (background).
      */
     public static void startFreedom(final Context context, final Callback callback) {
+        startFreedom(context, false, callback);
+    }
+
+    /**
+     * @param skipDisplayCheck  true si l'appelant sait déjà que le VirtualDisplay fission est absent
+     *                          (ex: juste après checkFreedomState → INACTIVE). Évite une 2e connexion
+     *                          ADB redondante pour vérifier la même chose.
+     */
+    public static void startFreedom(final Context context, final boolean skipDisplayCheck,
+            final Callback callback) {
         new Thread(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     // 1. Vérifier si le VirtualDisplay cluster (fission_bg_xdjaVirtualSurface) existe déjà.
-                    //    Si oui : Freedom tourne déjà en mode 全屏导航 → ne pas le toucher.
-                    //    Si on le force-stop alors qu'il tourne bien, on détruit le VirtualDisplay
-                    //    et Freedom perd sa configuration (état "fraîchement installé").
-                    String displayCheck = safeOut(dadb.shell(
-                            "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
-                    if (displayCheck.contains("fission")) {
-                        AppLogger.i(TAG, "startFreedom : VirtualDisplay déjà présent → pas de redémarrage");
-                        callback.onSuccess("VirtualDisplay déjà présent");
-                        return;
+                    //    Sauté si skipDisplayCheck=true (l'appelant a déjà confirmé son absence).
+                    if (!skipDisplayCheck) {
+                        String displayCheck = safeOut(dadb.shell(
+                                "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
+                        if (displayCheck.contains("fission")) {
+                            AppLogger.i(TAG, "startFreedom : VirtualDisplay déjà présent → pas de redémarrage");
+                            callback.onSuccess("VirtualDisplay déjà présent");
+                            return;
+                        }
+                    } else {
+                        AppLogger.d(TAG, "startFreedom : skip displayCheck (fission déjà confirmé absent)");
                     }
 
                     // 2. VirtualDisplay absent → force-stop Freedom (repartir d'un état propre)

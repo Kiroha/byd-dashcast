@@ -54,7 +54,18 @@ public class AppLogger {
     // ── Buffer circulaire ─────────────────────────────────────────────────────
     private static final int MAX_ENTRIES = 3000;
     private static final List<Entry> sEntries = new CopyOnWriteArrayList<>();
-
+    // SimpleDateFormat n'est pas thread-safe — un ThreadLocal par thread évite les allocations
+    // répétées sans risque de corruption.
+    private static final ThreadLocal<SimpleDateFormat> sFmt = new ThreadLocal<SimpleDateFormat>() {
+        @Override protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
+        }
+    };
+    private static final ThreadLocal<SimpleDateFormat> sFileFmt = new ThreadLocal<SimpleDateFormat>() {
+        @Override protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+        }
+    };
     private AppLogger() {}
 
     // ── Helper interne ────────────────────────────────────────────────────────
@@ -143,7 +154,7 @@ public class AppLogger {
 
     /** Retourne le buffer complet en String formatée (pour partage texte). */
     public static String get() {
-        SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
+        SimpleDateFormat fmt = sFmt.get();
         StringBuilder sb = new StringBuilder();
         for (Entry e : sEntries) {
             sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
@@ -167,7 +178,7 @@ public class AppLogger {
      */
     public static File saveToFile(Context context) {
         String filename = "byd_log_"
-                + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date())
+                + sFileFmt.get().format(new Date())
                 + ".log";
         File outDir = context.getExternalFilesDir(null);
         if (outDir == null) outDir = context.getFilesDir();
