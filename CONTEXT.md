@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 21/04/2026 — v2.04 — Sanity check + unlockHiddenApis() + createDisplay fallback secure=true + layerStack fallback fix
+> Dernière mise à jour : 21/04/2026 — v2.05 — Mirror screencap fallback + suppression savedItem + persistance bouton Cluster + split bounds via extras
 
 ---
 
@@ -55,6 +55,7 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 
 | Version | versionCode | Commit | Fix |
 |---------|-------------|--------|----- |
+| **2.05** | **110** | `f686f0a` | **4 bugs** : (1) **Mirror** : `SurfaceControl.createDisplay()` retourne null (ACCESS_SURFACE_FLINGER non accordé pour notre UID sur ce ROM) → fallback `screencap -d 1` via ADB (uid=2000 = accès SurfaceFlinger garanti). `AdbLocalClient.captureClusterDisplay()` + `startScreenshotLoop()` + `ImageView cluster_mirror_screenshot` dans layout. ~1 fps, suffisant pour saisie navigation. (2) **savedItem supprimé** : plus de PREF_LAST_APP ni relance auto au démarrage. (3) **Bouton Cluster** : `mMainDisplayPkg` persisté dans `PREF_MAIN_PKG` (SharedPreferences) — survit aux recréations d'Activity. Restauré dans `onCreate()` + `onClusterDisplayConnected()`. (4) **Split** : `am start --bounds` non supporté sur DiLink 3.0 → bounds passées via `--ei bounds_l/t/r/b`. `ClusterTrampolineActivity` lit et applique `ActivityOptions.setLaunchBounds(new Rect(...))` avec fallback sans bounds. |
 | **2.04** | **109** | `d0e0526` | **Sanity check** : suppression code mort (`resizeTaskOnDashboard()`, `resizeTask()`, champ `mMainDisplayApp` write-only). Fix bug `ClusterMirrorManager.resolveLayerStack()` : fallback retournait `displayId` (1) au lieu de `displayId<<16` (65536) — correct pour SurfaceFlinger Android 10 / DiLink 3.0. |
 | **2.03** | **108** | `62f6da9` | **unlockHiddenApis()** : `VMRuntime.setHiddenApiExemptions(["Landroid/", ...])` appelé dans `MainActivity.onCreate()` — même mécanisme que WindowManagement v1.2 — déverrouille `android.view.SurfaceControl` (@hide). `createDisplay(name, false)` puis fallback `secure=true` si null (WindowManagement utilise true sur DiLink 3.0). |
 | **2.02** | **107** | `5628173` | **4 bugs** : Freedom force-stop incorrect (nom activity + check fission avant) ; Split "resizeTask not allowed" → force-stop + `launchOnDashboardWithBounds` ; bouton "→ Cluster" manquant après "← Principal" (`mMainDisplayPkg` + `btn_to_cluster`) ; miroir noir (`createDisplay→null`) → FrameLayout SurfaceView + placeholder. |
