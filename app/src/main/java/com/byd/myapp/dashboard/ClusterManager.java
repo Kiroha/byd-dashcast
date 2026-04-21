@@ -125,7 +125,8 @@ public class ClusterManager {
      *
      * La callback est appelée sur le main thread.
      */
-    public void activateClusterDisplay(final DisplayReadyCallback callback) {
+    public void activateClusterDisplay(final boolean freedomJustStarted,
+            final DisplayReadyCallback callback) {
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
 
         // 1. Vérifier d'abord si le VirtualDisplay cluster est déjà présent (DISPLAY_CATEGORY_PRESENTATION)
@@ -203,65 +204,47 @@ public class ClusterManager {
         final long timeoutMs = FREEDOM_STARTUP_TIMEOUT_MS;
 
         // 1. Démarrer Freedom (com.xdja.clusterdemo) si absent → crée le VirtualDisplay cluster.
-        //    Après son démarrage on envoie sendInfo(30+16) pour libérer la surface Qt.
-        AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String result) {
-                AppLogger.i(TAG, "startFreedom : " + result.trim().replace("\n", " "));
+        //    Si freedomJustStarted=true : ClusterService l'a déjà lancé, on ne refait pas un
+        //    force-stop/restart (il serait en cours de démarrage → race condition).
+        if (freedomJustStarted) {
+            AppLogger.i(TAG, "activateClusterDisplay : Freedom déjà lancé par ClusterService — skip startFreedom()");
+            // Envoyer quand même sendInfo(30+16) pour libérer la surface Qt
+            mHandler.postDelayed(new Runnable() {
+                @Override public void run() { sendActivationSequence(callback); }
+            }, 2000);
+        } else {
+            AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String result) {
+                    AppLogger.i(TAG, "startFreedom : " + result.trim().replace("\n", " "));
 
-                // Ramener notre app au premier plan 1s après le démarrage de Freedom,
-                // pendant que Freedom initialise le VirtualDisplay en arrière-plan.
-                mHandler.postDelayed(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            Intent front = new Intent(mContext, MainActivity.class);
-                            front.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                         | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                            mContext.startActivity(front);
-                            AppLogger.i(TAG, "startFreedom : retour au premier plan");
-                        } catch (Exception e) {
-                            AppLogger.w(TAG, "startFreedom : impossible de revenir au 1er plan : " + e.getMessage());
+                    // Ramener notre app au premier plan 1s après le démarrage de Freedom
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                Intent front = new Intent(mContext, MainActivity.class);
+                                front.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                             | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                mContext.startActivity(front);
+                                AppLogger.i(TAG, "startFreedom : retour au premier plan");
+                            } catch (Exception e) {
+                                AppLogger.w(TAG, "startFreedom : impossible de revenir au 1er plan : " + e.getMessage());
+                            }
                         }
-                    }
-                }, 1000);
+                    }, 1000);
 
-                // Après 3s : envoyer sendInfo(30+16) pour activer le cluster
-                mHandler.postDelayed(new Runnable() {
-                    @Override public void run() {
-                        sendActivationSequence();
-                    }
-                }, 3000);
-            }
-            @Override public void onError(String err) {
-                AppLogger.w(TAG, "startFreedom ERREUR (on continue quand même) : " + err);
-                sendActivationSequence();
-            }
-
-            private void sendActivationSequence() {
-                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
-                    new AdbLocalClient.Callback() {
-                        @Override public void onSuccess(String out) {
-                            AppLogger.i(TAG, "slow path ADB(cmd=30) : " + out);
-                            mHandler.postDelayed(new Runnable() {
-                                @Override public void run() {
-                                    AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                                        new AdbLocalClient.Callback() {
-                                            @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) : " + out2); }
-                                            @Override public void onError(String err) { AppLogger.e(TAG, "slow path ADB(cmd=16) ERREUR: " + err); }
-                                        });
-                                }
-                            }, 1000);
+                    // Après 3s : envoyer sendInfo(30+16) pour activer le cluster
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            sendActivationSequence(callback);
                         }
-                        @Override public void onError(String err) {
-                            AppLogger.e(TAG, "slow path ADB(cmd=30) ERREUR: " + err);
-                            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                                new AdbLocalClient.Callback() {
-                                    @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) fallback : " + out2); }
-                                    @Override public void onError(String err2) { AppLogger.e(TAG, "slow path ADB(cmd=16) fallback ERREUR: " + err2); }
-                                });
-                        }
-                    });
-            }
-        });
+                    }, 3000);
+                }
+                @Override public void onError(String err) {
+                    AppLogger.w(TAG, "startFreedom ERREUR (on continue quand même) : " + err);
+                    sendActivationSequence(callback);
+                }
+            });
+        }
 
         // Écouter les ajouts de display + timeout
         final long[] pollCount = {0};
@@ -329,6 +312,41 @@ public class ClusterManager {
                 }
             }
         }, delayMs == 0 ? POLL_INTERVAL_MS : delayMs);
+    }
+
+    // ── Séquence d'activation sendInfo(30 → 16) ──────────────────────────────
+
+    /**
+     * Envoie sendInfo(30) puis sendInfo(16) via ADB relay.
+     * Utilisé à la fois par le fast path (Freedom déjà actif → depuis ClusterService)
+     * et par le slow path (Freedom vient d'être lancé → depuis activateClusterDisplay).
+     * Le callback DisplayReadyCallback n'est PAS appelé ici : c'est le DisplayListener /
+     * polling qui le déclenche quand le VirtualDisplay apparaît.
+     */
+    private void sendActivationSequence(final DisplayReadyCallback ignoredCallback) {
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "slow path ADB(cmd=30) : " + out);
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                                new AdbLocalClient.Callback() {
+                                    @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) : " + out2); }
+                                    @Override public void onError(String err)    { AppLogger.e(TAG, "slow path ADB(cmd=16) ERREUR: " + err); }
+                                });
+                        }
+                    }, 1000);
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "slow path ADB(cmd=30) ERREUR: " + err);
+                    AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                        new AdbLocalClient.Callback() {
+                            @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) fallback : " + out2); }
+                            @Override public void onError(String err2)   { AppLogger.e(TAG, "slow path ADB(cmd=16) fallback ERREUR: " + err2); }
+                        });
+                }
+            });
     }
 
     // ── Détection du display cluster ─────────────────────────────────────────

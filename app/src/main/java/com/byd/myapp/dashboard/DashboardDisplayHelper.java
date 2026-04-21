@@ -61,24 +61,15 @@ public class DashboardDisplayHelper {
     }
 
     /**
-     * Déclenche la séquence d'activation du cluster :
-     *   1. Vérifie DISPLAY_CATEGORY_PRESENTATION (VirtualDisplay créé au BOOT par AutoDisplayService)
-     *   2. Si trouvé → sendInfo(1000, 16) pour mettre Qt en standby → callback immédiat
-     *   3. Si non trouvé → sendInfo(16) + polling 3s → fallback displayId=1 sur timeout
-     *
-     * ARCHITECTURE (confirmé analyse Freedom v1.9) :
-     *   AutoDisplayService crée le VirtualDisplay cluster au BOOT avec flags PUBLIC|PRESENTATION.
-     *   Le display est visible via DISPLAY_CATEGORY_PRESENTATION dès le démarrage du système.
-     *   sendInfo(1000, 16) ne crée PAS le display : il met Qt en standby (libère la surface).
-     *
-     * La callback onDashboardDisplayConnected / onDashboardDisplayDisconnected
-     * sera appelée sur le main thread.
+     * Déclenche la séquence d'activation du cluster.
+     * @param freedomJustStarted  true si ClusterService vient de lancer Freedom via startFreedom().
+     *                            Évite un 2e appel redondant à startFreedom() dans ClusterManager
+     *                            si le VirtualDisplay n'est pas encore apparu pendant le délai 2 s.
      */
-    public void start() {
-        mKnownClusterDisplayId = -1; // réinitialiser avant chaque activation
+    public void start(boolean freedomJustStarted) {
+        mKnownClusterDisplayId = -1;
         mDisplayManager.registerDisplayListener(mDisconnectListener, null);
-
-        mClusterManager.activateClusterDisplay(new ClusterManager.DisplayReadyCallback() {
+        mClusterManager.activateClusterDisplay(freedomJustStarted, new ClusterManager.DisplayReadyCallback() {
             @Override
             public void onDisplayReady(Display display, int displayId) {
                 // Guard : si stop() a déjà été appelé, ignorer le callback
@@ -111,6 +102,11 @@ public class DashboardDisplayHelper {
                 }
             }
         });
+    }
+
+    /** Surcharge sans argument — Freedom non lancé par l'appelant (comportement par défaut). */
+    public void start() {
+        start(false);
     }
 
     public void stop() {
