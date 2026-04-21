@@ -215,29 +215,17 @@ public class ClusterManager {
         } else {
             AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String result) {
-                    AppLogger.i(TAG, "startFreedom : " + result.trim().replace("\n", " "));
+                    AppLogger.i(TAG, "startFreedom background : " + result.trim().replace("\n", " "));
 
-                    // Ramener notre app au premier plan 1s après le démarrage de Freedom
-                    mHandler.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            try {
-                                Intent front = new Intent(mContext, MainActivity.class);
-                                front.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                             | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                mContext.startActivity(front);
-                                AppLogger.i(TAG, "startFreedom : retour au premier plan");
-                            } catch (Exception e) {
-                                AppLogger.w(TAG, "startFreedom : impossible de revenir au 1er plan : " + e.getMessage());
-                            }
-                        }
-                    }, 1000);
-
-                    // Après 3s : envoyer sendInfo(30+16) pour activer le cluster
+                    // Avec le tir transparent via am broadcast, plus besoin de ramener
+                    // MainActivity au premier plan, car on ne l'a jamais quitté.
+                    // On attend juste 2s que Freedom ait le temps de lire properties.xml
+                    // et d'établir la connexion Binder C++ Qt.
                     mHandler.postDelayed(new Runnable() {
                         @Override public void run() {
                             sendActivationSequence();
                         }
-                    }, 3000);
+                    }, 2000);
                 }
                 @Override public void onError(String err) {
                     AppLogger.w(TAG, "startFreedom ERREUR (on continue quand même) : " + err);

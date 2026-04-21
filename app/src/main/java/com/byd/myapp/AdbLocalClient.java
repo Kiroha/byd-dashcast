@@ -374,13 +374,15 @@ public class AdbLocalClient {
                     writeNavigationTypeFile(dadb);
                     AppLogger.i(TAG, "startFreedom : properties.xml écrit (navigationType=1 → 全屏导航)");
 
-                    // 4. Démarrer Freedom — activité confirmée dans AndroidManifest.xml de Freedom :
-                    //    com.byd.windowmanager.activities.MainActivity (package com.xdja.clusterdemo)
-                    AppLogger.i(TAG, "startFreedom : démarrage via am start");
+                    // 4. Démarrer Freedom de manière 100% transparente
+                    //    Au lieu d'ouvrir MainActivity et causer un "flash" visuel à l'écran,
+                    //    on simule le BOOT_COMPLETED. Freedom n'a besoin que de lancer son BootReceiver
+                    //    pour lire notre fichier et établir le pont Binder.
+                    AppLogger.i(TAG, "startFreedom : démarrage transparent via am broadcast BOOT_COMPLETED");
                     String startOut = safeOut(dadb.shell(
-                            "am start -n com.xdja.clusterdemo/com.byd.windowmanager.activities.MainActivity 2>&1"
+                            "am broadcast -a android.intent.action.BOOT_COMPLETED -n com.xdja.clusterdemo/com.byd.windowmanager.receivers.BootReceiver 2>&1"
                     ).getAllOutput()).trim();
-                    AppLogger.i(TAG, "startFreedom am start → " + startOut);
+                    AppLogger.i(TAG, "startFreedom am broadcast → " + startOut);
                     callback.onSuccess(startOut);
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
