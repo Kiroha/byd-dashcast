@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 21/04/2026 — v2.08 — Fix race condition double startFreedom() : propagation freedomJustStarted → DashboardDisplayHelper → ClusterManager ; sendActivationSequence() extrait comme méthode de classe
+> Dernière mise à jour : 21/04/2026 — v2.09 — Perf & Sanity : AppLogger ArrayDeque (O(1)), AdbLocalClient ExecutorService, dead code cleanup
 
 ---
 
