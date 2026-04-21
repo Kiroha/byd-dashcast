@@ -146,7 +146,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                     AppLogger.i(TAG, "startFreedom pré-check OK → " + r.trim().replace("\n", " "));
                                     // Délai 2s : laisser Freedom créer le VirtualDisplay fission
                                     mMainHandler.postDelayed(new Runnable() {
-                                        @Override public void run() { mDisplayHelper.start(); }
+                                        @Override public void run() { mDisplayHelper.start(true); }
                                     }, 2000);
                                 }
                                 @Override public void onError(String err) {
