@@ -1,12 +1,14 @@
 package com.byd.myapp.dashboard;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 
 import com.byd.myapp.AppLogger;
@@ -83,11 +85,39 @@ public class ClusterTrampolineActivity extends Activity {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                 | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+
+        // Bounds optionnelles passées via extras entiers (DiLink 3.0 n'accepte pas --bounds)
+        int bl = getIntent().getIntExtra("bounds_l", -1);
+        int bt = getIntent().getIntExtra("bounds_t", -1);
+        int br = getIntent().getIntExtra("bounds_r", -1);
+        int bb = getIntent().getIntExtra("bounds_b", -1);
+        boolean hasBounds = bl >= 0 && br > bl && bb > bt;
+
         try {
-            startActivity(launch);
-            AppLogger.i(TAG, "startActivity(" + pkg + ") OK depuis trampoline");
+            if (hasBounds) {
+                ActivityOptions opts = ActivityOptions.makeBasic();
+                opts.setLaunchBounds(new Rect(bl, bt, br, bb));
+                startActivity(launch, opts.toBundle());
+                AppLogger.i(TAG, "startActivity(" + pkg + ") bounds=["
+                        + bl + "," + bt + "," + br + "," + bb + "] OK depuis trampoline");
+            } else {
+                startActivity(launch);
+                AppLogger.i(TAG, "startActivity(" + pkg + ") OK depuis trampoline");
+            }
         } catch (Exception e) {
-            AppLogger.e(TAG, "startActivity échoué pour " + pkg, e);
+            if (hasBounds) {
+                // Fallback sans bounds si setLaunchBounds n'est pas supporté sur ce ROM
+                AppLogger.w(TAG, "startActivity avec bounds échoué (" + e.getMessage()
+                        + "), fallback sans bounds");
+                try {
+                    startActivity(launch);
+                    AppLogger.i(TAG, "startActivity(" + pkg + ") fallback sans bounds OK");
+                } catch (Exception e2) {
+                    AppLogger.e(TAG, "startActivity fallback aussi échoué pour " + pkg, e2);
+                }
+            } else {
+                AppLogger.e(TAG, "startActivity échoué pour " + pkg, e);
+            }
         }
         finish();
     }

@@ -106,6 +106,18 @@
             android:focusable="true"
             android:contentDescription="Miroir cluster"/>
 
+        <!-- Fallback screencap quand SurfaceControl.createDisplay() échoue (permissions ROM) -->
+        <ImageView
+            android:id="@+id/cluster_mirror_screenshot"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:background="#090C10"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Screenshot miroir cluster"
+            android:visibility="gone"/>
+
         <TextView
             android:id="@+id/tv_mirror_placeholder"
             android:layout_width="match_parent"

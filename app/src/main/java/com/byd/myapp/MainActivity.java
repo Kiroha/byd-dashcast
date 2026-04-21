@@ -24,10 +24,15 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.byd.myapp.dashboard.DashboardLauncher;
 import com.byd.myapp.model.AppInfo;
@@ -56,9 +61,10 @@ public class MainActivity extends AppCompatActivity
     private boolean                 mBindRequested   = false; // vrai dès qu'un bindService est en cours
     private DashboardLauncher       mDashboardLauncher; // référence locale mise à jour après bind
 
-    // savedItem : package de la dernière app envoyée sur le cluster
+    // savedItem : package de la dernière app envoyée sur le cluster (supprimé, voir historique)
     private static final String PREFS_NAME         = "byd_app_prefs";
-    private static final String PREF_LAST_APP      = "last_app_package";
+    /** Package de l'app envoyée sur l'écran principal — persisté pour survivre à la recréation */
+    private static final String PREF_MAIN_PKG      = "main_display_pkg";
     /** Code sendInfo pour la taille d'écran du cluster : 29=8.8", 30=12.3" (défaut Seal EU), 31=10.25" */
     private static final String PREF_CLUSTER_TYPE  = "cluster_screen_size_cmd";
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
@@ -116,7 +122,13 @@ public class MainActivity extends AppCompatActivity
     private android.widget.FrameLayout frameMirror;
     private SurfaceView  clusterMirror;
     private TextView     tvMirrorPlaceholder;
+    private ImageView    clusterMirrorScreenshot;
     private SurfaceHolder mMirrorHolder;
+
+    // Screenshot mirror loop (fallback quand SurfaceControl.createDisplay() échoue)
+    private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
+    private Runnable       mScreenshotRunnable = null;
+    private static final int SCREENSHOT_INTERVAL_MS = 800;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -186,6 +198,14 @@ public class MainActivity extends AppCompatActivity
         frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
         clusterMirror       = (SurfaceView)  findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
+        clusterMirrorScreenshot = (ImageView) findViewById(R.id.cluster_mirror_screenshot);
+
+        // Restaurer mMainDisplayPkg (perdu si l'Activity est détruite et recrée)
+        mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString(PREF_MAIN_PKG, null);
+        if (mMainDisplayPkg != null) {
+            mAdapter.setMainPackage(mMainDisplayPkg);
+        }
 
         // SurfaceHolder.Callback : démarre/arrête le miroir SurfaceControl quand la Surface est disponible.
         mMirrorHolder = clusterMirror.getHolder();
@@ -224,6 +244,14 @@ public class MainActivity extends AppCompatActivity
 
         // Miroir cluster : touch → mapper les coordonnées → injecter sur display 1
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                forwardTouchFromMirror(v, event);
+                return true;
+            }
+        });
+        // Même listener pour l'ImageView screenshot (même espace de coordonnées)
+        clusterMirrorScreenshot.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 forwardTouchFromMirror(v, event);
@@ -351,27 +379,30 @@ public class MainActivity extends AppCompatActivity
                     attemptStartMirrorWithCurrentHolder();
                 }
 
-                // Auto-envoi : app en attente (tap pendant l'activation) ou savedItem
-                String toSend = mPendingLaunchPackage;
-                if (toSend == null) {
-                    toSend = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .getString(PREF_LAST_APP, null);
+                // Restaurer mMainDisplayPkg si l'Activity a été recrée (il est null après onCreate
+                // seulement si getSharedPreferences n'a pas renvoyé de valeur, ce qui ne devrait
+                // pas arriver ici, mais on re-vérifie pour le cas onClusterDisplayDisconnected)
+                if (mMainDisplayPkg == null) {
+                    mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .getString(PREF_MAIN_PKG, null);
+                    if (mMainDisplayPkg != null) {
+                        mAdapter.setMainPackage(mMainDisplayPkg);
+                    }
                 }
-                mPendingLaunchPackage = null;
 
-                if (toSend != null) {
-                    final String pkg = toSend;
-                    // Résoudre le nom lisible pour la status bar
+                // Lancer l'app en attente (tap pendant l'activation du cluster)
+                if (mPendingLaunchPackage != null) {
+                    final String pkg = mPendingLaunchPackage;
+                    mPendingLaunchPackage = null;
                     String resolvedName;
                     try {
                         resolvedName = getPackageManager()
                                 .getApplicationLabel(
                                     getPackageManager().getApplicationInfo(pkg, 0)).toString();
                     } catch (Exception ignored) {
-                        resolvedName = pkg; // fallback au package si l'app est désinstallée
+                        resolvedName = pkg;
                     }
                     final String appDisplayName = resolvedName;
-                    AppLogger.log(TAG, "savedItem : relance auto → " + pkg);
                     mClusterService.launchOnDashboard(pkg, new ClusterService.LaunchCallback() {
                         @Override public void onResult(boolean launched) {
                             if (launched) {
@@ -380,7 +411,6 @@ public class MainActivity extends AppCompatActivity
                                 mAdapter.setCurrentPackage(pkg);
                                 updateDashboardStatus(appDisplayName);
                                 updateControlLabel();
-                                AppLogger.log(TAG, "savedItem relancé ✓ → " + pkg);
                             }
                         }
                     });
@@ -398,6 +428,7 @@ public class MainActivity extends AppCompatActivity
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 mMainDisplayPkg = null;
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
                 mAdapter.setMainPackage(null);
@@ -430,6 +461,7 @@ public class MainActivity extends AppCompatActivity
         if (pkgName != null && pkgName.equals(mMainDisplayPkg)) {
             mMainDisplayPkg = null;
             mAdapter.setMainPackage(null);
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
         }
 
         // ── Mode split : une app occupe déjà un slot → la nouvelle app va dans l'autre ──
@@ -478,8 +510,6 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
                     mAdapter.setCurrentPackage(pkgName);
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .edit().putString(PREF_LAST_APP, pkgName).apply();
                     updateDashboardStatus(appName);
                     updateControlLabel();
                     startClusterMirror();
@@ -507,27 +537,21 @@ public class MainActivity extends AppCompatActivity
         mMainDisplayPkg = app.packageName;
         mAdapter.setCurrentPackage(null);
         mAdapter.setMainPackage(app.packageName);
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
         updateDashboardStatus(null);
         showAppList();
-        // Effacer PREF_LAST_APP : sinon onKillApp croirait que l'app est encore sur
-        // le cluster et appellerait stopProjection() inutilement, détruisant le service.
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_LAST_APP).apply();
         mDashboardLauncher.launchOnMainDisplay(app.packageName);
         AppLogger.log(TAG, "Envoi écran principal — " + app.packageName);
     }
 
     @Override
     public void onKillApp(final AppInfo app) {
-        // 1. Si l'app est effectivement encore sur le cluster (mCurrentDashboardApp != null
-        //    indique que notre code la considère toujours présente sur display 1),
+        // 1. Si l'app est effectivement encore sur le cluster (mCurrentDashboardPkg correspond),
         //    restaurer d'abord pour libérer la surface Qt.
-        //    NE PAS vérifier PREF_LAST_APP : il reste set même après "<- Principal",
-        //    ce qui causerait un stopProjection() inutile + déstruction du service.
-        boolean isOnCluster = mCurrentDashboardApp != null
+        boolean isOnCluster = mCurrentDashboardPkg != null
                 && app.packageName != null
-                && app.packageName.equals(
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .getString(PREF_LAST_APP, null));
+                && app.packageName.equals(mCurrentDashboardPkg);
         if (isOnCluster && mServiceBound && mClusterService != null) {
             mClusterService.stopProjection();
         }
@@ -538,12 +562,6 @@ public class MainActivity extends AppCompatActivity
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        if (app.packageName != null && app.packageName.equals(
-                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                    .getString(PREF_LAST_APP, null))) {
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                .edit().remove(PREF_LAST_APP).apply();
-                        }
                         mCurrentDashboardApp = null;
                         mCurrentDashboardPkg = null;
                         // Force-stop le slot secondaire en mode split
@@ -555,6 +573,8 @@ public class MainActivity extends AppCompatActivity
                         if (app.packageName != null && app.packageName.equals(mMainDisplayPkg)) {
                             mMainDisplayPkg = null;
                             mAdapter.setMainPackage(null);
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                    .edit().remove(PREF_MAIN_PKG).apply();
                         }
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
@@ -628,9 +648,19 @@ public class MainActivity extends AppCompatActivity
         boolean mirrorOk = mClusterService.getMirrorManager().startMirror(
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
 
-        // Afficher le SurfaceView si le miroir fonctionne, sinon le placeholder texte
-        clusterMirror.setVisibility(mirrorOk ? View.VISIBLE : View.GONE);
-        tvMirrorPlaceholder.setVisibility(mirrorOk ? View.GONE : View.VISIBLE);
+        if (mirrorOk) {
+            // SurfaceControl mirror fonctionne → afficher le SurfaceView
+            clusterMirror.setVisibility(View.VISIBLE);
+            clusterMirrorScreenshot.setVisibility(View.GONE);
+            tvMirrorPlaceholder.setVisibility(View.GONE);
+            stopScreenshotLoop();
+        } else {
+            // SurfaceControl indisponible (ACCESS_SURFACE_FLINGER non accordé) →
+            // fallback : screencap périodique via ADB shell (uid=2000)
+            clusterMirror.setVisibility(View.GONE);
+            tvMirrorPlaceholder.setVisibility(View.GONE);
+            startScreenshotLoop(displayId);
+        }
     }
 
     /**
@@ -672,6 +702,57 @@ public class MainActivity extends AppCompatActivity
             boolean wasActive = mClusterService.getMirrorManager().isMirrorActive();
             mClusterService.getMirrorManager().stopMirror();
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
+        }
+        stopScreenshotLoop();
+    }
+
+    /**
+     * Démarre la boucle de capture periodique via screencap (fallback miroir).
+     * ADB shell = uid=2000 → toujours accès SurfaceFlinger indépendamment de nos permissions.
+     */
+    private void startScreenshotLoop(final int displayId) {
+        stopScreenshotLoop();
+        clusterMirrorScreenshot.setVisibility(View.VISIBLE);
+        mScreenshotRunnable = new Runnable() {
+            @Override public void run() {
+                AdbLocalClient.captureClusterDisplay(MainActivity.this, displayId,
+                        new AdbLocalClient.BitmapCallback() {
+                    @Override public void onBitmap(final Bitmap bm) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (clusterMirrorScreenshot != null) {
+                                    clusterMirrorScreenshot.setImageBitmap(bm);
+                                }
+                            }
+                        });
+                        if (mScreenshotRunnable != null) {
+                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
+                                    SCREENSHOT_INTERVAL_MS);
+                        }
+                    }
+                    @Override public void onError(String error) {
+                        AppLogger.w(TAG, "screenshotLoop erreur: " + error);
+                        if (mScreenshotRunnable != null) {
+                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
+                                    SCREENSHOT_INTERVAL_MS * 2L);
+                        }
+                    }
+                });
+            }
+        };
+        mScreenshotHandler.post(mScreenshotRunnable);
+        AppLogger.i(TAG, "Screenshot mirror loop démarré (displayId=" + displayId + ")");
+    }
+
+    /** Arrête la boucle de capture et masque l'ImageView. */
+    private void stopScreenshotLoop() {
+        if (mScreenshotRunnable != null) {
+            mScreenshotHandler.removeCallbacks(mScreenshotRunnable);
+            mScreenshotRunnable = null;
+            AppLogger.d(TAG, "Screenshot mirror loop arrêté");
+        }
+        if (clusterMirrorScreenshot != null) {
+            clusterMirrorScreenshot.setVisibility(View.GONE);
         }
     }
 

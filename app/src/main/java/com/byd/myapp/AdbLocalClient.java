@@ -1,6 +1,8 @@
 package com.byd.myapp;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Base64;
 
 import dadb.AdbKeyPair;
@@ -42,6 +44,11 @@ public class AdbLocalClient {
         /** Appelé sur un thread background quand la connexion + les grants sont terminés. */
         void onSuccess(String report);
         /** Appelé si la connexion échoue (port fermé, timeout, refus…). */
+        void onError(String error);
+    }
+
+    public interface BitmapCallback {
+        void onBitmap(Bitmap bitmap);
         void onError(String error);
     }
 
@@ -1050,7 +1057,8 @@ public class AdbLocalClient {
 
     /**
      * Variante de launchTrampolineViaAdb avec des bounds FREEFORM explicites.
-     * Permet de positionner une app dans un demi-écran cluster au lancement.
+     * Les bounds sont passées via extras entiers (--ei) : DiLink 3.0 ne supporte pas --bounds.
+     * ClusterTrampolineActivity les lit et appelle ActivityOptions.setLaunchBounds().
      *
      * @param left   coordonnée gauche (pixels display cluster)
      * @param top    coordonnée haute
@@ -1065,11 +1073,16 @@ public class AdbLocalClient {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     String pkg = context.getPackageName();
+                    // Note : --bounds n'est pas supporté sur DiLink 3.0 (java.lang.IllegalArgumentException).
+                    // Passage des bounds comme extras entiers, lus par ClusterTrampolineActivity.
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
-                            + " --bounds \"" + left + " " + top + " " + right + " " + bottom + "\""
                             + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
                             + " --es target_package " + targetPackage
+                            + " --ei bounds_l " + left
+                            + " --ei bounds_t " + top
+                            + " --ei bounds_r " + right
+                            + " --ei bounds_b " + bottom
                             + " 2>&1";
                     AppLogger.i(TAG, "ADB launchTrampolineWithBounds: " + cmd);
                     AdbShellResponse r = dadb.shell(cmd);
@@ -1088,6 +1101,38 @@ public class AdbLocalClient {
                 }
             }
         }, "adb-trampoline-bounds-thread").start();
+    }
+
+    /**
+     * Capture une frame du display cluster via screencap (uid=2000 = accès SurfaceFlinger garanti).
+     * Sauvegarde dans le cache externe de l'app ; l'app peut le lire directement (pas de permission
+     * READ_EXTERNAL_STORAGE requise pour le répertoire spécifique au package en API 29).
+     */
+    public static void captureClusterDisplay(final Context context,
+            final int displayId, final BitmapCallback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    File cacheDir = context.getExternalCacheDir();
+                    if (cacheDir == null) cacheDir = context.getCacheDir();
+                    File outFile = new File(cacheDir, "cluster_live.png");
+                    // Chemin ADB : /storage/emulated/0 → /sdcard (symlink standard)
+                    String remotePath = outFile.getAbsolutePath()
+                            .replace("/storage/emulated/0", "/sdcard");
+                    dadb.shell("screencap -d " + displayId + " -p " + remotePath);
+                    Bitmap bm = BitmapFactory.decodeFile(outFile.getAbsolutePath());
+                    if (bm != null) {
+                        callback.onBitmap(bm);
+                    } else {
+                        callback.onError("decodeFile null: " + outFile.getAbsolutePath());
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.w(TAG, "captureClusterDisplay erreur: " + e.getMessage());
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }, "screenshot-mirror-thread").start();
     }
 
     private static String safeOut(String s) {
