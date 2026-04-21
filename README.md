@@ -194,7 +194,17 @@ cd MyBYDApp
 
 ## Freedom (com.xdja.clusterdemo)
 
-Freedom is started automatically if the cluster VirtualDisplay (`fission_*`) is absent.  
+Freedom state is **checked at startup** before the cluster activation sequence.
+`ClusterService.checkAndStartWithFreedom()` runs `AdbLocalClient.checkFreedomState()` and:
+
+| State | Action |
+|-------|--------|
+| `ACTIVE` — VirtualDisplay `fission_*` present | Proceed directly to `sendInfo(30+16)` |
+| `INACTIVE` — installed but VirtualDisplay absent | `startFreedom()` (force-stop + write `navigationType=1` + `am start`) → wait 2 s → activate |
+| `NOT_INSTALLED` | Proceed anyway (fallback to display id=1 hardcoded) |
+
+The current state is displayed in the main status bar (`tvDashboardStatus`).
+
 `AutoDisplayService` (com.xdja.containerservice) creates the VirtualDisplay at boot:
 ```
 createVirtualDisplay("fission_testVirtualSurface", 1920, 1080, 320, qtSurface, 11)
@@ -238,6 +248,9 @@ BYDAppLog_CL | where Tag_s in ("ClusterMirrorManager","AdbLocalClient","ClusterM
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **2.07** | 112 | Sanity fixes: `AsyncTask`→`Executors`, adapter O(1) HashMap index, `ThreadLocal` `SimpleDateFormat`, `WeakReference` screenshot loop guard |
+| **2.06** | 111 | Freedom state check at startup (`checkFreedomState` — NOT_INSTALLED / INACTIVE / ACTIVE), status bar feedback, `startFreedom(skipDisplayCheck)` to avoid redundant ADB round-trip |
+| **2.05** | 110 | Mirror screencap fallback (`captureClusterDisplay` via ADB shell), remove `savedItem`/`PREF_LAST_APP`, persist `PREF_MAIN_PKG` across recreations, split bounds via `--ei` extras + `ActivityOptions.setLaunchBounds()` |
 | **2.04** | 109 | Sanity check: dead code removal + `resolveLayerStack()` fix (`displayId<<16`) |
 | **2.03** | 108 | `unlockHiddenApis()` VMRuntime + `createDisplay` fallback `secure=true` |
 | **2.02** | 107 | Fix Freedom (activity name + fission check), split relaunch bounds, → Cluster btn, mirror placeholder |
