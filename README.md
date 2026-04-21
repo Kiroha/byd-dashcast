@@ -248,6 +248,7 @@ BYDAppLog_CL | where Tag_s in ("ClusterMirrorManager","AdbLocalClient","ClusterM
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **2.08** | 113 | Fix double `startFreedom()` race condition: `freedomJustStarted` flag propagated `ClusterService→DashboardDisplayHelper→ClusterManager`; `sendActivationSequence()` extracted as class-level method (was illegally nested in anonymous Callback); `DashboardDisplayHelper.start(boolean)` + `start()` no-arg overload |
 | **2.07** | 112 | Sanity fixes: `AsyncTask`→`Executors`, adapter O(1) HashMap index, `ThreadLocal` `SimpleDateFormat`, `WeakReference` screenshot loop guard |
 | **2.06** | 111 | Freedom state check at startup (`checkFreedomState` — NOT_INSTALLED / INACTIVE / ACTIVE), status bar feedback, `startFreedom(skipDisplayCheck)` to avoid redundant ADB round-trip |
 | **2.05** | 110 | Mirror screencap fallback (`captureClusterDisplay` via ADB shell), remove `savedItem`/`PREF_LAST_APP`, persist `PREF_MAIN_PKG` across recreations, split bounds via `--ei` extras + `ActivityOptions.setLaunchBounds()` |
