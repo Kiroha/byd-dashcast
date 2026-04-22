@@ -94,14 +94,17 @@ public class AdbLocalClient {
                         callback.onResult(FreedomStatus.NOT_INSTALLED);
                         return;
                     }
-                    // 2. VirtualDisplay fission présent ?
-                    String dispOut = safeOut(dadb.shell(
-                            "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
-                    if (dispOut.contains("fission")) {
-                        AppLogger.i(TAG, "checkFreedomState: ACTIVE (" + dispOut.replace("\n", " | ") + ")");
+                    // 2. Freedom tourne-t-il vraiment en mémoire ?
+                    //    ATTENTION: on ne vérifie plus "dumpsys display | grep fission" !
+                    //    Le VirtualDisplay fission est géré par AutoDisplayService et reste ALWAYS présent
+                    //    même quand Freedom est force-stop. On doit vérifier la présence du procesus.
+                    String pidOut = safeOut(dadb.shell(
+                            "ps -A | grep com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
+                    if (!pidOut.isEmpty()) {
+                        AppLogger.i(TAG, "checkFreedomState: ACTIVE (process found)");
                         callback.onResult(FreedomStatus.ACTIVE);
                     } else {
-                        AppLogger.i(TAG, "checkFreedomState: INACTIVE (fission absent)");
+                        AppLogger.i(TAG, "checkFreedomState: INACTIVE (processus absent)");
                         callback.onResult(FreedomStatus.INACTIVE);
                     }
                 } catch (Exception e) {
@@ -348,21 +351,21 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // 1. Vérifier si le VirtualDisplay cluster (fission_bg_xdjaVirtualSurface) existe déjà.
+                    // 1. Vérifier si Freedom tourne déjà en mémoire.
                     //    Sauté si skipDisplayCheck=true (l'appelant a déjà confirmé son absence).
                     if (!skipDisplayCheck) {
-                        String displayCheck = safeOut(dadb.shell(
-                                "dumpsys display 2>&1 | grep -i fission").getAllOutput()).trim();
-                        if (displayCheck.contains("fission")) {
-                            AppLogger.i(TAG, "startFreedom : VirtualDisplay déjà présent → pas de redémarrage");
-                            callback.onSuccess("VirtualDisplay déjà présent");
+                        String pidCheck = safeOut(dadb.shell(
+                                "ps -A | grep com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
+                        if (!pidCheck.isEmpty()) {
+                            AppLogger.i(TAG, "startFreedom : Freedom (com.xdja.clusterdemo) déjà actif → pas de redémarrage");
+                            callback.onSuccess("Freedom déjà actif");
                             return;
                         }
                     } else {
-                        AppLogger.d(TAG, "startFreedom : skip displayCheck (fission déjà confirmé absent)");
+                        AppLogger.d(TAG, "startFreedom : skip pidCheck (Freedom déjà confirmé inactif)");
                     }
 
-                    // 2. VirtualDisplay absent → force-stop Freedom (repartir d'un état propre)
+                    // 2. Freedom inactif → force-stop de sécurité avant le démarrage propre
                     dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
                     AppLogger.i(TAG, "startFreedom : force-stop Freedom");
                     Thread.sleep(500);
@@ -507,6 +510,28 @@ public class AdbLocalClient {
      * Ne contient PAS sendInfo(18) ni sendInfo(0) qui sont des commandes de restauration.
      */
     public static void activateClusterDisplay(final Context context, final Callback callback) {
+        checkFreedomState(context, new FreedomStateCallback() {
+            @Override public void onResult(FreedomStatus status) {
+                if (status == FreedomStatus.INACTIVE) {
+                    AppLogger.i(TAG, "activateClusterDisplay : Freedom inactif → démarrage d'abord");
+                    startFreedom(context, true, new Callback() {
+                        @Override public void onSuccess(String ignored) {
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                                @Override public void run() { doActivateClusterDisplayLocked(context, callback); }
+                            }, 2000);
+                        }
+                        @Override public void onError(String err) {
+                            doActivateClusterDisplayLocked(context, callback);
+                        }
+                    });
+                } else {
+                    doActivateClusterDisplayLocked(context, callback);
+                }
+            }
+        });
+    }
+
+    private static void doActivateClusterDisplayLocked(final Context context, final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 long t0 = AppLogger.startTiming();
