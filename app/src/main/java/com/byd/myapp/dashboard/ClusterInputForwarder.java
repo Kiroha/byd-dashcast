@@ -108,7 +108,15 @@ public class ClusterInputForwarder {
             // ROM trop ancienne ou méthode absente — l'event ira au display principal
         }
         try {
-            mInjectMethod.invoke(mInputManager, event, INJECT_INPUT_EVENT_MODE_ASYNC);
+            try {
+            String msg = action + "," + clusterX + "," + clusterY + "," + mClusterDisplayId;
+            java.net.DatagramSocket s = new java.net.DatagramSocket();
+            byte[] buf = msg.getBytes();
+            s.send(new java.net.DatagramPacket(buf, buf.length, java.net.InetAddress.getByName("127.0.0.1"), 5005));
+            s.close();
+        } catch (Exception x) {
+            AppLogger.e(TAG, "Touch UDP echoué", x);
+        }
         } catch (Exception e) {
             AppLogger.e(TAG, "Touch inject échoué", e);
         } finally {

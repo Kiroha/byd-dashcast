@@ -1,5 +1,7 @@
 package com.byd.myapp.dashboard;
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.IBinder;
@@ -70,7 +72,7 @@ public class ClusterMirrorManager {
         }
     }
 
-    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
+    public boolean startMirror(Context context, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         stopMirror();
 
@@ -121,8 +123,13 @@ public class ClusterMirrorManager {
                         "byd_cluster_mirror", true);
             }
             if (mirrorToken == null) {
-                AppLogger.e(TAG, "createDisplay → null (permission ACCESS_SURFACE_FLINGER ?"
-                        + " appeler unlockHiddenApis() au démarrage)");
+                AppLogger.w(TAG, "createDisplay → null. Tentative de délégation au MirrorDaemon (ADB)...");
+                // On délègue au Daemon via un broadcast (uid=2000 shell) !
+                boolean daemonOk = delegateToMirrorDaemon(context, targetSurface, viewW, viewH);
+                if (daemonOk) {
+                    mMirrorActive = true;
+                    return true;
+                }
                 return false;
             }
             AppLogger.i(TAG, "mirrorToken=" + mirrorToken);
@@ -284,6 +291,23 @@ public class ClusterMirrorManager {
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Arrête le miroir et libère le display SurfaceControl. */
+    private boolean delegateToMirrorDaemon(Context context, Surface targetSurface, int viewW, int viewH) {
+        try {
+            AppLogger.i(TAG, "Envoi de la demande MirrorDaemon avec la Surface...");
+            Intent i = new Intent("com.byd.myapp.MIRROR_DAEMON_SURFACE");
+            i.putExtra("surface", targetSurface);
+            i.putExtra("viewW", viewW);
+            i.putExtra("viewH", viewH);
+            i.putExtra("clusterW", mClusterW);
+            i.putExtra("clusterH", mClusterH);
+            context.sendBroadcast(i);
+            return true;
+        } catch (Exception e) {
+            AppLogger.e(TAG, "Erreur délégation daemon", e);
+            return false;
+        }
+    }
+
     public void stopMirror() {
         if (mMirrorToken != null) {
             try {

@@ -1,0 +1,185 @@
+package com.byd.myapp.daemon;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Rect;
+import android.os.IBinder;
+import android.os.Looper;
+import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
+
+import java.lang.reflect.Method;
+
+public class MirrorDaemon {
+
+    private static final String TAG = "MirrorDaemon";
+
+    public static void main(String[] args) {
+        Log.i(TAG, "Démarrage du daemon MirrorDaemon avec uid=" + android.os.Process.myUid());
+
+        try {
+            if (Looper.getMainLooper() == null) {
+                Looper.prepareMainLooper();
+            }
+
+            // Récupération d'un System Context
+            Class<?> atClass = Class.forName("android.app.ActivityThread");
+            Object thread = atClass.getMethod("systemMain").invoke(null);
+            Context context = (Context) thread.getClass().getMethod("getSystemContext").invoke(thread);
+            if (context == null) {
+                Log.e(TAG, "Context null !");
+                return;
+            }
+            Log.i(TAG, "Context système récupéré OK.");
+
+            // Déverrouillage des APIs cachées
+            try {
+                Method getDeclaredMethod = Class.class.getDeclaredMethod(
+                        "getDeclaredMethod", String.class, Class[].class);
+                Method forNameMethod = Class.class.getDeclaredMethod("forName", String.class);
+                Class<?> vmRuntimeClass = (Class<?>) forNameMethod.invoke(null, "dalvik.system.VMRuntime");
+                Method getRuntimeMethod = (Method) getDeclaredMethod.invoke(vmRuntimeClass, "getRuntime", null);
+                Object vmRuntime = getRuntimeMethod.invoke(null);
+                Method setExemptions = (Method) getDeclaredMethod.invoke(vmRuntimeClass,
+                        "setHiddenApiExemptions", new Class[]{String[].class});
+                setExemptions.invoke(vmRuntime, new Object[]{
+                        new String[]{"Landroid/", "Lcom/android/", "Ljava/lang/"}
+                });
+                Log.i(TAG, "APIs cachées déverrouillées dans le Daemon.");
+            } catch (Exception e) {
+                Log.e(TAG, "Erreur déverrouillage API", e);
+            }
+
+            // On enregistre un un receiver pour récupérer la Surface
+            IntentFilter filter = new IntentFilter("com.byd.myapp.MIRROR_DAEMON_SURFACE");
+            context.registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent intent) {
+                    Log.i(TAG, "Intent reçu : " + intent.getAction());
+                    Surface surface = intent.getParcelableExtra("surface");
+                    if (surface != null) {
+                        Log.i(TAG, "Surface reçue valide ! Démarrage du miroir...");
+                        int viewW = intent.getIntExtra("viewW", 1920);
+                        int viewH = intent.getIntExtra("viewH", 720);
+                        int clusterW = intent.getIntExtra("clusterW", 1920);
+                        int clusterH = intent.getIntExtra("clusterH", 720);
+                        startMirrorNatively(surface, viewW, viewH, clusterW, clusterH);
+                    } else {
+                        Log.e(TAG, "Surface null ou non trouvée dans l'Intent.");
+                    }
+                }
+            }, filter);
+
+            startTouchServer();
+
+            Log.i(TAG, "Receiver enregistré. Daemon en attente de la Surface...");
+            Looper.loop();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Crash du Daemon MirrorDaemon", e);
+        }
+    }
+
+    private static void startTouchServer() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    java.net.DatagramSocket socket = new java.net.DatagramSocket(5005);
+                    byte[] buffer = new byte[64];
+                    java.net.DatagramPacket packet = new java.net.DatagramPacket(buffer, buffer.length);
+                    Class<?> imClass = Class.forName("android.hardware.input.InputManager");
+                    Method getInstance = imClass.getDeclaredMethod("getInstance");
+                    getInstance.setAccessible(true);
+                    Object im = getInstance.invoke(null);
+                    Method inject = imClass.getDeclaredMethod("injectInputEvent", android.view.InputEvent.class, int.class);
+                    inject.setAccessible(true);
+                    Method setDisplayId = null;
+                    try { setDisplayId = android.view.MotionEvent.class.getMethod("setDisplayId", int.class); } catch (Exception ignored) {}
+                    Log.i(TAG, "Touch UDP Server démarré sur le port 5005");
+                    while (true) {
+                        socket.receive(packet);
+                        String data = new String(packet.getData(), 0, packet.getLength());
+                        String[] parts = data.split(",");
+                        if (parts.length >= 4) {
+                            int action = Integer.parseInt(parts[0]);
+                            float x = Float.parseFloat(parts[1]);
+                            float y = Float.parseFloat(parts[2]);
+                            int displayId = Integer.parseInt(parts[3]);
+                            long now = android.os.SystemClock.uptimeMillis();
+                            android.view.MotionEvent event = android.view.MotionEvent.obtain(now, now, action, x, y, 0);
+                            event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+                            if (setDisplayId != null && displayId > 0) {
+                                setDisplayId.invoke(event, displayId);
+                            }
+                            inject.invoke(im, event, 0);
+                            event.recycle();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "TouchServer erreur", e);
+                }
+            }
+        }).start();
+    }
+
+    private static IBinder mMirrorToken = null;
+
+    private static void startMirrorNatively(Surface targetSurface, int viewW, int viewH, int mClusterW, int mClusterH) {
+        try {
+            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+
+            // Nettoyage ancien token si existant
+            if (mMirrorToken != null) {
+                Method destroy = scClass.getMethod("destroyDisplay", IBinder.class);
+                destroy.invoke(null, mMirrorToken);
+                mMirrorToken = null;
+            }
+
+            // Layer stack info (Cluster = display 1 généralement, on force stack id = 1)
+            int layerStack = 1; 
+
+            // Create display
+            Method createDisplay = scClass.getMethod("createDisplay", String.class, boolean.class);
+            IBinder mirrorToken = (IBinder) createDisplay.invoke(null, "byd_cluster_mirror", false);
+            if (mirrorToken == null) {
+                mirrorToken = (IBinder) createDisplay.invoke(null, "byd_cluster_mirror", true);
+            }
+            if (mirrorToken == null) {
+                Log.e(TAG, "createDisplay a renvoyé null même en uid=2000.");
+                return;
+            }
+            Log.i(TAG, "Token de display créé : " + mirrorToken);
+
+            float scale = Math.min((float) viewW / mClusterW, (float) viewH / mClusterH);
+            int drawW = Math.round(mClusterW * scale);
+            int drawH = Math.round(mClusterH * scale);
+            int offsetX = (viewW - drawW) / 2;
+            int offsetY = (viewH - drawH) / 2;
+            Rect srcRect = new Rect(0, 0, mClusterW, mClusterH);
+            Rect dstRect = new Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH);
+
+            Class<?> txClass = null;
+            for (Class<?> inner : scClass.getDeclaredClasses()) {
+                if (inner.getSimpleName().equals("Transaction")) {
+                    txClass = inner;
+                    break;
+                }
+            }
+
+            Object tx = txClass.getConstructor().newInstance();
+            txClass.getMethod("setDisplaySurface", IBinder.class, Surface.class).invoke(tx, mirrorToken, targetSurface);
+            txClass.getMethod("setDisplayLayerStack", IBinder.class, int.class).invoke(tx, mirrorToken, layerStack);
+            txClass.getMethod("setDisplayProjection", IBinder.class, int.class, Rect.class, Rect.class).invoke(tx, mirrorToken, 0, srcRect, dstRect);
+            txClass.getMethod("apply").invoke(tx);
+
+            mMirrorToken = mirrorToken;
+            Log.i(TAG, "Miroir SurfaceControl démarré avec succès par le Daemon !");
+        } catch (Exception e) {
+            Log.e(TAG, "Erreur lors du démarrage du miroir natif", e);
+        }
+    }
+}
