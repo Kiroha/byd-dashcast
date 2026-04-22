@@ -45,22 +45,6 @@ For full technical details, see `FREEDOM_INJECTION_STRATEGY.md` and `FREEDOM_HID
 
 ---
 
-
-## 🔓 Freedom v1.9 IPC Cracked & Daemon Proxy
-
-In the latest major breakthrough, the **anti-tamper obfuscation** of the `Freedom v1.9` / `com.xdja.clusterdemo` application has been completely reverse-engineered. 
-
-* **The Honeypot**: The original APK included a decoy `DES/ECB/NoPadding` encryption block deliberately seeded with an invalid 7-byte key (`"decrypt"`) designed to throw a native `InvalidKeyException` on Android and waste reverse-engineering efforts.
-* **The Reality**: The actual strings are obfuscated through a complex character-substitution map converting back to standard Base64.
-* **The Result**: We extracted all hidden root/ADB daemon commands (e.g., `--nice-name=ClusterDemoProcess CommunicationProcessKt`) and Inter-Process Communication (IPC) intents (like `ACTION_cluster_demo_process_started`).
-
-### Diagnostic Features added:
-The `DiagActivity` now features a **Pseudo-Daemon (Freedom IPC)** test button. This executes `Runtime.getRuntime().exec()` simulating the `app_process` injection exactly as Freedom does it, proving that we can bypass the third-party app entirely and run our own native code autonomously in the background without requiring root permissions on the BYD system.
-
-For full technical details, see `FREEDOM_INJECTION_STRATEGY.md` and `FREEDOM_HIDDEN_SECRETS.md`.
-
----
-
 ## Code structure
 
 ```
