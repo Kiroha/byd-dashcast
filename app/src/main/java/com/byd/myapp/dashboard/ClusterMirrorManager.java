@@ -40,6 +40,9 @@ public class ClusterMirrorManager {
     public int     getClusterHeight() { return mClusterH; }
     public boolean isMirrorActive()   { return mMirrorActive; }
 
+    // Client spécialisé BYD
+    private BydVideoMirrorClient mBydClient;
+
     // ──────────────────────────────────────────────────────────────────────────
 
     /**
@@ -89,6 +92,17 @@ public class ClusterMirrorManager {
             return false;
         }
 
+        // --- BYD PROPRIETARY VIDEO MIRROR STRATEGY ---
+        if (mBydClient == null) {
+            mBydClient = new BydVideoMirrorClient(context);
+            mBydClient.startListening();
+        }
+        AppLogger.i(TAG, "Délégation du miroir à l'API système BYD chiffrée...");
+        mBydClient.startMirroring(targetSurface, mClusterW, mClusterH, viewW, viewH);
+        mMirrorActive = true;
+        return true;
+
+        /* ANCIEN CODE ANDROID STANDARD (BLOQUÉ PAR BYD ROM)
         try {
             if (sSurfaceControlClass == null) {
                 sSurfaceControlClass = Class.forName("android.view.SurfaceControl");
@@ -174,8 +188,10 @@ public class ClusterMirrorManager {
             AppLogger.e(TAG, "startMirror ERREUR", e);
             return false;
         }
+        */
     }
 
+    /*
     // ── Stratégie A : SurfaceControl.Transaction ─────────────────────────────
 
     private boolean applyViaTransaction(Class<?> scClass, IBinder token,
@@ -287,15 +303,33 @@ public class ClusterMirrorManager {
         AppLogger.w(TAG, "Fallback final layerStack = displayId=" + displayId);
         return displayId;
     }
+    */
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Arrête le miroir et libère le display SurfaceControl. */
     private boolean delegateToMirrorDaemon(Context context, Surface targetSurface, int viewW, int viewH) {
         try {
-            AppLogger.i(TAG, "Envoi de la demande MirrorDaemon avec la Surface...");
+            AppLogger.i(TAG, "Envoi de la demande MirrorDaemon avec Binder (bypassing FD restrictions)...");
             Intent i = new Intent("com.byd.myapp.MIRROR_DAEMON_SURFACE");
-            i.putExtra("surface", targetSurface);
+            
+            // L'astuce : Android (ActivityManager) supprime les File Descriptors (Surface) des Intents génériques.
+            // On utilise un Binder à la volée. Quand le daemon fera "transact()", il lira la Surface
+            // directement via l'IPC sans passer par la restriction de l'ActivityManager.
+            android.os.Bundle b = new android.os.Bundle();
+            final Surface finalSurface = targetSurface;
+            b.putBinder("surface_binder", new android.os.Binder() {
+                @Override
+                protected boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) {
+                    if (code == 1) {
+                        reply.writeNoException();
+                        finalSurface.writeToParcel(reply, 0);
+                        return true;
+                    }
+                    return false;
+                }
+            });
+            i.putExtras(b);
+            
             i.putExtra("viewW", viewW);
             i.putExtra("viewH", viewH);
             i.putExtra("clusterW", mClusterW);

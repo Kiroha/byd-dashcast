@@ -65,16 +65,34 @@ public class MirrorDaemon {
                         stopMirrorNatively();
                         return;
                     }
-                    Surface surface = intent.getParcelableExtra("surface");
+                    
+                    Surface surface = null;
+                    if (intent.getExtras() != null) {
+                        android.os.IBinder binder = intent.getExtras().getBinder("surface_binder");
+                        if (binder != null) {
+                            try {
+                                android.os.Parcel data = android.os.Parcel.obtain();
+                                android.os.Parcel reply = android.os.Parcel.obtain();
+                                binder.transact(1, data, reply, 0);
+                                reply.readException();
+                                surface = Surface.CREATOR.createFromParcel(reply);
+                                data.recycle();
+                                reply.recycle();
+                            } catch (Exception e) {
+                                Log.e(TAG, "Erreur transaction Binder (Surface)", e);
+                            }
+                        }
+                    }
+
                     if (surface != null) {
-                        Log.i(TAG, "Surface reçue valide ! Démarrage du miroir...");
+                        Log.i(TAG, "Surface reçue via Binder IPC valide ! Démarrage du miroir...");
                         int viewW = intent.getIntExtra("viewW", 1920);
                         int viewH = intent.getIntExtra("viewH", 720);
                         int clusterW = intent.getIntExtra("clusterW", 1920);
                         int clusterH = intent.getIntExtra("clusterH", 720);
                         startMirrorNatively(surface, viewW, viewH, clusterW, clusterH);
                     } else {
-                        Log.e(TAG, "Surface null ou non trouvée dans l'Intent.");
+                        Log.e(TAG, "Surface null ou non fournie par le Binder.");
                     }
                 }
             }, filter);

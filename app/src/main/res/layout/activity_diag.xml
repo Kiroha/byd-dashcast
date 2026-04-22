@@ -279,5 +279,15 @@
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 
-    </LinearLayout>
+    
+        <!-- Bloc Test Daemon -->
+        <Button
+            android:id="@+id/btn_test_daemon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lancer pseudo-daemon (Freedom IPC)"
+            android:textSize="13sp"
+            android:backgroundTint="#d81b60"
+            android:layout_marginBottom="16dp"/>
+</LinearLayout>
 </ScrollView>
