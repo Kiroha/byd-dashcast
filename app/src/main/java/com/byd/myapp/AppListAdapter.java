@@ -74,7 +74,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_app, parent, false);
-        return new ViewHolder(v);
+        return new ViewHolder(v, mListener, this);
     }
 
     @Override
@@ -90,43 +90,19 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         holder.btnToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
         holder.btnToCluster.setVisibility(isOnMain ? View.VISIBLE : View.GONE);
         holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
-
-        // Tap sur la ligne entière = envoyer sur le cluster
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mListener.onSendToDashboard(app);
-            }
-        });
-
-        // Bouton "← Principal"
-        holder.btnToMain.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mListener.onSendToMain(app);
-            }
-        });
-
-        // Bouton "→ Cluster"
-        holder.btnToCluster.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mListener.onSendToDashboard(app);
-            }
-        });
-
-        // Bouton "✕ Kill"
-        holder.btnKill.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mListener.onKillApp(app);
-            }
-        });
     }
 
     @Override
     public int getItemCount() {
         return mApps.size();
+    }
+
+    // Helper method for the ViewHolder to get the AppInfo safely
+    AppInfo getAppAt(int position) {
+        if (position >= 0 && position < mApps.size()) {
+            return mApps.get(position);
+        }
+        return null;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
@@ -137,7 +113,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final Button    btnToCluster;
         final Button    btnKill;
 
-        ViewHolder(View itemView) {
+        ViewHolder(View itemView, final OnSendToDashboardListener listener, final AppListAdapter adapter) {
             super(itemView);
             ivIcon              = (ImageView) itemView.findViewById(R.id.iv_app_icon);
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
@@ -145,6 +121,39 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
             btnKill             = (Button)    itemView.findViewById(R.id.btn_kill_app);
+
+            // Tap sur la ligne entière = envoyer sur le cluster
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AppInfo app = adapter.getAppAt(getAdapterPosition());
+                    if (app != null && listener != null) listener.onSendToDashboard(app);
+                }
+            });
+
+            btnToMain.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AppInfo app = adapter.getAppAt(getAdapterPosition());
+                    if (app != null && listener != null) listener.onSendToMain(app);
+                }
+            });
+
+            btnToCluster.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AppInfo app = adapter.getAppAt(getAdapterPosition());
+                    if (app != null && listener != null) listener.onSendToDashboard(app);
+                }
+            });
+
+            btnKill.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AppInfo app = adapter.getAppAt(getAdapterPosition());
+                    if (app != null && listener != null) listener.onKillApp(app);
+                }
+            });
         }
     }
 }

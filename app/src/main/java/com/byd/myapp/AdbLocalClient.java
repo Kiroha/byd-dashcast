@@ -35,7 +35,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class AdbLocalClient {
-    private static final ExecutorService sExecutor = Executors.newCachedThreadPool();
+    // Limité à 4 threads pour éviter un OutOfMemoryError ou une saturation socket
+    // si l'utilisateur martèle l'UI de clics provoquant des commandes lentes ADB.
+    private static final ExecutorService sExecutor = Executors.newFixedThreadPool(4);
 
     private static final String TAG = "AdbLocalClient";
 

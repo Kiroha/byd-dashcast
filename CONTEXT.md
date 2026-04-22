@@ -1,7 +1,7 @@
 # BYD Auto App — Contexte projet complet
 
 > Fichier de référence à conserver dans git pour reprise du contexte sur un autre poste ou après compact IA.  
-> Dernière mise à jour : 21/04/2026 — v2.09 — Perf & Sanity : AppLogger ArrayDeque (O(1)), AdbLocalClient ExecutorService, dead code cleanup
+> Dernière mise à jour : 22/04/2026 — v2.12 — Perf & Sanity checks appliqués : fixed thread pool sur ADB (max 4), memory limit sur ViewHolders (AppListAdapter O(1) OnClickBindings), refactoring Gradle property loading (stream closed properly), et Gradle daemon build opts.
 
 ---
 

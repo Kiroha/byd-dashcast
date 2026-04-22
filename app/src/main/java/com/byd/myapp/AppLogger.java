@@ -164,7 +164,8 @@ public class AppLogger {
     /** Retourne le buffer complet en String formatée (pour partage texte). */
     public static String get() {
         SimpleDateFormat fmt = sFmt.get();
-        StringBuilder sb = new StringBuilder();
+        int size = getEntriesCount();
+        StringBuilder sb = new StringBuilder(size * 80); // ~80 caractères par ligne pour éviter les réallocations coûteuses
         synchronized (LOCK) {
             for (Entry e : sEntries) {
                 sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
@@ -255,8 +256,7 @@ public class AppLogger {
     public static void shareTextAsFile(Context context, String prefix, String content,
             String chooserTitle) {
         if (content == null) content = "";
-        String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
-                Locale.getDefault()).format(new Date());
+        String stamp = sFileFmt.get().format(new Date());
         String filename = prefix + "_" + stamp + ".log";
         File outDir = context.getExternalFilesDir(null);
         if (outDir == null) outDir = context.getFilesDir();
