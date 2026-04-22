@@ -54,11 +54,17 @@ public class MirrorDaemon {
             }
 
             // On enregistre un un receiver pour récupérer la Surface
-            IntentFilter filter = new IntentFilter("com.byd.myapp.MIRROR_DAEMON_SURFACE");
+            IntentFilter filter = new IntentFilter();
+            filter.addAction("com.byd.myapp.MIRROR_DAEMON_SURFACE");
+            filter.addAction("com.byd.myapp.MIRROR_DAEMON_STOP");
             context.registerReceiver(new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context c, Intent intent) {
                     Log.i(TAG, "Intent reçu : " + intent.getAction());
+                    if ("com.byd.myapp.MIRROR_DAEMON_STOP".equals(intent.getAction())) {
+                        stopMirrorNatively();
+                        return;
+                    }
                     Surface surface = intent.getParcelableExtra("surface");
                     if (surface != null) {
                         Log.i(TAG, "Surface reçue valide ! Démarrage du miroir...");
@@ -101,22 +107,26 @@ public class MirrorDaemon {
                     try { setDisplayId = android.view.MotionEvent.class.getMethod("setDisplayId", int.class); } catch (Exception ignored) {}
                     Log.i(TAG, "Touch UDP Server démarré sur le port 5005");
                     while (true) {
-                        socket.receive(packet);
-                        String data = new String(packet.getData(), 0, packet.getLength());
-                        String[] parts = data.split(",");
-                        if (parts.length >= 4) {
-                            int action = Integer.parseInt(parts[0]);
-                            float x = Float.parseFloat(parts[1]);
-                            float y = Float.parseFloat(parts[2]);
-                            int displayId = Integer.parseInt(parts[3]);
-                            long now = android.os.SystemClock.uptimeMillis();
-                            android.view.MotionEvent event = android.view.MotionEvent.obtain(now, now, action, x, y, 0);
-                            event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
-                            if (setDisplayId != null && displayId > 0) {
-                                setDisplayId.invoke(event, displayId);
+                        try {
+                            socket.receive(packet);
+                            String data = new String(packet.getData(), 0, packet.getLength());
+                            String[] parts = data.split(",");
+                            if (parts.length >= 4) {
+                                int action = Integer.parseInt(parts[0]);
+                                float x = Float.parseFloat(parts[1]);
+                                float y = Float.parseFloat(parts[2]);
+                                int displayId = Integer.parseInt(parts[3]);
+                                long now = android.os.SystemClock.uptimeMillis();
+                                android.view.MotionEvent event = android.view.MotionEvent.obtain(now, now, action, x, y, 0);
+                                event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+                                if (setDisplayId != null && displayId > 0) {
+                                    setDisplayId.invoke(event, displayId);
+                                }
+                                inject.invoke(im, event, 0);
+                                event.recycle();
                             }
-                            inject.invoke(im, event, 0);
-                            event.recycle();
+                        } catch (Exception packetEx) {
+                            Log.e(TAG, "TouchServer: Erreur packet ignorée", packetEx);
                         }
                     }
                 } catch (Exception e) {
@@ -127,6 +137,20 @@ public class MirrorDaemon {
     }
 
     private static IBinder mMirrorToken = null;
+
+    private static void stopMirrorNatively() {
+        if (mMirrorToken != null) {
+            try {
+                Class<?> scClass = Class.forName("android.view.SurfaceControl");
+                Method destroy = scClass.getMethod("destroyDisplay", IBinder.class);
+                destroy.invoke(null, mMirrorToken);
+                Log.i(TAG, "Miroir natif detruit par le Daemon.");
+            } catch (Exception e) {
+                Log.e(TAG, "Erreur destruction miroir", e);
+            }
+            mMirrorToken = null;
+        }
+    }
 
     private static void startMirrorNatively(Surface targetSurface, int viewW, int viewH, int mClusterW, int mClusterH) {
         try {

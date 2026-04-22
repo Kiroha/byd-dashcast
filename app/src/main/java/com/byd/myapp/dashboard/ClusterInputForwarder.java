@@ -7,6 +7,11 @@ import com.byd.myapp.AppLogger;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.net.DatagramSocket;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 
 import java.lang.reflect.Method;
 
@@ -32,6 +37,8 @@ public class ClusterInputForwarder {
 
     private static final String TAG = "ClusterInputForwarder";
     private static final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
+    private ExecutorService mUdpExecutor = Executors.newSingleThreadExecutor();
+    private DatagramSocket mUdpSocket;
 
     private int mClusterWidth      = 1920;
     private int mClusterHeight     = 1080;
@@ -54,6 +61,8 @@ public class ClusterInputForwarder {
             mInjectMethod = imClass.getDeclaredMethod("injectInputEvent",
                     android.view.InputEvent.class, int.class);
             mInjectMethod.setAccessible(true);
+            mUdpSocket = new DatagramSocket();
+            // Pas de bind sur 5005 ici, on est client
 
             mAvailable = true;
             AppLogger.i(TAG, "InputManager injection: disponible");
@@ -88,12 +97,12 @@ public class ClusterInputForwarder {
      * @param padH   Hauteur de la vue touchpad
      * @param action MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
      */
-    public void forwardTouch(float padX, float padY, float padW, float padH, int action) {
+    public void forwardTouch(float padX, float padY, float padW, float padH, final int action) {
         if (!mAvailable) return;
 
         // Mapping proportionnel : coordonnées pad → coordonnées cluster
-        float clusterX = (padX / padW) * mClusterWidth;
-        float clusterY = (padY / padH) * mClusterHeight;
+        final float clusterX = (padX / padW) * mClusterWidth;
+        final float clusterY = (padY / padH) * mClusterHeight;
 
         long now = SystemClock.uptimeMillis();
         MotionEvent event = MotionEvent.obtain(now, now, action, clusterX, clusterY, 0);
@@ -108,15 +117,20 @@ public class ClusterInputForwarder {
             // ROM trop ancienne ou méthode absente — l'event ira au display principal
         }
         try {
-            try {
-            String msg = action + "," + clusterX + "," + clusterY + "," + mClusterDisplayId;
-            java.net.DatagramSocket s = new java.net.DatagramSocket();
-            byte[] buf = msg.getBytes();
-            s.send(new java.net.DatagramPacket(buf, buf.length, java.net.InetAddress.getByName("127.0.0.1"), 5005));
-            s.close();
-        } catch (Exception x) {
-            AppLogger.e(TAG, "Touch UDP echoué", x);
-        }
+            mUdpExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String msg = action + "," + clusterX + "," + clusterY + "," + mClusterDisplayId;
+                        byte[] buf = msg.getBytes();
+                        if (mUdpSocket != null) {
+                            mUdpSocket.send(new DatagramPacket(buf, buf.length, InetAddress.getByName("127.0.0.1"), 5005));
+                        }
+                    } catch (Exception x) {
+                        AppLogger.e(TAG, "Touch UDP echoué", x);
+                    }
+                }
+            });
         } catch (Exception e) {
             AppLogger.e(TAG, "Touch inject échoué", e);
         } finally {

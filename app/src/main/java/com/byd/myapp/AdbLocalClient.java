@@ -88,8 +88,10 @@ public class AdbLocalClient {
                 try (Dadb dadb = connect(context)) {
                     String psOut = safeOut(dadb.shell("ps -A | grep MirrorDaemon 2>&1").getAllOutput());
                     if (psOut.contains("MirrorDaemon")) {
-                        AppLogger.i(TAG, "MirrorDaemon tourne deja, pas besoin de le relancer.");
-                        return;
+                        // Kill l'ancien Daemon (utile en développement pour relancer avec le nouvel APK)
+                        // On trouve son PID pour ne pas tuer d'autres app_process.
+                        dadb.shell("ps -A | grep MirrorDaemon | awk '{print $2}' | xargs kill -9 2>/dev/null");
+                        AppLogger.i(TAG, "Ancien MirrorDaemon (shell) tué.");
                     }
                     String apkPath = context.getPackageCodePath();
                     String cmd = "export CLASSPATH=" + apkPath + " && nohup app_process /system/bin com.byd.myapp.daemon.MirrorDaemon </dev/null >/dev/null 2>&1 &";
@@ -1212,9 +1214,8 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // 1. Force stop (kill) 
-                    dadb.shell("am force-stop " + targetPackage);
-                    Thread.sleep(300);
+                    // Suppression de am force-stop pour ne pas tuer l'application de navigation
+                    // Le Trampoline va s'occuper de replacer l'activité sur le bon display
 
                     // 2. Lancement
                     String pkg = context.getPackageName();

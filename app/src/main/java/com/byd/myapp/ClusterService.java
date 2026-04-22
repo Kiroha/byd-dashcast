@@ -75,6 +75,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mLauncher       = new DashboardLauncher(this);
         mMirrorManager  = new ClusterMirrorManager();
         mInputForwarder = new ClusterInputForwarder(this);
+        
+        // Prédémarrer le MirrorDaemon (app_process via ADB) pour le Real-Time Cluster Mirror + Touch
+        // Executé ici au lieu de MainActivity pour éviter de le relancer à chaque rotation d'écran.
+        AdbLocalClient.startMirrorDaemon(this);
+        
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster : initialisation…"));
         AppLogger.log(TAG, "ClusterService créé — vérification état Freedom");
@@ -114,7 +119,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // sur un service détruit (NPE / leak de thread ADB).
         mMainHandler.removeCallbacksAndMessages(null);
         // Arrêter le miroir SurfaceControl si actif.
-        mMirrorManager.stopMirror();
+        mMirrorManager.stopMirror(this);
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }

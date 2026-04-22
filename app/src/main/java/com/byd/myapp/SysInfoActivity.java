@@ -96,6 +96,7 @@ public class SysInfoActivity extends AppCompatActivity {
     // Génération du rapport (AsyncTask — réseau dans doInBackground)
     // =========================================================================
 
+    @android.annotation.SuppressLint("StaticFieldLeak")
     private class GenerateTask extends AsyncTask<Void, String, String> {
 
         @Override

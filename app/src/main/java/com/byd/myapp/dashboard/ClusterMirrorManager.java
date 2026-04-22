@@ -74,7 +74,7 @@ public class ClusterMirrorManager {
 
     public boolean startMirror(Context context, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
-        stopMirror();
+        stopMirror(context);
 
         if (clusterDisplay == null) {
             AppLogger.e(TAG, "startMirror : clusterDisplay null");
@@ -308,7 +308,13 @@ public class ClusterMirrorManager {
         }
     }
 
-    public void stopMirror() {
+    public void stopMirror(Context context) {
+        if (context != null) {
+            try {
+                context.sendBroadcast(new Intent("com.byd.myapp.MIRROR_DAEMON_STOP"));
+            } catch (Exception ignored) {}
+        }
+        
         if (mMirrorToken != null) {
             try {
                 Class<?> scClass = sSurfaceControlClass != null

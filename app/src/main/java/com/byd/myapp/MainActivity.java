@@ -148,8 +148,6 @@ public class MainActivity extends AppCompatActivity
         // Doit être appelé avant tout appel à ClusterMirrorManager.startMirror(this, ).
         // Même mécanisme que WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
         com.byd.myapp.dashboard.ClusterMirrorManager.unlockHiddenApis();
-        // Prédémarrer le MirrorDaemon (app_process via ADB) pour le Real-Time Cluster Mirror + Touch
-        AdbLocalClient.startMirrorDaemon(this);
         // Bouton flottant LOG — debug uniquement (absent en release)
         if (BuildConfig.DEBUG) {
             startService(new Intent(this, FloatingLogButton.class));
@@ -729,7 +727,7 @@ public class MainActivity extends AppCompatActivity
     private void stopClusterMirror() {
         if (mServiceBound && mClusterService != null) {
             boolean wasActive = mClusterService.getMirrorManager().isMirrorActive();
-            mClusterService.getMirrorManager().stopMirror();
+            mClusterService.getMirrorManager().stopMirror(this);
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
         }
         stopScreenshotLoop();

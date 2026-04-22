@@ -104,7 +104,8 @@ git push https://$(grep github ~/.git-credentials | sed 's|https://||' | sed 's|
 | `dashboard/DashboardDisplayHelper.java` | Détecte le display cluster via DisplayManager |
 | `dashboard/DashboardPresentation.java` | Presentation Android sur display secondaire |
 | `dashboard/ClusterInputForwarder.java` | Injection d'events input vers le cluster |
-| `dashboard/ClusterMirrorManager.java` | Capture screenshot display 1 via SurfaceControl |
+| `dashboard/ClusterMirrorManager.java` | Capture screenshot display 1 via SurfaceControl (MirrorDaemon)|
+| `daemon/MirrorDaemon.java` | C++ daemon app_process via ADB pour injection native `SurfaceControl` et Socket UDP Tactile (0 latence) |
 
 ---
 
