@@ -92,17 +92,17 @@ public class ClusterMirrorManager {
             return false;
         }
 
-        // --- BYD PROPRIETARY VIDEO MIRROR STRATEGY ---
-        if (mBydClient == null) {
-            mBydClient = new BydVideoMirrorClient(context);
-            mBydClient.startListening();
-        }
-        AppLogger.i(TAG, "Délégation du miroir à l'API système BYD chiffrée...");
-        mBydClient.startMirroring(targetSurface, mClusterW, mClusterH, viewW, viewH);
-        mMirrorActive = true;
-        return true;
+//         // --- BYD PROPRIETARY VIDEO MIRROR STRATEGY ---
+//         if (mBydClient == null) {
+//             mBydClient = new BydVideoMirrorClient(context);
+//             mBydClient.startListening();
+//         }
+//         AppLogger.i(TAG, "Délégation du miroir à l'API système BYD chiffrée...");
+//         mBydClient.startMirroring(targetSurface, mClusterW, mClusterH, viewW, viewH);
+//         mMirrorActive = true;
+//         return true;
 
-        /* ANCIEN CODE ANDROID STANDARD (BLOQUÉ PAR BYD ROM)
+
         try {
             if (sSurfaceControlClass == null) {
                 sSurfaceControlClass = Class.forName("android.view.SurfaceControl");
@@ -188,10 +188,10 @@ public class ClusterMirrorManager {
             AppLogger.e(TAG, "startMirror ERREUR", e);
             return false;
         }
-        */
+
     }
 
-    /*
+
     // ── Stratégie A : SurfaceControl.Transaction ─────────────────────────────
 
     private boolean applyViaTransaction(Class<?> scClass, IBinder token,
@@ -303,7 +303,7 @@ public class ClusterMirrorManager {
         AppLogger.w(TAG, "Fallback final layerStack = displayId=" + displayId);
         return displayId;
     }
-    */
+
 
     // ─────────────────────────────────────────────────────────────────────────
 
