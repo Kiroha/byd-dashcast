@@ -1188,15 +1188,18 @@ public class AdbLocalClient {
                     }
                     String compName = li.getComponent().flattenToShortString();
 
-                    // Lancement natif de l'app via le shell ADB (am start) au lieu du Trampoline.
-                    // L'avantage d'ADB (uid=2000), c'est qu'il manipule nativement
-                    // le Tâche/Stack sans nécessiter un kill (force-stop) de l'app si elle
-                    // tournait déjà sur l'écran principal. "am start" gère le reparentement.
+                    // Lancement via le Trampoline (crucial sur DiLink 3.0/Android 10)
+                    // Passer directement "am start --display 1 -n compName" provoque un
+                    // "Permission Denial" car l'uid=2000 (ADB) n'est pas le propriétaire
+                    // de l'application tierce. En passant par NOTRE trampoline (même uid que nous),
+                    // l'ActivityStarter autorise le ciblage du display cluster.
+                    String pkg = context.getPackageName();
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
-                            + " -n " + compName
+                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
+                            + " --es target_package " + targetPackage
                             + " 2>&1";
-                    AppLogger.i(TAG, "ADB launch natif: " + cmd);
+                    AppLogger.i(TAG, "ADB launch via Trampoline: " + cmd);
                     
                     AdbShellResponse r = dadb.shell(cmd);
                     String out = r.getAllOutput().trim();

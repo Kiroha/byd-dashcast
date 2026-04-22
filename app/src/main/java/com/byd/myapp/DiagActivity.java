@@ -40,6 +40,7 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvBootReceiverResult;
     private Button   btnBootReceiver;
     private Button   btnBootReceiverShare;
+    private Button   btnTestDaemon;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -71,6 +72,7 @@ public class DiagActivity extends AppCompatActivity {
         tvBootReceiverResult  = (TextView) findViewById(R.id.tv_boot_receiver_result);
         btnBootReceiver       = (Button)   findViewById(R.id.btn_boot_receiver);
         btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
+        btnTestDaemon = (Button) findViewById(R.id.btn_test_daemon);
 
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -366,5 +368,38 @@ public class DiagActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void testLaunchFreedomDaemon() {
+        new Thread(() -> {
+            try {
+                // Command to proxy the freedom daemon via shell pseudo-daemon background exec
+                String cmd = "app_process /system/bin --nice-name=ClusterDemoProcess com.byd.windowmanager.CommunicationProcessKt >/dev/null 2>&1 &";
+                
+                Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", cmd});
+                
+                java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getErrorStream()));
+                StringBuilder output = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+                int exitCode = process.waitFor();
+                
+                runOnUiThread(() -> {
+                    if (exitCode == 0 && output.length() == 0) {
+                        android.widget.Toast.makeText(DiagActivity.this, "Test Daemon : Lancé avec succès (Silent/Background)\n\n(Fermez MyBYDApp et vérifiez que ClusterDemoProcess survit sur la voiture!)", android.widget.Toast.LENGTH_LONG).show();
+                    } else {
+                        android.widget.Toast.makeText(DiagActivity.this, "Erreur PID:\n" + output.toString(), android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    android.widget.Toast.makeText(DiagActivity.this, "Exception Shell: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
     }
 }
