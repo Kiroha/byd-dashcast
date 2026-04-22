@@ -1129,6 +1129,14 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
+                    // 1. Force-stop (kill) l'application tierce.
+                    //    Indispensable si elle tournait déjà sur l'écran principal (display 0)
+                    //    sinon le lancement via Trampoline (display 2) ne fait que ramener
+                    //    la tâche existante au premier plan sans changer de display.
+                    dadb.shell("am force-stop " + targetPackage);
+                    Thread.sleep(300);
+
+                    // 2. Lancement du trampoline sur le bon display.
                     String pkg = context.getPackageName();
                     // --es target_package <pkg>  → passé à ClusterTrampolineActivity.onCreate()
                     String cmd = "am start --display " + displayId
@@ -1172,6 +1180,11 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
+                    // 1. Force stop (kill) 
+                    dadb.shell("am force-stop " + targetPackage);
+                    Thread.sleep(300);
+
+                    // 2. Lancement
                     String pkg = context.getPackageName();
                     // Note : --bounds n'est pas supporté sur DiLink 3.0 (java.lang.IllegalArgumentException).
                     // Passage des bounds comme extras entiers, lus par ClusterTrampolineActivity.
