@@ -95,6 +95,12 @@ public class ClusterTrampolineActivity extends Activity {
             if (hasBounds) {
                 ActivityOptions opts = ActivityOptions.makeBasic();
                 opts.setLaunchBounds(new Rect(bl, bt, br, bb));
+                try {
+                    // For Android 10 (API 29), setLaunchWindowingMode(5) WINDOWING_MODE_FREEFORM
+                    java.lang.reflect.Method setLaunchWm = ActivityOptions.class.getMethod("setLaunchWindowingMode", int.class);
+                    setLaunchWm.invoke(opts, 5);
+                } catch (Exception ignored) {}
+                
                 startActivity(launch, opts.toBundle());
                 AppLogger.i(TAG, "startActivity(" + pkg + ") bounds=["
                         + bl + "," + bt + "," + br + "," + bb + "] OK depuis trampoline");

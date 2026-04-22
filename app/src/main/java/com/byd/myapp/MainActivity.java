@@ -152,6 +152,9 @@ public class MainActivity extends AppCompatActivity
         if (BuildConfig.DEBUG) {
             startService(new Intent(this, FloatingLogButton.class));
         }
+        
+        // Bouton flottant "GPS" pour rouvrir rapidement le streaming Waze
+        startService(new Intent(this, FloatingRemoteButton.class));
 
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
@@ -235,6 +238,15 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View v) {
                 showAppList();
+            }
+        });
+
+        // Clavier flottant temporaire
+        Button btnClusterKeyboard = (Button) findViewById(R.id.btn_cluster_keyboard);
+        btnClusterKeyboard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showKeyboardDialog();
             }
         });
 
@@ -580,7 +592,7 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
         if (isOnCluster && mServiceBound && mClusterService != null) {
-            mClusterService.stopProjection();
+            mClusterService.stopProjectionNoAdb(); // Ne pas envoyer le restore cluster auto
         }
 
         // 2. am force-stop via ADB
@@ -1270,6 +1282,33 @@ public class MainActivity extends AppCompatActivity
                 });
             }
         });
+    }
+
+    private void showKeyboardDialog() {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Texte à envoyer au cluster");
+        input.setSingleLine(true);
+
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Saisie Clavier (Cluster)")
+            .setMessage("Une fois validé, le texte sera tapé automatiquement dans l'application.")
+            .setView(input)
+            .setPositiveButton("Envoyer", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface dialog, int whichButton) {
+                    final String text = input.getText().toString();
+                    if (!text.isEmpty()) {
+                        new Thread(new Runnable() {
+                            public void run() {
+                                // Sur Android, "input text" prend l'espace avec %s
+                                String escapedText = text.replace(" ", "%s").replace("\"", "\\\"");
+                                AdbLocalClient.executeShell(MainActivity.this, "input text \"" + escapedText + "\"");
+                            }
+                        }).start();
+                    }
+                }
+            })
+            .setNegativeButton("Annuler", null)
+            .show();
     }
 
 }

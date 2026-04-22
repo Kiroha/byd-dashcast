@@ -44,6 +44,23 @@ public class AdbLocalClient {
 
     // -------------------------------------------------------------------------
 
+    /**
+     * Exécute une commande shell brute via ADB local (asynchrone).
+     */
+    public static void executeShell(final Context context, final String command) {
+        sExecutor.execute(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    AdbShellResponse r = dadb.shell(command);
+                    AppLogger.d(TAG, "executeShell: " + command + " -> " + r.getAllOutput().trim());
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "executeShell ERREUR pour: " + command, e);
+                }
+            }
+        });
+    }
+
     public interface Callback {
         /** Appelé sur un thread background quand la connexion + les grants sont terminés. */
         void onSuccess(String report);
@@ -1214,13 +1231,28 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // Suppression de am force-stop pour ne pas tuer l'application de navigation
-                    // Le Trampoline va s'occuper de replacer l'activité sur le bon display
+                    // Résolution directe de l'Intent de lancement de l'application tierce.
+                    android.content.pm.PackageManager pm = context.getPackageManager();
+                    android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
+                    if (li == null) {
+                        try {
+                            android.content.pm.PackageInfo pi = pm.getPackageInfo(targetPackage, android.content.pm.PackageManager.GET_ACTIVITIES);
+                            if (pi.activities != null && pi.activities.length > 0) {
+                                li = new android.content.Intent();
+                                li.setComponent(new android.content.ComponentName(targetPackage, pi.activities[0].name));
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (li == null || li.getComponent() == null) {
+                        callback.onError("Aucune activité trouvée pour " + targetPackage);
+                        return;
+                    }
+                    String compName = li.getComponent().flattenToShortString();
 
-                    // 2. Lancement
+                    // Lancement natif de l'app via le shell ADB (am start) directement
+                    // DiLink 3.0 bloque --bounds pour les apps tierces, nous utiliserons le redimensionnement
+                    // via notre Trampoline de configuration si nécessaire
                     String pkg = context.getPackageName();
-                    // Note : --bounds n'est pas supporté sur DiLink 3.0 (java.lang.IllegalArgumentException).
-                    // Passage des bounds comme extras entiers, lus par ClusterTrampolineActivity.
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
                             + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"

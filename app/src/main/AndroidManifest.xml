@@ -149,6 +149,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
+        <!-- Service overlay icône de retour rapide au streaming -->
+        <service
+            android:name=".FloatingRemoteButton"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
+
         <!-- FileProvider : partage de fichiers .log avec les apps externes (email, messagerie…) -->
         <provider
             android:name="androidx.core.content.FileProvider"

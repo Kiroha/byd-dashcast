@@ -191,6 +191,16 @@
                 android:textSize="10sp"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"/>
+
+            <Button
+                android:id="@+id/btn_cluster_keyboard"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="⌨️ Clavier"
+                android:textSize="10sp"
+                android:layout_marginStart="8dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"/>
         </LinearLayout>
 
         <!-- Boutons de navigation et volume -->
