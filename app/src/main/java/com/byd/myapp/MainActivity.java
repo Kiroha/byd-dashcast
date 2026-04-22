@@ -1297,13 +1297,9 @@ public class MainActivity extends AppCompatActivity
                 public void onClick(android.content.DialogInterface dialog, int whichButton) {
                     final String text = input.getText().toString();
                     if (!text.isEmpty()) {
-                        new Thread(new Runnable() {
-                            public void run() {
-                                // Sur Android, "input text" prend l'espace avec %s
-                                String escapedText = text.replace(" ", "%s").replace("\"", "\\\"");
-                                AdbLocalClient.executeShell(MainActivity.this, "input text \"" + escapedText + "\"");
-                            }
-                        }).start();
+                        // Sur Android, "input text" prend l'espace avec %s
+                        String escapedText = text.replace(" ", "%s").replace("\"", "\\\"");
+                        AdbLocalClient.executeShell(MainActivity.this, "input text \"" + escapedText + "\"");
                     }
                 }
             })
