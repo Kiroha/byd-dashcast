@@ -1129,25 +1129,37 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // 1. Force-stop (kill) l'application tierce.
-                    //    Indispensable si elle tournait déjà sur l'écran principal (display 0)
-                    //    sinon le lancement via Trampoline (display 2) ne fait que ramener
-                    //    la tâche existante au premier plan sans changer de display.
-                    dadb.shell("am force-stop " + targetPackage);
-                    Thread.sleep(300);
+                    // Résolution directe de l'Intent de lancement de l'application tierce.
+                    android.content.pm.PackageManager pm = context.getPackageManager();
+                    android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
+                    if (li == null) {
+                        try {
+                            android.content.pm.PackageInfo pi = pm.getPackageInfo(targetPackage, android.content.pm.PackageManager.GET_ACTIVITIES);
+                            if (pi.activities != null && pi.activities.length > 0) {
+                                li = new android.content.Intent();
+                                li.setComponent(new android.content.ComponentName(targetPackage, pi.activities[0].name));
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (li == null || li.getComponent() == null) {
+                        callback.onError("Aucune activité trouvée pour " + targetPackage);
+                        return;
+                    }
+                    String compName = li.getComponent().flattenToShortString();
 
-                    // 2. Lancement du trampoline sur le bon display.
-                    String pkg = context.getPackageName();
-                    // --es target_package <pkg>  → passé à ClusterTrampolineActivity.onCreate()
+                    // Lancement natif de l'app via le shell ADB (am start) au lieu du Trampoline.
+                    // L'avantage d'ADB (uid=2000), c'est qu'il manipule nativement
+                    // le Tâche/Stack sans nécessiter un kill (force-stop) de l'app si elle
+                    // tournait déjà sur l'écran principal. "am start" gère le reparentement.
                     String cmd = "am start --display " + displayId
                             + " --windowingMode 5"
-                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
-                            + " --es target_package " + targetPackage
+                            + " -n " + compName
                             + " 2>&1";
-                    AppLogger.i(TAG, "ADB launchTrampoline: " + cmd);
+                    AppLogger.i(TAG, "ADB launch natif: " + cmd);
+                    
                     AdbShellResponse r = dadb.shell(cmd);
                     String out = r.getAllOutput().trim();
-                    AppLogger.i(TAG, "ADB launchTrampoline result: " + out);
+                    AppLogger.i(TAG, "ADB launch result: " + out);
                     if (out.contains("Error") || out.contains("Exception")
                             || out.contains("Permission Denial")) {
                         callback.onError(out);
