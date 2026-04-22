@@ -145,9 +145,11 @@ public class MainActivity extends AppCompatActivity
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
 
         // Déverrouiller les APIs cachées Android (SurfaceControl, etc.)
-        // Doit être appelé avant tout appel à ClusterMirrorManager.startMirror().
+        // Doit être appelé avant tout appel à ClusterMirrorManager.startMirror(this, ).
         // Même mécanisme que WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
         com.byd.myapp.dashboard.ClusterMirrorManager.unlockHiddenApis();
+        // Prédémarrer le MirrorDaemon (app_process via ADB) pour le Real-Time Cluster Mirror + Touch
+        AdbLocalClient.startMirrorDaemon(this);
         // Bouton flottant LOG — debug uniquement (absent en release)
         if (BuildConfig.DEBUG) {
             startService(new Intent(this, FloatingLogButton.class));
@@ -672,7 +674,7 @@ public class MainActivity extends AppCompatActivity
 
         AppLogger.d(TAG, "attemptStartMirror → display=" + displayId
                 + " view=" + viewW + "×" + viewH);
-        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(
+        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(this, 
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
 
         if (mirrorOk) {

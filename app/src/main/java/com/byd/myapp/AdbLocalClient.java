@@ -82,6 +82,26 @@ public class AdbLocalClient {
      * Rappel : Freedom OFF = display 1 absent de DisplayManager (confirmé 18/04/2026).
      * En cas d'erreur ADB, on retourne INACTIVE (déclenchera startFreedom en fallback).
      */
+    public static void startMirrorDaemon(final Context context) {
+        sExecutor.execute(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    String psOut = safeOut(dadb.shell("ps -A | grep MirrorDaemon 2>&1").getAllOutput());
+                    if (psOut.contains("MirrorDaemon")) {
+                        AppLogger.i(TAG, "MirrorDaemon tourne deja, pas besoin de le relancer.");
+                        return;
+                    }
+                    String apkPath = context.getPackageCodePath();
+                    String cmd = "export CLASSPATH=" + apkPath + " && nohup app_process /system/bin com.byd.myapp.daemon.MirrorDaemon </dev/null >/dev/null 2>&1 &";
+                    dadb.shell(cmd);
+                    AppLogger.i(TAG, "MirrorDaemon lance via ADB (app_process).");
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "Erreur demarrage MirrorDaemon", e);
+                }
+            }
+        });
+    }
+
     public static void checkFreedomState(final Context context, final FreedomStateCallback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
