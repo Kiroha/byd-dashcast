@@ -10,6 +10,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 
 import java.lang.reflect.Method;
 
@@ -154,74 +156,53 @@ public class MirrorDaemon {
         }).start();
     }
 
-    private static IBinder mMirrorToken = null;
+    private static VirtualDisplay mVirtualDisplay = null;
 
     private static void stopMirrorNatively() {
-        if (mMirrorToken != null) {
+        if (mVirtualDisplay != null) {
             try {
-                Class<?> scClass = Class.forName("android.view.SurfaceControl");
-                Method destroy = scClass.getMethod("destroyDisplay", IBinder.class);
-                destroy.invoke(null, mMirrorToken);
-                Log.i(TAG, "Miroir natif detruit par le Daemon.");
+                mVirtualDisplay.release();
+                Log.i(TAG, "Miroir VirtualDisplay detruit par le Daemon.");
             } catch (Exception e) {
                 Log.e(TAG, "Erreur destruction miroir", e);
             }
-            mMirrorToken = null;
+            mVirtualDisplay = null;
         }
     }
 
     private static void startMirrorNatively(Surface targetSurface, int viewW, int viewH, int mClusterW, int mClusterH) {
         try {
-            Class<?> scClass = Class.forName("android.view.SurfaceControl");
-
-            // Nettoyage ancien token si existant
-            if (mMirrorToken != null) {
-                Method destroy = scClass.getMethod("destroyDisplay", IBinder.class);
-                destroy.invoke(null, mMirrorToken);
-                mMirrorToken = null;
+            if (mVirtualDisplay != null) {
+                mVirtualDisplay.release();
+                mVirtualDisplay = null;
             }
 
-            // Layer stack info (Cluster = display 1 généralement, on force stack id = 1)
-            int layerStack = 1; 
+            Class<?> atClass = Class.forName("android.app.ActivityThread");
+            Object thread = atClass.getMethod("systemMain").invoke(null);
+            Context systemContext = (Context) thread.getClass().getMethod("getSystemContext").invoke(thread);
 
-            // Create display
-            Method createDisplay = scClass.getMethod("createDisplay", String.class, boolean.class);
-            IBinder mirrorToken = (IBinder) createDisplay.invoke(null, "byd_cluster_mirror", false);
-            if (mirrorToken == null) {
-                mirrorToken = (IBinder) createDisplay.invoke(null, "byd_cluster_mirror", true);
-            }
-            if (mirrorToken == null) {
-                Log.e(TAG, "createDisplay a renvoyé null même en uid=2000.");
+            DisplayManager dm = (DisplayManager) systemContext.getSystemService(Context.DISPLAY_SERVICE);
+            if (dm == null) {
+                Log.e(TAG, "DisplayManager non trouvé.");
                 return;
             }
-            Log.i(TAG, "Token de display créé : " + mirrorToken);
 
-            float scale = Math.min((float) viewW / mClusterW, (float) viewH / mClusterH);
-            int drawW = Math.round(mClusterW * scale);
-            int drawH = Math.round(mClusterH * scale);
-            int offsetX = (viewW - drawW) / 2;
-            int offsetY = (viewH - drawH) / 2;
-            Rect srcRect = new Rect(0, 0, mClusterW, mClusterH);
-            Rect dstRect = new Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH);
-
-            Class<?> txClass = null;
-            for (Class<?> inner : scClass.getDeclaredClasses()) {
-                if (inner.getSimpleName().equals("Transaction")) {
-                    txClass = inner;
-                    break;
-                }
+            // Flags: 1=PUBLIC, 2=PRESENTATION, 8=AUTO_MIRROR => 11
+            int flags = 11;
+            
+            // Nom hardcodé qui bypass les protections BYD
+            String displayName = "fission_bg_xdjaVirtualSurface";
+            
+            mVirtualDisplay = dm.createVirtualDisplay(displayName, mClusterW, mClusterH, 320, targetSurface, flags);
+            
+            if (mVirtualDisplay == null) {
+                Log.e(TAG, "Echec creation VirtualDisplay par Daemon.");
+                return;
             }
 
-            Object tx = txClass.getConstructor().newInstance();
-            txClass.getMethod("setDisplaySurface", IBinder.class, Surface.class).invoke(tx, mirrorToken, targetSurface);
-            txClass.getMethod("setDisplayLayerStack", IBinder.class, int.class).invoke(tx, mirrorToken, layerStack);
-            txClass.getMethod("setDisplayProjection", IBinder.class, int.class, Rect.class, Rect.class).invoke(tx, mirrorToken, 0, srcRect, dstRect);
-            txClass.getMethod("apply").invoke(tx);
-
-            mMirrorToken = mirrorToken;
-            Log.i(TAG, "Miroir SurfaceControl démarré avec succès par le Daemon !");
+            Log.i(TAG, "Miroir Daemon (DisplayManager) démarré avec succès sous le nom: " + displayName);
         } catch (Exception e) {
-            Log.e(TAG, "Erreur lors du démarrage du miroir natif", e);
+            Log.e(TAG, "Erreur lors du démarrage du miroir Daemon natif", e);
         }
     }
 }
