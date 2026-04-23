@@ -267,6 +267,7 @@ BYDAppLog_CL | where Tag_s in ("ClusterMirrorManager","AdbLocalClient","ClusterM
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **2.15** | 120 | Fix native SurfaceControl mirror restoration (uncomment disabled block + daemon delegation) |
 | **2.14** | 119 | Freedom proxy injected: `app_process` pseudo-daemon to completely bypass Freedom APK + diagnostics IPC testing |
 | **2.09** | 114 | Perf & Sanity checks: `AppLogger` O(1) ArrayDeque allocation, replaced `new Thread()` with `ExecutorService` in `AdbLocalClient`, cleaned up dead logic |
 | **2.08** | 113 | Fix double `startFreedom()` race condition: `freedomJustStarted` flag propagated `ClusterService→DashboardDisplayHelper→ClusterManager`; `sendActivationSequence()` extracted as class-level method (was illegally nested in anonymous Callback); `DashboardDisplayHelper.start(boolean)` + `start()` no-arg overload |
