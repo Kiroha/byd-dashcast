@@ -280,7 +280,17 @@
             android:layout_marginBottom="16dp"/>
 
     
-        <!-- Bloc Test Daemon -->
+        <!-- Bloc Test Sniffer et Daemon -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Système — Daemon &amp; Sniffer"
+            android:textColor="#FFCC00"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
         <Button
             android:id="@+id/btn_test_daemon"
             android:layout_width="match_parent"
@@ -288,6 +298,24 @@
             android:text="Lancer pseudo-daemon (Freedom IPC)"
             android:textSize="13sp"
             android:backgroundTint="#d81b60"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_start_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Activer Sniffer Système (Arrière-plan)"
+            android:textSize="13sp"
+            android:backgroundTint="#811122"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_export_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📤 Exporter le rapport du Sniffeur"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 </LinearLayout>
 </ScrollView>

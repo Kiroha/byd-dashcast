@@ -41,6 +41,8 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnBootReceiver;
     private Button   btnBootReceiverShare;
     private Button   btnTestDaemon;
+    private Button   btnStartSniffer;
+    private Button   btnExportSniffer;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -73,6 +75,8 @@ public class DiagActivity extends AppCompatActivity {
         btnBootReceiver       = (Button)   findViewById(R.id.btn_boot_receiver);
         btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
         btnTestDaemon = (Button) findViewById(R.id.btn_test_daemon);
+        btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
+        btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
 
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -368,6 +372,43 @@ public class DiagActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private final String SNIFFER_FILE_NAME = "BYD_Sniffer_Dump.txt";
+
+    private void startSniffer() {
+        android.widget.Toast.makeText(DiagActivity.this, "Sniffeur système démarré (Background)", android.widget.Toast.LENGTH_LONG).show();
+        AppLogger.i("DiagSniffer", "Lancement du Sniffeur système...");
+        
+        java.io.File logFile = new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_NAME);
+        String logPath = logFile.getAbsolutePath();
+        
+        String logcatCmd = "logcat -v threadtime -b all >> " + logPath + " 2>&1";
+        String amMonitorCmd = "am monitor >> " + logPath + " 2>&1";
+        
+        String dumpsysHeaderCmd = "echo '\n--- DUMPSYS SURFACEFLINGER ---' >> " + logPath + " && dumpsys SurfaceFlinger >> " + logPath;
+        
+        String fullCmd = "echo '--- MAIN SNIFFER STARTED ---' > " + logPath + " && nohup sh -c \"" + logcatCmd + "\" & nohup sh -c \"" + amMonitorCmd + "\" & nohup sh -c \"" + dumpsysHeaderCmd + "\" &";
+        AdbLocalClient.executeShell(DiagActivity.this, fullCmd);
+    }
+
+    private void exportSnifferReport() {
+        java.io.File logFile = new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_NAME);
+        if (!logFile.exists() || logFile.length() == 0) {
+            android.widget.Toast.makeText(DiagActivity.this, "Aucun rapport trouvé.", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        try {
+            android.net.Uri fileUri = androidx.core.content.FileProvider.getUriForFile(DiagActivity.this, getPackageName() + ".fileprovider", logFile);
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, fileUri);
+            shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Partager le Sniffer"));
+        } catch (Exception e) {
+            AppLogger.e("DiagSniffer", "Erreur export", e);
+        }
     }
 
     private void testLaunchFreedomDaemon() {
