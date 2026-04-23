@@ -78,6 +78,10 @@ public class DiagActivity extends AppCompatActivity {
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
 
+        btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
+        btnStartSniffer.setOnClickListener(v -> startSniffer());
+        btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
+
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
             @Override

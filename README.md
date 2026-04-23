@@ -267,6 +267,7 @@ BYDAppLog_CL | where Tag_s in ("ClusterMirrorManager","AdbLocalClient","ClusterM
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **2.17** | 122 | Bugfix: Attach click listeners to sniffer & daemon buttons in DiagActivity |
 | **2.16** | 121 | Added Headless System Sniffer (logcat, am monitor, dumpsys via ADB) with Export button |
 | **2.15** | 120 | Fix native SurfaceControl mirror restoration (uncomment disabled block + daemon delegation) |
 | **2.14** | 119 | Freedom proxy injected: `app_process` pseudo-daemon to completely bypass Freedom APK + diagnostics IPC testing |
