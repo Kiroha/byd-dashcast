@@ -46,8 +46,9 @@ public class ClusterMirrorManager {
     private static final int TYPE_APPLICATION_OVERLAY = 2038;
     // Flags: FLAG_NOT_FOCUSABLE(8) | FLAG_LAYOUT_IN_SCREEN(256)
     private static final int OVERLAY_FLAGS = 0x108;
-    // VirtualDisplay flags = DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
-    private static final int VDISPLAY_FLAGS = 320;
+    // VirtualDisplay flags = PUBLIC(1) | DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
+    // PUBLIC(1) requis pour que uid=10100 puisse lancer des activités dessus sans INTERNAL_SYSTEM_WINDOW
+    private static final int VDISPLAY_FLAGS = 321;
 
     // ── A. Cluster overlay (TextureView sur le cluster physique) ─────────────
     private VirtualDisplay mClusterOverlayVD     = null;
@@ -297,9 +298,22 @@ public class ClusterMirrorManager {
         }
     }
 
+    /**
+     * Arrête uniquement le preview local (appelé depuis MainActivity.onStop).
+     * L'overlay cluster sur le display physique reste actif dans ClusterService.
+     */
     public void stopMirror(Context context) {
         stopPreview();
+        AppLogger.i(TAG, "ClusterMirrorManager preview arrêté (overlay cluster toujours actif)");
+    }
+
+    /**
+     * Libère TOUT : preview + overlay cluster.
+     * À appeler uniquement depuis ClusterService.onDestroy().
+     */
+    public void release(Context context) {
+        stopPreview();
         stopClusterOverlay();
-        AppLogger.i(TAG, "ClusterMirrorManager arrêté");
+        AppLogger.i(TAG, "ClusterMirrorManager libéré (preview + overlay)");
     }
 }

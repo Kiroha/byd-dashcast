@@ -121,8 +121,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // le launchOnDashboard (postDelayed 2s) pourrait poster une callback
         // sur un service détruit (NPE / leak de thread ADB).
         mMainHandler.removeCallbacksAndMessages(null);
-        // Arrêter le miroir SurfaceControl si actif.
-        mMirrorManager.stopMirror(this);
+        // release() = preview + overlay cluster (stopMirror() ne libère que le preview)
+        mMirrorManager.release(this);
+        mClusterOverlayDisplayId = -1;
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
