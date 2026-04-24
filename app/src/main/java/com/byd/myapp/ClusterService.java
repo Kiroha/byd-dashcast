@@ -336,7 +336,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         }
                         return;
                     }
-                    launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
+                    // MULTIPLE_TASK (pas CLEAR_TASK) : permet 2 instances indépendantes
+                    // sans tuer l'instance déjà lancée sur le cluster (Display 2)
+                    launchIntent.addFlags(0x10000000 | 0x08000000); // NEW_TASK | MULTIPLE_TASK
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
 
