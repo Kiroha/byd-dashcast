@@ -37,10 +37,6 @@ public class DashboardLauncher {
         AppLogger.log(TAG, "Display cluster enregistré : id=" + displayId);
     }
 
-    public boolean isDashboardAvailable() {
-        return mDashboardDisplayId >= 0;
-    }
-
     public int getDashboardDisplayId() {
         return mDashboardDisplayId;
     }

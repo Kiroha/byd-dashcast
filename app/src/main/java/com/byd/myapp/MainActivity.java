@@ -1,8 +1,10 @@
 package com.byd.myapp;
 
 import android.content.ComponentName;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -33,7 +35,6 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.dashboard.DashboardLauncher;
 import com.byd.myapp.model.AppInfo;
 
@@ -127,6 +128,30 @@ public class MainActivity extends AppCompatActivity
 
     // Screenshot mirror loop (fallback quand SurfaceControl.createDisplay() échoue)
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
+
+    // Daemon MirrorDaemon — Binder reçu via broadcast ACTION_DAEMON_READY
+    private IBinder mDaemonBinder = null;
+    private final BroadcastReceiver mDaemonReadyReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle extras = intent.getExtras();
+            if (extras == null) return;
+            IBinder binder = extras.getBinder("daemon_binder");
+            if (binder == null) return;
+            mDaemonBinder = binder;
+            AppLogger.i(TAG, "Daemon Binder reçu OK");
+            // Transmettre au forwarder pour injection touch/key via uid=2000
+            if (mServiceBound && mClusterService != null) {
+                mClusterService.getInputForwarder().setDaemonBinder(mDaemonBinder);
+            }
+            // Démarrer le miroir si la surface est disponible
+            if (mMirrorHolder != null && mMirrorHolder.getSurface().isValid()
+                    && panelClusterControl != null
+                    && panelClusterControl.getVisibility() == View.VISIBLE) {
+                attemptStartMirrorWithCurrentHolder();
+            }
+        }
+    };
     // volatile : lu depuis le thread ADB background (captureClusterDisplay callback),
     // écrit depuis le main thread (stopScreenshotLoop). Sans volatile, le thread ADB
     // pourrait voir la vieille valeur non-null après que stopScreenshotLoop() ait mis null.
@@ -152,6 +177,10 @@ public class MainActivity extends AppCompatActivity
         if (BuildConfig.DEBUG) {
             startService(new Intent(this, FloatingLogButton.class));
         }
+
+        // Receiver pour récupérer le Binder du daemon MirrorDaemon (uid=2000)
+        registerReceiver(mDaemonReadyReceiver,
+                new IntentFilter(com.byd.myapp.daemon.MirrorDaemon.ACTION_DAEMON_READY));
         
         // Bouton flottant "GPS" pour rouvrir rapidement le streaming Waze
         startService(new Intent(this, FloatingRemoteButton.class));
@@ -326,6 +355,10 @@ public class MainActivity extends AppCompatActivity
     protected void onStart() {
         super.onStart();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
+        // Demander au daemon de re-broadcaster son Binder s'il était déjà lancé
+        if (mDaemonBinder == null) {
+            sendBroadcast(new Intent(com.byd.myapp.daemon.MirrorDaemon.ACTION_REQUEST_BINDER));
+        }
         if (mServiceBound && mClusterService != null) {
             // Activity revenue au premier plan : ré-attacher le listener
             // (onStop l'avait mis à null pour éviter les leaks pendant le background)
@@ -367,6 +400,7 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
+        unregisterReceiver(mDaemonReadyReceiver);
         if (mServiceBound) {
             unbindService(mServiceConn);
             mServiceBound  = false;
@@ -689,29 +723,27 @@ public class MainActivity extends AppCompatActivity
 
         AppLogger.d(TAG, "attemptStartMirror → view=" + viewW + "×" + viewH
                 + " (clusterDisplay=" + (clusterDisplay != null ? displayId : "null") + ")");
-        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(this,
-                clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+
+        // Chemin préféré : miroir via daemon uid=2000 (ACCESS_SURFACE_FLINGER garanti)
+        boolean mirrorOk = false;
+        if (mDaemonBinder != null) {
+            mirrorOk = mClusterService.getMirrorManager().startMirrorViaDaemon(
+                    mDaemonBinder, clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+        }
+        // Fallback : SurfaceControl direct uid=10100 (échoue si ACCESS_SURFACE_FLINGER absent)
+        if (!mirrorOk) {
+            mirrorOk = mClusterService.getMirrorManager().startMirror(this,
+                    clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+        }
 
         if (mirrorOk) {
-            // SurfaceControl mirror actif → afficher le SurfaceView, stopper les screenshots
-            // Le contenu du cluster est déjà mirrioré via setDisplayLayerStack — pas besoin de
-            // lancer une app sur un display séparé.
+            // Miroir actif → afficher le SurfaceView, stopper les screenshots
             clusterMirror.setVisibility(View.VISIBLE);
             clusterMirrorScreenshot.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
             stopScreenshotLoop();
-
-            // Si c'est un fallback VirtualDisplay (ACCESS_SURFACE_FLINGER absent),
-            // lancer l'app sur ce VirtualDisplay pour qu'on voie quelque chose
-            int previewId = mClusterService.getMirrorManager().getPreviewDisplayId();
-            if (previewId > 0 && mCurrentDashboardPkg != null) {
-                AppLogger.i(TAG, "Fallback VD preview — lancement " + mCurrentDashboardPkg
-                        + " sur display=" + previewId);
-                mClusterService.launchOnSpecificDisplay(mCurrentDashboardPkg, previewId, null);
-            }
         } else {
-            // SurfaceControl indisponible (ACCESS_SURFACE_FLINGER non accordé) →
-            // fallback : screencap périodique via ADB shell (uid=2000)
+            // Aucun miroir disponible → screencap périodique via ADB shell
             clusterMirror.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
             startScreenshotLoop(displayId);
@@ -755,6 +787,11 @@ public class MainActivity extends AppCompatActivity
     private void stopClusterMirror() {
         if (mServiceBound && mClusterService != null) {
             boolean wasActive = mClusterService.getMirrorManager().isMirrorActive();
+            // Arrêter le miroir daemon si actif
+            if (mDaemonBinder != null) {
+                mClusterService.getMirrorManager().stopMirrorViaDaemon(mDaemonBinder);
+            }
+            // Nettoyage local (token SurfaceControl direct, VirtualDisplay résiduel)
             mClusterService.getMirrorManager().stopMirror(this);
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
         }
@@ -1268,7 +1305,8 @@ public class MainActivity extends AppCompatActivity
      * ────────────────────────────────────────────────────────────────────────────
      */
     private void loadAppsAsync() {
-        java.util.concurrent.Executors.newSingleThreadExecutor().execute(new Runnable() {
+        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor();
+        loader.execute(new Runnable() {
             @Override public void run() {
                 PackageManager pm = getPackageManager();
                 Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
@@ -1298,6 +1336,7 @@ public class MainActivity extends AppCompatActivity
                 });
             }
         });
+        loader.shutdown(); // le thread se termine dès que la tâche ci-dessus est finie
     }
 
     private void showKeyboardDialog() {

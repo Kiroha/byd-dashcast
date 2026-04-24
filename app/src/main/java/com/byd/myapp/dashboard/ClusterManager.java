@@ -7,7 +7,6 @@ import android.os.Handler;
 import android.os.Looper;
 import com.byd.myapp.AdbLocalClient;
 import com.byd.myapp.AppLogger;
-import com.byd.myapp.MainActivity;
 import android.view.Display;
 
 /**
@@ -66,8 +65,6 @@ public class ClusterManager {
     // CMD=1 : déconnecte Qt complètement — NE JAMAIS UTILISER (détruit display 1)
     // Commandes taille d'écran cluster (DiLink 3.0/Di4.0) :
     public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMÉ 16/04/2026)
-    public static final int CMD_SCREEN_SIZE_88       = 29; // 切换到8.8寸屏  — Atto3/Dolphin etc.
-    public static final int CMD_SCREEN_SIZE_1025     = 31; // 切换到10.25寸屏 — autres modèles
     // Timeout d'attente du VirtualDisplay après sendInfo(projection_on)
     // Réduit à 3s : le VirtualDisplay est présent au boot (AutoDisplayService), n'a pas besoin de 8s.
     private static final long VIRTUAL_DISPLAY_TIMEOUT_MS = 3000;

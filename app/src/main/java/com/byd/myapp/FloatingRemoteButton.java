@@ -18,9 +18,9 @@ import android.widget.TextView;
 /**
  * FloatingRemoteButton — bouton overlay persistant (visible sur tous les écrans).
  *
- * Affiche un petit badge "LOG" déplaçable dans le coin de l'écran.
- * • Un tap ouvre LogActivity.
- * • Long press efface le journal.
+ * Affiche un petit badge "GPS" déplaçable dans le coin de l'écran.
+ * • Un tap ramène MainActivity au premier plan.
+ * • Long press ferme ce service overlay.
  *
  * Démarre comme foreground Service depuis MainActivity.onCreate() et reste
  * actif tanto que l'app est vivante.
@@ -30,9 +30,9 @@ import android.widget.TextView;
  */
 public class FloatingRemoteButton extends Service {
 
-    private static final String TAG     = "FloatingLogBtn";
-    private static final String CHANNEL = "floating_log_btn";
-    private static final int    NOTIF_ID = 9988;
+    private static final String TAG     = "FloatingRemoteBtn";
+    private static final String CHANNEL = "floating_remote_btn";
+    private static final int    NOTIF_ID = 9989;
 
     private WindowManager mWindowManager;
     private View          mFloatView;
@@ -183,9 +183,9 @@ public class FloatingRemoteButton extends Service {
     private void startForegroundCompat() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(
-                CHANNEL, "Journal de bord", NotificationManager.IMPORTANCE_MIN));
+                CHANNEL, "Bouton rapide", NotificationManager.IMPORTANCE_MIN));
 
-        Intent tapIntent = new Intent(this, LogActivity.class);
+        Intent tapIntent = new Intent(this, MainActivity.class);
         tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pi = PendingIntent.getActivity(
                 this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
@@ -193,7 +193,7 @@ public class FloatingRemoteButton extends Service {
         Notification notif = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
                 .setContentTitle("MyBYDApp")
-                .setContentText("Journal actif — tap pour ouvrir")
+                .setContentText("Tap pour revenir sur l'app")
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .build();

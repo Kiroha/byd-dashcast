@@ -396,6 +396,7 @@ public class SysInfoActivity extends AppCompatActivity {
             case Display.STATE_ON:      return "ON";
             case Display.STATE_OFF:     return "OFF";
             case Display.STATE_DOZE:    return "DOZE";
+            case 4:                     return "DOZE_SUSPEND"; // Display.STATE_DOZE_SUSPEND = 4 (API 23+)
             case Display.STATE_UNKNOWN: return "UNKNOWN";
             default:                    return "state=" + state;
         }

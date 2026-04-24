@@ -368,13 +368,14 @@ public class AdbLocalClient {
      *
      * Mécanisme : Freedom persiste son mode navigation dans
      *   /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
-     * sous la clé "navigationType" (int) : 0=全屏, 1=小屏, 2=关闭.
-     * La valeur par défaut (fichier absent) est 0 = 全屏.
+     * sous la clé "navigationType" (int) — HashMap Java sérialisé (ObjectOutputStream).
+     * Valeur 1 = 全屏导航 (projection plein écran, confirmé voiture v2.29).
+     * Sans fichier (défaut) = navigationType absent → BootReceiver retourne sans créer de VirtualDisplay.
      *
      * Séquence :
-     *   1. force-stop Freedom (s'il tourne avec une mauvaise config, il enverrait sendInfo(18))
-     *   2. supprimer properties.xml → reset vers les défauts (navigationType=0 = 全屏)
-     *   3. am start Freedom → démarre avec 全屏导航, envoie sendInfo(16) de son côté
+     *   1. force-stop Freedom (nettoyage avant redémarrage propre)
+     *   2. écrire properties.xml avec navigationType=1 (全屏导航)
+     *   3. am broadcast BOOT_COMPLETED → BootReceiver lit le fichier et crée le VirtualDisplay
      *
      * La callback est appelée sur un thread ADB (background).
      */
@@ -1150,49 +1151,7 @@ public class AdbLocalClient {
     }
 
     /**
-     * Lance l'application tierce directement via notre Daemon Java (UID 2000).
-     * Bypasse complètement la syntaxe de compilation "am start" d'AOSP/BYD qui plante.
-     */
-    public static void launchDirectViaAdb(final Context context, final String targetPackage,
-            final int displayId, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try {
-                    android.content.pm.PackageManager pm = context.getPackageManager();
-                    android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
-                    if (li == null) {
-                        try {
-                            android.content.pm.PackageInfo pi = pm.getPackageInfo(targetPackage, android.content.pm.PackageManager.GET_ACTIVITIES);
-                            if (pi.activities != null && pi.activities.length > 0) {
-                                li = new android.content.Intent();
-                                li.setComponent(new android.content.ComponentName(targetPackage, pi.activities[0].name));
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                    if (li == null || li.getComponent() == null) {
-                        callback.onError("Aucune activité trouvée pour " + targetPackage);
-                        return;
-                    }
-                    
-                    AppLogger.i(TAG, "Broadcast daemon_launch pour " + targetPackage + " sur display " + displayId);
-                    android.content.Intent intent = new android.content.Intent("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
-                    intent.putExtra("pkg", li.getComponent().getPackageName());
-                    intent.putExtra("cls", li.getComponent().getClassName());
-                    intent.putExtra("displayId", displayId);
-                    context.sendBroadcast(intent);
-                    
-                    callback.onSuccess("Broadcast envoyé au Daemon.");
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchDirectViaAdb échoué", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-trampoline-thread
-    }
-
-    /**
-     * Variante de launchDirectViaAdb avec des bounds FREEFORM explicites envoyés au Daemon.
+     * Lance une application tierce via le MirrorDaemon (uid=2000) avec des bounds FREEFORM explicites.
      */
     public static void launchDirectWithBounds(final Context context,
             final String targetPackage, final int displayId,
