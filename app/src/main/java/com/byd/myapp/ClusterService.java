@@ -226,22 +226,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AppLogger.log(TAG, "launchOnDashboard — délai 2s → " + packageName);
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
-                // v1.73+ : lancement direct via ADB shell (uid=2000) qui possède
-                // INTERNAL_SYSTEM_WINDOW sur cette ROM. ADB shell lance notre trampoline
-                // exporté sur display 1 avec --es target_package=<tier>, le trampoline
-                // démarre ensuite le tiers depuis son propre contexte (display 1).
-                //
-                // On NE PASSE PLUS par mLauncher.launchOnDashboard() (Context.startActivity)
-                // qui échoue toujours faute de INTERNAL_SYSTEM_WINDOW (mismatch keystore
-                // confirmé par dump v1.72 : notre sig=b4addb29 ≠ ROM sig=22216e4d).
-                // v2.34 : préférer l'overlay VD si disponible, fallback Freedom display si échec.
-                // L'overlay (display=3) peut échouer si createVirtualDisplay a eu une SecurityException.
-                final int freedomDisplayId = mDisplayHelper.getKnownClusterDisplayId();
-                final int displayId = (mClusterOverlayDisplayId > 0)
-                        ? mClusterOverlayDisplayId : freedomDisplayId;
-                AppLogger.i(TAG, "Lancement IActivityManager sur display=" + displayId
-                        + (mClusterOverlayDisplayId > 0 ? " [OVERLAY ✓]" : " [FREEDOM direct]")
-                        + " → " + packageName);
+                // Lancement direct via IActivityManager sur le display Freedom (prouvé v2.29).
+                // L'overlay VD (mClusterOverlayDisplayId) est en cours d'expérimentation
+                // mais ne remplace pas encore le lancement direct.
+                final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+                AppLogger.i(TAG, "Lancement IActivityManager sur display=" + displayId + " → " + packageName);
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
@@ -252,7 +241,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
 
-                    boolean launched = false;
                     try {
                         Class<?> amClass = Class.forName("android.app.ActivityManager");
                         java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
@@ -269,45 +257,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         AppLogger.i(TAG, "Calling IActivityManager.startActivityAsUser callerPackage=" + getPackageName());
                         startActivityAsUserMethod.invoke(iActivityManager, null, getPackageName(),
                                 launchIntent, null, null, null, 0, 0, null, opts.toBundle(), -2);
-                        launched = true;
                     } catch (Exception ex) {
-                        AppLogger.w(TAG, "IActivityManager display=" + displayId + " ECHEC: "
-                                + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()));
+                        AppLogger.e(TAG, "Erreur appel IActivityManager depuis MyBYDApp, fallback context", ex);
+                        startActivity(launchIntent, opts.toBundle());
                     }
 
-                    // Si l'overlay display a échoué, retenter sur Freedom display (PUBLIC, prouvé v2.29)
-                    if (!launched && displayId != freedomDisplayId && freedomDisplayId > 0) {
-                        AppLogger.i(TAG, "Retry sur Freedom display=" + freedomDisplayId + " → " + packageName);
-                        opts = android.app.ActivityOptions.makeBasic();
-                        opts.setLaunchDisplayId(freedomDisplayId);
-                        try {
-                            Class<?> amClass = Class.forName("android.app.ActivityManager");
-                            java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
-                            Object iam = getServiceMethod.invoke(null);
-                            Class<?> iAmClass = Class.forName("android.app.IActivityManager");
-                            Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
-                            Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
-                            java.lang.reflect.Method startMethod = iAmClass.getMethod(
-                                    "startActivityAsUser", iAppThreadClass, String.class,
-                                    android.content.Intent.class, String.class,
-                                    android.os.IBinder.class, String.class,
-                                    int.class, int.class, profilerInfoClass,
-                                    android.os.Bundle.class, int.class);
-                            startMethod.invoke(iam, null, getPackageName(), launchIntent,
-                                    null, null, null, 0, 0, null, opts.toBundle(), -2);
-                            launched = true;
-                            AppLogger.i(TAG, "Lancement Freedom display=" + freedomDisplayId + " ✓");
-                        } catch (Exception ex2) {
-                            AppLogger.e(TAG, "Retry Freedom ECHEC", ex2);
-                        }
-                    }
-
-                    if (!launched) {
-                        AppLogger.e(TAG, "Echec lancement " + packageName + " sur tous les displays");
-                        return;
-                    }
-
-                    AppLogger.i(TAG, "Lancement réussi !");
+                    AppLogger.i(TAG, "Appel IActivityManager réussi depuis MyBYDApp !");
                     if (callback != null) {
                         mMainHandler.post(new Runnable() {
                             @Override public void run() { callback.onResult(true); }
