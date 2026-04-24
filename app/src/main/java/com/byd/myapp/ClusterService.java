@@ -66,6 +66,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
+    // v2.32 : displayId du VirtualDisplay de l'overlay TextureView sur le cluster.
+    // -1 tant que l'overlay n'est pas prêt (fallback Freedom displayId).
+    private int mClusterOverlayDisplayId = -1;
     // ────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -230,8 +233,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // On NE PASSE PLUS par mLauncher.launchOnDashboard() (Context.startActivity)
                 // qui échoue toujours faute de INTERNAL_SYSTEM_WINDOW (mismatch keystore
                 // confirmé par dump v1.72 : notre sig=b4addb29 ≠ ROM sig=22216e4d).
-                final int displayId = mDisplayHelper.getKnownClusterDisplayId();
-                AppLogger.i(TAG, "Lancement direct DEPUIS l'appli (uid=10xxx) via IActivityManager sur display=" + displayId + " -> " + packageName);
+                // v2.32 : préférer le VirtualDisplay de l'overlay (TextureView sur cluster)
+                // si disponible, sinon fallback sur le display Freedom directement.
+                final int freedomDisplayId = mDisplayHelper.getKnownClusterDisplayId();
+                final int displayId = (mClusterOverlayDisplayId > 0)
+                        ? mClusterOverlayDisplayId : freedomDisplayId;
+                AppLogger.i(TAG, "Lancement IActivityManager sur display=" + displayId
+                        + (mClusterOverlayDisplayId > 0 ? " [OVERLAY v2.32 ✓]" : " [FREEDOM fallback]")
+                        + " → " + packageName);
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
@@ -408,13 +417,35 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // ── DashboardDisplayHelper.Listener ─────────────────────────────────────
 
     @Override
-    public void onDashboardDisplayConnected(Display display, int displayId) {
+    public void onDashboardDisplayConnected(final Display display, final int displayId) {
         AppLogger.log(TAG, "Display cluster connecté : id=" + displayId);
         mLauncher.setDashboardDisplayId(displayId);
         // Mettre à jour le forwarder avec les dimensions et l'ID réels du display
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
         updateNotification("Cluster actif — display " + displayId);
+
+        // ── v2.32 : overlay TextureView sur le cluster (style byd_dashboard) ──
+        // createDisplayContext(clusterDisplay) + WindowManager.addView(TextureView, TYPE_APPLICATION_OVERLAY)
+        // Requiert INTERNAL_SYSTEM_WINDOW (nous l'avons via platform.keystore).
+        // Les apps seront lancées sur mClusterOverlayDisplayId à la place du display Freedom.
+        mClusterOverlayDisplayId = -1;
+        mMirrorManager.startClusterOverlay(
+                ClusterService.this, display, mMainHandler,
+                new ClusterMirrorManager.ClusterOverlayCallback() {
+                    @Override
+                    public void onOverlayDisplayReady(int overlayDisplayId) {
+                        AppLogger.i(TAG, "Cluster overlay ✓ VD id=" + overlayDisplayId
+                                + " (remplace Freedom display=" + displayId + ")");
+                        mClusterOverlayDisplayId = overlayDisplayId;
+                    }
+                    @Override
+                    public void onOverlayFailed(String reason) {
+                        AppLogger.w(TAG, "Cluster overlay ECHEC: " + reason
+                                + " → fallback Freedom display=" + displayId);
+                    }
+                });
+
         if (mListener != null) {
             mListener.onClusterDisplayConnected(display, displayId);
         }

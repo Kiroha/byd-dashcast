@@ -1,58 +1,89 @@
 package com.byd.myapp.dashboard;
 
 import android.content.Context;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.Surface;
+import android.view.TextureView;
+import android.view.WindowManager;
+import android.graphics.SurfaceTexture;
 import com.byd.myapp.AppLogger;
 
 import java.lang.reflect.Method;
 
 /**
- * Miroir temps réel du cluster via DisplayManager.createVirtualDisplay().
+ * Miroir cluster v2.32 — Architecture "byd_dashboard style" sans ACCESS_SURFACE_FLINGER.
  *
- * Architecture v2.30 — inspirée de WindowManagement v1.2 / byd_dashboard :
- *   WindowManagement crée un TextureView, envoie sa Surface via Binder à byd_dashboard
- *   (app whitelistée BYD), qui appelle DisplayManager.createVirtualDisplay("remote_dashboard",
- *   1920, 720, 320, surface, flags=320). Les apps lancées sur ce displayId s'affichent
- *   directement dans le TextureView — aucun SurfaceControl, aucun SurfaceFlinger.
+ * Deux VirtualDisplays :
  *
- * Notre app reproduit exactement ce mécanisme SANS passer par byd_dashboard :
- *   - DisplayManager.createVirtualDisplay() avec flags=320 ne nécessite pas ACCESS_SURFACE_FLINGER
- *   - Flags 320 = VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL(256) | VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH(64)
- *   - Les apps lancées sur le previewDisplayId s'affichent dans notre SurfaceView/TextureView
+ * A) CLUSTER OVERLAY (startClusterOverlay) :
+ *    createDisplayContext(clusterDisplay) + WindowManager.addView(TextureView, TYPE=2038)
+ *    → TextureView physiquement sur le cluster (Display 2)
+ *    → createVirtualDisplay(textureView.surface) → mClusterVirtualDisplayId
+ *    → apps lancées sur mClusterVirtualDisplayId rendent dans la TextureView → cluster
+ *    Requiert : INTERNAL_SYSTEM_WINDOW (nous l'avons ✓)
  *
- * Explication des anciens échecs :
- *   - SurfaceControl.createDisplay() → null : nécessite ACCESS_SURFACE_FLINGER (signature système) BLOQUÉ
- *   - ADB screencap 800ms : fonctionne mais janky
- *   - DisplayManager.createVirtualDisplay() → FONCTIONNE sans permission spéciale
+ * B) LOCAL PREVIEW (startMirror) :
+ *    createVirtualDisplay(localSurfaceView.surface) → mPreviewDisplayId
+ *    → apps lancées sur mPreviewDisplayId rendent dans notre SurfaceView (touchable)
+ *    Aucune permission spéciale requise.
+ *
+ * Inspiré de SecondaryDisplayService.java (byd_dashboard) :
+ *   WindowManager.LayoutParams(-1, -1, 2038, 768, -1)
+ *   WindowManagerGlobal.addView(textureView, params, clusterDisplay)
  */
 public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
 
-    // Flags identiques à byd_dashboard "remote_dashboard" VirtualDisplay
-    // VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL(256) | VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH(64)
+    // TYPE_APPLICATION_OVERLAY = 2038, même valeur que byd_dashboard
+    private static final int TYPE_APPLICATION_OVERLAY = 2038;
+    // Flags: FLAG_NOT_FOCUSABLE(8) | FLAG_LAYOUT_IN_SCREEN(256)
+    private static final int OVERLAY_FLAGS = 0x108;
+    // VirtualDisplay flags = DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
     private static final int VDISPLAY_FLAGS = 320;
 
-    private VirtualDisplay mVirtualDisplay = null;
-    private int mPreviewDisplayId = -1;
-    private boolean mMirrorActive = false;
-    private int mClusterW = 1920;
-    private int mClusterH = 720;
+    // ── A. Cluster overlay (TextureView sur le cluster physique) ─────────────
+    private VirtualDisplay mClusterOverlayVD     = null;
+    private Surface        mClusterOverlaySurface = null;
+    private TextureView    mClusterOverlayView    = null;
+    private WindowManager  mClusterOverlayWm      = null;
+    private int            mClusterVirtualDisplayId = -1;
 
-    public int     getClusterWidth()      { return mClusterW; }
-    public int     getClusterHeight()     { return mClusterH; }
-    public boolean isMirrorActive()       { return mMirrorActive; }
-    public int     getPreviewDisplayId()  { return mPreviewDisplayId; }
+    // ── B. Local preview (SurfaceView dans notre app) ────────────────────────
+    private VirtualDisplay mPreviewVD    = null;
+    private int            mPreviewDisplayId = -1;
+
+    private boolean mMirrorActive = false;
+    private int     mClusterW = 1920;
+    private int     mClusterH = 720;
+
+    public int     getClusterWidth()           { return mClusterW; }
+    public int     getClusterHeight()          { return mClusterH; }
+    public boolean isMirrorActive()            { return mMirrorActive; }
+    public int     getPreviewDisplayId()       { return mPreviewDisplayId; }
+    public int     getClusterVirtualDisplayId(){ return mClusterVirtualDisplayId; }
 
     // ──────────────────────────────────────────────────────────────────────────
 
     /**
-     * Déverrouille les APIs cachées Android via VMRuntime.setHiddenApiExemptions().
-     * Conservé pour les autres usages (IActivityManager reflection, etc.).
+     * Callback pour le résultat de l'overlay cluster.
+     */
+    public interface ClusterOverlayCallback {
+        void onOverlayDisplayReady(int displayId);
+        void onOverlayFailed(String reason);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Déverrouille les APIs cachées.
      */
     public static void unlockHiddenApis() {
         try {
@@ -73,27 +104,140 @@ public class ClusterMirrorManager {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── A. CLUSTER OVERLAY ────────────────────────────────────────────────────
 
     /**
-     * Crée un VirtualDisplay connecté à la Surface cible (SurfaceView ou TextureView).
+     * Place un TextureView invisible sur le cluster (Display 2) via createDisplayContext(),
+     * puis crée un VirtualDisplay connecté à cette surface.
      *
-     * Les apps lancées sur getPreviewDisplayId() s'afficheront directement dans la vue.
-     * Flags=320 : même valeur que byd_dashboard "remote_dashboard" — pas de permission requise.
+     * Les apps lancées sur getClusterVirtualDisplayId() rendent dans ce TextureView
+     * → s'affichent sur le cluster physique.
      *
-     * @param clusterDisplay Display cluster (pour les dimensions, peut être null → 1920×720)
-     * @param targetSurface  Surface du SurfaceView ou TextureView où le rendu apparaîtra
-     * @return true si le VirtualDisplay a été créé avec succès
+     * Doit être appelé sur le main thread ou via mainHandler.
+     */
+    public void startClusterOverlay(final Context context, final Display clusterDisplay,
+            final Handler mainHandler, final ClusterOverlayCallback callback) {
+
+        if (clusterDisplay == null) {
+            AppLogger.e(TAG, "startClusterOverlay : clusterDisplay null");
+            if (callback != null) callback.onOverlayFailed("clusterDisplay null");
+            return;
+        }
+
+        // Doit s'exécuter sur le main thread (création de View)
+        mainHandler.post(new Runnable() {
+            @Override public void run() {
+                try {
+                    // Dimensions réelles du cluster
+                    Point sz = new Point(1920, 720);
+                    clusterDisplay.getRealSize(sz);
+                    mClusterW = sz.x;
+                    mClusterH = sz.y;
+
+                    // Contexte ciblant le cluster → WindowManager pour ce display
+                    final Context displayCtx = context.createDisplayContext(clusterDisplay);
+                    final WindowManager wm =
+                            (WindowManager) displayCtx.getSystemService(Context.WINDOW_SERVICE);
+                    if (wm == null) {
+                        AppLogger.e(TAG, "WindowManager null pour cluster display");
+                        if (callback != null) callback.onOverlayFailed("WindowManager null");
+                        return;
+                    }
+
+                    // TextureView qui sera le "canvas" du cluster
+                    TextureView tv = new TextureView(displayCtx);
+                    tv.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+                        @Override
+                        public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
+                            AppLogger.i(TAG, "Cluster overlay surface disponible " + w + "×" + h);
+                            Surface surface = new Surface(st);
+                            mClusterOverlaySurface = surface;
+
+                            DisplayManager dm = (DisplayManager)
+                                    context.getSystemService(Context.DISPLAY_SERVICE);
+                            if (dm == null) {
+                                if (callback != null) mainHandler.post(new Runnable() {
+                                    @Override public void run() { callback.onOverlayFailed("DisplayManager null"); }
+                                });
+                                return;
+                            }
+
+                            // VirtualDisplay connecté à la surface de la TextureView
+                            // → les apps qui rendent sur ce display s'affichent sur le cluster
+                            mClusterOverlayVD = dm.createVirtualDisplay(
+                                    "mybyd_cluster_overlay",
+                                    mClusterW, mClusterH, 320, surface, VDISPLAY_FLAGS);
+
+                            if (mClusterOverlayVD != null) {
+                                mClusterVirtualDisplayId =
+                                        mClusterOverlayVD.getDisplay().getDisplayId();
+                                AppLogger.i(TAG, "Cluster overlay VirtualDisplay ✓ → id="
+                                        + mClusterVirtualDisplayId
+                                        + " dims=" + mClusterW + "×" + mClusterH);
+                                if (callback != null) {
+                                    final int id = mClusterVirtualDisplayId;
+                                    mainHandler.post(new Runnable() {
+                                        @Override public void run() { callback.onOverlayDisplayReady(id); }
+                                    });
+                                }
+                            } else {
+                                AppLogger.e(TAG, "createVirtualDisplay overlay → null");
+                                if (callback != null) mainHandler.post(new Runnable() {
+                                    @Override public void run() { callback.onOverlayFailed("VirtualDisplay null"); }
+                                });
+                            }
+                        }
+
+                        @Override
+                        public boolean onSurfaceTextureDestroyed(SurfaceTexture st) {
+                            AppLogger.i(TAG, "Cluster overlay surface détruite");
+                            return true;
+                        }
+
+                        @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
+                        @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
+                    });
+
+                    // Paramètres identiques à byd_dashboard SecondaryDisplayService :
+                    // TYPE_APPLICATION_OVERLAY (2038), flags comme byd_dashboard (768=0x300)
+                    // Nous utilisons INTERNAL_SYSTEM_WINDOW donc 2038 est autorisé
+                    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                            mClusterW, mClusterH,
+                            TYPE_APPLICATION_OVERLAY,
+                            OVERLAY_FLAGS,
+                            PixelFormat.OPAQUE
+                    );
+                    params.gravity = Gravity.LEFT | Gravity.TOP;
+
+                    mClusterOverlayWm   = wm;
+                    mClusterOverlayView = tv;
+                    wm.addView(tv, params);
+
+                    AppLogger.i(TAG, "TextureView overlay ajouté sur cluster display="
+                            + clusterDisplay.getDisplayId()
+                            + " (" + mClusterW + "×" + mClusterH + ")");
+
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "startClusterOverlay ERREUR", e);
+                    if (callback != null) callback.onOverlayFailed(e.getMessage());
+                }
+            }
+        });
+    }
+
+    // ── B. LOCAL PREVIEW ─────────────────────────────────────────────────────
+
+    /**
+     * Crée un VirtualDisplay local connecté à la Surface de notre SurfaceView.
+     * Les apps lancées sur getPreviewDisplayId() s'affichent dans notre app (touchable).
      */
     public boolean startMirror(Context context, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
-        // Si déjà actif avec un displayId valide, ne pas recréer
-        if (mMirrorActive && mPreviewDisplayId > 0 && mVirtualDisplay != null) {
-            AppLogger.d(TAG, "VirtualDisplay déjà actif : previewDisplayId=" + mPreviewDisplayId);
+        if (mMirrorActive && mPreviewDisplayId > 0 && mPreviewVD != null) {
+            AppLogger.d(TAG, "Preview VirtualDisplay déjà actif : id=" + mPreviewDisplayId);
             return true;
         }
-
-        stopMirror(context);
+        stopPreview();
 
         if (targetSurface == null || !targetSurface.isValid()) {
             AppLogger.e(TAG, "startMirror : targetSurface invalide");
@@ -101,63 +245,61 @@ public class ClusterMirrorManager {
         }
 
         DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
-        if (dm == null) {
-            AppLogger.e(TAG, "startMirror : DisplayManager null");
-            return false;
-        }
+        if (dm == null) return false;
 
-        // Récupérer les dimensions réelles du cluster
         if (clusterDisplay != null) {
             Point sz = new Point(1920, 720);
             clusterDisplay.getRealSize(sz);
             mClusterW = sz.x;
             mClusterH = sz.y;
-        } else {
-            mClusterW = 1920;
-            mClusterH = 720;
         }
 
-        AppLogger.i(TAG, "DisplayManager.createVirtualDisplay(" +
-                "\"mybyd_cluster_preview\", " + mClusterW + "×" + mClusterH +
-                ", dpi=320, flags=" + VDISPLAY_FLAGS + ")");
+        AppLogger.i(TAG, "createVirtualDisplay preview " + mClusterW + "×" + mClusterH);
+        mPreviewVD = dm.createVirtualDisplay(
+                "mybyd_cluster_preview", mClusterW, mClusterH, 320, targetSurface, VDISPLAY_FLAGS);
 
-        // Même appel que byd_dashboard "remote_dashboard" (dpi=320, flags=320)
-        // Flags 320 = DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
-        // Aucune permission ACCESS_SURFACE_FLINGER requise pour ces flags sur Android 10
-        mVirtualDisplay = dm.createVirtualDisplay(
-                "mybyd_cluster_preview",
-                mClusterW, mClusterH,
-                320,           // dpi — même valeur que byd_dashboard
-                targetSurface,
-                VDISPLAY_FLAGS
-        );
-
-        if (mVirtualDisplay == null) {
-            AppLogger.e(TAG, "createVirtualDisplay → null ! Vérifier les permissions.");
+        if (mPreviewVD == null) {
+            AppLogger.e(TAG, "createVirtualDisplay preview → null");
             return false;
         }
 
-        mPreviewDisplayId = mVirtualDisplay.getDisplay().getDisplayId();
+        mPreviewDisplayId = mPreviewVD.getDisplay().getDisplayId();
         mMirrorActive = true;
-        AppLogger.i(TAG, "VirtualDisplay créé ✓ → previewDisplayId=" + mPreviewDisplayId
-                + " name=mybyd_cluster_preview dims=" + mClusterW + "×" + mClusterH);
+        AppLogger.i(TAG, "Preview VirtualDisplay ✓ → id=" + mPreviewDisplayId);
         return true;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
 
-    public void stopMirror(Context context) {
+    private void stopPreview() {
         mMirrorActive = false;
         mPreviewDisplayId = -1;
-        if (mVirtualDisplay != null) {
-            try {
-                mVirtualDisplay.release();
-                AppLogger.i(TAG, "VirtualDisplay relâché");
-            } catch (Exception e) {
-                AppLogger.w(TAG, "release VirtualDisplay : " + e.getMessage());
-            }
-            mVirtualDisplay = null;
+        if (mPreviewVD != null) {
+            try { mPreviewVD.release(); } catch (Exception ignored) {}
+            mPreviewVD = null;
         }
     }
-}
 
+    private void stopClusterOverlay() {
+        mClusterVirtualDisplayId = -1;
+        if (mClusterOverlayVD != null) {
+            try { mClusterOverlayVD.release(); } catch (Exception ignored) {}
+            mClusterOverlayVD = null;
+        }
+        if (mClusterOverlaySurface != null) {
+            try { mClusterOverlaySurface.release(); } catch (Exception ignored) {}
+            mClusterOverlaySurface = null;
+        }
+        if (mClusterOverlayWm != null && mClusterOverlayView != null) {
+            try { mClusterOverlayWm.removeView(mClusterOverlayView); } catch (Exception ignored) {}
+            mClusterOverlayWm   = null;
+            mClusterOverlayView = null;
+        }
+    }
+
+    public void stopMirror(Context context) {
+        stopPreview();
+        stopClusterOverlay();
+        AppLogger.i(TAG, "ClusterMirrorManager arrêté");
+    }
+}
