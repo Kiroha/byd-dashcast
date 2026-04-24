@@ -19,8 +19,8 @@ android {
         applicationId "com.byd.myapp"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 139
-        versionName "2.36"
+        versionCode 140
+        versionName "2.37"
 
         // remote log analytics — lu depuis local.properties (hors source control)
         def props = new Properties()
@@ -86,16 +86,4 @@ dependencies {
 
     // dadb — client ADB pur JVM (même bibliothèque utilisée par Overdrive)
     implementation 'dev.mobile:dadb:1.2.7'
-}
-
-task testKeySize2 {
-    doLast {
-        try {
-            byte[] keyBytes = "decrypt".getBytes("UTF-8")
-            javax.crypto.spec.SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(keyBytes, "DES")
-            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("DES/ECB/NoPadding")
-            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key)
-            println "SUCCESS 7 BYTES"
-        } catch (Exception e) { e.printStackTrace() }
-    }
 }

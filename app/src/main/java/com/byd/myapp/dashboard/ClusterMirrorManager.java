@@ -1,20 +1,15 @@
 package com.byd.myapp.dashboard;
 
 import android.content.Context;
-import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
-import android.os.Handler;
 import android.os.IBinder;
+import android.os.Parcel;
 import android.view.Display;
-import android.view.Gravity;
 import android.view.Surface;
 import android.view.SurfaceControl;
-import android.view.TextureView;
-import android.view.WindowManager;
-import android.graphics.SurfaceTexture;
 import com.byd.myapp.AppLogger;
 
 import java.lang.reflect.Method;
@@ -35,21 +30,11 @@ public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
 
-    // TYPE_APPLICATION_OVERLAY = 2038
-    private static final int TYPE_APPLICATION_OVERLAY = 2038;
-    private static final int OVERLAY_FLAGS = 0x108;
     private static final int VDISPLAY_FLAGS = 320;
 
     // ── SurfaceControl mirror token (nouveau) ──────────────────────────────
     private IBinder mMirrorDisplayToken = null;
     private Surface mMirrorSurface      = null;
-
-    // ── Cluster overlay (TextureView sur cluster) — conservé mais non utilisé ──
-    private VirtualDisplay mClusterOverlayVD     = null;
-    private Surface        mClusterOverlaySurface = null;
-    private TextureView    mClusterOverlayView    = null;
-    private WindowManager  mClusterOverlayWm      = null;
-    private int            mClusterVirtualDisplayId = -1;
 
     // ── Local preview ────────────────────────────────────────────────────────
     private VirtualDisplay mPreviewVD    = null;
@@ -63,12 +48,6 @@ public class ClusterMirrorManager {
     public int     getClusterHeight()          { return mClusterH; }
     public boolean isMirrorActive()            { return mMirrorActive; }
     public int     getPreviewDisplayId()       { return mPreviewDisplayId; }
-    public int     getClusterVirtualDisplayId(){ return mClusterVirtualDisplayId; }
-
-    public interface ClusterOverlayCallback {
-        void onOverlayDisplayReady(int displayId);
-        void onOverlayFailed(String reason);
-    }
 
     /**
      * Déverrouille les APIs cachées (SurfaceControl, Display.getLayerStack, etc.).
@@ -90,93 +69,6 @@ public class ClusterMirrorManager {
         } catch (Exception e) {
             AppLogger.w(TAG, "unlockHiddenApis ERREUR : " + e.getMessage());
         }
-    }
-
-    // ── CLUSTER OVERLAY (conservé pour compatibilité) ─────────────────────
-
-    public void startClusterOverlay(final Context context, final Display clusterDisplay,
-            final Handler mainHandler, final ClusterOverlayCallback callback) {
-        if (clusterDisplay == null) {
-            if (callback != null) callback.onOverlayFailed("clusterDisplay null");
-            return;
-        }
-        mainHandler.post(new Runnable() {
-            @Override public void run() {
-                try {
-                    Point sz = new Point(1920, 720);
-                    clusterDisplay.getRealSize(sz);
-                    mClusterW = sz.x; mClusterH = sz.y;
-                    final Context displayCtx = context.createDisplayContext(clusterDisplay);
-                    final WindowManager wm =
-                            (WindowManager) displayCtx.getSystemService(Context.WINDOW_SERVICE);
-                    if (wm == null) {
-                        if (callback != null) callback.onOverlayFailed("WindowManager null");
-                        return;
-                    }
-                    TextureView tv = new TextureView(displayCtx);
-                    tv.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-                        @Override
-                        public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
-                            try {
-                                AppLogger.i(TAG, "Cluster overlay surface disponible " + w + "×" + h);
-                                Surface surface = new Surface(st);
-                                mClusterOverlaySurface = surface;
-                                DisplayManager dm = (DisplayManager)
-                                        context.getSystemService(Context.DISPLAY_SERVICE);
-                                if (dm == null) {
-                                    if (callback != null) mainHandler.post(new Runnable() {
-                                        @Override public void run() { callback.onOverlayFailed("DisplayManager null"); }
-                                    });
-                                    return;
-                                }
-                                mClusterOverlayVD = dm.createVirtualDisplay(
-                                        "mybyd_cluster_overlay",
-                                        mClusterW, mClusterH, 320, surface, VDISPLAY_FLAGS);
-                                if (mClusterOverlayVD != null) {
-                                    mClusterVirtualDisplayId =
-                                            mClusterOverlayVD.getDisplay().getDisplayId();
-                                    AppLogger.i(TAG, "Cluster overlay VirtualDisplay ✓ → id="
-                                            + mClusterVirtualDisplayId
-                                            + " dims=" + mClusterW + "×" + mClusterH);
-                                    if (callback != null) {
-                                        final int id = mClusterVirtualDisplayId;
-                                        mainHandler.post(new Runnable() {
-                                            @Override public void run() { callback.onOverlayDisplayReady(id); }
-                                        });
-                                    }
-                                } else {
-                                    AppLogger.e(TAG, "createVirtualDisplay overlay → null");
-                                    if (callback != null) mainHandler.post(new Runnable() {
-                                        @Override public void run() { callback.onOverlayFailed("VirtualDisplay null"); }
-                                    });
-                                }
-                            } catch (Exception e) {
-                                AppLogger.e(TAG, "onSurfaceTextureAvailable ERREUR", e);
-                                if (callback != null) mainHandler.post(new Runnable() {
-                                    @Override public void run() { callback.onOverlayFailed(e.getMessage()); }
-                                });
-                            }
-                        }
-                        @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { return true; }
-                        @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
-                        @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
-                    });
-                    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                            mClusterW, mClusterH, TYPE_APPLICATION_OVERLAY,
-                            OVERLAY_FLAGS, PixelFormat.OPAQUE);
-                    params.gravity = Gravity.LEFT | Gravity.TOP;
-                    mClusterOverlayWm   = wm;
-                    mClusterOverlayView = tv;
-                    wm.addView(tv, params);
-                    AppLogger.i(TAG, "TextureView overlay ajouté sur cluster display="
-                            + clusterDisplay.getDisplayId()
-                            + " (" + mClusterW + "×" + mClusterH + ")");
-                } catch (Exception e) {
-                    AppLogger.e(TAG, "startClusterOverlay ERREUR", e);
-                    if (callback != null) callback.onOverlayFailed(e.getMessage());
-                }
-            }
-        });
     }
 
     // ── MIROIR SURFACECONTROL (nouveau — v2.36) ────────────────────────────
@@ -278,30 +170,79 @@ public class ClusterMirrorManager {
             return true;
 
         } catch (Exception e) {
-            AppLogger.e(TAG, "SurfaceControl mirror ECHEC (ACCESS_SURFACE_FLINGER ?)", e);
+            AppLogger.e(TAG, "SurfaceControl mirror ECHEC (ACCESS_SURFACE_FLINGER ?) — utiliser startMirrorViaDaemon()", e);
             destroyMirrorToken();
-            // Fallback : VirtualDisplay (ne montre rien à moins qu'une app y soit lancée)
-            return startMirrorVirtualDisplay(context, clusterDisplay, targetSurface, viewW, viewH);
+            return false;
         }
     }
 
-    /** Fallback : VirtualDisplay (même approche qu'avant v2.36). */
-    private boolean startMirrorVirtualDisplay(Context context, Display clusterDisplay,
-                                              Surface targetSurface, int viewW, int viewH) {
-        DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
-        if (dm == null) return false;
-        AppLogger.i(TAG, "createVirtualDisplay preview " + mClusterW + "×" + mClusterH
-                + " (fallback — ACCESS_SURFACE_FLINGER absent)");
-        mPreviewVD = dm.createVirtualDisplay(
-                "mybyd_cluster_preview", mClusterW, mClusterH, 320, targetSurface, VDISPLAY_FLAGS);
-        if (mPreviewVD == null) {
-            AppLogger.e(TAG, "createVirtualDisplay preview → null");
+    /**
+     * Miroir via le daemon MirrorDaemon (uid=2000) qui a ACCESS_SURFACE_FLINGER.
+     * Le daemon reçoit la Surface via Binder et configure SurfaceControl.createDisplay.
+     */
+    public boolean startMirrorViaDaemon(IBinder daemonBinder, Display clusterDisplay,
+                                        Surface targetSurface, int viewW, int viewH) {
+        if (mMirrorActive) return true;
+        if (daemonBinder == null || targetSurface == null || !targetSurface.isValid()) return false;
+
+        // Dimensions cluster
+        if (clusterDisplay != null) {
+            Point sz = new Point(1920, 720);
+            clusterDisplay.getRealSize(sz);
+            mClusterW = sz.x;
+            mClusterH = sz.y;
+        }
+
+        int clusterDisplayId = (clusterDisplay != null) ? clusterDisplay.getDisplayId() : 2;
+        int layerStack;
+        try {
+            Method getLayerStack = Display.class.getDeclaredMethod("getLayerStack");
+            getLayerStack.setAccessible(true);
+            layerStack = (Integer) getLayerStack.invoke(clusterDisplay);
+        } catch (Exception e) {
+            layerStack = clusterDisplayId;
+            AppLogger.w(TAG, "getLayerStack échoué → fallback layerStack=" + layerStack);
+        }
+
+        try {
+            Parcel data = Parcel.obtain();
+            data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
+            data.writeInt(layerStack);
+            data.writeInt(mClusterW);
+            data.writeInt(mClusterH);
+            data.writeInt(clusterDisplayId);
+            data.writeInt(viewW);
+            data.writeInt(viewH);
+            data.writeParcelable(targetSurface, 0);
+            daemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_MIRROR_START,
+                    data, null, android.os.IBinder.FLAG_ONEWAY);
+            data.recycle();
+            mMirrorSurface = targetSurface;
+            mMirrorActive  = true;
+            AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
+                    + " " + mClusterW + "×" + mClusterH + " displayId=" + clusterDisplayId);
+            return true;
+        } catch (Exception e) {
+            AppLogger.e(TAG, "startMirrorViaDaemon échoué", e);
             return false;
         }
-        mPreviewDisplayId = mPreviewVD.getDisplay().getDisplayId();
-        mMirrorActive = true;
-        AppLogger.i(TAG, "Preview VirtualDisplay ✓ → id=" + mPreviewDisplayId);
-        return true;
+    }
+
+    /**
+     * Demande au daemon d'arrêter le miroir SurfaceControl.
+     */
+    public void stopMirrorViaDaemon(IBinder daemonBinder) {
+        if (daemonBinder == null) return;
+        try {
+            Parcel data = Parcel.obtain();
+            data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
+            daemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
+                    data, null, android.os.IBinder.FLAG_ONEWAY);
+            data.recycle();
+        } catch (Exception ignored) {}
+        mMirrorActive  = false;
+        mMirrorSurface = null;
+        AppLogger.i(TAG, "stopMirrorViaDaemon envoyé");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -330,39 +271,20 @@ public class ClusterMirrorManager {
         destroyMirrorToken();
     }
 
-    private void stopClusterOverlay() {
-        mClusterVirtualDisplayId = -1;
-        if (mClusterOverlayVD != null) {
-            try { mClusterOverlayVD.release(); } catch (Exception ignored) {}
-            mClusterOverlayVD = null;
-        }
-        if (mClusterOverlaySurface != null) {
-            try { mClusterOverlaySurface.release(); } catch (Exception ignored) {}
-            mClusterOverlaySurface = null;
-        }
-        if (mClusterOverlayWm != null && mClusterOverlayView != null) {
-            try { mClusterOverlayWm.removeView(mClusterOverlayView); } catch (Exception ignored) {}
-            mClusterOverlayWm   = null;
-            mClusterOverlayView = null;
-        }
-    }
-
     /**
-     * Arrête uniquement le preview local (appelé depuis MainActivity.onStop).
-     * L'overlay cluster reste actif dans ClusterService.
+     * Arrête le preview local (appelé depuis MainActivity.onStop).
      */
     public void stopMirror(Context context) {
         stopPreview();
-        AppLogger.i(TAG, "ClusterMirrorManager preview arrêté (overlay cluster toujours actif)");
+        AppLogger.i(TAG, "ClusterMirrorManager preview arrêté");
     }
 
     /**
-     * Libère TOUT : preview + overlay cluster.
+     * Libère le preview.
      * À appeler uniquement depuis ClusterService.onDestroy().
      */
     public void release(Context context) {
         stopPreview();
-        stopClusterOverlay();
-        AppLogger.i(TAG, "ClusterMirrorManager libéré (preview + overlay)");
+        AppLogger.i(TAG, "ClusterMirrorManager libéré");
     }
 }

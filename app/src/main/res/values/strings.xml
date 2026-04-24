@@ -4,27 +4,16 @@
     <!-- WelcomeActivity -->
     <string name="welcome_title">BYD Auto App</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
-    <string name="welcome_choose_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
 
     <!-- MainActivity -->
     <string name="status_disconnected">Dashboard : non connecté</string>
-    <string name="status_byd">Dashboard : affichage BYD</string>
-    <string name="status_app">Dashboard : %1$s</string>
-    <string name="btn_restore_byd">Restaurer BYD</string>
-    <string name="btn_diag_desc">Diagnostic</string>
-    <string name="btn_sysinfo_desc">Rapport système</string>
-    <string name="btn_language_desc">Changer la langue</string>
-    <string name="btn_live_desc">Données live BYD</string>
     <string name="title_app_list">Applications installées</string>
-    <string name="btn_send_to_dash">→ Dashboard</string>
-    <string name="btn_send_to_main">→ Écran principal</string>
 
     <!-- Panel contrôle cluster -->
     <string name="cluster_control_title">Contrôle cluster</string>
     <string name="cluster_control_hide">Masquer ▼</string>
-    <string name="cluster_touchpad_hint">Toucher ici pour piloter l\'app sur le cluster</string>
     <string name="btn_cluster_back">← Retour</string>
     <string name="btn_cluster_home">⌂</string>
     <string name="btn_cluster_up">↑</string>
@@ -33,7 +22,5 @@
     <string name="btn_cluster_vol_down">Vol－</string>
 
     <!-- Toasts -->
-    <string name="toast_dashboard_unavailable">Dashboard non disponible</string>
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
-    <string name="toast_main_error">%1$s : impossible de lancer sur l\'écran principal</string>
 </resources>

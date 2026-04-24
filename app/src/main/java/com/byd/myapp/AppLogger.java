@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * AppLogger — journal de bord structuré.
@@ -164,9 +163,9 @@ public class AppLogger {
     /** Retourne le buffer complet en String formatée (pour partage texte). */
     public static String get() {
         SimpleDateFormat fmt = sFmt.get();
-        int size = getEntriesCount();
-        StringBuilder sb = new StringBuilder(size * 80); // ~80 caractères par ligne pour éviter les réallocations coûteuses
+        StringBuilder sb;
         synchronized (LOCK) {
+            sb = new StringBuilder(sEntries.size() * 80); // ~80 caractères par ligne pour éviter les réallocations coûteuses
             for (Entry e : sEntries) {
                 sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
                   .append("[").append(e.level.name()).append("]")

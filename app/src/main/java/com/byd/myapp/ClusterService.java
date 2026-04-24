@@ -66,9 +66,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // Handler réutilisable sur le main thread (remplace les new Handler() éphémères).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
-    // v2.32 : displayId du VirtualDisplay de l'overlay TextureView sur le cluster.
-    // -1 tant que l'overlay n'est pas prêt (fallback Freedom displayId).
-    private int mClusterOverlayDisplayId = -1;
     // ────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -123,7 +120,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.removeCallbacksAndMessages(null);
         // release() = preview + overlay cluster (stopMirror() ne libère que le preview)
         mMirrorManager.release(this);
-        mClusterOverlayDisplayId = -1;
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
@@ -227,42 +223,26 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 // Lancement direct via IActivityManager sur le display Freedom (prouvé v2.29).
-                // L'overlay VD (mClusterOverlayDisplayId) est en cours d'expérimentation
-                // mais ne remplace pas encore le lancement direct.
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Lancement IActivityManager sur display=" + displayId + " → " + packageName);
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
                         AppLogger.e(TAG, "Aucun intent de lancement trouvé pour " + packageName);
+                        if (callback != null) {
+                            mMainHandler.post(new Runnable() {
+                                @Override public void run() { callback.onResult(false); }
+                            });
+                        }
                         return;
                     }
                     launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
 
-                    try {
-                        Class<?> amClass = Class.forName("android.app.ActivityManager");
-                        java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
-                        Object iActivityManager = getServiceMethod.invoke(null);
-                        Class<?> iAmClass = Class.forName("android.app.IActivityManager");
-                        Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
-                        Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
-                        java.lang.reflect.Method startActivityAsUserMethod = iAmClass.getMethod(
-                                "startActivityAsUser", iAppThreadClass, String.class,
-                                android.content.Intent.class, String.class,
-                                android.os.IBinder.class, String.class,
-                                int.class, int.class, profilerInfoClass,
-                                android.os.Bundle.class, int.class);
-                        AppLogger.i(TAG, "Calling IActivityManager.startActivityAsUser callerPackage=" + getPackageName());
-                        startActivityAsUserMethod.invoke(iActivityManager, null, getPackageName(),
-                                launchIntent, null, null, null, 0, 0, null, opts.toBundle(), -2);
-                    } catch (Exception ex) {
-                        AppLogger.e(TAG, "Erreur appel IActivityManager depuis MyBYDApp, fallback context", ex);
-                        startActivity(launchIntent, opts.toBundle());
-                    }
+                    startActivityViaIAM(launchIntent, opts);
 
-                    AppLogger.i(TAG, "Appel IActivityManager réussi depuis MyBYDApp !");
+                    AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                     if (callback != null) {
                         mMainHandler.post(new Runnable() {
                             @Override public void run() { callback.onResult(true); }
@@ -270,6 +250,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     }
                 } catch (Exception e) {
                     AppLogger.e(TAG, "Erreur globale de lancement de " + packageName, e);
+                    if (callback != null) {
+                        mMainHandler.post(new Runnable() {
+                            @Override public void run() { callback.onResult(false); }
+                        });
+                    }
                 }
             }
         }, 2000);
@@ -345,25 +330,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
 
-                    try {
-                        Class<?> amClass = Class.forName("android.app.ActivityManager");
-                        java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
-                        Object iam = getServiceMethod.invoke(null);
-                        Class<?> iAmClass = Class.forName("android.app.IActivityManager");
-                        Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
-                        Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
-                        java.lang.reflect.Method startMethod = iAmClass.getMethod(
-                                "startActivityAsUser",
-                                iAppThreadClass, String.class, android.content.Intent.class,
-                                String.class, android.os.IBinder.class, String.class,
-                                int.class, int.class, profilerInfoClass,
-                                android.os.Bundle.class, int.class);
-                        startMethod.invoke(iam, null, getPackageName(), launchIntent,
-                                null, null, null, 0, 0, null, opts.toBundle(), -2);
-                    } catch (Exception ex) {
-                        AppLogger.w(TAG, "launchOnSpecificDisplay fallback context: " + ex.getMessage());
-                        startActivity(launchIntent, opts.toBundle());
-                    }
+                    startActivityViaIAM(launchIntent, opts);
 
                     AppLogger.i(TAG, "launchOnSpecificDisplay réussi → " + packageName
                             + " sur display=" + displayId);
@@ -382,6 +349,30 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 }
             }
         }, 500);
+    }
+
+    /**
+     * Invoque IActivityManager.startActivityAsUser() par réflexion, avec fallback Context.startActivity().
+     * Partagé par launchOnDashboard() et launchOnSpecificDisplay() — élimine 15 lignes dupliquées.
+     */
+    private void startActivityViaIAM(android.content.Intent intent, android.app.ActivityOptions opts) {
+        try {
+            Class<?> amClass = Class.forName("android.app.ActivityManager");
+            Object iam = amClass.getMethod("getService").invoke(null);
+            Class<?> iAmClass = Class.forName("android.app.IActivityManager");
+            Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
+            Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
+            iAmClass.getMethod("startActivityAsUser",
+                    iAppThreadClass, String.class, android.content.Intent.class,
+                    String.class, android.os.IBinder.class, String.class,
+                    int.class, int.class, profilerInfoClass,
+                    android.os.Bundle.class, int.class)
+                .invoke(iam, null, getPackageName(), intent,
+                    null, null, null, 0, 0, null, opts.toBundle(), -2);
+        } catch (Exception ex) {
+            AppLogger.w(TAG, "startActivityViaIAM → fallback context: " + ex.getMessage());
+            startActivity(intent, opts.toBundle());
+        }
     }
 
     /** Arrête proprement la projection (sendInfo(0) + stopService AutoDisplayService). */
@@ -418,27 +409,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
         updateNotification("Cluster actif — display " + displayId);
-
-        // ── v2.32 : overlay TextureView sur le cluster (style byd_dashboard) ──
-        // createDisplayContext(clusterDisplay) + WindowManager.addView(TextureView, TYPE_APPLICATION_OVERLAY)
-        // Requiert INTERNAL_SYSTEM_WINDOW (nous l'avons via platform.keystore).
-        // Les apps seront lancées sur mClusterOverlayDisplayId à la place du display Freedom.
-        mClusterOverlayDisplayId = -1;
-        mMirrorManager.startClusterOverlay(
-                ClusterService.this, display, mMainHandler,
-                new ClusterMirrorManager.ClusterOverlayCallback() {
-                    @Override
-                    public void onOverlayDisplayReady(int overlayDisplayId) {
-                        AppLogger.i(TAG, "Cluster overlay ✓ VD id=" + overlayDisplayId
-                                + " (remplace Freedom display=" + displayId + ")");
-                        mClusterOverlayDisplayId = overlayDisplayId;
-                    }
-                    @Override
-                    public void onOverlayFailed(String reason) {
-                        AppLogger.w(TAG, "Cluster overlay ECHEC: " + reason
-                                + " → fallback Freedom display=" + displayId);
-                    }
-                });
 
         if (mListener != null) {
             mListener.onClusterDisplayConnected(display, displayId);
