@@ -648,8 +648,10 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Démarre le miroir SurfaceControl si la Surface est prête ET le display cluster connu.
-     * Peut être appelé depuis surfaceCreated, surfaceChanged, ou onClusterDisplayConnected.
+     * Démarre le VirtualDisplay preview si la Surface est prête.
+     * v2.30 : utilise DisplayManager.createVirtualDisplay() comme WindowManagement/byd_dashboard.
+     * Plus besoin de clusterDisplay — le VirtualDisplay est indépendant du display cluster.
+     * Après création, lance aussi l'app courante sur le preview display.
      */
     private void attemptStartMirrorWithCurrentHolder() {
         if (!mServiceBound || mClusterService == null) {
@@ -660,17 +662,13 @@ public class MainActivity extends AppCompatActivity
             AppLogger.d(TAG, "attemptStartMirror : surface invalide");
             return;
         }
-        int displayId = mClusterService.getDisplayId();
-        if (displayId < 0) {
-            AppLogger.d(TAG, "attemptStartMirror : displayId=" + displayId + " (non connecté)");
-            return;
-        }
 
-        DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-        if (dm == null) return;
-        Display clusterDisplay = dm.getDisplay(displayId);
-        if (clusterDisplay == null) {
-            AppLogger.w(TAG, "attemptStartMirror : getDisplay(" + displayId + ") null");
+        // Si VirtualDisplay déjà actif, ne pas recréer
+        if (mClusterService.getMirrorManager().isMirrorActive()
+                && mClusterService.getMirrorManager().getPreviewDisplayId() > 0) {
+            AppLogger.d(TAG, "attemptStartMirror : VirtualDisplay déjà actif");
+            clusterMirror.setVisibility(View.VISIBLE);
+            stopScreenshotLoop();
             return;
         }
 
@@ -682,17 +680,33 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
-        AppLogger.d(TAG, "attemptStartMirror → display=" + displayId
-                + " view=" + viewW + "×" + viewH);
-        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(this, 
+        // clusterDisplay passé pour obtenir les dimensions — peut être null (→ 1920×720 par défaut)
+        Display clusterDisplay = null;
+        int displayId = mClusterService.getDisplayId();
+        if (displayId >= 0) {
+            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            if (dm != null) clusterDisplay = dm.getDisplay(displayId);
+        }
+
+        AppLogger.d(TAG, "attemptStartMirror → view=" + viewW + "×" + viewH
+                + " (clusterDisplay=" + (clusterDisplay != null ? displayId : "null") + ")");
+        boolean mirrorOk = mClusterService.getMirrorManager().startMirror(this,
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
 
         if (mirrorOk) {
-            // SurfaceControl mirror fonctionne → afficher le SurfaceView
+            // VirtualDisplay créé → afficher le SurfaceView, stopper les screenshots
             clusterMirror.setVisibility(View.VISIBLE);
             clusterMirrorScreenshot.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
             stopScreenshotLoop();
+
+            // Lancer l'app courante sur le preview display pour la voir dans notre UI
+            int previewId = mClusterService.getMirrorManager().getPreviewDisplayId();
+            if (previewId > 0 && mCurrentDashboardPkg != null) {
+                AppLogger.i(TAG, "Lancement preview " + mCurrentDashboardPkg
+                        + " sur VirtualDisplay previewId=" + previewId);
+                mClusterService.launchOnSpecificDisplay(mCurrentDashboardPkg, previewId, null);
+            }
         } else {
             // SurfaceControl indisponible (ACCESS_SURFACE_FLINGER non accordé) →
             // fallback : screencap périodique via ADB shell (uid=2000)

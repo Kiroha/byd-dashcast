@@ -314,6 +314,71 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         return mDisplayHelper.getKnownClusterDisplayId();
     }
 
+    /**
+     * Lance une app sur un displayId spécifique (ex: VirtualDisplay preview de ClusterMirrorManager).
+     * Délai court (500ms) car le display est déjà prêt (pas d'activation Freedom nécessaire).
+     * Utilise la même réflexion IActivityManager que launchOnDashboard().
+     */
+    public void launchOnSpecificDisplay(final String packageName, final int displayId,
+            final LaunchCallback callback) {
+        AppLogger.i(TAG, "launchOnSpecificDisplay → " + packageName + " sur display=" + displayId);
+        mMainHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                try {
+                    android.content.Intent launchIntent =
+                            getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launchIntent == null) {
+                        AppLogger.e(TAG, "Aucun intent pour " + packageName);
+                        if (callback != null) {
+                            mMainHandler.post(new Runnable() {
+                                @Override public void run() { callback.onResult(false); }
+                            });
+                        }
+                        return;
+                    }
+                    launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
+                    android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                    opts.setLaunchDisplayId(displayId);
+
+                    try {
+                        Class<?> amClass = Class.forName("android.app.ActivityManager");
+                        java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
+                        Object iam = getServiceMethod.invoke(null);
+                        Class<?> iAmClass = Class.forName("android.app.IActivityManager");
+                        Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
+                        Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
+                        java.lang.reflect.Method startMethod = iAmClass.getMethod(
+                                "startActivityAsUser",
+                                iAppThreadClass, String.class, android.content.Intent.class,
+                                String.class, android.os.IBinder.class, String.class,
+                                int.class, int.class, profilerInfoClass,
+                                android.os.Bundle.class, int.class);
+                        startMethod.invoke(iam, null, getPackageName(), launchIntent,
+                                null, null, null, 0, 0, null, opts.toBundle(), -2);
+                    } catch (Exception ex) {
+                        AppLogger.w(TAG, "launchOnSpecificDisplay fallback context: " + ex.getMessage());
+                        startActivity(launchIntent, opts.toBundle());
+                    }
+
+                    AppLogger.i(TAG, "launchOnSpecificDisplay réussi → " + packageName
+                            + " sur display=" + displayId);
+                    if (callback != null) {
+                        mMainHandler.post(new Runnable() {
+                            @Override public void run() { callback.onResult(true); }
+                        });
+                    }
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "launchOnSpecificDisplay ERREUR", e);
+                    if (callback != null) {
+                        mMainHandler.post(new Runnable() {
+                            @Override public void run() { callback.onResult(false); }
+                        });
+                    }
+                }
+            }
+        }, 500);
+    }
+
     /** Arrête proprement la projection (sendInfo(0) + stopService AutoDisplayService). */
     public void stopProjection() {
         AppLogger.log(TAG, "stopProjection demandé");
