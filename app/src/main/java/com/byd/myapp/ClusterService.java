@@ -231,29 +231,43 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // qui échoue toujours faute de INTERNAL_SYSTEM_WINDOW (mismatch keystore
                 // confirmé par dump v1.72 : notre sig=b4addb29 ≠ ROM sig=22216e4d).
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
-                AppLogger.i(TAG, "launch via ADB trampoline: display=" + displayId
-                        + " → " + packageName);
-                AdbLocalClient.launchTrampolineViaAdb(ClusterService.this, packageName, displayId,
-                        new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String report) {
-                        AppLogger.i(TAG, "ADB trampoline OK: "
-                                + report.trim().replace("\n", " "));
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(true); }
-                            });
-                        }
+                AppLogger.i(TAG, "Lancement direct DEPUIS l'appli (uid=10xxx) via IActivityManager sur display=" + displayId + " -> " + packageName);
+                try {
+                    android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launchIntent == null) {
+                        AppLogger.e(TAG, "Aucun intent de lancement trouvé pour " + packageName);
+                        return;
                     }
-                    @Override public void onError(String error) {
-                        AppLogger.e(TAG, "ADB trampoline ÉCHEC — "
-                                + error.replace("\n", " | "));
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(false); }
-                            });
-                        }
+                    launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
+                    android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                    opts.setLaunchDisplayId(displayId);
+                    
+                    try {
+                        Class<?> amClass = Class.forName("android.app.ActivityManager");
+                        java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
+                        Object iActivityManager = getServiceMethod.invoke(null);
+                        
+                        Class<?> iAmClass = Class.forName("android.app.IActivityManager");
+                        Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
+                        Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
+                        java.lang.reflect.Method startActivityAsUserMethod = iAmClass.getMethod("startActivityAsUser", iAppThreadClass, String.class, android.content.Intent.class, String.class, android.os.IBinder.class, String.class, int.class, int.class, profilerInfoClass, android.os.Bundle.class, int.class);
+                        
+                        AppLogger.i(TAG, "Calling IActivityManager.startActivityAsUser avec callerPackage=" + getPackageName());
+                        startActivityAsUserMethod.invoke(iActivityManager, null, getPackageName(), launchIntent, null, null, null, 0, 0, null, opts.toBundle(), -2); // UserHandle.USER_CURRENT = -2
+                    } catch (Exception ex) {
+                        AppLogger.e(TAG, "Erreur appel IActivityManager depuis MyBYDApp, fallback context", ex);
+                        startActivity(launchIntent, opts.toBundle());
                     }
-                });
+                    
+                    AppLogger.i(TAG, "Appel IActivityManager réussi depuis MyBYDApp !");
+                    if (callback != null) {
+                        mMainHandler.post(new Runnable() {
+                            @Override public void run() { callback.onResult(true); }
+                        });
+                    }
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "Erreur globale de lancement de " + packageName, e);
+                }
             }
         }, 2000);
     }
@@ -270,7 +284,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
-                AdbLocalClient.launchTrampolineWithBounds(ClusterService.this, packageName,
+                AdbLocalClient.launchDirectWithBounds(ClusterService.this, packageName,
                         displayId, left, top, right, bottom,
                         new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String report) {

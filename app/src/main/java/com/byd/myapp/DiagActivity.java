@@ -42,6 +42,7 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnBootReceiverShare;
     private Button   btnTestDaemon;
     private Button   btnStartSniffer;
+    private Button   btnStopSniffer;
     private Button   btnExportSniffer;
 
     @Override
@@ -76,10 +77,12 @@ public class DiagActivity extends AppCompatActivity {
         btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
         btnTestDaemon = (Button) findViewById(R.id.btn_test_daemon);
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
+        btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
 
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
         btnStartSniffer.setOnClickListener(v -> startSniffer());
+        btnStopSniffer.setOnClickListener(v -> stopSniffer());
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
 
         // TEST 1 — Connexion ADB locale
@@ -381,6 +384,9 @@ public class DiagActivity extends AppCompatActivity {
     private final String SNIFFER_FILE_NAME = "BYD_Sniffer_Dump.txt";
 
     private void startSniffer() {
+        // Tuer les précédents sniffeurs (pour éviter les doublons/fuite mémoire)
+        stopSnifferSilently();
+        
         android.widget.Toast.makeText(DiagActivity.this, "Sniffeur système démarré (Background)", android.widget.Toast.LENGTH_LONG).show();
         AppLogger.i("DiagSniffer", "Lancement du Sniffeur système...");
         
@@ -394,6 +400,20 @@ public class DiagActivity extends AppCompatActivity {
         
         String fullCmd = "echo '--- MAIN SNIFFER STARTED ---' > " + logPath + " && nohup sh -c \"" + logcatCmd + "\" & nohup sh -c \"" + amMonitorCmd + "\" & nohup sh -c \"" + dumpsysHeaderCmd + "\" &";
         AdbLocalClient.executeShell(DiagActivity.this, fullCmd);
+    }
+
+    private void stopSnifferSilently() {
+        // Enlève uniquement les instances logcat/am monitor liées à la capture
+        String killCmd = "ps -A | grep 'logcat -v threadtime -b all' | awk '{print $2}' | xargs kill -9 2>/dev/null; " +
+                         "ps -A | grep 'am monitor' | awk '{print $2}' | xargs kill -9 2>/dev/null; " + 
+                         "ps -A | grep 'dumpsys SurfaceFlinger' | awk '{print $2}' | xargs kill -9 2>/dev/null";
+        AdbLocalClient.executeShell(DiagActivity.this, killCmd);
+    }
+
+    private void stopSniffer() {
+        AppLogger.i("DiagSniffer", "Arrêt du Sniffeur demandé");
+        stopSnifferSilently();
+        android.widget.Toast.makeText(DiagActivity.this, "Sniffeur arrêté (background clean)", android.widget.Toast.LENGTH_SHORT).show();
     }
 
     private void exportSnifferReport() {

@@ -82,6 +82,7 @@ public class ClusterTrampolineActivity extends Activity {
         // CRUCIAL : pas de setLaunchDisplayId ici. La nouvelle task héritera du
         // display de la source (nous → display 1).
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TASK
                 | Intent.FLAG_ACTIVITY_NO_ANIMATION);
 
         // Bounds optionnelles passées via extras entiers (DiLink 3.0 n'accepte pas --bounds)

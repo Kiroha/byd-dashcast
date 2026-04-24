@@ -10,8 +10,6 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
-import android.hardware.display.DisplayManager;
-import android.hardware.display.VirtualDisplay;
 
 import java.lang.reflect.Method;
 
@@ -20,6 +18,9 @@ public class MirrorDaemon {
     private static final String TAG = "MirrorDaemon";
 
     public static void main(String[] args) {
+        try {
+            android.os.Process.class.getMethod("setArgV0", String.class).invoke(null, "com.byd.myapp.mirrordaemon");
+        } catch (Exception ignored) {}
         Log.i(TAG, "Démarrage du daemon MirrorDaemon avec uid=" + android.os.Process.myUid());
 
         try {
@@ -57,44 +58,81 @@ public class MirrorDaemon {
 
             // On enregistre un un receiver pour récupérer la Surface
             IntentFilter filter = new IntentFilter();
-            filter.addAction("com.byd.myapp.MIRROR_DAEMON_SURFACE");
+            filter.addAction("com.byd.myapp.MIRROR_DAEMON_PULL");
             filter.addAction("com.byd.myapp.MIRROR_DAEMON_STOP");
+            filter.addAction("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
             context.registerReceiver(new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context c, Intent intent) {
                     Log.i(TAG, "Intent reçu : " + intent.getAction());
+                    if ("com.byd.myapp.MIRROR_DAEMON_LAUNCH".equals(intent.getAction())) {
+                        String pkg = intent.getStringExtra("pkg");
+                        String cls = intent.getStringExtra("cls");
+                        int displayId = intent.getIntExtra("displayId", 0);
+                        int bl = intent.getIntExtra("bounds_l", -1);
+                        int bt = intent.getIntExtra("bounds_t", -1);
+                        int br = intent.getIntExtra("bounds_r", -1);
+                        int bb = intent.getIntExtra("bounds_b", -1);
+                        try {
+                            Intent launchIntent = new Intent();
+                            launchIntent.setComponent(new android.content.ComponentName(pkg, cls));
+                            launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
+                            android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                            opts.setLaunchDisplayId(displayId);
+                            if (bl >= 0 && br > bl && bb > bt) {
+                                opts.setLaunchBounds(new Rect(bl, bt, br, bb));
+                                try {
+                                    Method setWm = android.app.ActivityOptions.class.getMethod("setLaunchWindowingMode", int.class);
+                                    setWm.invoke(opts, 5); // FREEFORM
+                                } catch (Exception ignored) {}
+                            }
+                            c.startActivity(launchIntent, opts.toBundle());
+                            Log.i(TAG, "Lancement réussi de " + pkg + "/" + cls + " sur display " + displayId + " par le MirrorDaemon !");
+                        } catch (Exception e) {
+                            Log.e(TAG, "Erreur lancement daemon de " + pkg, e);
+                        }
+                        return;
+                    }
                     if ("com.byd.myapp.MIRROR_DAEMON_STOP".equals(intent.getAction())) {
-                        stopMirrorNatively();
+                        DaemonMirrorLogic.stop();
                         return;
                     }
                     
-                    Surface surface = null;
-                    if (intent.getExtras() != null) {
-                        android.os.IBinder binder = intent.getExtras().getBinder("surface_binder");
-                        if (binder != null) {
-                            try {
-                                android.os.Parcel data = android.os.Parcel.obtain();
-                                android.os.Parcel reply = android.os.Parcel.obtain();
-                                binder.transact(1, data, reply, 0);
-                                reply.readException();
-                                surface = Surface.CREATOR.createFromParcel(reply);
-                                data.recycle();
-                                reply.recycle();
-                            } catch (Exception e) {
-                                Log.e(TAG, "Erreur transaction Binder (Surface)", e);
+                    if ("com.byd.myapp.MIRROR_DAEMON_PULL".equals(intent.getAction())) {
+                        try {
+                            android.net.Uri uri = android.net.Uri.parse("content://com.byd.myapp.mirrorprovider");
+                            android.os.Bundle result = c.getContentResolver().call(uri, "getSurface", null, null);
+                            if (result != null) {
+                                android.os.IBinder binder = result.getBinder("surface_binder");
+                                if (binder != null) {
+                                    android.os.Parcel data = android.os.Parcel.obtain();
+                                    android.os.Parcel reply = android.os.Parcel.obtain();
+                                    binder.transact(1, data, reply, 0);
+                                    reply.readException();
+                                    Surface surface = null;
+                                    int hasSurface = reply.readInt();
+                                    if (hasSurface == 1) {
+                                        surface = Surface.CREATOR.createFromParcel(reply);
+                                    }
+                                    int viewW = reply.readInt();
+                                    int viewH = reply.readInt();
+                                    int clusterW = reply.readInt();
+                                    int clusterH = reply.readInt();
+                                    int layerStack = reply.readInt();
+                                    data.recycle();
+                                    reply.recycle();
+                                    
+                                    if (surface != null && surface.isValid()) {
+                                        Log.i(TAG, "Surface PULL valide depuis le Provider ! Démarrage du miroir... " + viewW + "x" + viewH);
+                                        DaemonMirrorLogic.start(surface, viewW, viewH, clusterW, clusterH, layerStack);
+                                    } else {
+                                        Log.e(TAG, "Surface récupérée est invalide ou nulle !");
+                                    }
+                                }
                             }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Erreur PULL ContentProvider", e);
                         }
-                    }
-
-                    if (surface != null) {
-                        Log.i(TAG, "Surface reçue via Binder IPC valide ! Démarrage du miroir...");
-                        int viewW = intent.getIntExtra("viewW", 1920);
-                        int viewH = intent.getIntExtra("viewH", 720);
-                        int clusterW = intent.getIntExtra("clusterW", 1920);
-                        int clusterH = intent.getIntExtra("clusterH", 720);
-                        startMirrorNatively(surface, viewW, viewH, clusterW, clusterH);
-                    } else {
-                        Log.e(TAG, "Surface null ou non fournie par le Binder.");
                     }
                 }
             }, filter);
@@ -102,6 +140,8 @@ public class MirrorDaemon {
             startTouchServer();
 
             Log.i(TAG, "Receiver enregistré. Daemon en attente de la Surface...");
+            context.sendBroadcast(new Intent("com.byd.myapp.MIRROR_DAEMON_READY"));
+            
             Looper.loop();
 
         } catch (Exception e) {
@@ -115,7 +155,7 @@ public class MirrorDaemon {
             public void run() {
                 try {
                     java.net.DatagramSocket socket = new java.net.DatagramSocket(5005);
-                    byte[] buffer = new byte[64];
+                    byte[] buffer = new byte[16];
                     java.net.DatagramPacket packet = new java.net.DatagramPacket(buffer, buffer.length);
                     Class<?> imClass = Class.forName("android.hardware.input.InputManager");
                     Method getInstance = imClass.getDeclaredMethod("getInstance");
@@ -125,17 +165,21 @@ public class MirrorDaemon {
                     inject.setAccessible(true);
                     Method setDisplayId = null;
                     try { setDisplayId = android.view.MotionEvent.class.getMethod("setDisplayId", int.class); } catch (Exception ignored) {}
-                    Log.i(TAG, "Touch UDP Server démarré sur le port 5005");
+                    
+                    java.nio.ByteBuffer byteBuffer = java.nio.ByteBuffer.allocateDirect(16).order(java.nio.ByteOrder.nativeOrder());
+                    Log.i(TAG, "Touch UDP Server Binary démarré sur le port 5005");
                     while (true) {
                         try {
                             socket.receive(packet);
-                            String data = new String(packet.getData(), 0, packet.getLength());
-                            String[] parts = data.split(",");
-                            if (parts.length >= 4) {
-                                int action = Integer.parseInt(parts[0]);
-                                float x = Float.parseFloat(parts[1]);
-                                float y = Float.parseFloat(parts[2]);
-                                int displayId = Integer.parseInt(parts[3]);
+                            if (packet.getLength() == 16) {
+                                byteBuffer.clear();
+                                byteBuffer.put(buffer, 0, 16);
+                                byteBuffer.position(0);
+                                int action = byteBuffer.getInt();
+                                float x = byteBuffer.getFloat();
+                                float y = byteBuffer.getFloat();
+                                int displayId = byteBuffer.getInt();
+                                
                                 long now = android.os.SystemClock.uptimeMillis();
                                 android.view.MotionEvent event = android.view.MotionEvent.obtain(now, now, action, x, y, 0);
                                 event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
@@ -156,53 +200,4 @@ public class MirrorDaemon {
         }).start();
     }
 
-    private static VirtualDisplay mVirtualDisplay = null;
-
-    private static void stopMirrorNatively() {
-        if (mVirtualDisplay != null) {
-            try {
-                mVirtualDisplay.release();
-                Log.i(TAG, "Miroir VirtualDisplay detruit par le Daemon.");
-            } catch (Exception e) {
-                Log.e(TAG, "Erreur destruction miroir", e);
-            }
-            mVirtualDisplay = null;
-        }
-    }
-
-    private static void startMirrorNatively(Surface targetSurface, int viewW, int viewH, int mClusterW, int mClusterH) {
-        try {
-            if (mVirtualDisplay != null) {
-                mVirtualDisplay.release();
-                mVirtualDisplay = null;
-            }
-
-            Class<?> atClass = Class.forName("android.app.ActivityThread");
-            Object thread = atClass.getMethod("systemMain").invoke(null);
-            Context systemContext = (Context) thread.getClass().getMethod("getSystemContext").invoke(thread);
-
-            DisplayManager dm = (DisplayManager) systemContext.getSystemService(Context.DISPLAY_SERVICE);
-            if (dm == null) {
-                Log.e(TAG, "DisplayManager non trouvé.");
-                return;
-            }
-
-            // Flags: 1=PUBLIC, 2=PRESENTATION, 8=AUTO_MIRROR => 11
-            int flags = 11;
-            
-            // Nom hardcodé qui bypass les protections BYD
-            String displayName = "fission_bg_xdjaVirtualSurface";
-            
-            mVirtualDisplay = dm.createVirtualDisplay(displayName, mClusterW, mClusterH, 320, targetSurface, flags);
-            
-            if (mVirtualDisplay == null) {
-                Log.e(TAG, "Echec creation VirtualDisplay par Daemon.");
-                return;
-            }
-
-            Log.i(TAG, "Miroir Daemon (DisplayManager) démarré avec succès sous le nom: " + displayName);
-        } catch (Exception e) {
-            Log.e(TAG, "Erreur lors du démarrage du miroir Daemon natif", e);
-        }
-    }
 }

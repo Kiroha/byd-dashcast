@@ -166,6 +166,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <provider
+            android:name=".daemon.MirrorProvider"
+            android:authorities="${applicationId}.mirrorprovider"
+            android:exported="true" />
+
+
     </application>
 
 </manifest>

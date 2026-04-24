@@ -105,15 +105,15 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    String psOut = safeOut(dadb.shell("ps -A | grep MirrorDaemon 2>&1").getAllOutput());
-                    if (psOut.contains("MirrorDaemon")) {
+                    String psOut = safeOut(dadb.shell("ps -A | grep mirrordaemon 2>&1").getAllOutput());
+                    if (psOut.contains("mirrordaemon")) {
                         // Kill l'ancien Daemon (utile en développement pour relancer avec le nouvel APK)
                         // On trouve son PID pour ne pas tuer d'autres app_process.
-                        dadb.shell("ps -A | grep MirrorDaemon | awk '{print $2}' | xargs kill -9 2>/dev/null");
+                        dadb.shell("ps -A | grep mirrordaemon | awk '{print $2}' | xargs kill -9 2>/dev/null");
                         AppLogger.i(TAG, "Ancien MirrorDaemon (shell) tué.");
                     }
                     String apkPath = context.getPackageCodePath();
-                    String cmd = "export CLASSPATH=" + apkPath + " && nohup app_process /system/bin com.byd.myapp.daemon.MirrorDaemon </dev/null >/dev/null 2>&1 &";
+                    String cmd = "export CLASSPATH=" + apkPath + " && nohup app_process /system/bin com.byd.myapp.daemon.MirrorDaemon </dev/null >/sdcard/mirrordaemon.log 2>&1 &";
                     dadb.shell(cmd);
                     AppLogger.i(TAG, "MirrorDaemon lance via ADB (app_process).");
                 } catch (Exception e) {
@@ -879,7 +879,7 @@ public class AdbLocalClient {
                     // Tente un am start --display 1 minimal pour confirmer le verdict
                     AppLogger.i(dTag, "uid=2000 am start --display 1 (notre activity, dry run):");
                     String testLaunch = dadb.shell(
-                            "am start-activity -W --display 1 --windowingMode 5 "
+                            "am start-activity -W --display 1 "
                             + "-n " + pkg + "/.dashboard.ClusterTrampolineActivity 2>&1 "
                             + "| head -20").getAllOutput().trim();
                     for (String line : testLaunch.split("\n")) AppLogger.i(dTag, "  " + line);
@@ -1150,27 +1150,14 @@ public class AdbLocalClient {
     }
 
     /**
-     * Lance NOTRE TRAMPOLINE sur display N via ADB shell, avec le package cible en extra.
-     *
-     * Pourquoi ce chemin (v1.73+) :
-     *   - Notre APK n'est PAS signé avec la clé BYD (CN=Android testkey vs CN=auto_api)
-     *     → INTERNAL_SYSTEM_WINDOW non accordée
-     *     → setLaunchDisplayId(N!=0) toujours refusé depuis uid=10100
-     *   - ADB shell (uid=2000) sur cette ROM POSSÈDE INTERNAL_SYSTEM_WINDOW
-     *     (présent dans /system/etc/permissions/platform.xml, contexte SELinux shell:s0)
-     *   - Le trampoline est exporté → ADB shell peut le lancer
-     *   - Une fois sur display 1, le trampoline lance le tiers via Activity.startActivity()
-     *     SANS setLaunchDisplayId → la nouvelle task hérite du display source.
-     *
-     * C'est le pattern qui fonctionnait le 12 avril (BYDDashboardActivity exported=true
-     * lancée depuis ADB shell uid=2000 via am start --display 1).
+     * Lance l'application tierce directement via notre Daemon Java (UID 2000).
+     * Bypasse complètement la syntaxe de compilation "am start" d'AOSP/BYD qui plante.
      */
-    public static void launchTrampolineViaAdb(final Context context, final String targetPackage,
+    public static void launchDirectViaAdb(final Context context, final String targetPackage,
             final int displayId, final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    // Résolution directe de l'Intent de lancement de l'application tierce.
+                try {
                     android.content.pm.PackageManager pm = context.getPackageManager();
                     android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
                     if (li == null) {
@@ -1186,33 +1173,18 @@ public class AdbLocalClient {
                         callback.onError("Aucune activité trouvée pour " + targetPackage);
                         return;
                     }
-                    String compName = li.getComponent().flattenToShortString();
-
-                    // Lancement via le Trampoline (crucial sur DiLink 3.0/Android 10)
-                    // Passer directement "am start --display 1 -n compName" provoque un
-                    // "Permission Denial" car l'uid=2000 (ADB) n'est pas le propriétaire
-                    // de l'application tierce. En passant par NOTRE trampoline (même uid que nous),
-                    // l'ActivityStarter autorise le ciblage du display cluster.
-                    String pkg = context.getPackageName();
-                    String cmd = "am start --display " + displayId
-                            + " --windowingMode 5"
-                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
-                            + " --es target_package " + targetPackage
-                            + " 2>&1";
-                    AppLogger.i(TAG, "ADB launch via Trampoline: " + cmd);
                     
-                    AdbShellResponse r = dadb.shell(cmd);
-                    String out = r.getAllOutput().trim();
-                    AppLogger.i(TAG, "ADB launch result: " + out);
-                    if (out.contains("Error") || out.contains("Exception")
-                            || out.contains("Permission Denial")) {
-                        callback.onError(out);
-                    } else {
-                        callback.onSuccess(out);
-                    }
+                    AppLogger.i(TAG, "Broadcast daemon_launch pour " + targetPackage + " sur display " + displayId);
+                    android.content.Intent intent = new android.content.Intent("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
+                    intent.putExtra("pkg", li.getComponent().getPackageName());
+                    intent.putExtra("cls", li.getComponent().getClassName());
+                    intent.putExtra("displayId", displayId);
+                    context.sendBroadcast(intent);
+                    
+                    callback.onSuccess("Broadcast envoyé au Daemon.");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchTrampolineViaAdb échoué", e);
+                    AppLogger.e(TAG, "launchDirectViaAdb échoué", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -1220,23 +1192,15 @@ public class AdbLocalClient {
     }
 
     /**
-     * Variante de launchTrampolineViaAdb avec des bounds FREEFORM explicites.
-     * Les bounds sont passées via extras entiers (--ei) : DiLink 3.0 ne supporte pas --bounds.
-     * ClusterTrampolineActivity les lit et appelle ActivityOptions.setLaunchBounds().
-     *
-     * @param left   coordonnée gauche (pixels display cluster)
-     * @param top    coordonnée haute
-     * @param right  coordonnée droite
-     * @param bottom coordonnée basse
+     * Variante de launchDirectViaAdb avec des bounds FREEFORM explicites envoyés au Daemon.
      */
-    public static void launchTrampolineWithBounds(final Context context,
+    public static void launchDirectWithBounds(final Context context,
             final String targetPackage, final int displayId,
             final int left, final int top, final int right, final int bottom,
             final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    // Résolution directe de l'Intent de lancement de l'application tierce.
+                try {
                     android.content.pm.PackageManager pm = context.getPackageManager();
                     android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
                     if (li == null) {
@@ -1252,34 +1216,22 @@ public class AdbLocalClient {
                         callback.onError("Aucune activité trouvée pour " + targetPackage);
                         return;
                     }
-                    String compName = li.getComponent().flattenToShortString();
-
-                    // Lancement natif de l'app via le shell ADB (am start) directement
-                    // DiLink 3.0 bloque --bounds pour les apps tierces, nous utiliserons le redimensionnement
-                    // via notre Trampoline de configuration si nécessaire
-                    String pkg = context.getPackageName();
-                    String cmd = "am start --display " + displayId
-                            + " --windowingMode 5"
-                            + " -n " + pkg + "/.dashboard.ClusterTrampolineActivity"
-                            + " --es target_package " + targetPackage
-                            + " --ei bounds_l " + left
-                            + " --ei bounds_t " + top
-                            + " --ei bounds_r " + right
-                            + " --ei bounds_b " + bottom
-                            + " 2>&1";
-                    AppLogger.i(TAG, "ADB launchTrampolineWithBounds: " + cmd);
-                    AdbShellResponse r = dadb.shell(cmd);
-                    String out = r.getAllOutput().trim();
-                    AppLogger.i(TAG, "ADB launchTrampolineWithBounds result: " + out);
-                    if (out.contains("Error") || out.contains("Exception")
-                            || out.contains("Permission Denial")) {
-                        callback.onError(out);
-                    } else {
-                        callback.onSuccess(out);
-                    }
+                    
+                    AppLogger.i(TAG, "Broadcast daemon_launch_bounds pour " + targetPackage);
+                    android.content.Intent intent = new android.content.Intent("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
+                    intent.putExtra("pkg", li.getComponent().getPackageName());
+                    intent.putExtra("cls", li.getComponent().getClassName());
+                    intent.putExtra("displayId", displayId);
+                    intent.putExtra("bounds_l", left);
+                    intent.putExtra("bounds_t", top);
+                    intent.putExtra("bounds_r", right);
+                    intent.putExtra("bounds_b", bottom);
+                    context.sendBroadcast(intent);
+                    
+                    callback.onSuccess("Broadcast bounds envoyé au Daemon.");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchTrampolineWithBounds échoué", e);
+                    AppLogger.e(TAG, "launchDirectWithBounds échoué", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }

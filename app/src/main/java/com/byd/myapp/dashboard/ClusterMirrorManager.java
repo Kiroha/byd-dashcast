@@ -36,12 +36,15 @@ public class ClusterMirrorManager {
     // Classe SurfaceControl mise en cache après la première résolution (réflexion coûteuse).
     private static Class<?> sSurfaceControlClass = null;
 
+    private android.content.BroadcastReceiver mReadyReceiver = null;
+    private Surface mPendingSurface = null;
+    private Display mPendingDisplay = null;
+    private int mPendingViewW = 0;
+    private int mPendingViewH = 0;
+
     public int     getClusterWidth()  { return mClusterW; }
     public int     getClusterHeight() { return mClusterH; }
     public boolean isMirrorActive()   { return mMirrorActive; }
-
-    // Client spécialisé BYD
-    private BydVideoMirrorClient mBydClient;
 
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -79,6 +82,22 @@ public class ClusterMirrorManager {
                                int viewW, int viewH) {
         stopMirror(context);
 
+        if (mReadyReceiver == null) {
+            mReadyReceiver = new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent intent) {
+                    if ("com.byd.myapp.MIRROR_DAEMON_READY".equals(intent.getAction())) {
+                        AppLogger.i(TAG, "Daemon vient de nous dire qu'il est prêt (MIRROR_DAEMON_READY) !");
+                        if (mPendingSurface != null && mPendingSurface.isValid()) {
+                            AppLogger.i(TAG, "Renvoi direct de la Surface mise en attente au Daemon.");
+                            delegateToMirrorDaemon(c, mPendingDisplay, mPendingSurface, mPendingViewW, mPendingViewH);
+                        }
+                    }
+                }
+            };
+            context.getApplicationContext().registerReceiver(mReadyReceiver, new android.content.IntentFilter("com.byd.myapp.MIRROR_DAEMON_READY"));
+        }
+
         if (clusterDisplay == null) {
             AppLogger.e(TAG, "startMirror : clusterDisplay null");
             return false;
@@ -91,17 +110,6 @@ public class ClusterMirrorManager {
             AppLogger.e(TAG, "startMirror : dimensions vue invalides " + viewW + "×" + viewH);
             return false;
         }
-
-//         // --- BYD PROPRIETARY VIDEO MIRROR STRATEGY ---
-//         if (mBydClient == null) {
-//             mBydClient = new BydVideoMirrorClient(context);
-//             mBydClient.startListening();
-//         }
-//         AppLogger.i(TAG, "Délégation du miroir à l'API système BYD chiffrée...");
-//         mBydClient.startMirroring(targetSurface, mClusterW, mClusterH, viewW, viewH);
-//         mMirrorActive = true;
-//         return true;
-
 
         try {
             if (sSurfaceControlClass == null) {
@@ -139,7 +147,7 @@ public class ClusterMirrorManager {
             if (mirrorToken == null) {
                 AppLogger.w(TAG, "createDisplay → null. Tentative de délégation au MirrorDaemon (ADB)...");
                 // On délègue au Daemon via un broadcast (uid=2000 shell) !
-                boolean daemonOk = delegateToMirrorDaemon(context, targetSurface, viewW, viewH);
+                boolean daemonOk = delegateToMirrorDaemon(context, clusterDisplay, targetSurface, viewW, viewH);
                 if (daemonOk) {
                     mMirrorActive = true;
                     return true;
@@ -307,33 +315,20 @@ public class ClusterMirrorManager {
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    private boolean delegateToMirrorDaemon(Context context, Surface targetSurface, int viewW, int viewH) {
+    private boolean delegateToMirrorDaemon(Context context, Display clusterDisplay, Surface targetSurface, int viewW, int viewH) {
+        // Exposer les paramètres au ContentProvider
+        com.byd.myapp.daemon.MirrorProvider.sTargetSurface = targetSurface;
+        com.byd.myapp.daemon.MirrorProvider.sViewW = viewW;
+        com.byd.myapp.daemon.MirrorProvider.sViewH = viewH;
+        com.byd.myapp.daemon.MirrorProvider.sClusterW = mClusterW;
+        com.byd.myapp.daemon.MirrorProvider.sClusterH = mClusterH;
+        com.byd.myapp.daemon.MirrorProvider.sLayerStack = resolveLayerStack(clusterDisplay);
+        
+        com.byd.myapp.AdbLocalClient.startMirrorDaemon(context); // Force start si pas encore fait
+
         try {
-            AppLogger.i(TAG, "Envoi de la demande MirrorDaemon avec Binder (bypassing FD restrictions)...");
-            Intent i = new Intent("com.byd.myapp.MIRROR_DAEMON_SURFACE");
-            
-            // L'astuce : Android (ActivityManager) supprime les File Descriptors (Surface) des Intents génériques.
-            // On utilise un Binder à la volée. Quand le daemon fera "transact()", il lira la Surface
-            // directement via l'IPC sans passer par la restriction de l'ActivityManager.
-            android.os.Bundle b = new android.os.Bundle();
-            final Surface finalSurface = targetSurface;
-            b.putBinder("surface_binder", new android.os.Binder() {
-                @Override
-                protected boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) {
-                    if (code == 1) {
-                        reply.writeNoException();
-                        finalSurface.writeToParcel(reply, 0);
-                        return true;
-                    }
-                    return false;
-                }
-            });
-            i.putExtras(b);
-            
-            i.putExtra("viewW", viewW);
-            i.putExtra("viewH", viewH);
-            i.putExtra("clusterW", mClusterW);
-            i.putExtra("clusterH", mClusterH);
+            AppLogger.i(TAG, "Envoi de l'impulsion MirrorDaemon pour qu'il interroge le ContentProvider...");
+            Intent i = new Intent("com.byd.myapp.MIRROR_DAEMON_PULL");
             context.sendBroadcast(i);
             return true;
         } catch (Exception e) {

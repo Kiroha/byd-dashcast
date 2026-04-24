@@ -12,6 +12,8 @@ import java.util.concurrent.Executors;
 import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import java.lang.reflect.Method;
 
@@ -48,7 +50,15 @@ public class ClusterInputForwarder {
     private Method mInjectMethod;
     private boolean mAvailable = false;
 
+    // Object buffer and pre-resolved address for high-performance UDP transmission to avoid GC churn
+    private InetAddress mLoopback;
+    private final ByteBuffer mTouchBuffer = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder());
+    private final byte[] mTouchBytes = new byte[16];
+
     public ClusterInputForwarder(Context context) {
+        try {
+            mLoopback = InetAddress.getByName("127.0.0.1");
+        } catch (Exception e) {}
         try {
             // InputManager.getInstance() est une méthode cachée depuis API 16
             Class<?> imClass = Class.forName("android.hardware.input.InputManager");
@@ -98,44 +108,35 @@ public class ClusterInputForwarder {
      * @param action MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
      */
     public void forwardTouch(float padX, float padY, float padW, float padH, final int action) {
-        if (!mAvailable) return;
+        if (!mAvailable || mLoopback == null) return;
 
         // Mapping proportionnel : coordonnées pad → coordonnées cluster
         final float clusterX = (padX / padW) * mClusterWidth;
         final float clusterY = (padY / padH) * mClusterHeight;
+        final int displayId = mClusterDisplayId;
 
-        long now = SystemClock.uptimeMillis();
-        MotionEvent event = MotionEvent.obtain(now, now, action, clusterX, clusterY, 0);
-        event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        // API 29 : router l'event vers le display cluster.
-        // setDisplayId() est @hide → accessible via réflexion avec platform.keystore.
-        try {
-            java.lang.reflect.Method setDisplayId =
-                    MotionEvent.class.getMethod("setDisplayId", int.class);
-            setDisplayId.invoke(event, mClusterDisplayId);
-        } catch (Exception ignored) {
-            // ROM trop ancienne ou méthode absente — l'event ira au display principal
-        }
-        try {
-            mUdpExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        String msg = action + "," + clusterX + "," + clusterY + "," + mClusterDisplayId;
-                        byte[] buf = msg.getBytes();
-                        if (mUdpSocket != null) {
-                            mUdpSocket.send(new DatagramPacket(buf, buf.length, InetAddress.getByName("127.0.0.1"), 5005));
-                        }
-                    } catch (Exception x) {
-                        AppLogger.e(TAG, "Touch UDP echoué", x);
+        // On utilise un ByteBuffer alloué une fois par thread ou synchronisé pour éviter le GC overhead:
+        // On push la task dans le thread unique de l'Executor
+        mUdpExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (mUdpSocket != null) {
+                        mTouchBuffer.clear();
+                        mTouchBuffer.putInt(action);
+                        mTouchBuffer.putFloat(clusterX);
+                        mTouchBuffer.putFloat(clusterY);
+                        mTouchBuffer.putInt(displayId);
+                        mTouchBuffer.position(0);
+                        mTouchBuffer.get(mTouchBytes, 0, 16);
+                        
+                        mUdpSocket.send(new DatagramPacket(mTouchBytes, 16, mLoopback, 5005));
                     }
+                } catch (Exception x) {
+                    AppLogger.e(TAG, "Touch UDP echoué", x);
                 }
-            });
-        } catch (Exception e) {
-            AppLogger.e(TAG, "Touch inject échoué", e);
-        } finally {
-            event.recycle();
-        }
+            }
+        });
     }
 
     /**
