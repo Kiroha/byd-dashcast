@@ -663,10 +663,9 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
-        // Si VirtualDisplay déjà actif, ne pas recréer
-        if (mClusterService.getMirrorManager().isMirrorActive()
-                && mClusterService.getMirrorManager().getPreviewDisplayId() > 0) {
-            AppLogger.d(TAG, "attemptStartMirror : VirtualDisplay déjà actif");
+        // Si miroir déjà actif (SurfaceControl ou VirtualDisplay), ne pas recréer
+        if (mClusterService.getMirrorManager().isMirrorActive()) {
+            AppLogger.d(TAG, "attemptStartMirror : miroir déjà actif");
             clusterMirror.setVisibility(View.VISIBLE);
             stopScreenshotLoop();
             return;
@@ -694,17 +693,20 @@ public class MainActivity extends AppCompatActivity
                 clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
 
         if (mirrorOk) {
-            // VirtualDisplay créé → afficher le SurfaceView, stopper les screenshots
+            // SurfaceControl mirror actif → afficher le SurfaceView, stopper les screenshots
+            // Le contenu du cluster est déjà mirrioré via setDisplayLayerStack — pas besoin de
+            // lancer une app sur un display séparé.
             clusterMirror.setVisibility(View.VISIBLE);
             clusterMirrorScreenshot.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
             stopScreenshotLoop();
 
-            // Lancer l'app courante sur le preview display pour la voir dans notre UI
+            // Si c'est un fallback VirtualDisplay (ACCESS_SURFACE_FLINGER absent),
+            // lancer l'app sur ce VirtualDisplay pour qu'on voie quelque chose
             int previewId = mClusterService.getMirrorManager().getPreviewDisplayId();
             if (previewId > 0 && mCurrentDashboardPkg != null) {
-                AppLogger.i(TAG, "Lancement preview " + mCurrentDashboardPkg
-                        + " sur VirtualDisplay previewId=" + previewId);
+                AppLogger.i(TAG, "Fallback VD preview — lancement " + mCurrentDashboardPkg
+                        + " sur display=" + previewId);
                 mClusterService.launchOnSpecificDisplay(mCurrentDashboardPkg, previewId, null);
             }
         } else {

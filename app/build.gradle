@@ -19,8 +19,8 @@ android {
         applicationId "com.byd.myapp"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 138
-        versionName "2.35"
+        versionCode 139
+        versionName "2.36"
 
         // remote log analytics — lu depuis local.properties (hors source control)
         def props = new Properties()

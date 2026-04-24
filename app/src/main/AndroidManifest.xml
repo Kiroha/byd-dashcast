@@ -17,6 +17,10 @@
          C'est une signature permission — accordée grâce à la signature platform.keystore BYD -->
     <uses-permission android:name="android.permission.INJECT_EVENTS"/>
 
+    <!-- Miroir SurfaceControl — capturer le layer stack du cluster dans notre SurfaceView
+         Signature permission : accordée si notre cert == platform cert (cas ici avec platform.keystore) -->
+    <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER"/>
+
     <!-- Carrosserie / Véhicule (COMMON = obligatoire en dynamique avant getInstance) -->
     <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_COMMON"/>
     <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_GET"/>
