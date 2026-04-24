@@ -107,36 +107,53 @@ public class ClusterInputForwarder {
      * @param padH   Hauteur de la vue touchpad
      * @param action MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
      */
+    /**
+     * Transfère un événement tactile vers le cluster via InputManager.injectInputEvent
+     * avec setDisplayId — identique à ce que fait WindowManagement.
+     *
+     * @param padX / padY  Coordonnées déjà mappées en espace cluster (pas en espace vue)
+     * @param padW / padH  Dimensions référence (= mClusterWidth/Height si déjà mappées)
+     * @param action       MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
+     */
     public void forwardTouch(float padX, float padY, float padW, float padH, final int action) {
-        if (!mAvailable || mLoopback == null) return;
+        if (!mAvailable) return;
 
-        // Mapping proportionnel : coordonnées pad → coordonnées cluster
+        // Mapping proportionnel (no-op si padW==mClusterWidth, déjà mappé par l'appelant)
         final float clusterX = (padX / padW) * mClusterWidth;
         final float clusterY = (padY / padH) * mClusterHeight;
-        final int displayId = mClusterDisplayId;
+        final int displayId  = mClusterDisplayId;
 
-        // On utilise un ByteBuffer alloué une fois par thread ou synchronisé pour éviter le GC overhead:
-        // On push la task dans le thread unique de l'Executor
-        mUdpExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (mUdpSocket != null) {
-                        mTouchBuffer.clear();
-                        mTouchBuffer.putInt(action);
-                        mTouchBuffer.putFloat(clusterX);
-                        mTouchBuffer.putFloat(clusterY);
-                        mTouchBuffer.putInt(displayId);
-                        mTouchBuffer.position(0);
-                        mTouchBuffer.get(mTouchBytes, 0, 16);
-                        
-                        mUdpSocket.send(new DatagramPacket(mTouchBytes, 16, mLoopback, 5005));
-                    }
-                } catch (Exception x) {
-                    AppLogger.e(TAG, "Touch UDP echoué", x);
-                }
+        try {
+            MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[1];
+            props[0] = new MotionEvent.PointerProperties();
+            props[0].id = 0;
+            props[0].toolType = MotionEvent.TOOL_TYPE_FINGER;
+
+            MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[1];
+            coords[0] = new MotionEvent.PointerCoords();
+            coords[0].x = clusterX;
+            coords[0].y = clusterY;
+            coords[0].pressure = 1.0f;
+            coords[0].size = 1.0f;
+
+            long now = SystemClock.uptimeMillis();
+            MotionEvent ev = MotionEvent.obtain(
+                    now, now, action, 1, props, coords,
+                    0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+            // setDisplayId est une API @hide — appel par reflection (unlockHiddenApis() déjà fait)
+            try {
+                Method setDisplayId = MotionEvent.class.getDeclaredMethod("setDisplayId", int.class);
+                setDisplayId.setAccessible(true);
+                setDisplayId.invoke(ev, displayId);
+            } catch (Exception ignored) {
+                // Sur certaines ROM la méthode n'existe pas — injection sans display ID
             }
-        });
+            mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
+            ev.recycle();
+        } catch (Exception e) {
+            AppLogger.e(TAG, "forwardTouch inject échoué x=" + (int)clusterX
+                    + " y=" + (int)clusterY + " disp=" + displayId, e);
+        }
     }
 
     /**
