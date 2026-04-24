@@ -46,9 +46,10 @@ public class ClusterMirrorManager {
     private static final int TYPE_APPLICATION_OVERLAY = 2038;
     // Flags: FLAG_NOT_FOCUSABLE(8) | FLAG_LAYOUT_IN_SCREEN(256)
     private static final int OVERLAY_FLAGS = 0x108;
-    // VirtualDisplay flags = PUBLIC(1) | DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
-    // PUBLIC(1) requis pour que uid=10100 puisse lancer des activités dessus sans INTERNAL_SYSTEM_WINDOW
-    private static final int VDISPLAY_FLAGS = 321;
+    // VirtualDisplay flags = DESTROY_CONTENT_ON_REMOVAL(256) | SUPPORTS_TOUCH(64)
+    // NOTE: PUBLIC(1) non inclus → createVirtualDisplay sans PUBLIC ne requiert pas CAPTURE_VIDEO_OUTPUT
+    // Le lancement depuis uid=10100 doit passer par IActivityManager (display owner check)
+    private static final int VDISPLAY_FLAGS = 320;
 
     // ── A. Cluster overlay (TextureView sur le cluster physique) ─────────────
     private VirtualDisplay mClusterOverlayVD     = null;
@@ -150,6 +151,7 @@ public class ClusterMirrorManager {
                     tv.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
                         @Override
                         public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
+                            try {
                             AppLogger.i(TAG, "Cluster overlay surface disponible " + w + "×" + h);
                             Surface surface = new Surface(st);
                             mClusterOverlaySurface = surface;
@@ -185,6 +187,13 @@ public class ClusterMirrorManager {
                                 AppLogger.e(TAG, "createVirtualDisplay overlay → null");
                                 if (callback != null) mainHandler.post(new Runnable() {
                                     @Override public void run() { callback.onOverlayFailed("VirtualDisplay null"); }
+                                });
+                            }
+                            } catch (Exception e) {
+                                // SecurityException si PUBLIC flag sans CAPTURE_VIDEO_OUTPUT, etc.
+                                AppLogger.e(TAG, "onSurfaceTextureAvailable ERREUR", e);
+                                if (callback != null) mainHandler.post(new Runnable() {
+                                    @Override public void run() { callback.onOverlayFailed(e.getMessage()); }
                                 });
                             }
                         }

@@ -234,13 +234,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // On NE PASSE PLUS par mLauncher.launchOnDashboard() (Context.startActivity)
                 // qui échoue toujours faute de INTERNAL_SYSTEM_WINDOW (mismatch keystore
                 // confirmé par dump v1.72 : notre sig=b4addb29 ≠ ROM sig=22216e4d).
-                // v2.32 : préférer le VirtualDisplay de l'overlay (TextureView sur cluster)
-                // si disponible, sinon fallback sur le display Freedom directement.
+                // v2.34 : préférer l'overlay VD si disponible, fallback Freedom display si échec.
+                // L'overlay (display=3) peut échouer si createVirtualDisplay a eu une SecurityException.
                 final int freedomDisplayId = mDisplayHelper.getKnownClusterDisplayId();
                 final int displayId = (mClusterOverlayDisplayId > 0)
                         ? mClusterOverlayDisplayId : freedomDisplayId;
                 AppLogger.i(TAG, "Lancement IActivityManager sur display=" + displayId
-                        + (mClusterOverlayDisplayId > 0 ? " [OVERLAY v2.32 ✓]" : " [FREEDOM fallback]")
+                        + (mClusterOverlayDisplayId > 0 ? " [OVERLAY ✓]" : " [FREEDOM direct]")
                         + " → " + packageName);
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
@@ -251,25 +251,63 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     launchIntent.addFlags(0x10008000); // NEW_TASK | CLEAR_TASK
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
-                    
+
+                    boolean launched = false;
                     try {
                         Class<?> amClass = Class.forName("android.app.ActivityManager");
                         java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
                         Object iActivityManager = getServiceMethod.invoke(null);
-                        
                         Class<?> iAmClass = Class.forName("android.app.IActivityManager");
                         Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
                         Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
-                        java.lang.reflect.Method startActivityAsUserMethod = iAmClass.getMethod("startActivityAsUser", iAppThreadClass, String.class, android.content.Intent.class, String.class, android.os.IBinder.class, String.class, int.class, int.class, profilerInfoClass, android.os.Bundle.class, int.class);
-                        
-                        AppLogger.i(TAG, "Calling IActivityManager.startActivityAsUser avec callerPackage=" + getPackageName());
-                        startActivityAsUserMethod.invoke(iActivityManager, null, getPackageName(), launchIntent, null, null, null, 0, 0, null, opts.toBundle(), -2); // UserHandle.USER_CURRENT = -2
+                        java.lang.reflect.Method startActivityAsUserMethod = iAmClass.getMethod(
+                                "startActivityAsUser", iAppThreadClass, String.class,
+                                android.content.Intent.class, String.class,
+                                android.os.IBinder.class, String.class,
+                                int.class, int.class, profilerInfoClass,
+                                android.os.Bundle.class, int.class);
+                        AppLogger.i(TAG, "Calling IActivityManager.startActivityAsUser callerPackage=" + getPackageName());
+                        startActivityAsUserMethod.invoke(iActivityManager, null, getPackageName(),
+                                launchIntent, null, null, null, 0, 0, null, opts.toBundle(), -2);
+                        launched = true;
                     } catch (Exception ex) {
-                        AppLogger.e(TAG, "Erreur appel IActivityManager depuis MyBYDApp, fallback context", ex);
-                        startActivity(launchIntent, opts.toBundle());
+                        AppLogger.w(TAG, "IActivityManager display=" + displayId + " ECHEC: "
+                                + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()));
                     }
-                    
-                    AppLogger.i(TAG, "Appel IActivityManager réussi depuis MyBYDApp !");
+
+                    // Si l'overlay display a échoué, retenter sur Freedom display (PUBLIC, prouvé v2.29)
+                    if (!launched && displayId != freedomDisplayId && freedomDisplayId > 0) {
+                        AppLogger.i(TAG, "Retry sur Freedom display=" + freedomDisplayId + " → " + packageName);
+                        opts = android.app.ActivityOptions.makeBasic();
+                        opts.setLaunchDisplayId(freedomDisplayId);
+                        try {
+                            Class<?> amClass = Class.forName("android.app.ActivityManager");
+                            java.lang.reflect.Method getServiceMethod = amClass.getMethod("getService");
+                            Object iam = getServiceMethod.invoke(null);
+                            Class<?> iAmClass = Class.forName("android.app.IActivityManager");
+                            Class<?> iAppThreadClass = Class.forName("android.app.IApplicationThread");
+                            Class<?> profilerInfoClass = Class.forName("android.app.ProfilerInfo");
+                            java.lang.reflect.Method startMethod = iAmClass.getMethod(
+                                    "startActivityAsUser", iAppThreadClass, String.class,
+                                    android.content.Intent.class, String.class,
+                                    android.os.IBinder.class, String.class,
+                                    int.class, int.class, profilerInfoClass,
+                                    android.os.Bundle.class, int.class);
+                            startMethod.invoke(iam, null, getPackageName(), launchIntent,
+                                    null, null, null, 0, 0, null, opts.toBundle(), -2);
+                            launched = true;
+                            AppLogger.i(TAG, "Lancement Freedom display=" + freedomDisplayId + " ✓");
+                        } catch (Exception ex2) {
+                            AppLogger.e(TAG, "Retry Freedom ECHEC", ex2);
+                        }
+                    }
+
+                    if (!launched) {
+                        AppLogger.e(TAG, "Echec lancement " + packageName + " sur tous les displays");
+                        return;
+                    }
+
+                    AppLogger.i(TAG, "Lancement réussi !");
                     if (callback != null) {
                         mMainHandler.post(new Runnable() {
                             @Override public void run() { callback.onResult(true); }
