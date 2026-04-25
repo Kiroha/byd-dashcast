@@ -271,11 +271,15 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
                     startActivityViaIAM(launchIntent, opts);
 
-                    // Force the cluster display back to landscape via ADB.
-                    // On this ROM, FREEFORM mode is overridden to FULLSCREEN on secondary
-                    // displays, so apps can still rotate the display at runtime.
+                    // Freeze cluster display rotation to landscape (ROTATION_0).
+                    // IWindowManager.freezeDisplayRotation() prevents any app from calling
+                    // setRequestedOrientation() and rotating the display.
+                    // This is the definitive fix; wm size below is a safety net.
+                    freezeClusterRotation(displayId);
+
+                    // Also force display size to landscape via ADB as a safety net.
                     // 'wm size WxH --display N' calls IWindowManager.setForcedDisplaySize()
-                    // which overrides the logical display dimensions, countering portrait rotation.
+                    // which overrides the logical display dimensions if they got rotated.
                     com.byd.myapp.AdbLocalClient.executeShell(ClusterService.this,
                             "wm size " + clusterW + "x" + clusterH + " --display " + displayId);
 
@@ -392,6 +396,39 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * Invokes IActivityManager.startActivityAsUser() via reflection, with Context.startActivity() fallback.
      * Shared by launchOnDashboard() and launchOnSpecificDisplay() — eliminates 15 duplicated lines.
      */
+    /**
+     * Freezes the rotation of the cluster display to ROTATION_0 (landscape) via
+     * IWindowManager.freezeDisplayRotation(). This prevents any app running on the
+     * cluster from changing the display orientation via setRequestedOrientation(),
+     * which on DiLink 3.0 rotates the VirtualDisplay from landscape to portrait.
+     *
+     * Requires the platform signature (INTERNAL_SYSTEM_WINDOW) — granted with our cert.
+     * Falls back silently: if not available on this ROM, the 'wm size' ADB command
+     * already mitigates the issue after-the-fact.
+     */
+    private void freezeClusterRotation(int displayId) {
+        try {
+            Class<?> smClass = Class.forName("android.os.ServiceManager");
+            android.os.IBinder wmBinder = (android.os.IBinder)
+                    smClass.getMethod("getService", String.class).invoke(null, "window");
+            if (wmBinder == null) {
+                AppLogger.w(TAG, "freezeClusterRotation: window ServiceManager null");
+                return;
+            }
+            Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
+            Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
+                    .invoke(null, wmBinder);
+            // freezeDisplayRotation(int displayId, int rotation)
+            // rotation = Surface.ROTATION_0 = 0 → landscape
+            java.lang.reflect.Method freeze = iwm.getClass()
+                    .getMethod("freezeDisplayRotation", int.class, int.class);
+            freeze.invoke(iwm, displayId, 0 /* ROTATION_0 */);
+            AppLogger.i(TAG, "freezeDisplayRotation(display=" + displayId + ", ROTATION_0) OK");
+        } catch (Exception e) {
+            AppLogger.w(TAG, "freezeDisplayRotation not available on this ROM: " + e.getMessage());
+        }
+    }
+
     private void startActivityViaIAM(android.content.Intent intent, android.app.ActivityOptions opts) {
         try {
             Class<?> amClass = Class.forName("android.app.ActivityManager");
