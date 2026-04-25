@@ -172,7 +172,7 @@ adb connect <car-ip>:5555
 adb install -r app/build/outputs/apk/debug/DashCast-v0.1.1-alpha-debug.apk
 ```
 3. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
-4. The app should be functional immediately. If vehicle data (speed, energy, etc.) is not available, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
+4. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
 
    > On DiLink 3.0 with `platform.keystore` signing, these permissions are typically pre-granted by the ROM at install time and TEST 1 is not required.
 
@@ -252,7 +252,7 @@ cd MyBYDApp   # repo folder name
 | `SYSTEM_ALERT_WINDOW` | dangerous | Floating overlay (FloatingLogButton) |
 | `FOREGROUND_SERVICE` | normal | ClusterService |
 | `INTERNET` | normal | remote log analytics export |
-| `BYDAUTO_*_COMMON` (×11) | dangerous | Vehicle data (speed, energy, gearbox…) |
+| `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs (declared, not yet used) |
 | `BYDAUTO_*_GET` | signature | Extended read (not grantable without real BYD key) |
 
 `dangerous` permissions are granted via `pm grant` on first launch (TEST 1 — Diagnostic).
