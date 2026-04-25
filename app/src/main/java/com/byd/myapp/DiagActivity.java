@@ -44,6 +44,7 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnStartSniffer;
     private Button   btnStopSniffer;
     private Button   btnExportSniffer;
+    private Button   btnExportDaemonLog;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -79,11 +80,13 @@ public class DiagActivity extends AppCompatActivity {
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
         btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
+        btnExportDaemonLog = (Button) findViewById(R.id.btn_export_daemon_log);
 
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
         btnStartSniffer.setOnClickListener(v -> startSniffer());
         btnStopSniffer.setOnClickListener(v -> stopSniffer());
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
+        btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog());
 
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -432,6 +435,42 @@ public class DiagActivity extends AppCompatActivity {
             startActivity(android.content.Intent.createChooser(shareIntent, "Partager le Sniffer"));
         } catch (Exception e) {
             AppLogger.e("DiagSniffer", "Erreur export", e);
+        }
+    }
+
+    private void exportDaemonLog() {
+        // /sdcard/mirrordaemon.log — écrit par MirrorDaemon via nohup app_process
+        java.io.File logFile = new java.io.File(
+                android.os.Environment.getExternalStorageDirectory(), "mirrordaemon.log");
+        if (!logFile.exists() || logFile.length() == 0) {
+            android.widget.Toast.makeText(this,
+                    "mirrordaemon.log introuvable ou vide — daemon jamais lancé ?",
+                    android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            // Copier dans un répertoire accessible au FileProvider
+            java.io.File dst = new java.io.File(getExternalFilesDir(null), "mirrordaemon.log");
+            try (java.io.InputStream in  = new java.io.FileInputStream(logFile);
+                 java.io.OutputStream out = new java.io.FileOutputStream(dst)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            }
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", dst);
+            android.content.Intent shareIntent = new android.content.Intent(
+                    android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+            shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "mirrordaemon.log");
+            shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(android.content.Intent.createChooser(shareIntent,
+                    "Partager mirrordaemon.log"));
+        } catch (Exception e) {
+            AppLogger.e("DiagDaemon", "exportDaemonLog erreur", e);
+            android.widget.Toast.makeText(this, "Erreur : " + e.getMessage(),
+                    android.widget.Toast.LENGTH_LONG).show();
         }
     }
 

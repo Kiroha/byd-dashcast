@@ -325,6 +325,15 @@
             android:text="📤 Exporter le rapport du Sniffeur"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_export_daemon_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔍 Exporter mirrordaemon.log"
+            android:textSize="13sp"
+            android:backgroundTint="#6A1B9A"
             android:layout_marginBottom="16dp"/>
 </LinearLayout>
 </ScrollView>
