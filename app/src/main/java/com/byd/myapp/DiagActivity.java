@@ -49,8 +49,10 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnScanSniffer;
     private Button   btnStopSniffer;
     private Button   btnExportSniffer;
+    private Button   btnCleanSnifferLogs;
     private TextView tvSnifferScanResult;
     private Button   btnExportDaemonLog;
+    private Button   btnCleanDaemonLogs;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -92,7 +94,9 @@ public class DiagActivity extends AppCompatActivity {
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
         btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
+        btnCleanSnifferLogs = (Button) findViewById(R.id.btn_clean_sniffer_logs);
         btnExportDaemonLog = (Button) findViewById(R.id.btn_export_daemon_log);
+        btnCleanDaemonLogs = (Button) findViewById(R.id.btn_clean_daemon_logs);
 
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
         btnScanDaemon.setOnClickListener(v -> scanDaemon());
@@ -102,7 +106,9 @@ public class DiagActivity extends AppCompatActivity {
         btnStartSniffer.setOnClickListener(v -> startSniffer());
         btnStopSniffer.setOnClickListener(v -> killSnifferWithFeedback());
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
+        btnCleanSnifferLogs.setOnClickListener(v -> cleanSnifferLogs());
         btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog());
+        btnCleanDaemonLogs.setOnClickListener(v -> cleanDaemonLogs());
 
         // TEST 1 — Connexion ADB locale
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -595,6 +601,43 @@ public class DiagActivity extends AppCompatActivity {
                         "mirrordaemon.log : " + error,
                         android.widget.Toast.LENGTH_LONG).show());
             }
+        });
+    }
+
+    private void cleanDaemonLogs() {
+        // Suppression via ADB (fichiers dans /data/local/tmp/, inaccessibles depuis l'app)
+        AdbLocalClient.executeShell(this,
+                "rm -f /data/local/tmp/mirrordaemon_*.log /data/local/tmp/mirrordaemon_latest.log"
+                + " && echo cleaned");
+        runOnUiThread(() -> {
+            tvDaemonScanResult.setText("mirrordaemon_*.log supprimés ✓");
+            tvDaemonScanResult.setTextColor(0xFF69F0AE);
+            android.widget.Toast.makeText(this,
+                    "Logs daemon supprimés", android.widget.Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void cleanSnifferLogs() {
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) {
+            android.widget.Toast.makeText(this, "Dossier introuvable", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        java.io.File[] files = dir.listFiles(
+                f -> f.getName().startsWith(SNIFFER_FILE_PREFIX) && f.getName().endsWith(".txt"));
+        int count = 0;
+        if (files != null) {
+            for (java.io.File f : files) {
+                if (f.delete()) count++;
+            }
+        }
+        mCurrentSnifferFile = null;
+        final int deleted = count;
+        runOnUiThread(() -> {
+            tvSnifferScanResult.setText(deleted + " fichier(s) Sniffer supprimé(s) ✓");
+            tvSnifferScanResult.setTextColor(0xFF69F0AE);
+            android.widget.Toast.makeText(this,
+                    deleted + " fichier(s) supprimé(s)", android.widget.Toast.LENGTH_SHORT).show();
         });
     }
 

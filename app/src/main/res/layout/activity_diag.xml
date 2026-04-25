@@ -350,6 +350,15 @@
             android:text="📋 Exporter mirrordaemon.log"
             android:textSize="13sp"
             android:backgroundTint="#6A1B9A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_clean_daemon_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🗑 Supprimer tous les mirrordaemon*.log"
+            android:textSize="13sp"
+            android:backgroundTint="#37474F"
             android:layout_marginBottom="16dp"/>
 
         <!-- ======================== TEST 6 — SNIFFER SYSTÈME ======================== -->
@@ -422,6 +431,15 @@
             android:text="📤 Exporter rapport Sniffer (Telegram…)"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_clean_sniffer_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🗑 Supprimer tous les BYD_Sniffer_Dump*.txt"
+            android:textSize="13sp"
+            android:backgroundTint="#37474F"
             android:layout_marginBottom="8dp"/>
 
         <Button
