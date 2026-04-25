@@ -465,7 +465,7 @@ public class AdbLocalClient {
                 sb.append("=== Current permissions (raw dump) ===\n");
                 String finalOut = rFinal.getAllOutput().trim();
                 if (finalOut.isEmpty()) {
-                    // Fallback : dump complet de la section permissions
+                    // Fallback: full dump of the permissions section
                     AdbShellResponse rFull = dadb.shell(
                             "dumpsys package " + pkg + " 2>/dev/null | grep -A2 -E 'permission|Permission' | grep -iE 'byd|granted|denied' | head -30");
                     finalOut = rFull.getAllOutput().trim();
@@ -530,7 +530,7 @@ public class AdbLocalClient {
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "grantOverlayPermission ERREUR", e);
+                    AppLogger.e(TAG, "grantOverlayPermission ERROR", e);
                     callback.onError(msg);
                 }
             }
@@ -607,7 +607,7 @@ public class AdbLocalClient {
                     callback.onSuccess(startOut);
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "startFreedom ERREUR", e);
+                    AppLogger.e(TAG, "startFreedom ERROR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -645,7 +645,7 @@ public class AdbLocalClient {
     }
 
 
-    // ── TEST 4 : Broadcast BOOT_COMPLETED vers le BootReceiver de Freedom ──────
+    // ── TEST 4: Broadcast BOOT_COMPLETED to Freedom's BootReceiver ────────────
     /**
      * Sends BOOT_COMPLETED directly to Freedom's BootReceiver without opening its UI.
      *
@@ -710,7 +710,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "sendBootReceiverBroadcast ERREUR", e);
+                    AppLogger.e(TAG, "sendBootReceiverBroadcast ERROR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -771,7 +771,7 @@ public class AdbLocalClient {
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "activateClusterDisplay ERREUR", e);
+                    AppLogger.e(TAG, "activateClusterDisplay ERROR", e);
                     callback.onError(msg);
                 }
             }
@@ -839,7 +839,7 @@ public class AdbLocalClient {
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "runDisplayOneLaunch ERREUR", e);
+                    AppLogger.e(TAG, "runDisplayOneLaunch ERROR", e);
                     callback.onError(msg);
                 }
             }
@@ -993,7 +993,7 @@ public class AdbLocalClient {
                     if (callback != null) callback.onSuccess(out);
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "sendInfo ADB ERREUR", e);
+                    AppLogger.e(TAG, "sendInfo ADB ERROR", e);
                     if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -1051,9 +1051,9 @@ public class AdbLocalClient {
                             + "| head -30 2>&1").getAllOutput().trim();
                     for (String line : perms.split("\n")) AppLogger.i(dTag, "  " + line);
 
-                    AppLogger.i(dTag, "=== Appels signature checks (test direct) ===");
-                    // Tente un am start --display 1 minimal pour confirmer le verdict
-                    AppLogger.i(dTag, "uid=2000 am start --display 1 (notre activity, dry run):");
+                    AppLogger.i(dTag, "=== Signature permission checks (direct test) ===");
+                    // Attempt a minimal am start --display 1 to confirm the verdict
+                    AppLogger.i(dTag, "uid=2000 am start --display 1 (our activity, dry run):");
                     String testLaunch = dadb.shell(
                             "am start-activity -W --display 1 "
                             + "-n " + pkg + "/.dashboard.ClusterTrampolineActivity 2>&1 "
@@ -1063,7 +1063,7 @@ public class AdbLocalClient {
                     AppLogger.i(dTag, "=== FIN dump ===");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(dTag, "dumpSignatureAndPermissions ERREUR", e);
+                    AppLogger.e(dTag, "dumpSignatureAndPermissions ERROR", e);
                 }
             }
         }); // adb-sigdump-thread
@@ -1250,7 +1250,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "sendClusterScreenSize(" + sizeCmd + ") ERREUR", e);
+                    AppLogger.e(TAG, "sendClusterScreenSize(" + sizeCmd + ") ERROR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -1287,7 +1287,7 @@ public class AdbLocalClient {
                     callback.onSuccess(sb.toString());
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "resetClusterDisplaySize ERREUR", e);
+                    AppLogger.e(TAG, "resetClusterDisplaySize ERROR", e);
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
@@ -1318,7 +1318,7 @@ public class AdbLocalClient {
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "forceStopApp ERREUR", e);
+                    AppLogger.e(TAG, "forceStopApp ERROR", e);
                     if (callback != null) callback.onError(msg);
                 }
             }
@@ -1397,7 +1397,7 @@ public class AdbLocalClient {
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.w(TAG, "captureClusterDisplay erreur: " + e.getMessage());
+                    AppLogger.w(TAG, "captureClusterDisplay error: " + e.getMessage());
                     callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }

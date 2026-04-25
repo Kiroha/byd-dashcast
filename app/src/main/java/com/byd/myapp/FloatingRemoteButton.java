@@ -67,8 +67,8 @@ public class FloatingRemoteButton extends Service {
     private void createOverlay() {
         // Guard: SYSTEM_ALERT_WINDOW (AppOp) must be granted before addView().
         // On Android 10+, even with platform.keystore, AppOp may not be granted
-        // automatiquement pour une app en /data/app.  On tente un auto-grant via le
-        // shell ADB local (dadb), puis on relance createOverlay() sur le main thread.
+        // automatically for an app in /data/app. We attempt an auto-grant via the
+        // local ADB shell (dadb), then retry createOverlay() on the main thread.
         if (!android.provider.Settings.canDrawOverlays(this)) {
             if (mGrantAttempted) {
                 // A previous attempt already failed — do not loop indefinitely.
@@ -152,11 +152,11 @@ public class FloatingRemoteButton extends Service {
 
                         if (movX < 12 && movY < 12) {
                             if (held > 600) {
-                                // Long press → Ferme le bouton
-                                AppLogger.i(TAG, "Fermeture du Remote Button");
+                                // Long press → close the button
+                                AppLogger.i(TAG, "Remote Button closed by long press");
                                 stopSelf();
                             } else {
-                                // Tap → ouvrir MainActivity au premier plan
+                                // Tap → bring MainActivity to foreground
                                 Intent intent = new Intent(FloatingRemoteButton.this, MainActivity.class);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                                         | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);

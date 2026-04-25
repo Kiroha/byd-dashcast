@@ -49,7 +49,7 @@ public class MirrorDaemon {
     private static volatile IBinder sMirrorToken     = null;
     private static volatile int     sClusterDisplayId = 2;
 
-    // InputManager (init une seule fois)
+    // InputManager (initialized once at startup)
     private static Object  sInputManager    = null;
     private static Method  sInjectMethod    = null;
     private static Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
@@ -116,8 +116,8 @@ public class MirrorDaemon {
             final IBinder daemonBinder = new MirrorBinder();
             out("MirrorBinder created");
 
-            // Enregistrer dans ServiceManager (accessible par uid=2000) :
-            // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
+            // Register in ServiceManager (accessible by uid=2000):
+            // Replaces registerReceiver (forbidden since systemMain() — AMS rejects
             // the unregistered IApplicationThread → SecurityException).
             out("ServiceManager.addService(byd_mirror_daemon)...");
             try {
@@ -130,7 +130,7 @@ public class MirrorDaemon {
                     addSvc.invoke(null, "byd_mirror_daemon", daemonBinder, false, 0);
                     out("ServiceManager.addService (4-arg) OK");
                 } catch (NoSuchMethodException e2) {
-                    // Fallback : addService(String, IBinder)
+                    // Fallback: addService(String, IBinder)
                     Method addSvc = smClass.getDeclaredMethod("addService",
                             String.class, IBinder.class);
                     addSvc.setAccessible(true);
@@ -353,7 +353,7 @@ public class MirrorDaemon {
             try {
                 sSetDisplayId = MotionEvent.class.getDeclaredMethod("setDisplayId", int.class);
                 sSetDisplayId.setAccessible(true);
-            } catch (Exception ignored) { /* ROM sans setDisplayId */ }
+            } catch (Exception ignored) { /* ROM without setDisplayId */ }
             Log.i(TAG, "InputManager init OK");
         } catch (Exception e) {
             Log.e(TAG, "initInputManager failed", e);

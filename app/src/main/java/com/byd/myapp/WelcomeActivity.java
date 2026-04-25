@@ -9,12 +9,12 @@ import android.widget.Button;
 /**
  * WelcomeActivity — shown only on the first launch.
  *
- * Propose le choix de langue (FR / EN).
+ * Presents the language selection screen (FR / EN / DE / TR / IT).
  * Once the user selects a language, the locale is applied, the
  * "setup_done" flag is saved, and MainActivity is started.
  *
  * On subsequent launches, MainActivity starts directly
- * (voir logique dans onStart ci-dessous).
+ * (see skip logic in onStart below).
  */
 public class WelcomeActivity extends AppCompatActivity {
 
@@ -86,6 +86,6 @@ public class WelcomeActivity extends AppCompatActivity {
 
     private void startMainActivity() {
         startActivity(new Intent(this, MainActivity.class));
-        finish(); // WelcomeActivity ne reste pas dans la back stack
+        finish(); // WelcomeActivity must not remain in the back stack
     }
 }

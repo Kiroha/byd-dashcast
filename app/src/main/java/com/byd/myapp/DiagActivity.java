@@ -156,7 +156,7 @@ public class DiagActivity extends AppCompatActivity {
             }
         });
 
-        // TEST 2 — Restauration cluster
+        // TEST 2 — Cluster restore
         btnDisplay1Share.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -173,7 +173,7 @@ public class DiagActivity extends AppCompatActivity {
             }
         });
 
-        // TEST 3 — Taille display cluster
+        // TEST 3 — Cluster display size
         btnDisplaySizeShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -224,7 +224,7 @@ public class DiagActivity extends AppCompatActivity {
 
 
     // -------------------------------------------------------------------------
-    // TEST 3 : Taille display cluster — helpers
+    // TEST 3 : Cluster display size — helpers
     // -------------------------------------------------------------------------
 
     private void setDisplaySizeBtnsEnabled(boolean enabled) {
@@ -258,7 +258,7 @@ public class DiagActivity extends AppCompatActivity {
                     tvDisplaySizeResult.setText("❌ " + error
                             + "\n\n" + getString(R.string.diag_adb_test1_hint));
                     setDisplaySizeBtnsEnabled(true);
-                    AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
+                    AppLogger.log("DiagDisplaySize", "ERROR: " + error);
                 }});
             }
         });
@@ -294,7 +294,7 @@ public class DiagActivity extends AppCompatActivity {
         setDisplaySizeBtnsEnabled(false);
         tvDisplaySizeResult.setText(getString(R.string.diag_size_full_running));
         tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
-        AppLogger.log("DiagDisplaySize", "Lancement TEST 3 complet");
+        AppLogger.log("DiagDisplaySize", "Launching full TEST 3");
 
         AdbLocalClient.runClusterDisplaySizeTest(DiagActivity.this, new AdbLocalClient.Callback() {
             @Override
@@ -316,7 +316,7 @@ public class DiagActivity extends AppCompatActivity {
                         tvDisplaySizeResult.setText("❌ " + error
                                 + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         setDisplaySizeBtnsEnabled(true);
-                        AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
+                        AppLogger.log("DiagDisplaySize", "ERROR: " + error);
                     }
                 });
             }
@@ -324,7 +324,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // TEST 2 : Lancement sur display 1 (cluster) — restauration cluster
+    // TEST 2 — Launch on display 1 (cluster) — restore
     // -------------------------------------------------------------------------
 
     private void runDisplayOneLaunch() {
@@ -358,7 +358,7 @@ public class DiagActivity extends AppCompatActivity {
                         tvDisplay1Result.setText("❌ " + error
                                 + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         btnDisplay1.setEnabled(true);
-                        AppLogger.log("DiagDisplay1", "ERREUR: " + error);
+                        AppLogger.log("DiagDisplay1", "ERROR: " + error);
                     }
                 });
             }
@@ -373,7 +373,7 @@ public class DiagActivity extends AppCompatActivity {
         btnBootReceiver.setEnabled(false);
         tvBootReceiverResult.setText(getString(R.string.diag_boot_receiver_running));
         tvBootReceiverResult.setBackgroundColor(0xFF111A1A);
-        AppLogger.log("DiagBootReceiver", "Lancement TEST 4");
+        AppLogger.log("DiagBootReceiver", "Launching TEST 4");
 
         AdbLocalClient.sendBootReceiverBroadcast(DiagActivity.this, new AdbLocalClient.Callback() {
             @Override
@@ -396,7 +396,7 @@ public class DiagActivity extends AppCompatActivity {
                         tvBootReceiverResult.setText("❌ " + error
                                 + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         btnBootReceiver.setEnabled(true);
-                        AppLogger.log("DiagBootReceiver", "ERREUR: " + error);
+                        AppLogger.log("DiagBootReceiver", "ERROR: " + error);
                     }
                 });
             }
@@ -560,7 +560,7 @@ public class DiagActivity extends AppCompatActivity {
             shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.diag_share_sniffer_title)));
         } catch (Exception e) {
-            AppLogger.e("DiagSniffer", "Erreur export", e);
+            AppLogger.e("DiagSniffer", "Export error", e);
         }
     }
 
@@ -587,7 +587,7 @@ public class DiagActivity extends AppCompatActivity {
                         startActivity(android.content.Intent.createChooser(
                                 shareIntent, getString(R.string.diag_share_daemon_log_title)));
                     } catch (Exception e) {
-                        AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
+                        AppLogger.e("DiagDaemon", "exportDaemonLog share error", e);
                         android.widget.Toast.makeText(DiagActivity.this,
                                 getString(R.string.toast_share_error, e.getMessage()),
                                 android.widget.Toast.LENGTH_LONG).show();
@@ -631,7 +631,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void cleanDaemonLogs() {
-        // Suppression via ADB (fichiers dans /data/local/tmp/, inaccessibles depuis l'app)
+        // Deletion via ADB (files in /data/local/tmp/, not accessible from the app)
         AdbLocalClient.executeShell(this,
                 "rm -f /data/local/tmp/mirrordaemon_*.log /data/local/tmp/mirrordaemon_latest.log"
                 + " && echo cleaned");
@@ -668,7 +668,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void testLaunchFreedomDaemon() {
-        // Non fonctionnel : app_process n'est pas accessible depuis uid=10100,
+        // Not functional: app_process is not accessible from uid=10100,
         // and CommunicationProcessKt belongs to com.byd.windowmanager (WindowManagement),
         // not to our APK. The command fails silently in the background.
         android.widget.Toast.makeText(this,

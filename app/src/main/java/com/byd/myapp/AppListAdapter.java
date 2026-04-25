@@ -28,7 +28,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private String mCurrentPackage = null;
     // Package currently on the main screen ("→ Cluster" button visible)
     private String mMainPackage = null;
-    // Cache packageName → index dans mApps pour notifyItemChanged() O(1)
+    // Cache packageName → index in mApps for O(1) notifyItemChanged()
     private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
 
     public AppListAdapter(OnSendToDashboardListener listener) {
@@ -37,7 +37,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
     public void setApps(List<AppInfo> apps) {
         mApps = apps;
-        // Reconstruire l'index pour notifyPackageChanged() O(1)
+        // Rebuild the index for O(1) notifyPackageChanged()
         mPackageIndexMap.clear();
         for (int i = 0; i < apps.size(); i++) {
             mPackageIndexMap.put(apps.get(i).packageName, i);

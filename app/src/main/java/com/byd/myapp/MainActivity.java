@@ -594,7 +594,7 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
         if (isOnCluster && mServiceBound && mClusterService != null) {
-            mClusterService.stopProjectionNoAdb(); // Ne pas envoyer le restore cluster auto
+            mClusterService.stopProjectionNoAdb(); // Do not send the auto cluster restore
         }
 
         // 2. am force-stop via ADB
@@ -605,7 +605,7 @@ public class MainActivity extends AppCompatActivity
                     @Override public void run() {
                         mCurrentDashboardApp = null;
                         mCurrentDashboardPkg = null;
-                        // Force-stop le slot secondaire en mode split
+                        // Force-stop the secondary slot in split mode
                         if (mSecondDashboardPkg != null) {
                             AdbLocalClient.forceStopApp(MainActivity.this, mSecondDashboardPkg, null);
                         }
@@ -747,7 +747,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (mirrorOk) {
-            // Miroir actif → afficher le SurfaceView, stopper les screenshots
+            // Mirror active → show the SurfaceView, stop screenshots
             clusterMirror.setVisibility(View.VISIBLE);
             clusterMirrorScreenshot.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
@@ -839,7 +839,7 @@ public class MainActivity extends AppCompatActivity
                         }
                     }
                     @Override public void onError(String error) {
-                        AppLogger.w(TAG, "screenshotLoop erreur: " + error);
+                        AppLogger.w(TAG, "screenshotLoop error: " + error);
                         if (mScreenshotRunnable != null) {
                             mScreenshotHandler.postDelayed(mScreenshotRunnable,
                                     SCREENSHOT_INTERVAL_MS * 2L);

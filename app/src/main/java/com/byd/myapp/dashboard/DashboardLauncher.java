@@ -42,7 +42,7 @@ public class DashboardLauncher {
     }
 
     /**
-     * Lance une app sur le display principal (display ID 0).
+     * Launches an app on the main display (display ID 0).
      */
     public boolean launchOnMainDisplay(String packageName) {
         Intent launchIntent = mContext.getPackageManager()

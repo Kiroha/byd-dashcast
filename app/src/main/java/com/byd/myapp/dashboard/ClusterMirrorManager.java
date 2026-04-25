@@ -184,7 +184,7 @@ public class ClusterMirrorManager {
 
             mMirrorSurface = targetSurface;
             mMirrorActive  = true;
-            // mPreviewDisplayId reste -1 (pas de VirtualDisplay — le contenu vient du cluster)
+            // mPreviewDisplayId stays -1 (no VirtualDisplay — content comes from the cluster)
             AppLogger.i(TAG, "SurfaceControl mirror ✓ layerStack=" + layerStack
                     + " src=" + mClusterW + "×" + mClusterH
                     + " dest=" + drawW + "×" + drawH + " offset=(" + offsetX + "," + offsetY + ")");

@@ -15,24 +15,24 @@ import com.byd.myapp.AppLogger;
 
 /**
  * ClusterTrampolineActivity — empty activity launched on display 1 to serve as
- * "source activity" lors du lancement d'apps tierces sur le cluster.
+ * "source activity" when launching third-party apps on the cluster.
  *
- * Pourquoi : sur Seal EU (DiLink 3.0, Android 10), pousser une app tierce
+ * Why: on Seal EU (DiLink 3.0, Android 10), pushing a third-party app
  * directly with ActivityOptions.setLaunchDisplayId(1) fails with
  * SecurityException in SafeActivityOptions.checkPermissions() — even when
  * the APK is signed with platform.keystore (INTERNAL_SYSTEM_WINDOW and MANAGE_ACTIVITY_STACKS
  * are declared but the ROM does not consider them sufficient to target a non-default display
  * belonging to another process — confirmed in car with v1.69 and v1.70).
  *
- * AOSP API 29 — ActivityStackSupervisor.isCallerAllowedToLaunchOnDisplay() :
+ * AOSP API 29 — ActivityStackSupervisor.isCallerAllowedToLaunchOnDisplay():
  *   final int targetUid = aInfo.applicationInfo.uid;
- *   if (targetUid == callingUid) return true;   // ← ON PASSE ICI
+ *   if (targetUid == callingUid) return true;   // ← we pass here
  *
- * Donc lancer NOTRE PROPRE activity (uid identique) avec setLaunchDisplayId(1) est
+ * So launching OUR OWN activity (same uid) with setLaunchDisplayId(1) is
  * allowed. Once this activity is on display 1, we call
- * `Activity.startActivity(intent_tiers)` SANS setLaunchDisplayId : ActivityStarter
- * place la nouvelle task sur le display de la source (display 1) — aucun check de
- * SafeActivityOptions is not triggered because launchDisplayId == INVALID_DISPLAY.
+ * `Activity.startActivity(intent_third_party)` WITHOUT setLaunchDisplayId: ActivityStarter
+ * places the new task on the source display (display 1) — no SafeActivityOptions
+ * check is triggered because launchDisplayId == INVALID_DISPLAY.
  *
  * This is exactly the pattern used by the official BYDDashboard app.
  *
@@ -64,10 +64,10 @@ public class ClusterTrampolineActivity extends Activity {
 
         AppLogger.i(TAG, "Trampoline launched on display="
                 + getWindowManager().getDefaultDisplay().getDisplayId()
-                + " — cible: " + pkg);
+                + " — target: " + pkg);
 
         if (pkg == null || pkg.isEmpty()) {
-            AppLogger.w(TAG, "Pas de cible — finish");
+            AppLogger.w(TAG, "No target package — finish");
             finish();
             return;
         }
@@ -80,7 +80,7 @@ public class ClusterTrampolineActivity extends Activity {
         }
 
         // CRUCIAL: no setLaunchDisplayId here. The new task inherits the
-        // display de la source (nous → display 1).
+        // display of the source activity (us → display 1).
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TASK
                 | Intent.FLAG_ACTIVITY_NO_ANIMATION);

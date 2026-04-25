@@ -28,16 +28,16 @@ import java.util.Locale;
  *
  * • Scrollable display color-coded by level: DEBUG=grey, INFO=white, WARN=orange, ERROR=red
  * • Instant text filter (by tag or message)
- * • Auto-scroll vers le bas (toggle)
+ * • Auto-scroll to bottom (toggle)
  * • Auto-refresh every 500 ms while the activity is visible
- * • Partage texte brut + effacement
+ * • Share as plain text + clear
  */
 public class LogActivity extends AppCompatActivity {
 
     private static final String TAG = "LogActivity";
     private static final long REFRESH_MS = 500;
 
-    // Couleurs par niveau
+    // Colors by log level
     private static final int COLOR_DEBUG    = Color.parseColor("#999999");
     private static final int COLOR_INFO     = Color.parseColor("#DDDDDD");
     private static final int COLOR_WARN     = Color.parseColor("#FFA040");
@@ -54,8 +54,8 @@ public class LogActivity extends AppCompatActivity {
 
     private String mFilter = "";
     private boolean mRunning = false;
-    private int    mLastEntryCount = -1;   // perf: skip rebuild si rien de nouveau
-    private String mLastFilter    = null; // perf: invalider si filtre change
+    private int    mLastEntryCount = -1;   // perf: skip rebuild if nothing changed
+    private String mLastFilter    = null; // perf: invalidate if filter changes
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mRefreshRunnable = new Runnable() {
@@ -85,7 +85,7 @@ public class LogActivity extends AppCompatActivity {
         btnShare     = (Button)      findViewById(R.id.log_btn_share);
         btnClear     = (Button)      findViewById(R.id.log_btn_clear);
 
-        // Fond sombre pour le log
+        // Dark background for the log view
         tvLog.setBackgroundColor(Color.parseColor("#1A1A1A"));
         tvLog.setTextColor(COLOR_INFO);
 
@@ -173,7 +173,7 @@ public class LogActivity extends AppCompatActivity {
         java.util.ArrayList<int[]> spanData = new java.util.ArrayList<>();
 
         for (AppLogger.Entry e : entries) {
-            // Filtre
+            // Filter
             if (!filter.isEmpty()) {
                 boolean match = e.tag.toLowerCase(Locale.getDefault()).contains(filter)
                         || e.message.toLowerCase(Locale.getDefault()).contains(filter)
@@ -195,7 +195,7 @@ public class LogActivity extends AppCompatActivity {
             int tagEnd = sb.length();
 
             sb.append(e.message);
-            // Thread si pas main
+            // Append thread name if not running on main
             if (!"main".equals(e.threadName)) {
                 sb.append("  {").append(e.threadName).append("}");
             }
@@ -213,10 +213,10 @@ public class LogActivity extends AppCompatActivity {
             // Full line: level color
             span.setSpan(new ForegroundColorSpan(msgColor),
                     d[0], d[1], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            // Timestamp en gris discret
+            // Timestamp in discrete grey
             span.setSpan(new ForegroundColorSpan(COLOR_TIME),
                     d[2], d[3], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            // Tag en bleu clair
+            // Tag in light blue
             span.setSpan(new ForegroundColorSpan(COLOR_TAG),
                     d[4], d[5], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }

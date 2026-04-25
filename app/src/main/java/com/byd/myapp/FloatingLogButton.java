@@ -67,8 +67,8 @@ public class FloatingLogButton extends Service {
     private void createOverlay() {
         // Guard: SYSTEM_ALERT_WINDOW (AppOp) must be granted before addView().
         // On Android 10+, even with platform.keystore, AppOp may not be granted
-        // automatiquement pour une app en /data/app.  On tente un auto-grant via le
-        // shell ADB local (dadb), puis on relance createOverlay() sur le main thread.
+        // automatically for an app in /data/app. We attempt an auto-grant via the
+        // local ADB shell (dadb), then retry createOverlay() on the main thread.
         if (!android.provider.Settings.canDrawOverlays(this)) {
             if (mGrantAttempted) {
                 // A previous attempt already failed — do not loop indefinitely.
@@ -152,11 +152,11 @@ public class FloatingLogButton extends Service {
 
                         if (movX < 12 && movY < 12) {
                             if (held > 600) {
-                                // Long press → effacer
+                                // Long press → clear log
                                 AppLogger.clear();
                                 AppLogger.i(TAG, "Log cleared via long press");
                             } else {
-                                // Tap → ouvrir LogActivity
+                                // Tap → open LogActivity
                                 Intent intent = new Intent(FloatingLogButton.this, LogActivity.class);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                                         | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);

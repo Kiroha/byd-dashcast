@@ -10,9 +10,9 @@ import java.util.Locale;
  * Manages persistence and application of the selected language.
  *
  * Used in:
- *  - WelcomeActivity  : premier lancement → choix de langue → sauvegarde
+ *  - WelcomeActivity  : first launch → language selection → saved to prefs
  *  - MainActivity     : applies the saved language on each launch
- *  - Application      : applique la langue au niveau global si besoin
+ *  - Application      : applies the locale globally if needed
  */
 public class LocaleHelper {
 

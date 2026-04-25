@@ -371,7 +371,7 @@ public class SysInfoActivity extends AppCompatActivity {
             String val = (String) get.invoke(null, key, "");
             return val == null || val.isEmpty() ? "(undefined)" : val;
         } catch (Exception e) {
-            return "(erreur: " + e.getMessage() + ")";
+            return "(error: " + e.getMessage() + ")";
         }
     }
 
