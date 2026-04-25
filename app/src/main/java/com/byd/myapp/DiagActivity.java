@@ -122,15 +122,14 @@ public class DiagActivity extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
                 intent.putExtra(Intent.EXTRA_TEXT, tvAdbLocalResult.getText().toString());
-                startActivity(Intent.createChooser(intent, "Share TEST 1 result"));
+                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result1_btn)));
             }
         });
         btnAdbLocal.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 btnAdbLocal.setEnabled(false);
-                tvAdbLocalResult.setText("Connecting to localhost:5555…\n" +
-                        "⏳ The popup will appear on this screen — press ALLOW.");
+                tvAdbLocalResult.setText(getString(R.string.diag_adb_connecting));
                 AppLogger.log("DiagADB", "Starting local ADB connection");
                 AdbLocalClient.connectAndGrant(DiagActivity.this,
                         new AdbLocalClient.Callback() {
@@ -138,7 +137,7 @@ public class DiagActivity extends AppCompatActivity {
                     public void onSuccess(final String report) {
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
-                                tvAdbLocalResult.setText("✅ Connection established\n\n" + report);
+                                tvAdbLocalResult.setText(getString(R.string.diag_adb_connected) + report);
                                 btnAdbLocal.setEnabled(true);
                             }
                         });
@@ -148,10 +147,7 @@ public class DiagActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
                                 tvAdbLocalResult.setText(
-                                        "❌ Failed: " + error + "\n\n" +
-                                        "→ Verify that ADB TCP debugging is enabled\n" +
-                                        "  in Settings → Developer → USB Debugging\n" +
-                                        "  (or Wireless Debugging on this ROM)");
+                                        getString(R.string.diag_adb_failed, error));
                                 btnAdbLocal.setEnabled(true);
                             }
                         });
@@ -167,7 +163,7 @@ public class DiagActivity extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
                 intent.putExtra(Intent.EXTRA_TEXT, tvDisplay1Result.getText().toString());
-                startActivity(Intent.createChooser(intent, "Share TEST 2 result"));
+                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result2_btn)));
             }
         });
         btnDisplay1.setOnClickListener(new View.OnClickListener() {
@@ -184,7 +180,7 @@ public class DiagActivity extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
                 intent.putExtra(Intent.EXTRA_TEXT, tvDisplaySizeResult.getText().toString());
-                startActivity(Intent.createChooser(intent, "Share TEST 3 result"));
+                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result3_btn)));
             }
         });
         btnDisplaySize88.setOnClickListener(new View.OnClickListener() {
@@ -215,7 +211,7 @@ public class DiagActivity extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType("text/plain");
                 intent.putExtra(Intent.EXTRA_TEXT, tvBootReceiverResult.getText().toString());
-                startActivity(Intent.createChooser(intent, "Share TEST 4 result"));
+                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result4_btn)));
             }
         });
         btnBootReceiver.setOnClickListener(new View.OnClickListener() {
@@ -242,7 +238,7 @@ public class DiagActivity extends AppCompatActivity {
     private void sendScreenSize(final int sizeCmd) {
         setDisplaySizeBtnsEnabled(false);
         String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
-        tvDisplaySizeResult.setText("⏳ sendInfo(1000, " + sizeCmd + ") → " + label + "…");
+        tvDisplaySizeResult.setText(getString(R.string.diag_size_sending, sizeCmd, label));
         tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "sendClusterScreenSize(" + sizeCmd + ")");
 
@@ -260,7 +256,7 @@ public class DiagActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() { @Override public void run() {
                     tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
                     tvDisplaySizeResult.setText("❌ " + error
-                            + "\n\n→ Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
+                            + "\n\n" + getString(R.string.diag_adb_test1_hint));
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
                 }});
@@ -270,7 +266,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void restoreDisplaySize() {
         setDisplaySizeBtnsEnabled(false);
-        tvDisplaySizeResult.setText("⏳ Restoring default size (cmd 30 + wm reset)…");
+        tvDisplaySizeResult.setText(getString(R.string.diag_size_restoring));
         tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "resetClusterDisplaySize");
 
@@ -296,9 +292,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runClusterDisplaySizeTest() {
         setDisplaySizeBtnsEnabled(false);
-        tvDisplaySizeResult.setText("⏳ Diagnostic dimensions cluster…\n"
-                + "Essai cmd=29 / cmd=30 / cmd=31 / wm size…\n"
-                + "(~8 secondes)");
+        tvDisplaySizeResult.setText(getString(R.string.diag_size_full_running));
         tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "Lancement TEST 3 complet");
 
@@ -320,7 +314,7 @@ public class DiagActivity extends AppCompatActivity {
                     @Override public void run() {
                         tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
                         tvDisplaySizeResult.setText("❌ " + error
-                                + "\n\n→ Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
+                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         setDisplaySizeBtnsEnabled(true);
                         AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
                     }
@@ -335,7 +329,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runDisplayOneLaunch() {
         btnDisplay1.setEnabled(false);
-        tvDisplay1Result.setText("⏳ Lancement display 1…");
+        tvDisplay1Result.setText(getString(R.string.diag_launching_display1));
         AppLogger.log("DiagDisplay1", "display 1 launch started");
 
         AdbLocalClient.runDisplayOneLaunch(DiagActivity.this, new AdbLocalClient.Callback() {
@@ -361,8 +355,8 @@ public class DiagActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         tvDisplay1Result.setBackgroundColor(0xFF2A1A1A);
-                        tvDisplay1Result.setText("\u274C " + error
-                                + "\n\n\u2192 Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
+                        tvDisplay1Result.setText("❌ " + error
+                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", "ERREUR: " + error);
                     }
@@ -377,9 +371,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runBootReceiverTest() {
         btnBootReceiver.setEnabled(false);
-        tvBootReceiverResult.setText(
-                "⏳ Force-stop Freedom puis broadcast BOOT_COMPLETED → BootReceiver…\n"
-                + "Waiting 5s for VirtualDisplay creation…");
+        tvBootReceiverResult.setText(getString(R.string.diag_boot_receiver_running));
         tvBootReceiverResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagBootReceiver", "Lancement TEST 4");
 
@@ -402,7 +394,7 @@ public class DiagActivity extends AppCompatActivity {
                     @Override public void run() {
                         tvBootReceiverResult.setBackgroundColor(0xFF2A1A1A);
                         tvBootReceiverResult.setText("❌ " + error
-                                + "\n\n→ Lancez d'abord TEST 1 pour autoriser la connexion ADB.");
+                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         btnBootReceiver.setEnabled(true);
                         AppLogger.log("DiagBootReceiver", "ERREUR: " + error);
                     }
@@ -442,7 +434,7 @@ public class DiagActivity extends AppCompatActivity {
         String p = logFile.getAbsolutePath();
 
         android.widget.Toast.makeText(DiagActivity.this,
-                "Sniffer started → " + logFile.getName(),
+                getString(R.string.toast_sniffer_started, logFile.getName()),
                 android.widget.Toast.LENGTH_LONG).show();
         AppLogger.i("DiagSniffer", "Starting system Sniffer → " + p);
 
@@ -505,7 +497,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void killSnifferWithFeedback() {
-        tvSnifferScanResult.setText("Kill sniffer en cours…");
+            tvSnifferScanResult.setText(getString(R.string.diag_sniffer_killing));
         tvSnifferScanResult.setTextColor(0xFFFFAB40);
         AdbLocalClient.killSniffer(this, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String msg) {
@@ -532,7 +524,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void scanSniffer() {
-        tvSnifferScanResult.setText("Scan en cours…");
+        tvSnifferScanResult.setText(getString(R.string.diag_scanning));
         tvSnifferScanResult.setTextColor(0xFFAAAAAA);
         AdbLocalClient.scanSniffer(this, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String msg) {
@@ -555,7 +547,7 @@ public class DiagActivity extends AppCompatActivity {
         java.io.File logFile = mCurrentSnifferFile != null ? mCurrentSnifferFile : findLatestSnifferFile();
         if (logFile == null || !logFile.exists() || logFile.length() == 0) {
             android.widget.Toast.makeText(DiagActivity.this,
-                    "No report found (start the sniffer first).",
+                    getString(R.string.diag_no_sniffer_report),
                     android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
@@ -566,14 +558,14 @@ public class DiagActivity extends AppCompatActivity {
             shareIntent.setType("text/plain");
             shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, fileUri);
             shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(android.content.Intent.createChooser(shareIntent, "Partager le Sniffer"));
+            startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.diag_share_sniffer_title)));
         } catch (Exception e) {
             AppLogger.e("DiagSniffer", "Erreur export", e);
         }
     }
 
     private void exportDaemonLog() {
-        android.widget.Toast.makeText(this, "Lecture mirrordaemon_latest.log via ADB…",
+        android.widget.Toast.makeText(this, getString(R.string.diag_daemon_log_reading),
                 android.widget.Toast.LENGTH_SHORT).show();
         AdbLocalClient.readFileViaAdb(this, "/data/local/tmp/mirrordaemon_latest.log",
                 "mirrordaemon_latest.log", new AdbLocalClient.ReadFileCallback() {
@@ -593,11 +585,11 @@ public class DiagActivity extends AppCompatActivity {
                         shareIntent.addFlags(
                                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         startActivity(android.content.Intent.createChooser(
-                                shareIntent, "Partager mirrordaemon_latest.log"));
+                                shareIntent, getString(R.string.diag_share_daemon_log_title)));
                     } catch (Exception e) {
                         AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
                         android.widget.Toast.makeText(DiagActivity.this,
-                                "Share error: " + e.getMessage(),
+                                getString(R.string.toast_share_error, e.getMessage()),
                                 android.widget.Toast.LENGTH_LONG).show();
                     }
                 });
@@ -612,7 +604,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void dumpSurfaceFlinger() {
-        tvSfDumpResult.setText("dumpsys SurfaceFlinger en cours…");
+        tvSfDumpResult.setText(getString(R.string.diag_sf_dumping));
         tvSfDumpResult.setTextColor(0xFFAAAAAA);
         // Filter on our display + layerStack=2 to check if SF knows about the mirror
         String cmd = "dumpsys SurfaceFlinger 2>/dev/null"
@@ -621,7 +613,7 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onSuccess(String report) {
                 runOnUiThread(() -> {
                     String text = report.trim().isEmpty()
-                            ? "(no result — mirror not registered in SF)"
+                            ? getString(R.string.diag_sf_no_result)
                             : report.trim();
                     tvSfDumpResult.setText(text);
                     boolean found = report.contains("byd_myapp_mirror");
@@ -631,7 +623,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvSfDumpResult.setText("Error: " + error);
+                    tvSfDumpResult.setText(getString(R.string.diag_sf_error, error));
                     tvSfDumpResult.setTextColor(0xFFFF5252);
                 });
             }
@@ -644,17 +636,17 @@ public class DiagActivity extends AppCompatActivity {
                 "rm -f /data/local/tmp/mirrordaemon_*.log /data/local/tmp/mirrordaemon_latest.log"
                 + " && echo cleaned");
         runOnUiThread(() -> {
-            tvDaemonScanResult.setText("mirrordaemon_*.log deleted ✓");
+            tvDaemonScanResult.setText(getString(R.string.diag_daemon_logs_deleted_text));
             tvDaemonScanResult.setTextColor(0xFF69F0AE);
             android.widget.Toast.makeText(this,
-                    "Daemon logs deleted", android.widget.Toast.LENGTH_SHORT).show();
+                    getString(R.string.toast_daemon_logs_deleted), android.widget.Toast.LENGTH_SHORT).show();
         });
     }
 
     private void cleanSnifferLogs() {
         java.io.File dir = getExternalFilesDir(null);
         if (dir == null) {
-            android.widget.Toast.makeText(this, "Folder not found", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(this, getString(R.string.toast_folder_not_found), android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
         java.io.File[] files = dir.listFiles(
@@ -668,10 +660,10 @@ public class DiagActivity extends AppCompatActivity {
         mCurrentSnifferFile = null;
         final int deleted = count;
         runOnUiThread(() -> {
-            tvSnifferScanResult.setText(deleted + " Sniffer file(s) deleted ✓");
+            tvSnifferScanResult.setText(getString(R.string.diag_sniffer_files_deleted, deleted));
             tvSnifferScanResult.setTextColor(0xFF69F0AE);
             android.widget.Toast.makeText(this,
-                    deleted + " file(s) deleted", android.widget.Toast.LENGTH_SHORT).show();
+                    getString(R.string.toast_files_deleted, deleted), android.widget.Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -680,13 +672,13 @@ public class DiagActivity extends AppCompatActivity {
         // and CommunicationProcessKt belongs to com.byd.windowmanager (WindowManagement),
         // not to our APK. The command fails silently in the background.
         android.widget.Toast.makeText(this,
-                "Experimental — not functional\n(app_process inaccessible from uid=10100)",
+                getString(R.string.toast_experimental),
                 android.widget.Toast.LENGTH_LONG).show();
         AppLogger.w("DiagDaemon", "testLaunchFreedomDaemon() — not functional on this ROM (uid=10100 without app_process access)");
     }
 
     private void scanDaemon() {
-        tvDaemonScanResult.setText("Scan en cours…");
+        tvDaemonScanResult.setText(getString(R.string.diag_scanning));
         tvDaemonScanResult.setTextColor(0xFFAAAAAA);
         AdbLocalClient.scanMirrorDaemon(this, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String msg) {
@@ -706,7 +698,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void killDaemon() {
-        tvDaemonScanResult.setText("Envoi kill -9 en cours…");
+        tvDaemonScanResult.setText(getString(R.string.diag_daemon_killing));
         tvDaemonScanResult.setTextColor(0xFFFFAB40);
         AdbLocalClient.killMirrorDaemon(this, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String msg) {

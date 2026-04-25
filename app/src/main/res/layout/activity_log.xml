@@ -19,7 +19,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="📋 Journal de bord"
+            android:text="@string/log_title"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"/>
@@ -28,7 +28,7 @@
             android:id="@+id/log_btn_clear"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="Effacer"
+            android:text="@string/log_btn_clear"
             android:textSize="12sp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
@@ -38,12 +38,7 @@
             android:id="@+id/log_btn_share"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:text="Partager"
-            android:textSize="12sp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginStart="6dp"
-            android:backgroundTint="#1565C0"/>
+            android:text="@string/log_btn_share"/>
 
     </LinearLayout>
 
@@ -62,7 +57,7 @@
             android:layout_width="0dp"
             android:layout_height="36dp"
             android:layout_weight="1"
-            android:hint="Filtrer (tag / message / niveau)…"
+            android:hint="@string/log_filter_hint"
             android:textColor="#FFFFFF"
             android:textColorHint="#666666"
             android:background="#2A2A2A"
@@ -76,7 +71,7 @@
             android:id="@+id/log_autoscroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Auto↓"
+            android:text="@string/log_autoscroll"
             android:textColor="#AAAAAA"
             android:textSize="11sp"
             android:layout_marginStart="8dp"/>
@@ -94,13 +89,13 @@
         android:paddingEnd="12dp">
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="DEBUG " android:textColor="#999999" android:textSize="10sp"/>
+            android:text="@string/log_level_debug" android:textColor="#999999" android:textSize="10sp"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="INFO " android:textColor="#DDDDDD" android:textSize="10sp"/>
+            android:text="@string/log_level_info" android:textColor="#DDDDDD" android:textSize="10sp"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="WARN " android:textColor="#FFA040" android:textSize="10sp"/>
+            android:text="@string/log_level_warn" android:textColor="#FFA040" android:textSize="10sp"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="ERROR" android:textColor="#FF4444" android:textSize="10sp"/>
+            android:text="@string/log_level_error" android:textColor="#FF4444" android:textSize="10sp"/>
 
     </LinearLayout>
 
@@ -122,7 +117,7 @@
             android:fontFamily="monospace"
             android:padding="8dp"
             android:lineSpacingExtra="2dp"
-            android:text="(aucune entrée)"/>
+            android:text="@string/log_empty"/>
 
     </ScrollView>
 
