@@ -4,7 +4,7 @@
 [![API 29](https://img.shields.io/badge/API-29%20(Android%2010)-green.svg)](https://developer.android.com/about/versions/10)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-red.svg)](CHANGELOG.md)
 
-Android application for **BYD Seal EU** (DiLink 3.0 — Android 10) to push any installed app
+Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
 onto the instrument cluster display, control it via a real-time touch mirror, and diagnose
 BYD APIs.
 
