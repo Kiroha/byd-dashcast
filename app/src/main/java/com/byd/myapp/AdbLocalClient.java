@@ -105,17 +105,36 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    String psOut = safeOut(dadb.shell("ps -A | grep mirrordaemon 2>&1").getAllOutput());
-                    if (psOut.contains("mirrordaemon")) {
-                        // Kill l'ancien Daemon (utile en développement pour relancer avec le nouvel APK)
-                        // On trouve son PID pour ne pas tuer d'autres app_process.
-                        dadb.shell("ps -A | grep mirrordaemon | awk '{print $2}' | xargs kill -9 2>/dev/null");
-                        AppLogger.i(TAG, "Ancien MirrorDaemon (shell) tué.");
+                    // Tuer l'ancien daemon si présent (cherche par nice-name)
+                    String psOut = safeOut(dadb.shell("ps -A | grep 'byd.mirror.daemon' 2>&1").getAllOutput());
+                    if (psOut.contains("byd.mirror.daemon")) {
+                        dadb.shell("ps -A | grep 'byd.mirror.daemon' | awk '{print $2}' | xargs kill -9 2>/dev/null");
+                        AppLogger.i(TAG, "Ancien MirrorDaemon tué.");
+                        Thread.sleep(500);
                     }
                     String apkPath = context.getPackageCodePath();
-                    String cmd = "export CLASSPATH=" + apkPath + " && nohup app_process /system/bin com.byd.myapp.daemon.MirrorDaemon </dev/null >/sdcard/mirrordaemon.log 2>&1 &";
+                    final String logPath = "/data/local/tmp/mirrordaemon.log";
+                    // app_process64 (ARM64) + -Xnoimage-dex2oat pour éviter crash AOT au démarrage
+                    // Pas de nohup (défaillant sur Android toybox) — & suffit via ADB exec channel
+                    // CLASSPATH inline (pas export &&) comme le fait Commander APK
+                    String cmd = "CLASSPATH=" + apkPath
+                            + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
+                            + " --nice-name=byd.mirror.daemon"
+                            + " com.byd.myapp.daemon.MirrorDaemon"
+                            + " </dev/null >" + logPath + " 2>&1 &";
                     dadb.shell(cmd);
-                    AppLogger.i(TAG, "MirrorDaemon lance via ADB (app_process).");
+                    AppLogger.i(TAG, "MirrorDaemon lancé via ADB (app_process64).");
+
+                    // Vérification : le process est-il bien vivant après 3s ?
+                    Thread.sleep(3000);
+                    String psCheck = safeOut(dadb.shell("ps -A | grep 'byd.mirror.daemon' 2>&1").getAllOutput());
+                    if (psCheck.contains("byd.mirror.daemon")) {
+                        AppLogger.i(TAG, "MirrorDaemon ACTIF ✓  " + psCheck.trim());
+                    } else {
+                        AppLogger.e(TAG, "MirrorDaemon INTROUVABLE après 3s — lecture log :");
+                        String logContent = safeOut(dadb.shell("cat " + logPath + " 2>&1").getAllOutput());
+                        AppLogger.e(TAG, "mirrordaemon.log = [" + logContent + "]");
+                    }
                 } catch (Exception e) {
                     AppLogger.e(TAG, "Erreur demarrage MirrorDaemon", e);
                 }

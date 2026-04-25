@@ -441,7 +441,7 @@ public class DiagActivity extends AppCompatActivity {
     private void exportDaemonLog() {
         android.widget.Toast.makeText(this, "Lecture mirrordaemon.log via ADB…",
                 android.widget.Toast.LENGTH_SHORT).show();
-        AdbLocalClient.readFileViaAdb(this, "/sdcard/mirrordaemon.log",
+        AdbLocalClient.readFileViaAdb(this, "/data/local/tmp/mirrordaemon.log",
                 "mirrordaemon.log", new AdbLocalClient.ReadFileCallback() {
             @Override
             public void onSuccess(java.io.File localCopy) {
