@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DashCast</string>
+
+    <!-- WelcomeActivity -->
+    <string name="welcome_title">DashCast</string>
+    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+
+    <!-- MainActivity — status bar -->
+    <string name="status_disconnected">Gösterge paneli: bağlı değil</string>
+    <string name="btn_activate_cluster">Kümeyi etkinleştir</string>
+    <string name="btn_restore_cluster">Kümeyi geri yükle</string>
+    <string name="btn_origin_cluster">Orijinal küme</string>
+    <string name="title_app_list">Yüklü uygulamalar</string>
+    <string name="mirror_placeholder">Kümede aktif ekran ✓</string>
+    <string name="btn_cluster_split">⬛⬛ Böl</string>
+    <string name="btn_cluster_keyboard">⌨️ Klavye</string>
+
+    <!-- Cluster control panel -->
+    <string name="cluster_control_title">Küme kontrolü</string>
+    <string name="cluster_control_hide">Gizle ▼</string>
+
+    <!-- item_app.xml -->
+    <string name="btn_app_to_main">← Ana</string>
+    <string name="btn_app_to_cluster">→ Küme</string>
+
+    <!-- MainActivity — status texts -->
+    <string name="status_starting_cluster">Küme başlatılıyor…</string>
+    <string name="status_activating_cluster">Küme etkinleştiriliyor…</string>
+    <string name="status_cluster_activated">Küme etkinleştirildi ✓</string>
+    <string name="status_restoring_cluster">Küme geri yükleniyor…</string>
+    <string name="status_restoring_origin">Orijinal küme geri yükleniyor…</string>
+    <string name="status_dashboard_byd">Gösterge paneli: BYD ekranı</string>
+    <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
+    <string name="status_freedom_active">Freedom aktif ✓ — küme hazır</string>
+    <string name="status_freedom_starting">Freedom başlatılıyor…</string>
+    <string name="status_freedom_not_installed">⚠ Freedom yüklü değil — yayın yapılamıyor</string>
+    <string name="status_freedom_unknown">Freedom: bilinmeyen durum</string>
+
+    <!-- MainActivity — Toasts -->
+    <string name="toast_app_incompatible">%1$s: yüklü değil veya çoklu ekranla uyumsuz</string>
+    <string name="toast_cluster_unavailable">Küme servisi kullanılamıyor</string>
+    <string name="toast_app_already_cluster">Uygulama zaten kümede</string>
+    <string name="toast_activation_failed">Etkinleştirme başarısız: %1$s</string>
+    <string name="toast_restore_failed">Geri yükleme başarısız: %1$s</string>
+    <string name="toast_origin_failed">Orijinal küme geri yüklemesi başarısız: %1$s</string>
+    <string name="toast_app_stopped">%1$s durduruldu</string>
+    <string name="toast_kill_failed">Sonlandırma başarısız: %1$s</string>
+    <string name="toast_no_app_cluster">Kümede uygulama yok</string>
+    <string name="toast_cluster_type">Küme: %1$s</string>
+
+    <!-- MainActivity — overflow menu -->
+    <string name="menu_settings">⚙️ Ayarlar</string>
+    <string name="menu_diagnostic">🔧 Tanılama</string>
+    <string name="menu_system_report">📋 Sistem raporu</string>
+    <string name="menu_language">🌐 Dil</string>
+
+    <!-- MainActivity — cluster type dialog -->
+    <string name="dialog_cluster_type_title">Küme türü</string>
+    <string name="cluster_label_88">8,8 inç  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 inç (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 inç (cmd=31)</string>
+    <string name="btn_ok">Tamam</string>
+    <string name="btn_cancel">İptal</string>
+
+    <!-- MainActivity — split menu -->
+    <string name="split_full_screen">⬜ Tam ekran</string>
+    <string name="split_left">⬜⬛ Sol (%50)</string>
+    <string name="split_right">⬛⬜ Sağ (%50)</string>
+
+    <!-- MainActivity — keyboard dialog -->
+    <string name="dialog_keyboard_title">Klavye Girişi (Küme)</string>
+    <string name="dialog_keyboard_message">Onaylandıktan sonra metin uygulamada otomatik olarak yazılacaktır.</string>
+    <string name="dialog_keyboard_hint">Kümeye gönderilecek metin</string>
+    <string name="btn_send">Gönder</string>
+
+    <!-- LogActivity -->
+    <string name="log_title">📋 Günlük</string>
+    <string name="log_btn_clear">Temizle</string>
+    <string name="log_btn_share">Paylaş</string>
+    <string name="log_filter_hint">Filtrele (etiket / mesaj / seviye)…</string>
+    <string name="log_autoscroll">Oto↓</string>
+    <string name="log_level_debug">DEBUG </string>
+    <string name="log_level_info">INFO </string>
+    <string name="log_level_warn">WARN </string>
+    <string name="log_level_error">ERROR</string>
+    <string name="log_empty">(giriş yok)</string>
+
+    <!-- SysInfoActivity -->
+    <string name="sysinfo_title">BYD Sistem Raporu</string>
+    <string name="sysinfo_desc">Eksiksiz rapor oluşturur: ekranlar, API\'ler, BYD paketleri, izinler, ADB. Kaydedin ve hata ayıklama için gönderin.</string>
+    <string name="btn_generate_report">▶ Rapor oluştur</string>
+    <string name="btn_save_report">💾 Kaydet</string>
+    <string name="btn_share_report">📤 Paylaş</string>
+    <string name="sysinfo_hint">Başlamak için \'Rapor oluştur\'a basın.</string>
+    <string name="sysinfo_generating">Oluşturuluyor…\n</string>
+    <string name="toast_write_error">Yazma hatası: %1$s</string>
+    <string name="toast_report_saved">Rapor kaydedildi:\n%1$s</string>
+
+    <!-- DiagActivity — layout labels -->
+    <string name="diag_title">Uyumluluk Tanılaması</string>
+    <string name="diag_subtitle">Dashboard ekranına (instrument cluster) uygulama göndermek için hangi mekanizmanın mevcut olduğunu kontrol eder.</string>
+    <string name="diag_test1_title">TEST 1 — Yerel ADB bağlantısı (dadb)</string>
+    <string name="diag_test1_desc">Tabletin ADB daemon\'ına localhost:5555 üzerinden bağlanır (Overdrive ile aynı mekanizma). İlk başlatmada «USB hata ayıklamaya izin ver?» açılır penceresi görünür — İZİN VER\'e basın. Yetkilendirildikten sonra pm grant ile reddedilen tüm BYDAUTO_*_GET izinlerini açmayı dener.</string>
+    <string name="btn_adb_local_label">Yerel ADB bağlantısı + İzin ver</string>
+    <string name="diag_press_hint">Başlatmak için düğmeye basın.</string>
+    <string name="diag_share_result1_btn">TEST 1 sonucunu paylaş</string>
+    <string name="diag_test2_title">TEST 2 — Küme geri yükleme</string>
+    <string name="diag_test2_desc">BYD DiLink 3.0\'da küme = IActivityManager\'de display ID 1 (DisplayManager\'de değil). sendInfo(1000,16) + am start --display 1.</string>
+    <string name="diag_launch_test2_btn">▶ TEST 2\'yi başlat</string>
+    <string name="diag_result_test2_hint">(TEST 2 sonucu)</string>
+    <string name="diag_share_result2_btn">TEST 2 sonucunu paylaş</string>
+    <string name="diag_test3_title">TEST 3 — Küme ekran boyutu (Qt çözünürlüğü)</string>
+    <string name="diag_test3_desc">Küme ekran boyutu: cmd 29=8,8\" (Atto3/Dolphin) / cmd 30=12,3\" (Seal EU ✅) / cmd 31=10,25\". 16/04/2026 onaylandı: cmd 30 = doğru Seal EU çözünürlüğü. Geri yükle: cmd30 + wm reset.</string>
+    <string name="diag_size_88_btn">▶ 8,8\"\n(cmd 29)\nAtto3/Dolphin</string>
+    <string name="diag_size_123_btn">▶ 12,3\"\n(cmd 30)\nSeal EU ✅</string>
+    <string name="diag_size_1025_btn">▶ 10,25\"\n(cmd 31)\ndiğer modeller</string>
+    <string name="diag_size_restore_btn">🔄 Varsayılanı geri yükle (cmd 30 + wm reset)</string>
+    <string name="diag_size_full_btn">📊 Tam tanılama (~8 sn)</string>
+    <string name="diag_test3_hint_text">Bir düğmeye basın (ADB yetkilendirilmiş olmalı — önce TEST 1\'i çalıştırın).</string>
+    <string name="diag_share_result3_btn">TEST 3 sonucunu paylaş</string>
+    <string name="diag_test4_title">TEST 4 — BootReceiver Freedom (gözetimsiz)</string>
+    <string name="diag_test4_desc">BOOT_COMPLETED\'ı Freedom\'ın BootReceiver\'ına (com.xdja.clusterdemo) ADB aracılığıyla UI açmadan gönderir. Küme VirtualDisplay oluşturulursa → Freedom gözetimsiz başlatılabilir.</string>
+    <string name="diag_launch_test4_btn">▶ TEST 4\'ü başlat — Broadcast BootReceiver</string>
+    <string name="diag_result_test4_hint">(TEST 4 sonucu)</string>
+    <string name="diag_share_result4_btn">TEST 4 sonucunu paylaş</string>
+    <string name="diag_test5_title">TEST 5 — MirrorDaemon yönetimi (uid=2000)</string>
+    <string name="diag_test5_desc">MirrorDaemon sürecini (com.byd.myapp.mirrordaemon) kontrol eder. Birden fazla eş zamanlı örnek siyah ekrana neden olur.</string>
+    <string name="diag_scan_daemon_btn">🔍 Aktif MirrorDaemon\'ları tara</string>
+    <string name="diag_scan_result_hint">(tarama sonucu)</string>
+    <string name="diag_kill_daemon_btn">☠ Tüm MirrorDaemon\'ları sonlandır</string>
+    <string name="diag_kill_restart_daemon_btn">🔄 MirrorDaemon\'u sonlandır + yeniden başlat</string>
+    <string name="diag_export_daemon_log_btn">📋 mirrordaemon.log dışa aktar</string>
+    <string name="diag_dump_sf_btn">🔬 SurfaceFlinger dökümü (byd_myapp_mirror)</string>
+    <string name="diag_dump_sf_result_hint">(SF döküm sonucu)</string>
+    <string name="diag_clean_daemon_btn">🗑 Tüm mirrordaemon*.log dosyalarını sil</string>
+    <string name="diag_test6_title">TEST 6 — Sistem Dinleyici</string>
+    <string name="diag_test6_desc">Arka planda her 30 saniyede filtrelenmiş logcat ve dumpsys anlık görüntülerini yakalar.</string>
+    <string name="diag_scan_sniffer_btn">🔍 Aktif Sniffer süreçlerini tara</string>
+    <string name="diag_sniffer_result_hint">(tarama sonucu)</string>
+    <string name="diag_start_sniffer_btn">▶ Sniffer\'ı başlat</string>
+    <string name="diag_stop_sniffer_btn">☠ Tüm Sniffer süreçlerini sonlandır</string>
+    <string name="diag_export_sniffer_btn">📤 Sniffer raporunu dışa aktar (Telegram…)</string>
+    <string name="diag_clean_sniffer_btn">🗑 Tüm BYD_Sniffer_Dump*.txt dosyalarını sil</string>
+    <string name="diag_test_daemon_btn">🧪 Freedom IPC\'yi test et (deneysel)</string>
+
+    <!-- DiagActivity — Java status / feedback -->
+    <string name="diag_adb_connecting">localhost:5555\'e bağlanılıyor…\n⏳ Açılır pencere bu ekranda görünecek — İZİN VER\'e basın.</string>
+    <string name="diag_adb_connected">✅ Bağlantı kuruldu\n\n</string>
+    <string name="diag_adb_failed">❌ Başarısız: %1$s\n\n→ ADB TCP hata ayıklamanın etkin olduğunu doğrulayın\n  Ayarlar → Geliştirici → USB Hata Ayıklama\n  (veya bu ROM\'da Kablosuz Hata Ayıklama)</string>
+    <string name="diag_adb_test1_hint">→ ADB bağlantısını yetkilendirmek için önce TEST 1\'i çalıştırın.</string>
+    <string name="diag_adb_error_with_hint">❌ %1$s\n\n→ ADB bağlantısını yetkilendirmek için önce TEST 1\'i çalıştırın.</string>
+    <string name="diag_launching_display1">⏳ Display 1 başlatılıyor…</string>
+    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
+    <string name="diag_size_restoring">⏳ Varsayılan boyut geri yükleniyor (cmd 30 + wm reset)…</string>
+    <string name="diag_size_full_running">⏳ Küme boyutu tanılaması…\ncmd=29 / cmd=30 / cmd=31 / wm size deneniyor…\n(~8 saniye)</string>
+    <string name="diag_boot_receiver_running">⏳ Freedom durduruluyor, ardından BOOT_COMPLETED → BootReceiver\'a gönderiliyor…\nVirtualDisplay oluşturulması için 5 sn bekleniyor…</string>
+    <string name="diag_sniffer_killing">Sniffer durduruluyor…</string>
+    <string name="diag_scanning">Taranıyor…</string>
+    <string name="diag_daemon_killing">kill -9 gönderiliyor…</string>
+    <string name="diag_daemon_log_reading">mirrordaemon_latest.log ADB aracılığıyla okunuyor…</string>
+    <string name="diag_sf_dumping">dumpsys SurfaceFlinger çalıştırılıyor…</string>
+    <string name="diag_sf_no_result">(sonuç yok — mirror SF\'de kayıtlı değil)</string>
+    <string name="diag_sf_error">Hata: %1$s</string>
+    <string name="toast_sniffer_started">Sniffer başlatıldı → %1$s</string>
+    <string name="toast_daemon_logs_deleted">Daemon günlükleri silindi</string>
+    <string name="toast_folder_not_found">Klasör bulunamadı</string>
+    <string name="diag_daemon_logs_deleted_text">mirrordaemon_*.log silindi ✓</string>
+    <string name="diag_no_sniffer_report">Rapor bulunamadı (önce sniffer\'ı başlatın).</string>
+    <string name="diag_share_sniffer_title">Sniffer\'ı paylaş</string>
+    <string name="diag_share_daemon_log_title">mirrordaemon_latest.log paylaş</string>
+    <string name="toast_share_error">Paylaşım hatası: %1$s</string>
+    <string name="diag_sniffer_files_deleted">%1$d Sniffer dosyası silindi ✓</string>
+    <string name="toast_files_deleted">%1$d dosya silindi</string>
+    <string name="toast_experimental">Deneysel — işlevsel değil\n(app_process uid=10100\'den erişilemiyor)</string>
+
+    <!-- DiagActivity — killAndRestartDaemon -->
+    <string name="diag_kill_restart_in_progress">Sonlandırma + yeniden başlatma devam ediyor…</string>
+    <string name="diag_kill_ok_restarting">Kill tamam — yeniden başlatılıyor…</string>
+    <string name="diag_daemon_restarted">MirrorDaemon yeniden başlatıldı — 5 sn sonra günlüğü kontrol edin</string>
+    <string name="toast_daemon_restarted">MirrorDaemon yeniden başlatıldı (temiz)</string>
+    <string name="diag_kill_failed">Sonlandırma başarısız: %1$s</string>
+
+    <!-- AppLogger -->
+    <string name="share_log_title">Günlüğü paylaş…</string>
+    <string name="share_report_title">Raporu paylaş…</string>
+</resources>

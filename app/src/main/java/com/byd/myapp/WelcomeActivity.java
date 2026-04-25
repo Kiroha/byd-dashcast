@@ -38,6 +38,9 @@ public class WelcomeActivity extends AppCompatActivity {
 
         Button btnFr = (Button) findViewById(R.id.btn_lang_fr);
         Button btnEn = (Button) findViewById(R.id.btn_lang_en);
+        Button btnDe = (Button) findViewById(R.id.btn_lang_de);
+        Button btnTr = (Button) findViewById(R.id.btn_lang_tr);
+        Button btnIt = (Button) findViewById(R.id.btn_lang_it);
 
         btnFr.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -50,6 +53,27 @@ public class WelcomeActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 selectLanguage(LocaleHelper.LANG_EN);
+            }
+        });
+
+        btnDe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectLanguage(LocaleHelper.LANG_DE);
+            }
+        });
+
+        btnTr.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectLanguage(LocaleHelper.LANG_TR);
+            }
+        });
+
+        btnIt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectLanguage(LocaleHelper.LANG_IT);
             }
         });
     }

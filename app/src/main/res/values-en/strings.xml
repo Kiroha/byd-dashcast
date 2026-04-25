@@ -7,6 +7,9 @@
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard: not connected</string>

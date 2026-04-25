@@ -59,6 +59,42 @@
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Bouton Deutsch -->
+    <Button
+        android:id="@+id/btn_lang_de"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_lang_de"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Bouton Türkçe -->
+    <Button
+        android:id="@+id/btn_lang_tr"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_lang_tr"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Bouton Italiano -->
+    <Button
+        android:id="@+id/btn_lang_it"
+        android:layout_width="260dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_lang_it"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
         android:textColor="#FFFFFF"/>
 
 </LinearLayout>
