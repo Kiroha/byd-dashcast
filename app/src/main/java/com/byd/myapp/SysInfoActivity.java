@@ -103,7 +103,7 @@ public class SysInfoActivity extends AppCompatActivity {
         protected void onPreExecute() {
             btnGenerate.setEnabled(false);
             btnSave.setEnabled(false);
-            tvReport.setText("Generating…\n");
+            tvReport.setText(getString(R.string.sysinfo_generating));
             mReport = new StringBuilder();
         }
 
@@ -338,13 +338,13 @@ public class SysInfoActivity extends AppCompatActivity {
         try (FileWriter fw = new FileWriter(outFile)) {
             fw.write(mReport.toString());
         } catch (IOException e) {
-            Toast.makeText(this, "Write error: " + e.getMessage(),
+            Toast.makeText(this, getString(R.string.toast_write_error, e.getMessage()),
                     Toast.LENGTH_LONG).show();
             return;
         }
 
         Toast.makeText(this,
-                "Report saved:\n" + outFile.getAbsolutePath(),
+                getString(R.string.toast_report_saved, outFile.getAbsolutePath()),
                 Toast.LENGTH_LONG).show();
 
         // Display the path in the report itself
