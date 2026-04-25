@@ -340,7 +340,7 @@ public class MainActivity extends AppCompatActivity
         } else if (!mBindRequested) {
             // First start or after onDestroy: start + bind the service
             mBindRequested = true;
-            tvDashboardStatus.setText("Starting cluster...");
+            tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
             // Freedom is started automatically by ClusterManager.activateClusterDisplay()
             // if the VirtualDisplay is not yet present — no need to launch it here
             // (avoids a double force-stop/restart of Freedom during service initialization).
@@ -462,16 +462,16 @@ public class MainActivity extends AppCompatActivity
                 final String msg;
                 switch (status) {
                     case ACTIVE:
-                        msg = "Freedom active ✓ — cluster ready";
+                        msg = getString(R.string.status_freedom_active);
                         break;
                     case INACTIVE:
-                        msg = "Freedom starting...";
+                        msg = getString(R.string.status_freedom_starting);
                         break;
                     case NOT_INSTALLED:
-                        msg = "⚠ Freedom not installed — streaming impossible";
+                        msg = getString(R.string.status_freedom_not_installed);
                         break;
                     default:
-                        msg = "Freedom: unknown state";
+                        msg = getString(R.string.status_freedom_unknown);
                 }
                 tvDashboardStatus.setText(msg);
                 AppLogger.i(TAG, "onFreedomStatus: " + status + " → " + msg);
@@ -489,7 +489,7 @@ public class MainActivity extends AppCompatActivity
         // with displayId=1 hardcoded (Seal EU) as fallback → always functional.
         if (mClusterService == null) {
             AppLogger.e(TAG, "ClusterService null — send cancelled for " + app.packageName);
-            Toast.makeText(this, "Cluster service unavailable", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.toast_cluster_unavailable), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -511,7 +511,7 @@ public class MainActivity extends AppCompatActivity
             if (pkgName.equals(mCurrentDashboardPkg) || pkgName.equals(mSecondDashboardPkg)) {
                 AppLogger.w(TAG, "split: duplicate ignored pkg=" + pkgName
                         + " (main=" + mCurrentDashboardPkg + " second=" + mSecondDashboardPkg + ")");
-                Toast.makeText(this, "App already on the cluster", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.toast_app_already_cluster), Toast.LENGTH_SHORT).show();
                 return;
             }
             int[] dims = getClusterDimensions();
@@ -621,7 +621,8 @@ public class MainActivity extends AppCompatActivity
                         updateDashboardStatus(null);
                         showAppList();
                         Toast.makeText(MainActivity.this,
-                                app.appName + " stopped", Toast.LENGTH_SHORT).show();
+                                getString(R.string.toast_app_stopped, app.appName),
+                                Toast.LENGTH_SHORT).show();
                         AppLogger.log(TAG, "forceStop " + app.packageName + " OK");
                     }
                 });
@@ -631,7 +632,7 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         Toast.makeText(MainActivity.this,
-                                "Kill failed: " + error, Toast.LENGTH_LONG).show();
+                                getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "forceStop FAILED: " + error);
                     }
                 });
@@ -902,7 +903,7 @@ public class MainActivity extends AppCompatActivity
 
     private void activateCluster() {
         btnActivateCluster.setEnabled(false);
-        tvDashboardStatus.setText("Activation cluster…");
+        tvDashboardStatus.setText(getString(R.string.status_activating_cluster));
         AppLogger.log(TAG, "activateCluster() — serviceBound=" + mServiceBound
                 + " bindRequested=" + mBindRequested
                 + " displayId=" + (mClusterService != null ? mClusterService.getDisplayId() : "N/A"));
@@ -917,9 +918,7 @@ public class MainActivity extends AppCompatActivity
                 startForegroundService(svcIntent);
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
             }
-            tvDashboardStatus.setText("Starting cluster...");
-            btnActivateCluster.setEnabled(true);
-            return;
+                        tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
         }
 
         // Service already bound → send ADB commands directly (manual re-activation)
@@ -928,7 +927,7 @@ public class MainActivity extends AppCompatActivity
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDashboardStatus.setText("Cluster activated ✓");
+                        tvDashboardStatus.setText(getString(R.string.status_cluster_activated));
                         btnActivateCluster.setEnabled(true);
                         AppLogger.log(TAG, "activateCluster OK — " + report);
                     }
@@ -941,7 +940,7 @@ public class MainActivity extends AppCompatActivity
                         tvDashboardStatus.setText(getString(R.string.status_disconnected));
                         btnActivateCluster.setEnabled(true);
                         Toast.makeText(MainActivity.this,
-                                "Activation failed: " + error, Toast.LENGTH_LONG).show();
+                                getString(R.string.toast_activation_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "activateCluster FAILED — " + error);
                     }
                 });
@@ -958,10 +957,10 @@ public class MainActivity extends AppCompatActivity
     /** ⋮ menu — developer tools accessible without cluttering the toolbar. */
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 1, 0, "⚙️ Settings");
-        popup.getMenu().add(0, 2, 0, "🔧 Diagnostic");
-        popup.getMenu().add(0, 3, 0, "📋 System report");
-        popup.getMenu().add(0, 5, 0, "🌐 Language");
+        popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
+        popup.getMenu().add(0, 2, 0, getString(R.string.menu_diagnostic));
+        popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
+        popup.getMenu().add(0, 5, 0, getString(R.string.menu_language));
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -988,9 +987,9 @@ public class MainActivity extends AppCompatActivity
     private void showClusterTypeSettings() {
         final int[] cmds    = { 29, 30, 31 };
         final String[] labels = {
-            "8.8 inches  (cmd=29)",
-            "12.3 inches (cmd=30) — Seal EU",
-            "10.25 inches (cmd=31)"
+            getString(R.string.cluster_label_88),
+            getString(R.string.cluster_label_123),
+            getString(R.string.cluster_label_1025)
         };
         int current = getClusterTypeCmd();
         int checked = 1; // default 12.3"
@@ -999,31 +998,31 @@ public class MainActivity extends AppCompatActivity
         }
         final int[] selected = { checked };
         new AlertDialog.Builder(this)
-            .setTitle("Cluster type")
+            .setTitle(getString(R.string.dialog_cluster_type_title))
             .setSingleChoiceItems(labels, checked, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     selected[0] = which;
                 }
             })
-            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            .setPositiveButton(getString(R.string.btn_ok), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     int cmd = cmds[selected[0]];
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .edit().putInt(PREF_CLUSTER_TYPE, cmd).apply();
                     Toast.makeText(MainActivity.this,
-                            "Cluster: " + labels[selected[0]], Toast.LENGTH_SHORT).show();
+                            getString(R.string.toast_cluster_type, labels[selected[0]]), Toast.LENGTH_SHORT).show();
                     AppLogger.log(TAG, "Cluster type → sendInfo cmd=" + cmd);
                 }
             })
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show();
     }
 
     private void restoreBydDashboard() {
         btnRestoreCluster.setEnabled(false);
-        tvDashboardStatus.setText("Restoring cluster...");
+        tvDashboardStatus.setText(getString(R.string.status_restoring_cluster));
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
         // Split mode: force-stop the second app before sendInfo(18)
         // (prevents it from relocating to the main display)
@@ -1062,7 +1061,7 @@ public class MainActivity extends AppCompatActivity
                     @Override public void run() {
                         btnRestoreCluster.setEnabled(true);
                         Toast.makeText(MainActivity.this,
-                                "Restore failed: " + error, Toast.LENGTH_LONG).show();
+                                getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "Restore FAILED: " + error);
                     }
                 });
@@ -1072,9 +1071,9 @@ public class MainActivity extends AppCompatActivity
 
     private void updateDashboardStatus(String appName) {
         if (appName == null) {
-            tvDashboardStatus.setText("Dashboard: BYD display");
+            tvDashboardStatus.setText(getString(R.string.status_dashboard_byd));
         } else {
-            tvDashboardStatus.setText("Dashboard: " + appName);
+            tvDashboardStatus.setText(getString(R.string.status_dashboard_app, appName));
         }
         btnRestoreCluster.setEnabled(true);
     }
@@ -1082,7 +1081,7 @@ public class MainActivity extends AppCompatActivity
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private void originCluster() {
         btnOriginCluster.setEnabled(false);
-        tvDashboardStatus.setText("Restoring original cluster...");
+        tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
         // Split mode: force-stop the second app before restoration
         if (mSecondDashboardPkg != null) {
@@ -1114,7 +1113,7 @@ public class MainActivity extends AppCompatActivity
                     @Override public void run() {
                         btnOriginCluster.setEnabled(true);
                         Toast.makeText(MainActivity.this,
-                                "Original cluster restore failed: " + error, Toast.LENGTH_LONG).show();
+                                getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "originCluster FAILED: " + error);
                     }
                 });
@@ -1130,16 +1129,16 @@ public class MainActivity extends AppCompatActivity
             AppLogger.w(TAG, "showSplitMenu ignored — serviceBound=" + mServiceBound
                     + " clusterService=" + (mClusterService != null)
                     + " currentPkg=" + mCurrentDashboardPkg);
-            Toast.makeText(this, "No app on the cluster", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.toast_no_app_cluster), Toast.LENGTH_SHORT).show();
             return;
         }
         AppLogger.d(TAG, "showSplitMenu — app=" + mCurrentDashboardPkg
                 + " slot=" + mCurrentSplitSlot
                 + " second=" + mSecondDashboardPkg);
         PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 1, 0, "⬜ Full screen");
-        popup.getMenu().add(0, 2, 0, "⬜⬛ Left (50%)");
-        popup.getMenu().add(0, 3, 0, "⬛⬜ Right (50%)");
+        popup.getMenu().add(0, 1, 0, getString(R.string.split_full_screen));
+        popup.getMenu().add(0, 2, 0, getString(R.string.split_left));
+        popup.getMenu().add(0, 3, 0, getString(R.string.split_right));
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -1350,14 +1349,14 @@ public class MainActivity extends AppCompatActivity
 
     private void showKeyboardDialog() {
         final android.widget.EditText input = new android.widget.EditText(this);
-        input.setHint("Text to send to the cluster");
+        input.setHint(getString(R.string.dialog_keyboard_hint));
         input.setSingleLine(true);
 
         new android.app.AlertDialog.Builder(this)
-            .setTitle("Keyboard Input (Cluster)")
-            .setMessage("Once confirmed, the text will be typed automatically in the application.")
+            .setTitle(getString(R.string.dialog_keyboard_title))
+            .setMessage(getString(R.string.dialog_keyboard_message))
             .setView(input)
-            .setPositiveButton("Envoyer", new android.content.DialogInterface.OnClickListener() {
+            .setPositiveButton(getString(R.string.btn_send), new android.content.DialogInterface.OnClickListener() {
                 public void onClick(android.content.DialogInterface dialog, int whichButton) {
                     final String text = input.getText().toString();
                     if (!text.isEmpty()) {
@@ -1367,7 +1366,7 @@ public class MainActivity extends AppCompatActivity
                     }
                 }
             })
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show();
     }
 

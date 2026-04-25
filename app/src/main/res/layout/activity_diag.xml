@@ -14,7 +14,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Diagnostic de compatibilité"
+            android:text="@string/diag_title"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -23,7 +23,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Vérifie quel mécanisme est disponible pour envoyer des apps sur l'écran dashboard (instrument cluster)."
+            android:text="@string/diag_subtitle"
             android:textColor="#AAAAAA"
             android:textSize="13sp"
             android:layout_marginBottom="20dp"/>
@@ -32,7 +32,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 1 — Connexion ADB locale (dadb)"
+            android:text="@string/diag_test1_title"
             android:textColor="#A5D6A7"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -41,7 +41,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Se connecte au daemon ADB de la tablette sur localhost:5555 (même mécanisme qu'Overdrive). Au premier lancement, un popup &#171;Autoriser le débogage USB ?&#187; apparaît — appuyez AUTORISER. Une fois autorisé, tente de débloquer toutes les permissions BYDAUTO_*_GET refusées via pm grant."
+            android:text="@string/diag_test1_desc"
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -50,7 +50,7 @@
             android:id="@+id/btn_adb_local"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Connexion ADB locale + Grant permissions"
+            android:text="@string/btn_adb_local_label"
             android:textSize="14sp"
             android:backgroundTint="#2E7D32"
             android:layout_marginBottom="8dp"/>
@@ -59,7 +59,7 @@
             android:id="@+id/tv_adb_local_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Appuyez sur le bouton pour lancer."
+            android:text="@string/diag_press_hint"
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:fontFamily="monospace"
@@ -71,7 +71,7 @@
             android:id="@+id/btn_adb_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 1"
+            android:text="@string/diag_share_result1_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
@@ -80,7 +80,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 2 — Restauration cluster"
+            android:text="@string/diag_test2_title"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
             android:textSize="14sp"
@@ -90,7 +90,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Sur BYD DiLink 3.0, le cluster = display ID 1 dans IActivityManager (pas dans DisplayManager). sendInfo(1000,16) + am start --display 1."
+            android:text="@string/diag_test2_desc"
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -99,7 +99,7 @@
             android:id="@+id/btn_display1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Lancer TEST 2"
+            android:text="@string/diag_launch_test2_btn"
             android:textSize="15sp"
             android:backgroundTint="#E65100"
             android:layout_marginBottom="8dp"/>
@@ -108,7 +108,7 @@
             android:id="@+id/tv_display1_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat TEST 2)"
+            android:text="@string/diag_result_test2_hint"
             android:textColor="#CCCCCC"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -120,7 +120,7 @@
             android:id="@+id/btn_display1_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 2"
+            android:text="@string/diag_share_result2_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
@@ -135,7 +135,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 3 — Taille display cluster (résolution Qt)"
+            android:text="@string/diag_test3_title"
             android:textColor="#80DEEA"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -144,7 +144,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Taille écran cluster : cmd 29=8.8&quot; (Atto3/Dolphin) / cmd 30=12.3&quot; (Seal EU ✅) / cmd 31=10.25&quot;. Confirmé 16/04/2026 : cmd 30 = bonne résolution Seal EU. Rétablir : cmd30 + wm reset."
+            android:text="@string/diag_test3_desc"
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -161,7 +161,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 8.8&quot;\n(cmd 29)\nAtto3/Dolphin"
+                android:text="@string/diag_size_88_btn"
                 android:textSize="12sp"
                 android:backgroundTint="#00695C"
                 android:layout_marginEnd="4dp"/>
@@ -171,7 +171,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 12.3&quot;\n(cmd 30)\nSeal EU ✅"
+                android:text="@string/diag_size_123_btn"
                 android:textSize="12sp"
                 android:backgroundTint="#1B5E20"
                 android:layout_marginStart="4dp"
@@ -182,7 +182,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="▶ 10.25&quot;\n(cmd 31)\nautres modèles"
+                android:text="@string/diag_size_1025_btn"
                 android:textSize="12sp"
                 android:backgroundTint="#00695C"
                 android:layout_marginStart="4dp"/>
@@ -194,7 +194,7 @@
             android:id="@+id/btn_display_size_restore"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔄 Rétablir défaut (cmd 30 + wm reset)"
+            android:text="@string/diag_size_restore_btn"
             android:textSize="13sp"
             android:backgroundTint="#6A1B9A"
             android:layout_marginBottom="8dp"/>
@@ -204,7 +204,7 @@
             android:id="@+id/btn_display_size_full"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📊 Diagnostic complet (~8s)"
+            android:text="@string/diag_size_full_btn"
             android:textSize="13sp"
             android:backgroundTint="#00695C"
             android:layout_marginBottom="8dp"/>
@@ -213,7 +213,7 @@
             android:id="@+id/tv_display_size_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Appuyez sur un bouton (ADB doit être autorisé — TEST 1 d&#39;abord)."
+            android:text="@string/diag_test3_hint_text"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -225,7 +225,7 @@
             android:id="@+id/btn_display_size_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 3"
+            android:text="@string/diag_share_result3_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
@@ -234,7 +234,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 4 — BootReceiver Freedom (sans UI)"
+            android:text="@string/diag_test4_title"
             android:textColor="#FFCC00"
             android:textStyle="bold"
             android:textSize="13sp"
@@ -244,7 +244,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Envoie BOOT_COMPLETED directement au BootReceiver de Freedom (com.xdja.clusterdemo) via ADB, sans ouvrir son UI. Si ça crée le VirtualDisplay cluster → Freedom peut être lancé en headless."
+            android:text="@string/diag_test4_desc"
             android:textColor="#AAAAAA"
             android:textSize="11sp"
             android:layout_marginBottom="8dp"/>
@@ -253,7 +253,7 @@
             android:id="@+id/btn_boot_receiver"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Lancer TEST 4 — Broadcast BootReceiver"
+            android:text="@string/diag_launch_test4_btn"
             android:textSize="13sp"
             android:backgroundTint="#4A1580"
             android:layout_marginBottom="8dp"/>
@@ -262,7 +262,7 @@
             android:id="@+id/tv_boot_receiver_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat TEST 4)"
+            android:text="@string/diag_result_test4_hint"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -274,7 +274,7 @@
             android:id="@+id/btn_boot_receiver_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Partager le résultat TEST 4"
+            android:text="@string/diag_share_result4_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
@@ -290,7 +290,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 5 — Gestion MirrorDaemon (uid=2000)"
+            android:text="@string/diag_test5_title"
             android:textColor="#FFAB40"
             android:textStyle="bold"
             android:textSize="14sp"
@@ -299,7 +299,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Vérifie et contrôle le processus MirrorDaemon (com.byd.myapp.mirrordaemon). Plusieurs instances simultanées causent un écran noir."
+            android:text="@string/diag_test5_desc"
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -308,7 +308,7 @@
             android:id="@+id/btn_scan_daemon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔍 Scanner les MirrorDaemon actifs"
+            android:text="@string/diag_scan_daemon_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="8dp"/>
@@ -317,7 +317,7 @@
             android:id="@+id/tv_daemon_scan_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat scan)"
+            android:text="@string/diag_scan_result_hint"
             android:textColor="#AAAAAA"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -329,7 +329,7 @@
             android:id="@+id/btn_kill_daemon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="☠ Tuer tous les MirrorDaemon"
+            android:text="@string/diag_kill_daemon_btn"
             android:textSize="13sp"
             android:backgroundTint="#BF360C"
             android:layout_marginBottom="8dp"/>
@@ -338,7 +338,7 @@
             android:id="@+id/btn_kill_restart_daemon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔄 Tuer + Relancer MirrorDaemon (propre)"
+            android:text="@string/diag_kill_restart_daemon_btn"
             android:textSize="13sp"
             android:backgroundTint="#E65100"
             android:layout_marginBottom="8dp"/>
@@ -347,7 +347,7 @@
             android:id="@+id/btn_export_daemon_log"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📋 Exporter mirrordaemon.log"
+            android:text="@string/diag_export_daemon_log_btn"
             android:textSize="13sp"
             android:backgroundTint="#6A1B9A"
             android:layout_marginBottom="8dp"/>
@@ -356,7 +356,7 @@
             android:id="@+id/btn_dump_sf_mirror"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔬 Dump SurfaceFlinger (byd_myapp_mirror)"
+            android:text="@string/diag_dump_sf_btn"
             android:textSize="13sp"
             android:backgroundTint="#00695C"
             android:layout_marginBottom="8dp"/>
@@ -365,7 +365,7 @@
             android:id="@+id/tv_sf_dump_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat dump SF)"
+            android:text="@string/diag_dump_sf_result_hint"
             android:textColor="#AAAAAA"
             android:textSize="10sp"
             android:fontFamily="monospace"
@@ -377,7 +377,7 @@
             android:id="@+id/btn_clean_daemon_logs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🗑 Supprimer tous les mirrordaemon*.log"
+            android:text="@string/diag_clean_daemon_btn"
             android:textSize="13sp"
             android:backgroundTint="#37474F"
             android:layout_marginBottom="16dp"/>
@@ -392,7 +392,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 6 — Sniffer Système"
+            android:text="@string/diag_test6_title"
             android:textColor="#FFAB40"
             android:textStyle="bold"
             android:textSize="14sp"
@@ -401,7 +401,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Capture logcat filtré + snapshots dumpsys toutes les 30s en arrière-plan."
+            android:text="@string/diag_test6_desc"
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -410,7 +410,7 @@
             android:id="@+id/btn_scan_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔍 Scanner les processus Sniffer actifs"
+            android:text="@string/diag_scan_sniffer_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="8dp"/>
@@ -419,7 +419,7 @@
             android:id="@+id/tv_sniffer_scan_result"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="(résultat scan)"
+            android:text="@string/diag_sniffer_result_hint"
             android:textColor="#AAAAAA"
             android:textSize="11sp"
             android:fontFamily="monospace"
@@ -431,7 +431,7 @@
             android:id="@+id/btn_start_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Démarrer le Sniffer"
+            android:text="@string/diag_start_sniffer_btn"
             android:textSize="13sp"
             android:backgroundTint="#2E7D32"
             android:layout_marginBottom="8dp"/>
@@ -440,7 +440,7 @@
             android:id="@+id/btn_stop_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="☠ Tuer tous les processus Sniffer"
+            android:text="@string/diag_stop_sniffer_btn"
             android:textSize="13sp"
             android:backgroundTint="#BF360C"
             android:layout_marginBottom="8dp"/>
@@ -449,7 +449,7 @@
             android:id="@+id/btn_export_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📤 Exporter rapport Sniffer (Telegram…)"
+            android:text="@string/diag_export_sniffer_btn"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="8dp"/>
@@ -458,7 +458,7 @@
             android:id="@+id/btn_clean_sniffer_logs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🗑 Supprimer tous les BYD_Sniffer_Dump*.txt"
+            android:text="@string/diag_clean_sniffer_btn"
             android:textSize="13sp"
             android:backgroundTint="#37474F"
             android:layout_marginBottom="8dp"/>
@@ -467,7 +467,7 @@
             android:id="@+id/btn_test_daemon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🧪 Tester Freedom IPC (expérimental)"
+            android:text="@string/diag_test_daemon_btn"
             android:textSize="13sp"
             android:backgroundTint="#d81b60"
             android:layout_marginBottom="16dp"/>
