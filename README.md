@@ -189,11 +189,11 @@ There is no supported fallback in the current alpha.
 ## Known issues (alpha)
 
 - **Reliability**: The cluster activation sequence may fail on the first attempt — retry
+- **Mirror touch (first launch)**: Touch input on the mirror does not work on the very first run. Force-stop the app and relaunch it — touch will work correctly from the second start onwards
 - **Freedom dependency**: **Freedom (`com.xdja.clusterdemo`) is required** — there is no working fallback in the current alpha
 - **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface)
 - **Split 50/50**: Experimental — may fail depending on target app window mode
-- ** export**: Optional feature requiring a personal remote log analytics workspace (configure `local.properties`)
-- **Language**: UI is bilingual (FR/EN) but some log messages are in French
+- **Language**: The UI has been translated to English, but some messages (toasts, logs) may still appear in French
 
 ---
 
