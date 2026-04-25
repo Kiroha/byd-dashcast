@@ -35,17 +35,6 @@
             android:backgroundTint="#555555"/>
 
         <Button
-            android:id="@+id/log_btn_export"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="☁ "
-            android:textSize="12sp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginStart="6dp"
-            android:backgroundTint="#00897B"/>
-
-        <Button
             android:id="@+id/log_btn_share"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
@@ -93,21 +82,6 @@
             android:layout_marginStart="8dp"/>
 
     </LinearLayout>
-
-    <!-- Statut export  -->
-    <TextView
-        android:id="@+id/log_tv_export_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textColor="#AAAAAA"
-        android:textSize="11sp"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="2dp"
-        android:paddingBottom="2dp"
-        android:background="#161616"
-        android:visibility="visible"/>
 
     <!-- Color legend -->
     <LinearLayout

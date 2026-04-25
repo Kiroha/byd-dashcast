@@ -21,19 +21,6 @@ android {
         targetSdkVersion 29
         versionCode 3
         versionName "0.1.2-alpha"
-
-        // remote log analytics — lu depuis local.properties (hors source control)
-        def props = new Properties()
-        def lp = rootProject.file('local.properties')
-        if (lp.exists()) {
-            lp.withInputStream { stream ->
-                props.load(stream)
-            }
-        }
-        buildConfigField 'String', 'LOG_WORKSPACE_ID',
-            '"' + (props.getProperty('') ?: '') + '"'
-        buildConfigField 'String', 'LOG_PRIMARY_KEY',
-            '"' + (props.getProperty('') ?: '') + '"'
     }
 
     buildTypes {

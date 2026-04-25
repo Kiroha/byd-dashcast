@@ -51,8 +51,6 @@ public class LogActivity extends AppCompatActivity {
     private CheckBox    cbAutoScroll;
     private Button      btnShare;
     private Button      btnClear;
-    private Button      btn;
-    private TextView    tvStatus;
 
     private String mFilter = "";
     private boolean mRunning = false;
@@ -86,8 +84,6 @@ public class LogActivity extends AppCompatActivity {
         cbAutoScroll = (CheckBox)    findViewById(R.id.log_autoscroll);
         btnShare     = (Button)      findViewById(R.id.log_btn_share);
         btnClear     = (Button)      findViewById(R.id.log_btn_clear);
-        btn     = (Button)      findViewById(R.id.log_btn_export);
-        tvStatus = (TextView)   findViewById(R.id.log_tv_export_status);
 
         // Fond sombre pour le log
         tvLog.setBackgroundColor(Color.parseColor("#1A1A1A"));
@@ -107,37 +103,7 @@ public class LogActivity extends AppCompatActivity {
         btnShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 1. Sauvegarde le fichier .log + ouvre le share chooser
                 AppLogger.share(LogActivity.this);
-                // 2. Double automatique dans remote log analytics
-                tvStatus.setText("Double  en cours…");
-                tvStatus.setTextColor(android.graphics.Color.parseColor("#FFA040"));
-                btn.setEnabled(false);
-                LogExporter.export(new LogExporter.ExportCallback() {
-                    @Override
-                    public void onSuccess(final int count, final int httpStatus) {
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                tvStatus.setText("✅ File shared + "
-                                        + count + " entries sent to  (HTTP " + httpStatus + ")");
-                                tvStatus.setTextColor(
-                                        android.graphics.Color.parseColor("#44DD44"));
-                                btn.setEnabled(true);
-                            }
-                        });
-                    }
-                    @Override
-                    public void onError(final String message) {
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                tvStatus.setText("⚠ File shared — : ❌ " + message);
-                                tvStatus.setTextColor(
-                                        android.graphics.Color.parseColor("#FFA040"));
-                                btn.setEnabled(true);
-                            }
-                        });
-                    }
-                });
             }
         });
 
@@ -146,40 +112,6 @@ public class LogActivity extends AppCompatActivity {
             public void onClick(View v) {
                 AppLogger.clear();
                 refreshLog();
-            }
-        });
-
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                btn.setEnabled(false);
-                tvStatus.setText("Envoi en cours…");
-                tvStatus.setTextColor(android.graphics.Color.parseColor("#FFA040"));
-                LogExporter.export(new LogExporter.ExportCallback() {
-                    @Override
-                    public void onSuccess(final int count, final int httpStatus) {
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                tvStatus.setText("✅ " + count
-                                    + " entries sent (HTTP " + httpStatus + ")");
-                                tvStatus.setTextColor(
-                                    android.graphics.Color.parseColor("#44DD44"));
-                                btn.setEnabled(true);
-                            }
-                        });
-                    }
-                    @Override
-                    public void onError(final String message) {
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                tvStatus.setText("❌ " + message);
-                                tvStatus.setTextColor(
-                                    android.graphics.Color.parseColor("#FF4444"));
-                                btn.setEnabled(true);
-                            }
-                        });
-                    }
-                });
             }
         });
 
