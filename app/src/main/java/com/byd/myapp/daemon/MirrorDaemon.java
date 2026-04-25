@@ -1,9 +1,7 @@
 package com.byd.myapp.daemon;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.os.Binder;
 import android.os.Bundle;
@@ -118,30 +116,41 @@ public class MirrorDaemon {
             final IBinder daemonBinder = new MirrorBinder();
             out("MirrorBinder créé");
 
-            // Enregistrer les receivers (LAUNCH + REQUEST_BINDER)
-            out("Enregistrement receivers...");
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(ACTION_DAEMON_LAUNCH);
-            filter.addAction(ACTION_REQUEST_BINDER);
-            context.registerReceiver(new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context c, Intent intent) {
-                    String action = intent.getAction();
-                    if (ACTION_REQUEST_BINDER.equals(action)) {
-                        // L'app demande à récupérer le Binder (ex: Activity revenue au 1er plan)
-                        broadcastBinder(c, daemonBinder);
-                    } else if (ACTION_DAEMON_LAUNCH.equals(action)) {
-                        handleLaunch(c, intent);
-                    }
+            // Enregistrer dans ServiceManager (accessible par uid=2000) :
+            // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
+            // l'IApplicationThread non enregistré → SecurityException).
+            out("ServiceManager.addService(byd_mirror_daemon)...");
+            try {
+                Class<?> smClass = Class.forName("android.os.ServiceManager");
+                // Android 10 : addService(String, IBinder, boolean, int)
+                try {
+                    Method addSvc = smClass.getDeclaredMethod("addService",
+                            String.class, IBinder.class, boolean.class, int.class);
+                    addSvc.setAccessible(true);
+                    addSvc.invoke(null, "byd_mirror_daemon", daemonBinder, false, 0);
+                    out("ServiceManager.addService (4-arg) OK");
+                } catch (NoSuchMethodException e2) {
+                    // Fallback : addService(String, IBinder)
+                    Method addSvc = smClass.getDeclaredMethod("addService",
+                            String.class, IBinder.class);
+                    addSvc.setAccessible(true);
+                    addSvc.invoke(null, "byd_mirror_daemon", daemonBinder);
+                    out("ServiceManager.addService (2-arg) OK");
                 }
-            }, filter);
-            out("Receivers enregistrés");
+            } catch (Exception eSm) {
+                err("ServiceManager.addService ECHEC — broadcast seul", eSm);
+            }
 
-            // Annoncer notre présence avec le Binder
+            // SUPPRIMÉ : registerReceiver → SecurityException depuis systemMain()
+            // AMS vérifie que l'IApplicationThread est dans mPidsSelfLocked → refusé
+            // pour un process app_process non passé par la séquence de démarrage normale.
+            // Remplacement : ServiceManager.addService() ci-dessus + sendBroadcast initial.
+
+            // Annoncer notre présence (sendBroadcast fonctionne depuis systemMain())
             out("broadcastBinder()...");
             broadcastBinder(context, daemonBinder);
             Log.i(TAG, "MirrorDaemon prêt — Binder diffusé.");
-            out("MirrorDaemon PRÊT — Binder diffusé — Looper.loop() démarré");
+            out("MirrorDaemon PRÊT — Binder dans ServiceManager + broadcast envoyé — Looper.loop() démarré");
 
             Looper.loop();
             out("Looper.loop() terminé (ne devrait pas arriver)");

@@ -355,9 +355,11 @@ public class MainActivity extends AppCompatActivity
     protected void onStart() {
         super.onStart();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
-        // Demander au daemon de re-broadcaster son Binder s'il était déjà lancé
+        // Récupérer le Binder daemon depuis ServiceManager si pas encore disponible.
+        // ACTION_REQUEST_BINDER ne fonctionne plus : le daemon n'a plus de registerReceiver
+        // (interdit depuis systemMain() — AMS rejette l'IApplicationThread).
         if (mDaemonBinder == null) {
-            sendBroadcast(new Intent(com.byd.myapp.daemon.MirrorDaemon.ACTION_REQUEST_BINDER));
+            tryGetDaemonBinderFromServiceManager();
         }
         if (mServiceBound && mClusterService != null) {
             // Activity revenue au premier plan : ré-attacher le listener
@@ -683,6 +685,47 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * Démarre le VirtualDisplay preview si la Surface est prête.
+    /**
+     * Tente de récupérer le Binder du daemon depuis ServiceManager (via reflection).
+     * Appelé dans onStart() si mDaemonBinder == null (daemon déjà lancé, app revenue au 1er plan).
+     * Thread-safe : doit être appelé depuis le main thread.
+     */
+    private void tryGetDaemonBinderFromServiceManager() {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    Class<?> smClass = Class.forName("android.os.ServiceManager");
+                    java.lang.reflect.Method getService = smClass.getDeclaredMethod(
+                            "getService", String.class);
+                    getService.setAccessible(true);
+                    IBinder binder = (IBinder) getService.invoke(null, "byd_mirror_daemon");
+                    if (binder != null) {
+                        AppLogger.i(TAG, "DaemonBinder récupéré depuis ServiceManager ✓");
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                mDaemonBinder = binder;
+                                if (mServiceBound && mClusterService != null) {
+                                    mClusterService.getInputForwarder().setDaemonBinder(binder);
+                                }
+                                // Relancer le miroir si panel visible
+                                if (mCurrentDashboardApp != null
+                                        && panelClusterControl != null
+                                        && panelClusterControl.getVisibility() == View.VISIBLE) {
+                                    attemptStartMirrorWithCurrentHolder();
+                                }
+                            }
+                        });
+                    } else {
+                        AppLogger.d(TAG, "DaemonBinder absent de ServiceManager (daemon pas encore lancé ?)");
+                    }
+                } catch (Exception e) {
+                    AppLogger.w(TAG, "tryGetDaemonBinderFromServiceManager: " + e.getMessage());
+                }
+            }
+        }, "sm-daemon-lookup").start();
+    }
+
+    /**
      * v2.30 : utilise DisplayManager.createVirtualDisplay() comme WindowManagement/byd_dashboard.
      * Plus besoin de clusterDisplay — le VirtualDisplay est indépendant du display cluster.
      * Après création, lance aussi l'app courante sur le preview display.
