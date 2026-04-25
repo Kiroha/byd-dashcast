@@ -42,12 +42,27 @@ public class ClusterMirrorManager {
 
     private boolean mMirrorActive = false;
     private int     mClusterW = 1920;
-    private int     mClusterH = 720;
+    private int     mClusterH = 1080;  // Match physical cluster resolution (Seal EU)
+
+    // ── Projection parameters (set when setDisplayProjection is called) ───────
+    // Stored with integer arithmetic to match the daemon's computation exactly.
+    // Used by touch mapping so the offset/scale are always consistent with the
+    // actual rendered projection, regardless of current view dimensions.
+    private int   mProjOffsetX = 0;
+    private int   mProjOffsetY = 0;
+    private float mProjScale   = 0f;  // 0 means "not yet set"
 
     public int     getClusterWidth()           { return mClusterW; }
     public int     getClusterHeight()          { return mClusterH; }
     public boolean isMirrorActive()            { return mMirrorActive; }
     public int     getPreviewDisplayId()       { return mPreviewDisplayId; }
+
+    /** Returns the horizontal letterbox offset (pixels) used in the last setDisplayProjection call. */
+    public int   getProjOffsetX() { return mProjOffsetX; }
+    /** Returns the vertical letterbox offset (pixels) used in the last setDisplayProjection call. */
+    public int   getProjOffsetY() { return mProjOffsetY; }
+    /** Returns the scale factor used in the last setDisplayProjection call. 0 if not yet set. */
+    public float getProjScale()   { return mProjScale; }
 
     /**
      * Unlocks hidden APIs (SurfaceControl, Display.getLayerStack, etc.).
@@ -132,6 +147,7 @@ public class ClusterMirrorManager {
             }
 
             // 3. Projection: preserve aspect ratio (letterbox)
+            // Use integer arithmetic to match MirrorDaemon.setupMirror() exactly.
             float scale   = Math.min((float) viewW / mClusterW, (float) viewH / mClusterH);
             int   drawW   = (int) (mClusterW * scale);
             int   drawH   = (int) (mClusterH * scale);
@@ -139,6 +155,11 @@ public class ClusterMirrorManager {
             int   offsetY = (viewH  - drawH) / 2;
             Rect srcRect  = new Rect(0, 0, mClusterW, mClusterH);
             Rect destRect = new Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH);
+
+            // Store projection params for touch coordinate mapping
+            mProjOffsetX = offsetX;
+            mProjOffsetY = offsetY;
+            mProjScale   = scale;
 
             // 4. SurfaceControl Transaction (@hide methods)
             SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
@@ -189,10 +210,21 @@ public class ClusterMirrorManager {
 
         // Cluster dimensions
         if (clusterDisplay != null) {
-            Point sz = new Point(1920, 720);
+            Point sz = new Point(1920, 1080);
             clusterDisplay.getRealSize(sz);
             mClusterW = sz.x;
             mClusterH = sz.y;
+        }
+
+        // Pre-compute projection params (identical formula to MirrorDaemon.setupMirror).
+        // Stored here so touch mapping uses exact same offsets as the daemon's projection.
+        {
+            float scale = Math.min((float) viewW / mClusterW, (float) viewH / mClusterH);
+            int drawW   = (int) (mClusterW * scale);
+            int drawH   = (int) (mClusterH * scale);
+            mProjOffsetX = (viewW - drawW) / 2;
+            mProjOffsetY = (viewH - drawH) / 2;
+            mProjScale   = scale;
         }
 
         int clusterDisplayId = (clusterDisplay != null) ? clusterDisplay.getDisplayId() : 2;
@@ -277,6 +309,7 @@ public class ClusterMirrorManager {
     private void stopPreview() {
         mMirrorActive = false;
         mPreviewDisplayId = -1;
+        mProjScale = 0f;  // Reset: signals "not yet set" to touch mapping
         if (mPreviewVD != null) {
             try { mPreviewVD.release(); } catch (Exception ignored) {}
             mPreviewVD = null;

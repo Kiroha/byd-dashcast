@@ -878,25 +878,32 @@ public class MainActivity extends AppCompatActivity
                         ? mClusterService.getMirrorManager() : null;
         if (mirror == null) return;
 
-        int clusterW = mirror.getClusterWidth();
-        int clusterH = mirror.getClusterHeight();
-        int viewW    = mirrorView.getWidth();
-        int viewH    = mirrorView.getHeight();
-        if (viewW <= 0 || viewH <= 0 || clusterW <= 0 || clusterH <= 0) return;
+        // Use the projection params stored when setDisplayProjection was called.
+        // This guarantees the touch offset/scale matches the actual rendered projection,
+        // even if the view was resized since mirror start (avoids touch offset bugs).
+        float scale   = mirror.getProjScale();
+        if (scale <= 0f) return;  // Mirror not yet fully initialized
 
-        // Same calculation as ClusterMirrorManager.startMirror (ratio preserved)
-        float scale   = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
-        float drawW   = clusterW * scale;
-        float drawH   = clusterH * scale;
-        float offsetX = (viewW - drawW) / 2f;
-        float offsetY = (viewH - drawH) / 2f;
+        float offsetX = mirror.getProjOffsetX();
+        float offsetY = mirror.getProjOffsetY();
+        int   clusterW = mirror.getClusterWidth();
+        int   clusterH = mirror.getClusterHeight();
+        if (clusterW <= 0 || clusterH <= 0) return;
 
         float clusterX = (event.getX() - offsetX) / scale;
         float clusterY = (event.getY() - offsetY) / scale;
         clusterX = Math.max(0, Math.min(clusterX, clusterW - 1));
         clusterY = Math.max(0, Math.min(clusterY, clusterH - 1));
 
-        forwarder.forwardTouch(clusterX, clusterY, clusterW, clusterH, event.getAction());
+        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+            AppLogger.d(TAG, "touch → view(" + (int)event.getX() + "," + (int)event.getY()
+                    + ") off=(" + (int)offsetX + "," + (int)offsetY + ")"
+                    + " scale=" + String.format("%.3f", scale)
+                    + " cluster=(" + (int)clusterX + "," + (int)clusterY
+                    + ")/" + clusterW + "×" + clusterH);
+        }
+
+        forwarder.forwardTouchFinal(clusterX, clusterY, event.getAction());
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----
