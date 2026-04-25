@@ -43,6 +43,11 @@ public class DashboardLauncher {
 
     /**
      * Launches an app on the main display (display ID 0).
+     *
+     * Unlike launchWithDisplayId(), this does NOT apply FREEFORM windowing mode
+     * or setLaunchBounds — both are needed only for the cluster VirtualDisplay.
+     * On the main 15.6" screen, FREEFORM mode would prevent apps from going
+     * fullscreen and would break their declared screenOrientation (e.g. landscape).
      */
     public boolean launchOnMainDisplay(String packageName) {
         Intent launchIntent = mContext.getPackageManager()
@@ -53,8 +58,14 @@ public class DashboardLauncher {
         }
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        // Display 0 = main screen
-        return launchWithDisplayId(launchIntent, 0);
+        try {
+            mContext.startActivity(launchIntent);
+            AppLogger.log(TAG, "launchOnMainDisplay OK: " + packageName);
+            return true;
+        } catch (Exception e) {
+            AppLogger.e(TAG, "launchOnMainDisplay failed: " + packageName, e);
+            return false;
+        }
     }
 
     /**
