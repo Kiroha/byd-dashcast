@@ -97,7 +97,10 @@
         android:layout_weight="1"
         android:visibility="gone">
 
-        <SurfaceView
+        <!-- TextureView: SF est le PRODUCTEUR (il rend le contenu du display dans la surface).
+             new Surface(textureView.getSurfaceTexture()) = surface où SF écrit → TextureView affiche.
+             SurfaceView.getSurface() était incorrect : l'app était le producteur, pas SF. -->
+        <TextureView
             android:id="@+id/cluster_mirror"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

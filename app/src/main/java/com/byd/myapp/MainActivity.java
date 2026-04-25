@@ -21,8 +21,9 @@ import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.graphics.SurfaceTexture;
+import android.view.Surface;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -121,10 +122,12 @@ public class MainActivity extends AppCompatActivity
     private LinearLayout panelClusterControl;
     private TextView     tvControlAppName;
     private android.widget.FrameLayout frameMirror;
-    private SurfaceView  clusterMirror;
+    private TextureView clusterMirror;
     private TextView     tvMirrorPlaceholder;
     private ImageView    clusterMirrorScreenshot;
-    private SurfaceHolder mMirrorHolder;
+    // Surface créée depuis la SurfaceTexture du TextureView.
+    // SF est le PRODUCTEUR de cette surface (setDisplaySurface) → TextureView affiche.
+    private Surface      mMirrorSurface;
 
     // Screenshot mirror loop (fallback quand SurfaceControl.createDisplay() échoue)
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
@@ -145,7 +148,7 @@ public class MainActivity extends AppCompatActivity
                 mClusterService.getInputForwarder().setDaemonBinder(mDaemonBinder);
             }
             // Démarrer le miroir si la surface est disponible
-            if (mMirrorHolder != null && mMirrorHolder.getSurface().isValid()
+            if (mMirrorSurface != null && mMirrorSurface.isValid()
                     && panelClusterControl != null
                     && panelClusterControl.getVisibility() == View.VISIBLE) {
                 attemptStartMirrorWithCurrentHolder();
@@ -231,7 +234,7 @@ public class MainActivity extends AppCompatActivity
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
         tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
         frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
-        clusterMirror       = (SurfaceView)  findViewById(R.id.cluster_mirror);
+        clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
         clusterMirrorScreenshot = (ImageView) findViewById(R.id.cluster_mirror_screenshot);
 
@@ -242,24 +245,32 @@ public class MainActivity extends AppCompatActivity
             mAdapter.setMainPackage(mMainDisplayPkg);
         }
 
-        // SurfaceHolder.Callback : démarre/arrête le miroir SurfaceControl quand la Surface est disponible.
-        mMirrorHolder = clusterMirror.getHolder();
-        mMirrorHolder.addCallback(new SurfaceHolder.Callback() {
+        // TextureView.SurfaceTextureListener : démarre/arrête le miroir quand la SurfaceTexture est disponible.
+        // Surface(SurfaceTexture) → SF est le PRODUCTEUR, TextureView affiche chaque frame rendu par SF.
+        clusterMirror.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                // La surface est prête — démarrer le miroir si le display cluster est connu
+            public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
+                mMirrorSurface = new Surface(st);
                 attemptStartMirrorWithCurrentHolder();
             }
             @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                // Dimensions changées : reconfigurer la projection
+            public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {
+                mMirrorSurface = new Surface(st);
                 attemptStartMirrorWithCurrentHolder();
             }
             @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture st) {
                 stopClusterMirror();
+                if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
+                return true;
             }
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture st) { /* frame reçu */ }
         });
+        // Si la SurfaceTexture est déjà disponible (Activity recréée)
+        if (clusterMirror.isAvailable()) {
+            mMirrorSurface = new Surface(clusterMirror.getSurfaceTexture());
+        }
 
         // Masquer → retour à la liste
         Button btnControlHide = (Button) findViewById(R.id.btn_control_hide);
@@ -735,7 +746,7 @@ public class MainActivity extends AppCompatActivity
             AppLogger.d(TAG, "attemptStartMirror : service non disponible");
             return;
         }
-        if (mMirrorHolder == null || !mMirrorHolder.getSurface().isValid()) {
+        if (mMirrorSurface == null || !mMirrorSurface.isValid()) {
             AppLogger.d(TAG, "attemptStartMirror : surface invalide");
             return;
         }
@@ -771,12 +782,12 @@ public class MainActivity extends AppCompatActivity
         boolean mirrorOk = false;
         if (mDaemonBinder != null) {
             mirrorOk = mClusterService.getMirrorManager().startMirrorViaDaemon(
-                    mDaemonBinder, clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+                    mDaemonBinder, clusterDisplay, mMirrorSurface, viewW, viewH);
         }
         // Fallback : SurfaceControl direct uid=10100 (échoue si ACCESS_SURFACE_FLINGER absent)
         if (!mirrorOk) {
             mirrorOk = mClusterService.getMirrorManager().startMirror(this,
-                    clusterDisplay, mMirrorHolder.getSurface(), viewW, viewH);
+                    clusterDisplay, mMirrorSurface, viewW, viewH);
         }
 
         if (mirrorOk) {
@@ -898,7 +909,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Mappe les coordonnées touch depuis la SurfaceView miroir vers le display cluster.
+     * Mappe les coordonnées touch depuis le TextureView miroir vers le display cluster.
      * La projection SurfaceControl respecte le ratio (letterboxing), donc on recalcule
      * l'offset de la même façon que setDisplayProjection l'a fait.
      */
