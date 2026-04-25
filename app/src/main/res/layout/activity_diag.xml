@@ -280,22 +280,35 @@
             android:layout_marginBottom="16dp"/>
 
     
-        <!-- Bloc Test Sniffer et Daemon -->
+        <!-- ======================== TEST 5 — DAEMON & SNIFFER ======================== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="16dp"/>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Système — Daemon &amp; Sniffer"
-            android:textColor="#FFCC00"
+            android:text="TEST 5 — Daemon Mirror &amp; Sniffer"
+            android:textColor="#FFAB40"
             android:textStyle="bold"
-            android:textSize="13sp"
-            android:layout_marginTop="12dp"
+            android:textSize="14sp"
             android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Outils pour diagnostiquer le daemon MirrorDaemon (uid=2000) et capturer les événements système. Le log mirrordaemon.log est écrit dans /sdcard/ au démarrage du daemon."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
 
         <Button
             android:id="@+id/btn_test_daemon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Lancer pseudo-daemon (Freedom IPC)"
+            android:text="🧪 Tester Freedom IPC (expérimental)"
             android:textSize="13sp"
             android:backgroundTint="#d81b60"
             android:layout_marginBottom="8dp"/>
@@ -304,7 +317,7 @@
             android:id="@+id/btn_start_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶ Activer Sniffer Système (Arrière-plan)"
+            android:text="▶ Activer Sniffer Système (arrière-plan)"
             android:textSize="13sp"
             android:backgroundTint="#811122"
             android:layout_marginBottom="8dp"/>
@@ -322,7 +335,7 @@
             android:id="@+id/btn_export_sniffer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📤 Exporter le rapport du Sniffeur"
+            android:text="📤 Exporter rapport Sniffer"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
             android:layout_marginBottom="8dp"/>
