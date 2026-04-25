@@ -1265,7 +1265,7 @@ public class AdbLocalClient {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
-                    sb.append("🔄 Restoring default size
+                    sb.append("🔄 Restoring default size\n\n");
 
                     AdbShellResponse r30 = dadb.shell(
                             "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
@@ -1344,7 +1344,7 @@ public class AdbLocalClient {
                         } catch (Exception ignored) {}
                     }
                     if (li == null || li.getComponent() == null) {
-                        callback.onError("No activity found foargetPackage);
+                        callback.onError("No activity found for " + targetPackage);
                         return;
                     }
                     
@@ -1418,7 +1418,7 @@ public class AdbLocalClient {
                     String content = safeOut(
                             dadb.shell("cat " + remotePath + " 2>&1").getAllOutput());
                     if (content.contains("No such file") || content.equals("(empty)")) {
-                        callback.onError("File not foundremotePath);
+                        callback.onError("File not found: " + remotePath);
                         return;
                     }
                     java.io.File dst = new java.io.File(
