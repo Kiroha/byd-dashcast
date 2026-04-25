@@ -208,12 +208,26 @@ public class ClusterMirrorManager {
         if (mMirrorActive) return true;
         if (daemonBinder == null || targetSurface == null || !targetSurface.isValid()) return false;
 
-        // Cluster dimensions
+        // Cluster dimensions — always normalized to landscape.
+        // getRealSize() may return portrait values (720×1920) if a previous app called
+        // setRequestedOrientation(PORTRAIT) and rotated the display. Using those portrait
+        // values as srcRect would mirror portrait content into a landscape surface.
+        // The BYD Seal EU cluster VirtualDisplay is physically always created at 1920×720
+        // by AutoDisplayService; any portrait configuration is a logical WM rotation only.
         if (clusterDisplay != null) {
-            Point sz = new Point(1920, 1080);
+            Point sz = new Point(1920, 720);
             clusterDisplay.getRealSize(sz);
-            mClusterW = sz.x;
-            mClusterH = sz.y;
+            // Normalize: if portrait (w < h), swap to get landscape dimensions
+            if (sz.x < sz.y) {
+                AppLogger.w(TAG, "startMirrorViaDaemon: display reported portrait "
+                        + sz.x + "×" + sz.y + " — normalizing to landscape "
+                        + sz.y + "×" + sz.x);
+                mClusterW = sz.y;
+                mClusterH = sz.x;
+            } else {
+                mClusterW = sz.x;
+                mClusterH = sz.y;
+            }
         }
 
         // Pre-compute projection params (identical formula to MirrorDaemon.setupMirror).
