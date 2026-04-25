@@ -439,39 +439,42 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void exportDaemonLog() {
-        // /sdcard/mirrordaemon.log — écrit par MirrorDaemon via nohup app_process
-        java.io.File logFile = new java.io.File(
-                android.os.Environment.getExternalStorageDirectory(), "mirrordaemon.log");
-        if (!logFile.exists() || logFile.length() == 0) {
-            android.widget.Toast.makeText(this,
-                    "mirrordaemon.log introuvable ou vide — daemon jamais lancé ?",
-                    android.widget.Toast.LENGTH_LONG).show();
-            return;
-        }
-        try {
-            // Copier dans un répertoire accessible au FileProvider
-            java.io.File dst = new java.io.File(getExternalFilesDir(null), "mirrordaemon.log");
-            try (java.io.InputStream in  = new java.io.FileInputStream(logFile);
-                 java.io.OutputStream out = new java.io.FileOutputStream(dst)) {
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        android.widget.Toast.makeText(this, "Lecture mirrordaemon.log via ADB…",
+                android.widget.Toast.LENGTH_SHORT).show();
+        AdbLocalClient.readFileViaAdb(this, "/sdcard/mirrordaemon.log",
+                "mirrordaemon.log", new AdbLocalClient.ReadFileCallback() {
+            @Override
+            public void onSuccess(java.io.File localCopy) {
+                runOnUiThread(() -> {
+                    try {
+                        android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                                DiagActivity.this,
+                                getPackageName() + ".fileprovider", localCopy);
+                        android.content.Intent shareIntent = new android.content.Intent(
+                                android.content.Intent.ACTION_SEND);
+                        shareIntent.setType("text/plain");
+                        shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT,
+                                "mirrordaemon.log");
+                        shareIntent.addFlags(
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(android.content.Intent.createChooser(
+                                shareIntent, "Partager mirrordaemon.log"));
+                    } catch (Exception e) {
+                        AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
+                        android.widget.Toast.makeText(DiagActivity.this,
+                                "Erreur partage : " + e.getMessage(),
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
             }
-            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
-                    this, getPackageName() + ".fileprovider", dst);
-            android.content.Intent shareIntent = new android.content.Intent(
-                    android.content.Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
-            shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "mirrordaemon.log");
-            shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(android.content.Intent.createChooser(shareIntent,
-                    "Partager mirrordaemon.log"));
-        } catch (Exception e) {
-            AppLogger.e("DiagDaemon", "exportDaemonLog erreur", e);
-            android.widget.Toast.makeText(this, "Erreur : " + e.getMessage(),
-                    android.widget.Toast.LENGTH_LONG).show();
-        }
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> android.widget.Toast.makeText(DiagActivity.this,
+                        "mirrordaemon.log : " + error,
+                        android.widget.Toast.LENGTH_LONG).show());
+            }
+        });
     }
 
     private void testLaunchFreedomDaemon() {

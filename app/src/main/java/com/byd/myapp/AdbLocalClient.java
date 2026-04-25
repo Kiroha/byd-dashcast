@@ -1229,6 +1229,40 @@ public class AdbLocalClient {
         }); // screenshot-mirror-thread
     }
 
+    /**
+     * Lit un fichier texte via ADB shell (cat) et le copie dans getExternalFilesDir.
+     * Évite le besoin de READ_EXTERNAL_STORAGE pour lire des fichiers dans /sdcard/.
+     */
+    public interface ReadFileCallback {
+        void onSuccess(java.io.File localCopy);
+        void onError(String error);
+    }
+
+    public static void readFileViaAdb(final Context context, final String remotePath,
+                                      final String localName, final ReadFileCallback callback) {
+        sExecutor.execute(new Runnable() {
+            @Override public void run() {
+                try (Dadb dadb = connect(context)) {
+                    String content = safeOut(
+                            dadb.shell("cat " + remotePath + " 2>&1").getAllOutput());
+                    if (content.contains("No such file") || content.equals("(vide)")) {
+                        callback.onError("Fichier introuvable : " + remotePath);
+                        return;
+                    }
+                    java.io.File dst = new java.io.File(
+                            context.getExternalFilesDir(null), localName);
+                    try (java.io.FileWriter fw = new java.io.FileWriter(dst, false)) {
+                        fw.write(content);
+                    }
+                    callback.onSuccess(dst);
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        });
+    }
+
     private static String safeOut(String s) {
         if (s == null) return "(null)";
         s = s.trim();
