@@ -240,6 +240,34 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
 
+                    // Force FREEFORM mode + explicit landscape bounds on the cluster.
+                    // In FREEFORM mode the system ignores setRequestedOrientation() calls
+                    // from the launched app, so apps cannot switch to portrait on their own.
+                    // (WINDOWING_MODE_FULLSCREEN is rejected by the BYD hardware display
+                    // but accepted on VirtualDisplays — however it honors orientation requests.
+                    // FREEFORM with fixed bounds locks the layout to landscape.)
+                    try {
+                        java.lang.reflect.Method setWM = android.app.ActivityOptions.class
+                                .getDeclaredMethod("setLaunchWindowingMode", int.class);
+                        setWM.setAccessible(true);
+                        setWM.invoke(opts, 5); // WINDOWING_MODE_FREEFORM = 5
+
+                        android.hardware.display.DisplayManager dm =
+                                (android.hardware.display.DisplayManager)
+                                getSystemService(android.content.Context.DISPLAY_SERVICE);
+                        android.view.Display clusterDisp = (dm != null) ? dm.getDisplay(displayId) : null;
+                        android.graphics.Point sz = new android.graphics.Point(1920, 720);
+                        if (clusterDisp != null) clusterDisp.getRealSize(sz);
+
+                        java.lang.reflect.Method setLB = android.app.ActivityOptions.class
+                                .getDeclaredMethod("setLaunchBounds", android.graphics.Rect.class);
+                        setLB.setAccessible(true);
+                        setLB.invoke(opts, new android.graphics.Rect(0, 0, sz.x, sz.y));
+                        AppLogger.i(TAG, "Cluster launch: FREEFORM + bounds(0,0," + sz.x + "," + sz.y + ")");
+                    } catch (Exception eFreeform) {
+                        AppLogger.w(TAG, "Cluster FREEFORM setup failed: " + eFreeform.getMessage());
+                    }
+
                     startActivityViaIAM(launchIntent, opts);
 
                     AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
