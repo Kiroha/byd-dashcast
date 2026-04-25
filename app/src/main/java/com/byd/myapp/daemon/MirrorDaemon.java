@@ -224,7 +224,6 @@ public class MirrorDaemon {
             Log.e(TAG, "setupMirror : surface invalide");
             return false;
         }
-        boolean txOpen = false;
         try {
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
 
@@ -237,6 +236,7 @@ public class MirrorDaemon {
                 Log.e(TAG, "setupMirror : createDisplay → null");
                 return false;
             }
+            Log.i(TAG, "setupMirror : createDisplay token=" + sMirrorToken);
 
             // 2. Projection letterbox (ratio préservé)
             float scale = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
@@ -246,50 +246,60 @@ public class MirrorDaemon {
             int offY    = (viewH - drawH) / 2;
             Rect src = new Rect(0, 0, clusterW, clusterH);
             Rect dst = new Rect(offX, offY, offX + drawW, offY + drawH);
+            Log.i(TAG, "setupMirror : src=" + src + " dst=" + dst
+                    + " surface.valid=" + surface.isValid());
 
-            // 3. Méthodes statiques SurfaceControl (approche WindowManagement)
-            //    openTransaction / setDisplay* / closeTransaction
-            Method openTx = scClass.getDeclaredMethod("openTransaction");
-            openTx.setAccessible(true);
-            openTx.invoke(null);
-            txOpen = true;
+            // 3. SurfaceControl.Transaction — méthodes d'instance via reflection.
+            //    IMPORTANT : on utilise Transaction (pas les méthodes statiques) car c'est
+            //    ce qui fonctionnait en v2.43. Les méthodes statiques (openTransaction/
+            //    closeTransaction) sont disponibles sur cette ROM mais produisent un écran
+            //    noir sans erreur — comportement observé en v2.45.
+            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
+            Class<?> txClass = tx.getClass();
 
-            Method setLayerStack = scClass.getDeclaredMethod("setDisplayLayerStack",
+            Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
                     IBinder.class, int.class);
             setLayerStack.setAccessible(true);
-            setLayerStack.invoke(null, sMirrorToken, layerStack);
+            setLayerStack.invoke(tx, sMirrorToken, layerStack);
+            Log.i(TAG, "setupMirror : setDisplayLayerStack(" + layerStack + ") OK");
 
-            Method setSurface = scClass.getDeclaredMethod("setDisplaySurface",
+            Method setSurface = txClass.getDeclaredMethod("setDisplaySurface",
                     IBinder.class, Surface.class);
             setSurface.setAccessible(true);
-            setSurface.invoke(null, sMirrorToken, surface);
+            setSurface.invoke(tx, sMirrorToken, surface);
+            Log.i(TAG, "setupMirror : setDisplaySurface OK");
 
-            Method setProjection = scClass.getDeclaredMethod("setDisplayProjection",
+            Method setProjection = txClass.getDeclaredMethod("setDisplayProjection",
                     IBinder.class, int.class, Rect.class, Rect.class);
             setProjection.setAccessible(true);
-            setProjection.invoke(null, sMirrorToken, 0, src, dst);
+            setProjection.invoke(tx, sMirrorToken, 0, src, dst);
+            Log.i(TAG, "setupMirror : setDisplayProjection OK");
 
-            Method closeTx = scClass.getDeclaredMethod("closeTransaction");
-            closeTx.setAccessible(true);
-            closeTx.invoke(null);
-            txOpen = false;
+            tx.apply();
+            Log.i(TAG, "setupMirror : tx.apply() OK");
 
-            Log.i(TAG, "setupMirror ✓ (static API) layerStack=" + layerStack
+            // 4. Vérification post-setup via dumpsys SurfaceFlinger
+            try {
+                Process p = Runtime.getRuntime().exec(
+                        new String[]{"sh", "-c",
+                                "dumpsys SurfaceFlinger 2>/dev/null"
+                                + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
+                java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                p.waitFor();
+                Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
+            } catch (Exception ignored) {}
+
+            Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
                     + " dst=" + drawW + "×" + drawH + " offset=(" + offX + "," + offY + ")");
             return true;
 
         } catch (Exception e) {
             Log.e(TAG, "setupMirror échoué", e);
-            // S'assurer que la transaction est fermée en cas d'exception
-            if (txOpen) {
-                try {
-                    Class<?> scClass2 = Class.forName("android.view.SurfaceControl");
-                    Method closeTx2 = scClass2.getDeclaredMethod("closeTransaction");
-                    closeTx2.setAccessible(true);
-                    closeTx2.invoke(null);
-                } catch (Exception ignored) {}
-            }
             sMirrorToken = null;
             return false;
         }

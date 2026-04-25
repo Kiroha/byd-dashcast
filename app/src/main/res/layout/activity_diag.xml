@@ -353,6 +353,27 @@
             android:layout_marginBottom="8dp"/>
 
         <Button
+            android:id="@+id/btn_dump_sf_mirror"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔬 Dump SurfaceFlinger (byd_myapp_mirror)"
+            android:textSize="13sp"
+            android:backgroundTint="#00695C"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_sf_dump_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat dump SF)"
+            android:textColor="#AAAAAA"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#1A1A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
             android:id="@+id/btn_clean_daemon_logs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
