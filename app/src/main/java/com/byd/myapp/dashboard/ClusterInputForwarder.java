@@ -113,7 +113,24 @@ public class ClusterInputForwarder {
         // Proportional mapping to cluster space
         final float clusterX = (padX / padW) * mClusterWidth;
         final float clusterY = (padY / padH) * mClusterHeight;
+        injectTouchAt(clusterX, clusterY, action);
+    }
 
+    /**
+     * Forwards pre-mapped cluster coordinates directly, without any re-normalization.
+     * Use this when the caller has already computed exact cluster-space coordinates
+     * from the stored projection parameters (avoids double-normalization bugs).
+     *
+     * @param clusterX  Final X coordinate in cluster display space (0..clusterW-1)
+     * @param clusterY  Final Y coordinate in cluster display space (0..clusterH-1)
+     * @param action    MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
+     */
+    public void forwardTouchFinal(float clusterX, float clusterY, final int action) {
+        injectTouchAt(clusterX, clusterY, action);
+    }
+
+    /** Internal: build and inject a MotionEvent at the given cluster coordinates. */
+    private void injectTouchAt(final float clusterX, final float clusterY, final int action) {
         // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
         if (mDaemonBinder != null) {
             try {
@@ -141,7 +158,7 @@ public class ClusterInputForwarder {
                 data.recycle();
                 ev.recycle();
             } catch (Exception e) {
-                AppLogger.e(TAG, "forwardTouch via daemon failed", e);
+                AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
             }
             return;
         }
@@ -174,7 +191,7 @@ public class ClusterInputForwarder {
             mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
             ev.recycle();
         } catch (Exception e) {
-            AppLogger.e(TAG, "forwardTouch inject failed x=" + (int)clusterX
+            AppLogger.e(TAG, "injectTouchAt inject failed x=" + (int)clusterX
                     + " y=" + (int)clusterY + " disp=" + mClusterDisplayId, e);
         }
     }
