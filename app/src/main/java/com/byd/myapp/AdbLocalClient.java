@@ -63,6 +63,22 @@ public class AdbLocalClient {
         });
     }
 
+    /** Exécute une commande shell et retourne le résultat via callback (thread background). */
+    public static void executeShellWithResult(final Context context, final String command,
+                                              final Callback callback) {
+        sExecutor.execute(() -> {
+            try (Dadb dadb = connect(context)) {
+                String output = safeOut(dadb.shell(command).getAllOutput()).trim();
+                AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
+                if (callback != null) callback.onSuccess(output);
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                AppLogger.e(TAG, "executeShellWithResult ERREUR: " + command, e);
+                if (callback != null) callback.onError(e.getMessage());
+            }
+        });
+    }
+
     public interface Callback {
         /** Appelé sur un thread background quand la connexion + les grants sont terminés. */
         void onSuccess(String report);

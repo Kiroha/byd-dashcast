@@ -52,6 +52,8 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnCleanSnifferLogs;
     private TextView tvSnifferScanResult;
     private Button   btnExportDaemonLog;
+    private Button   btnDumpSfMirror;
+    private TextView tvSfDumpResult;
     private Button   btnCleanDaemonLogs;
 
     @Override
@@ -96,6 +98,8 @@ public class DiagActivity extends AppCompatActivity {
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
         btnCleanSnifferLogs = (Button) findViewById(R.id.btn_clean_sniffer_logs);
         btnExportDaemonLog = (Button) findViewById(R.id.btn_export_daemon_log);
+        btnDumpSfMirror = (Button) findViewById(R.id.btn_dump_sf_mirror);
+        tvSfDumpResult = (TextView) findViewById(R.id.tv_sf_dump_result);
         btnCleanDaemonLogs = (Button) findViewById(R.id.btn_clean_daemon_logs);
 
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
@@ -108,6 +112,7 @@ public class DiagActivity extends AppCompatActivity {
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
         btnCleanSnifferLogs.setOnClickListener(v -> cleanSnifferLogs());
         btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog());
+        btnDumpSfMirror.setOnClickListener(v -> dumpSurfaceFlinger());
         btnCleanDaemonLogs.setOnClickListener(v -> cleanDaemonLogs());
 
         // TEST 1 — Connexion ADB locale
@@ -600,6 +605,33 @@ public class DiagActivity extends AppCompatActivity {
                 runOnUiThread(() -> android.widget.Toast.makeText(DiagActivity.this,
                         "mirrordaemon.log : " + error,
                         android.widget.Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void dumpSurfaceFlinger() {
+        tvSfDumpResult.setText("dumpsys SurfaceFlinger en cours…");
+        tvSfDumpResult.setTextColor(0xFFAAAAAA);
+        // Filtre sur notre display + layerStack=2 pour voir si SF connaît le miroir
+        String cmd = "dumpsys SurfaceFlinger 2>/dev/null"
+                + " | grep -iE 'byd_myapp_mirror|layerStack=2|fission_bg|virtual'";
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
+                runOnUiThread(() -> {
+                    String text = report.trim().isEmpty()
+                            ? "(aucun résultat — miroir non enregistré dans SF)"
+                            : report.trim();
+                    tvSfDumpResult.setText(text);
+                    boolean found = report.contains("byd_myapp_mirror");
+                    tvSfDumpResult.setTextColor(found ? 0xFF69F0AE : 0xFFFF5252);
+                    AppLogger.i("SFDump", "SF dump :\n" + text);
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvSfDumpResult.setText("Erreur : " + error);
+                    tvSfDumpResult.setTextColor(0xFFFF5252);
+                });
             }
         });
     }
