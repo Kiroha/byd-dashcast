@@ -18,7 +18,6 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
-import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.graphics.SurfaceTexture;
@@ -313,50 +312,6 @@ public class MainActivity extends AppCompatActivity
                 return true;
             }
         });
-
-        // Boutons de navigation
-        ((Button) findViewById(R.id.btn_cluster_back)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_BACK);
-                    }
-                });
-        ((Button) findViewById(R.id.btn_cluster_home)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_HOME);
-                    }
-                });
-        ((Button) findViewById(R.id.btn_cluster_up)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_DPAD_UP);
-                    }
-                });
-        ((Button) findViewById(R.id.btn_cluster_down)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_DPAD_DOWN);
-                    }
-                });
-        ((Button) findViewById(R.id.btn_cluster_vol_up)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_VOLUME_UP);
-                    }
-                });
-        ((Button) findViewById(R.id.btn_cluster_vol_down)).setOnClickListener(
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        com.byd.myapp.dashboard.ClusterInputForwarder f = getInputForwarder();
-                        if (f != null) f.injectKey(KeyEvent.KEYCODE_VOLUME_DOWN);
-                    }
-                });
 
         // Async loading of the app list (async to avoid blocking the UI)
         loadAppsAsync();

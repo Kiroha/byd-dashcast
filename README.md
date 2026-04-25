@@ -29,14 +29,13 @@ BYD APIs.
 | 3 | **→ Main screen** | Move an app from the cluster back to display 0 |
 | 4 | **Touch mirror** | Real-time TextureView of the cluster via `SurfaceControl.createDisplay()` + touch forwarding |
 | 5 | **Split 50/50** | Two apps side by side on the cluster (force-stop + relaunch with `--bounds`) |
-| 6 | **Remote control** | ←/⌂/↑/↓/Vol+/Vol− buttons via `InputManager.injectInputEvent()` |
-| 7 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
-| 8 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
-| 9 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
-| 10 | **🔧 Diagnostic** | 4 ADB tests (permissions, cluster restore, display size, Freedom BootReceiver) |
-| 11 | **📋 System report** | Displays, permissions, build tags, APK signature |
-| 12 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
-| 13 | **Multilingual** | French / English, selected on first launch |
+| 6 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
+| 7 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
+| 8 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
+| 9 | **🔧 Diagnostic** | 4 ADB tests (permissions, cluster restore, display size, Freedom BootReceiver) |
+| 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
+| 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
+| 12 | **Multilingual** | French / English, selected on first launch |
 
 ---
 
@@ -127,8 +126,6 @@ SurfaceControl.setDisplayLayerStack(token, clusterLayerStack);
 SurfaceControl.setDisplayProjection(token, 0, srcRect, dstRect);
 SurfaceControl.closeTransaction();
 ```
-
-Touch: `MotionEvent.setDisplayId(clusterDisplayId)` + `InputManager.injectInputEvent()`.
 
 ### Restore
 
