@@ -280,7 +280,7 @@
             android:layout_marginBottom="16dp"/>
 
     
-        <!-- ======================== TEST 5 — DAEMON & SNIFFER ======================== -->
+        <!-- ======================== TEST 5 — GESTION MIRRORDAEMON ======================== -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -290,7 +290,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TEST 5 — Daemon Mirror &amp; Sniffer"
+            android:text="TEST 5 — Gestion MirrorDaemon (uid=2000)"
             android:textColor="#FFAB40"
             android:textStyle="bold"
             android:textSize="14sp"
@@ -299,7 +299,79 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Outils pour diagnostiquer le daemon MirrorDaemon (uid=2000) et capturer les événements système. Le log mirrordaemon.log est écrit dans /sdcard/ au démarrage du daemon."
+            android:text="Vérifie et contrôle le processus MirrorDaemon (com.byd.myapp.mirrordaemon). Plusieurs instances simultanées causent un écran noir."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_scan_daemon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔍 Scanner les MirrorDaemon actifs"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_daemon_scan_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat scan)"
+            android:textColor="#AAAAAA"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#1A1A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_kill_daemon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="☠ Tuer tous les MirrorDaemon"
+            android:textSize="13sp"
+            android:backgroundTint="#BF360C"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_kill_restart_daemon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔄 Tuer + Relancer MirrorDaemon (propre)"
+            android:textSize="13sp"
+            android:backgroundTint="#E65100"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_export_daemon_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📋 Exporter mirrordaemon.log"
+            android:textSize="13sp"
+            android:backgroundTint="#6A1B9A"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- ======================== TEST 6 — SNIFFER SYSTÈME ======================== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TEST 6 — Sniffer Système"
+            android:textColor="#FFAB40"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Capture logcat et événements ROM en arrière-plan."
             android:textColor="#AAAAAA"
             android:textSize="12sp"
             android:layout_marginBottom="8dp"/>
@@ -338,15 +410,6 @@
             android:text="📤 Exporter rapport Sniffer"
             android:textSize="13sp"
             android:backgroundTint="#1565C0"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_export_daemon_log"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔍 Exporter mirrordaemon.log"
-            android:textSize="13sp"
-            android:backgroundTint="#6A1B9A"
             android:layout_marginBottom="16dp"/>
 </LinearLayout>
 </ScrollView>

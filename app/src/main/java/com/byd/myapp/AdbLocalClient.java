@@ -101,15 +101,73 @@ public class AdbLocalClient {
      * Rappel : Freedom OFF = display 1 absent de DisplayManager (confirmé 18/04/2026).
      * En cas d'erreur ADB, on retourne INACTIVE (déclenchera startFreedom en fallback).
      */
+    /** Commande shell qui tue TOUS les processus mirrordaemon (nice-name ET setArgV0). */
+    private static final String KILL_DAEMON_CMD =
+            "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' | awk '{print $2}'" +
+            " | xargs -r kill -9 2>/dev/null; echo killed";
+
+    /**
+     * Scanne les processus MirrorDaemon actifs et retourne un résumé lisible.
+     * Format : "PID  USER  NAME\n..." ou "(aucun processus trouvé)"
+     */
+    public static void scanMirrorDaemon(final Context context, final Callback callback) {
+        sExecutor.execute(() -> {
+            try (Dadb dadb = connect(context)) {
+                String ps = safeOut(dadb.shell(
+                        "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' 2>&1").getAllOutput()).trim();
+                boolean found = !ps.isEmpty();
+                int count = found ? ps.split("\n").length : 0;
+                String msg = found
+                        ? count + " processus MirrorDaemon détecté(s) :\n" + ps
+                        : "(aucun processus MirrorDaemon actif)";
+                AppLogger.i(TAG, "scanMirrorDaemon : " + msg);
+                if (callback != null) callback.onSuccess(msg);
+            } catch (Exception e) {
+                AppLogger.e(TAG, "scanMirrorDaemon échoué", e);
+                if (callback != null) callback.onError("Erreur scan : " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Tue tous les processus MirrorDaemon existants et confirme le résultat via callback.
+     */
+    public static void killMirrorDaemon(final Context context, final Callback callback) {
+        sExecutor.execute(() -> {
+            try (Dadb dadb = connect(context)) {
+                String before = safeOut(dadb.shell(
+                        "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' 2>&1").getAllOutput()).trim();
+                AppLogger.i(TAG, "killMirrorDaemon — avant : " + (before.isEmpty() ? "(aucun)" : before));
+                dadb.shell(KILL_DAEMON_CMD);
+                Thread.sleep(800);
+                String after = safeOut(dadb.shell(
+                        "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' 2>&1").getAllOutput()).trim();
+                boolean ok = after.isEmpty();
+                String msg = ok
+                        ? "MirrorDaemon(s) tué(s) ✓"
+                        : "Processus encore présents : " + after;
+                AppLogger.i(TAG, "killMirrorDaemon — après : " + msg);
+                if (ok) { if (callback != null) callback.onSuccess(msg); }
+                else    { if (callback != null) callback.onError(msg); }
+            } catch (Exception e) {
+                AppLogger.e(TAG, "killMirrorDaemon échoué", e);
+                if (callback != null) callback.onError("Erreur : " + e.getMessage());
+            }
+        });
+    }
+
     public static void startMirrorDaemon(final Context context) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    // Tuer l'ancien daemon si présent (cherche par nice-name)
-                    String psOut = safeOut(dadb.shell("ps -A | grep 'byd.mirror.daemon' 2>&1").getAllOutput());
-                    if (psOut.contains("byd.mirror.daemon")) {
-                        dadb.shell("ps -A | grep 'byd.mirror.daemon' | awk '{print $2}' | xargs kill -9 2>/dev/null");
-                        AppLogger.i(TAG, "Ancien MirrorDaemon tué.");
+                    // Tuer l'ancien daemon si présent.
+                    // IMPORTANT : le daemon se renomme en "com.byd.myapp.mirrordaemon" via
+                    // setArgV0(), pas "byd.mirror.daemon" → grep sur les deux patterns.
+                    String psOut = safeOut(dadb.shell(
+                            "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' 2>&1").getAllOutput());
+                    if (!psOut.trim().isEmpty()) {
+                        dadb.shell(KILL_DAEMON_CMD);
+                        AppLogger.i(TAG, "Ancien(s) MirrorDaemon tué(s).");
                         Thread.sleep(500);
                     }
                     String apkPath = context.getPackageCodePath();
@@ -128,8 +186,9 @@ public class AdbLocalClient {
 
                     // Vérification : le process est-il bien vivant après 3s ?
                     Thread.sleep(3000);
-                    String psCheck = safeOut(dadb.shell("ps -A | grep 'byd.mirror.daemon' 2>&1").getAllOutput());
-                    if (psCheck.contains("byd.mirror.daemon")) {
+                    String psCheck = safeOut(dadb.shell(
+                            "ps -A | grep -E 'mirrordaemon|byd.mirror.daemon' 2>&1").getAllOutput());
+                    if (!psCheck.trim().isEmpty()) {
                         AppLogger.i(TAG, "MirrorDaemon ACTIF ✓  " + psCheck.trim());
                     } else {
                         AppLogger.e(TAG, "MirrorDaemon INTROUVABLE après 3s — lecture log :");
