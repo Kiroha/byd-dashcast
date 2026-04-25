@@ -169,6 +169,7 @@ public class AdbLocalClient {
                 if (ok) { if (callback != null) callback.onSuccess(msg); }
                 else    { if (callback != null) callback.onError(msg); }
             } catch (Exception e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 AppLogger.e(TAG, "killMirrorDaemon failed", e);
                 if (callback != null) callback.onError("Error: " + e.getMessage());
             }
@@ -220,7 +221,8 @@ public class AdbLocalClient {
                         AppLogger.e(TAG, "mirrordaemon.log = [" + logContent + "]");
                     }
                 } catch (Exception e) {
-                    AppLogger.e(TAG, "Erreur demarrage MirrorDaemon", e);
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    AppLogger.e(TAG, "MirrorDaemon startup error", e);
                 }
             }
         });
@@ -236,7 +238,7 @@ public class AdbLocalClient {
             + "echo killed";
 
     /**
-     * Scanne les processus Sniffer actifs (logcat + boucle snapshot).
+     * Scans active Sniffer processes (logcat + snapshot loop).
      */
     public static void scanSniffer(final Context context, final Callback callback) {
         sExecutor.execute(() -> {
@@ -273,7 +275,7 @@ public class AdbLocalClient {
     }
 
     /**
-     * Tue tous les processus Sniffer (logcat + boucle snapshot).
+     * Kills all Sniffer processes (logcat + snapshot loop).
      */
     public static void killSniffer(final Context context, final Callback callback) {
         sExecutor.execute(() -> {
@@ -290,6 +292,7 @@ public class AdbLocalClient {
                 if (ok) { if (callback != null) callback.onSuccess(msg); }
                 else    { if (callback != null) callback.onError(msg); }
             } catch (Exception e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 AppLogger.e(TAG, "killSniffer failed", e);
                 if (callback != null) callback.onError("Error: " + e.getMessage());
             }
@@ -1323,7 +1326,7 @@ public class AdbLocalClient {
     }
 
     /**
-     * Lance une application tierce via le MirrorDaemon (uid=2000) avec des bounds FREEFORM explicites.
+     * Launches a third-party app via MirrorDaemon (uid=2000) with explicit FREEFORM bounds.
      */
     public static void launchDirectWithBounds(final Context context,
             final String targetPackage, final int displayId,

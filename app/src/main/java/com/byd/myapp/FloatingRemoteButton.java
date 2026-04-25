@@ -20,10 +20,10 @@ import android.widget.TextView;
  *
  * Displays a small draggable "GPS" badge in the corner of the screen.
  * • A tap brings MainActivity back to the foreground.
- * • Long press ferme ce service overlay.
+ * • Long press closes this overlay service.
  *
  * Started as a foreground Service from MainActivity.onCreate() and stays
- * actif tanto que l'app est vivante.
+ * active as long as the app is alive.
  *
  * Uses TYPE_APPLICATION_OVERLAY (2038) — SYSTEM_ALERT_WINDOW is declared
  * in the manifest AND the APK is signed with platform.keystore (= granted).

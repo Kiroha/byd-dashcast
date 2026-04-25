@@ -418,7 +418,9 @@ public class DiagActivity extends AppCompatActivity {
     private java.io.File buildSnifferFile() {
         String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
                 .format(new java.util.Date());
-        return new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_PREFIX + ts + ".txt");
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) dir = getFilesDir();
+        return new java.io.File(dir, SNIFFER_FILE_PREFIX + ts + ".txt");
     }
 
     /** Finds the most recent sniffer file in the directory (fallback if mCurrentSnifferFile is null). */
@@ -595,7 +597,7 @@ public class DiagActivity extends AppCompatActivity {
                     } catch (Exception e) {
                         AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
                         android.widget.Toast.makeText(DiagActivity.this,
-                                "Erreur partage : " + e.getMessage(),
+                                "Share error: " + e.getMessage(),
                                 android.widget.Toast.LENGTH_LONG).show();
                     }
                 });
@@ -629,7 +631,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvSfDumpResult.setText("Erreur : " + error);
+                    tvSfDumpResult.setText("Error: " + error);
                     tvSfDumpResult.setTextColor(0xFFFF5252);
                 });
             }
@@ -652,7 +654,7 @@ public class DiagActivity extends AppCompatActivity {
     private void cleanSnifferLogs() {
         java.io.File dir = getExternalFilesDir(null);
         if (dir == null) {
-            android.widget.Toast.makeText(this, "Dossier introuvable", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(this, "Folder not found", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
         java.io.File[] files = dir.listFiles(

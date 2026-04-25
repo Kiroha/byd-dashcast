@@ -19,11 +19,11 @@ import android.widget.TextView;
  * FloatingLogButton — persistent overlay button (visible over all screens).
  *
  * Displays a small draggable "LOG" badge in the corner of the screen.
- * • Un tap ouvre LogActivity.
- * • Long press efface le journal.
+ * • A tap opens LogActivity.
+ * • Long press clears the log.
  *
  * Started as a foreground Service from MainActivity.onCreate() and stays
- * actif tanto que l'app est vivante.
+ * active as long as the app is alive.
  *
  * Uses TYPE_APPLICATION_OVERLAY (2038) — SYSTEM_ALERT_WINDOW is declared
  * in the manifest AND the APK is signed with platform.keystore (= granted).
