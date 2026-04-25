@@ -56,6 +56,13 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvSfDumpResult;
     private Button   btnCleanDaemonLogs;
 
+    // TEST 7 — Cluster orientation
+    private Button   btnOrientFreezeLandscape;
+    private Button   btnOrientFreezePortrait;
+    private Button   btnOrientUnfreeze;
+    private Button   btnOrientRead;
+    private TextView tvOrientationResult;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -102,7 +109,17 @@ public class DiagActivity extends AppCompatActivity {
         tvSfDumpResult = (TextView) findViewById(R.id.tv_sf_dump_result);
         btnCleanDaemonLogs = (Button) findViewById(R.id.btn_clean_daemon_logs);
 
-        btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
+        // TEST 7 — Cluster orientation
+        btnOrientFreezeLandscape = (Button)   findViewById(R.id.btn_orient_freeze_landscape);
+        btnOrientFreezePortrait  = (Button)   findViewById(R.id.btn_orient_freeze_portrait);
+        btnOrientUnfreeze        = (Button)   findViewById(R.id.btn_orient_unfreeze);
+        btnOrientRead            = (Button)   findViewById(R.id.btn_orient_read);
+        tvOrientationResult      = (TextView) findViewById(R.id.tv_orientation_result);
+
+        btnOrientFreezeLandscape.setOnClickListener(v -> orientFreezeDisplay(0 /* ROTATION_0 = landscape */));
+        btnOrientFreezePortrait .setOnClickListener(v -> orientFreezeDisplay(1 /* ROTATION_90 = portrait  */));
+        btnOrientUnfreeze       .setOnClickListener(v -> orientUnfreezeDisplay());
+        btnOrientRead           .setOnClickListener(v -> orientReadDisplay());
         btnScanDaemon.setOnClickListener(v -> scanDaemon());
         btnKillDaemon.setOnClickListener(v -> killDaemon());
         btnKillRestartDaemon.setOnClickListener(v -> killAndRestartDaemon());
@@ -665,6 +682,129 @@ public class DiagActivity extends AppCompatActivity {
             android.widget.Toast.makeText(this,
                     getString(R.string.toast_files_deleted, deleted), android.widget.Toast.LENGTH_SHORT).show();
         });
+    }
+
+    // ── TEST 7 — Cluster orientation ──────────────────────────────────────────
+
+    /**
+     * Calls IWindowManager.freezeDisplayRotation(displayId, rotation) via reflection.
+     * rotation = 0 → ROTATION_0 (landscape), 1 → ROTATION_90 (portrait).
+     * Requires platform signature (INTERNAL_SYSTEM_WINDOW).
+     */
+    private void orientFreezeDisplay(int rotation) {
+        final int displayId = getClusterDisplayId();
+        tvOrientationResult.setText("⏳ freezeDisplayRotation(display=" + displayId
+                + ", rotation=" + rotation + ")…");
+        tvOrientationResult.setTextColor(0xFFFFAB40);
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            // 1. IWindowManager.freezeDisplayRotation
+            try {
+                Class<?> smClass = Class.forName("android.os.ServiceManager");
+                android.os.IBinder wmBinder = (android.os.IBinder)
+                        smClass.getMethod("getService", String.class).invoke(null, "window");
+                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
+                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
+                        .invoke(null, wmBinder);
+                java.lang.reflect.Method freeze = iwm.getClass()
+                        .getMethod("freezeDisplayRotation", int.class, int.class);
+                freeze.invoke(iwm, displayId, rotation);
+                sb.append("✅ freezeDisplayRotation(").append(displayId).append(", ")
+                  .append(rotation == 0 ? "LANDSCAPE" : "PORTRAIT").append(") OK\n");
+            } catch (Exception e) {
+                sb.append("❌ freezeDisplayRotation: ").append(e.getMessage()).append("\n");
+            }
+            // 2. wm size to also force logical dimensions
+            if (rotation == 0) {
+                AdbLocalClient.executeShell(this, "wm size 1920x720 --display " + displayId);
+                sb.append("→ wm size 1920x720 --display ").append(displayId).append(" sent\n");
+            } else {
+                AdbLocalClient.executeShell(this, "wm size 720x1920 --display " + displayId);
+                sb.append("→ wm size 720x1920 --display ").append(displayId).append(" sent\n");
+            }
+            final String result = sb.toString();
+            runOnUiThread(() -> {
+                tvOrientationResult.setText(result);
+                tvOrientationResult.setTextColor(
+                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
+            });
+        }).start();
+    }
+
+    /** Calls IWindowManager.thawDisplayRotation(displayId) to unfreeze rotation. */
+    private void orientUnfreezeDisplay() {
+        final int displayId = getClusterDisplayId();
+        tvOrientationResult.setText("⏳ thawDisplayRotation(display=" + displayId + ")…");
+        tvOrientationResult.setTextColor(0xFFFFAB40);
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            try {
+                Class<?> smClass = Class.forName("android.os.ServiceManager");
+                android.os.IBinder wmBinder = (android.os.IBinder)
+                        smClass.getMethod("getService", String.class).invoke(null, "window");
+                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
+                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
+                        .invoke(null, wmBinder);
+                // Try thawDisplayRotation(int displayId) first (API 30+),
+                // fall back to thawRotation() (API 26-29).
+                try {
+                    java.lang.reflect.Method thaw = iwm.getClass()
+                            .getMethod("thawDisplayRotation", int.class);
+                    thaw.invoke(iwm, displayId);
+                    sb.append("✅ thawDisplayRotation(").append(displayId).append(") OK\n");
+                } catch (NoSuchMethodException nsme) {
+                    java.lang.reflect.Method thaw = iwm.getClass().getMethod("thawRotation");
+                    thaw.invoke(iwm);
+                    sb.append("✅ thawRotation() OK (no displayId overload on this ROM)\n");
+                }
+                AdbLocalClient.executeShell(this, "wm size reset --display " + displayId);
+                sb.append("→ wm size reset --display ").append(displayId).append(" sent\n");
+            } catch (Exception e) {
+                sb.append("❌ thawDisplayRotation: ").append(e.getMessage()).append("\n");
+            }
+            final String result = sb.toString();
+            runOnUiThread(() -> {
+                tvOrientationResult.setText(result);
+                tvOrientationResult.setTextColor(
+                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
+            });
+        }).start();
+    }
+
+    /** Reads current size and rotation of the cluster display. */
+    private void orientReadDisplay() {
+        final int displayId = getClusterDisplayId();
+        tvOrientationResult.setText("⏳ Reading display " + displayId + "…");
+        tvOrientationResult.setTextColor(0xFFFFAB40);
+        AdbLocalClient.executeShellWithResult(this,
+                "wm size --display " + displayId
+                + " 2>&1; wm rotation 2>&1; dumpsys display | grep -A3 'mDisplayId=" + displayId + "'",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String result) {
+                        runOnUiThread(() -> {
+                            tvOrientationResult.setText(result.trim());
+                            tvOrientationResult.setTextColor(0xFF69F0AE);
+                        });
+                    }
+                    @Override public void onError(String error) {
+                        runOnUiThread(() -> {
+                            tvOrientationResult.setText("❌ " + error);
+                            tvOrientationResult.setTextColor(0xFFFF5252);
+                        });
+                    }
+                });
+    }
+
+    /** Returns the known cluster display ID, or 2 as fallback. */
+    private int getClusterDisplayId() {
+        android.hardware.display.DisplayManager dm =
+                (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (dm != null) {
+            for (android.view.Display d : dm.getDisplays()) {
+                if (d.getDisplayId() != 0) return d.getDisplayId();
+            }
+        }
+        return 2;
     }
 
     private void testLaunchFreedomDaemon() {
