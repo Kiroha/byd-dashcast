@@ -173,14 +173,19 @@ public class MirrorDaemon {
             data.enforceInterface(DESCRIPTOR);
             switch (code) {
                 case TRANSACT_MIRROR_START: {
-                    int layerStack       = data.readInt();
-                    int clusterW         = data.readInt();
-                    int clusterH         = data.readInt();
-                    sClusterDisplayId    = data.readInt();
-                    int viewW            = data.readInt();
-                    int viewH            = data.readInt();
-                    Surface surface = data.readParcelable(Surface.class.getClassLoader());
-                    setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                    int layerStack    = data.readInt();
+                    int clusterW      = data.readInt();
+                    int clusterH      = data.readInt();
+                    sClusterDisplayId = data.readInt();
+                    int viewW         = data.readInt();
+                    int viewH         = data.readInt();
+                    Surface surface   = data.readParcelable(Surface.class.getClassLoader());
+                    boolean ok = setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                    // Répondre au client (appel synchrone, pas oneway)
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(ok ? 1 : 0);
+                    }
                     return true;
                 }
                 case TRANSACT_INJECT_MOTION: {
@@ -205,26 +210,35 @@ public class MirrorDaemon {
 
     // ── SurfaceControl mirror ─────────────────────────────────────────────────
 
-    private static void setupMirror(int layerStack, int clusterW, int clusterH,
-                                    int viewW, int viewH, Surface surface) {
+    /**
+     * Configure le miroir via les méthodes STATIQUES de SurfaceControl (API deprecated mais
+     * fonctionnelle sur Android 10 BYD ROM — identique à l'approche WindowManagement).
+     * SurfaceControl.Transaction échoue silencieusement sur cette ROM.
+     *
+     * @return true si le miroir a été configuré avec succès
+     */
+    private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
+                                       int viewW, int viewH, Surface surface) {
         stopMirror();
         if (surface == null || !surface.isValid()) {
             Log.e(TAG, "setupMirror : surface invalide");
-            return;
+            return false;
         }
+        boolean txOpen = false;
         try {
-            // Créer le display token de miroir
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
+
+            // 1. Créer le display token de miroir
             Method createDisplay = scClass.getDeclaredMethod("createDisplay",
                     String.class, boolean.class);
             createDisplay.setAccessible(true);
             sMirrorToken = (IBinder) createDisplay.invoke(null, "byd_myapp_mirror", false);
             if (sMirrorToken == null) {
                 Log.e(TAG, "setupMirror : createDisplay → null");
-                return;
+                return false;
             }
 
-            // Projection letterbox (ratio préservé)
+            // 2. Projection letterbox (ratio préservé)
             float scale = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
             int drawW   = (int) (clusterW * scale);
             int drawH   = (int) (clusterH * scale);
@@ -233,33 +247,51 @@ public class MirrorDaemon {
             Rect src = new Rect(0, 0, clusterW, clusterH);
             Rect dst = new Rect(offX, offY, offX + drawW, offY + drawH);
 
-            // Transaction SurfaceControl (méthodes @hide accessibles après unlockHiddenApis)
-            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
-            Class<?> txClass = tx.getClass();
+            // 3. Méthodes statiques SurfaceControl (approche WindowManagement)
+            //    openTransaction / setDisplay* / closeTransaction
+            Method openTx = scClass.getDeclaredMethod("openTransaction");
+            openTx.setAccessible(true);
+            openTx.invoke(null);
+            txOpen = true;
 
-            Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
+            Method setLayerStack = scClass.getDeclaredMethod("setDisplayLayerStack",
                     IBinder.class, int.class);
             setLayerStack.setAccessible(true);
+            setLayerStack.invoke(null, sMirrorToken, layerStack);
 
-            Method setSurface = txClass.getDeclaredMethod("setDisplaySurface",
+            Method setSurface = scClass.getDeclaredMethod("setDisplaySurface",
                     IBinder.class, Surface.class);
             setSurface.setAccessible(true);
+            setSurface.invoke(null, sMirrorToken, surface);
 
-            Method setProjection = txClass.getDeclaredMethod("setDisplayProjection",
+            Method setProjection = scClass.getDeclaredMethod("setDisplayProjection",
                     IBinder.class, int.class, Rect.class, Rect.class);
             setProjection.setAccessible(true);
+            setProjection.invoke(null, sMirrorToken, 0, src, dst);
 
-            setLayerStack.invoke(tx, sMirrorToken, layerStack);
-            setSurface.invoke(tx, sMirrorToken, surface);
-            setProjection.invoke(tx, sMirrorToken, 0, src, dst);
-            tx.apply();
+            Method closeTx = scClass.getDeclaredMethod("closeTransaction");
+            closeTx.setAccessible(true);
+            closeTx.invoke(null);
+            txOpen = false;
 
-            Log.i(TAG, "setupMirror ✓ layerStack=" + layerStack
+            Log.i(TAG, "setupMirror ✓ (static API) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
                     + " dst=" + drawW + "×" + drawH + " offset=(" + offX + "," + offY + ")");
+            return true;
+
         } catch (Exception e) {
             Log.e(TAG, "setupMirror échoué", e);
+            // S'assurer que la transaction est fermée en cas d'exception
+            if (txOpen) {
+                try {
+                    Class<?> scClass2 = Class.forName("android.view.SurfaceControl");
+                    Method closeTx2 = scClass2.getDeclaredMethod("closeTransaction");
+                    closeTx2.setAccessible(true);
+                    closeTx2.invoke(null);
+                } catch (Exception ignored) {}
+            }
             sMirrorToken = null;
+            return false;
         }
     }
 

@@ -178,7 +178,9 @@ public class ClusterMirrorManager {
 
     /**
      * Miroir via le daemon MirrorDaemon (uid=2000) qui a ACCESS_SURFACE_FLINGER.
-     * Le daemon reçoit la Surface via Binder et configure SurfaceControl.createDisplay.
+     * Le daemon reçoit la Surface via Binder et configure SurfaceControl (méthodes statiques).
+     * Appel SYNCHRONE : le daemon répond 1 (succès) ou 0 (échec) → mMirrorActive reflète
+     * la réalité, ce qui permet le fallback screencap si le daemon échoue.
      */
     public boolean startMirrorViaDaemon(IBinder daemonBinder, Display clusterDisplay,
                                         Surface targetSurface, int viewW, int viewH) {
@@ -204,8 +206,9 @@ public class ClusterMirrorManager {
             AppLogger.w(TAG, "getLayerStack échoué → fallback layerStack=" + layerStack);
         }
 
+        Parcel data  = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
         try {
-            Parcel data = Parcel.obtain();
             data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
             data.writeInt(layerStack);
             data.writeInt(mClusterW);
@@ -214,17 +217,27 @@ public class ClusterMirrorManager {
             data.writeInt(viewW);
             data.writeInt(viewH);
             data.writeParcelable(targetSurface, 0);
+            // Appel synchrone (pas FLAG_ONEWAY) → réponse du daemon dans reply
             daemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_MIRROR_START,
-                    data, null, android.os.IBinder.FLAG_ONEWAY);
-            data.recycle();
-            mMirrorSurface = targetSurface;
-            mMirrorActive  = true;
-            AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
-                    + " " + mClusterW + "×" + mClusterH + " displayId=" + clusterDisplayId);
-            return true;
+                    data, reply, 0);
+            reply.readException();
+            boolean daemonOk = reply.readInt() == 1;
+            if (daemonOk) {
+                mMirrorSurface = targetSurface;
+                mMirrorActive  = true;
+                AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
+                        + " " + mClusterW + "×" + mClusterH + " displayId=" + clusterDisplayId);
+            } else {
+                AppLogger.e(TAG, "startMirrorViaDaemon : daemon a rapporté un échec"
+                        + " (vérifier logcat MirrorDaemon pour le détail)");
+            }
+            return daemonOk;
         } catch (Exception e) {
             AppLogger.e(TAG, "startMirrorViaDaemon échoué", e);
             return false;
+        } finally {
+            data.recycle();
+            reply.recycle();
         }
     }
 
