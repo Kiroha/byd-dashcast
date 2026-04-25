@@ -205,6 +205,76 @@ public class AdbLocalClient {
         });
     }
 
+    // Patterns sniffer : trick [x] pour éviter l'auto-match du grep.
+    // Le sniffer lance deux processus background : logcat (capture) + sh/sleep (snapshots).
+    private static final String SNIFFER_GREP =
+            "grep -E '[l]ogcat -v threadtime|[s]leep 30'";
+    public static final String SNIFFER_KILL_CMD =
+            "ps -A | grep '[l]ogcat -v threadtime' | awk '{print $2}' | xargs -r kill -9 2>/dev/null; "
+            + "ps -A | grep '[s]leep 30' | awk '{print $2}' | xargs -r kill -9 2>/dev/null; "
+            + "echo killed";
+
+    /**
+     * Scanne les processus Sniffer actifs (logcat + boucle snapshot).
+     */
+    public static void scanSniffer(final Context context, final Callback callback) {
+        sExecutor.execute(() -> {
+            try (Dadb dadb = connect(context)) {
+                String logcatPs = safeOut(dadb.shell(
+                        "ps -A | grep '[l]ogcat -v threadtime' 2>&1").getAllOutput()).trim();
+                String sleepPs = safeOut(dadb.shell(
+                        "ps -A | grep '[s]leep 30' 2>&1").getAllOutput()).trim();
+                boolean hasLogcat = !logcatPs.isEmpty();
+                boolean hasLoop   = !sleepPs.isEmpty();
+                String msg;
+                if (!hasLogcat && !hasLoop) {
+                    msg = "(aucun processus Sniffer actif)";
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    int count = 0;
+                    if (hasLogcat) {
+                        sb.append("logcat (capture) :\n").append(logcatPs).append("\n");
+                        count++;
+                    }
+                    if (hasLoop) {
+                        sb.append("sleep/snapshot loop :\n").append(sleepPs);
+                        count++;
+                    }
+                    msg = count + " processus Sniffer détecté(s) :\n" + sb.toString().trim();
+                }
+                AppLogger.i(TAG, "scanSniffer : " + msg);
+                if (callback != null) callback.onSuccess(msg);
+            } catch (Exception e) {
+                AppLogger.e(TAG, "scanSniffer échoué", e);
+                if (callback != null) callback.onError("Erreur scan : " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Tue tous les processus Sniffer (logcat + boucle snapshot).
+     */
+    public static void killSniffer(final Context context, final Callback callback) {
+        sExecutor.execute(() -> {
+            try (Dadb dadb = connect(context)) {
+                dadb.shell(SNIFFER_KILL_CMD);
+                Thread.sleep(600);
+                String logcatAfter = safeOut(dadb.shell(
+                        "ps -A | grep '[l]ogcat -v threadtime' 2>&1").getAllOutput()).trim();
+                String sleepAfter = safeOut(dadb.shell(
+                        "ps -A | grep '[s]leep 30' 2>&1").getAllOutput()).trim();
+                boolean ok = logcatAfter.isEmpty() && sleepAfter.isEmpty();
+                String msg = ok ? "Sniffer arrêté ✓" : "Processus encore actifs : " + logcatAfter + " " + sleepAfter;
+                AppLogger.i(TAG, "killSniffer : " + msg);
+                if (ok) { if (callback != null) callback.onSuccess(msg); }
+                else    { if (callback != null) callback.onError(msg); }
+            } catch (Exception e) {
+                AppLogger.e(TAG, "killSniffer échoué", e);
+                if (callback != null) callback.onError("Erreur : " + e.getMessage());
+            }
+        });
+    }
+
     public static void checkFreedomState(final Context context, final FreedomStateCallback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {

@@ -371,9 +371,57 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Capture logcat et événements ROM en arrière-plan."
+            android:text="Capture logcat filtré + snapshots dumpsys toutes les 30s en arrière-plan."
             android:textColor="#AAAAAA"
             android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_scan_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔍 Scanner les processus Sniffer actifs"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_sniffer_scan_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="(résultat scan)"
+            android:textColor="#AAAAAA"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="8dp"
+            android:background="#1A1A1A"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_start_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶ Démarrer le Sniffer"
+            android:textSize="13sp"
+            android:backgroundTint="#2E7D32"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_stop_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="☠ Tuer tous les processus Sniffer"
+            android:textSize="13sp"
+            android:backgroundTint="#BF360C"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_export_sniffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📤 Exporter rapport Sniffer (Telegram…)"
+            android:textSize="13sp"
+            android:backgroundTint="#1565C0"
             android:layout_marginBottom="8dp"/>
 
         <Button
@@ -383,33 +431,6 @@
             android:text="🧪 Tester Freedom IPC (expérimental)"
             android:textSize="13sp"
             android:backgroundTint="#d81b60"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_start_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="▶ Activer Sniffer Système (arrière-plan)"
-            android:textSize="13sp"
-            android:backgroundTint="#811122"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_stop_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⏹ Arrêter Sniffer Système"
-            android:textSize="13sp"
-            android:backgroundTint="#d32f2f"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_export_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📤 Exporter rapport Sniffer"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
             android:layout_marginBottom="16dp"/>
 </LinearLayout>
 </ScrollView>

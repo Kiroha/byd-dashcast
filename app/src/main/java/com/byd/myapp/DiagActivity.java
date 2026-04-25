@@ -46,8 +46,10 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnKillRestartDaemon;
     private TextView tvDaemonScanResult;
     private Button   btnStartSniffer;
+    private Button   btnScanSniffer;
     private Button   btnStopSniffer;
     private Button   btnExportSniffer;
+    private TextView tvSnifferScanResult;
     private Button   btnExportDaemonLog;
 
     @Override
@@ -85,6 +87,8 @@ public class DiagActivity extends AppCompatActivity {
         btnKillDaemon = (Button) findViewById(R.id.btn_kill_daemon);
         btnKillRestartDaemon = (Button) findViewById(R.id.btn_kill_restart_daemon);
         tvDaemonScanResult = (TextView) findViewById(R.id.tv_daemon_scan_result);
+        btnScanSniffer = (Button) findViewById(R.id.btn_scan_sniffer);
+        tvSnifferScanResult = (TextView) findViewById(R.id.tv_sniffer_scan_result);
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
         btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
@@ -94,8 +98,9 @@ public class DiagActivity extends AppCompatActivity {
         btnScanDaemon.setOnClickListener(v -> scanDaemon());
         btnKillDaemon.setOnClickListener(v -> killDaemon());
         btnKillRestartDaemon.setOnClickListener(v -> killAndRestartDaemon());
+        btnScanSniffer.setOnClickListener(v -> scanSniffer());
         btnStartSniffer.setOnClickListener(v -> startSniffer());
-        btnStopSniffer.setOnClickListener(v -> stopSniffer());
+        btnStopSniffer.setOnClickListener(v -> killSnifferWithFeedback());
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
         btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog());
 
@@ -462,18 +467,55 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void stopSnifferSilently() {
-        String killCmd =
-            "ps -A | grep 'logcat -v threadtime' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
-            + "ps -A | grep 'am monitor' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
-            + "ps -A | grep 'dumpsys SurfaceFlinger' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
-            + "ps -A | grep 'sleep 30' | awk '{print $2}' | xargs kill -9 2>/dev/null";
-        AdbLocalClient.executeShell(DiagActivity.this, killCmd);
+        // Kill synchrone sans feedback (appelé avant de relancer le sniffer)
+        AdbLocalClient.executeShell(DiagActivity.this, AdbLocalClient.SNIFFER_KILL_CMD);
+    }
+
+    private void killSnifferWithFeedback() {
+        tvSnifferScanResult.setText("Kill sniffer en cours…");
+        tvSnifferScanResult.setTextColor(0xFFFFAB40);
+        AdbLocalClient.killSniffer(this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String msg) {
+                runOnUiThread(() -> {
+                    tvSnifferScanResult.setText(msg);
+                    tvSnifferScanResult.setTextColor(0xFF69F0AE);
+                    android.widget.Toast.makeText(DiagActivity.this, msg,
+                            android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvSnifferScanResult.setText(error);
+                    tvSnifferScanResult.setTextColor(0xFFFF5252);
+                    android.widget.Toast.makeText(DiagActivity.this, error,
+                            android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
     }
 
     private void stopSniffer() {
-        AppLogger.i("DiagSniffer", "Arrêt du Sniffeur demandé");
-        stopSnifferSilently();
-        android.widget.Toast.makeText(DiagActivity.this, "Sniffeur arrêté (background clean)", android.widget.Toast.LENGTH_SHORT).show();
+        killSnifferWithFeedback();
+    }
+
+    private void scanSniffer() {
+        tvSnifferScanResult.setText("Scan en cours…");
+        tvSnifferScanResult.setTextColor(0xFFAAAAAA);
+        AdbLocalClient.scanSniffer(this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String msg) {
+                runOnUiThread(() -> {
+                    tvSnifferScanResult.setText(msg);
+                    boolean active = msg.contains("processus Sniffer détecté");
+                    tvSnifferScanResult.setTextColor(active ? 0xFF69F0AE : 0xFFAAAAAA);
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvSnifferScanResult.setText(error);
+                    tvSnifferScanResult.setTextColor(0xFFFF5252);
+                });
+            }
+        });
     }
 
     private void exportSnifferReport() {
