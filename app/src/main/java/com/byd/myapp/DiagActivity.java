@@ -400,18 +400,38 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    private static final String SNIFFER_FILE_NAME = "BYD_Sniffer_Dump.txt";
+    private static final String SNIFFER_FILE_PREFIX = "BYD_Sniffer_Dump_";
+    private java.io.File mCurrentSnifferFile = null;
+
+    /** Génère un fichier horodaté dans le répertoire externe de l'app. */
+    private java.io.File buildSnifferFile() {
+        String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                .format(new java.util.Date());
+        return new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_PREFIX + ts + ".txt");
+    }
+
+    /** Retrouve le fichier sniffer le plus récent dans le répertoire (fallback si mCurrentSnifferFile est null). */
+    private java.io.File findLatestSnifferFile() {
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) return null;
+        java.io.File[] files = dir.listFiles(
+                f -> f.getName().startsWith(SNIFFER_FILE_PREFIX) && f.getName().endsWith(".txt"));
+        if (files == null || files.length == 0) return null;
+        java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        return files[0];
+    }
 
     private void startSniffer() {
         stopSnifferSilently();
 
-        android.widget.Toast.makeText(DiagActivity.this,
-                "Sniffeur démarré — logcat filtré + snapshots 30s",
-                android.widget.Toast.LENGTH_LONG).show();
-        AppLogger.i("DiagSniffer", "Lancement du Sniffeur système...");
-
-        java.io.File logFile = new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_NAME);
+        mCurrentSnifferFile = buildSnifferFile();
+        java.io.File logFile = mCurrentSnifferFile;
         String p = logFile.getAbsolutePath();
+
+        android.widget.Toast.makeText(DiagActivity.this,
+                "Sniffeur démarré → " + logFile.getName(),
+                android.widget.Toast.LENGTH_LONG).show();
+        AppLogger.i("DiagSniffer", "Lancement du Sniffeur système → " + p);
 
         // ── Header enrichi (synchrone, crée le fichier) ──────────────────────
         // On vide d'abord le buffer logcat pour n'avoir que les événements futurs.
@@ -519,9 +539,11 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void exportSnifferReport() {
-        java.io.File logFile = new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_NAME);
-        if (!logFile.exists() || logFile.length() == 0) {
-            android.widget.Toast.makeText(DiagActivity.this, "Aucun rapport trouvé.", android.widget.Toast.LENGTH_SHORT).show();
+        java.io.File logFile = mCurrentSnifferFile != null ? mCurrentSnifferFile : findLatestSnifferFile();
+        if (logFile == null || !logFile.exists() || logFile.length() == 0) {
+            android.widget.Toast.makeText(DiagActivity.this,
+                    "Aucun rapport trouvé (démarrez d'abord le sniffer).",
+                    android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -538,10 +560,10 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void exportDaemonLog() {
-        android.widget.Toast.makeText(this, "Lecture mirrordaemon.log via ADB…",
+        android.widget.Toast.makeText(this, "Lecture mirrordaemon_latest.log via ADB…",
                 android.widget.Toast.LENGTH_SHORT).show();
-        AdbLocalClient.readFileViaAdb(this, "/data/local/tmp/mirrordaemon.log",
-                "mirrordaemon.log", new AdbLocalClient.ReadFileCallback() {
+        AdbLocalClient.readFileViaAdb(this, "/data/local/tmp/mirrordaemon_latest.log",
+                "mirrordaemon_latest.log", new AdbLocalClient.ReadFileCallback() {
             @Override
             public void onSuccess(java.io.File localCopy) {
                 runOnUiThread(() -> {
@@ -554,11 +576,11 @@ public class DiagActivity extends AppCompatActivity {
                         shareIntent.setType("text/plain");
                         shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
                         shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT,
-                                "mirrordaemon.log");
+                                "mirrordaemon_latest.log");
                         shareIntent.addFlags(
                                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         startActivity(android.content.Intent.createChooser(
-                                shareIntent, "Partager mirrordaemon.log"));
+                                shareIntent, "Partager mirrordaemon_latest.log"));
                     } catch (Exception e) {
                         AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
                         android.widget.Toast.makeText(DiagActivity.this,

@@ -174,7 +174,11 @@ public class AdbLocalClient {
                         Thread.sleep(500);
                     }
                     String apkPath = context.getPackageCodePath();
-                    final String logPath = "/data/local/tmp/mirrordaemon.log";
+                    // Horodatage Java → nom de fichier unique à chaque lancement
+                    String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                            .format(new java.util.Date());
+                    final String logPath = "/data/local/tmp/mirrordaemon_" + ts + ".log";
+                    final String latestLink = "/data/local/tmp/mirrordaemon_latest.log";
                     // setsid : détache le processus du groupe de la session ADB
                     // → survit à la fermeture de la connexion dadb (sinon SIGHUP possible)
                     // CLASSPATH inline (pas export &&) comme le fait Commander APK
@@ -183,9 +187,10 @@ public class AdbLocalClient {
                             + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
                             + " --nice-name=byd.mirror.daemon"
                             + " com.byd.myapp.daemon.MirrorDaemon"
-                            + " </dev/null >" + logPath + " 2>&1' &";
+                            + " </dev/null >" + logPath + " 2>&1' &"
+                            + " ln -sf " + logPath + " " + latestLink;
                     dadb.shell(cmd);
-                    AppLogger.i(TAG, "MirrorDaemon lancé via ADB (app_process64).");
+                    AppLogger.i(TAG, "MirrorDaemon lancé → " + logPath);
 
                     // Vérification : le process est-il bien vivant après 3s ?
                     Thread.sleep(3000);
