@@ -41,6 +41,10 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnBootReceiver;
     private Button   btnBootReceiverShare;
     private Button   btnTestDaemon;
+    private Button   btnScanDaemon;
+    private Button   btnKillDaemon;
+    private Button   btnKillRestartDaemon;
+    private TextView tvDaemonScanResult;
     private Button   btnStartSniffer;
     private Button   btnStopSniffer;
     private Button   btnExportSniffer;
@@ -77,12 +81,19 @@ public class DiagActivity extends AppCompatActivity {
         btnBootReceiver       = (Button)   findViewById(R.id.btn_boot_receiver);
         btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
         btnTestDaemon = (Button) findViewById(R.id.btn_test_daemon);
+        btnScanDaemon = (Button) findViewById(R.id.btn_scan_daemon);
+        btnKillDaemon = (Button) findViewById(R.id.btn_kill_daemon);
+        btnKillRestartDaemon = (Button) findViewById(R.id.btn_kill_restart_daemon);
+        tvDaemonScanResult = (TextView) findViewById(R.id.tv_daemon_scan_result);
         btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
         btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
         btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
         btnExportDaemonLog = (Button) findViewById(R.id.btn_export_daemon_log);
 
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
+        btnScanDaemon.setOnClickListener(v -> scanDaemon());
+        btnKillDaemon.setOnClickListener(v -> killDaemon());
+        btnKillRestartDaemon.setOnClickListener(v -> killAndRestartDaemon());
         btnStartSniffer.setOnClickListener(v -> startSniffer());
         btnStopSniffer.setOnClickListener(v -> stopSniffer());
         btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
@@ -531,5 +542,71 @@ public class DiagActivity extends AppCompatActivity {
                 "Expérimental — non fonctionnel\n(app_process inaccessible depuis uid=10100)",
                 android.widget.Toast.LENGTH_LONG).show();
         AppLogger.w("DiagDaemon", "testLaunchFreedomDaemon() — non fonctionnel sur cette ROM (uid=10100 sans accès app_process)");
+    }
+
+    private void scanDaemon() {
+        tvDaemonScanResult.setText("Scan en cours…");
+        tvDaemonScanResult.setTextColor(0xFFAAAAAA);
+        AdbLocalClient.scanMirrorDaemon(this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String msg) {
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText(msg);
+                    boolean multi = msg.matches("(?s).*[2-9] processus.*");
+                    tvDaemonScanResult.setTextColor(multi ? 0xFFFF5252 : 0xFF69F0AE);
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText(error);
+                    tvDaemonScanResult.setTextColor(0xFFFF5252);
+                });
+            }
+        });
+    }
+
+    private void killDaemon() {
+        tvDaemonScanResult.setText("Envoi kill -9 en cours…");
+        tvDaemonScanResult.setTextColor(0xFFFFAB40);
+        AdbLocalClient.killMirrorDaemon(this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String msg) {
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText(msg);
+                    tvDaemonScanResult.setTextColor(0xFF69F0AE);
+                    android.widget.Toast.makeText(DiagActivity.this, msg,
+                            android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText(error);
+                    tvDaemonScanResult.setTextColor(0xFFFF5252);
+                    android.widget.Toast.makeText(DiagActivity.this, error,
+                            android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    private void killAndRestartDaemon() {
+        tvDaemonScanResult.setText("Kill + redémarrage en cours…");
+        tvDaemonScanResult.setTextColor(0xFFFFAB40);
+        AdbLocalClient.killMirrorDaemon(this, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String msg) {
+                runOnUiThread(() -> tvDaemonScanResult.setText("Kill OK — relancement…"));
+                AdbLocalClient.startMirrorDaemon(DiagActivity.this);
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText("MirrorDaemon relancé — vérifiez le log dans 5s");
+                    tvDaemonScanResult.setTextColor(0xFF69F0AE);
+                    android.widget.Toast.makeText(DiagActivity.this,
+                            "MirrorDaemon relancé (propre)", android.widget.Toast.LENGTH_SHORT).show();
+                });
+            }
+            @Override public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvDaemonScanResult.setText("Kill échoué : " + error);
+                    tvDaemonScanResult.setTextColor(0xFFFF5252);
+                });
+            }
+        });
     }
 }
