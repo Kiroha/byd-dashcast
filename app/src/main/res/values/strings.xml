@@ -14,12 +14,6 @@
     <!-- Cluster control panel -->
     <string name="cluster_control_title">Contrôle cluster</string>
     <string name="cluster_control_hide">Masquer ▼</string>
-    <string name="btn_cluster_back">← Retour</string>
-    <string name="btn_cluster_home">⌂</string>
-    <string name="btn_cluster_up">↑</string>
-    <string name="btn_cluster_down">↓</string>
-    <string name="btn_cluster_vol_up">Vol＋</string>
-    <string name="btn_cluster_vol_down">Vol－</string>
 
     <!-- Toasts -->
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
