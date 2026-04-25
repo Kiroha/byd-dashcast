@@ -387,29 +387,75 @@ public class DiagActivity extends AppCompatActivity {
     private static final String SNIFFER_FILE_NAME = "BYD_Sniffer_Dump.txt";
 
     private void startSniffer() {
-        // Tuer les précédents sniffeurs (pour éviter les doublons/fuite mémoire)
         stopSnifferSilently();
-        
-        android.widget.Toast.makeText(DiagActivity.this, "Sniffeur système démarré (Background)", android.widget.Toast.LENGTH_LONG).show();
+
+        android.widget.Toast.makeText(DiagActivity.this,
+                "Sniffeur démarré — logcat filtré + snapshots 30s",
+                android.widget.Toast.LENGTH_LONG).show();
         AppLogger.i("DiagSniffer", "Lancement du Sniffeur système...");
-        
+
         java.io.File logFile = new java.io.File(getExternalFilesDir(null), SNIFFER_FILE_NAME);
-        String logPath = logFile.getAbsolutePath();
-        
-        String logcatCmd = "logcat -v threadtime -b all >> " + logPath + " 2>&1";
-        String amMonitorCmd = "am monitor >> " + logPath + " 2>&1";
-        
-        String dumpsysHeaderCmd = "echo '\n--- DUMPSYS SURFACEFLINGER ---' >> " + logPath + " && dumpsys SurfaceFlinger >> " + logPath;
-        
-        String fullCmd = "echo '--- MAIN SNIFFER STARTED ---' > " + logPath + " && nohup sh -c \"" + logcatCmd + "\" & nohup sh -c \"" + amMonitorCmd + "\" & nohup sh -c \"" + dumpsysHeaderCmd + "\" &";
+        String p = logFile.getAbsolutePath();
+
+        // ── Header enrichi (synchrone, crée le fichier) ──────────────────────
+        // On vide d'abord le buffer logcat pour n'avoir que les événements futurs.
+        String headerCmd =
+            "logcat -c 2>/dev/null"
+            + " && echo '=== BYD SNIFFER DUMP ===' > " + p
+            + " && date >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- ROM ---' >> " + p
+            + " && getprop ro.build.fingerprint >> " + p
+            + " && getprop ro.build.version.release >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- PROCESSUS BYD/XDJA/DAEMON ---' >> " + p
+            + " && (ps -A 2>/dev/null | grep -iE 'byd|xdja|freedom|daemon|mirror') >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- DISPLAYS (dumpsys display) ---' >> " + p
+            + " && (dumpsys display 2>/dev/null | grep -E 'mDisplayId|mName|mState|fission|virtual|cluster' | head -25) >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- WINDOWS (dumpsys window displays) ---' >> " + p
+            + " && (dumpsys window displays 2>/dev/null | head -50) >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- SURFACEFLINGER ---' >> " + p
+            + " && (dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'display|fission|layer|cluster|mirror|virtual' | head -30) >> " + p
+            + " && echo '' >> " + p
+            + " && echo '--- MAIN SNIFFER STARTED ---' >> " + p;
+
+        // ── Logcat filtré sur tags pertinents — évite le flood audio/AAudio ──
+        // *:S = silence tout. Ensuite on réactive les tags BYD/display/crash.
+        String logcatCmd =
+            "logcat -v threadtime *:S"
+            + " WindowManager:V ActivityManager:V SurfaceFlinger:V"
+            + " AutoContainer:V MirrorDaemon:V"
+            + " byd:V xdja:V freedom:V cluster:V"
+            + " DEBUG:E dalvikvm:W art:W"
+            + " >> " + p + " 2>&1";
+
+        // ── Snapshots périodiques toutes les 30s ──────────────────────────────
+        // \\$ → \$ dans la string Java → $ envoyé au sh interne (date se réduit dans sh -c)
+        String snapshotCmd =
+            "while true; do sleep 30;"
+            + " echo '' >> " + p + ";"
+            + " echo '--- SNAPSHOT '\\$(date +%H:%M:%S)' ---' >> " + p + ";"
+            + " dumpsys display 2>/dev/null | grep -E 'mDisplayId|mState|fission|virtual' | head -10 >> " + p + ";"
+            + " dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'display|fission|layer|cluster|mirror' | head -10 >> " + p + ";"
+            + " ps -A 2>/dev/null | grep -iE 'byd|xdja|freedom|daemon|mirror' >> " + p + ";"
+            + " done";
+
+        String fullCmd = headerCmd
+                + " && nohup sh -c \"" + logcatCmd + "\" &"
+                + " nohup sh -c \"" + snapshotCmd + "\" &";
+
         AdbLocalClient.executeShell(DiagActivity.this, fullCmd);
     }
 
     private void stopSnifferSilently() {
-        // Enlève uniquement les instances logcat/am monitor liées à la capture
-        String killCmd = "ps -A | grep 'logcat -v threadtime -b all' | awk '{print $2}' | xargs kill -9 2>/dev/null; " +
-                         "ps -A | grep 'am monitor' | awk '{print $2}' | xargs kill -9 2>/dev/null; " + 
-                         "ps -A | grep 'dumpsys SurfaceFlinger' | awk '{print $2}' | xargs kill -9 2>/dev/null";
+        String killCmd =
+            "ps -A | grep 'logcat -v threadtime' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
+            + "ps -A | grep 'am monitor' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
+            + "ps -A | grep 'dumpsys SurfaceFlinger' | awk '{print $2}' | xargs kill -9 2>/dev/null; "
+            + "ps -A | grep 'sleep 30' | awk '{print $2}' | xargs kill -9 2>/dev/null";
         AdbLocalClient.executeShell(DiagActivity.this, killCmd);
     }
 
