@@ -104,7 +104,6 @@
             android:id="@+id/cluster_mirror"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#090C10"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="Miroir cluster"/>
