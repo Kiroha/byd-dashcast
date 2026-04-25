@@ -42,22 +42,16 @@ BYD APIs.
 ---
 
 
-## 🔓 WindowManagement v1.2 — Reverse Engineering
+## WindowManagement v1.2 — Reverse Engineering
 
-The **anti-tamper obfuscation** of the `WindowManagement v1.2` third-party app has been
-completely reverse-engineered.
+`WindowManagement v1.2` is a third-party app used on DiLink systems to control the cluster
+display surface. Its internal Binder API was reverse-engineered to identify the hidden method
+names used to interact with `SurfaceControl`:
+`openTransaction`, `setDisplaySurface`, `setDisplayProjection`,
+`setDisplayLayerStack`, `closeTransaction`.
 
-* **Obfuscation scheme**: Unicode invisible characters are used as a substitution table
-  (class `C0854a.f1372c`) mapping each character to a Base64 character, then Base64-decoded
-  to the real UTF-8 string. An optional DES/ECB layer (key `"decrypt"`) is used for a few
-  bootstrap strings.
-* **Result**: All hidden Binder method names were extracted:
-  `openTransaction`, `setDisplaySurface`, `setDisplayProjection`,
-  `setDisplayLayerStack`, `closeTransaction`.
-* **Our implementation** uses the same static `SurfaceControl` API, confirming compatibility
-  with DiLink 3.0.
-
-For full technical details, see `doc_api/DEOBFUSCATION_WindowManagement.md` in the root of this workspace (not included in the repo — proprietary reverse-engineering notes).
+DashCast uses the same static `SurfaceControl` API directly, confirming compatibility
+with DiLink 3.0.
 
 ---
 
