@@ -58,35 +58,68 @@ public class MirrorDaemon {
 
     // ─────────────────────────────────────────────────────────────────────────
 
+    /** Helper stdout thread-safe (Log.* va dans logcat, pas dans notre fichier redirigé) */
+    private static void out(String msg) {
+        System.out.println("[MirrorDaemon] " + msg);
+        System.out.flush();
+    }
+    private static void err(String msg, Throwable t) {
+        System.err.println("[MirrorDaemon][ERROR] " + msg);
+        if (t != null) t.printStackTrace(System.err);
+        System.err.flush();
+    }
+
     public static void main(String[] args) {
+        out("main() démarrage uid=" + android.os.Process.myUid());
         try {
             android.os.Process.class.getMethod("setArgV0", String.class)
                     .invoke(null, "com.byd.myapp.mirrordaemon");
-        } catch (Exception ignored) {}
+            out("setArgV0 OK");
+        } catch (Exception ignored) {
+            out("setArgV0 ignoré : " + ignored.getMessage());
+        }
 
         Log.i(TAG, "Démarrage MirrorDaemon uid=" + android.os.Process.myUid());
 
         try {
+            out("Looper.getMainLooper()=" + Looper.getMainLooper());
             if (Looper.getMainLooper() == null) Looper.prepareMainLooper();
+            out("Looper prêt");
 
             // System context (via ActivityThread)
+            out("Chargement ActivityThread...");
             Class<?> atClass = Class.forName("android.app.ActivityThread");
+            out("ActivityThread trouvé, appel systemMain()...");
             Object thread = atClass.getMethod("systemMain").invoke(null);
+            out("systemMain() retourné : " + thread);
             Context context = (Context) thread.getClass()
                     .getMethod("getSystemContext").invoke(thread);
-            if (context == null) { Log.e(TAG, "Context null"); return; }
+            out("getSystemContext() retourné : " + context);
+            if (context == null) {
+                err("Context null — abandon", null);
+                Log.e(TAG, "Context null");
+                return;
+            }
             Log.i(TAG, "Context système OK");
+            out("Context système OK");
 
             // Déverrouiller les APIs cachées
+            out("unlockHiddenApis()...");
             unlockHiddenApis();
+            out("unlockHiddenApis OK");
 
             // Initialiser InputManager
+            out("initInputManager()...");
             initInputManager();
+            out("initInputManager OK");
 
             // Créer notre Binder (effectively final pour l'inner class)
+            out("Création MirrorBinder...");
             final IBinder daemonBinder = new MirrorBinder();
+            out("MirrorBinder créé");
 
             // Enregistrer les receivers (LAUNCH + REQUEST_BINDER)
+            out("Enregistrement receivers...");
             IntentFilter filter = new IntentFilter();
             filter.addAction(ACTION_DAEMON_LAUNCH);
             filter.addAction(ACTION_REQUEST_BINDER);
@@ -102,16 +135,22 @@ public class MirrorDaemon {
                     }
                 }
             }, filter);
+            out("Receivers enregistrés");
 
             // Annoncer notre présence avec le Binder
+            out("broadcastBinder()...");
             broadcastBinder(context, daemonBinder);
             Log.i(TAG, "MirrorDaemon prêt — Binder diffusé.");
+            out("MirrorDaemon PRÊT — Binder diffusé — Looper.loop() démarré");
 
             Looper.loop();
+            out("Looper.loop() terminé (ne devrait pas arriver)");
 
         } catch (Exception e) {
+            err("Crash MirrorDaemon", e);
             Log.e(TAG, "Crash MirrorDaemon", e);
         }
+        out("main() terminé");
     }
 
     // ── Binder ────────────────────────────────────────────────────────────────

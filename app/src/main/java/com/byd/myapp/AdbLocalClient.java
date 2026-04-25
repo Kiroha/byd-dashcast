@@ -114,14 +114,15 @@ public class AdbLocalClient {
                     }
                     String apkPath = context.getPackageCodePath();
                     final String logPath = "/data/local/tmp/mirrordaemon.log";
-                    // app_process64 (ARM64) + -Xnoimage-dex2oat pour éviter crash AOT au démarrage
-                    // Pas de nohup (défaillant sur Android toybox) — & suffit via ADB exec channel
+                    // setsid : détache le processus du groupe de la session ADB
+                    // → survit à la fermeture de la connexion dadb (sinon SIGHUP possible)
                     // CLASSPATH inline (pas export &&) comme le fait Commander APK
-                    String cmd = "CLASSPATH=" + apkPath
+                    // -Xnoimage-dex2oat : évite crash AOT au démarrage
+                    String cmd = "setsid sh -c 'CLASSPATH=" + apkPath
                             + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
                             + " --nice-name=byd.mirror.daemon"
                             + " com.byd.myapp.daemon.MirrorDaemon"
-                            + " </dev/null >" + logPath + " 2>&1 &";
+                            + " </dev/null >" + logPath + " 2>&1' &";
                     dadb.shell(cmd);
                     AppLogger.i(TAG, "MirrorDaemon lancé via ADB (app_process64).");
 
