@@ -4,6 +4,8 @@
 [![API 29](https://img.shields.io/badge/API-29%20(Android%2010)-green.svg)](https://developer.android.com/about/versions/10)
 [![Status: Alpha](https://img.shields.io/badge/Status-Alpha-red.svg)](CHANGELOG.md)
 
+> **About this project** — I am not a professional developer — I work in IT with a solid understanding of software development concepts. This project was built with the help of AI-assisted **vibe coding**: I provided the technical context, reverse-engineering findings, and intent, while AI (GitHub Copilot) helped translate that into working Java/Android code. The result is a functional alpha that runs on a real BYD Seal EU — but the codebase reflects an exploratory, iterative process rather than production-grade engineering. Contributions and code reviews from experienced Android/automotive developers are very welcome.
+
 Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
 onto the instrument cluster display, control it via a real-time touch mirror, and diagnose
 BYD APIs.
