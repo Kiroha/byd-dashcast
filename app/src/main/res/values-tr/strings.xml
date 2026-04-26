@@ -187,6 +187,14 @@
     <string name="toast_daemon_restarted">MirrorDaemon yeniden başlatıldı (temiz)</string>
     <string name="diag_kill_failed">Sonlandırma başarısız: %1$s</string>
 
+    <string name="diag_test7_title">TEST 7 — Küme yönlendirmesi (freezeDisplayRotation)</string>
+    <string name="diag_test7_desc">IWindowManager aracılığıyla küme ekranı rotasyonunu dondur/çöz. LANDSCAPE dondurma, uygulamaların dikey moda geçmesini engeller. wm size çağrısı yok — ana ekran çözünürlüğü değişmez.</string>
+    <string name="diag_orientation_hint">(TEST 7 sonucu — küme yönlendirmesi)</string>
+    <string name="diag_orient_freeze_landscape">🔒 Freeze LANDSCAPE</string>
+    <string name="diag_orient_freeze_portrait">🔒 Freeze PORTRAIT (test)</string>
+    <string name="diag_orient_unfreeze">🔓 Unfreeze</string>
+    <string name="diag_orient_read">📐 Ekran rotasyonunu oku</string>
+
     <!-- AppLogger -->
     <string name="share_log_title">Günlüğü paylaş…</string>
     <string name="share_report_title">Raporu paylaş…</string>

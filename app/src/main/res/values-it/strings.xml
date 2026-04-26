@@ -187,6 +187,14 @@
     <string name="toast_daemon_restarted">MirrorDaemon riavviato (pulito)</string>
     <string name="diag_kill_failed">Terminazione fallita: %1$s</string>
 
+    <string name="diag_test7_title">TEST 7 — Orientamento cluster (freezeDisplayRotation)</string>
+    <string name="diag_test7_desc">Freeze/unfreeze della rotazione del display cluster via IWindowManager. Freeze LANDSCAPE impedisce alle app di passare in modalità verticale. Nessuna chiamata wm size — risoluzione schermo principale non modificata.</string>
+    <string name="diag_orientation_hint">(risultato TEST 7 — orientamento cluster)</string>
+    <string name="diag_orient_freeze_landscape">🔒 Freeze LANDSCAPE</string>
+    <string name="diag_orient_freeze_portrait">🔒 Freeze PORTRAIT (test)</string>
+    <string name="diag_orient_unfreeze">🔓 Unfreeze</string>
+    <string name="diag_orient_read">📐 Leggi rotazione display</string>
+
     <!-- AppLogger -->
     <string name="share_log_title">Condividi log…</string>
     <string name="share_report_title">Condividi rapporto…</string>
