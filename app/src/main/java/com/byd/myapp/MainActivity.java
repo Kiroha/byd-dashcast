@@ -91,7 +91,9 @@ public class MainActivity extends AppCompatActivity
             // mClusterService.launchOnDashboard() → NullPointerException.
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
             mCurrentDashboardApp = null;
-            mCurrentDashboardPkg = null;
+                mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
             mMainDisplayPkg      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
@@ -399,6 +401,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 updateDashboardStatus(null);
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
 
                 // If the panel is visible (app already active), start/reconfigure the mirror
                 if (panelClusterControl.getVisibility() == View.VISIBLE) {
@@ -453,6 +457,8 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                 mMainDisplayPkg = null;
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
                 clearSplitState();
@@ -464,29 +470,7 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    @Override
-    public void onFreedomStatus(final AdbLocalClient.FreedomStatus status) {
-        runOnUiThread(new Runnable() {
-            @Override public void run() {
-                final String msg;
-                switch (status) {
-                    case ACTIVE:
-                        msg = getString(R.string.status_freedom_active);
-                        break;
-                    case INACTIVE:
-                        msg = getString(R.string.status_freedom_starting);
-                        break;
-                    case NOT_INSTALLED:
-                        msg = getString(R.string.status_freedom_not_installed);
-                        break;
-                    default:
-                        msg = getString(R.string.status_freedom_unknown);
-                }
-                tvDashboardStatus.setText(msg);
-                AppLogger.i(TAG, "onFreedomStatus: " + status + " → " + msg);
-            }
-        });
-    }
+    
 
     // ---- AppListAdapter.OnSendToDashboardListener ----
 
@@ -577,7 +561,9 @@ public class MainActivity extends AppCompatActivity
         // Clean up cluster state before launch: launchOnMainDisplay may return
         // false even if the app launches correctly (startActivity fallback without reflection).
         mCurrentDashboardApp = null;
-        mCurrentDashboardPkg = null;
+                mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
         // Force-stop the secondary slot in split mode (prevents it from staying on display 1)
         if (mSecondDashboardPkg != null) {
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
@@ -590,6 +576,8 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
         updateDashboardStatus(null);
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
         showAppList();
         mDashboardLauncher.launchOnMainDisplay(app.packageName);
         AppLogger.log(TAG, "Send to main display — " + app.packageName);
@@ -613,7 +601,9 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
+                mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         // Force-stop le slot secondaire en mode split
                         if (mSecondDashboardPkg != null) {
                             AdbLocalClient.forceStopApp(MainActivity.this, mSecondDashboardPkg, null);
@@ -628,6 +618,8 @@ public class MainActivity extends AppCompatActivity
                         }
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         showAppList();
                         Toast.makeText(MainActivity.this,
                                 getString(R.string.toast_app_stopped, app.appName),
@@ -937,31 +929,10 @@ public class MainActivity extends AppCompatActivity
             tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
             // Button is re-enabled natively by onClusterDisplayConnected or onClusterDisplayDisconnected callbacks.
         } else {
-            // Service already up → send ADB commands directly (manual re-activation)
-            AdbLocalClient.activateClusterDisplay(this, new AdbLocalClient.Callback() {
-                @Override
-                public void onSuccess(final String report) {
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            tvDashboardStatus.setText(getString(R.string.status_cluster_activated));
-                            btnActivateCluster.setEnabled(true);
-                            AppLogger.log(TAG, "activateCluster OK — " + report);
-                        }
-                    });
-                }
-                @Override
-                public void onError(final String error) {
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() {
-                            tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                            btnActivateCluster.setEnabled(true);
-                            Toast.makeText(MainActivity.this,
-                                    getString(R.string.toast_activation_failed, error), Toast.LENGTH_LONG).show();
-                            AppLogger.log(TAG, "activateCluster FAILED — " + error);
-                        }
-                    });
-                }
-            });
+            // Service already up → manually restart projection natively without ADB
+            AppLogger.log(TAG, "Calling native restartProjection via ClusterService");
+            mClusterService.restartProjection();
+            // onClusterDisplayConnected / onClusterDisplayDisconnected will re-enable the button
         }
     }
 
@@ -1062,10 +1033,14 @@ public class MainActivity extends AppCompatActivity
                             mClusterService.stopProjectionNoAdb();
                         }
                         mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
+                mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         clearSplitState();
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         showAppList();
                         btnRestoreCluster.setEnabled(true);
                         AppLogger.log(TAG, "BYD restored via ADB ✓");
@@ -1114,10 +1089,14 @@ public class MainActivity extends AppCompatActivity
                             mClusterService.stopProjectionNoAdb();
                         }
                         mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
+                mCurrentDashboardPkg = null;
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         clearSplitState();
                         mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
+                btnActivateCluster.setEnabled(true);
+                btnActivateCluster.setEnabled(true);
                         showAppList();
                         btnOriginCluster.setEnabled(true);
                         AppLogger.log(TAG, "Original cluster restored ✓");

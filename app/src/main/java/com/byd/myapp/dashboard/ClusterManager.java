@@ -143,7 +143,7 @@ public class ClusterManager {
                     @Override public void onSuccess(String out) {
                         AppLogger.i(TAG, "activateCluster ADB(cmd=30, Seal EU screen): " + out);
                         // Wait 1s for the cluster to adopt the new resolution
-                        mHandler.postDelayed(new Runnable() {
+                                              mHandler.postDelayed(new Runnable() {
                             @Override public void run() {
                                 AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                     new AdbLocalClient.Callback() {
@@ -200,7 +200,7 @@ public class ClusterManager {
         // Extended timeout: Freedom may take ~5s to create the display on first startup.
         final long timeoutMs = FREEDOM_STARTUP_TIMEOUT_MS;
 
-        // 1. Start Freedom (com.xdja.clusterdemo) if absent → creates the cluster VirtualDisplay.
+        // 1. Start AppStartManagement directly
         //    If freedomJustStarted=true: ClusterService already launched it, do not force-stop/restart
         //    (it would be in the process of starting → race condition).
         if (freedomJustStarted) {
@@ -210,25 +210,17 @@ public class ClusterManager {
                 @Override public void run() { sendActivationSequence(); }
             }, 2000);
         } else {
-            AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
-                @Override public void onSuccess(String result) {
-                    AppLogger.i(TAG, "startFreedom background: " + result.trim().replace("\n", " "));
-
-                    // With transparent firing via am broadcast, no need to bring
-                    // MainActivity back to the foreground, as we never left it.
-                    // Just wait 2s for Freedom to have time to read properties.xml
-                    // and establish the C++ Qt Binder connection.
-                    mHandler.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            sendActivationSequence();
-                        }
-                    }, 2000);
-                }
-                @Override public void onError(String err) {
-                    AppLogger.w(TAG, "startFreedom ERROR (continuing anyway): " + err);
-                    sendActivationSequence();
-                }
-            });
+            
+            AppLogger.i(TAG, "Invoking native BYD cluster spawn (com.byd.appstartmanagement)");
+            Intent bypassIntent = new Intent();
+            bypassIntent.setClassName("com.byd.appstartmanagement", "com.byd.appstartmanagement.frame.AppStartManagement");
+            bypassIntent.addFlags(268468224);
+            try {
+                mContext.startActivity(bypassIntent);
+            } catch (Exception e) {
+                AppLogger.e(TAG, "Bypass failed", e);
+            }
+            mHandler.postDelayed(new Runnable() { @Override public void run() { sendActivationSequence(); } }, 2000);
         }
 
         // Listen for display additions + timeout
