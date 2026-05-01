@@ -19,17 +19,17 @@ import android.hardware.display.VirtualDisplay;
  */
 public class DiagActivity extends AppCompatActivity {
 
-    // TEST 1 — Local ADB connection
+    // [1] ADB Local
     private TextView tvAdbLocalResult;
     private Button   btnAdbLocal;
     private Button   btnAdbShare;
 
-    // TEST 2 — Cluster restore
+    // [2] Cluster restore
     private TextView tvDisplay1Result;
     private Button   btnDisplay1;
     private Button   btnDisplay1Share;
 
-    // TEST 3 — Cluster display size
+    // [3] Propriétés Cluster — display size
     private TextView tvDisplaySizeResult;
     private Button   btnDisplaySize88;       // cmd 29 — 8.8"
     private Button   btnDisplaySize123;      // cmd 30 — 12.3"
@@ -38,33 +38,34 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplaySizeFull;     // full diagnostic
     private Button   btnDisplaySizeShare;
 
+    // [4] Analyses Système
     private Button   btnDumpSfMirror;
     private TextView tvSfDumpResult;
 
-    // TEST 13 — JNI Qt Surface
+    // JNI Qt Surface Probe
     private Button   btnTest13;
     private TextView tvTest13Result;
 
-    // TEST 15
+    // Dumpsys Windows
     private Button   btnDumpsysWindows;
     private TextView tvDumpsysResult;
 
-    // TEST 16
-    private Button btnDaemonVdTest;
+    // Daemon VD (app_process)
+    private Button   btnDaemonVdTest;
     private TextView tvDaemonVdResult;
 
-    // SNIFFER RE
+    // AutoDisplayService
+    private Button   btnAutoDisplayStart;
+    private Button   btnAutoDisplayStop;
+    private TextView tvAutoDisplayResult;
+
+    // [5] Sniffer RE
     private Button   btnReSnifferStart;
     private Button   btnReSnifferStop;
     private Button   btnReSnifferSnapshot;
     private Button   btnReSnifferExport;
     private TextView tvReSnifferStatus;
     private java.io.File mReSnifferFile = null;
-
-    // AutoDisplayService
-    private Button   btnAutoDisplayStart;
-    private Button   btnAutoDisplayStop;
-    private TextView tvAutoDisplayResult;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
