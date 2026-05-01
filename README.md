@@ -179,9 +179,12 @@ adb install -r app/build/outputs/apk/debug/DashCast-v0.1.1-alpha-debug.apk
 
 ### 4. Freedom (`com.xdja.clusterdemo`) — **required**
 
-Freedom is a third-party app that creates the cluster VirtualDisplay (`fission_*`) at boot.
+Freedom is a third-party app with a specific package name (`com.xdja.clusterdemo`) that is whitelisted in a system JSON configuration file. This system whitelist grants it the unique privilege to create the cluster VirtualDisplay (`fission_*`) when the full-screen or half-screen projection mode is activated via `sendInfo`.
+
 **The app will not work without Freedom installed and active on your DiLink system.**
-There is no supported fallback in the current alpha.
+Because of this restrictive whitelist, it remains completely mandatory to install and use it for now. There is currently no other known method to create this virtual display on the dashboard cluster directly from our app.
+
+**Call for Help:** Anyone with knowledge, experience, or ideas on how to bypass this system restriction and create a virtual display on the cluster natively — effectively dropping the need for Freedom — is highly welcome to contribute and open an issue or PR!
 
 ---
 
@@ -189,7 +192,7 @@ There is no supported fallback in the current alpha.
 
 - **Reliability**: The cluster activation sequence may fail on the first attempt — retry
 - **Mirror touch (first launch)**: Touch input on the mirror does not work on the very first run. Force-stop the app and relaunch it — touch will work correctly from the second start onwards
-- **Freedom dependency**: **Freedom (`com.xdja.clusterdemo`) is required** — there is no working fallback in the current alpha
+- **Freedom dependency**: **Freedom (`com.xdja.clusterdemo`) is strictly required** as its package name is part of the system JSON whitelist to spawn the `fission` display. There is no other known working fallback in the current alpha.
 - **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface)
 - **Split 50/50**: Experimental — may fail depending on target app window mode
 - **Language**: The UI has been translated to English, but some messages (toasts, logs) may still appear in French
@@ -295,8 +298,9 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 
 ## Freedom (`com.xdja.clusterdemo`) — required dependency
 
-> **Freedom must be installed and active.** The app depends on it to create the cluster
-> VirtualDisplay (`fission_*`). Without Freedom, the cluster surface is not available.
+> **Freedom must be installed and active.** As mentioned earlier, `com.xdja.clusterdemo` is whitelisted by the system via JSON, allowing it to spawn the cluster VirtualDisplay (`fission_*`). Without Freedom, the cluster surface cannot be created and the projection is not available.
+>
+> 🤝 **Currently looking for contributors:** If you know how to natively create a `VirtualDisplay` on the DiLink cluster without relying on this whitelisted app, your help is very welcome!
 
 Freedom state is **checked at startup** before the cluster activation sequence.
 `ClusterService.checkAndStartWithFreedom()` runs `AdbLocalClient.checkFreedomState()` and:
