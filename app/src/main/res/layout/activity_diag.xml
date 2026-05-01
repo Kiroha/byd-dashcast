@@ -124,29 +124,6 @@
                 android:textColor="#ffffff"
                 android:layout_marginBottom="12dp"/>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Tentative locale depuis DiagActivity (Doit causer une SecurityException)"
-                android:textSize="12sp"
-                android:textColor="#4C566A"
-                android:layout_marginBottom="8dp"/>
-            <TextView
-                android:id="@+id/tv_vd_result"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="--"
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                android:background="#E5E9F0"
-                android:padding="8dp"
-                android:layout_marginBottom="8dp"/>
-            <Button
-                android:id="@+id/btn_vd_test"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Créer VirtualDisplay Localement"
-                android:backgroundTint="#BF616A"/>
         </LinearLayout>
 
         <!-- 3. CONFIGURATION CLUSTER -->
@@ -189,25 +166,6 @@
                 <Button android:id="@+id/btn_display_size_restore" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="RESTORE" android:layout_marginRight="4dp"/>
                 <Button android:id="@+id/btn_display_size_full" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="FULL TEST" android:layout_marginRight="4dp"/>
                 <Button android:id="@+id/btn_display_size_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Share"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_orientation_result"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Orientation"
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                android:background="#E5E9F0"
-                android:padding="8dp"
-                android:layout_marginBottom="8dp"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
-                <Button android:id="@+id/btn_orient_freeze_landscape" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Landscape" android:layout_marginRight="4dp"/>
-                <Button android:id="@+id/btn_orient_freeze_portrait" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Portrait"/>
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
-                <Button android:id="@+id/btn_orient_unfreeze" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Unfreeze" android:layout_marginRight="4dp"/>
-                <Button android:id="@+id/btn_orient_read" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Read Status"/>
             </LinearLayout>
 
             <TextView

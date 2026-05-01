@@ -9,8 +9,6 @@ import android.content.Intent;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
-import android.media.ImageReader;
-import android.graphics.PixelFormat;
 
 /**
  * DiagActivity — Diagnostic tools and configuration.
@@ -43,20 +41,9 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDumpSfMirror;
     private TextView tvSfDumpResult;
 
-    // TEST 7 — Cluster orientation
-    private Button   btnOrientFreezeLandscape;
-    private Button   btnOrientFreezePortrait;
-    private Button   btnOrientUnfreeze;
-    private Button   btnOrientRead;
-    private TextView tvOrientationResult;
-
     // TEST 13 — JNI Qt Surface
     private Button   btnTest13;
     private TextView tvTest13Result;
-
-    // TEST 14
-    private Button   btnVdTest;
-    private TextView tvVdResult;
 
     // TEST 15
     private Button   btnDumpsysWindows;
@@ -117,23 +104,10 @@ public class DiagActivity extends AppCompatActivity {
         tvAutoDisplayResult  = (TextView) findViewById(R.id.tv_auto_display_result);
         tvAutoDisplayResult.setTag("AutoDisplayService");
 
-        // TEST 7 — Cluster orientation
-        btnOrientFreezeLandscape = (Button)   findViewById(R.id.btn_orient_freeze_landscape);
-        btnOrientFreezePortrait  = (Button)   findViewById(R.id.btn_orient_freeze_portrait);
-        btnOrientUnfreeze        = (Button)   findViewById(R.id.btn_orient_unfreeze);
-        btnOrientRead            = (Button)   findViewById(R.id.btn_orient_read);
-        tvOrientationResult      = (TextView) findViewById(R.id.tv_orientation_result);
-        tvOrientationResult.setTag("Orientation");
-
         // TEST 13
         btnTest13      = (Button)   findViewById(R.id.btn_test_13);
         tvTest13Result = (TextView) findViewById(R.id.tv_test_13_result);
         tvTest13Result.setTag("JNI Qt Surface Probe");
-
-        // TEST 14
-        btnVdTest      = (Button)   findViewById(R.id.btn_vd_test);
-        tvVdResult     = (TextView) findViewById(R.id.tv_vd_result);
-        tvVdResult.setTag("VirtualDisplay Local");
 
         // TEST 15
         btnDumpsysWindows = (Button) findViewById(R.id.btn_dumpsys_windows);
@@ -163,13 +137,8 @@ public class DiagActivity extends AppCompatActivity {
         btnDumpSfMirror.setOnClickListener(v -> dumpSurfaceFlinger());
         btnAutoDisplayStart.setOnClickListener(v -> startAutoDisplayService());
         btnAutoDisplayStop .setOnClickListener(v -> stopAutoDisplayService());
-        btnOrientFreezeLandscape.setOnClickListener(v -> orientFreezeDisplay(0));
-        btnOrientFreezePortrait .setOnClickListener(v -> orientFreezeDisplay(1));
-        btnOrientUnfreeze       .setOnClickListener(v -> orientUnfreezeDisplay());
-        btnOrientRead           .setOnClickListener(v -> orientReadDisplay());
 
         btnTest13.setOnClickListener(v -> runJniSurfaceProbe());
-        btnVdTest.setOnClickListener(v -> testVirtualDisplayAPI());
         btnDumpsysWindows.setOnClickListener(v -> runDumpsysWindows());
         btnDaemonVdTest.setOnClickListener(v -> runDaemonVdTest());
 
@@ -502,138 +471,6 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    // -------------------------------------------------------------------------
-    // TEST 7 — Cluster orientation (freezeDisplayRotation via IWindowManager)
-    // NOTE: NO wm size call here — it would corrupt the main screen resolution
-    //       on Android 10 (DiLink 3.0) because --display is silently ignored.
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns the cluster display ID (first non-default display, fallback = 2).
-     */
-    private int getClusterDisplayId() {
-        android.hardware.display.DisplayManager dm =
-                (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
-        if (dm != null) {
-            for (android.view.Display d : dm.getDisplays()) {
-                if (d.getDisplayId() != 0) return d.getDisplayId();
-            }
-        }
-        return 2;
-    }
-
-    /**
-     * Freezes the cluster display rotation via IWindowManager.freezeDisplayRotation().
-     * rotation = 0 → ROTATION_0 (landscape), 1 → ROTATION_90 (portrait).
-     * Does NOT call wm size — main screen resolution is never touched.
-     */
-    private void orientFreezeDisplay(int rotation) {
-        final int displayId = getClusterDisplayId();
-        // GARDE : refuser toute modification sur le display 0 (écran principal)
-        if (displayId == 0) {
-            tvOrientationResult.setText("❌ REFUS : display 0 détecté (écran principal) — opération annulée.");
-            tvOrientationResult.setTextColor(0xFFFF5252);
-            return;
-        }
-        tvOrientationResult.setText("⏳ freezeDisplayRotation(display=" + displayId
-                + ", rotation=" + rotation + ")…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
-        new Thread(() -> {
-            StringBuilder sb = new StringBuilder();
-            try {
-                Class<?> smClass = Class.forName("android.os.ServiceManager");
-                android.os.IBinder wmBinder = (android.os.IBinder)
-                        smClass.getMethod("getService", String.class).invoke(null, "window");
-                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
-                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
-                        .invoke(null, wmBinder);
-                java.lang.reflect.Method freeze = iwm.getClass()
-                        .getMethod("freezeDisplayRotation", int.class, int.class);
-                freeze.invoke(iwm, displayId, rotation);
-                sb.append("✅ freezeDisplayRotation(").append(displayId).append(", ")
-                  .append(rotation == 0 ? "LANDSCAPE" : "PORTRAIT").append(") OK\n");
-            } catch (Exception e) {
-                sb.append("❌ freezeDisplayRotation: ").append(e.getMessage()).append("\n");
-            }
-            final String result = sb.toString();
-            runOnUiThread(() -> {
-                tvOrientationResult.setText(result);
-                tvOrientationResult.setTextColor(
-                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
-            });
-        }).start();
-    }
-
-    /**
-     * Thaws the cluster display rotation via IWindowManager.thawDisplayRotation().
-     */
-    private void orientUnfreezeDisplay() {
-        final int displayId = getClusterDisplayId();
-        // GARDE : refuser toute modification sur le display 0 (écran principal)
-        if (displayId == 0) {
-            tvOrientationResult.setText("❌ REFUS : display 0 détecté (écran principal) — opération annulée.");
-            tvOrientationResult.setTextColor(0xFFFF5252);
-            return;
-        }
-        tvOrientationResult.setText("⏳ thawDisplayRotation(display=" + displayId + ")…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
-        new Thread(() -> {
-            StringBuilder sb = new StringBuilder();
-            try {
-                Class<?> smClass = Class.forName("android.os.ServiceManager");
-                android.os.IBinder wmBinder = (android.os.IBinder)
-                        smClass.getMethod("getService", String.class).invoke(null, "window");
-                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
-                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
-                        .invoke(null, wmBinder);
-                // thawDisplayRotation(int displayId) — API 30+ seulement.
-                // REFUSÉ : thawRotation() sans arg (API 29 fallback) → opère sur display 0.
-                try {
-                    java.lang.reflect.Method thaw = iwm.getClass()
-                            .getMethod("thawDisplayRotation", int.class);
-                    thaw.invoke(iwm, displayId);
-                    sb.append("✅ thawDisplayRotation(").append(displayId).append(") OK\n");
-                } catch (NoSuchMethodException e2) {
-                    // thawRotation() sans argument affecte le display 0 → BLOQUÉ.
-                    sb.append("⛔ thawRotation() (API 29 fallback) BLOQUÉ — affecterait display 0.\n");
-                    sb.append("ℹ️ Nécessite API 30+ pour thawDisplayRotation(displayId).\n");
-                }
-            } catch (Exception e) {
-                sb.append("❌ thawDisplayRotation: ").append(e.getMessage()).append("\n");
-            }
-            final String result = sb.toString();
-            runOnUiThread(() -> {
-                tvOrientationResult.setText(result);
-                tvOrientationResult.setTextColor(
-                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
-            });
-        }).start();
-    }
-
-    /**
-     * Reads current display rotation via ADB (wm rotation -d N or dumpsys display).
-     */
-    private void orientReadDisplay() {
-        final int displayId = getClusterDisplayId();
-        tvOrientationResult.setText("⏳ Reading display " + displayId + "…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
-        String cmd = "dumpsys display 2>/dev/null"
-                + " | grep -E 'mDisplayId|mName|mCurrentOrientation|mRotation|PhysicalDisplayInfo' | head -20";
-        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String result) {
-                runOnUiThread(() -> {
-                    tvOrientationResult.setText(result.trim());
-                    tvOrientationResult.setTextColor(0xFF69F0AE);
-                });
-            }
-            @Override public void onError(String error) {
-                runOnUiThread(() -> {
-                    tvOrientationResult.setText("❌ " + error);
-                    tvOrientationResult.setTextColor(0xFFFF5252);
-                });
-            }
-        });
-    }
     // TEST 13 — JNI Surface Probe
     private void runJniSurfaceProbe() {
         tvTest13Result.setText("Liberating Qt Display (sendInfo 16)...");
@@ -691,34 +528,6 @@ public class DiagActivity extends AppCompatActivity {
                 });
             }
         });
-    }
-
-    // -------------------------------------------------------------------------
-    // TEST 14 : VirtualDisplay API
-    // -------------------------------------------------------------------------
-    private void testVirtualDisplayAPI() {
-        tvVdResult.setText("Appel en cours...");
-        btnVdTest.setEnabled(false);
-        ImageReader reader = null;
-        try {
-            DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
-            reader = ImageReader.newInstance(1920, 720, PixelFormat.RGBA_8888, 2);
-            VirtualDisplay vd = dm.createVirtualDisplay("remote_dashboard", 1920, 720, 320, reader.getSurface(), 320);
-            if (vd != null) {
-                tvVdResult.setText("SUCCES MYSTERIEUX ! Un VirtualDisplay a pu etre cree par l'app !\nID: " 
-                    + vd.getDisplay().getDisplayId() + " Name: " + vd.getDisplay().getName());
-                vd.release();
-            } else {
-                tvVdResult.setText("Echec : createVirtualDisplay a renvoye null.");
-            }
-        } catch (SecurityException se) {
-            tvVdResult.setText("EXCEPTION DE SECURITE (Attendu) :\n" + se.getMessage());
-        } catch (Exception e) {
-            tvVdResult.setText("ERREUR : " + e.getMessage());
-        } finally {
-            if (reader != null) reader.close();
-        }
-        btnVdTest.setEnabled(true);
     }
 
     // -------------------------------------------------------------------------
@@ -806,9 +615,9 @@ public class DiagActivity extends AppCompatActivity {
 
     private void setupShareOnLongClick() {
         TextView[] results = {
-            tvAdbLocalResult, tvDaemonVdResult, tvVdResult, tvDisplaySizeResult,
+            tvAdbLocalResult, tvDaemonVdResult, tvDisplaySizeResult,
             tvDisplay1Result, tvDumpsysResult, tvTest13Result, tvSfDumpResult,
-            tvAutoDisplayResult, tvReSnifferStatus, tvOrientationResult
+            tvAutoDisplayResult, tvReSnifferStatus
         };
         for (TextView tv : results) {
             if (tv == null) continue;
