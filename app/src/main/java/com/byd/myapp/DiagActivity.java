@@ -6,6 +6,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.content.Intent;
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.media.ImageReader;
+import android.graphics.PixelFormat;
 
 /**
  * DiagActivity — Diagnostic tools and configuration.
@@ -67,6 +72,14 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnTest13;
     private TextView tvTest13Result;
 
+    // TEST 14
+    private Button   btnVdTest;
+    private TextView tvVdResult;
+
+    // TEST 15
+    private Button   btnDumpsysWindows;
+    private TextView tvDumpsysResult;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -124,6 +137,14 @@ public class DiagActivity extends AppCompatActivity {
         btnTest13      = (Button)   findViewById(R.id.btn_test_13);
         tvTest13Result = (TextView) findViewById(R.id.tv_test_13_result);
 
+        // TEST 14
+        btnVdTest      = (Button)   findViewById(R.id.btn_vd_test);
+        tvVdResult     = (TextView) findViewById(R.id.tv_vd_result);
+
+        // TEST 15
+        btnDumpsysWindows = (Button) findViewById(R.id.btn_dumpsys_windows);
+        tvDumpsysResult   = (TextView) findViewById(R.id.tv_dumpsys_result);
+
         btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
         btnScanDaemon.setOnClickListener(v -> scanDaemon());
         btnKillDaemon.setOnClickListener(v -> killDaemon());
@@ -142,6 +163,8 @@ public class DiagActivity extends AppCompatActivity {
         btnOrientRead           .setOnClickListener(v -> orientReadDisplay());
 
         btnTest13.setOnClickListener(v -> runJniSurfaceProbe());
+        btnVdTest.setOnClickListener(v -> testVirtualDisplayAPI());
+        btnDumpsysWindows.setOnClickListener(v -> runDumpsysWindows());
 
         // TEST 1 — Local ADB connection
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -965,6 +988,56 @@ public class DiagActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     tvTest13Result.setText("Failed to send 16: " + e);
                     btnTest13.setEnabled(true);
+                });
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 14 : VirtualDisplay API
+    // -------------------------------------------------------------------------
+    private void testVirtualDisplayAPI() {
+        tvVdResult.setText("Appel en cours...");
+        btnVdTest.setEnabled(false);
+        try {
+            DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+            ImageReader reader = ImageReader.newInstance(1920, 720, PixelFormat.RGBA_8888, 2);
+            VirtualDisplay vd = dm.createVirtualDisplay("remote_dashboard", 1920, 720, 320, reader.getSurface(), 320);
+            if (vd != null) {
+                tvVdResult.setText("SUCCES MYSTERIEUX ! Un VirtualDisplay a pu etre cree par l'app !\nID: " 
+                    + vd.getDisplay().getDisplayId() + " Name: " + vd.getDisplay().getName());
+                vd.release();
+            } else {
+                tvVdResult.setText("Echec : createVirtualDisplay a renvoye null.");
+            }
+        } catch (SecurityException se) {
+            tvVdResult.setText("EXCEPTION DE SECURITE (Attendu) :\n" + se.getMessage());
+        } catch (Exception e) {
+            tvVdResult.setText("ERREUR : " + e.getMessage());
+        }
+        btnVdTest.setEnabled(true);
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 15 : Dumpsys window displays
+    // -------------------------------------------------------------------------
+    private void runDumpsysWindows() {
+        tvDumpsysResult.setText("Execution via adb local...");
+        btnDumpsysWindows.setEnabled(false);
+        AdbLocalClient.executeShellWithResult(this, "dumpsys window displays", new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(() -> {
+                    tvDumpsysResult.setText(report);
+                    btnDumpsysWindows.setEnabled(true);
+                });
+            }
+
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(() -> {
+                    tvDumpsysResult.setText("ERREUR:\n" + error);
+                    btnDumpsysWindows.setEnabled(true);
                 });
             }
         });

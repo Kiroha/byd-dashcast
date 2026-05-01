@@ -626,5 +626,87 @@
 
         </LinearLayout>
 
+        <!-- TEST 14 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#f9f9f9"
+            android:layout_marginBottom="16dp"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TEST 14 — API createVirtualDisplay"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Lancement direct dans l'app (Exception de securite attendue)"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp"
+                android:textColor="#666"/>
+            <TextView
+                android:id="@+id/tv_vd_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#eef"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_vd_test"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Creer un VirtualDisplay"
+                android:backgroundTint="#FF9800"/>
+        </LinearLayout>
+
+        <!-- TEST 15 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#f9f9f9"
+            android:layout_marginBottom="16dp"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TEST 15 — Dumpsys window displays"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Capture via ADB de tout l'arbre d'affichage"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp"
+                android:textColor="#666"/>
+            <TextView
+                android:id="@+id/tv_dumpsys_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="10sp"
+                android:maxLines="40"
+                android:scrollbars="vertical"
+                android:fontFamily="monospace"
+                android:background="#eef"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_dumpsys_windows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Lancer dumpsys window displays"
+                android:backgroundTint="#03A9F4"/>
+        </LinearLayout>
+
 </LinearLayout>
 </ScrollView>
