@@ -529,6 +529,12 @@ public class DiagActivity extends AppCompatActivity {
      */
     private void orientFreezeDisplay(int rotation) {
         final int displayId = getClusterDisplayId();
+        // GARDE : refuser toute modification sur le display 0 (écran principal)
+        if (displayId == 0) {
+            tvOrientationResult.setText("❌ REFUS : display 0 détecté (écran principal) — opération annulée.");
+            tvOrientationResult.setTextColor(0xFFFF5252);
+            return;
+        }
         tvOrientationResult.setText("⏳ freezeDisplayRotation(display=" + displayId
                 + ", rotation=" + rotation + ")…");
         tvOrientationResult.setTextColor(0xFFFFAB40);
@@ -563,6 +569,12 @@ public class DiagActivity extends AppCompatActivity {
      */
     private void orientUnfreezeDisplay() {
         final int displayId = getClusterDisplayId();
+        // GARDE : refuser toute modification sur le display 0 (écran principal)
+        if (displayId == 0) {
+            tvOrientationResult.setText("❌ REFUS : display 0 détecté (écran principal) — opération annulée.");
+            tvOrientationResult.setTextColor(0xFFFF5252);
+            return;
+        }
         tvOrientationResult.setText("⏳ thawDisplayRotation(display=" + displayId + ")…");
         tvOrientationResult.setTextColor(0xFFFFAB40);
         new Thread(() -> {
@@ -574,17 +586,17 @@ public class DiagActivity extends AppCompatActivity {
                 Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
                 Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
                         .invoke(null, wmBinder);
-                // Try thawDisplayRotation(int displayId) first (API 30+),
-                // fall back to thawRotation() (API 26-29).
+                // thawDisplayRotation(int displayId) — API 30+ seulement.
+                // REFUSÉ : thawRotation() sans arg (API 29 fallback) → opère sur display 0.
                 try {
                     java.lang.reflect.Method thaw = iwm.getClass()
                             .getMethod("thawDisplayRotation", int.class);
                     thaw.invoke(iwm, displayId);
                     sb.append("✅ thawDisplayRotation(").append(displayId).append(") OK\n");
                 } catch (NoSuchMethodException e2) {
-                    java.lang.reflect.Method thaw = iwm.getClass().getMethod("thawRotation");
-                    thaw.invoke(iwm);
-                    sb.append("✅ thawRotation() OK (fallback API 29)\n");
+                    // thawRotation() sans argument affecte le display 0 → BLOQUÉ.
+                    sb.append("⛔ thawRotation() (API 29 fallback) BLOQUÉ — affecterait display 0.\n");
+                    sb.append("ℹ️ Nécessite API 30+ pour thawDisplayRotation(displayId).\n");
                 }
             } catch (Exception e) {
                 sb.append("❌ thawDisplayRotation: ").append(e.getMessage()).append("\n");
