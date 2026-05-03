@@ -87,19 +87,11 @@ public class DashboardDisplayHelper {
                     AppLogger.d(TAG, "onDisplayTimeout ignored — stop() already called");
                     return;
                 }
-                // VirtualDisplay not found via DISPLAY_CATEGORY_PRESENTATION (rare edge case).
-                // Fallback: hardcoded displayId=1 (DiLink 3.0, Seal EU — IActivityManager path).
-                AppLogger.w(TAG, "Dashboard display not detected after timeout — "
-                        + "falling back to hardcoded displayId=1 (DiLink 3.0)");
-                mKnownClusterDisplayId = 1;
-                Display display1 = mDisplayManager.getDisplay(1); // may return null on some ROMs
-                if (display1 != null) {
-                    AppLogger.i(TAG, "getDisplay(1) != null — cluster display accessible");
-                    mListener.onDashboardDisplayConnected(display1, 1);
-                } else {
-                    AppLogger.i(TAG, "getDisplay(1) null — launching via IActivityManager at displayId=1");
-                    mListener.onDashboardDisplayConnected(null, 1);
-                }
+                // VirtualDisplay not created after the full sequence (30→6s→16→6s→35).
+                // No fallback to hardcoded displayId=1 — report failure to the caller.
+                AppLogger.e(TAG, "Dashboard VirtualDisplay timeout — activation sequence failed");
+                mKnownClusterDisplayId = -1;
+                mListener.onDashboardDisplayDisconnected();
             }
         });
     }

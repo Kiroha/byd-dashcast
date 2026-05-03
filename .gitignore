@@ -30,3 +30,13 @@ captures/
 CONTEXT.md
 MIRROR_DEV_JOURNAL.md
 FREEDOM_INJECTION_STRATEGY.md
+
+# Scripts temporaires de patching
+patch_*.py
+fix*.py
+decrypt.py
+final_patch.py
+generate_diag_ui.py
+char_map.json
+*.py.save
+app/build.gradle.bak

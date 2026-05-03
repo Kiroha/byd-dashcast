@@ -37,6 +37,9 @@
     <string name="status_restoring_origin">Restoring original cluster…</string>
     <string name="status_dashboard_byd">Dashboard: BYD display</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
+    <string name="status_vd_detected">Cluster VirtualDisplay detected ✓ — ready to activate</string>
+    <string name="status_vd_not_found">⚠ VirtualDisplay not found — full sequence required (30→16→35)</string>
+    <string name="status_activation_timeout">⚠ Timeout: VirtualDisplay not created. Please retry.</string>
     <string name="status_freedom_active">Freedom active ✓ — cluster ready</string>
     <string name="status_freedom_starting">Freedom starting…</string>
     <string name="status_freedom_not_installed">⚠ Freedom not installed — streaming impossible</string>

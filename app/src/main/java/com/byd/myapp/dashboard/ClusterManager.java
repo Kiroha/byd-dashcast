@@ -65,11 +65,11 @@ public class ClusterManager {
     // CMD=1 : disconnects Qt completely — NEVER USE (destroys display 1)
     // Cluster screen size commands (DiLink 3.0/Di4.0) :
     public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMED 16/04/2026)
-    // Timeout waiting for VirtualDisplay after sendInfo(projection_on)
-    // Reduced to 3s: the VirtualDisplay is present at boot (AutoDisplayService), does not need 8s.
-    private static final long VIRTUAL_DISPLAY_TIMEOUT_MS = 3000;
-    // Extended timeout when Freedom is not yet active (startup + display creation ~5s)
-    private static final long FREEDOM_STARTUP_TIMEOUT_MS = 12000;
+    public static final int CMD_DI40_MODE            = 35; // Di4.0 mode — triggers VirtualDisplay creation (CONFIRMED 03/05/2026)
+    // Timeout waiting for VirtualDisplay after full sendInfo(30→16→35) sequence.
+    // Sequence: 2s delay + 6s (30→16) + 6s (16→35) + ~280ms creation = ~14.3s → 18s total with margin.
+    // 🚨 VirtualDisplay does NOT exist at boot on Seal EU (confirmed by logcat 03/05/2026).
+    private static final long FREEDOM_STARTUP_TIMEOUT_MS = 18000;
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
 
@@ -99,28 +99,24 @@ public class ClusterManager {
     // ── Activation + waiting for VirtualDisplay ───────────────────────────────
 
     /**
-     * Full sequence:
-     *   1. First checks DISPLAY_CATEGORY_PRESENTATION (VirtualDisplay present at boot)
-     *   2. If found → sendInfo(16) to put Qt in standby → immediate callback
-     *   3. If not found → sendInfo(16) → listens to DisplayManager + short polling (3s)
-     *   4. Timeout → onDisplayTimeout() → DashboardDisplayHelper falls back to displayId=1
+     * Full activation sequence (CONFIRMED by logcat 03/05/2026, BYD Seal EU DiLink 3.0):
      *
-     * CONFIRMED ARCHITECTURE (Freedom v1.9 + com.xdja.containerservice analysis):
-     *   AutoDisplayService creates the cluster VirtualDisplay at BOOT:
-     *     createVirtualDisplay("fission_testVirtualSurface", 1920, 1080, 320, qtSurface, 11)
-     *     flags 11 = PUBLIC | PRESENTATION | OWN_CONTENT_ONLY
-     *   → The display is visible via DISPLAY_CATEGORY_PRESENTATION BEFORE any sendInfo call.
-     *   → sendInfo(1000, 16) does NOT create the display: it only puts Qt in standby
-     *     (releases the surface for our Android rendering).
-     *   → sendInfo(1000, 0) alone is enough to restore the cluster on Seal EU
-     *     (Freedom confirms: no need to restart com.byd.automap, not installed).
+     *   🚨 The VirtualDisplay does NOT exist at boot. It is created by the sequence below.
      *
-     * TEST 10 CONFIRMATION (11/04/2026):
-     *   cmd=1 = WRONG COMMAND: Qt disconnects entirely → MCU takes back control
-     *   (Simple mode visible) → display 1 DISAPPEARS from IActivityManager → launch impossible.
-     *   cmd=16 = CORRECT COMMAND: Qt enters standby, display 1 remains registered.
+     *   Fast path (VD already present from a previous session):
+     *     sendInfo(30) → 6s → sendInfo(16) → onDisplayReady immediately
+     *
+     *   Slow path (VD not yet created):
+     *     sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35)
+     *     → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
+     *     → VirtualDisplay "fission_bg_xdjaVirtualSurface" id=1 appears in ~280ms
+     *     → DisplayListener / polling fires → onDisplayReady()
+     *
+     *   Timeout: 18s (2s init + 6s + 6s + margin)
      *
      * The callback is called on the main thread.
+     *
+     * Details: doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md
      */
     public void activateClusterDisplay(final boolean freedomJustStarted,
             final DisplayReadyCallback callback) {
@@ -130,25 +126,21 @@ public class ClusterManager {
         //    AutoDisplayService creates it at BOOT → available immediately without waiting.
         Display found = findClusterDisplay(dm);
         if (found != null) {
-            AppLogger.i(TAG, "VirtualDisplay cluster present at boot: id=" + found.getDisplayId()
-                    + " name=" + found.getName());
-            // Seal EU sequence (CONFIRMED 16/04/2026):
-            //   1. sendInfo(1000, 30) — switch cluster to Seal EU mode (12.3") → correct resolution
-            //   2. sendInfo(1000, 16) — Qt standby → we can display our app
-            // sendInfo via ADB relay (uid=2000) — direct Binder fails:
-            //   com.byd.myapp missing from container_comm_cfg.json → SecurityException.
+            // Fast path: VirtualDisplay already present (previous session, not destroyed yet).
+            // Send 30→6s→16 to put Qt back in projection mode. VD already exists → immediate callback.
+            AppLogger.i(TAG, "VirtualDisplay already present: id=" + found.getDisplayId()
+                    + " name=" + found.getName() + " — fast path (30→6s→16)");
             final Display displayFound = found;
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String out) {
-                        AppLogger.i(TAG, "activateCluster ADB(cmd=30, Seal EU screen): " + out);
-                        // Wait 1s for the cluster to adopt the new resolution
+                        AppLogger.i(TAG, "fast path ADB(cmd=30): " + out);
                         mHandler.postDelayed(new Runnable() {
                             @Override public void run() {
                                 AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String out2) {
-                                            AppLogger.i(TAG, "activateCluster ADB(cmd=16): " + out2);
+                                            AppLogger.i(TAG, "fast path ADB(cmd=16): " + out2);
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -156,7 +148,7 @@ public class ClusterManager {
                                             });
                                         }
                                         @Override public void onError(String err) {
-                                            AppLogger.e(TAG, "activateCluster ADB(cmd=16) ERROR: " + err);
+                                            AppLogger.e(TAG, "fast path ADB(cmd=16) ERROR: " + err);
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -165,15 +157,14 @@ public class ClusterManager {
                                         }
                                     });
                             }
-                        }, 1000);
+                        }, 6000);
                     }
                     @Override public void onError(String err) {
-                        AppLogger.e(TAG, "activateCluster ADB(cmd=30) ERROR: " + err);
-                        // Even on cmd=30 error, attempt cmd=16
+                        AppLogger.e(TAG, "fast path ADB(cmd=30) ERROR: " + err);
                         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                             new AdbLocalClient.Callback() {
                                 @Override public void onSuccess(String out2) {
-                                    AppLogger.i(TAG, "activateCluster ADB(cmd=16) fallback: " + out2);
+                                    AppLogger.i(TAG, "fast path ADB(cmd=16) fallback: " + out2);
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -181,7 +172,7 @@ public class ClusterManager {
                                     });
                                 }
                                 @Override public void onError(String err2) {
-                                    AppLogger.e(TAG, "activateCluster ADB(cmd=16) fallback ERROR: " + err2);
+                                    AppLogger.e(TAG, "fast path ADB(cmd=16) fallback ERROR: " + err2);
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -194,13 +185,15 @@ public class ClusterManager {
             return;
         }
 
-        // Display not found immediately — start Freedom if absent, then sendInfo(30+16)
-        AppLogger.w(TAG, "VirtualDisplay not found — starting Freedom + sendInfo(30+16) ADB + polling");
+        // Display not found immediately — send full sequence 30→6s→16→6s→35 to create the VirtualDisplay.
+        // sendInfo(35) = Di4.0 mode → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
+        // VirtualDisplay appears ~280ms after sendInfo(35). DisplayListener + polling will detect it.
+        AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→6s→16→6s→35) + polling");
 
         // Extended timeout: Freedom may take ~5s to create the display on first startup.
         final long timeoutMs = FREEDOM_STARTUP_TIMEOUT_MS;
 
-        // 1. Start Freedom (com.xdja.clusterdemo) if absent → creates the cluster VirtualDisplay.
+        // 1. Start AppStartManagement directly
         //    If freedomJustStarted=true: ClusterService already launched it, do not force-stop/restart
         //    (it would be in the process of starting → race condition).
         if (freedomJustStarted) {
@@ -210,25 +203,17 @@ public class ClusterManager {
                 @Override public void run() { sendActivationSequence(); }
             }, 2000);
         } else {
-            AdbLocalClient.startFreedom(mContext, new AdbLocalClient.Callback() {
-                @Override public void onSuccess(String result) {
-                    AppLogger.i(TAG, "startFreedom background: " + result.trim().replace("\n", " "));
-
-                    // With transparent firing via am broadcast, no need to bring
-                    // MainActivity back to the foreground, as we never left it.
-                    // Just wait 2s for Freedom to have time to read properties.xml
-                    // and establish the C++ Qt Binder connection.
-                    mHandler.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            sendActivationSequence();
-                        }
-                    }, 2000);
-                }
-                @Override public void onError(String err) {
-                    AppLogger.w(TAG, "startFreedom ERROR (continuing anyway): " + err);
-                    sendActivationSequence();
-                }
-            });
+            
+            AppLogger.i(TAG, "Invoking native BYD cluster spawn (com.byd.appstartmanagement)");
+            Intent bypassIntent = new Intent();
+            bypassIntent.setClassName("com.byd.appstartmanagement", "com.byd.appstartmanagement.frame.AppStartManagement");
+            bypassIntent.addFlags(268468224);
+            try {
+                mContext.startActivity(bypassIntent);
+            } catch (Exception e) {
+                AppLogger.e(TAG, "Bypass failed", e);
+            }
+            mHandler.postDelayed(new Runnable() { @Override public void run() { sendActivationSequence(); } }, 2000);
         }
 
         // Listen for display additions + timeout
@@ -302,33 +287,67 @@ public class ClusterManager {
     // ── Activation sequence sendInfo(30 → 16) ──────────────────────────────
 
     /**
-     * Sends sendInfo(30) then sendInfo(16) via ADB relay.
-     * Used both by the fast path (Freedom already active → from ClusterService)
-     * and by the slow path (Freedom just started → from activateClusterDisplay).
-     * The DisplayReadyCallback is NOT called here: it is the DisplayListener /
-     * polling that triggers it when the VirtualDisplay appears.
+     * Full activation sequence: sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35).
+     * Confirmed sequence from logcat (03/05/2026, BYD Seal EU):
+     *   sendInfo(35) triggers Qt JNI → AutoDisplayService.createVirtualDisplay() → VD appears ~280ms later.
+     * The DisplayReadyCallback is NOT called here: the DisplayListener / polling handles it.
      */
     private void sendActivationSequence() {
         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
             new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {
-                    AppLogger.i(TAG, "slow path ADB(cmd=30): " + out);
+                    AppLogger.i(TAG, "activation ADB(cmd=30): " + out);
                     mHandler.postDelayed(new Runnable() {
                         @Override public void run() {
                             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                 new AdbLocalClient.Callback() {
-                                    @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16): " + out2); }
-                                    @Override public void onError(String err)    { AppLogger.e(TAG, "slow path ADB(cmd=16) ERROR: " + err); }
+                                    @Override public void onSuccess(String out2) {
+                                        AppLogger.i(TAG, "activation ADB(cmd=16): " + out2);
+                                        mHandler.postDelayed(new Runnable() {
+                                            @Override public void run() {
+                                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
+                                                    new AdbLocalClient.Callback() {
+                                                        @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35): " + out3); }
+                                                        @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
+                                                    });
+                                            }
+                                        }, 6000);
+                                    }
+                                    @Override public void onError(String err) {
+                                        AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: " + err);
+                                        // Still attempt sendInfo(35) even if cmd=16 failed
+                                        mHandler.postDelayed(new Runnable() {
+                                            @Override public void run() {
+                                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
+                                                    new AdbLocalClient.Callback() {
+                                                        @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35) after err16: " + out3); }
+                                                        @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
+                                                    });
+                                            }
+                                        }, 6000);
+                                    }
                                 });
                         }
-                    }, 1000);
+                    }, 6000);
                 }
                 @Override public void onError(String err) {
-                    AppLogger.e(TAG, "slow path ADB(cmd=30) ERROR: " + err);
+                    AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: " + err);
+                    // On cmd=30 error: still send 16 → 6s → 35
                     AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                         new AdbLocalClient.Callback() {
-                            @Override public void onSuccess(String out2) { AppLogger.i(TAG, "slow path ADB(cmd=16) fallback: " + out2); }
-                            @Override public void onError(String err2)   { AppLogger.e(TAG, "slow path ADB(cmd=16) fallback ERROR: " + err2); }
+                            @Override public void onSuccess(String out2) {
+                                AppLogger.i(TAG, "activation ADB(cmd=16) after err30: " + out2);
+                                mHandler.postDelayed(new Runnable() {
+                                    @Override public void run() {
+                                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
+                                            new AdbLocalClient.Callback() {
+                                                @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35) after err30: " + out3); }
+                                                @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
+                                            });
+                                    }
+                                }, 6000);
+                            }
+                            @Override public void onError(String err2) { AppLogger.e(TAG, "activation ADB(cmd=16) ERROR after err30: " + err2); }
                         });
                 }
             });

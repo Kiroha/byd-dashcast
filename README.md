@@ -18,9 +18,6 @@ BYD APIs.
 > **Alpha software** — This project is in early alpha. Expect bugs, incomplete features,
 > and breaking changes between releases. Use at your own risk.
 > The authors are not responsible for any damage to your vehicle's infotainment system.
->
-> **Freedom (`com.xdja.clusterdemo`) must be installed and active on your DiLink system.**
-> The app does not work without it in the current alpha.
 
 ---
 
@@ -36,7 +33,7 @@ BYD APIs.
 | 6 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
 | 7 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
 | 8 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
-| 9 | **🔧 Diagnostic** | 7 tests: ADB/permissions, cluster restore, display size, Freedom BootReceiver, MirrorDaemon, Sniffer, cluster orientation |
+| 9 | **🔧 Diagnostic** | 7 tests: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, VirtualDisplay fission pipeline |
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
 | 12 | **Multilingual** | French / English / German / Italian / Turkish, selected on first launch |
@@ -75,7 +72,7 @@ app/src/main/java/com/byd/myapp/
 ├── daemon/
 │   └── MirrorDaemon.java        — Core proxy class mirroring cluster display
 └── dashboard/
-    ├── ClusterManager.java          — Cluster activation sequence (sendInfo 30+16, Freedom fallback)
+    ├── ClusterManager.java          — Cluster activation sequence (sendInfo 30→16→35, autonomous)
     ├── DashboardDisplayHelper.java  — Cluster VirtualDisplay detection (DisplayManager + polling)
     ├── DashboardLauncher.java       — Launch app on main display (setLaunchDisplayId)
     ├── ClusterTrampolineActivity.java — Exported trampoline launched via ADB uid=2000 on display 1
@@ -86,6 +83,31 @@ app/src/main/java/com/byd/myapp/
 ---
 
 ## Core mechanism
+
+### VirtualDisplay cluster creation — CONFIRMED (03/05/2026)
+
+> Full details: [`doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md`](../doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md)
+> Source: live logcat captured on BYD Seal EU (DiLink 3.0, API 29)
+
+**The cluster VirtualDisplay does NOT exist at boot.** It is created on demand by the
+following sequence, captured to the millisecond:
+
+```
+sendInfo(1000, 30)                  → switch to 12.3" Qt profile (ADAS workaround)
+sleep 6s
+sendInfo(1000, 16)                  → 全屏投屏开启 — Qt enters projection mode
+sleep 6s
+sendInfo(1000, 35)                  → Di4.0 mode — triggers VirtualDisplay creation
+  │  +132ms  FissionGenerayService (Qt native) handles sendInfo(35)
+  │  +219ms  Qt calls getQtProjectionDispInfoNative() via JNI
+  │  +251ms  Qt returns: name="fission_bg_xdjaVirtualSurface", bufferProducer ≠ null
+  │  +274ms  DisplayManagerService: Display device ADDED
+  └  +278ms  AutoDisplayService.createVirtualDisplay() → id=1, 1920×720, FLAG_PRESENTATION
+```
+
+The VirtualDisplay is ready **~280ms after sendInfo(35)**. It is owned by
+`com.xdja.containerservice` (uid=1000) and has `FLAG_OWN_CONTENT_ONLY`, meaning only its
+owner can write to it. Apps are launched on it via `am start --display 1`.
 
 ### Cluster activation
 
@@ -135,7 +157,6 @@ SurfaceControl.closeTransaction();
 
 ```
 am force-stop <app>                  → releases the Qt surface
-am force-stop com.xdja.clusterdemo   → stops Freedom (prevents it from reclaiming display 1)
 sendInfo(1000, 18)                   → 投屏关闭 — close projection
 sendInfo(1000, 0)                    → 主机恢复仪表视频流 — Qt resumes
 ```
@@ -177,22 +198,12 @@ adb install -r app/build/outputs/apk/debug/DashCast-v0.1.1-alpha-debug.apk
 
 > If you don't have the car's IP, the app can also be installed via USB when ADB USB debugging is enabled (developer options).
 
-### 4. Freedom (`com.xdja.clusterdemo`) — **required**
-
-Freedom is a third-party app with a specific package name (`com.xdja.clusterdemo`) that is whitelisted in a system JSON configuration file. This system whitelist grants it the unique privilege to create the cluster VirtualDisplay (`fission_*`) when the full-screen or half-screen projection mode is activated via `sendInfo`.
-
-**The app will not work without Freedom installed and active on your DiLink system.**
-Because of this restrictive whitelist, it remains completely mandatory to install and use it for now. There is currently no other known method to create this virtual display on the dashboard cluster directly from our app.
-
-**Call for Help:** Anyone with knowledge, experience, or ideas on how to bypass this system restriction and create a virtual display on the cluster natively — effectively dropping the need for Freedom — is highly welcome to contribute and open an issue or PR!
-
 ---
 
 ## Known issues (alpha)
 
 - **Reliability**: The cluster activation sequence may fail on the first attempt — retry
 - **Mirror touch (first launch)**: Touch input on the mirror does not work on the very first run. Force-stop the app and relaunch it — touch will work correctly from the second start onwards
-- **Freedom dependency**: **Freedom (`com.xdja.clusterdemo`) is strictly required** as its package name is part of the system JSON whitelist to spawn the `fission` display. There is no other known working fallback in the current alpha.
 - **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface)
 - **Split 50/50**: Experimental — may fail depending on target app window mode
 - **Language**: The UI has been translated to English, but some messages (toasts, logs) may still appear in French
@@ -296,37 +307,6 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 
 ---
 
-## Freedom (`com.xdja.clusterdemo`) — required dependency
-
-> **Freedom must be installed and active.** As mentioned earlier, `com.xdja.clusterdemo` is whitelisted by the system via JSON, allowing it to spawn the cluster VirtualDisplay (`fission_*`). Without Freedom, the cluster surface cannot be created and the projection is not available.
->
-> 🤝 **Currently looking for contributors:** If you know how to natively create a `VirtualDisplay` on the DiLink cluster without relying on this whitelisted app, your help is very welcome!
-
-Freedom state is **checked at startup** before the cluster activation sequence.
-`ClusterService.checkAndStartWithFreedom()` runs `AdbLocalClient.checkFreedomState()` and:
-
-| State | Action |
-|-------|--------|
-| `ACTIVE` — VirtualDisplay `fission_*` present | Proceed directly to `sendInfo(30+16)` |
-| `INACTIVE` — installed but VirtualDisplay absent | `startFreedom()` (force-stop + write `navigationType=1` + `am start`) → wait 2 s → activate |
-| `NOT_INSTALLED` | **App will not function** — cluster activation aborted |
-
-The current state is displayed in the main status bar (`tvDashboardStatus`).
-
-`AutoDisplayService` (com.xdja.containerservice) creates the VirtualDisplay at boot:
-```
-createVirtualDisplay("fission_testVirtualSurface", 1920, 1080, 320, qtSurface, 11)
-flags 11 = PUBLIC | PRESENTATION | OWN_CONTENT_ONLY
-```
-
-Freedom config file:
-```
-/sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
-```
-Java-serialized HashMap (ObjectOutputStream): `{"navigationType": Integer(1)}`  
-→ `navigationType=1` = 全屏导航 (full-screen). Default (file absent) = 0 →
-Freedom returns immediately without creating the VirtualDisplay.
-
 ---
 
 ## Field diagnostic
@@ -334,10 +314,10 @@ Freedom returns immediately without creating the VirtualDisplay.
 1. **TEST 1** → ADB connection + `pm grant` `_COMMON` permissions
 2. **TEST 2** → cluster restore (sendInfo 30→16→18→0)
 3. **TEST 3** → cluster display size change (cmd 29/30/31)
-4. **TEST 4** → BOOT_COMPLETED broadcast to Freedom BootReceiver (headless)
-5. **TEST 5** → MirrorDaemon: scan / kill / kill+restart / export logs / SurfaceFlinger dump
-6. **TEST 6** → Sniffer: scan / start / stop / export logcat report / clean logs
-7. **TEST 7** → Cluster orientation: freeze LANDSCAPE/PORTRAIT / unfreeze / read rotation (`IWindowManager.freezeDisplayRotation` — no `wm size`)
+4. **TEST 4** → MirrorDaemon: scan / kill / kill+restart / export logs / SurfaceFlinger dump
+5. **TEST 5** → Sniffer: scan / start / stop / export logcat report / clean logs
+6. **TEST 6** → Cluster orientation: freeze LANDSCAPE/PORTRAIT / unfreeze / read rotation (`IWindowManager.freezeDisplayRotation` — no `wm size`)
+7. **TEST 7** → VirtualDisplay fission pipeline: full `sendInfo(30→16→35)` sequence + DisplayManager detection
 
 ### Retrieve logs without USB cable
 
@@ -376,6 +356,6 @@ This project is licensed under the [MIT License](LICENSE).
 > to compile without requiring the full SDK. All rights over this file remain with BYD Auto
 > Co., Ltd. If you are the rights holder and wish it removed, please open an issue.
 >
-> Freedom (`com.xdja.clusterdemo`) and WindowManagement are third-party applications
-> (not BYD) whose behavior has been analyzed for interoperability purposes only.
+> WindowManagement is a third-party application (not BYD) whose behavior has been
+> analyzed for interoperability purposes only.
 

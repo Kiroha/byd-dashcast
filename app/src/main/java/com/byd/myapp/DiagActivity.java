@@ -1,33 +1,38 @@
 package com.byd.myapp;
 
 import android.os.Bundle;
+import android.os.IBinder;
+import android.os.Parcel;
+import android.view.Surface;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.content.Intent;
+import android.content.Context;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 
 /**
  * DiagActivity — Diagnostic tools and configuration.
  *
  * TEST 1 — Local ADB connection (prerequisite, to run once)
- * TEST 2 — Cluster restore (sendInfo 30→16→18→0)
+ * TEST 2 — Cluster restore (sendInfo 30→sleep6s→16→sleep6s→35)
  * TEST 3 — Cluster display size (cmd 29 / 30 / 31)
- * TEST 4 — Broadcast BOOT_COMPLETED to Freedom BootReceiver (headless, no UI)
  */
 public class DiagActivity extends AppCompatActivity {
 
-    // TEST 1 — Local ADB connection
+    // [1] ADB Local
     private TextView tvAdbLocalResult;
     private Button   btnAdbLocal;
     private Button   btnAdbShare;
 
-    // TEST 2 — Cluster restore
+    // [2] Cluster restore
     private TextView tvDisplay1Result;
     private Button   btnDisplay1;
     private Button   btnDisplay1Share;
 
-    // TEST 3 — Cluster display size
+    // [3] Propriétés Cluster — display size
     private TextView tvDisplaySizeResult;
     private Button   btnDisplaySize88;       // cmd 29 — 8.8"
     private Button   btnDisplaySize123;      // cmd 30 — 12.3"
@@ -36,32 +41,42 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplaySizeFull;     // full diagnostic
     private Button   btnDisplaySizeShare;
 
-    // TEST 4 — Broadcast BootReceiver Freedom
-    private TextView tvBootReceiverResult;
-    private Button   btnBootReceiver;
-    private Button   btnBootReceiverShare;
-    private Button   btnTestDaemon;
-    private Button   btnScanDaemon;
-    private Button   btnKillDaemon;
-    private Button   btnKillRestartDaemon;
-    private TextView tvDaemonScanResult;
-    private Button   btnStartSniffer;
-    private Button   btnScanSniffer;
-    private Button   btnStopSniffer;
-    private Button   btnExportSniffer;
-    private Button   btnCleanSnifferLogs;
-    private TextView tvSnifferScanResult;
-    private Button   btnExportDaemonLog;
+    // [4] Analyses Système
     private Button   btnDumpSfMirror;
     private TextView tvSfDumpResult;
-    private Button   btnCleanDaemonLogs;
 
-    // TEST 7 — Cluster orientation
-    private Button   btnOrientFreezeLandscape;
-    private Button   btnOrientFreezePortrait;
-    private Button   btnOrientUnfreeze;
-    private Button   btnOrientRead;
-    private TextView tvOrientationResult;
+    // JNI Qt Surface Probe
+    private Button   btnTest13;
+    private Button   btnJniStartProbe;
+    private TextView tvTest13Result;
+
+    // Dumpsys Windows
+    private Button   btnDumpsysWindows;
+    private TextView tvDumpsysResult;
+
+    // Daemon VD (app_process)
+    private Button   btnDaemonVdTest;
+    private TextView tvDaemonVdResult;
+
+    // AutoDisplayService
+    private Button   btnAutoDisplayStart;
+    private Button   btnAutoDisplayStop;
+    private TextView tvAutoDisplayResult;
+
+    // [5] Fission via IBinder direct (mécanisme Freedom)
+    private Button        btnFissionViaBinder;
+    private Button        btnFissionPipeline;
+    private Button        btnFissionLaunch;
+    private TextView      tvFissionResult;
+    private int           mFissionDisplayId = -1;
+    private VirtualDisplay mClusterVirtualDisplay = null;
+
+    private Button   btnReSnifferStart;
+    private Button   btnReSnifferStop;
+    private Button   btnReSnifferSnapshot;
+    private Button   btnReSnifferExport;
+    private TextView tvReSnifferStatus;
+    private java.io.File mReSnifferFile = null;
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -75,14 +90,17 @@ public class DiagActivity extends AppCompatActivity {
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
 
         tvAdbLocalResult      = (TextView) findViewById(R.id.tv_adb_local_result);
+        tvAdbLocalResult.setTag("ADB Local");
         btnAdbLocal           = (Button)   findViewById(R.id.btn_adb_local);
         btnAdbShare           = (Button)   findViewById(R.id.btn_adb_share);
 
         tvDisplay1Result      = (TextView) findViewById(R.id.tv_display1_result);
+        tvDisplay1Result.setTag("Display Info");
         btnDisplay1           = (Button)   findViewById(R.id.btn_display1);
         btnDisplay1Share      = (Button)   findViewById(R.id.btn_display1_share);
 
         tvDisplaySizeResult    = (TextView) findViewById(R.id.tv_display_size_result);
+        tvDisplaySizeResult.setTag("Display Size");
         btnDisplaySize88       = (Button)   findViewById(R.id.btn_display_size_88);
         btnDisplaySize123      = (Button)   findViewById(R.id.btn_display_size_123);
         btnDisplaySize1025     = (Button)   findViewById(R.id.btn_display_size_1025);
@@ -90,48 +108,63 @@ public class DiagActivity extends AppCompatActivity {
         btnDisplaySizeFull     = (Button)   findViewById(R.id.btn_display_size_full);
         btnDisplaySizeShare    = (Button)   findViewById(R.id.btn_display_size_share);
 
-        tvBootReceiverResult  = (TextView) findViewById(R.id.tv_boot_receiver_result);
-        btnBootReceiver       = (Button)   findViewById(R.id.btn_boot_receiver);
-        btnBootReceiverShare  = (Button)   findViewById(R.id.btn_boot_receiver_share);
-        btnTestDaemon = (Button) findViewById(R.id.btn_test_daemon);
-        btnScanDaemon = (Button) findViewById(R.id.btn_scan_daemon);
-        btnKillDaemon = (Button) findViewById(R.id.btn_kill_daemon);
-        btnKillRestartDaemon = (Button) findViewById(R.id.btn_kill_restart_daemon);
-        tvDaemonScanResult = (TextView) findViewById(R.id.tv_daemon_scan_result);
-        btnScanSniffer = (Button) findViewById(R.id.btn_scan_sniffer);
-        tvSnifferScanResult = (TextView) findViewById(R.id.tv_sniffer_scan_result);
-        btnStartSniffer = (Button) findViewById(R.id.btn_start_sniffer);
-        btnStopSniffer = (Button) findViewById(R.id.btn_stop_sniffer);
-        btnExportSniffer = (Button) findViewById(R.id.btn_export_sniffer);
-        btnCleanSnifferLogs = (Button) findViewById(R.id.btn_clean_sniffer_logs);
-        btnExportDaemonLog = (Button) findViewById(R.id.btn_export_daemon_log);
         btnDumpSfMirror = (Button) findViewById(R.id.btn_dump_sf_mirror);
         tvSfDumpResult = (TextView) findViewById(R.id.tv_sf_dump_result);
-        btnCleanDaemonLogs = (Button) findViewById(R.id.btn_clean_daemon_logs);
+        tvSfDumpResult.setTag("SurfaceFlinger Dump");
+        btnAutoDisplayStart  = (Button)   findViewById(R.id.btn_auto_display_start);
+        btnAutoDisplayStop   = (Button)   findViewById(R.id.btn_auto_display_stop);
+        tvAutoDisplayResult  = (TextView) findViewById(R.id.tv_auto_display_result);
 
-        // TEST 7 — Cluster orientation
-        btnOrientFreezeLandscape = (Button)   findViewById(R.id.btn_orient_freeze_landscape);
-        btnOrientFreezePortrait  = (Button)   findViewById(R.id.btn_orient_freeze_portrait);
-        btnOrientUnfreeze        = (Button)   findViewById(R.id.btn_orient_unfreeze);
-        btnOrientRead            = (Button)   findViewById(R.id.btn_orient_read);
-        tvOrientationResult      = (TextView) findViewById(R.id.tv_orientation_result);
+        btnFissionViaBinder = (Button)   findViewById(R.id.btn_fission_via_binder);
+        btnFissionPipeline  = (Button)   findViewById(R.id.btn_fission_pipeline);
+        btnFissionLaunch    = (Button)   findViewById(R.id.btn_fission_launch);
+        tvFissionResult     = (TextView) findViewById(R.id.tv_fission_result);
+        tvFissionResult.setTag("Fission Pipeline");
+        tvAutoDisplayResult.setTag("AutoDisplayService");
 
-        btnTestDaemon.setOnClickListener(v -> testLaunchFreedomDaemon());
-        btnScanDaemon.setOnClickListener(v -> scanDaemon());
-        btnKillDaemon.setOnClickListener(v -> killDaemon());
-        btnKillRestartDaemon.setOnClickListener(v -> killAndRestartDaemon());
-        btnScanSniffer.setOnClickListener(v -> scanSniffer());
-        btnStartSniffer.setOnClickListener(v -> startSniffer());
-        btnStopSniffer.setOnClickListener(v -> killSnifferWithFeedback());
-        btnExportSniffer.setOnClickListener(v -> exportSnifferReport());
-        btnCleanSnifferLogs.setOnClickListener(v -> cleanSnifferLogs());
-        btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog());
+        // JNI Qt Surface Probe
+        btnTest13      = (Button)   findViewById(R.id.btn_test_13);
+        btnJniStartProbe = (Button) findViewById(R.id.btn_jni_start_probe);
+        tvTest13Result = (TextView) findViewById(R.id.tv_test_13_result);
+        tvTest13Result.setTag("JNI Qt Surface Probe");
+
+        // TEST 15
+        btnDumpsysWindows = (Button) findViewById(R.id.btn_dumpsys_windows);
+        tvDumpsysResult   = (TextView) findViewById(R.id.tv_dumpsys_result);
+        tvDumpsysResult.setTag("Dumpsys Windows");
+
+        // TEST 16
+        btnDaemonVdTest = (Button) findViewById(R.id.btn_daemon_vd_test);
+        tvDaemonVdResult = (TextView) findViewById(R.id.tv_daemon_vd_result);
+        tvDaemonVdResult.setTag("Daemon VD");
+
+        // SNIFFER RE
+        btnReSnifferStart    = (Button)   findViewById(R.id.btn_re_sniffer_start);
+        btnReSnifferStop     = (Button)   findViewById(R.id.btn_re_sniffer_stop);
+        btnReSnifferSnapshot = (Button)   findViewById(R.id.btn_re_sniffer_snapshot);
+        btnReSnifferExport   = (Button)   findViewById(R.id.btn_re_sniffer_export);
+        tvReSnifferStatus    = (TextView) findViewById(R.id.tv_re_sniffer_status);
+        tvReSnifferStatus.setTag("RE Sniffer");
+
+        btnReSnifferStart   .setOnClickListener(v -> startReSniffer());
+        btnReSnifferStop    .setOnClickListener(v -> stopReSniffer());
+        btnReSnifferSnapshot.setOnClickListener(v -> snapshotReSniffer());
+        btnReSnifferExport  .setOnClickListener(v -> exportReSniffer());
+
+        setupShareOnLongClick();
+
         btnDumpSfMirror.setOnClickListener(v -> dumpSurfaceFlinger());
-        btnCleanDaemonLogs.setOnClickListener(v -> cleanDaemonLogs());
-        btnOrientFreezeLandscape.setOnClickListener(v -> orientFreezeDisplay(0));
-        btnOrientFreezePortrait .setOnClickListener(v -> orientFreezeDisplay(1));
-        btnOrientUnfreeze       .setOnClickListener(v -> orientUnfreezeDisplay());
-        btnOrientRead           .setOnClickListener(v -> orientReadDisplay());
+        btnAutoDisplayStart.setOnClickListener(v -> startAutoDisplayService());
+        btnAutoDisplayStop .setOnClickListener(v -> stopAutoDisplayService());
+
+        btnFissionViaBinder.setOnClickListener(v -> runFissionViaBinder());
+        btnFissionPipeline.setOnClickListener(v -> runFissionPipeline());
+        btnFissionLaunch  .setOnClickListener(v -> launchOnFissionDisplay());
+
+        btnTest13.setOnClickListener(v -> runJniSurfaceProbe());
+        btnJniStartProbe.setOnClickListener(v -> runStartAndProbe());
+        btnDumpsysWindows.setOnClickListener(v -> runDumpsysWindows());
+        btnDaemonVdTest.setOnClickListener(v -> runDaemonVdTest());
 
         // TEST 1 — Local ADB connection
         btnAdbShare.setOnClickListener(new View.OnClickListener() {
@@ -222,22 +255,6 @@ public class DiagActivity extends AppCompatActivity {
             public void onClick(View v) { runClusterDisplaySizeTest(); }
         });
 
-        // TEST 4 — Broadcast BootReceiver Freedom
-        btnBootReceiverShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_TEXT, tvBootReceiverResult.getText().toString());
-                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result4_btn)));
-            }
-        });
-        btnBootReceiver.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runBootReceiverTest();
-            }
-        });
     }
 
 
@@ -383,240 +400,70 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
+
+
     // -------------------------------------------------------------------------
-    // TEST 4 : Broadcast BOOT_COMPLETED → BootReceiver Freedom (headless)
+    // AutoDisplayService — start/stop via ADB local
+    // Chemin direct : Qt Surface native → createVirtualDisplay (mécanisme Dilink5)
     // -------------------------------------------------------------------------
 
-    private void runBootReceiverTest() {
-        btnBootReceiver.setEnabled(false);
-        tvBootReceiverResult.setText(getString(R.string.diag_boot_receiver_running));
-        tvBootReceiverResult.setBackgroundColor(0xFF111A1A);
-        AppLogger.log("DiagBootReceiver", "Lancement TEST 4");
+    private static final String AUTO_DISPLAY_PKG = "com.xdja.containerservice";
+    private static final String AUTO_DISPLAY_SVC = AUTO_DISPLAY_PKG + "/.AutoDisplayService";
 
-        AdbLocalClient.sendBootReceiverBroadcast(DiagActivity.this, new AdbLocalClient.Callback() {
-            @Override
-            public void onSuccess(final String report) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        boolean ok = report.contains("✅");
-                        tvBootReceiverResult.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
-                        tvBootReceiverResult.setText(report);
-                        btnBootReceiver.setEnabled(true);
-                        AppLogger.log("DiagBootReceiver", report);
-                    }
-                });
-            }
-            @Override
-            public void onError(final String error) {
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        tvBootReceiverResult.setBackgroundColor(0xFF2A1A1A);
-                        tvBootReceiverResult.setText("❌ " + error
-                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
-                        btnBootReceiver.setEnabled(true);
-                        AppLogger.log("DiagBootReceiver", "ERREUR: " + error);
-                    }
-                });
-            }
-        });
-    }
+    private void startAutoDisplayService() {
+        tvAutoDisplayResult.setText("Démarrage via ADB...");
+        tvAutoDisplayResult.setTextColor(0xFFFFAB40);
+        btnAutoDisplayStart.setEnabled(false);
 
-    private static final String SNIFFER_FILE_PREFIX = "BYD_Sniffer_Dump_";
-    private java.io.File mCurrentSnifferFile = null;
+        String cmd = "am startservice " + AUTO_DISPLAY_SVC
+                + " 2>&1"
+                // Vérifier si le display est apparu après 1s
+                + " && sleep 1"
+                + " && dumpsys display 2>/dev/null | grep -E 'mDisplayId|mName|mState|virtual|fission' | head -20";
 
-    /** Generates a timestamped file in the app's external directory. */
-    private java.io.File buildSnifferFile() {
-        String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
-                .format(new java.util.Date());
-        java.io.File dir = getExternalFilesDir(null);
-        if (dir == null) dir = getFilesDir();
-        return new java.io.File(dir, SNIFFER_FILE_PREFIX + ts + ".txt");
-    }
-
-    /** Finds the most recent sniffer file in the directory (fallback if mCurrentSnifferFile is null). */
-    private java.io.File findLatestSnifferFile() {
-        java.io.File dir = getExternalFilesDir(null);
-        if (dir == null) return null;
-        java.io.File[] files = dir.listFiles(
-                f -> f.getName().startsWith(SNIFFER_FILE_PREFIX) && f.getName().endsWith(".txt"));
-        if (files == null || files.length == 0) return null;
-        java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-        return files[0];
-    }
-
-    private void startSniffer() {
-        stopSnifferSilently();
-
-        mCurrentSnifferFile = buildSnifferFile();
-        java.io.File logFile = mCurrentSnifferFile;
-        String p = logFile.getAbsolutePath();
-
-        android.widget.Toast.makeText(DiagActivity.this,
-                getString(R.string.toast_sniffer_started, logFile.getName()),
-                android.widget.Toast.LENGTH_LONG).show();
-        AppLogger.i("DiagSniffer", "Starting system Sniffer → " + p);
-
-        // ── Enriched header (synchronous, creates the file) ──────────────────────
-        // Clear the logcat buffer first to capture only future events.
-        String headerCmd =
-            "logcat -c 2>/dev/null"
-            + " && echo '=== BYD SNIFFER DUMP ===' > " + p
-            + " && date >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- ROM ---' >> " + p
-            + " && getprop ro.build.fingerprint >> " + p
-            + " && getprop ro.build.version.release >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- PROCESSUS BYD/XDJA/DAEMON ---' >> " + p
-            + " && (ps -A 2>/dev/null | grep -iE 'byd|xdja|freedom|daemon|mirror') >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- DISPLAYS (dumpsys display) ---' >> " + p
-            + " && (dumpsys display 2>/dev/null | grep -E 'mDisplayId|mName|mState|fission|virtual|cluster' | head -25) >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- WINDOWS (dumpsys window displays) ---' >> " + p
-            + " && (dumpsys window displays 2>/dev/null | head -50) >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- SURFACEFLINGER ---' >> " + p
-            + " && (dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'display|fission|layer|cluster|mirror|virtual' | head -30) >> " + p
-            + " && echo '' >> " + p
-            + " && echo '--- MAIN SNIFFER STARTED ---' >> " + p;
-
-        // ── Logcat filtered on relevant tags — avoids audio/AAudio flood ──────────
-        // *:S = silence all. Then re-enable BYD/display/crash tags.
-        String logcatCmd =
-            "logcat -v threadtime *:S"
-            + " WindowManager:V ActivityManager:V SurfaceFlinger:V"
-            + " AutoContainer:V MirrorDaemon:V"
-            + " byd:V xdja:V freedom:V cluster:V"
-            + " DEBUG:E dalvikvm:W art:W"
-            + " >> " + p + " 2>&1";
-
-        // ── Periodic snapshots every 30s ────────────────────────────────
-        // \\$ → \$ in the Java string → $ sent to the inner sh (date expands in sh -c)
-        String snapshotCmd =
-            "while true; do sleep 30;"
-            + " echo '' >> " + p + ";"
-            + " echo '--- SNAPSHOT '\\$(date +%H:%M:%S)' ---' >> " + p + ";"
-            + " dumpsys display 2>/dev/null | grep -E 'mDisplayId|mState|fission|virtual' | head -10 >> " + p + ";"
-            + " dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'display|fission|layer|cluster|mirror' | head -10 >> " + p + ";"
-            + " ps -A 2>/dev/null | grep -iE 'byd|xdja|freedom|daemon|mirror' >> " + p + ";"
-            + " done";
-
-        String fullCmd = headerCmd
-                + " && nohup sh -c \"" + logcatCmd + "\" &"
-                + " nohup sh -c \"" + snapshotCmd + "\" &";
-
-        AdbLocalClient.executeShell(DiagActivity.this, fullCmd);
-    }
-
-    private void stopSnifferSilently() {
-        // Synchronous kill without feedback (called before restarting the sniffer)
-        AdbLocalClient.executeShell(DiagActivity.this, AdbLocalClient.SNIFFER_KILL_CMD);
-    }
-
-    private void killSnifferWithFeedback() {
-            tvSnifferScanResult.setText(getString(R.string.diag_sniffer_killing));
-        tvSnifferScanResult.setTextColor(0xFFFFAB40);
-        AdbLocalClient.killSniffer(this, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String msg) {
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
                 runOnUiThread(() -> {
-                    tvSnifferScanResult.setText(msg);
-                    tvSnifferScanResult.setTextColor(0xFF69F0AE);
-                    android.widget.Toast.makeText(DiagActivity.this, msg,
-                            android.widget.Toast.LENGTH_SHORT).show();
+                    boolean started = !report.contains("Error") && !report.contains("not found");
+                    boolean newDisplay = report.contains("mDisplayId=1")
+                            || report.contains("remote_dashboard")
+                            || report.contains("fission");
+                    String status = started ? "✅ Service démarré\n" : "⚠️ Réponse inattendue\n";
+                    status += newDisplay ? "✅ Nouveau display détecté !\n" : "⚠️ Aucun nouveau display (normal si Qt pas prêt)\n";
+                    status += "\n" + report.trim();
+                    tvAutoDisplayResult.setText(status);
+                    tvAutoDisplayResult.setTextColor(newDisplay ? 0xFF69F0AE : 0xFFFFAB40);
+                    btnAutoDisplayStart.setEnabled(true);
+                    AppLogger.i("AutoDisplay", report);
                 });
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvSnifferScanResult.setText(error);
-                    tvSnifferScanResult.setTextColor(0xFFFF5252);
-                    android.widget.Toast.makeText(DiagActivity.this, error,
-                            android.widget.Toast.LENGTH_SHORT).show();
+                    tvAutoDisplayResult.setText("❌ " + error);
+                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
+                    btnAutoDisplayStart.setEnabled(true);
                 });
             }
         });
     }
 
-    private void stopSniffer() {
-        killSnifferWithFeedback();
-    }
-
-    private void scanSniffer() {
-        tvSnifferScanResult.setText(getString(R.string.diag_scanning));
-        tvSnifferScanResult.setTextColor(0xFFAAAAAA);
-        AdbLocalClient.scanSniffer(this, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String msg) {
+    private void stopAutoDisplayService() {
+        tvAutoDisplayResult.setText("Arrêt via ADB...");
+        tvAutoDisplayResult.setTextColor(0xFFFFAB40);
+        AdbLocalClient.executeShellWithResult(this,
+                "am stopservice " + AUTO_DISPLAY_SVC + " 2>&1",
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
                 runOnUiThread(() -> {
-                    tvSnifferScanResult.setText(msg);
-                    boolean active = msg.contains("Sniffer process detected");
-                    tvSnifferScanResult.setTextColor(active ? 0xFF69F0AE : 0xFFAAAAAA);
+                    tvAutoDisplayResult.setText("STOP: " + report.trim());
+                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
                 });
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvSnifferScanResult.setText(error);
-                    tvSnifferScanResult.setTextColor(0xFFFF5252);
+                    tvAutoDisplayResult.setText("❌ " + error);
+                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
                 });
-            }
-        });
-    }
-
-    private void exportSnifferReport() {
-        java.io.File logFile = mCurrentSnifferFile != null ? mCurrentSnifferFile : findLatestSnifferFile();
-        if (logFile == null || !logFile.exists() || logFile.length() == 0) {
-            android.widget.Toast.makeText(DiagActivity.this,
-                    getString(R.string.diag_no_sniffer_report),
-                    android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        try {
-            android.net.Uri fileUri = androidx.core.content.FileProvider.getUriForFile(DiagActivity.this, getPackageName() + ".fileprovider", logFile);
-            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, fileUri);
-            shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.diag_share_sniffer_title)));
-        } catch (Exception e) {
-            AppLogger.e("DiagSniffer", "Erreur export", e);
-        }
-    }
-
-    private void exportDaemonLog() {
-        android.widget.Toast.makeText(this, getString(R.string.diag_daemon_log_reading),
-                android.widget.Toast.LENGTH_SHORT).show();
-        AdbLocalClient.readFileViaAdb(this, "/data/local/tmp/mirrordaemon_latest.log",
-                "mirrordaemon_latest.log", new AdbLocalClient.ReadFileCallback() {
-            @Override
-            public void onSuccess(java.io.File localCopy) {
-                runOnUiThread(() -> {
-                    try {
-                        android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
-                                DiagActivity.this,
-                                getPackageName() + ".fileprovider", localCopy);
-                        android.content.Intent shareIntent = new android.content.Intent(
-                                android.content.Intent.ACTION_SEND);
-                        shareIntent.setType("text/plain");
-                        shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
-                        shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT,
-                                "mirrordaemon_latest.log");
-                        shareIntent.addFlags(
-                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(android.content.Intent.createChooser(
-                                shareIntent, getString(R.string.diag_share_daemon_log_title)));
-                    } catch (Exception e) {
-                        AppLogger.e("DiagDaemon", "exportDaemonLog share erreur", e);
-                        android.widget.Toast.makeText(DiagActivity.this,
-                                getString(R.string.toast_share_error, e.getMessage()),
-                                android.widget.Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-            @Override
-            public void onError(String error) {
-                runOnUiThread(() -> android.widget.Toast.makeText(DiagActivity.this,
-                        "mirrordaemon.log : " + error,
-                        android.widget.Toast.LENGTH_LONG).show());
             }
         });
     }
@@ -648,237 +495,726 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    private void cleanDaemonLogs() {
-        // Suppression via ADB (fichiers dans /data/local/tmp/, inaccessibles depuis l'app)
-        AdbLocalClient.executeShell(this,
-                "rm -f /data/local/tmp/mirrordaemon_*.log /data/local/tmp/mirrordaemon_latest.log"
-                + " && echo cleaned");
-        runOnUiThread(() -> {
-            tvDaemonScanResult.setText(getString(R.string.diag_daemon_logs_deleted_text));
-            tvDaemonScanResult.setTextColor(0xFF69F0AE);
-            android.widget.Toast.makeText(this,
-                    getString(R.string.toast_daemon_logs_deleted), android.widget.Toast.LENGTH_SHORT).show();
-        });
-    }
+    // TEST 13 — JNI Surface Probe
+    private void runJniSurfaceProbe() {
 
-    private void cleanSnifferLogs() {
-        java.io.File dir = getExternalFilesDir(null);
-        if (dir == null) {
-            android.widget.Toast.makeText(this, getString(R.string.toast_folder_not_found), android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        java.io.File[] files = dir.listFiles(
-                f -> f.getName().startsWith(SNIFFER_FILE_PREFIX) && f.getName().endsWith(".txt"));
-        int count = 0;
-        if (files != null) {
-            for (java.io.File f : files) {
-                if (f.delete()) count++;
-            }
-        }
-        mCurrentSnifferFile = null;
-        final int deleted = count;
-        runOnUiThread(() -> {
-            tvSnifferScanResult.setText(getString(R.string.diag_sniffer_files_deleted, deleted));
-            tvSnifferScanResult.setTextColor(0xFF69F0AE);
-            android.widget.Toast.makeText(this,
-                    getString(R.string.toast_files_deleted, deleted), android.widget.Toast.LENGTH_SHORT).show();
-        });
-    }
+        // 1. Release display
+        AdbLocalClient.sendInfo(this, 1000, 16, "", new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(String ignored) {
+                runOnUiThread(() -> tvTest13Result.setText("Display released. Probing JNI..."));
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(1000);
+                        com.xdja.containerservice.ContainerService.ensureLoaded();
+                        com.xdja.containerservice.QtDisplayInfo[] arr = com.xdja.containerservice.ContainerService.getQtProjectionDispInfoArray();
+                        com.xdja.containerservice.QtDisplayInfo info = com.xdja.containerservice.ContainerService.getQtProjectionDispInfo(0);
 
-    private void testLaunchFreedomDaemon() {
-        // Non fonctionnel : app_process n'est pas accessible depuis uid=10100,
-        // and CommunicationProcessKt belongs to com.byd.windowmanager (WindowManagement),
-        // not to our APK. The command fails silently in the background.
-        android.widget.Toast.makeText(this,
-                getString(R.string.toast_experimental),
-                android.widget.Toast.LENGTH_LONG).show();
-        AppLogger.w("DiagDaemon", "testLaunchFreedomDaemon() — not functional on this ROM (uid=10100 without app_process access)");
-    }
+                        StringBuilder res = new StringBuilder();
+                        res.append("JNI LOAD: ").append(com.xdja.containerservice.ContainerService.isLoaded).append("\n");
+                        if (info != null) {
+                            res.append("✅ SUCCESS Qt(0):\n").append(info.toString()).append("\n");
+                        } else {
+                            res.append("❌ FAIL Qt(0) returned null\n");
+                        }
+                        if (arr != null) {
+                            res.append("✅ SUCCESS Array Size: ").append(arr.length).append("\n");
+                            for (int i = 0; i < arr.length; i++) {
+                                res.append(" - [").append(i).append("]: ").append(arr[i]).append("\n");
+                            }
+                        } else {
+                            res.append("❌ FAIL Array returned null\n");
+                        }
 
-    private void scanDaemon() {
-        tvDaemonScanResult.setText(getString(R.string.diag_scanning));
-        tvDaemonScanResult.setTextColor(0xFFAAAAAA);
-        AdbLocalClient.scanMirrorDaemon(this, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String msg) {
-                runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(msg);
-                    boolean multi = msg.matches("(?s).*[2-9] processus.*");
-                    tvDaemonScanResult.setTextColor(multi ? 0xFFFF5252 : 0xFF69F0AE);
-                });
+                        AppLogger.log("DiagJNI", res.toString());
+                        runOnUiThread(() -> {
+                            tvTest13Result.setText(res.toString());
+                            btnTest13.setEnabled(true);
+                        });
+                    } catch (Exception e) {
+                        AppLogger.e("DiagJNI", "Exception", e);
+                        runOnUiThread(() -> {
+                            tvTest13Result.setText("FATAL: " + e.getMessage());
+                            btnTest13.setEnabled(true);
+                        });
+                    }
+                }).start();
             }
-            @Override public void onError(String error) {
-                runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(error);
-                    tvDaemonScanResult.setTextColor(0xFFFF5252);
-                });
-            }
-        });
-    }
 
-    private void killDaemon() {
-        tvDaemonScanResult.setText(getString(R.string.diag_daemon_killing));
-        tvDaemonScanResult.setTextColor(0xFFFFAB40);
-        AdbLocalClient.killMirrorDaemon(this, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String msg) {
+            @Override
+            public void onError(String e) {
                 runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(msg);
-                    tvDaemonScanResult.setTextColor(0xFF69F0AE);
-                    android.widget.Toast.makeText(DiagActivity.this, msg,
-                            android.widget.Toast.LENGTH_SHORT).show();
-                });
-            }
-            @Override public void onError(String error) {
-                runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(error);
-                    tvDaemonScanResult.setTextColor(0xFFFF5252);
-                    android.widget.Toast.makeText(DiagActivity.this, error,
-                            android.widget.Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
-    }
-
-    private void killAndRestartDaemon() {
-        tvDaemonScanResult.setText(getString(R.string.diag_kill_restart_in_progress));
-        tvDaemonScanResult.setTextColor(0xFFFFAB40);
-        AdbLocalClient.killMirrorDaemon(this, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String msg) {
-                runOnUiThread(() -> tvDaemonScanResult.setText(getString(R.string.diag_kill_ok_restarting)));
-                AdbLocalClient.startMirrorDaemon(DiagActivity.this);
-                runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(getString(R.string.diag_daemon_restarted));
-                    tvDaemonScanResult.setTextColor(0xFF69F0AE);
-                    android.widget.Toast.makeText(DiagActivity.this,
-                            getString(R.string.toast_daemon_restarted), android.widget.Toast.LENGTH_SHORT).show();
-                });
-            }
-            @Override public void onError(String error) {
-                runOnUiThread(() -> {
-                    tvDaemonScanResult.setText(getString(R.string.diag_kill_failed, error));
-                    tvDaemonScanResult.setTextColor(0xFFFF5252);
+                    tvTest13Result.setText("Failed to send 16: " + e);
+                    btnTest13.setEnabled(true);
                 });
             }
         });
     }
 
     // -------------------------------------------------------------------------
-    // TEST 7 — Cluster orientation (freezeDisplayRotation via IWindowManager)
-    // NOTE: NO wm size call here — it would corrupt the main screen resolution
-    //       on Android 10 (DiLink 3.0) because --display is silently ignored.
+    // Start containerservice + JNI Probe (combiné)
     // -------------------------------------------------------------------------
-
-    /**
-     * Returns the cluster display ID (first non-default display, fallback = 2).
-     */
-    private int getClusterDisplayId() {
-        android.hardware.display.DisplayManager dm =
-                (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
-        if (dm != null) {
-            for (android.view.Display d : dm.getDisplays()) {
-                if (d.getDisplayId() != 0) return d.getDisplayId();
-            }
-        }
-        return 2;
+    // Exécute une commande shell et retourne le résultat (bloquant, max 5s)
+    private String shellSync(String cmd) {
+        String[] out = {""};
+        java.util.concurrent.CountDownLatch l = new java.util.concurrent.CountDownLatch(1);
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String r) { out[0] = r.trim(); l.countDown(); }
+            @Override public void onError(String e)   { out[0] = "ERR:" + e; l.countDown(); }
+        });
+        try { l.await(5, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+        return out[0];
     }
 
-    /**
-     * Freezes the cluster display rotation via IWindowManager.freezeDisplayRotation().
-     * rotation = 0 → ROTATION_0 (landscape), 1 → ROTATION_90 (portrait).
-     * Does NOT call wm size — main screen resolution is never touched.
-     */
-    private void orientFreezeDisplay(int rotation) {
-        final int displayId = getClusterDisplayId();
-        tvOrientationResult.setText("⏳ freezeDisplayRotation(display=" + displayId
-                + ", rotation=" + rotation + ")…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
+    private void runStartAndProbe() {
+        tvTest13Result.setText("Diagnostic en cours...");
+        btnJniStartProbe.setEnabled(false);
+        btnTest13.setEnabled(false);
+
         new Thread(() -> {
-            StringBuilder sb = new StringBuilder();
-            try {
-                Class<?> smClass = Class.forName("android.os.ServiceManager");
-                android.os.IBinder wmBinder = (android.os.IBinder)
-                        smClass.getMethod("getService", String.class).invoke(null, "window");
-                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
-                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
-                        .invoke(null, wmBinder);
-                java.lang.reflect.Method freeze = iwm.getClass()
-                        .getMethod("freezeDisplayRotation", int.class, int.class);
-                freeze.invoke(iwm, displayId, rotation);
-                sb.append("✅ freezeDisplayRotation(").append(displayId).append(", ")
-                  .append(rotation == 0 ? "LANDSCAPE" : "PORTRAIT").append(") OK\n");
-            } catch (Exception e) {
-                sb.append("❌ freezeDisplayRotation: ").append(e.getMessage()).append("\n");
+            StringBuilder res = new StringBuilder();
+
+            // 1. Vérifier si Qt / containerservice tournent AVANT de démarrer
+            String psXdja = shellSync("ps -A | grep xdja");
+            String psQt   = shellSync("ps -A | grep -i 'qt\\|dilink\\|mecanum'");
+            res.append("── Processus avant start ──\n");
+            res.append("containerservice: ").append(psXdja.isEmpty() ? "❌ absent" : "✅ " + psXdja.replace("\n", " | ")).append("\n");
+            res.append("Qt/dilink: ").append(psQt.isEmpty() ? "❌ absent" : "✅ " + psQt.replace("\n", " | ")).append("\n\n");
+
+            // 2. Displays actifs avant
+            String dispBefore = shellSync("dumpsys display | grep -E 'mDisplayId|mName|fission|remote_dash'");
+            res.append("── Displays avant start ──\n").append(dispBefore.isEmpty() ? "(aucun fission/remote_dashboard)" : dispBefore).append("\n\n");
+
+            runOnUiThread(() -> tvTest13Result.setText(res.toString()));
+
+            // 3. Démarrer AutoDisplayService
+            String startResult = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
+            res.append("── am startservice ──\n").append(startResult).append("\n\n");
+            runOnUiThread(() -> tvTest13Result.setText(res.toString()));
+
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+
+            // 4. Vérifier les displays APRÈS
+            String dispAfter = shellSync("dumpsys display | grep -E 'mDisplayId|mName|fission|remote_dash'");
+            res.append("── Displays après 2s ──\n").append(dispAfter.isEmpty() ? "❌ toujours aucun fission/remote_dashboard\n→ Qt n'a pas enregistré sa Surface (JNI null)" : "✅ " + dispAfter).append("\n\n");
+
+            // 5. JNI probe
+            com.xdja.containerservice.ContainerService.ensureLoaded();
+            com.xdja.containerservice.QtDisplayInfo[] arr = com.xdja.containerservice.ContainerService.getQtProjectionDispInfoArray();
+            com.xdja.containerservice.QtDisplayInfo info  = com.xdja.containerservice.ContainerService.getQtProjectionDispInfo(0);
+
+            res.append("── JNI probe ──\n");
+            res.append("JNI chargé: ").append(com.xdja.containerservice.ContainerService.isLoaded).append("\n");
+            if (info != null) {
+                res.append("✅ Qt(0): ").append(info.toString()).append("\n");
+            } else {
+                res.append("❌ Qt(0) = null\n");
+                if (psXdja.isEmpty()) {
+                    res.append("→ CAUSE PROBABLE: containerservice n'était pas lancé\n");
+                } else if (psQt.isEmpty()) {
+                    res.append("→ CAUSE PROBABLE: Qt/Dilink5 n'est pas actif, Surface non enregistrée\n");
+                } else {
+                    res.append("→ Qt tourne mais n'a pas encore enregistré sa Surface\n");
+                    res.append("  (Surface enregistrée dans le process Qt, pas accessible cross-process)\n");
+                }
             }
-            final String result = sb.toString();
+            if (arr != null) {
+                res.append("✅ Array[").append(arr.length).append("]\n");
+                for (int i = 0; i < arr.length; i++) {
+                    res.append("  [").append(i).append("]: ").append(arr[i]).append("\n");
+                }
+            } else {
+                res.append("❌ Array = null\n");
+            }
+
+            AppLogger.log("DiagJNI", res.toString());
             runOnUiThread(() -> {
-                tvOrientationResult.setText(result);
-                tvOrientationResult.setTextColor(
-                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
+                tvTest13Result.setText(res.toString());
+                btnJniStartProbe.setEnabled(true);
+                btnTest13.setEnabled(true);
             });
         }).start();
     }
 
-    /**
-     * Thaws the cluster display rotation via IWindowManager.thawDisplayRotation().
-     */
-    private void orientUnfreezeDisplay() {
-        final int displayId = getClusterDisplayId();
-        tvOrientationResult.setText("⏳ thawDisplayRotation(display=" + displayId + ")…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
+    // -------------------------------------------------------------------------
+    // TEST 15 : Dumpsys window displays
+    // -------------------------------------------------------------------------
+    private void runDumpsysWindows() {
+        tvDumpsysResult.setText("Execution via adb local...");
+        btnDumpsysWindows.setEnabled(false);
+        AdbLocalClient.executeShellWithResult(this, "dumpsys window displays", new AdbLocalClient.Callback() {
+            @Override
+            public void onSuccess(final String report) {
+                runOnUiThread(() -> {
+                    tvDumpsysResult.setText(report);
+                    btnDumpsysWindows.setEnabled(true);
+                });
+            }
+
+            @Override
+            public void onError(final String error) {
+                runOnUiThread(() -> {
+                    tvDumpsysResult.setText("ERREUR:\n" + error);
+                    btnDumpsysWindows.setEnabled(true);
+                });
+            }
+        });
+    }
+
+    private static final long DAEMON_TIMEOUT_MS = 15_000;
+
+    private void runDaemonVdTest() {
+        tvDaemonVdResult.setText("Lancement du daemon via adb local...");
+        btnDaemonVdTest.setEnabled(false);
+
+        // Timeout de sécurité : réactive le bouton si ADB ne répond pas dans les 15s
+        android.os.Handler timeoutHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        Runnable timeoutAction = () -> {
+            tvDaemonVdResult.setText("TIMEOUT : ADB n'a pas répondu dans " + (DAEMON_TIMEOUT_MS / 1000) + "s.");
+            btnDaemonVdTest.setEnabled(true);
+        };
+        timeoutHandler.postDelayed(timeoutAction, DAEMON_TIMEOUT_MS);
+
+        try {
+            String apkPath = getPackageManager().getApplicationInfo(getPackageName(), 0).sourceDir;
+            String cmd = "app_process -Djava.class.path=" + apkPath + " /system/bin com.byd.myapp.dashboard.DashCastDaemon";
+            AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+                @Override
+                public void onSuccess(final String report) {
+                    timeoutHandler.removeCallbacks(timeoutAction);
+                    runOnUiThread(() -> {
+                        tvDaemonVdResult.setText("DAEMON OUTPUT: " + report);
+                        btnDaemonVdTest.setEnabled(true);
+                    });
+                }
+                @Override
+                public void onError(final String error) {
+                    timeoutHandler.removeCallbacks(timeoutAction);
+                    runOnUiThread(() -> {
+                        tvDaemonVdResult.setText("ERREUR: " + error);
+                        btnDaemonVdTest.setEnabled(true);
+                    });
+                }
+            });
+        } catch (Exception e) {
+            timeoutHandler.removeCallbacks(timeoutAction);
+            tvDaemonVdResult.setText("Erreur APK path: " + e.getMessage());
+            btnDaemonVdTest.setEnabled(true);
+        }
+    }
+
+    // =========================================================================
+    // FISSION VIA IBINDER DIRECT — Mécanisme Freedom (com.byd.windowmanager)
+    // =========================================================================
+    // [OBSOLÈTE v0.1.20] — Le broadcast START_CLUSTER_MIRROR n'est pas reçu par Qt.
+    // Le flux réel : ClusterDemoProcess (process séparé) obtient la Surface Qt,
+    // puis broadcaste ACTION_cluster_demo_process_started → Freedom reçoit l'IBinder.
+    //
+    // [v0.1.21 — NOUVEAU TEST] : sendInfo via AutoContainerManager Java direct
+    // Le log montre que sendInfo via shell → callingUid=2000, Qt refuse le JNI.
+    // Via AutoContainerManager.sendInfo() Java → callingUid = uid de notre app.
+    // =========================================================================
+
+    private void runFissionViaBinder() {
+        if (tvFissionResult == null) return;
+        tvFissionResult.setText("sendInfo Java direct...");
+        btnFissionViaBinder.setEnabled(false);
+        btnFissionLaunch.setEnabled(false);
+        mFissionDisplayId = -1;
+
         new Thread(() -> {
-            StringBuilder sb = new StringBuilder();
+            final StringBuilder res = new StringBuilder();
+
+            // ── Étape 1 : sendInfo via AutoContainerManager Java (pas shell) ──
+            // LOG montre : shell → callingUid=2000, Qt refuse JNI.
+            // Java direct → callingUid = notre uid app → Qt devrait accepter.
+            res.append("── Étape 1 : AutoContainerManager Java direct ──\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try {
-                Class<?> smClass = Class.forName("android.os.ServiceManager");
-                android.os.IBinder wmBinder = (android.os.IBinder)
-                        smClass.getMethod("getService", String.class).invoke(null, "window");
-                Class<?> iwmStub = Class.forName("android.view.IWindowManager$Stub");
-                Object iwm = iwmStub.getMethod("asInterface", android.os.IBinder.class)
-                        .invoke(null, wmBinder);
-                // Try thawDisplayRotation(int displayId) first (API 30+),
-                // fall back to thawRotation() (API 26-29).
-                try {
-                    java.lang.reflect.Method thaw = iwm.getClass()
-                            .getMethod("thawDisplayRotation", int.class);
-                    thaw.invoke(iwm, displayId);
-                    sb.append("✅ thawDisplayRotation(").append(displayId).append(") OK\n");
-                } catch (NoSuchMethodException e2) {
-                    java.lang.reflect.Method thaw = iwm.getClass().getMethod("thawRotation");
-                    thaw.invoke(iwm);
-                    sb.append("✅ thawRotation() OK (fallback API 29)\n");
+                Object acm = getSystemService("auto_container");
+                if (acm == null) {
+                    acm = getSystemService("Auto_container");
+                }
+                if (acm == null) {
+                    // Fallback via reflection sur AutoContainerManager.getAutoContainerManager()
+                    Class<?> cls = Class.forName("android.os.AutoContainerManager");
+                    java.lang.reflect.Method initM = cls.getMethod("init", android.content.Context.class);
+                    initM.invoke(null, this);
+                    java.lang.reflect.Method getM = cls.getMethod("getAutoContainerManager");
+                    acm = getM.invoke(null);
+                }
+                if (acm != null) {
+                    // Séquence complète :
+                    // sendInfo(30)           ← correctif maison écrans 8.8"/10.25" : bascule cluster
+                    //                          en mode 12" (sans bug fenêtre ADAS)
+                    // sleep(6s)              ← laisser Qt absorber le changement de mode
+                    // sendInfo(16)           ← Qt entre en mode projection plein écran
+                    // sleep(6s)              ← délai Freedom (RE onNavigationTypeChanged L2c11)
+                    // sendInfo(35)           ← Di4.0 mode → Qt enregistre Surface via JNI
+                    java.lang.reflect.Method sendM = acm.getClass()
+                            .getMethod("sendInfo", int.class, int.class, String.class);
+                    sendM.invoke(acm, 1000, 30, ""); // correctif écrans 8.8"/10.25" — mode cluster 12"
+                    res.append("  sendInfo(1000,30) ✅ (workaround ADAS 8.8\"/10.25\")\n");
+                    Thread.sleep(6000); // attendre que Qt absorbe le changement de taille
+                    sendM.invoke(acm, 1000, 16, ""); // Qt enters full-screen projection mode
+                    res.append("  sendInfo(1000,16) ✅\n");
+                    Thread.sleep(6000); // Freedom: sleep 6s before sendInfo(35)
+                    sendM.invoke(acm, 1000, 35, ""); // Di4.0 mode → Qt registers Surface via JNI
+                    res.append("  sendInfo(1000,35) ✅\n");
+                    runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+                } else {
+                    res.append("❌ AutoContainerManager null via getSystemService\n");
+                    res.append("→ Fallback shell...\n");
+                    runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+                    shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\""); // workaround ADAS
+                    Thread.sleep(6000);
+                    shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
+                    Thread.sleep(6000);
+                    shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
+                    res.append("  shell sendInfo(30→16→35) envoyés\n");
                 }
             } catch (Exception e) {
-                sb.append("❌ thawDisplayRotation: ").append(e.getMessage()).append("\n");
+                res.append("⚠ Exception AutoContainerManager: ").append(e.getMessage()).append("\n");
+                res.append("→ Fallback shell...\n");
+                runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+                shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\""); // workaround ADAS
+                try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+                shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
+                try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+                shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
+                res.append("  shell sendInfo(30→16→35) envoyés\n");
             }
-            final String result = sb.toString();
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+
+            // ── Étape 2 : attendre 5s que Qt prépare son end-point JNI ──
+            res.append("\n── Étape 2 : attendre 5s Qt end-point JNI ──\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+
+            // ── Étape 3 : démarrer AutoDisplayService ──
+            res.append("\n── Étape 3 : am startservice AutoDisplayService ──\n");
+            String startResult = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
+            res.append(startResult.isEmpty() ? "❌ pas de réponse\n" : startResult + "\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+
+            // ── Étape 4 : vérifier les displays via DisplayManager Java (API 29) ──
+            res.append("\n── Étape 4 : displays présents ──\n");
+            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            android.view.Display[] allDisplays = dm.getDisplays();
+            int foundId = -1;
+            for (android.view.Display d : allDisplays) {
+                String name = d.getName();
+                int id = d.getDisplayId();
+                res.append("mDisplayId=").append(id).append(" name=").append(name).append("\n");
+                if (id != 0 && (name.contains("fission") || name.contains("remote_dashboard")
+                        || name.contains("xdja") || name.contains("Virtual"))) {
+                    foundId = id;
+                }
+            }
+            // Fallback : tout display non-0 est candidat cluster
+            if (foundId == -1 && allDisplays.length > 1) {
+                for (android.view.Display d : allDisplays) {
+                    if (d.getDisplayId() != 0) { foundId = d.getDisplayId(); break; }
+                }
+                res.append("⚠ Display non-nommé détecté, id=").append(foundId).append("\n");
+            }
+
+            if (foundId > 0) {
+                mFissionDisplayId = foundId;
+                res.append("✅ Display cluster trouvé ! id=").append(foundId).append("\n");
+            } else {
+                res.append("❌ Aucun display cluster créé\n");
+                res.append("→ sendInfo shell peut nécessiter plus de temps\n");
+                res.append("→ Freedom (ClusterDemoProcess) doit être installé\n");
+            }
+
+            AppLogger.i("FissionJavaDirect", "foundId=" + foundId);
+            final int finalId = foundId;
             runOnUiThread(() -> {
-                tvOrientationResult.setText(result);
-                tvOrientationResult.setTextColor(
-                        result.contains("✅") ? 0xFF69F0AE : 0xFFFF5252);
+                tvFissionResult.setText(res.toString());
+                btnFissionViaBinder.setEnabled(true);
+                btnFissionLaunch.setEnabled(finalId > 0);
+            });
+        }).start();
+    }
+
+    // =========================================================================
+    // PIPELINE FISSION — Création du VirtualDisplay cluster
+    // =========================================================================
+    // Séquence découverte par RE de AutoDisplayService (com.xdja.containerservice) :
+    //   1. sendInfo(1000,16) → Qt entre en mode projection → enregistre Surface via JNI
+    //   2. am startservice AutoDisplayService → onStart() → updateDisplay() →
+    //      getQtProjectionDispInfo(0) != null → createVirtualDisplay("fission_testVirtualSurface")
+    //   3. am start-activity --display <fission_id> → app visible sur cluster
+    //
+    // Note: SecondaryDisplayService (Dilink5) ne démarre QUE sur API > 30 (Android 12+).
+    // Sur Seal EU (API 29), on lance directement sur fission_testVirtualSurface.
+    // =========================================================================
+
+    private void runFissionPipeline() {
+        tvFissionResult.setText("Séquence en cours...");
+        btnFissionPipeline.setEnabled(false);
+        btnFissionLaunch.setEnabled(false);
+        mFissionDisplayId = -1;
+
+        new Thread(() -> {
+            StringBuilder res = new StringBuilder();
+
+            // ── Étape 0 : état initial displays ────────────────────────────
+            String dispBefore = shellSync("dumpsys display | grep -E 'mDisplayId|mName'");
+            res.append("── Displays AVANT ──\n").append(dispBefore.isEmpty() ? "(vide)" : dispBefore).append("\n\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+
+            // ── Étape 1 : sendInfo(30→sleep6s→16→sleep6s→35) ─────────────────
+            // sendInfo(30) = correctif maison écrans 8.8"/10.25" : bascule cluster
+            //                en mode 12" (sans bug fenêtre ADAS)
+            // sleep(6s)    = laisser Qt absorber le changement de mode taille
+            // sendInfo(16) = Qt entre en mode projection plein écran (全屏投屏开启)
+            // sleep(6s)    = délai Freedom (RE onNavigationTypeChanged L2c11)
+            // sendInfo(35) = Di4.0 mode → Qt enregistre Surface via JNI
+            res.append("── sendInfo(1000,30) workaround ADAS 8.8\"/10.25\" ──\n");
+            String r30 = shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\"");
+            res.append(r30.isEmpty() ? "⚠ pas de réponse AutoContainer" : r30).append("\n\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+
+            // sleep(6s) — laisser Qt absorber sendInfo(30)
+            try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+
+            res.append("── sendInfo(1000,16) → Qt projection plein écran ON ──\n");
+            String r16 = shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
+            res.append(r16.isEmpty() ? "❌ AutoContainer non disponible" : r16).append("\n\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+
+            // sleep(6s) — Freedom: délai entre sendInfo(16) et sendInfo(35)
+            try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+
+            res.append("── sendInfo(1000,35) → Di4.0 mode / Qt enregistre Surface JNI ──\n");
+            String r35 = shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
+            res.append(r35.isEmpty() ? "⚠" : r35).append("\n\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+
+            // ── Étape 2 : démarrer AutoDisplayService ──────────────────────
+            // onStart() → updateDisplay() → getQtProjectionDispInfo(0)
+            // → si non-null → createVirtualDisplay("fission_testVirtualSurface", qtSurface, flags=11)
+            res.append("── am startservice AutoDisplayService ──\n");
+            String startSvc = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
+            res.append(startSvc.isEmpty() ? "❌ startservice échoué" : startSvc).append("\n\n");
+            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+
+            // ── Étape 4 : vérifier les displays créés via DisplayManager Java ──
+            DisplayManager dm2 = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            android.view.Display[] disps = dm2.getDisplays();
+            StringBuilder dispAfterSb = new StringBuilder();
+            int foundId2 = -1;
+            for (android.view.Display d : disps) {
+                String n = d.getName(); int id = d.getDisplayId();
+                dispAfterSb.append("mDisplayId=").append(id).append(" name=").append(n).append("\n");
+                if (id != 0 && (n.contains("fission") || n.contains("remote_dashboard")
+                        || n.contains("xdja") || n.contains("Virtual"))) {
+                    foundId2 = id;
+                }
+            }
+            if (foundId2 == -1 && disps.length > 1) {
+                for (android.view.Display d : disps) {
+                    if (d.getDisplayId() != 0) { foundId2 = d.getDisplayId(); break; }
+                }
+            }
+            String dispAfter = dispAfterSb.toString();
+            res.append("── Displays APRÈS ──\n").append(dispAfter.isEmpty() ? "(vide)" : dispAfter).append("\n\n");
+
+            if (foundId2 != -1) {
+                mFissionDisplayId = foundId2;
+                res.append("✅ Display cluster trouvé : displayId=").append(foundId2).append("\n");
+                res.append("→ Cliquer \"Lancer Dashboard\" pour lancer sur ce display\n\n");
+            } else {
+                res.append("❌ Aucun display cluster trouvé\n");
+                res.append("→ Vérifier: AutoContainer accessible ? sendInfo(16) reçu par Qt ?\n\n");
+            }
+
+            AppLogger.i("FissionPipeline", res.toString());
+            final boolean canLaunch = mFissionDisplayId != -1;
+            runOnUiThread(() -> {
+                tvFissionResult.setText(res.toString());
+                btnFissionPipeline.setEnabled(true);
+                btnFissionLaunch.setEnabled(canLaunch);
             });
         }).start();
     }
 
     /**
-     * Reads current display rotation via ADB (wm rotation -d N or dumpsys display).
+     * Parse la sortie de "dumpsys display | grep -E 'mDisplayId|mName'"
+     * et retourne le displayId du premier display dont le nom contient nameContains.
+     * Format attendu (l'ID précède toujours le nom) :
+     *   mDisplayId=4
+     *   mName=fission_testVirtualSurface
      */
-    private void orientReadDisplay() {
-        final int displayId = getClusterDisplayId();
-        tvOrientationResult.setText("⏳ Reading display " + displayId + "…");
-        tvOrientationResult.setTextColor(0xFFFFAB40);
-        String cmd = "dumpsys display 2>/dev/null"
-                + " | grep -E 'mDisplayId|mName|mCurrentOrientation|mRotation|PhysicalDisplayInfo' | head -20";
-        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String result) {
+    private int parseDisplayIdByName(String output, String nameContains) {
+        int lastId = -1;
+        for (String line : output.split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("mDisplayId=")) {
+                try {
+                    lastId = Integer.parseInt(t.substring("mDisplayId=".length()).trim());
+                } catch (NumberFormatException ignored) {}
+            } else if (t.startsWith("mName=") && t.contains(nameContains)) {
+                return lastId;
+            }
+        }
+        return -1;
+    }
+
+    private void launchOnFissionDisplay() {
+        if (mFissionDisplayId == -1) {
+            tvFissionResult.setText("❌ Pas de display fission. Lancer d'abord \"Créer Fission Display\".");
+            return;
+        }
+        tvFissionResult.setText("Lancement sur display " + mFissionDisplayId + "...");
+        btnFissionLaunch.setEnabled(false);
+
+        new Thread(() -> {
+            StringBuilder res = new StringBuilder();
+            String pkg = getPackageName();
+            // --windowingMode 5 = FREEFORM (obligatoire sur DiLink 3.0)
+            String cmd = "am start-activity -W --windowingMode 5 --display " + mFissionDisplayId
+                    + " " + pkg + "/.dashboard.BYDDashboardActivity";
+            res.append("Cmd:\n").append(cmd).append("\n\n");
+            String result = shellSync(cmd);
+            res.append(result.isEmpty() ? "❌ Pas de réponse" : result);
+            AppLogger.i("FissionLaunch", "displayId=" + mFissionDisplayId + " → " + result);
+            runOnUiThread(() -> {
+                tvFissionResult.setText(res.toString());
+                btnFissionLaunch.setEnabled(true);
+            });
+        }).start();
+    }
+
+    // =========================================================================
+    // SNIFFER SYSTÈME — Reverse Engineering
+    // =========================================================================
+    // Capture logcat + dumpsys périodiques dans un fichier exportable.
+    // Conçu pour intercepter TOUT ce qui se passe sur le système BYD
+    // sans dépendre de Freedom.
+    // =========================================================================
+
+    private static final String RE_SNIFFER_TAG    = ".re_sniffer_run";
+    private static final String RE_SNIFFER_PIDS    = ".re_sniffer_pids";
+    private static final String RE_SNIFFER_PREFIX  = "BYD_RE_Sniffer_";
+
+    // =========================================================================
+    // Partage rapide — appui long sur n'importe quel TextView résultat
+    // =========================================================================
+
+    private void setupShareOnLongClick() {
+        TextView[] results = {
+            tvAdbLocalResult, tvDaemonVdResult, tvDisplaySizeResult,
+            tvDisplay1Result, tvDumpsysResult, tvTest13Result, tvSfDumpResult,
+            tvAutoDisplayResult, tvFissionResult, tvReSnifferStatus
+        };
+        for (TextView tv : results) {
+            if (tv == null) continue;
+            tv.setLongClickable(true);
+            tv.setOnLongClickListener(v -> {
+                String text = tv.getText().toString().trim();
+                if (text.isEmpty() || text.equals("--")) {
+                    android.widget.Toast.makeText(this,
+                            "Pas de résultat à partager.",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                shareText(tv.getTag() != null ? tv.getTag().toString() : "DashCast Diag", text);
+                return true;
+            });
+        }
+    }
+
+    /**
+     * Lance un Intent de partage texte vers Telegram (en priorité) ou
+     * n'importe quelle app de messagerie via le sélecteur système.
+     */
+    private void shareText(String label, String body) {
+        String full = "[DashCast / " + label + "]\n" + body;
+
+        // Tenter Telegram en direct
+        Intent tg = new Intent(Intent.ACTION_SEND);
+        tg.setType("text/plain");
+        tg.setPackage("org.telegram.messenger");
+        tg.putExtra(Intent.EXTRA_TEXT, full);
+        try {
+            startActivity(tg);
+            return;
+        } catch (android.content.ActivityNotFoundException ignored) {}
+
+        // Fallback : sélecteur générique
+        Intent generic = new Intent(Intent.ACTION_SEND);
+        generic.setType("text/plain");
+        generic.putExtra(Intent.EXTRA_TEXT, full);
+        startActivity(Intent.createChooser(generic, "Partager résultat"));
+    }
+
+    private java.io.File buildReSnifferFile() {
+        String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                .format(new java.util.Date());
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) dir = getFilesDir();
+        return new java.io.File(dir, RE_SNIFFER_PREFIX + ts + ".txt");
+    }
+
+    private void startReSniffer() {
+        killReSnifferProcesses();
+
+        mReSnifferFile = buildReSnifferFile();
+        final String p  = mReSnifferFile.getAbsolutePath();
+        final String pf = "/data/local/tmp/" + RE_SNIFFER_PIDS;
+        AppLogger.i("RESniffer", "Starting RE Sniffer → " + p);
+
+        runOnUiThread(() -> {
+            tvReSnifferStatus.setText("Initialisation...");
+            tvReSnifferStatus.setTextColor(0xFFFFAB40);
+        });
+
+        // ── Étape 1 : header rapide (synchrone via executeShellWithResult) ─────
+        // IMPORTANT : on utilise executeShellWithResult pour s'assurer que le fichier
+        // existe et que le tag est posé AVANT de lancer les processus background.
+        // On évite service list / dumpsys window / dumps broadcasts → trop lents.
+        String headerCmd =
+            "logcat -c 2>/dev/null"
+            + " ; touch /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; echo === BYD RE SNIFFER === > " + p
+            + " ; date >> " + p
+            + " ; getprop ro.product.model >> " + p
+            + " ; getprop ro.build.fingerprint >> " + p
+            + " ; echo --- DISPLAYS INITIAL --- >> " + p
+            + " ; dumpsys display 2>/dev/null >> " + p
+            + " ; echo --- SURFACEFLINGER INITIAL --- >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null >> " + p
+            + " ; echo --- PROCESSUS INITIAL --- >> " + p
+            + " ; ps -A 2>/dev/null >> " + p
+            + " ; echo === LIVE CAPTURE START === >> " + p;
+
+        AdbLocalClient.executeShellWithResult(this, headerCmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                // ── Étape 2 : processus background avec setsid ────────────────
+                // setsid crée une nouvelle session → survit à la fermeture de la session ADB.
+                // nohup seul ne suffit pas : adbd envoie SIGHUP au groupe de processus.
+                // On capture TOUT le logcat (pas de filtre tag) → rien n'est manqué.
+                // Les PIDs sont sauvés avec $! pour un kill propre.
+
+                // Snapshot toutes les 10s : pas de simples-quotes dans le corps
+                // (la commande est wrappée dans sh -c '...' — les ' casseraient l'arg)
+                String snapLoop =
+                    "while [ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ]; do sleep 10;"
+                    + " echo >> " + p + ";"
+                    + " printf \"=== SNAP %s ===\\n\" $(date +%H:%M:%S) >> " + p + ";"
+                    + " dumpsys display 2>/dev/null"
+                    + "   | grep -E \"mDisplayId|mName|mState|fission|virtual|cluster|layerStack\""
+                    + "   >> " + p + ";"
+                    + " dumpsys SurfaceFlinger 2>/dev/null"
+                    + "   | grep -iE \"display|fission|layer|cluster|mirror|virtual|qt\""
+                    + "   | head -30 >> " + p + ";"
+                    + " ps -A 2>/dev/null"
+                    + "   | grep -iE \"byd|xdja|daemon|dilink|qt|cluster|app_process\""
+                    + "   >> " + p + ";"
+                    + " done";
+
+                // Reset PID file, lance 3 processus setsid, sauve $! après chaque &
+                String bgCmd =
+                    "echo > " + pf
+                    + " ; setsid sh -c 'logcat -v threadtime >> " + p + " 2>&1'"
+                    + "   & echo $! >> " + pf
+                    + " ; setsid sh -c '" + snapLoop + "'"
+                    + "   & echo $! >> " + pf
+                    + " ; setsid sh -c 'logcat -b events -v time >> " + p + " 2>&1'"
+                    + "   & echo $! >> " + pf;
+
+                AdbLocalClient.executeShell(DiagActivity.this, bgCmd);
+
                 runOnUiThread(() -> {
-                    tvOrientationResult.setText(result.trim());
-                    tvOrientationResult.setTextColor(0xFF69F0AE);
+                    tvReSnifferStatus.setText("ACTIF → " + mReSnifferFile.getName());
+                    tvReSnifferStatus.setTextColor(0xFF69F0AE);
+                    android.widget.Toast.makeText(DiagActivity.this,
+                            "Sniffer démarré : " + mReSnifferFile.getName(),
+                            android.widget.Toast.LENGTH_LONG).show();
                 });
             }
-            @Override public void onError(String error) {
+            @Override public void onError(String err) {
                 runOnUiThread(() -> {
-                    tvOrientationResult.setText("❌ " + error);
-                    tvOrientationResult.setTextColor(0xFFFF5252);
+                    tvReSnifferStatus.setText("❌ Échec init: " + err);
+                    tvReSnifferStatus.setTextColor(0xFFFF5252);
                 });
             }
         });
+    }
+
+    /** Tue proprement tous les processus du sniffer via PID file + pkill fallback. */
+    private void killReSnifferProcesses() {
+        String pidFile = "/data/local/tmp/" + RE_SNIFFER_PIDS;
+        String killCmd =
+            "rm -f /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; if [ -f " + pidFile + " ]; then"
+            + "   while IFS= read -r pid; do"
+            + "     [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null; done < " + pidFile + ";"
+            + "   rm -f " + pidFile + ";"
+            + " fi"
+            + " ; pkill -f " + RE_SNIFFER_PREFIX + " 2>/dev/null; true";
+        AdbLocalClient.executeShell(this, killCmd);
+    }
+
+    private void stopReSniffer() {
+        killReSnifferProcesses();
+        final String fileName = mReSnifferFile != null ? mReSnifferFile.getName() : "aucun";
+        if (mReSnifferFile != null) {
+            AdbLocalClient.executeShell(this,
+                    "echo '[RE Sniffer] Stopped.' >> " + mReSnifferFile.getAbsolutePath());
+        }
+        runOnUiThread(() -> {
+            tvReSnifferStatus.setText("Arrêté — fichier : " + fileName);
+            tvReSnifferStatus.setTextColor(0xFFFF5252);
+            android.widget.Toast.makeText(this, "Sniffer arrêté.", android.widget.Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void snapshotReSniffer() {
+        if (mReSnifferFile == null) {
+            android.widget.Toast.makeText(this, "Démarrer le sniffer d'abord.", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final String p = mReSnifferFile.getAbsolutePath();
+        String cmd =
+            "echo '' >> " + p
+            + " && echo '=== SNAPSHOT MANUEL '$(date +%H:%M:%S)' ===' >> " + p
+            + " && echo '--- DISPLAYS ---' >> " + p
+            + " && dumpsys display 2>/dev/null >> " + p
+            + " && echo '--- WINDOWS ---' >> " + p
+            + " && dumpsys window 2>/dev/null >> " + p
+            + " && echo '--- SURFACEFLINGER ---' >> " + p
+            + " && dumpsys SurfaceFlinger 2>/dev/null >> " + p
+            + " && echo '--- PROCESSUS ---' >> " + p
+            + " && ps -A >> " + p
+            + " && echo '--- BROADCASTS ---' >> " + p
+            + " && dumpsys activity broadcasts history 2>/dev/null >> " + p;
+        AdbLocalClient.executeShell(this, cmd);
+        android.widget.Toast.makeText(this, "Snapshot injecté dans le fichier.", android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void exportReSniffer() {
+        java.io.File logFile = mReSnifferFile;
+        if (logFile == null || !logFile.exists() || logFile.length() == 0) {
+            android.widget.Toast.makeText(this, "Aucun fichier sniffer à exporter.", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", logFile);
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+            shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, logFile.getName());
+            shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Exporter Sniffer RE"));
+        } catch (Exception e) {
+            AppLogger.e("RESniffer", "Export erreur", e);
+        }
     }
 }

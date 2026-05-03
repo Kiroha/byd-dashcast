@@ -38,6 +38,9 @@
     <string name="status_restoring_origin">Orijinal küme geri yükleniyor…</string>
     <string name="status_dashboard_byd">Gösterge paneli: BYD ekranı</string>
     <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
+    <string name="status_vd_detected">Küme VirtualDisplay algılandı ✓ — etkinleştirmeye hazır</string>
+    <string name="status_vd_not_found">⚠ VirtualDisplay bulunamadı — tam dizi gerekli (30→16→35)</string>
+    <string name="status_activation_timeout">⚠ Zaman aşımı: VirtualDisplay oluşturulamadı. Tekrar deneyin.</string>
     <string name="status_freedom_active">Freedom aktif ✓ — küme hazır</string>
     <string name="status_freedom_starting">Freedom başlatılıyor…</string>
     <string name="status_freedom_not_installed">⚠ Freedom yüklü değil — yayın yapılamıyor</string>

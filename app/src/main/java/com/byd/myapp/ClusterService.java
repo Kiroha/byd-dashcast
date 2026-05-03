@@ -38,13 +38,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private static final String TAG = "ClusterService";
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int NOTIF_ID = 1;
+    public static boolean sIsRunning = false;
 
     // ── Listener for MainActivity ───────────────────────────────────────────
     public interface Listener {
         void onClusterDisplayConnected(Display display, int displayId);
         void onClusterDisplayDisconnected();
-        /** Freedom state checked at service startup (called on the main thread). */
-        void onFreedomStatus(AdbLocalClient.FreedomStatus status);
     }
 
     // ── Binder ──────────────────────────────────────────────────────────────
@@ -62,8 +61,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private Listener               mListener;
     private boolean                mProjectionActive = false;
     // Last known Freedom state — cached for replay in setListener()
-    private AdbLocalClient.FreedomStatus mFreedomStatus = null;
-    // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
+        // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     // ────────────────────────────────────────────────────────────────────────
@@ -71,6 +69,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     @Override
     public void onCreate() {
         super.onCreate();
+        sIsRunning = true;
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
         mLauncher       = new DashboardLauncher(this);
         mMirrorManager  = new ClusterMirrorManager();
@@ -82,13 +81,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         
         createNotificationChannel();
         startForeground(NOTIF_ID, buildNotification("Cluster: initializing…"));
-        AppLogger.log(TAG, "ClusterService created — checking Freedom state");
+        AppLogger.log(TAG, "ClusterService created — starting native projection");
         mProjectionActive = true;
         // Signature + permissions diagnostics — debug only (opens an ADB connection).
         if (BuildConfig.DEBUG) {
             AdbLocalClient.dumpSignatureAndPermissions(this);
         }
-        checkAndStartWithFreedom();
+        startNativeProjection();
     }
 
     @Override
@@ -113,6 +112,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     @Override
     public void onDestroy() {
         super.onDestroy();
+        sIsRunning = false;
         mListener = null;
         // Cancel all pending Runnables on mMainHandler BEFORE release():
         // launchOnDashboard (postDelayed 2s) could post a callback
@@ -134,48 +134,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      *   INACTIVE    → startFreedom() (force-stop + navigationType=1 + am start) → 2s delay → start()
      *   NOT_INSTALLED → mDisplayHelper.start() anyway (let activateClusterDisplay handle the fallback)
      */
-    private void checkAndStartWithFreedom() {
-        AppLogger.i(TAG, "Freedom: checking state before cluster activation");
-        AdbLocalClient.checkFreedomState(this, new AdbLocalClient.FreedomStateCallback() {
-            @Override public void onResult(final AdbLocalClient.FreedomStatus status) {
-                mMainHandler.post(new Runnable() {
-                    @Override public void run() {
-                        mFreedomStatus = status;
-                        AppLogger.i(TAG, "Freedom state: " + status);
-                        if (mListener != null) mListener.onFreedomStatus(status);
-                        if (status == AdbLocalClient.FreedomStatus.INACTIVE) {
-                            // Freedom installed but inactive → start in 全屏導航 mode first
-                            AppLogger.i(TAG, "Freedom INACTIVE → startFreedom() before cluster activation");
-                            AdbLocalClient.startFreedom(ClusterService.this, true, new AdbLocalClient.Callback() {
-                                @Override public void onSuccess(String r) {
-                                    AppLogger.i(TAG, "startFreedom pre-check OK → " + r.trim().replace("\n", " "));
-                                    // 2s delay: let Freedom create the fission VirtualDisplay
-                                    mMainHandler.postDelayed(new Runnable() {
-                                        @Override public void run() { mDisplayHelper.start(true); }
-                                    }, 2000);
-                                }
-                                @Override public void onError(String err) {
-                                    AppLogger.w(TAG, "startFreedom pre-check ERROR (continuing): " + err);
-                                    mDisplayHelper.start();
-                                }
-                            });
-                        } else {
-                            // ACTIVE (fast path) or NOT_INSTALLED (fallback in activateClusterDisplay)
-                            mDisplayHelper.start();
-                        }
-                    }
-                });
-            }
-        });
+    private void startNativeProjection() {
+        AppLogger.i(TAG, "Starting cluster projection (native)...");
+        mDisplayHelper.start(false);
     }
 
     public void setListener(Listener listener) {
         mListener = listener;
-        // Replay cached Freedom state if available (check launched before bind)
-        if (mFreedomStatus != null && mListener != null) {
-            mListener.onFreedomStatus(mFreedomStatus);
-        }
-        // If the display is already known, notify immediately (Activity reconnection)
+                // If the display is already known, notify immediately (Activity reconnection)
         int knownId = mDisplayHelper.getKnownClusterDisplayId();
         if (knownId > 0 && mListener != null) {
             Display d = null;
@@ -372,6 +338,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Exception ex) {
             AppLogger.w(TAG, "startActivityViaIAM → fallback context: " + ex.getMessage());
             startActivity(intent, opts.toBundle());
+        }
+    }
+
+    public void restartProjection() {
+        AppLogger.log(TAG, "restartProjection requested natively");
+        if (mDisplayHelper != null) {
+            mDisplayHelper.start(false);
         }
     }
 

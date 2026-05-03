@@ -2,566 +2,454 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212">
+    android:fillViewport="true"
+    android:background="#f2f2f2">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="12dp"
+        android:clipToPadding="false">
 
-        <!-- Titre -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/diag_title"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
+            android:text="Tableau de bord Diagnostic"
+            android:textSize="26sp"
+            android:textColor="#2E3440"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_subtitle"
-            android:textColor="#AAAAAA"
-            android:textSize="13sp"
-            android:layout_marginBottom="20dp"/>
-
-        <!-- ======================== TEST 1 — ADB LOCAL ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test1_title"
-            android:textColor="#A5D6A7"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test1_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_adb_local"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_adb_local_label"
-            android:textSize="14sp"
-            android:backgroundTint="#2E7D32"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_adb_local_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_press_hint"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:background="#1A2A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_adb_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_share_result1_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- TEST 2 : Restauration cluster -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test2_title"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:textSize="14sp"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp"/>
+            android:layout_marginBottom="16dp"
+            android:gravity="center_horizontal"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test2_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_display1"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_launch_test2_btn"
-            android:textSize="15sp"
-            android:backgroundTint="#E65100"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_display1_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_result_test2_hint"
-            android:textColor="#CCCCCC"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:background="#1A1200"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_display1_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_share_result2_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ======================== TEST 3 — DISPLAY SIZE ======================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test3_title"
-            android:textColor="#80DEEA"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test3_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Ligne 1 : 3 boutons taille -->
+        <!-- 1. CONNEXION ADB LOCAL -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <Button
-                android:id="@+id/btn_display_size_88"
-                android:layout_width="0dp"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+            
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/diag_size_88_btn"
-                android:textSize="12sp"
-                android:backgroundTint="#00695C"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btn_display_size_123"
-                android:layout_width="0dp"
+                android:text="1. ADB Local (Prérequis Vitals)"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/diag_size_123_btn"
+                android:text="Requis pour injecter des daemons et créer le VirtualDisplay système de la même manière que Dilink5."
                 android:textSize="12sp"
-                android:backgroundTint="#1B5E20"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btn_display_size_1025"
-                android:layout_width="0dp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+                
+            <TextView
+                android:id="@+id/tv_adb_local_result"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/diag_size_1025_btn"
-                android:textSize="12sp"
-                android:backgroundTint="#00695C"
-                android:layout_marginStart="4dp"/>
-
+                android:text="Non connecté"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_adb_local"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Connecter ADB"
+                    android:backgroundTint="#5E81AC"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_adb_share"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Partager"
+                    android:backgroundTint="#88C0D0"/>
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Row 2: Restore -->
-        <Button
-            android:id="@+id/btn_display_size_restore"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_size_restore_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#6A1B9A"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Ligne 3 : Diagnostic complet -->
-        <Button
-            android:id="@+id/btn_display_size_full"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_size_full_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#00695C"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_display_size_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test3_hint_text"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:background="#111A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_display_size_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_share_result3_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ======================== TEST 4 — BOOT RECEIVER ======================== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test4_title"
-            android:textColor="#FFCC00"
-            android:textStyle="bold"
-            android:textSize="13sp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test4_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="11sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_boot_receiver"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_launch_test4_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#4A1580"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_boot_receiver_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_result_test4_hint"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:background="#111A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_boot_receiver_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_share_result4_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="16dp"/>
-
-    
-        <!-- ======================== TEST 5 — GESTION MIRRORDAEMON ======================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test5_title"
-            android:textColor="#FFAB40"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test5_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_scan_daemon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_scan_daemon_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_daemon_scan_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_scan_result_hint"
-            android:textColor="#AAAAAA"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="8dp"
-            android:background="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_kill_daemon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_kill_daemon_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#BF360C"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_kill_restart_daemon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_kill_restart_daemon_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#E65100"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_export_daemon_log"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_export_daemon_log_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#6A1B9A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_dump_sf_mirror"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_dump_sf_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#00695C"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_sf_dump_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_dump_sf_result_hint"
-            android:textColor="#AAAAAA"
-            android:textSize="10sp"
-            android:fontFamily="monospace"
-            android:padding="8dp"
-            android:background="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_clean_daemon_logs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_clean_daemon_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#37474F"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ======================== TEST 6 — SYSTEM SNIFFER ======================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test6_title"
-            android:textColor="#FFAB40"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test6_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_scan_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_scan_sniffer_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_sniffer_scan_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_sniffer_result_hint"
-            android:textColor="#AAAAAA"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="8dp"
-            android:background="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_start_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_start_sniffer_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#2E7D32"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_stop_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_stop_sniffer_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#BF360C"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_export_sniffer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_export_sniffer_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#1565C0"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_clean_sniffer_logs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_clean_sniffer_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#37474F"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_test_daemon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test_daemon_btn"
-            android:textSize="13sp"
-            android:backgroundTint="#d81b60"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- ======================== TEST 7 — CLUSTER ORIENTATION ======================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#444444"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test7_title"
-            android:textColor="#FFAB40"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_test7_desc"
-            android:textColor="#AAAAAA"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/tv_orientation_result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/diag_orientation_hint"
-            android:textColor="#AAAAAA"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="8dp"
-            android:background="#1A1A1A"
-            android:layout_marginBottom="8dp"/>
-
+        <!-- 2. INJECTION DAEMON & VIRTUALDISPLAY -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <Button
-                android:id="@+id/btn_orient_freeze_landscape"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+            
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/diag_orient_freeze_landscape"
-                android:textSize="11sp"
-                android:backgroundTint="#1565C0"
-                android:layout_marginEnd="4dp"/>
-
-            <Button
-                android:id="@+id/btn_orient_freeze_portrait"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:text="2. Injection Daemon &amp; Rendu"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/diag_orient_freeze_portrait"
-                android:textSize="11sp"
-                android:backgroundTint="#BF360C"/>
+                android:text="Lance DashCastDaemon.java dans app_process via ADB shell : Hérite de CAPTURE_VIDEO_OUTPUT."
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+                
+            <TextView
+                android:id="@+id/tv_daemon_vd_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_daemon_vd_test"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Créer VirtualDisplay (Inject Daemon)"
+                android:backgroundTint="#A3BE8C"
+                android:textColor="#ffffff"
+                android:layout_marginBottom="12dp"/>
 
         </LinearLayout>
 
+        <!-- 3. CONFIGURATION CLUSTER -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <Button
-                android:id="@+id/btn_orient_unfreeze"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+            
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/diag_orient_unfreeze"
-                android:textSize="11sp"
-                android:backgroundTint="#2E7D32"
-                android:layout_marginEnd="4dp"/>
+                android:text="3. Propriétés du Cluster"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
 
-            <Button
-                android:id="@+id/btn_orient_read"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            <TextView
+                android:id="@+id/tv_display_size_result"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/diag_orient_read"
-                android:textSize="11sp"
-                android:backgroundTint="#1565C0"
-                android:layout_marginStart="4dp"/>
+                android:text="Taille du Display"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
+                <Button android:id="@+id/btn_display_size_88" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="8.8&quot;" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_1025" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="10.25&quot;" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_123" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="12.3&quot;"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
+                <Button android:id="@+id/btn_display_size_restore" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="RESTORE" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_full" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="FULL TEST" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Share"/>
+            </LinearLayout>
 
+            <TextView
+                android:id="@+id/tv_display1_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Restaurer l'affichage cluster"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btn_display1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Restaurer Affichage" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display1_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Share"/>
+            </LinearLayout>
         </LinearLayout>
 
-</LinearLayout>
+        <!-- 4. ANALYSE SYSTEM ET DUMPSYS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+            
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="4. Analyses Système (SurfaceFlinger)"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Dumpsys -->
+            <TextView
+                android:id="@+id/tv_dumpsys_result"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:text="Dumpsys window displays: --"
+                android:textSize="10sp"
+                android:fontFamily="monospace"
+                android:scrollbars="vertical"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_dumpsys_windows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Exécuter dumpsys window displays"
+                android:backgroundTint="#434C5E"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- JNI Surface -->
+            <TextView
+                android:id="@+id/tv_test_13_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="JNI Probe result: --"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
+                <Button
+                    android:id="@+id/btn_test_13"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="JNI Probe"
+                    android:backgroundTint="#434C5E"
+                    android:layout_marginEnd="4dp"/>
+                <Button
+                    android:id="@+id/btn_jni_start_probe"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Start + JNI Probe"
+                    android:backgroundTint="#5E81AC"/>
+            </LinearLayout>
+
+            <!-- Dump SF Mirror -->
+            <TextView
+                android:id="@+id/tv_sf_dump_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SF Dump: --"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_dump_sf_mirror"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Dump Mirror Service"
+                android:backgroundTint="#434C5E"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- AutoDisplayService — chemin direct Qt Surface → VirtualDisplay -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="AutoDisplayService (com.xdja.containerservice)"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#3B4252"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Démarre le service Qt→VirtualDisplay directement. C'est le mécanisme interne de Dilink5 : il récupère la Surface native Qt du cluster et la passe à createVirtualDisplay."
+                android:textSize="11sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tv_auto_display_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_auto_display_start"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="START AutoDisplayService"
+                    android:backgroundTint="#A3BE8C"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_auto_display_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="STOP"
+                    android:backgroundTint="#BF616A"/>
+            </LinearLayout>
+
+            <!-- ═══ PIPELINE FISSION (création VirtualDisplay cluster) ═══ -->
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#D8DEE9" android:layout_marginVertical="12dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pipeline Fission (création VirtualDisplay cluster)"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#3B4252"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Séquence complète : sendInfo(30)+sendInfo(16) → Qt enregistre sa Surface → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay(fission_testVirtualSurface). Puis lance DashBoard sur ce display."
+                android:textSize="11sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tv_fission_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="11sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_via_binder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="☕ sendInfo Java Direct (v0.1.21)"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="4dp"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_pipeline"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="🚀 Créer Fission Display"
+                    android:backgroundTint="#5E81AC"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_launch"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="▶ Lancer Dashboard"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="#FFFFFF"
+                    android:enabled="false"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 5. SNIFFER SYSTÈME (Reverse Engineering) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="32dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="5. Sniffer Système (Reverse Engineering)"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Capture logcat (tous tags pertinents) + snapshots dumpsys périodiques dans un fichier exportable. Conçu pour le reverse engineering : intercepte display, SF, AM, WM, BYD, autoContainer, Qt, broadcasts."
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Status -->
+            <TextView
+                android:id="@+id/tv_re_sniffer_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Inactif"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Start / Stop -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                <Button
+                    android:id="@+id/btn_re_sniffer_start"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="START"
+                    android:backgroundTint="#A3BE8C"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_re_sniffer_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="STOP"
+                    android:backgroundTint="#BF616A"/>
+            </LinearLayout>
+
+            <!-- Snapshot on demand + Export -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_re_sniffer_snapshot"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Snapshot maintenant"
+                    android:backgroundTint="#5E81AC"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_re_sniffer_export"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Exporter"
+                    android:backgroundTint="#88C0D0"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
 </ScrollView>

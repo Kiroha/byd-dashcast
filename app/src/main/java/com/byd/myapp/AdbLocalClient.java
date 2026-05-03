@@ -233,8 +233,8 @@ public class AdbLocalClient {
     private static final String SNIFFER_GREP =
             "grep -E '[l]ogcat -v threadtime|[s]leep 30'";
     public static final String SNIFFER_KILL_CMD =
-            "ps -A | grep '[l]ogcat -v threadtime' | awk '{print $2}' | xargs -r kill -9 2>/dev/null; "
-            + "ps -A | grep '[s]leep 30' | awk '{print $2}' | xargs -r kill -9 2>/dev/null; "
+            "rm -f /data/local/tmp/.sniffer_run; "
+            + "for p in $(ps -A | awk '/[s]leep 15/ {print $2}; /[s]leep 5/ {print $2}; /[l]ogcat -v threadtime/ {print $2}; /[l]ogcat -b events/ {print $2}'); do kill -9 $p 2>/dev/null; done; "
             + "echo killed";
 
     /**
@@ -244,9 +244,9 @@ public class AdbLocalClient {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
                 String logcatPs = safeOut(dadb.shell(
-                        "ps -A | grep '[l]ogcat -v threadtime' 2>&1").getAllOutput()).trim();
+                        "ps -A | grep -E '[l]ogcat -v threadtime|[l]ogcat -b events' 2>&1").getAllOutput()).trim();
                 String sleepPs = safeOut(dadb.shell(
-                        "ps -A | grep '[s]leep 30' 2>&1").getAllOutput()).trim();
+                        "ps -A | grep -E '[s]leep 15|[s]leep 5' 2>&1").getAllOutput()).trim();
                 boolean hasLogcat = !logcatPs.isEmpty();
                 boolean hasLoop   = !sleepPs.isEmpty();
                 String msg;
@@ -283,9 +283,9 @@ public class AdbLocalClient {
                 dadb.shell(SNIFFER_KILL_CMD);
                 Thread.sleep(600);
                 String logcatAfter = safeOut(dadb.shell(
-                        "ps -A | grep '[l]ogcat -v threadtime' 2>&1").getAllOutput()).trim();
+                        "ps -A | grep -E '[l]ogcat -v threadtime|[l]ogcat -b events' 2>&1").getAllOutput()).trim();
                 String sleepAfter = safeOut(dadb.shell(
-                        "ps -A | grep '[s]leep 30' 2>&1").getAllOutput()).trim();
+                        "ps -A | grep -E '[s]leep 15|[s]leep 5' 2>&1").getAllOutput()).trim();
                 boolean ok = logcatAfter.isEmpty() && sleepAfter.isEmpty();
                 String msg = ok ? "Sniffer stopped ✓" : "Processes still active: " + logcatAfter + " " + sleepAfter;
                 AppLogger.i(TAG, "killSniffer: " + msg);
@@ -502,7 +502,30 @@ public class AdbLocalClient {
             }
             keyPair = AdbKeyPair.read(privateKey, publicKey);
         }
-        return Dadb.create("localhost", ADB_PORT, keyPair);
+        
+        // Retry loop to give the user time to click 'Allow USB Debugging' if the popup appears
+        int retries = 15;
+        Exception lastE = null;
+        while (retries > 0) {
+            try {
+                return Dadb.create("localhost", ADB_PORT, keyPair);
+            } catch (Exception e) {
+                lastE = e;
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+                AppLogger.w(TAG, "ADB connect exception (popup pending?), retrying in 2s... (" + retries + " left)");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+                retries--;
+            }
+        }
+        throw lastE;
     }
 
     // ── Grant SYSTEM_ALERT_WINDOW via appops ─────────────────────────────────────
@@ -755,16 +778,24 @@ public class AdbLocalClient {
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
-                    sb.append("── sendInfo(1000, 30) = 12.3\" (ADAS not stretched) ──\n");
+                    // Full confirmed sequence (logcat 03/05/2026, BYD Seal EU):
+                    //   sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35) → VirtualDisplay in ~280ms
+                    sb.append("── sendInfo(1000, 30) = 12.3\" profile ──\n");
                     AdbShellResponse r30 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
                     sb.append(r30.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1000);
+                    Thread.sleep(6000);
 
-                    sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
+                    sb.append("\n── sendInfo(1000, 16) = 全屏投屏开启 Qt standby ──\n");
                     AdbShellResponse r16 = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
                     sb.append(r16.getAllOutput().trim()).append("\n");
+                    Thread.sleep(6000);
+
+                    sb.append("\n── sendInfo(1000, 35) = Di4.0 mode → VirtualDisplay creation ──\n");
+                    AdbShellResponse r35 = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 35 s16 \"\" 2>&1");
+                    sb.append(r35.getAllOutput().trim()).append("\n");
 
                     AppLogger.endTiming(TAG, t0, "activateClusterDisplay finished");
                     callback.onSuccess(sb.toString());
