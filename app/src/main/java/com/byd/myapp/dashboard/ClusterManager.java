@@ -69,7 +69,7 @@ public class ClusterManager {
     // Timeout waiting for VirtualDisplay after full sendInfo(30→16→35) sequence.
     // Sequence: 2s delay + 6s (30→16) + 6s (16→35) + ~280ms creation = ~14.3s → 18s total with margin.
     // 🚨 VirtualDisplay does NOT exist at boot on Seal EU (confirmed by logcat 03/05/2026).
-    private static final long FREEDOM_STARTUP_TIMEOUT_MS = 18000;
+    private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 18000;
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
 
@@ -118,8 +118,7 @@ public class ClusterManager {
      *
      * Details: doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md
      */
-    public void activateClusterDisplay(final boolean freedomJustStarted,
-            final DisplayReadyCallback callback) {
+    public void activateClusterDisplay(final DisplayReadyCallback callback) {
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
 
         // 1. First check if the cluster VirtualDisplay is already present (DISPLAY_CATEGORY_PRESENTATION)
@@ -190,31 +189,19 @@ public class ClusterManager {
         // VirtualDisplay appears ~280ms after sendInfo(35). DisplayListener + polling will detect it.
         AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→6s→16→6s→35) + polling");
 
-        // Extended timeout: Freedom may take ~5s to create the display on first startup.
-        final long timeoutMs = FREEDOM_STARTUP_TIMEOUT_MS;
+        // Timeout: sequence 30→6s→16→6s→35 + ~280ms creation = ~14.3s → 18s with margin.
+        final long timeoutMs = CLUSTER_DISPLAY_TIMEOUT_MS;
 
-        // 1. Start AppStartManagement directly
-        //    If freedomJustStarted=true: ClusterService already launched it, do not force-stop/restart
-        //    (it would be in the process of starting → race condition).
-        if (freedomJustStarted) {
-            AppLogger.i(TAG, "activateClusterDisplay: Freedom already started by ClusterService — skip startFreedom()");
-            // Still send sendInfo(30+16) to release the Qt surface
-            mHandler.postDelayed(new Runnable() {
-                @Override public void run() { sendActivationSequence(); }
-            }, 2000);
-        } else {
-            
-            AppLogger.i(TAG, "Invoking native BYD cluster spawn (com.byd.appstartmanagement)");
-            Intent bypassIntent = new Intent();
-            bypassIntent.setClassName("com.byd.appstartmanagement", "com.byd.appstartmanagement.frame.AppStartManagement");
-            bypassIntent.addFlags(268468224);
-            try {
-                mContext.startActivity(bypassIntent);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "Bypass failed", e);
-            }
-            mHandler.postDelayed(new Runnable() { @Override public void run() { sendActivationSequence(); } }, 2000);
+        AppLogger.i(TAG, "Invoking native BYD cluster spawn (com.byd.appstartmanagement)");
+        Intent bypassIntent = new Intent();
+        bypassIntent.setClassName("com.byd.appstartmanagement", "com.byd.appstartmanagement.frame.AppStartManagement");
+        bypassIntent.addFlags(268468224);
+        try {
+            mContext.startActivity(bypassIntent);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "Bypass failed", e);
         }
+        mHandler.postDelayed(new Runnable() { @Override public void run() { sendActivationSequence(); } }, 2000);
 
         // Listen for display additions + timeout
         final long[] pollCount = {0};
@@ -244,7 +231,7 @@ public class ClusterManager {
         // created in another process (cross-process binder)
         scheduleDisplayPoll(dm, listenerHolder, callback, pollCount, 0);
 
-        // Global timeout — extended (FREEDOM_STARTUP_TIMEOUT_MS) because Freedom must start
+        // Global timeout for VirtualDisplay creation.
         mHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 dm.unregisterDisplayListener(listenerHolder[0]);
@@ -267,7 +254,7 @@ public class ClusterManager {
         mHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 pollCount[0]++;
-                if (pollCount[0] * POLL_INTERVAL_MS >= FREEDOM_STARTUP_TIMEOUT_MS) return;
+                if (pollCount[0] * POLL_INTERVAL_MS >= CLUSTER_DISPLAY_TIMEOUT_MS) return;
 
                 Display found = findClusterDisplay(dm);
                 if (found != null) {

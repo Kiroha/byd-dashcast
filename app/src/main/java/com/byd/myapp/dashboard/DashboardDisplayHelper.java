@@ -62,14 +62,11 @@ public class DashboardDisplayHelper {
 
     /**
      * Triggers the cluster activation sequence.
-     * @param freedomJustStarted  true if ClusterService just launched Freedom via startFreedom().
-     *                            Avoids a redundant second call to startFreedom() in ClusterManager
-     *                            if the VirtualDisplay has not yet appeared within the 2s delay.
      */
-    public void start(boolean freedomJustStarted) {
+    public void start() {
         mKnownClusterDisplayId = -1;
         mDisplayManager.registerDisplayListener(mDisconnectListener, null);
-        mClusterManager.activateClusterDisplay(freedomJustStarted, new ClusterManager.DisplayReadyCallback() {
+        mClusterManager.activateClusterDisplay(new ClusterManager.DisplayReadyCallback() {
             @Override
             public void onDisplayReady(Display display, int displayId) {
                 // Guard: if stop() was already called, discard this callback
@@ -94,11 +91,6 @@ public class DashboardDisplayHelper {
                 mListener.onDashboardDisplayDisconnected();
             }
         });
-    }
-
-    /** No-arg overload — Freedom not started by the caller (default behavior). */
-    public void start() {
-        start(false);
     }
 
     public void stop() {

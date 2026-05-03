@@ -3,16 +3,12 @@ package com.byd.myapp;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.util.Base64;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
 import dadb.Dadb;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.ObjectOutputStream;
-import java.util.HashMap;
 
 /**
  * AdbLocalClient — connects to the local ADB daemon (localhost:5555) from inside
@@ -91,32 +87,7 @@ public class AdbLocalClient {
         void onError(String error);
     }
 
-    // ── Freedom state ─────────────────────────────────────────────────────────
 
-    /** Freedom state (com.xdja.clusterdemo) — required before any cluster projection. */
-    public enum FreedomStatus {
-        /** com.xdja.clusterdemo is not installed on the system. */
-        NOT_INSTALLED,
-        /** Installed but inactive: fission VirtualDisplay absent — display 1 inaccessible. */
-        INACTIVE,
-        /** Active in 全屏导航 mode: fission VirtualDisplay present — display 1 accessible. */
-        ACTIVE
-    }
-
-    public interface FreedomStateCallback {
-        void onResult(FreedomStatus status);
-    }
-
-    /**
-     * Checks Freedom state via ADB (background thread).
-     *
-     * Two sequential tests:
-     *   1. pm list packages com.xdja.clusterdemo → NOT_INSTALLED if absent
-     *   2. ps -A | grep com.xdja.clusterdemo     → ACTIVE if process found, INACTIVE otherwise
-     *
-     * Note: Freedom OFF = display 1 absent from DisplayManager (confirmed 18/04/2026).
-     * On ADB error, returns INACTIVE (will trigger startFreedom as fallback).
-     */
     // Grep pattern uses the [m] trick to prevent grep from matching its own cmdline.
     // "[m]irrordaemon" matches "mirrordaemon" in process names but not in the
     // grep cmdline (which literally contains "[m]irrordaemon").
@@ -299,39 +270,6 @@ public class AdbLocalClient {
         });
     }
 
-    public static void checkFreedomState(final Context context, final FreedomStateCallback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    // 1. Is Freedom installed?
-                    String pkgOut = safeOut(dadb.shell(
-                            "pm list packages com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
-                    if (!pkgOut.contains("com.xdja.clusterdemo")) {
-                        AppLogger.w(TAG, "checkFreedomState: not installed");
-                        callback.onResult(FreedomStatus.NOT_INSTALLED);
-                        return;
-                    }
-                    // 2. Is Freedom actually running in memory?
-                    //    NOTE: we no longer check "dumpsys display | grep fission"!
-                    //    The fission VirtualDisplay is managed by AutoDisplayService and is ALWAYS present
-                    //    even when Freedom is force-stopped. We must check for the process instead.
-                    String pidOut = safeOut(dadb.shell(
-                            "ps -A | grep com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
-                    if (!pidOut.isEmpty()) {
-                        AppLogger.i(TAG, "checkFreedomState: ACTIVE (process found)");
-                        callback.onResult(FreedomStatus.ACTIVE);
-                    } else {
-                        AppLogger.i(TAG, "checkFreedomState: INACTIVE (process not found)");
-                        callback.onResult(FreedomStatus.INACTIVE);
-                    }
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "checkFreedomState ERROR", e);
-                    callback.onResult(FreedomStatus.INACTIVE); // fallback → startFreedom will be tried
-                }
-            }
-        }); // adb-check-freedom
-    }
 
     // -------------------------------------------------------------------------
 
@@ -560,255 +498,6 @@ public class AdbLocalClient {
         }); // adb-overlay-grant
     }
 
-    // ── Freedom: automatic startup ────────────────────────────────────────────
-    /**
-     * Configures Freedom (com.xdja.clusterdemo) in "全屏导航" (full-screen) mode,
-     * then starts it via ADB shell.
-     *
-     * Mechanism: Freedom persists its navigation mode in
-     *   /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
-     * under the key "navigationType" (int) — Java-serialized HashMap (ObjectOutputStream).
-     * Value 1 = 全屏导航 (full-screen projection, confirmed in car v2.29).
-     * Without file (default) = navigationType absent → BootReceiver returns without creating VirtualDisplay.
-     *
-     * Sequence:
-     *   1. force-stop Freedom (clean state before restart)
-     *   2. write properties.xml with navigationType=1 (全屏导航)
-     *   3. am broadcast BOOT_COMPLETED → BootReceiver reads the file and creates the VirtualDisplay
-     *
-     * Callback is called on an ADB background thread.
-     */
-    public static void startFreedom(final Context context, final Callback callback) {
-        startFreedom(context, false, callback);
-    }
-
-    /**
-     * @param skipDisplayCheck  true if the caller already knows the fission VirtualDisplay is absent
-     *                          (e.g. just after checkFreedomState → INACTIVE). Avoids a redundant
-     *                          second ADB round-trip to check the same thing.
-     */
-    public static void startFreedom(final Context context, final boolean skipDisplayCheck,
-            final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    // 1. Check if Freedom is already running in memory.
-                    //    Skipped if skipDisplayCheck=true (caller already confirmed it's absent).
-                    if (!skipDisplayCheck) {
-                        String pidCheck = safeOut(dadb.shell(
-                                "ps -A | grep com.xdja.clusterdemo 2>&1").getAllOutput()).trim();
-                        if (!pidCheck.isEmpty()) {
-                            AppLogger.i(TAG, "startFreedom: Freedom (com.xdja.clusterdemo) already active → not restarting");
-                            callback.onSuccess("Freedom already active");
-                            return;
-                        }
-                    } else {
-                        AppLogger.d(TAG, "startFreedom: skip pidCheck (Freedom already confirmed inactive)");
-                    }
-
-                    // 2. Freedom inactive → safety force-stop before clean startup
-                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
-                    AppLogger.i(TAG, "startFreedom: force-stop Freedom");
-                    Thread.sleep(500);
-
-                    // 3. Write properties.xml with navigationType=1 (全屏导航)
-                    //    IMPORTANT: do NOT delete the file — navigationType=0 (default without file)
-                    //    triggers immediate return in BootReceiver.setup() without creating the VirtualDisplay.
-                    //    The file is a Java-serialized HashMap (ObjectOutputStream).
-                    writeNavigationTypeFile(dadb);
-                    AppLogger.i(TAG, "startFreedom: properties.xml written (navigationType=1 → 全屏导航)");
-
-                    // 4. Start Freedom fully transparently.
-                    //    Instead of opening MainActivity (which causes a visual flash on screen),
-                    //    we simulate BOOT_COMPLETED. Freedom only needs to run its BootReceiver
-                    //    to read our file and establish the Binder bridge.
-                    AppLogger.i(TAG, "startFreedom: transparent startup via am broadcast BOOT_COMPLETED");
-                    String startOut = safeOut(dadb.shell(
-                            "am broadcast -a android.intent.action.BOOT_COMPLETED -n com.xdja.clusterdemo/com.byd.windowmanager.receivers.BootReceiver 2>&1"
-                    ).getAllOutput()).trim();
-                    AppLogger.i(TAG, "startFreedom am broadcast → " + startOut);
-                    callback.onSuccess(startOut);
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "startFreedom ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-start-freedom
-    }
-
-    /**
-     * Writes /sdcard/Android/data/com.xdja.clusterdemo/data/properties.xml
-     * with navigationType=1 (全屏导航 — full-screen projection).
-     *
-     * Freedom reads this file via ObjectInputStream → HashMap<String, Object>.
-     * BootReceiver.setup() checks navigationType > 0 to trigger VirtualDisplay creation.
-     * With the default value 0 (file absent), setup() returns immediately without action.
-     */
-    private static void writeNavigationTypeFile(Dadb dadb) throws Exception {
-        // Serialize HashMap {"navigationType": Integer(1)} with Java ObjectOutputStream
-        HashMap<String, Object> prefs = new HashMap<>();
-        prefs.put("navigationType", Integer.valueOf(1));
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(prefs);
-        oos.close();
-        byte[] bytes = baos.toByteArray();
-
-        // Base64-encode and write via ADB shell (base64 available in Android toybox)
-        String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
-        String dir  = "/sdcard/Android/data/com.xdja.clusterdemo/data";
-        String path = dir + "/properties.xml";
-        dadb.shell("mkdir -p " + dir + " 2>&1");
-        String writeResult = safeOut(dadb.shell(
-                "echo '" + b64 + "' | base64 -d > " + path + " 2>&1"
-        ).getAllOutput()).trim();
-        AppLogger.i(TAG, "writeNavigationTypeFile → '" + writeResult + "' (" + bytes.length + " bytes)");
-    }
-
-
-    // ── TEST 4 : Broadcast BOOT_COMPLETED vers le BootReceiver de Freedom ──────
-    /**
-     * Sends BOOT_COMPLETED directly to Freedom's BootReceiver without opening its UI.
-     *
-     * Sequence:
-     *   1. am broadcast BOOT_COMPLETED → com.xdja.clusterdemo/.BootReceiver
-     *   2. Wait 5s for the VirtualDisplay to appear
-     *   3. dumpsys display | grep fission → verify if cluster VirtualDisplay was created
-     *
-     * If VirtualDisplay is created → startFreedom() can be replaced by this broadcast
-     * (headless, no Freedom UI visible).
-     */
-    public static void sendBootReceiverBroadcast(final Context context, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                long t0 = AppLogger.startTiming();
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-
-                    // Snapshot AVANT
-                    sb.append("── AVANT broadcast ──\n");
-                    String before = safeOut(dadb.shell(
-                            "dumpsys display 2>&1 | grep -i fission"
-                    ).getAllOutput()).trim();
-                    sb.append(before.isEmpty() ? "(aucun display fission)" : before).append("\n\n");
-                    AppLogger.i(TAG, "TEST4 avant : " + (before.isEmpty() ? "vide" : before));
-
-                    // Force-stop Freedom first for a clean state
-                    sb.append("── Force-stop Freedom ──\n");
-                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
-                    Thread.sleep(500);
-                    sb.append("OK\n\n");
-
-                    // Targeted BOOT_COMPLETED broadcast
-                    sb.append("── am broadcast BOOT_COMPLETED → BootReceiver ──\n");
-                    String broadcastOut = safeOut(dadb.shell(
-                            "am broadcast -a android.intent.action.BOOT_COMPLETED" +
-                            " -n com.xdja.clusterdemo/com.byd.windowmanager.receivers.BootReceiver 2>&1"
-                    ).getAllOutput()).trim();
-                    sb.append(broadcastOut).append("\n\n");
-                    AppLogger.i(TAG, "TEST4 broadcast → " + broadcastOut);
-
-                    // Wait 5s for VirtualDisplay creation
-                    sb.append("── Waiting 5s (VirtualDisplay creation) ──\n");
-                    Thread.sleep(5000);
-
-                    // Snapshot AFTER
-                    sb.append("── AFTER broadcast ──\n");
-                    String after = safeOut(dadb.shell(
-                            "dumpsys display 2>&1 | grep -i fission"
-                    ).getAllOutput()).trim();
-                    sb.append(after.isEmpty() ? "(aucun display fission)" : after).append("\n\n");
-                    AppLogger.i(TAG, "TEST4 after: " + (after.isEmpty() ? "empty" : after));
-
-                    // Conclusion
-                    boolean created = !after.isEmpty() && after.contains("fission");
-                    sb.append(created
-                            ? "✅ VirtualDisplay created! Broadcast alone is sufficient → Freedom headless possible."
-                            : "❌ VirtualDisplay absent. Le BootReceiver seul ne suffit pas.");
-                    long ms = System.currentTimeMillis() - t0;
-                    sb.append("\n\n(").append(ms).append(" ms)");
-
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "sendBootReceiverBroadcast ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-test4-boot-receiver
-    }
-
-
-    /**
-     * Activates the cluster in presentation mode (sendInfo 30 + 16 only).
-     *
-     *   1. sendInfo(1000, 30) — 12.3" size ALWAYS: only mode where ADAS screen is not stretched
-     *   2. sendInfo(1000, 16) — Qt standby → releases display for projection
-     *
-     * Does NOT include sendInfo(18) or sendInfo(0) which are restore commands.
-     */
-    public static void activateClusterDisplay(final Context context, final Callback callback) {
-        checkFreedomState(context, new FreedomStateCallback() {
-            @Override public void onResult(FreedomStatus status) {
-                if (status == FreedomStatus.INACTIVE) {
-                    AppLogger.i(TAG, "activateClusterDisplay: Freedom inactive → starting first");
-                    startFreedom(context, true, new Callback() {
-                        @Override public void onSuccess(String ignored) {
-                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
-                                @Override public void run() { doActivateClusterDisplayLocked(context, callback); }
-                            }, 2000);
-                        }
-                        @Override public void onError(String err) {
-                            doActivateClusterDisplayLocked(context, callback);
-                        }
-                    });
-                } else {
-                    doActivateClusterDisplayLocked(context, callback);
-                }
-            }
-        });
-    }
-
-    private static void doActivateClusterDisplayLocked(final Context context, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                long t0 = AppLogger.startTiming();
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-
-                    // Full confirmed sequence (logcat 03/05/2026, BYD Seal EU):
-                    //   sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35) → VirtualDisplay in ~280ms
-                    sb.append("── sendInfo(1000, 30) = 12.3\" profile ──\n");
-                    AdbShellResponse r30 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
-                    sb.append(r30.getAllOutput().trim()).append("\n");
-                    Thread.sleep(6000);
-
-                    sb.append("\n── sendInfo(1000, 16) = 全屏投屏开启 Qt standby ──\n");
-                    AdbShellResponse r16 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
-                    sb.append(r16.getAllOutput().trim()).append("\n");
-                    Thread.sleep(6000);
-
-                    sb.append("\n── sendInfo(1000, 35) = Di4.0 mode → VirtualDisplay creation ──\n");
-                    AdbShellResponse r35 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 35 s16 \"\" 2>&1");
-                    sb.append(r35.getAllOutput().trim()).append("\n");
-
-                    AppLogger.endTiming(TAG, t0, "activateClusterDisplay finished");
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "activateClusterDisplay ERREUR", e);
-                    callback.onError(msg);
-                }
-            }
-        }); // adb-activate-cluster-thread
-    }
-
     /**
      * TEST 10 — Cluster activation + restore sequence (Seal EU)
      *
@@ -911,14 +600,6 @@ public class AdbLocalClient {
                         sb.append("force-stop ").append(targetPackage).append("\n");
                         Thread.sleep(500);
                     }
-
-                    // 1. Force-stop Freedom (com.xdja.clusterdemo).
-                    //    Freedom is started automatically at our app launch (v1.86).
-                    //    If still running, it reclaims display immediately after sendInfo(18)
-                    //    and cancels the restore. Must stop it first.
-                    dadb.shell("am force-stop com.xdja.clusterdemo 2>&1");
-                    sb.append("force-stop Freedom\n");
-                    Thread.sleep(500);
 
                     AdbShellResponse rStop = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");

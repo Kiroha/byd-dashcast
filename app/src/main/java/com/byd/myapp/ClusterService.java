@@ -60,8 +60,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
     private boolean                mProjectionActive = false;
-    // Last known Freedom state — cached for replay in setListener()
-        // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
+    // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     // ────────────────────────────────────────────────────────────────────────
@@ -128,15 +127,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     // ── Public API (called from MainActivity via the binder) ─────────────────
 
-    /**
-     * Checks Freedom state via ADB, then:
-     *   ACTIVE      → mDisplayHelper.start() directly
-     *   INACTIVE    → startFreedom() (force-stop + navigationType=1 + am start) → 2s delay → start()
-     *   NOT_INSTALLED → mDisplayHelper.start() anyway (let activateClusterDisplay handle the fallback)
-     */
     private void startNativeProjection() {
         AppLogger.i(TAG, "Starting cluster projection (native)...");
-        mDisplayHelper.start(false);
+        mDisplayHelper.start();
     }
 
     public void setListener(Listener listener) {
@@ -346,7 +339,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void restartProjection() {
         AppLogger.log(TAG, "restartProjection requested natively");
         if (mDisplayHelper != null) {
-            mDisplayHelper.start(false);
+            mDisplayHelper.start();
         }
     }
 
