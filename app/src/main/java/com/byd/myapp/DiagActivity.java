@@ -561,7 +561,7 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onSuccess(String r) { out[0] = r.trim(); l.countDown(); }
             @Override public void onError(String e)   { out[0] = "ERR:" + e; l.countDown(); }
         });
-        try { l.await(5, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+        try { l.await(5, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         return out[0];
     }
 

@@ -49,10 +49,10 @@ public class MirrorDaemon {
     private static volatile IBinder sMirrorToken     = null;
     private static volatile int     sClusterDisplayId = 2;
 
-    // InputManager (init une seule fois)
-    private static Object  sInputManager    = null;
-    private static Method  sInjectMethod    = null;
-    private static Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
+    // InputManager (init une seule fois, lu depuis les threads Binder → volatile)
+    private static volatile Object  sInputManager    = null;
+    private static volatile Method  sInjectMethod    = null;
+    private static volatile Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
 
     // ─────────────────────────────────────────────────────────────────────────
 

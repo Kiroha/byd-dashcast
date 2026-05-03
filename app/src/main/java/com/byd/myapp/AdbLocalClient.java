@@ -1118,44 +1118,10 @@ public class AdbLocalClient {
         }); // screenshot-mirror-thread
     }
 
-    /**
-     * Reads a text file via ADB shell (cat) and copies it to getExternalFilesDir.
-     * Avoids the need for READ_EXTERNAL_STORAGE to read files in
-     */
-    public interface ReadFileCallback {
-        void onSuccess(java.io.File localCopy);
-        void onError(String error);
-    }
-
-    public static void readFileViaAdb(final Context context, final String remotePath,
-                                      final String localName, final ReadFileCallback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    String content = safeOut(
-                            dadb.shell("cat " + remotePath + " 2>&1").getAllOutput());
-                    if (content.contains("No such file") || content.equals("(empty)")) {
-                        callback.onError("File not found: " + remotePath);
-                        return;
-                    }
-                    java.io.File dst = new java.io.File(
-                            context.getExternalFilesDir(null), localName);
-                    try (java.io.FileWriter fw = new java.io.FileWriter(dst, false)) {
-                        fw.write(content);
-                    }
-                    callback.onSuccess(dst);
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        });
-    }
-
     private static String safeOut(String s) {
         if (s == null) return "(null)";
         s = s.trim();
-        return s.isEmpty() ? "(emptyy)" : s;
+        return s.isEmpty() ? "(empty)" : s;
     }
 
 }
