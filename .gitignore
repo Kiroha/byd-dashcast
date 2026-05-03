@@ -40,3 +40,4 @@ generate_diag_ui.py
 char_map.json
 *.py.save
 app/build.gradle.bak
+scripts_work/
