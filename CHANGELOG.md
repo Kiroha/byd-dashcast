@@ -5,6 +5,21 @@ Public releases are tracked in [README.md](README.md#version-history).
 
 ---
 
+## Public releases
+
+| Version | versionCode | Summary |
+|---------|-------------|---------|
+| **0.1.7-alpha** | 8 | **Freedom-free** — VirtualDisplay cluster creation confirmed via live logcat RE (sendInfo 30→16→35). Full autonomous activation sequence. Sanity fixes (duplicate setEnabled, color reset). README cleaned. |
+| **0.1.6-alpha** | 7 | DiLink 5 Dashboard RE — deep dumpsys sniffer, broadcast tracking, DiagActivity refactor |
+| **0.1.5-alpha** | — | Stability improvements — last release with Freedom dependency |
+| **0.1.4-alpha** | — | Fix touch offset bug in cluster mirror input forwarding |
+| **0.1.3-alpha** | — | Full i18n (FR/EN/DE/IT/TR), string externalization |
+| **0.1.2-alpha** | — | EN translation, DashCast rename, new icon — device-validated |
+| **0.1.1-alpha** | — | Bug fixes, code sanity, README improvements |
+| **0.1.0-alpha** | — | First public release — cluster mirror working (image + touch) |
+
+---
+
 ## Internal versions (pre-public)
 
 | Version | versionCode | Summary |
