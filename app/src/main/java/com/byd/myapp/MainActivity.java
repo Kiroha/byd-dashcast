@@ -525,10 +525,16 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
-        // ── Normal behavior — full screen launch ────────────────────────────────
-        mClusterService.launchOnDashboard(pkgName, new ClusterService.LaunchCallback() {
+        // ── Normal behavior — move (or launch if not running) ──────────────────
+        // moveTaskToDisplay() moves the existing task without killing it.
+        // Falls back to launchOnDashboard() if no running task is found.
+        int clusterDisplayId = mClusterService.getDisplayId();
+        if (clusterDisplayId < 0) clusterDisplayId = 1; // Seal EU hardcoded fallback
+        final int targetDisplayId = clusterDisplayId;
+        mClusterService.moveTaskToDisplay(pkgName, targetDisplayId, new ClusterService.LaunchCallback() {
             @Override public void onResult(boolean launched) {
-                AppLogger.log(TAG, "launchOnDashboard " + pkgName + " → " + (launched ? "OK" : "FAILED"));
+                AppLogger.log(TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId
+                        + " " + (launched ? "OK" : "FAILED"));
                 if (launched) {
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
@@ -548,8 +554,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSendToMain(AppInfo app) {
-        // Clean up cluster state before launch: launchOnMainDisplay may return
-        // false even if the app launches correctly (startActivity fallback without reflection).
+        // Clean up cluster state before move
         mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 btnActivateCluster.setEnabled(true);
@@ -567,7 +572,13 @@ public class MainActivity extends AppCompatActivity
         updateDashboardStatus(null);
                 btnActivateCluster.setEnabled(true);
         showAppList();
-        mDashboardLauncher.launchOnMainDisplay(app.packageName);
+        // Move the running task to display 0 without relaunching.
+        // Falls back to launchOnMainDisplay() if no task is found.
+        if (mServiceBound && mClusterService != null) {
+            mClusterService.moveTaskToDisplay(app.packageName, 0, null);
+        } else {
+            mDashboardLauncher.launchOnMainDisplay(app.packageName);
+        }
         AppLogger.log(TAG, "Send to main display — " + app.packageName);
     }
 

@@ -172,6 +172,122 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         void onResult(boolean success);
     }
 
+    // ── Task reparenting ─────────────────────────────────────────────────────
+
+    /**
+     * Finds the taskId of the running task whose top activity belongs to packageName.
+     * Must be called from a background thread.
+     * Returns -1 if no running task is found.
+     */
+    private int findRunningTaskId(String packageName) {
+        try {
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks =
+                    am.getRunningTasks(50);
+            for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
+                if (t.topActivity != null
+                        && packageName.equals(t.topActivity.getPackageName())) {
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName + " → taskId=" + t.id);
+                    return t.id;
+                }
+            }
+        } catch (Exception e) {
+            AppLogger.w(TAG, "findRunningTaskId: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * Moves the running task for packageName to targetDisplayId using
+     * IActivityTaskManager.moveTaskToDisplay() (hidden API, reflection — no relaunch, no state loss).
+     *
+     * For the cluster (targetDisplayId > 0), also applies FREEFORM + inset bounds after the move.
+     *
+     * Fallback: if the task is not found (app not yet running) or the IATM call fails,
+     *   - targetDisplayId > 0 → launchOnDashboard() (fresh launch with 2s delay)
+     *   - targetDisplayId == 0 → mLauncher.launchOnMainDisplay() (relaunch on main)
+     *
+     * Callback is always called on the main thread.
+     */
+    public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
+                                   final LaunchCallback callback) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    int taskId = findRunningTaskId(packageName);
+                    if (taskId == -1) {
+                        AppLogger.w(TAG, "moveTaskToDisplay: no running task for "
+                                + packageName + " → fallback launch");
+                        fallbackLaunch(packageName, targetDisplayId, callback);
+                        return;
+                    }
+
+                    // IActivityTaskManager.moveTaskToDisplay(taskId, displayId)
+                    Class<?> atmClass  = Class.forName("android.app.ActivityTaskManager");
+                    Object   iatm      = atmClass.getMethod("getService").invoke(null);
+                    Class<?> iAtmClass = iatm.getClass();
+                    iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
+                            .invoke(iatm, taskId, targetDisplayId);
+                    AppLogger.i(TAG, "moveTaskToDisplay taskId=" + taskId
+                            + " → display=" + targetDisplayId + " OK");
+
+                    if (targetDisplayId > 0) {
+                        Thread.sleep(300); // let WM settle after the display move
+
+                        // WINDOWING_MODE_FREEFORM = 5
+                        try {
+                            iAtmClass.getMethod("setTaskWindowingMode",
+                                    int.class, int.class, boolean.class)
+                                    .invoke(iatm, taskId, 5, true);
+                            AppLogger.i(TAG, "setTaskWindowingMode(FREEFORM) OK");
+                        } catch (Exception e) {
+                            AppLogger.w(TAG, "setTaskWindowingMode: " + e.getMessage());
+                        }
+                        // Apply the same inset bounds as applyClusterFreeformBounds()
+                        try {
+                            android.graphics.Rect bounds = new android.graphics.Rect(
+                                    CLUSTER_INSET_H, CLUSTER_INSET_V,
+                                    1920 - CLUSTER_INSET_H, 720 - CLUSTER_INSET_V);
+                            iAtmClass.getMethod("resizeTask",
+                                    int.class, android.graphics.Rect.class, int.class)
+                                    .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
+                            AppLogger.i(TAG, "resizeTask " + bounds + " OK");
+                        } catch (Exception e) {
+                            AppLogger.w(TAG, "resizeTask: " + e.getMessage());
+                        }
+                    }
+
+                    mMainHandler.post(new Runnable() {
+                        @Override public void run() {
+                            if (callback != null) callback.onResult(true);
+                        }
+                    });
+
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "moveTaskToDisplay error", e);
+                    fallbackLaunch(packageName, targetDisplayId, callback);
+                }
+            }
+        }, "move-task-thread").start();
+    }
+
+    private void fallbackLaunch(final String packageName, final int targetDisplayId,
+                                 final LaunchCallback callback) {
+        mMainHandler.post(new Runnable() {
+            @Override public void run() {
+                if (targetDisplayId > 0) {
+                    launchOnDashboard(packageName, callback);
+                } else {
+                    boolean ok = mLauncher.launchOnMainDisplay(packageName);
+                    if (callback != null) callback.onResult(ok);
+                }
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
      * Launches an app on the cluster.
      * Activation sequence:
