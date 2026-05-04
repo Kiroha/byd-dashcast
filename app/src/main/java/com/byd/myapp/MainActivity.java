@@ -181,10 +181,6 @@ public class MainActivity extends AppCompatActivity
         // Must be called before any call to ClusterMirrorManager.startMirror(this, ).
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
         com.byd.myapp.dashboard.ClusterMirrorManager.unlockHiddenApis();
-        // Floating LOG button — debug only (absent in release)
-        if (BuildConfig.DEBUG) {
-            startService(new Intent(this, FloatingLogButton.class));
-        }
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
