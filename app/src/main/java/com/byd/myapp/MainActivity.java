@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity
             // Without this, onSendToDashboard() would think the cluster is available and would call
             // mClusterService.launchOnDashboard() → NullPointerException.
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
+            stopTrackingApp();
             mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 btnActivateCluster.setEnabled(true);
@@ -104,6 +105,11 @@ public class MainActivity extends AppCompatActivity
     private String mSecondDashboardPkg  = null;   // package name of the secondary slot (split)
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
+
+    // External process-death detection (zero polling, event-driven).
+    // Stored as Object because ActivityManager.OnUidImportanceListener is absent from
+    // the BYD custom SDK android.jar; the real interface is resolved at runtime via reflection.
+    private Object mUidImportanceListener = null;
 
     // UI — barre statut
     private TextView tvDashboardStatus;
@@ -438,6 +444,7 @@ public class MainActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                stopTrackingApp();
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 btnActivateCluster.setEnabled(true);
@@ -526,6 +533,7 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
                     mAdapter.setCurrentPackage(pkgName);
+                    startTrackingApp(pkgName); // detect external kill (swipe task switcher)
                     updateDashboardStatus(appName);
                     updateControlLabel();
                     startClusterMirror();
@@ -738,6 +746,110 @@ public class MainActivity extends AppCompatActivity
             startScreenshotLoop(displayId);
         }
     }
+
+    // ---- External process-death detection -----------------------------------
+
+    /**
+     * Registers an OnUidImportanceListener for the given package.
+     * Fires (on a binder thread → dispatched to main) when the process importance
+     * rises above IMPORTANCE_CACHED, meaning the app has no active components left
+     * (task removed from display 1 and/or process killed).
+     * Cost: zero — purely event-driven, no polling, no background thread.
+     */
+    /**
+     * Registers an OnUidImportanceListener for the given package via reflection.
+     * ActivityManager.OnUidImportanceListener is absent from the BYD custom SDK android.jar,
+     * so we create a java.lang.reflect.Proxy that implements the real runtime interface.
+     * Fires when process importance rises above IMPORTANCE_CACHED (400), i.e. the app has
+     * no active components — task on display 1 is gone (swipe task-switcher or low-memory kill).
+     * Cost: zero — purely event-driven, no polling, no background thread.
+     */
+    private void startTrackingApp(String packageName) {
+        stopTrackingApp();
+        try {
+            final int uid = getPackageManager().getApplicationInfo(packageName, 0).uid;
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+
+            // Resolve the hidden interface at runtime
+            Class<?> listenerIface = Class.forName(
+                    "android.app.ActivityManager$OnUidImportanceListener");
+            // IMPORTANCE_CACHED = 400; use literal to avoid SDK resolution issue
+            final int IMPORTANCE_CACHED = 400;
+
+            Object proxy = java.lang.reflect.Proxy.newProxyInstance(
+                    getClassLoader(),
+                    new Class[]{listenerIface},
+                    new java.lang.reflect.InvocationHandler() {
+                        @Override
+                        public Object invoke(Object p, java.lang.reflect.Method method,
+                                Object[] args) {
+                            if ("onUidImportance".equals(method.getName())
+                                    && args != null && args.length == 2) {
+                                int checkedUid  = (Integer) args[0];
+                                int importance  = (Integer) args[1];
+                                if (checkedUid == uid && importance > IMPORTANCE_CACHED) {
+                                    runOnUiThread(new Runnable() {
+                                        @Override public void run() { onExternalAppKill(); }
+                                    });
+                                }
+                            }
+                            return null;
+                        }
+                    });
+
+            java.lang.reflect.Method addMethod =
+                    android.app.ActivityManager.class.getMethod(
+                            "addOnUidImportanceListener", listenerIface, int.class);
+            addMethod.invoke(am, proxy, IMPORTANCE_CACHED);
+            mUidImportanceListener = proxy;
+            AppLogger.d(TAG, "trackApp uid=" + uid + " pkg=" + packageName);
+        } catch (PackageManager.NameNotFoundException e) {
+            AppLogger.w(TAG, "startTrackingApp: " + packageName + " not found");
+        } catch (Exception e) {
+            AppLogger.w(TAG, "startTrackingApp reflection failed: " + e.getMessage());
+        }
+    }
+
+    /** Removes the importance listener. No-op if not tracking or reflection unavailable. */
+    private void stopTrackingApp() {
+        if (mUidImportanceListener == null) return;
+        try {
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            Class<?> listenerIface = Class.forName(
+                    "android.app.ActivityManager$OnUidImportanceListener");
+            java.lang.reflect.Method removeMethod =
+                    android.app.ActivityManager.class.getMethod(
+                            "removeOnUidImportanceListener", listenerIface);
+            removeMethod.invoke(am, mUidImportanceListener);
+        } catch (Exception e) {
+            AppLogger.w(TAG, "stopTrackingApp: " + e.getMessage());
+        } finally {
+            mUidImportanceListener = null;
+        }
+    }
+
+    /**
+     * Called when the tracked app was killed externally (task-switcher swipe, low memory, etc.).
+     * Clears the stale cluster state and restores the app list so the buttons do not remain visible.
+     */
+    private void onExternalAppKill() {
+        if (mCurrentDashboardPkg == null) return; // already cleared by another path
+        AppLogger.i(TAG, "App tué externalement: " + mCurrentDashboardPkg);
+        stopTrackingApp();
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        clearSplitState();
+        mAdapter.setCurrentPackage(null);
+        updateDashboardStatus(null);
+        if (panelClusterControl != null
+                && panelClusterControl.getVisibility() == View.VISIBLE) {
+            showAppList();
+        }
+    }
+
+    // -------------------------------------------------------------------------
 
     /**
      * Hides the app list and displays the cluster mirror in full space.
@@ -1043,6 +1155,7 @@ public class MainActivity extends AppCompatActivity
             tvDashboardStatus.setText(getString(R.string.status_dashboard_byd));
             // No app on cluster — hide the mirror shortcut
             btnShowMirror.setVisibility(View.GONE);
+            stopTrackingApp(); // cancel any pending process-death watch
         } else {
             tvDashboardStatus.setText(getString(R.string.status_dashboard_app, appName));
             // App active on cluster — show the mirror shortcut in the status bar
