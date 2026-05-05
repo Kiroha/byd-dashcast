@@ -333,26 +333,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         });
                     }
 
-                    // Verify after 2s that the WM actually honoured the FREEFORM inset bounds.
-                    // If not, a warning is logged with the wm overscan fallback suggestion.
-                    final String pkg = packageName;
-                    mMainHandler.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            AdbLocalClient.checkTaskBoundsOnDisplay(
-                                    ClusterService.this, pkg,
-                                    CLUSTER_INSET_H + "," + CLUSTER_INSET_V
-                                    + "," + (1920 - CLUSTER_INSET_H)
-                                    + "," + (720 - CLUSTER_INSET_V), // cluster is 1920×720
-                                    new AdbLocalClient.Callback() {
-                                        @Override public void onSuccess(String msg) {
-                                            AppLogger.i(TAG, "bounds check: " + msg);
-                                        }
-                                        @Override public void onError(String err) {
-                                            AppLogger.w(TAG, "bounds check ADB error: " + err);
-                                        }
-                                    });
-                        }
-                    }, 2000);
+                    // Apply FREEFORM bounds after launch via IActivityTaskManager.
+                    // Required because Context.startActivity() ignores ActivityOptions.setLaunchBounds
+                    // on FLAG_PRESENTATION virtual displays (IAM path above may have fallen back).
+                    applyFreeformBoundsAfterLaunch(packageName);
                 } catch (Exception e) {
                     AppLogger.e(TAG, "Global launch error for " + packageName, e);
                     if (callback != null) {
@@ -405,6 +389,55 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     public int getDisplayId() {
         return mDisplayHelper.getKnownClusterDisplayId();
+    }
+
+    /**
+     * After launching an app on the cluster, applies FREEFORM + inset bounds via
+     * IActivityTaskManager.setTaskWindowingMode() + resizeTask().
+     * Retries up to 3 times (every 1 s) to handle slow-starting apps.
+     * Runs on a background thread; does not block the caller.
+     */
+    private void applyFreeformBoundsAfterLaunch(final String packageName) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final android.graphics.Rect bounds = new android.graphics.Rect(
+                        CLUSTER_INSET_H, CLUSTER_INSET_V,
+                        1920 - CLUSTER_INSET_H, 720 - CLUSTER_INSET_V);
+                for (int attempt = 0; attempt < 3; attempt++) {
+                    try { Thread.sleep(attempt == 0 ? 1500 : 1000); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                    int taskId = findRunningTaskId(packageName);
+                    if (taskId == -1) {
+                        AppLogger.d(TAG, "applyFreeformBounds: task not found (attempt "
+                                + (attempt + 1) + "/3) → retry");
+                        continue;
+                    }
+                    try {
+                        Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
+                        Object iatm = atmClass.getMethod("getService").invoke(null);
+                        Class<?> iAtmClass = iatm.getClass();
+                        try {
+                            iAtmClass.getMethod("setTaskWindowingMode",
+                                    int.class, int.class, boolean.class)
+                                    .invoke(iatm, taskId, 5 /* WINDOWING_MODE_FREEFORM */, true);
+                            AppLogger.i(TAG, "applyFreeformBounds: FREEFORM OK taskId=" + taskId);
+                        } catch (Exception e) {
+                            AppLogger.w(TAG, "applyFreeformBounds: setTaskWindowingMode: " + e.getMessage());
+                        }
+                        iAtmClass.getMethod("resizeTask",
+                                int.class, android.graphics.Rect.class, int.class)
+                                .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
+                        AppLogger.i(TAG, "applyFreeformBounds: resizeTask " + bounds
+                                + " OK taskId=" + taskId);
+                        return; // success
+                    } catch (Exception e) {
+                        AppLogger.w(TAG, "applyFreeformBounds attempt " + (attempt + 1)
+                                + ": " + e.getMessage());
+                    }
+                }
+                AppLogger.w(TAG, "applyFreeformBounds: gave up after 3 attempts for " + packageName);
+            }
+        }, "apply-bounds-thread").start();
     }
 
     /**
