@@ -168,33 +168,6 @@
                 <Button android:id="@+id/btn_display_size_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result"/>
             </LinearLayout>
 
-            <!-- ADAS ON / OFF (cmd 12/13) -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
-                <Button
-                    android:id="@+id/btn_adas_show"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="@string/diag_btn_adas_show"
-                    android:backgroundTint="#5E81AC"
-                    android:layout_marginRight="4dp"/>
-                <Button
-                    android:id="@+id/btn_adas_hide"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="@string/diag_btn_adas_hide"
-                    android:backgroundTint="#4C566A"/>
-            </LinearLayout>
-            <TextView
-                android:id="@+id/tv_adas_result"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="#4C566A"
-                android:layout_marginBottom="12dp"
-                android:text=""/>
-
             <!-- Garde-fou écran principal -->
             <Button
                 android:id="@+id/btn_reset_main_overscan"

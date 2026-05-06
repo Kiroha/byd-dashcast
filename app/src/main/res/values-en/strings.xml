@@ -192,11 +192,6 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Reset main display overscan (display 0)</string>
     <string name="diag_reset_main_overscan_done">Main display overscan reset OK — wm overscan reset -d 0</string>
-    <string name="diag_btn_adas_show">👁 ADAS ON (cmd 12)</string>
-    <string name="diag_btn_adas_hide">🚫 ADAS OFF (cmd 13)</string>
-    <string name="diag_adas_sending">Sending sendInfo(1000, %1$d)…</string>
-    <string name="diag_adas_shown">ADAS shown (cmd 12 OK)</string>
-    <string name="diag_adas_hidden">ADAS hidden (cmd 13 OK)</string>
     <!-- Section 6 — Storage cleanup -->
     <string name="diag_s6_title">6. Storage Cleanup</string>
     <string name="diag_s6_desc">Deletes DashCast-generated log and report files: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Also clears the in-memory log buffer. ADB keys (adb.key / adb.pub) are NOT deleted.</string>

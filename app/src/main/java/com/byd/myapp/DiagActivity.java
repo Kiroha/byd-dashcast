@@ -41,9 +41,7 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDisplaySizeShare;
     private Button   btnResetMainOverscan;   // safety: reset wm overscan on display 0
     private TextView tvResetMainOverscanResult;
-    private Button   btnAdasShow;            // sendInfo(1000, 12) — 显示Adas
-    private Button   btnAdasHide;            // sendInfo(1000, 13) — 关闭Adas
-    private TextView tvAdasResult;
+
 
     // [4] Analyses Système
     private Button   btnDumpSfMirror;
@@ -119,11 +117,7 @@ public class DiagActivity extends AppCompatActivity {
         tvResetMainOverscanResult  = (TextView) findViewById(R.id.tv_reset_main_overscan_result);
         btnResetMainOverscan.setOnClickListener(v -> resetMainDisplayOverscan());
 
-        btnAdasShow  = (Button)   findViewById(R.id.btn_adas_show);
-        btnAdasHide  = (Button)   findViewById(R.id.btn_adas_hide);
-        tvAdasResult = (TextView) findViewById(R.id.tv_adas_result);
-        btnAdasShow.setOnClickListener(v -> sendAdasCommand(12));
-        btnAdasHide.setOnClickListener(v -> sendAdasCommand(13));
+
 
         btnDumpSfMirror = (Button) findViewById(R.id.btn_dump_sf_mirror);
         tvSfDumpResult = (TextView) findViewById(R.id.tv_sf_dump_result);
@@ -1216,32 +1210,6 @@ public class DiagActivity extends AppCompatActivity {
         } catch (Exception e) {
             AppLogger.e("RESniffer", "Export erreur", e);
         }
-    }
-
-    private void sendAdasCommand(final int cmd) {
-        // cmd 12 = 显示Adas (Afficher ADAS), cmd 13 = 关闭Adas (Masquer ADAS)
-        btnAdasShow.setEnabled(false);
-        btnAdasHide.setEnabled(false);
-        tvAdasResult.setText(getString(R.string.diag_adas_sending, cmd));
-        AdbLocalClient.sendInfo(this, 1000, cmd, "", new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String result) {
-                runOnUiThread(() -> {
-                    btnAdasShow.setEnabled(true);
-                    btnAdasHide.setEnabled(true);
-                    tvAdasResult.setText(getString(
-                            cmd == 12 ? R.string.diag_adas_shown : R.string.diag_adas_hidden));
-                    AppLogger.i("ADAS", "sendInfo(1000," + cmd + ") OK: " + result.trim());
-                });
-            }
-            @Override public void onError(String error) {
-                runOnUiThread(() -> {
-                    btnAdasShow.setEnabled(true);
-                    btnAdasHide.setEnabled(true);
-                    tvAdasResult.setText("ERROR: " + error.trim());
-                    AppLogger.e("ADAS", "sendInfo(1000," + cmd + ") FAILED: " + error);
-                });
-            }
-        });
     }
 
     private void resetMainDisplayOverscan() {

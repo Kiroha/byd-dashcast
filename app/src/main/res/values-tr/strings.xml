@@ -193,11 +193,6 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Ana ekran overscan sıfırla (display 0)</string>
     <string name="diag_reset_main_overscan_done">Display 0 overscan sıfırlandı — wm overscan reset -d 0</string>
-    <string name="diag_btn_adas_show">👁 ADAS AÇIK (cmd 12)</string>
-    <string name="diag_btn_adas_hide">🚫 ADAS KAPALI (cmd 13)</string>
-    <string name="diag_adas_sending">sendInfo(1000, %1$d) gönderiliyor…</string>
-    <string name="diag_adas_shown">ADAS gösterildi (cmd 12 OK)</string>
-    <string name="diag_adas_hidden">ADAS gizlendi (cmd 13 OK)</string>
     <!-- Bölüm 6 — Depolama temizliği -->
     <string name="diag_s6_title">6. Depolama Temizliği</string>
     <string name="diag_s6_desc">DashCast tarafından oluşturulan log ve rapor dosyalarını siler: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Bellek log arabellerini de temizler. ADB anahtarları (adb.key / adb.pub) SİLİNMEZ.</string>

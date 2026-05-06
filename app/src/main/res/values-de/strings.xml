@@ -193,11 +193,6 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Overscan Hauptbildschirm zurücksetzen (Display 0)</string>
     <string name="diag_reset_main_overscan_done">Overscan Display 0 zurückgesetzt — wm overscan reset -d 0</string>
-    <string name="diag_btn_adas_show">👁 ADAS AN (Cmd 12)</string>
-    <string name="diag_btn_adas_hide">🚫 ADAS AUS (Cmd 13)</string>
-    <string name="diag_adas_sending">Sende sendInfo(1000, %1$d)…</string>
-    <string name="diag_adas_shown">ADAS angezeigt (Cmd 12 OK)</string>
-    <string name="diag_adas_hidden">ADAS ausgeblendet (Cmd 13 OK)</string>
     <!-- Section 6 — Speicher bereinigen -->
     <string name="diag_s6_title">6. Speicherbereinigung</string>
     <string name="diag_s6_desc">Löscht von DashCast erzeugte Log- und Berichtsdateien: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Löscht auch den In-Memory-Logpuffer. ADB-Schlüssel (adb.key / adb.pub) werden NICHT gelöscht.</string>
