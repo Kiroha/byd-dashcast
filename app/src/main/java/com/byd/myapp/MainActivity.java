@@ -322,15 +322,6 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        // Temporary floating keyboard
-        Button btnClusterKeyboard = (Button) findViewById(R.id.btn_cluster_keyboard);
-        btnClusterKeyboard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showKeyboardDialog();
-            }
-        });
-
         // Split button — cluster layout (full screen / left 50% / right 50%)
         btnSplitLayout = (Button) findViewById(R.id.btn_cluster_split);
         btnSplitLayout.setOnClickListener(new View.OnClickListener() {
@@ -1714,28 +1705,6 @@ public class MainActivity extends AppCompatActivity
         loader.shutdown(); // thread ends as soon as the above task finishes
     }
 
-    private void showKeyboardDialog() {
-        final android.widget.EditText input = new android.widget.EditText(this);
-        input.setHint(getString(R.string.dialog_keyboard_hint));
-        input.setSingleLine(true);
-
-        new android.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_keyboard_title))
-            .setMessage(getString(R.string.dialog_keyboard_message))
-            .setView(input)
-            .setPositiveButton(getString(R.string.btn_send), new android.content.DialogInterface.OnClickListener() {
-                public void onClick(android.content.DialogInterface dialog, int whichButton) {
-                    final String text = input.getText().toString();
-                    if (!text.isEmpty()) {
-                        // On Android, "input text" takes space as %s
-                        String escapedText = text.replace(" ", "%s").replace("\"", "\\\"");
-                        AdbLocalClient.executeShell(MainActivity.this, "input text \"" + escapedText + "\"");
-                    }
-                }
-            })
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show();
-    }
-
 }
+
 

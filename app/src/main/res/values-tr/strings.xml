@@ -21,7 +21,6 @@
     <string name="title_app_list">Yüklü uygulamalar</string>
     <string name="mirror_placeholder">Kümede aktif ekran ✓</string>
     <string name="btn_cluster_split">⬛⬛ Böl</string>
-    <string name="btn_cluster_keyboard">⌨️ Klavye</string>
 
     <!-- Cluster control panel -->
     <string name="cluster_control_title">Küme kontrolü</string>
@@ -70,10 +69,6 @@
     <string name="split_left">⬜⬛ Sol (%50)</string>
     <string name="split_right">⬛⬜ Sağ (%50)</string>
 
-    <!-- MainActivity — keyboard dialog -->
-    <string name="dialog_keyboard_title">Klavye Girişi (Küme)</string>
-    <string name="dialog_keyboard_message">Onaylandıktan sonra metin uygulamada otomatik olarak yazılacaktır.</string>
-    <string name="dialog_keyboard_hint">Kümeye gönderilecek metin</string>
     <string name="btn_send">Gönder</string>
 
     <!-- LogActivity -->

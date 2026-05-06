@@ -21,7 +21,6 @@
     <string name="title_app_list">App installate</string>
     <string name="mirror_placeholder">Display attivo su cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Dividi</string>
-    <string name="btn_cluster_keyboard">⌨️ Tastiera</string>
 
     <!-- Cluster control panel -->
     <string name="cluster_control_title">Controllo cluster</string>
@@ -70,10 +69,6 @@
     <string name="split_left">⬜⬛ Sinistra (50%)</string>
     <string name="split_right">⬛⬜ Destra (50%)</string>
 
-    <!-- MainActivity — keyboard dialog -->
-    <string name="dialog_keyboard_title">Input Tastiera (Cluster)</string>
-    <string name="dialog_keyboard_message">Dopo la conferma il testo verrà inserito automaticamente nell\'applicazione.</string>
-    <string name="dialog_keyboard_hint">Testo da inviare al cluster</string>
     <string name="btn_send">Invia</string>
 
     <!-- LogActivity -->
