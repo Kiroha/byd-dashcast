@@ -14,10 +14,10 @@
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard: nicht verbunden</string>
-    <string name="btn_activate_cluster">Cluster aktivieren</string>
+    <string name="btn_activate_cluster">Projektion aktivieren</string>
     <string name="btn_show_mirror">📺 Spiegeln</string>
-    <string name="btn_restore_cluster">Cluster wiederherstellen</string>
-    <string name="btn_origin_cluster">Original-Cluster</string>
+    <string name="btn_restore_cluster">Projektion stoppen</string>
+    <string name="btn_origin_cluster">Original-Dashboard wiederherstellen</string>
     <string name="title_app_list">Installierte Apps</string>
     <string name="mirror_placeholder">Aktive Anzeige auf Cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>

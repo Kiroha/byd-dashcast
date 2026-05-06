@@ -14,10 +14,10 @@
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Gösterge paneli: bağlı değil</string>
-    <string name="btn_activate_cluster">Kümeyi etkinleştir</string>
+    <string name="btn_activate_cluster">Projeksiyonu etkinleştir</string>
     <string name="btn_show_mirror">📺 Yansıt</string>
-    <string name="btn_restore_cluster">Kümeyi geri yükle</string>
-    <string name="btn_origin_cluster">Orijinal küme</string>
+    <string name="btn_restore_cluster">Projeksiyonu durdur</string>
+    <string name="btn_origin_cluster">Orijinal Dashboard\'u geri yükle</string>
     <string name="title_app_list">Yüklü uygulamalar</string>
     <string name="mirror_placeholder">Kümede aktif ekran ✓</string>
     <string name="btn_cluster_split">⬛⬛ Böl</string>

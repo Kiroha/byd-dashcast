@@ -13,10 +13,10 @@
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard : non connecté</string>
-    <string name="btn_activate_cluster">Activer cluster</string>
+    <string name="btn_activate_cluster">Activer Projection</string>
     <string name="btn_show_mirror">📺 Miroir</string>
-    <string name="btn_restore_cluster">Restaurer cluster</string>
-    <string name="btn_origin_cluster">Cluster d\'origine</string>
+    <string name="btn_restore_cluster">Arrêter Projection</string>
+    <string name="btn_origin_cluster">Restaurer Dashboard d\'origine</string>
     <string name="title_app_list">Applications installées</string>
     <string name="mirror_placeholder">Affichage actif sur le cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
