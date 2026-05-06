@@ -114,6 +114,7 @@ public class MainActivity extends AppCompatActivity
     // Fallback: /proc watchdog (2 s polling, no permissions needed, always reliable).
     private Object   mUidImportanceListener = null;
     private String   mWatchdogPkg           = null;
+    private int      mWatchdogPid           = -1;  // cached PID — avoids full /proc scan each tick
     private Runnable mWatchdogRunnable       = null;
     private static final int WATCHDOG_INTERVAL_MS = 2000;
 
@@ -911,12 +912,15 @@ public class MainActivity extends AppCompatActivity
     private void startWatchdog(final String packageName) {
         stopWatchdog();
         mWatchdogPkg = packageName;
+        // Resolve the PID once so each tick only needs to check /proc/[pid] existence
+        // instead of scanning the full /proc directory (~100-300 entries).
+        mWatchdogPid = findPid(packageName);
         mWatchdogRunnable = new Runnable() {
             @Override public void run() {
                 if (mCurrentDashboardPkg == null || !packageName.equals(mWatchdogPkg)) return;
                 new Thread(new Runnable() {
                     @Override public void run() {
-                        final boolean alive = isProcessRunning(packageName);
+                        final boolean alive = isPidAlive(packageName, mWatchdogPid);
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
                                 if (mCurrentDashboardPkg == null
@@ -936,7 +940,7 @@ public class MainActivity extends AppCompatActivity
             }
         };
         mScreenshotHandler.postDelayed(mWatchdogRunnable, WATCHDOG_INTERVAL_MS);
-        AppLogger.d(TAG, "watchdog started for " + packageName);
+        AppLogger.d(TAG, "watchdog started for " + packageName + " pid=" + mWatchdogPid);
     }
 
     /** Cancels the /proc watchdog. Safe to call multiple times. */
@@ -946,12 +950,46 @@ public class MainActivity extends AppCompatActivity
             mWatchdogRunnable = null;
         }
         mWatchdogPkg = null;
+        mWatchdogPid = -1;
     }
 
     /**
-     * Returns true if at least one process with the given package name is found in /proc.
-     * Reads the first bytes of /proc/[pid]/cmdline for each numeric directory.
-     * Multi-process apps: matches any process whose cmdline starts with packageName.
+     * Finds the main PID of packageName via ActivityManager.getRunningAppProcesses().
+     * Returns -1 if not found (app not yet started or ROM hides the list).
+     */
+    private int findPid(String packageName) {
+        try {
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            java.util.List<android.app.ActivityManager.RunningAppProcessInfo> procs =
+                    am.getRunningAppProcesses();
+            if (procs == null) return -1;
+            for (android.app.ActivityManager.RunningAppProcessInfo p : procs) {
+                if (packageName.equals(p.processName)) return p.pid;
+            }
+        } catch (Exception e) {
+            AppLogger.w(TAG, "findPid: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * Fast liveness check for a known PID: just tests /proc/[pid] directory existence.
+     * If the PID is unknown (-1), falls back to the full /proc scan.
+     * Cost (known PID): 1 stat syscall — negligible.
+     */
+    private boolean isPidAlive(String packageName, int pid) {
+        if (pid > 0) {
+            return new java.io.File("/proc/" + pid).exists();
+        }
+        // PID unknown — fall back to full scan
+        return isProcessRunning(packageName);
+    }
+
+    /**
+     * Full /proc scan fallback: returns true if any process whose cmdline starts with packageName
+     * is found. Used only when the PID could not be resolved at watchdog start.
+     * Reads the first bytes of /proc/[pid]/cmdline for each numeric /proc entry.
      */
     private boolean isProcessRunning(String packageName) {
         java.io.File procDir = new java.io.File("/proc");
