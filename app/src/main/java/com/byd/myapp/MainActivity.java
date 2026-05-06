@@ -109,10 +109,13 @@ public class MainActivity extends AppCompatActivity
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
-    // External process-death detection (zero polling, event-driven).
-    // Stored as Object because ActivityManager.OnUidImportanceListener is absent from
-    // the BYD custom SDK android.jar; the real interface is resolved at runtime via reflection.
-    private Object mUidImportanceListener = null;
+    // External process-death detection.
+    // Primary: OnUidImportanceListener (event-driven, via reflection — may be unsupported on DiLink).
+    // Fallback: /proc watchdog (2 s polling, no permissions needed, always reliable).
+    private Object   mUidImportanceListener = null;
+    private String   mWatchdogPkg           = null;
+    private Runnable mWatchdogRunnable       = null;
+    private static final int WATCHDOG_INTERVAL_MS = 2000;
 
     // UI — barre statut
     private TextView tvDashboardStatus;
@@ -874,10 +877,14 @@ public class MainActivity extends AppCompatActivity
         } catch (Exception e) {
             AppLogger.w(TAG, "startTrackingApp reflection failed: " + e.getMessage());
         }
+        // Always start the /proc watchdog as a reliable fallback regardless of
+        // whether the OnUidImportanceListener registration succeeded.
+        startWatchdog(packageName);
     }
 
-    /** Removes the importance listener. No-op if not tracking or reflection unavailable. */
+    /** Removes the importance listener and stops the /proc watchdog. */
     private void stopTrackingApp() {
+        stopWatchdog();
         if (mUidImportanceListener == null) return;
         try {
             android.app.ActivityManager am =
@@ -896,12 +903,100 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
+     * Starts a 2-second periodic check that reads /proc/[pid]/cmdline to detect
+     * when the tracked package's process has disappeared.
+     * No Android permissions required — /proc is readable by any app process.
+     * The check runs on a short-lived background thread to avoid blocking the UI.
+     */
+    private void startWatchdog(final String packageName) {
+        stopWatchdog();
+        mWatchdogPkg = packageName;
+        mWatchdogRunnable = new Runnable() {
+            @Override public void run() {
+                if (mCurrentDashboardPkg == null || !packageName.equals(mWatchdogPkg)) return;
+                new Thread(new Runnable() {
+                    @Override public void run() {
+                        final boolean alive = isProcessRunning(packageName);
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (mCurrentDashboardPkg == null
+                                        || !packageName.equals(mWatchdogPkg)) return;
+                                if (!alive) {
+                                    AppLogger.d(TAG, "watchdog: " + packageName
+                                            + " absent de /proc → cleanup");
+                                    onExternalAppKill();
+                                } else {
+                                    mScreenshotHandler.postDelayed(
+                                            mWatchdogRunnable, WATCHDOG_INTERVAL_MS);
+                                }
+                            }
+                        });
+                    }
+                }, "watchdog-thread").start();
+            }
+        };
+        mScreenshotHandler.postDelayed(mWatchdogRunnable, WATCHDOG_INTERVAL_MS);
+        AppLogger.d(TAG, "watchdog started for " + packageName);
+    }
+
+    /** Cancels the /proc watchdog. Safe to call multiple times. */
+    private void stopWatchdog() {
+        if (mWatchdogRunnable != null) {
+            mScreenshotHandler.removeCallbacks(mWatchdogRunnable);
+            mWatchdogRunnable = null;
+        }
+        mWatchdogPkg = null;
+    }
+
+    /**
+     * Returns true if at least one process with the given package name is found in /proc.
+     * Reads the first bytes of /proc/[pid]/cmdline for each numeric directory.
+     * Multi-process apps: matches any process whose cmdline starts with packageName.
+     */
+    private boolean isProcessRunning(String packageName) {
+        java.io.File procDir = new java.io.File("/proc");
+        String[] entries = procDir.list();
+        if (entries == null) return true; // /proc unreadable — assume alive to avoid false kill
+        for (String entry : entries) {
+            // Only numeric entries are PIDs
+            boolean isNumeric = true;
+            for (int i = 0; i < entry.length(); i++) {
+                if (entry.charAt(i) < '0' || entry.charAt(i) > '9') { isNumeric = false; break; }
+            }
+            if (!isNumeric) continue;
+            java.io.File cmdlineFile = new java.io.File("/proc/" + entry + "/cmdline");
+            java.io.FileInputStream fis = null;
+            try {
+                fis = new java.io.FileInputStream(cmdlineFile);
+                // Read just enough bytes to check the package name prefix
+                byte[] buf = new byte[packageName.length() + 2];
+                int read = fis.read(buf);
+                if (read > 0) {
+                    // cmdline entries are NUL-separated; take the first segment
+                    int end = read;
+                    for (int i = 0; i < read; i++) {
+                        if (buf[i] == 0) { end = i; break; }
+                    }
+                    String cmdline = new String(buf, 0, end);
+                    if (cmdline.startsWith(packageName)) return true;
+                }
+            } catch (Exception ignore) {
+                // Process may have exited between listing and reading — normal
+            } finally {
+                if (fis != null) try { fis.close(); } catch (Exception ignore) {}
+            }
+        }
+        return false;
+    }
+
+    /**
      * Called when the tracked app was killed externally (task-switcher swipe, low memory, etc.).
      * Clears the stale cluster state and restores the app list so the buttons do not remain visible.
      */
     private void onExternalAppKill() {
         if (mCurrentDashboardPkg == null) return; // already cleared by another path
         AppLogger.i(TAG, "App tué externalement: " + mCurrentDashboardPkg);
+        stopWatchdog();
         stopTrackingApp();
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
