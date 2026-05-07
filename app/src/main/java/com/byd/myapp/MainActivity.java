@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity
     private DashboardLauncher       mDashboardLauncher; // local reference updated after bind
 
     // savedItem: package of the last app sent to the cluster (removed, see history)
-    private static final String PREFS_NAME         = "byd_app_prefs";
+    private static final String PREFS_NAME         = SettingsActivity.PREFS_NAME;
     /** Package of the app sent to the main display — persisted to survive Activity recreation */
     private static final String PREF_MAIN_PKG      = "main_display_pkg";
     /** Package/name of the app currently active on the cluster — persisted to survive Activity recreation */

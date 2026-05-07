@@ -53,7 +53,6 @@
     <string name="toast_app_stopped">%1$s arrêté</string>
     <string name="toast_kill_failed">Échec kill : %1$s</string>
     <string name="toast_no_app_cluster">Aucune app sur le cluster</string>
-    <string name="toast_cluster_type">Cluster : %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Paramètres</string>
@@ -67,12 +66,9 @@
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Type de cluster</string>
     <string name="cluster_label_88">8,8 pouces  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pouces (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 pouces (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Annuler</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Plein écran</string>

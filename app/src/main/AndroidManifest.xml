@@ -137,13 +137,8 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- Trampoline display 1 : permet de lancer une app tierce sur le cluster
-             en passant par notre propre uid (isCallerAllowedToLaunchOnDisplay
-             retourne true quand targetUid == callingUid).
-             EXPORTED=TRUE : le lancement se fait via ADB shell uid=2000
-             which holds INTERNAL_SYSTEM_WINDOW in platform.xml on this ROM.
-             C'est exactement le pattern qui fonctionnait le 12 avril avec
-             BYDDashboardActivity (aussi exported=true). -->
+        <!-- Trampoline display 1 — NEUTRALIZED (v0.1.41+): finishes immediately, launches nothing.
+             exported=false: no external component needs to launch it. -->
         <activity
             android:name=".dashboard.ClusterTrampolineActivity"
             android:exported="false"

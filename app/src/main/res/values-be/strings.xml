@@ -52,7 +52,6 @@
     <string name="toast_app_stopped">%1$s спынена</string>
     <string name="toast_kill_failed">Не ўдалося завяршыць: %1$s</string>
     <string name="toast_no_app_cluster">На кластары няма праграмы</string>
-    <string name="toast_cluster_type">Кластар: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Налады</string>
@@ -64,12 +63,9 @@
     <string name="settings_prerelease_label">Уключыць прэдвыпускнія версіі (alpha/beta)</string>
     <string name="settings_prerelease_hint">Атрымліваць тэставыя зборкі да афіцыйнага выпуску</string>
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Тып кластара</string>
     <string name="cluster_label_88">8,8 цалі  (cmd=29)</string>
     <string name="cluster_label_123">12,3 цалі (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 цалі (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Скасаваць</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ На ўвесь экран</string>

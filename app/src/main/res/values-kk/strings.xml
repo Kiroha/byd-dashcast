@@ -52,7 +52,6 @@
     <string name="toast_app_stopped">%1$s тоқтатылды</string>
     <string name="toast_kill_failed">Аяқтау сәтсіз: %1$s</string>
     <string name="toast_no_app_cluster">Кластерде қолданба жоқ</string>
-    <string name="toast_cluster_type">Кластер: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Баптаулар</string>
@@ -66,12 +65,9 @@
     <string name="settings_prerelease_hint">Ресми шығарылымға дейін сынақ нұсқаларды алу</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Кластер түрі</string>
     <string name="cluster_label_88">8,8 дюйм  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйм (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Бас тарту</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Толық экран</string>

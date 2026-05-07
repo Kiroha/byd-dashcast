@@ -51,7 +51,6 @@
     <string name="toast_app_stopped">تم إيقاف %1$s</string>
     <string name="toast_kill_failed">فشل الإيقاف: %1$s</string>
     <string name="toast_no_app_cluster">لا توجد تطبيقات على العنقود</string>
-    <string name="toast_cluster_type">العنقود: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ الإعدادات</string>
@@ -65,12 +64,9 @@
     <string name="settings_prerelease_hint">استلام إصدارات تجريبية قبل الإصدار الرسمي</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">نوع العنقود</string>
     <string name="cluster_label_88">8,8 بوصة  (cmd=29)</string>
     <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 بوصة (cmd=31)</string>
-    <string name="btn_ok">موافق</string>
-    <string name="btn_cancel">إلغاء</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ ملء الشاشة</string>

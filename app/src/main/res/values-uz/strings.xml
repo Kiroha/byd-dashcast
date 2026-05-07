@@ -52,7 +52,6 @@
     <string name="toast_app_stopped">%1$s toʻxtatildi</string>
     <string name="toast_kill_failed">Yakunlab boʻlmadi: %1$s</string>
     <string name="toast_no_app_cluster">Klasterda ilova yoʻq</string>
-    <string name="toast_cluster_type">Klaster: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Sozlamalar</string>
@@ -66,12 +65,9 @@
     <string name="settings_prerelease_hint">Rasmiy chiqarilishidan oldin sinov versiyalarini oling</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Klaster turi</string>
     <string name="cluster_label_88">8,8 dyuym  (cmd=29)</string>
     <string name="cluster_label_123">12,3 dyuym (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 dyuym (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Bekor qilish</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Toʻliq ekran</string>
