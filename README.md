@@ -33,11 +33,11 @@ BYD APIs.
 | 6 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
 | 7 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
 | 8 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
-| 9 | **🔧 Diagnostic** | 7 tests: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, VirtualDisplay fission pipeline |
+| 9 | **🔧 Diagnostic** | 7 sections: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test (WM:4→5 + resizeTask FORCED) |
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
 | 12 | **Multilingual** | French / English / German / Italian / Turkish, selected on first launch |
-| 13 | **Floating overlay** | Two floating buttons: LOG (opens log) and GPS (returns to MainActivity) |
+| 13 | **Floating overlay** | Two floating buttons: LOG (opens log) and 📺 Mirror (opens cluster mirror / returns to main screen) |
 
 ---
 
@@ -61,7 +61,7 @@ with DiLink 3.0.
 app/src/main/java/com/byd/myapp/
 ├── MainActivity.java           — Main 15.6" screen: app list, cluster mirror, split
 ├── WelcomeActivity.java        — Language selection (first launch)
-├── DiagActivity.java           — Tests 1–7 (ADB, restore, display size, BootReceiver, MirrorDaemon, Sniffer, cluster orientation)
+├── DiagActivity.java           — Sections 1–7 (ADB, restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test)
 ├── SysInfoActivity.java        — System report + share
 ├── ClusterService.java         — Foreground service: cluster projection independent of Activity lifecycle
 ├── AdbLocalClient.java         — All ADB logic (dadb, localhost:5555)
@@ -190,7 +190,7 @@ See [Build requirements](#build-requirements) below.
 2. Sideload onto the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install -r app/build/outputs/apk/debug/DashCast-v0.1.11-alpha-debug.apk
+adb install -r app/build/outputs/apk/debug/DashCast-v0.1.31-alpha-debug.apk
 ```
 3. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
 4. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
@@ -251,7 +251,7 @@ The `app/build.gradle` signing config applies this keystore for both debug and r
 ```bash
 cd MyBYDApp   # repo folder name
 ./gradlew assembleDebug
-# APK → app/build/outputs/apk/debug/DashCast-v0.1.11-alpha-debug.apk
+# APK → app/build/outputs/apk/debug/DashCast-v0.1.31-alpha-debug.apk
 ```
 
 ---
@@ -318,7 +318,7 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 4. **TEST 4** → MirrorDaemon: scan / kill / kill+restart / export logs / SurfaceFlinger dump
 5. **TEST 5** → Sniffer: scan / start / stop / export logcat report / clean logs
 6. **TEST 6** → Cluster orientation: freeze LANDSCAPE/PORTRAIT / unfreeze / read rotation (`IWindowManager.freezeDisplayRotation` — no `wm size`)
-7. **TEST 7** → VirtualDisplay fission pipeline: full `sendInfo(30→16→35)` sequence + DisplayManager detection
+7. **TEST 7** → DiLink5 resize test: `WM:4→5` + `resizeTask(RESIZE_MODE_FORCED=3)` via raw Binder + task inspection
 
 ### Retrieve logs without USB cable
 
@@ -332,10 +332,13 @@ adb pull /sdcard/Android/data/com.byd.myapp/files/  # package ID unchanged
 
 | Version | versionCode | Summary |
 |---------|-------------|--------|
-| **0.1.11-alpha** | 12 | **Sanity checks #5→#8** — 4 rounds of static analysis: JMM volatile fields, dead code removal (~120 lines), empty catches logged, typo fixed, orphan imports/strings cleaned — **current** |
-| **0.1.10-alpha** | 11 | Sanity check #7 — orphan imports (Parcel, DisplayManager) + dead string (btn_adb_local_label ×5 locales) |
-| **0.1.9-alpha** | 10 | Sanity check #6 — safeOut() typo fix, readFileViaAdb() dead code removed, volatile on MirrorDaemon InputManager fields, InterruptedException flag restored |
-| **0.1.8-alpha** | 9 | Sanity check #5 — empty catches logged, handleLaunch() + parseDisplayIdByName() dead methods removed |
+| **0.1.31-alpha** | 32 | **DiLink5 resize test (Section 7)** — WM:4→5 + resizeTask FORCED=3 via raw Binder; sanity lint fixes; CHANGELOG 0.1.8→0.1.31; docs/ HTML manuals (5 locales) for GitHub Pages — **current** |
+| **0.1.16-alpha** | 17 | Watchdog /proc fallback + PID cache + overscan tuning screen + misc UI renames |
+| **0.1.15-alpha** | 16 | Fix DashCastDaemon UID mismatch bypass |
+| **0.1.14-alpha** | 15 | Display 0 guard-rails — full security audit |
+| **0.1.13-alpha** | 14 | Long-press any result TextView → share via Telegram |
+| **0.1.12-alpha** | 13 | Mirror shortcut floating button (replaces GPS), LogActivity overflow menu entry, dead strings cleanup |
+| **0.1.11-alpha** | 12 | **Sanity checks #5→#8** — JMM volatile, dead code (~120 lines), empty catches logged, orphan imports/strings |
 | **0.1.7-alpha** | 8 | **Freedom-free** — all Freedom (com.xdja.clusterdemo) references removed, VirtualDisplay creation confirmed (sendInfo 30→16→35), fully autonomous |
 | **0.1.6-alpha** | — | DiLink 5 RE sniffer, deep dumpsys, broadcast tracking |
 | **0.1.5-alpha** | — | Stability improvements (last release with Freedom dependency) |
