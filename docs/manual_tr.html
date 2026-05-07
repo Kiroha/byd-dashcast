@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DashCast — Kullanım Kılavuzu</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+  h2 { font-size: 1.35rem; font-weight: 700; margin: 40px 0 14px; color: #1A237E; border-left: 4px solid #1A237E; padding-left: 12px; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #333; }
+  p  { margin-bottom: 12px; color: #333; font-size: 0.95rem; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; font-size: 0.95rem; color: #333; }
+  li { margin-bottom: 6px; }
+  .note { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  .warn { background: #FFF3E0; border-left: 4px solid #E65100; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  .cover { background: linear-gradient(135deg, #0D1117 0%, #1A237E 100%); color: white; padding: 50px 40px; border-radius: 12px; margin: 30px 0 40px; }
+  .cover h1 { font-size: 2.8rem; letter-spacing: 2px; }
+  .cover .sub { font-size: 1.1rem; color: #90CAF9; margin-top: 6px; }
+  .cover .meta { font-size: 0.85rem; color: #aaa; margin-top: 30px; }
+  .toc { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 28px; margin-bottom: 40px; }
+  .toc h2 { margin-top: 0; font-size: 1.1rem; }
+  .toc a { color: #1A237E; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .device-wrap { display: flex; justify-content: center; margin: 24px 0 8px; }
+  .device { background: #1c1c1e; border-radius: 14px; padding: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.35); width: 100%; max-width: 680px; }
+  .screen { background: #f5f5f5; border-radius: 8px; overflow: hidden; min-height: 200px; }
+  .sb { display: flex; align-items: center; gap: 5px; background: #1A237E; padding: 8px 10px; flex-wrap: wrap; }
+  .sb-text { flex: 1; color: white; font-size: 11px; font-weight: bold; min-width: 120px; }
+  .sb-text.active { color: #A5D6A7; }
+  .btn-ui { border: none; border-radius: 4px; color: white; font-size: 10px; padding: 5px 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+  .btn-blue { background: #1565C0; }
+  .btn-red { background: #B71C1C; }
+  .btn-green { background: #2E7D32; }
+  .btn-teal { background: #00695C; }
+  .btn-gray { background: #455A64; width: 28px; font-size: 13px; padding: 3px 0; }
+  .btn-indigo { background: #5C6BC0; }
+  .btn-dark { background: #2a2a2a; }
+  .btn-small { font-size: 9px; padding: 4px 6px; }
+  .list-title { background: #F5F5F5; padding: 8px 14px; font-size: 12px; font-weight: bold; color: #555; border-bottom: 1px solid #e0e0e0; }
+  .app-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #eee; background: white; }
+  .app-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .app-name { flex: 1; font-size: 13px; color: #111; font-weight: 500; }
+  .active-dot { width: 5px; height: 26px; background: #4CAF50; border-radius: 2px; flex-shrink: 0; }
+  .control-panel { background: #0D1117; }
+  .cp-header { background: #161B22; display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+  .cp-label { color: #4A9FDF; font-size: 10px; font-weight: bold; }
+  .cp-app { flex: 1; color: #aaa; font-size: 10px; }
+  .mirror-area { background: #090C10; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+  .mirror-text { color: #4A9FDF; font-size: 13px; }
+  .welcome-screen { background: #0D0D0D; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; min-height: 280px; gap: 10px; }
+  .wc-title { color: white; font-size: 24px; font-weight: 800; letter-spacing: 3px; }
+  .wc-sub { color: #4A9FDF; font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
+  .wc-hint { color: #888; font-size: 12px; margin-bottom: 18px; text-align: center; }
+  .lang-btn { background: #1A237E; color: white; border: none; border-radius: 6px; padding: 10px 0; width: 220px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .lang-btn.selected { background: #1565C0; outline: 2px solid #90CAF9; }
+  .settings-screen { background: #f2f2f2; padding: 12px; min-height: 220px; }
+  .settings-title { font-size: 18px; font-weight: 800; text-align: center; color: #2E3440; margin-bottom: 14px; }
+  .card { background: white; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .card-title { font-size: 13px; font-weight: 700; color: #3B4252; margin-bottom: 10px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #333; }
+  .radio-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #1A237E; flex-shrink: 0; }
+  .radio-circle.checked { background: #1A237E; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-label { font-size: 11px; color: #3B4252; flex: 1; }
+  .slider-val { font-size: 11px; color: #5E81AC; font-weight: bold; width: 40px; text-align: right; }
+  .slider-bar { flex: 2; height: 6px; background: #e0e0e0; border-radius: 3px; position: relative; }
+  .slider-fill { height: 100%; background: #1565C0; border-radius: 3px; }
+  .slider-thumb { width: 14px; height: 14px; background: #1565C0; border-radius: 50%; position: absolute; top: -4px; }
+  .annotation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .ann { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; color: #333; }
+  .ann-num { background: #1A237E; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ann-num.red { background: #B71C1C; }
+  .ann-num.green { background: #2E7D32; }
+  .ann-num.gray { background: #455A64; }
+  .caption { text-align: center; font-size: 0.82rem; color: #777; margin-bottom: 20px; font-style: italic; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .step-num { background: #1A237E; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-content { flex: 1; padding-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="cover">
+  <h1>DashCast</h1>
+  <div class="sub">Kullanım Kılavuzu</div>
+  <div class="meta">v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10</div>
+</div>
+
+<div class="toc">
+  <h2>📋 İçindekiler</h2>
+  <ol>
+    <li><a href="#s1">Genel Bakış</a></li>
+    <li><a href="#s2">İlk Çalıştırma — Dil Seçimi</a></li>
+    <li><a href="#s3">Ana Ekran</a></li>
+    <li><a href="#s4">Uygulamayı Gösterge Paneline Yansıtma</a></li>
+    <li><a href="#s5">Yansıtma Sırasında — Kontrol Paneli</a></li>
+    <li><a href="#s6">Yansıtmayı Durdurma</a></li>
+    <li><a href="#s7">Ayarlar</a></li>
+    <li><a href="#s8">⋮ Menü — Ek Araçlar</a></li>
+    <li><a href="#s9">SSS & Sorun Giderme</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Genel Bakış</h2>
+<p><strong>DashCast</strong>, BYD aracınızın bilgi-eğlence ekranındaki herhangi bir uygulamayı <strong>dijital gösterge paneline</strong> yansıtmanızı sağlayan bir Android uygulamasıdır. Navigasyon, müzik, video — merkez ekranda çalışan her şey, sürücünün karşısındaki küme ekranına yönlendirilebilir.</p>
+<ul>
+  <li>✅ BYD Seal EU ile uyumlu (DiLink 3.0, Di3.0 / 6125F firmware)</li>
+  <li>✅ Sistem değişikliği gerektirmez</li>
+  <li>✅ TCP üzerinden yerel ADB (localhost) — kurulum sonrası PC gerekmez</li>
+  <li>✅ Uygulama harici olarak kapatıldığında otomatik algılama</li>
+</ul>
+<div class="note">💡 <strong>Ön koşul:</strong> Bilgi-eğlence sistemi Ayarlar → Geliştirici seçenekleri → Kablosuz hata ayıklama (veya "Ağ üzerinden ADB") bölümünden <strong>TCP ADB hata ayıklamasını</strong> etkinleştirin. Bu işlem yalnızca bir kez yapılır. DashCast'ın ilk çalıştırılmasında "USB hata ayıklamaya izin verilsin mi?" penceresi görünür — <strong>Bu bilgisayardan her zaman izin ver</strong> seçeneğine dokunun.</div>
+
+<h2 id="s2">2. İlk Çalıştırma — Dil Seçimi</h2>
+<p>İlk çalıştırmada hoş geldiniz ekranı görünür. Dilinizi seçmek için beş düğmeden birine dokunun. Bu tercih kaydedilir — ⋮ menüsünden dil değiştirmediğiniz sürece bu ekran bir daha görünmez.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="welcome-screen">
+        <div class="wc-title">DashCast</div>
+        <div class="wc-sub">Dashboard Controller</div>
+        <div class="wc-hint">Choisissez votre langue<br>Please select your language</div>
+        <button class="lang-btn">🇫🇷&nbsp;&nbsp;Français</button>
+        <button class="lang-btn">🇬🇧&nbsp;&nbsp;English</button>
+        <button class="lang-btn">🇩🇪&nbsp;&nbsp;Deutsch</button>
+        <button class="lang-btn selected">🇹🇷&nbsp;&nbsp;Türkçe</button>
+        <button class="lang-btn">🇮🇹&nbsp;&nbsp;Italiano</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Dil seçim ekranı — yalnızca ilk çalıştırmada görüntülenir</p>
+
+<h2 id="s3">3. Ana Ekran</h2>
+<p>Ana ekran iki bölümden oluşur: üstte <strong>durum çubuğu</strong> (koyu mavi arka plan) ve altında <strong>yüklü uygulamalar listesi</strong>.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text">① Gösterge: bağlı değil</span>
+        <button class="btn-ui btn-blue">② Projeksiyonu etkinleştir</button>
+        <button class="btn-ui btn-red">③ Projeksiyonu durdur</button>
+        <button class="btn-ui btn-green btn-small">④ Orijinal Dashboard'u geri yükle</button>
+        <button class="btn-ui btn-gray">⑤ ⋮</button>
+      </div>
+      <div class="list-title">⑥ Yüklü uygulamalar</div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E3F2FD">🗺</div>
+        <div class="app-name">Maps</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#FCE4EC">▶️</div>
+        <div class="app-name">YouTube</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E8F5E9">🎵</div>
+        <div class="app-name">Spotify</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Ana ekran — uygulama yansıtılmıyor (başlangıç durumu)</p>
+
+<div class="annotation-grid">
+  <div class="ann"><div class="ann-num">①</div><div><strong>Durum</strong> — Kümeyle bağlantı durumunu gösterir. Uygulama aktifken "Gösterge: [Uygulama adı]" olarak değişir.</div></div>
+  <div class="ann"><div class="ann-num">②</div><div><strong>Projeksiyonu etkinleştir</strong> — Kümeyle bağlantı kurar ve yansıtmaya hazırlar. İlk önce buna dokunun.</div></div>
+  <div class="ann"><div class="ann-num red">③</div><div><strong>Projeksiyonu durdur</strong> — BYD göstergesini geri yüklemeden mevcut yansıtmayı sonlandırır.</div></div>
+  <div class="ann"><div class="ann-num green">④</div><div><strong>Orijinal Dashboard'u geri yükle</strong> — Yansıtmayı sonlandırır VE yerel BYD kümesini geri yükler (hız, göstergeler…).</div></div>
+  <div class="ann"><div class="ann-num gray">⑤</div><div><strong>⋮ Menü</strong> — Ayarlar, Tanılama, Sistem Raporu, Günlükler ve dil değiştirme erişimi.</div></div>
+  <div class="ann"><div class="ann-num gray">⑥</div><div><strong>Uygulama listesi</strong> — Tüm yüklü uygulamalar. Yansıtmak için dokunun, <strong>✕</strong> ile zorla kapatın.</div></div>
+</div>
+
+<h2 id="s4">4. Uygulamayı Gösterge Paneline Yansıtma</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-content"><strong>"Projeksiyonu etkinleştir"</strong> düğmesine (mavi) dokunun. Durum <em>"Küme başlatılıyor…"</em> olarak değişir. Yerel ADB bağlantısı kurulur.</div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-content"><strong>İstediğiniz uygulamaya</strong> listeden dokunun. DashCast uygulamayı küme ekranına taşır. Durum <em>"Gösterge: [Uygulama adı]"</em> olarak değişir.</div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-content"><strong>Kontrol paneli</strong> ana ekranın alt kısmında görünür.</div>
+</div>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text active">Gösterge: Maps ✓</span>
+        <button class="btn-ui btn-blue">Projeksiyonu etkinleştir</button>
+        <button class="btn-ui btn-teal">📺 Yansıt</button>
+        <button class="btn-ui btn-red">Projeksiyonu durdur</button>
+        <button class="btn-ui btn-green btn-small">Orijinal Dashboard'u geri yükle</button>
+        <button class="btn-ui btn-gray">⋮</button>
+      </div>
+      <div class="list-title">Yüklü uygulamalar</div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E3F2FD">🗺</div>
+        <div class="app-name">Maps</div>
+        <div class="active-dot"></div>
+        <button class="btn-ui btn-dark btn-small">← Ana</button>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#FCE4EC">▶️</div>
+        <div class="app-name">YouTube</div>
+        <button class="btn-ui btn-blue btn-small">→ Küme</button>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="control-panel">
+        <div class="cp-header">
+          <span class="cp-label">Küme kontrolü</span>
+          <span class="cp-app">Maps</span>
+          <button class="btn-ui btn-indigo btn-small">⬛⬛ Böl</button>
+          <button class="btn-ui btn-dark btn-small">Gizle ▼</button>
+        </div>
+        <div class="mirror-area">
+          <span class="mirror-text">Kümede ekran aktif ✓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Ana ekran — Maps gösterge panelinde yansıtılıyor</p>
+
+<h2 id="s5">5. Yansıtma Sırasında — Kontrol Paneli</h2>
+<p>Kümede bir uygulama aktifken, ana ekranın altında üç uzaktan kumanda özelliğine sahip koyu bir panel görünür:</p>
+
+<h3>5.1 Yansıtma modu (📺 Yansıt)</h3>
+<p>Durum çubuğundaki <strong>📺 Yansıt</strong> düğmesine dokunarak küme içeriğinin canlı bir kopyasını DashCast içinde görüntüleyin. Dokunma olayları küme ekranına iletilir.</p>
+
+<h3>5.2 Bölünmüş ekran modu (⬛⬛ Böl)</h3>
+<p>Küme ekranını iki uygulama arasında paylaştırın:</p>
+<ul>
+  <li><strong>Tam ekran</strong> — Bir uygulama kümenin tamamını kaplar</li>
+  <li><strong>⬜⬛ Sol (%50)</strong> — Ana uygulama solda, ikinci uygulama sağda</li>
+  <li><strong>⬛⬜ Sağ (%50)</strong> — Ana uygulama sağda</li>
+</ul>
+
+<h3>5.3 Paneli gizle</h3>
+<p>Kontrol panelini daraltmak için <strong>Gizle ▼</strong> düğmesine dokunun.</p>
+
+<h2 id="s6">6. Yansıtmayı Durdurma</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Düğme</th><th style="padding:8px 12px;text-align:left">Davranış</th><th style="padding:8px 12px;text-align:left">Ne zaman kullanılır</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px"><strong style="color:#B71C1C">Projeksiyonu durdur</strong></td><td style="padding:8px 12px">Yansıtmayı sonlandırır. Küme boş (siyah) kalır.</td><td style="padding:8px 12px">Görüntüyü geçici olarak durdurmak istediğinizde.</td></tr>
+    <tr style="background:#f9f9f9"><td style="padding:8px 12px"><strong style="color:#2E7D32">Orijinal Dashboard'u geri yükle</strong></td><td style="padding:8px 12px">Yansıtmayı sonlandırır VE yerel BYD kümesini geri yükler (hız, menzil…).</td><td style="padding:8px 12px">Kullanımın sonunda — normal BYD göstergesine dönmek için.</td></tr>
+  </tbody>
+</table>
+<div class="warn">⚠️ Bu düğmelerden birine basmadan DashCast'tan çıkarsanız, servis yeniden başlatılana kadar yansıtma kümede aktif kalmaya devam eder.</div>
+
+<h2 id="s7">7. Ayarlar</h2>
+<p>Ayarlara <strong>⋮ → ⚙️ Ayarlar</strong> üzerinden erişin.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="settings-screen">
+        <div class="settings-title">Ayarlar</div>
+        <div class="card">
+          <div class="card-title">Küme türü</div>
+          <div class="radio-item"><div class="radio-circle"></div>8,8 inç (cmd=29)</div>
+          <div class="radio-item"><div class="radio-circle checked"></div>12,3 inç (cmd=30) — Seal EU</div>
+          <div class="radio-item"><div class="radio-circle"></div>10,25 inç (cmd=31)</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Ekran kenar boşlukları (overscan)</div>
+          <div class="slider-row">
+            <div class="slider-label">Sol / Sağ:</div>
+            <div class="slider-bar"><div class="slider-fill" style="width:40%"></div><div class="slider-thumb" style="left:calc(40% - 7px)"></div></div>
+            <div class="slider-val">80 px</div>
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Üst / Alt:</div>
+            <div class="slider-bar"><div class="slider-fill" style="width:25%"></div><div class="slider-thumb" style="left:calc(25% - 7px)"></div></div>
+            <div class="slider-val">50 px</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn-ui btn-blue" style="flex:1;padding:8px">Şimdi uygula</button>
+            <button class="btn-ui" style="flex:1;background:#607D8B;padding:8px">Sıfırla (80 / 50)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Ayarlar sayfası</p>
+
+<h3>7.1 Küme Türü</h3>
+<p>Gösterge paneli ekranınızın boyutunu seçin. <strong>BYD Seal EU</strong> için <strong>12,3 inç</strong> (cmd=30) seçin.</p>
+
+<h3>7.2 Ekran Kenar Boşlukları (Overscan)</h3>
+<p>İçeriği küme ekranının görünür alanına tam olarak sığdırmak için kenar boşluklarını ayarlayın. Kavisli ekranlarda fiziksel kenarlar çoğunlukla kullanılabilir görüntü alanının dışına taşar.</p>
+<ul>
+  <li><strong>Sol / Sağ</strong> — Yatay kenar boşluğu (her iki tarafta 0–200 px)</li>
+  <li><strong>Üst / Alt</strong> — Dikey kenar boşluğu (üstte ve altta 0–200 px)</li>
+</ul>
+<div class="note">💡 Seal EU için önerilen varsayılan değerler: Sol/Sağ = <strong>80 px</strong>, Üst/Alt = <strong>50 px</strong>.</div>
+
+<h2 id="s8">8. ⋮ Menü — Ek Araçlar</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Seçenek</th><th style="padding:8px 12px;text-align:left">Açıklama</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">⚙️ Ayarlar</td><td style="padding:8px 12px">Küme türü + overscan kenar boşluğu ayarı</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">🔧 Tanılama</td><td style="padding:8px 12px">Gelişmiş geliştirici testleri — ADB bağlantısı, ekranlar, küme ekran boyutu</td></tr>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">📋 Sistem Raporu</td><td style="padding:8px 12px">Tam rapor oluşturur (ekranlar, BYD API'leri, izinler)</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">📜 Günlükler</td><td style="padding:8px 12px">Gerçek zamanlı günlük görüntüleyici — etiket/seviyeye göre filtre, e-posta veya dosya olarak paylaşma</td></tr>
+    <tr style="background:#fff"><td style="padding:8px 12px">🌐 Dil</td><td style="padding:8px 12px">Dil seçim ekranına geri döner</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">9. SSS & Sorun Giderme</h2>
+
+<h3>❓ "USB hata ayıklamaya izin verilsin mi?" penceresi görünmüyor</h3>
+<p>Bilgi-eğlence sistemi geliştirici ayarlarında <strong>TCP ADB hata ayıklamasının</strong> etkinleştirildiğinden emin olun. Seçenek yoksa önce geliştirici modunu etkinleştirin (Hakkında bölümündeki yapı numarasına 7 kez dokunun).</p>
+
+<h3>❓ Uygulama seçildikten sonra kümede görünmüyor</h3>
+<ul>
+  <li>Uygulama seçmeden önce <strong>Projeksiyonu etkinleştir</strong> düğmesine dokunduğunuzdan emin olun.</li>
+  <li>Bazı uygulamalar ikincil ekranda başlatılmayı reddeder. Hata mesajı için Günlükleri kontrol edin.</li>
+  <li>DashCast'ı kapatıp yeniden açın, ardından adımları tekrarlayın.</li>
+</ul>
+
+<h3>❓ İçerik kümede kırpılmış veya kaymış görünüyor</h3>
+<p>⋮ → Ayarlar'dan <strong>Ekran kenar boşluklarını</strong> ayarlayın. Yatay taşma varsa Sol/Sağ değerini, dikey taşma varsa Üst/Alt değerini artırın. Sonucu hemen görmek için <strong>Şimdi uygula</strong>'ya tıklayın.</p>
+
+<h3>❓ Uygulama kapatıldıktan sonra "← Ana" ve "✕" düğmeleri görünmeye devam ediyor</h3>
+<p>DashCast uygulama sonlanmalarını otomatik olarak algılar (/proc izleme). Arayüz takılıp kaldıysa sıfırlamayı zorlamak için <strong>Projeksiyonu durdur</strong>'a dokunun.</p>
+
+<h3>❓ Araç yeniden başlatıldıktan sonra her şeyi yeniden yapılandırmam gerekiyor mu?</h3>
+<p>Hayır. <strong>Küme türü</strong> ve <strong>overscan kenar boşlukları</strong> kaydedilir. Yalnızca ADB bağlantısı, <strong>Projeksiyonu etkinleştir</strong> düğmesine tekrar dokunmayı gerektirebilir.</p>
+
+<hr>
+<p style="text-align:center;color:#999;font-size:0.82rem;">DashCast · Kullanım Kılavuzu · Türkçe · github.com/Kiroha/byd-dashcast</p>
+
+</div>
+</body>
+</html>

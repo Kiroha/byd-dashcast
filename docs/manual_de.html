@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DashCast — Bedienungsanleitung</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+  h2 { font-size: 1.35rem; font-weight: 700; margin: 40px 0 14px; color: #1A237E; border-left: 4px solid #1A237E; padding-left: 12px; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #333; }
+  p  { margin-bottom: 12px; color: #333; font-size: 0.95rem; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; font-size: 0.95rem; color: #333; }
+  li { margin-bottom: 6px; }
+  .note { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  .warn { background: #FFF3E0; border-left: 4px solid #E65100; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  .cover { background: linear-gradient(135deg, #0D1117 0%, #1A237E 100%); color: white; padding: 50px 40px; border-radius: 12px; margin: 30px 0 40px; }
+  .cover h1 { font-size: 2.8rem; letter-spacing: 2px; }
+  .cover .sub { font-size: 1.1rem; color: #90CAF9; margin-top: 6px; }
+  .cover .meta { font-size: 0.85rem; color: #aaa; margin-top: 30px; }
+  .toc { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 28px; margin-bottom: 40px; }
+  .toc h2 { margin-top: 0; font-size: 1.1rem; }
+  .toc a { color: #1A237E; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .device-wrap { display: flex; justify-content: center; margin: 24px 0 8px; }
+  .device { background: #1c1c1e; border-radius: 14px; padding: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.35); width: 100%; max-width: 680px; }
+  .screen { background: #f5f5f5; border-radius: 8px; overflow: hidden; min-height: 200px; }
+  .sb { display: flex; align-items: center; gap: 5px; background: #1A237E; padding: 8px 10px; flex-wrap: wrap; }
+  .sb-text { flex: 1; color: white; font-size: 11px; font-weight: bold; min-width: 120px; }
+  .sb-text.active { color: #A5D6A7; }
+  .btn-ui { border: none; border-radius: 4px; color: white; font-size: 10px; padding: 5px 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+  .btn-blue { background: #1565C0; }
+  .btn-red { background: #B71C1C; }
+  .btn-green { background: #2E7D32; }
+  .btn-teal { background: #00695C; }
+  .btn-gray { background: #455A64; width: 28px; font-size: 13px; padding: 3px 0; }
+  .btn-indigo { background: #5C6BC0; }
+  .btn-dark { background: #2a2a2a; }
+  .btn-small { font-size: 9px; padding: 4px 6px; }
+  .list-title { background: #F5F5F5; padding: 8px 14px; font-size: 12px; font-weight: bold; color: #555; border-bottom: 1px solid #e0e0e0; }
+  .app-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #eee; background: white; }
+  .app-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .app-name { flex: 1; font-size: 13px; color: #111; font-weight: 500; }
+  .active-dot { width: 5px; height: 26px; background: #4CAF50; border-radius: 2px; flex-shrink: 0; }
+  .control-panel { background: #0D1117; }
+  .cp-header { background: #161B22; display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+  .cp-label { color: #4A9FDF; font-size: 10px; font-weight: bold; }
+  .cp-app { flex: 1; color: #aaa; font-size: 10px; }
+  .mirror-area { background: #090C10; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+  .mirror-text { color: #4A9FDF; font-size: 13px; }
+  .welcome-screen { background: #0D0D0D; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; min-height: 280px; gap: 10px; }
+  .wc-title { color: white; font-size: 24px; font-weight: 800; letter-spacing: 3px; }
+  .wc-sub { color: #4A9FDF; font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
+  .wc-hint { color: #888; font-size: 12px; margin-bottom: 18px; text-align: center; }
+  .lang-btn { background: #1A237E; color: white; border: none; border-radius: 6px; padding: 10px 0; width: 220px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .lang-btn.selected { background: #1565C0; outline: 2px solid #90CAF9; }
+  .settings-screen { background: #f2f2f2; padding: 12px; min-height: 220px; }
+  .settings-title { font-size: 18px; font-weight: 800; text-align: center; color: #2E3440; margin-bottom: 14px; }
+  .card { background: white; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .card-title { font-size: 13px; font-weight: 700; color: #3B4252; margin-bottom: 10px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #333; }
+  .radio-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #1A237E; flex-shrink: 0; }
+  .radio-circle.checked { background: #1A237E; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-label { font-size: 11px; color: #3B4252; flex: 1; }
+  .slider-val { font-size: 11px; color: #5E81AC; font-weight: bold; width: 40px; text-align: right; }
+  .slider-bar { flex: 2; height: 6px; background: #e0e0e0; border-radius: 3px; position: relative; }
+  .slider-fill { height: 100%; background: #1565C0; border-radius: 3px; }
+  .slider-thumb { width: 14px; height: 14px; background: #1565C0; border-radius: 50%; position: absolute; top: -4px; }
+  .annotation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .ann { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; color: #333; }
+  .ann-num { background: #1A237E; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ann-num.red { background: #B71C1C; }
+  .ann-num.green { background: #2E7D32; }
+  .ann-num.gray { background: #455A64; }
+  .ann-num.teal { background: #00695C; }
+  .caption { text-align: center; font-size: 0.82rem; color: #777; margin-bottom: 20px; font-style: italic; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .step-num { background: #1A237E; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-content { flex: 1; padding-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="cover">
+  <h1>DashCast</h1>
+  <div class="sub">Bedienungsanleitung</div>
+  <div class="meta">v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10</div>
+</div>
+
+<div class="toc">
+  <h2>📋 Inhaltsverzeichnis</h2>
+  <ol>
+    <li><a href="#s1">Übersicht</a></li>
+    <li><a href="#s2">Erster Start — Sprachauswahl</a></li>
+    <li><a href="#s3">Hauptbildschirm</a></li>
+    <li><a href="#s4">App auf das Kombiinstrument projizieren</a></li>
+    <li><a href="#s5">Während der Projektion — Steuerungsfeld</a></li>
+    <li><a href="#s6">Projektion beenden</a></li>
+    <li><a href="#s7">Einstellungen</a></li>
+    <li><a href="#s8">⋮ Menü — Weitere Werkzeuge</a></li>
+    <li><a href="#s9">FAQ & Fehlerbehebung</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Übersicht</h2>
+<p><strong>DashCast</strong> ist eine Android-App, mit der beliebige Apps vom Infotainment-Bildschirm auf das <strong>digitale Kombiinstrument</strong> Ihres BYD-Fahrzeugs projiziert werden können. Navigation, Musik, Videos – alles, was auf dem Zentraldisplay läuft, kann auf das fahrerseitige Cluster-Display umgeleitet werden.</p>
+<ul>
+  <li>✅ Kompatibel mit BYD Seal EU (DiLink 3.0, Firmware Di3.0 / 6125F)</li>
+  <li>✅ Keine Systemmodifikation erforderlich</li>
+  <li>✅ Lokales ADB über TCP (localhost) — nach der Einrichtung kein PC mehr nötig</li>
+  <li>✅ Automatische Erkennung, wenn eine App extern geschlossen wird</li>
+</ul>
+<div class="note">💡 <strong>Voraussetzung:</strong> Aktivieren Sie <strong>ADB-Debugging über TCP</strong> in Einstellungen → Entwickleroptionen → Kabelloses Debugging (oder „ADB über Netzwerk"). Dieser Schritt ist einmalig. Beim ersten Start von DashCast erscheint ein Dialog „USB-Debugging zulassen?" — tippen Sie auf <strong>Von diesem Computer immer zulassen</strong>.</div>
+
+<h2 id="s2">2. Erster Start — Sprachauswahl</h2>
+<p>Beim ersten Start erscheint der Willkommensbildschirm. Tippen Sie auf eine der fünf Schaltflächen, um Ihre Sprache auszuwählen. Diese Auswahl wird gespeichert — Sie sehen diesen Bildschirm nur noch, wenn Sie die Sprache im ⋮-Menü ändern.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="welcome-screen">
+        <div class="wc-title">DashCast</div>
+        <div class="wc-sub">Dashboard Controller</div>
+        <div class="wc-hint">Choisissez votre langue<br>Please select your language</div>
+        <button class="lang-btn">🇫🇷&nbsp;&nbsp;Français</button>
+        <button class="lang-btn">🇬🇧&nbsp;&nbsp;English</button>
+        <button class="lang-btn selected">🇩🇪&nbsp;&nbsp;Deutsch</button>
+        <button class="lang-btn">🇹🇷&nbsp;&nbsp;Türkçe</button>
+        <button class="lang-btn">🇮🇹&nbsp;&nbsp;Italiano</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Sprachauswahl — nur beim ersten Start angezeigt</p>
+
+<h2 id="s3">3. Hauptbildschirm</h2>
+<p>Der Hauptbildschirm besteht aus zwei Bereichen: einer <strong>Statusleiste</strong> oben (dunkelblauer Hintergrund) und einer <strong>Liste installierter Apps</strong> darunter.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text">① Dashboard: nicht verbunden</span>
+        <button class="btn-ui btn-blue">② Projektion aktivieren</button>
+        <button class="btn-ui btn-red">③ Projektion stoppen</button>
+        <button class="btn-ui btn-green btn-small">④ Original-Dashboard wiederherstellen</button>
+        <button class="btn-ui btn-gray">⑤ ⋮</button>
+      </div>
+      <div class="list-title">⑥ Installierte Apps</div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E3F2FD">🗺</div>
+        <div class="app-name">Maps</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#FCE4EC">▶️</div>
+        <div class="app-name">YouTube</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E8F5E9">🎵</div>
+        <div class="app-name">Spotify</div>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Hauptbildschirm — keine App projiziert (Ausgangszustand)</p>
+
+<div class="annotation-grid">
+  <div class="ann"><div class="ann-num">①</div><div><strong>Status</strong> — Zeigt den Verbindungsstatus zum Cluster. Wechselt zu „Dashboard: [App-Name]", wenn eine App aktiv ist.</div></div>
+  <div class="ann"><div class="ann-num">②</div><div><strong>Projektion aktivieren</strong> — Stellt die Verbindung zum Cluster her. Zuerst antippen.</div></div>
+  <div class="ann"><div class="ann-num red">③</div><div><strong>Projektion stoppen</strong> — Beendet die aktuelle Projektion, stellt das BYD-Dashboard aber nicht wieder her.</div></div>
+  <div class="ann"><div class="ann-num green">④</div><div><strong>Original-Dashboard wiederherstellen</strong> — Beendet die Projektion UND stellt das native BYD-Cluster wieder her (Geschwindigkeit, Anzeigen…).</div></div>
+  <div class="ann"><div class="ann-num gray">⑤</div><div><strong>⋮ Menü</strong> — Zugriff auf Einstellungen, Diagnose, Systembericht, Logs und Sprachwechsel.</div></div>
+  <div class="ann"><div class="ann-num gray">⑥</div><div><strong>App-Liste</strong> — Alle installierten Apps. Antippen zum Projizieren, <strong>✕</strong> zum Schließen.</div></div>
+</div>
+
+<h2 id="s4">4. App auf das Kombiinstrument projizieren</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-content"><strong>Tippen Sie auf „Projektion aktivieren"</strong> (blaue Schaltfläche). Der Status wechselt zu <em>„Cluster wird gestartet…"</em>. Die lokale ADB-Verbindung wird hergestellt.</div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-content"><strong>Tippen Sie auf die gewünschte App</strong> in der Liste. DashCast verschiebt die App auf das Cluster-Display. Der Status wechselt zu <em>„Dashboard: [App-Name]"</em>.</div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-content">Das <strong>Steuerungsfeld</strong> erscheint am unteren Bildschirmrand.</div>
+</div>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text active">Dashboard: Maps ✓</span>
+        <button class="btn-ui btn-blue">Projektion aktivieren</button>
+        <button class="btn-ui btn-teal">📺 Spiegel</button>
+        <button class="btn-ui btn-red">Projektion stoppen</button>
+        <button class="btn-ui btn-green btn-small">Original-Dashboard wiederherstellen</button>
+        <button class="btn-ui btn-gray">⋮</button>
+      </div>
+      <div class="list-title">Installierte Apps</div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#E3F2FD">🗺</div>
+        <div class="app-name">Maps</div>
+        <div class="active-dot"></div>
+        <button class="btn-ui btn-dark btn-small">← Haupt</button>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="app-item">
+        <div class="app-icon" style="background:#FCE4EC">▶️</div>
+        <div class="app-name">YouTube</div>
+        <button class="btn-ui btn-blue btn-small">→ Cluster</button>
+        <button class="btn-ui btn-red btn-small">✕</button>
+      </div>
+      <div class="control-panel">
+        <div class="cp-header">
+          <span class="cp-label">Cluster-Steuerung</span>
+          <span class="cp-app">Maps</span>
+          <button class="btn-ui btn-indigo btn-small">⬛⬛ Split</button>
+          <button class="btn-ui btn-dark btn-small">Ausblenden ▼</button>
+        </div>
+        <div class="mirror-area">
+          <span class="mirror-text">Anzeige aktiv auf Cluster ✓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Hauptbildschirm — Maps wird auf dem Kombiinstrument angezeigt</p>
+
+<h2 id="s5">5. Während der Projektion — Steuerungsfeld</h2>
+<p>Wenn eine App auf dem Cluster aktiv ist, erscheint unten ein dunkles Steuerungsfeld mit drei Fernsteuerungsfunktionen:</p>
+
+<h3>5.1 Spiegelmodus (📺 Spiegel)</h3>
+<p>Tippen Sie auf <strong>📺 Spiegel</strong>, um eine Live-Kopie des Cluster-Inhalts in DashCast anzuzeigen. Berührungsereignisse werden an das Cluster weitergeleitet.</p>
+
+<h3>5.2 Split-Modus (⬛⬛ Split)</h3>
+<p>Teilen Sie das Cluster-Display zwischen zwei Apps auf:</p>
+<ul>
+  <li><strong>Vollbild</strong> — Eine App belegt das gesamte Cluster</li>
+  <li><strong>⬜⬛ Links (50 %)</strong> — Haupt-App links, zweite App rechts</li>
+  <li><strong>⬛⬜ Rechts (50 %)</strong> — Haupt-App rechts</li>
+</ul>
+
+<h3>5.3 Panel ausblenden</h3>
+<p>Tippen Sie auf <strong>Ausblenden ▼</strong>, um das Steuerungsfeld einzuklappen.</p>
+
+<h2 id="s6">6. Projektion beenden</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Schaltfläche</th><th style="padding:8px 12px;text-align:left">Verhalten</th><th style="padding:8px 12px;text-align:left">Wann verwenden</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px"><strong style="color:#B71C1C">Projektion stoppen</strong></td><td style="padding:8px 12px">Beendet die Projektion. Cluster bleibt leer (schwarz).</td><td style="padding:8px 12px">Um die Anzeige vorübergehend zu stoppen.</td></tr>
+    <tr style="background:#f9f9f9"><td style="padding:8px 12px"><strong style="color:#2E7D32">Original-Dashboard wiederherstellen</strong></td><td style="padding:8px 12px">Beendet die Projektion UND stellt das native BYD-Cluster wieder her (Geschwindigkeit, Reichweite…).</td><td style="padding:8px 12px">Am Ende der Nutzung.</td></tr>
+  </tbody>
+</table>
+<div class="warn">⚠️ Wenn Sie DashCast beenden, ohne eine dieser Schaltflächen zu drücken, bleibt die Projektion bis zum nächsten Neustart des Dienstes aktiv.</div>
+
+<h2 id="s7">7. Einstellungen</h2>
+<p>Öffnen Sie die Einstellungen über <strong>⋮ → ⚙️ Einstellungen</strong>.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="settings-screen">
+        <div class="settings-title">Einstellungen</div>
+        <div class="card">
+          <div class="card-title">Cluster-Typ</div>
+          <div class="radio-item"><div class="radio-circle"></div>8,8 Zoll (cmd=29)</div>
+          <div class="radio-item"><div class="radio-circle checked"></div>12,3 Zoll (cmd=30) — Seal EU</div>
+          <div class="radio-item"><div class="radio-circle"></div>10,25 Zoll (cmd=31)</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Anzeigeränder (Overscan)</div>
+          <div class="slider-row">
+            <div class="slider-label">Links / Rechts:</div>
+            <div class="slider-bar"><div class="slider-fill" style="width:40%"></div><div class="slider-thumb" style="left:calc(40% - 7px)"></div></div>
+            <div class="slider-val">80 px</div>
+          </div>
+          <div class="slider-row">
+            <div class="slider-label">Oben / Unten:</div>
+            <div class="slider-bar"><div class="slider-fill" style="width:25%"></div><div class="slider-thumb" style="left:calc(25% - 7px)"></div></div>
+            <div class="slider-val">50 px</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn-ui btn-blue" style="flex:1;padding:8px">Jetzt anwenden</button>
+            <button class="btn-ui" style="flex:1;background:#607D8B;padding:8px">Zurücksetzen (80 / 50)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Einstellungsseite</p>
+
+<h3>7.1 Cluster-Typ</h3>
+<p>Wählen Sie die Bildschirmgröße Ihres Kombiinstruments. Für den <strong>BYD Seal EU</strong> wählen Sie <strong>12,3 Zoll</strong> (cmd=30).</p>
+
+<h3>7.2 Anzeigeränder (Overscan)</h3>
+<p>Passen Sie die Ränder an, um den Inhalt in der sichtbaren Fläche des Cluster-Displays einzurahmen. Gekrümmte Displays haben häufig physische Ränder, die über die nutzbare Anzeigefläche hinausgehen.</p>
+<ul>
+  <li><strong>Links / Rechts</strong> — Horizontaler Rand (0–200 px auf jeder Seite)</li>
+  <li><strong>Oben / Unten</strong> — Vertikaler Rand (0–200 px oben und unten)</li>
+</ul>
+<div class="note">💡 Empfohlene Standardwerte für den Seal EU: Links/Rechts = <strong>80 px</strong>, Oben/Unten = <strong>50 px</strong>.</div>
+
+<h2 id="s8">8. ⋮ Menü — Weitere Werkzeuge</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Option</th><th style="padding:8px 12px;text-align:left">Beschreibung</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">⚙️ Einstellungen</td><td style="padding:8px 12px">Cluster-Typ + Overscan-Randanpassung</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">🔧 Diagnose</td><td style="padding:8px 12px">Erweiterte Entwicklertests — ADB-Verbindung, Displays, Cluster-Bildschirmgröße</td></tr>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">📋 Systembericht</td><td style="padding:8px 12px">Erstellt einen vollständigen Bericht (Displays, BYD-APIs, Berechtigungen)</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">📜 Protokoll</td><td style="padding:8px 12px">Echtzeit-Protokollansicht — Filter nach Tag/Ebene, Teilen per E-Mail oder Datei</td></tr>
+    <tr style="background:#fff"><td style="padding:8px 12px">🌐 Sprache</td><td style="padding:8px 12px">Kehrt zur Sprachauswahl zurück</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">9. FAQ & Fehlerbehebung</h2>
+
+<h3>❓ Der Dialog „USB-Debugging zulassen?" erscheint nicht</h3>
+<p>Stellen Sie sicher, dass <strong>ADB-Debugging über TCP</strong> in den Entwickleroptionen des Infotainmentsystems aktiviert ist. Falls die Option fehlt, aktivieren Sie zuerst den Entwicklermodus (7× auf die Build-Nummer in „Über dieses Gerät" tippen).</p>
+
+<h3>❓ Die App erscheint nach der Auswahl nicht auf dem Cluster</h3>
+<ul>
+  <li>Vergewissern Sie sich, dass Sie <strong>Projektion aktivieren</strong> angetippt haben, bevor Sie eine App auswählen.</li>
+  <li>Einige Apps verweigern den Start auf einem sekundären Display. Prüfen Sie das Protokoll auf Fehlermeldungen.</li>
+  <li>Schließen und öffnen Sie DashCast neu, und wiederholen Sie die Schritte.</li>
+</ul>
+
+<h3>❓ Der Inhalt ist auf dem Cluster abgeschnitten oder verschoben</h3>
+<p>Passen Sie die <strong>Anzeigeränder</strong> unter ⋮ → Einstellungen an. Erhöhen Sie Links/Rechts bei horizontalem Überlauf, Oben/Unten bei vertikalem Überlauf. Klicken Sie auf <strong>Jetzt anwenden</strong>, um das Ergebnis sofort zu sehen.</p>
+
+<h3>❓ Die Schaltflächen „← Haupt" und „✕" bleiben nach dem Schließen der App sichtbar</h3>
+<p>DashCast erkennt das Schließen von Apps automatisch (über /proc-Überwachung). Falls die Oberfläche hängt, tippen Sie auf <strong>Projektion stoppen</strong>, um einen Reset zu erzwingen.</p>
+
+<h3>❓ Muss ich nach einem Fahrzeugneustart alles neu einrichten?</h3>
+<p>Nein. <strong>Cluster-Typ</strong> und <strong>Overscan-Ränder</strong> werden gespeichert. Nur die ADB-Verbindung erfordert möglicherweise erneutes Antippen von <strong>Projektion aktivieren</strong>.</p>
+
+<hr>
+<p style="text-align:center;color:#999;font-size:0.82rem;">DashCast · Bedienungsanleitung · Deutsch · github.com/Kiroha/byd-dashcast</p>
+
+</div>
+</body>
+</html>
