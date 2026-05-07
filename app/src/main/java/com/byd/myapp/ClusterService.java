@@ -137,13 +137,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     /** Returns the current horizontal overscan inset (left + right) from persistent settings. */
     private int getInsetH() {
-        return getSharedPreferences("byd_app_prefs", MODE_PRIVATE)
+        return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
                 .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
     }
 
     /** Returns the current vertical overscan inset (top + bottom) from persistent settings. */
     private int getInsetV() {
-        return getSharedPreferences("byd_app_prefs", MODE_PRIVATE)
+        return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
                 .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
     }
 

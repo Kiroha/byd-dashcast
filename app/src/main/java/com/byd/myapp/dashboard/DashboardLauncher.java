@@ -107,7 +107,7 @@ public class DashboardLauncher {
                     targetDisplay.getRealSize(size);
                     AppLogger.i(TAG, "getRealSize display " + displayId + " → " + size.x + "×" + size.y);
                 } else {
-                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×1080");
+                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×720");
                 }
                 setLB.invoke(options, new Rect(0, 0, size.x, size.y));
                 AppLogger.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") applied");

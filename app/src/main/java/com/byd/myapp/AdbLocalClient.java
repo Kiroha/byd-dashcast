@@ -631,7 +631,7 @@ public class AdbLocalClient {
      *   2. sendInfo(1000,  0)            — refresh Qt stream                   → wait 6s
      *   3. sendInfo(1000, screenSizeCmd) — switch Qt to the correct resolution
      *
-     * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal U-DMI), 31=10.25" (Seal EU)
+     * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal EU — CONFIRMED), 31=10.25" (Seal U-DMI)
      */
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
@@ -1029,55 +1029,6 @@ public class AdbLocalClient {
                 }
             }
         }); // adb-forcestop-thread
-    }
-
-    /**
-     * Launches a third-party app via MirrorDaemon (uid=2000) with explicit FREEFORM bounds.
-     */
-    public static void launchDirectWithBounds(final Context context,
-            final String targetPackage, final int displayId,
-            final int left, final int top, final int right, final int bottom,
-            final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try {
-                    android.content.pm.PackageManager pm = context.getPackageManager();
-                    android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
-                    if (li == null) {
-                        try {
-                            android.content.pm.PackageInfo pi = pm.getPackageInfo(targetPackage, android.content.pm.PackageManager.GET_ACTIVITIES);
-                            if (pi.activities != null && pi.activities.length > 0) {
-                                li = new android.content.Intent();
-                                li.setComponent(new android.content.ComponentName(targetPackage, pi.activities[0].name));
-                            }
-                        } catch (Exception e) {
-                            AppLogger.d(TAG, "getPackageInfo fallback failed for " + targetPackage + ": " + e.getMessage());
-                        }
-                    }
-                    if (li == null || li.getComponent() == null) {
-                        callback.onError("No activity found for " + targetPackage);
-                        return;
-                    }
-                    
-                    AppLogger.i(TAG, "Broadcast daemon_launch_bounds pour " + targetPackage);
-                    android.content.Intent intent = new android.content.Intent("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
-                    intent.putExtra("pkg", li.getComponent().getPackageName());
-                    intent.putExtra("cls", li.getComponent().getClassName());
-                    intent.putExtra("displayId", displayId);
-                    intent.putExtra("bounds_l", left);
-                    intent.putExtra("bounds_t", top);
-                    intent.putExtra("bounds_r", right);
-                    intent.putExtra("bounds_b", bottom);
-                    context.sendBroadcast(intent);
-                    
-                    callback.onSuccess("Bounds broadcast sent to Daemon.");
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchDirectWithBounds failed", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-trampoline-bounds-thread
     }
 
     /**

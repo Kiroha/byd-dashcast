@@ -45,7 +45,8 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView    tvInsetVValue;
     private Button      btnApply;
     private Button      btnReset;
-    private TextView    tvResult;    private CheckBox    cbPrerelease;
+    private TextView    tvResult;
+    private CheckBox    cbPrerelease;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
