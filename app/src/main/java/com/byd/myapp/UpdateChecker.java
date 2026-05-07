@@ -32,8 +32,10 @@ import java.net.URL;
 public class UpdateChecker {
 
     private static final String TAG = "UpdateChecker";
-    private static final String RELEASES_API =
+    private static final String RELEASES_LATEST_API =
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases/latest";
+    private static final String RELEASES_LIST_API =
+            "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=10";
     private static final String APK_CACHE_NAME = "dashcast-update.apk";
 
     /**
@@ -53,9 +55,27 @@ public class UpdateChecker {
     private static void doCheckAndInstall(Context context) throws Exception {
         Handler ui = new Handler(Looper.getMainLooper());
 
-        // 1. Fetch latest release info from GitHub API
-        String json = httpGet(RELEASES_API);
-        JSONObject release = new JSONObject(json);
+        boolean includePrerelease = context
+                .getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(SettingsActivity.PREF_OTA_PRERELEASE,
+                        SettingsActivity.DEFAULT_OTA_PRERELEASE);
+
+        // 1. Fetch latest (or latest including pre-release) release info from GitHub API
+        JSONObject release;
+        if (includePrerelease) {
+            // /releases returns all releases including pre-releases, sorted by creation desc.
+            // Pick the first one (most recent).
+            String json = httpGet(RELEASES_LIST_API);
+            JSONArray list = new JSONArray(json);
+            if (list.length() == 0) {
+                AppLogger.i(TAG, "No releases found");
+                return;
+            }
+            release = list.getJSONObject(0);
+        } else {
+            String json = httpGet(RELEASES_LATEST_API);
+            release = new JSONObject(json);
+        }
         String tag = release.getString("tag_name");
         String latestVer = tag.startsWith("v") ? tag.substring(1) : tag;
 

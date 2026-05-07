@@ -64,6 +64,9 @@
     <string name="menu_language">🌐 Sprache</string>
     <string name="menu_check_updates">🔄 Nach Updates suchen</string>
     <string name="toast_checking_updates">Suche nach Updates…</string>
+    <string name="settings_updates_title">Updates</string>
+    <string name="settings_prerelease_label">Vorabversionen einschließen (alpha/beta)</string>
+    <string name="settings_prerelease_hint">Testversionen vor offiziellem Release erhalten</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Cluster-Typ</string>

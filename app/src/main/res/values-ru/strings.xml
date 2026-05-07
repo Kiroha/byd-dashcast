@@ -66,6 +66,9 @@
     <string name="menu_language">🌐 Язык</string>
     <string name="menu_check_updates">🔄 Проверить обновления</string>
     <string name="toast_checking_updates">Проверка обновлений…</string>
+    <string name="settings_updates_title">Обновления</string>
+    <string name="settings_prerelease_label">Включать предварительные версии (alpha/beta)</string>
+    <string name="settings_prerelease_hint">Получать тестовые сборки до официального выпуска</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Тип кластера</string>

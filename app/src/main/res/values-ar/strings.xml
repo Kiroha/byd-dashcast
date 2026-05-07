@@ -61,6 +61,9 @@
     <string name="menu_language">🌐 اللغة</string>
     <string name="menu_check_updates">🔄 التحقق من التحديثات</string>
     <string name="toast_checking_updates">جارٍ البحث عن تحديثات…</string>
+    <string name="settings_updates_title">التحديثات</string>
+    <string name="settings_prerelease_label">تضمين إصدارات ما قبل الإصدار (alpha/beta)</string>
+    <string name="settings_prerelease_hint">استلام إصدارات تجريبية قبل الإصدار الرسمي</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">نوع العنقود</string>
