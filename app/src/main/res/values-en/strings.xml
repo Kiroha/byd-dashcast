@@ -10,6 +10,11 @@
     <string name="btn_lang_de">🇩🇪  Deutsch</string>
     <string name="btn_lang_tr">🇹🇷  Türkçe</string>
     <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
+    <string name="btn_lang_kk">🇰🇿  Қазақша</string>
+    <string name="btn_lang_be">🇧🇾  Беларуская</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard: not connected</string>

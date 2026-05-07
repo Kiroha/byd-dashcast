@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DashCast — Руководство пользователя</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+  h2 { font-size: 1.35rem; font-weight: 700; margin: 40px 0 14px; color: #1A237E; border-left: 4px solid #1A237E; padding-left: 12px; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #333; }
+  p  { margin-bottom: 12px; color: #333; font-size: 0.95rem; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; font-size: 0.95rem; color: #333; }
+  li { margin-bottom: 6px; }
+  .note { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  .warn { background: #FFF3E0; border-left: 4px solid #E65100; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  .cover { background: linear-gradient(135deg, #0D1117 0%, #1A237E 100%); color: white; padding: 50px 40px; border-radius: 12px; margin: 30px 0 40px; }
+  .cover h1 { font-size: 2.8rem; letter-spacing: 2px; }
+  .cover .sub { font-size: 1.1rem; color: #90CAF9; margin-top: 6px; }
+  .cover .meta { font-size: 0.85rem; color: #aaa; margin-top: 30px; }
+  .toc { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 28px; margin-bottom: 40px; }
+  .toc h2 { margin-top: 0; font-size: 1.1rem; }
+  .toc a { color: #1A237E; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .device-wrap { display: flex; justify-content: center; margin: 24px 0 8px; }
+  .device { background: #1c1c1e; border-radius: 14px; padding: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.35); width: 100%; max-width: 680px; }
+  .screen { background: #f5f5f5; border-radius: 8px; overflow: hidden; min-height: 200px; }
+  .sb { display: flex; align-items: center; gap: 5px; background: #1A237E; padding: 8px 10px; flex-wrap: wrap; }
+  .sb-text { flex: 1; color: white; font-size: 11px; font-weight: bold; min-width: 120px; }
+  .sb-text.active { color: #A5D6A7; }
+  .btn-ui { border: none; border-radius: 4px; color: white; font-size: 10px; padding: 5px 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+  .btn-blue { background: #1565C0; }
+  .btn-red { background: #B71C1C; }
+  .btn-green { background: #2E7D32; }
+  .btn-teal { background: #00695C; }
+  .btn-gray { background: #455A64; width: 28px; font-size: 13px; padding: 3px 0; }
+  .btn-indigo { background: #5C6BC0; }
+  .btn-dark { background: #2a2a2a; }
+  .btn-small { font-size: 9px; padding: 4px 6px; }
+  .list-title { background: #F5F5F5; padding: 8px 14px; font-size: 12px; font-weight: bold; color: #555; border-bottom: 1px solid #e0e0e0; }
+  .app-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #eee; background: white; }
+  .app-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .app-name { flex: 1; font-size: 13px; color: #111; font-weight: 500; }
+  .active-dot { width: 5px; height: 26px; background: #4CAF50; border-radius: 2px; flex-shrink: 0; }
+  .control-panel { background: #0D1117; }
+  .cp-header { background: #161B22; display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+  .cp-label { color: #4A9FDF; font-size: 10px; font-weight: bold; }
+  .cp-app { flex: 1; color: #aaa; font-size: 10px; }
+  .mirror-area { background: #090C10; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+  .mirror-text { color: #4A9FDF; font-size: 13px; }
+  .welcome-screen { background: #0D0D0D; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; min-height: 280px; gap: 10px; }
+  .wc-title { color: white; font-size: 24px; font-weight: 800; letter-spacing: 3px; }
+  .wc-sub { color: #4A9FDF; font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
+  .wc-hint { color: #888; font-size: 12px; margin-bottom: 18px; text-align: center; }
+  .lang-btn { background: #1A237E; color: white; border: none; border-radius: 6px; padding: 10px 0; width: 220px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .lang-btn.selected { background: #1565C0; outline: 2px solid #90CAF9; }
+  .settings-screen { background: #f2f2f2; padding: 12px; min-height: 220px; }
+  .settings-title { font-size: 18px; font-weight: 800; text-align: center; color: #2E3440; margin-bottom: 14px; }
+  .card { background: white; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .card-title { font-size: 13px; font-weight: 700; color: #3B4252; margin-bottom: 10px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #333; }
+  .radio-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #1A237E; flex-shrink: 0; }
+  .radio-circle.checked { background: #1A237E; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-label { font-size: 11px; color: #3B4252; flex: 1; }
+  .slider-val { font-size: 11px; color: #5E81AC; font-weight: bold; width: 40px; text-align: right; }
+  .slider-bar { flex: 2; height: 6px; background: #e0e0e0; border-radius: 3px; position: relative; }
+  .slider-fill { height: 100%; background: #1565C0; border-radius: 3px; }
+  .slider-thumb { width: 14px; height: 14px; background: #1565C0; border-radius: 50%; position: absolute; top: -4px; }
+  .annotation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .ann { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; color: #333; }
+  .ann-num { background: #1A237E; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ann-num.red { background: #B71C1C; }
+  .ann-num.green { background: #2E7D32; }
+  .ann-num.gray { background: #455A64; }
+  .ann-num.teal { background: #00695C; }
+  .caption { text-align: center; font-size: 0.82rem; color: #777; margin-bottom: 20px; font-style: italic; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .step-num { background: #1A237E; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-content { flex: 1; padding-top: 4px; }
+  .log-screen { background: #0D0D0D; padding: 10px 12px; min-height: 180px; }
+  .log-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .log-title-text { color: #4A9FDF; font-size: 13px; font-weight: bold; flex: 1; }
+  .log-entry { font-size: 10px; font-family: monospace; margin-bottom: 3px; padding: 2px 4px; border-radius: 2px; }
+  .log-i { color: #E0E0E0; }
+  .log-w { color: #FFA726; }
+  .log-filter { background: #1c1c1e; border: 1px solid #333; color: #ccc; border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 100%; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="cover">
+  <h1>DashCast</h1>
+  <div class="sub">Руководство пользователя</div>
+  <div class="meta">v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10</div>
+</div>
+
+<div class="toc">
+  <h2>📋 Содержание</h2>
+  <ol>
+    <li><a href="#s1">Обзор</a></li>
+    <li><a href="#s2">Первый запуск — выбор языка</a></li>
+    <li><a href="#s3">Главный экран</a></li>
+    <li><a href="#s4">Проекция приложения на панель приборов</a></li>
+    <li><a href="#s5">Во время проекции — панель управления</a></li>
+    <li><a href="#s6">Остановка проекции</a></li>
+    <li><a href="#s7">Настройки</a></li>
+    <li><a href="#s8">Меню ⋮ — дополнительные инструменты</a></li>
+    <li><a href="#s9">FAQ и устранение неполадок</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Обзор</h2>
+<p><strong>DashCast</strong> — Android-приложение, которое позволяет вывести любое приложение с экрана мультимедиа на <strong>цифровую панель приборов</strong> вашего BYD. Навигация, музыка, видео — всё, что работает на центральном экране, можно перенаправить на дисплей перед водителем.</p>
+<ul>
+  <li>✅ Совместимо с BYD Seal EU (DiLink 3.0, прошивка Di3.0 / 6125F)</li>
+  <li>✅ Не требует модификации системы</li>
+  <li>✅ Локальный ADB через TCP (localhost) — после настройки ПК не нужен</li>
+  <li>✅ Автоматически определяет внешнее закрытие приложения</li>
+</ul>
+<div class="note">💡 <strong>Предварительное условие:</strong> включите <strong>отладку ADB TCP</strong> в Настройки → Для разработчиков → Беспроводная отладка (или «ADB по сети»). Это нужно сделать один раз. При первом запуске DashCast появится окно «Разрешить отладку USB?» — нажмите <strong>Всегда разрешать с этого компьютера</strong>.</div>
+
+<h2 id="s2">2. Первый запуск — выбор языка</h2>
+<p>При первом запуске отображается экран приветствия. Нажмите одну из десяти кнопок, чтобы выбрать язык. Выбор сохраняется — экран больше не появится, пока вы не смените язык через меню ⋮.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="welcome-screen">
+        <div class="wc-title">DashCast</div>
+        <div class="wc-sub">Контроллер панели приборов</div>
+        <div class="wc-hint">Выберите язык<br>Please select your language</div>
+        <button class="lang-btn">🇫🇷&nbsp;&nbsp;Français</button>
+        <button class="lang-btn">🇬🇧&nbsp;&nbsp;English</button>
+        <button class="lang-btn">🇩🇪&nbsp;&nbsp;Deutsch</button>
+        <button class="lang-btn">🇹🇷&nbsp;&nbsp;Türkçe</button>
+        <button class="lang-btn">🇮🇹&nbsp;&nbsp;Italiano</button>
+        <button class="lang-btn selected">🇷🇺&nbsp;&nbsp;Русский</button>
+        <button class="lang-btn">🇺🇿&nbsp;&nbsp;Oʻzbekcha</button>
+        <button class="lang-btn">🇰🇿&nbsp;&nbsp;Қазақша</button>
+        <button class="lang-btn">🇧🇾&nbsp;&nbsp;Беларуская</button>
+        <button class="lang-btn">🇺🇦&nbsp;&nbsp;Українська</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Экран выбора языка — отображается только при первом запуске</p>
+
+<h2 id="s3">3. Главный экран</h2>
+<p>Главный экран состоит из двух зон: <strong>строки состояния</strong> сверху (тёмно-синяя) и <strong>списка установленных приложений</strong> ниже.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text">① Панель приборов: не подключена</span>
+        <button class="btn-ui btn-blue">② Включить проекцию</button>
+        <button class="btn-ui btn-red">③ Остановить проекцию</button>
+        <button class="btn-ui btn-green btn-small">④ Восстановить штатную панель</button>
+        <button class="btn-ui btn-gray">⑤ ⋮</button>
+      </div>
+      <div class="list-title">⑥ Установленные приложения</div>
+      <div class="app-item"><div class="app-icon" style="background:#E3F2FD">🗺</div><div class="app-name">Карты</div><button class="btn-ui btn-red btn-small">✕</button></div>
+      <div class="app-item"><div class="app-icon" style="background:#FCE4EC">▶️</div><div class="app-name">YouTube</div><button class="btn-ui btn-red btn-small">✕</button></div>
+      <div class="app-item"><div class="app-icon" style="background:#E8F5E9">🎵</div><div class="app-name">Spotify</div><button class="btn-ui btn-red btn-small">✕</button></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Главный экран — приложение ещё не выведено (начальное состояние)</p>
+
+<div class="annotation-grid">
+  <div class="ann"><div class="ann-num">①</div><div><strong>Статус</strong> — показывает состояние подключения к кластеру. При активном приложении меняется на «Панель приборов: [Имя приложения]».</div></div>
+  <div class="ann"><div class="ann-num">②</div><div><strong>Включить проекцию</strong> — подключает кластер и готовит его к выводу приложений. Нажмите сначала эту кнопку.</div></div>
+  <div class="ann"><div class="ann-num red">③</div><div><strong>Остановить проекцию</strong> — завершает текущую проекцию без восстановления штатной панели BYD.</div></div>
+  <div class="ann"><div class="ann-num green">④</div><div><strong>Восстановить штатную панель</strong> — завершает проекцию И возвращает родной кластер BYD (скорость, шкалы и т. д.).</div></div>
+  <div class="ann"><div class="ann-num gray">⑤</div><div><strong>Меню ⋮</strong> — доступ к настройкам, диагностике, системному отчёту, журналам и смене языка.</div></div>
+  <div class="ann"><div class="ann-num gray">⑥</div><div><strong>Список приложений</strong> — все установленные приложения. Нажмите приложение для вывода или <strong>✕</strong>, чтобы принудительно закрыть.</div></div>
+</div>
+
+<h2 id="s4">4. Проекция приложения на панель приборов</h2>
+<div class="step"><div class="step-num">1</div><div class="step-content"><strong>Нажмите «Включить проекцию»</strong> (синяя кнопка). Статус изменится на <em>«Запуск кластера…»</em>. Устанавливается локальное ADB-подключение, и кластер переходит в режим проекции.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-content"><strong>Нажмите нужное приложение</strong> в списке. DashCast переносит приложение на дисплей кластера. Статус изменится на <em>«Панель приборов: [Имя приложения]»</em>.</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-content">Появится <strong>панель управления</strong> внизу экрана, с которой можно управлять выведенным приложением с основного экрана.</div></div>
+
+<div class="device-wrap">
+  <div class="device"><div class="screen">
+    <div class="sb"><span class="sb-text active">Панель приборов: Карты ✓</span><button class="btn-ui btn-blue">Включить проекцию</button><button class="btn-ui btn-teal">📺 Mirror</button><button class="btn-ui btn-red">Остановить проекцию</button><button class="btn-ui btn-green btn-small">Восстановить штатную панель</button><button class="btn-ui btn-gray">⋮</button></div>
+    <div class="list-title">Установленные приложения</div>
+    <div class="app-item"><div class="app-icon" style="background:#E3F2FD">🗺</div><div class="app-name">Карты</div><div class="active-dot"></div><button class="btn-ui btn-dark btn-small">← Основной</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="app-item"><div class="app-icon" style="background:#FCE4EC">▶️</div><div class="app-name">YouTube</div><button class="btn-ui btn-blue btn-small">→ Кластер</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="app-item"><div class="app-icon" style="background:#E8F5E9">🎵</div><div class="app-name">Spotify</div><button class="btn-ui btn-blue btn-small">→ Кластер</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="control-panel"><div class="cp-header"><span class="cp-label">Управление кластером</span><span class="cp-app">Карты</span><button class="btn-ui btn-indigo btn-small">⬛⬛ Разделить</button><button class="btn-ui btn-dark btn-small">Скрыть ▼</button></div><div class="mirror-area"><span class="mirror-text">Активное изображение на кластере ✓</span></div></div>
+  </div></div>
+</div>
+<p class="caption">Главный экран — Карты выведены на панель приборов</p>
+
+<h2 id="s5">5. Во время проекции — панель управления</h2>
+<p>Когда приложение активно на кластере, внизу главного экрана появляется тёмная панель с тремя функциями дистанционного управления:</p>
+<h3>5.1 Зеркало (📺 Зеркало)</h3>
+<p>Нажмите <strong>📺 Зеркало</strong> в строке состояния, чтобы увидеть живую копию содержимого кластера внутри DashCast. С копией можно взаимодействовать касаниями — события передаются на дисплей кластера.</p>
+<div class="note">Зеркало использует SurfaceControl для захвата дисплея. Если оно недоступно, включается запасной режим со скриншотом каждые 2 секунды.</div>
+<h3>5.2 Режим разделения (⬛⬛ Разделить)</h3>
+<p>Нажмите <strong>⬛⬛ Разделить</strong>, чтобы разделить кластер между двумя приложениями:</p>
+<ul>
+  <li><strong>Полный экран</strong> — одно приложение занимает весь кластер</li>
+  <li><strong>⬜⬛ Слева (50%)</strong> — основное приложение слева, второе справа</li>
+  <li><strong>⬛⬜ Справа (50%)</strong> — основное приложение справа</li>
+</ul>
+<h3>5.3 Скрыть панель</h3>
+<p>Нажмите <strong>Скрыть ▼</strong>, чтобы свернуть панель управления и видеть весь список приложений.</p>
+
+<h2 id="s6">6. Остановка проекции</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Кнопка</th><th style="padding:8px 12px;text-align:left">Поведение</th><th style="padding:8px 12px;text-align:left">Когда использовать</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px"><strong style="color:#B71C1C">Остановить проекцию</strong></td><td style="padding:8px 12px">Завершает проекцию. Кластер становится пустым.</td><td style="padding:8px 12px">Когда нужно временно отключить вывод.</td></tr>
+    <tr style="background:#f9f9f9"><td style="padding:8px 12px"><strong style="color:#2E7D32">Восстановить штатную панель</strong></td><td style="padding:8px 12px">Завершает проекцию И возвращает родной кластер BYD (скорость, запас хода, шкалы…).</td><td style="padding:8px 12px">В конце использования — для возврата к обычной панели BYD.</td></tr>
+  </tbody>
+</table>
+<div class="warn">⚠️ Если выйти из DashCast, не нажав одну из этих кнопок, проекция останется активной на кластере до следующего перезапуска службы.</div>
+
+<h2 id="s7">7. Настройки</h2>
+<p>Откройте настройки через <strong>⋮ → ⚙️ Настройки</strong>.</p>
+<div class="device-wrap"><div class="device"><div class="screen"><div class="settings-screen"><div class="settings-title">Настройки</div><div class="card"><div class="card-title">Тип кластера</div><div class="radio-item"><div class="radio-circle"></div>8.8 inches (cmd=29)</div><div class="radio-item"><div class="radio-circle checked"></div>12.3 inches (cmd=30) — Seal EU</div><div class="radio-item"><div class="radio-circle"></div>10.25 inches (cmd=31)</div></div><div class="card"><div class="card-title">Поля дисплея (overscan)</div><div class="slider-row"><div class="slider-label">Слева / Справа:</div><div class="slider-bar"><div class="slider-fill" style="width:40%"></div><div class="slider-thumb" style="left:calc(40% - 7px)"></div></div><div class="slider-val">80 px</div></div><div class="slider-row"><div class="slider-label">Сверху / Снизу:</div><div class="slider-bar"><div class="slider-fill" style="width:25%"></div><div class="slider-thumb" style="left:calc(25% - 7px)"></div></div><div class="slider-val">50 px</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-ui btn-blue" style="flex:1;padding:8px">Применить сейчас</button><button class="btn-ui" style="flex:1;background:#607D8B;padding:8px">Сбросить (80 / 50)</button></div></div></div></div></div></div>
+<p class="caption">Настройки</p>
+<h3>7.1 Тип кластера</h3>
+<p>Выберите размер экрана вашей панели приборов. Для <strong>BYD Seal EU</strong> выберите <strong>12,3 дюйма</strong> (cmd=30).</p>
+<h3>7.2 Поля дисплея (Overscan)</h3>
+<p>Настройте поля, чтобы вписать содержимое в видимую область экрана кластера. У кластеров с изогнутым стеклом физические края часто выходят за пределы полезной области.</p>
+<ul>
+  <li><strong>Слева / Справа</strong> — горизонтальное поле (0–200 px с каждой стороны)</li>
+  <li><strong>Сверху / Снизу</strong> — вертикальное поле (0–200 px сверху и снизу)</li>
+</ul>
+<p>Нажмите <strong>Применить сейчас</strong>, чтобы сразу увидеть результат, если приложение уже выведено. Значения сохраняются между сеансами.</p>
+<div class="note">💡 Рекомендуемые значения для Seal EU: Слева/Справа = <strong>80 px</strong>, Сверху/Снизу = <strong>50 px</strong>.</div>
+
+<h2 id="s8">8. Меню ⋮ — дополнительные инструменты</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Пункт</th><th style="padding:8px 12px;text-align:left">Описание</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">⚙️ Настройки</td><td style="padding:8px 12px">Тип кластера + настройка полей overscan</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">🔧 Диагностика</td><td style="padding:8px 12px">Расширенные тесты для разработчика — ADB-подключение, дисплеи, размер экрана кластера</td></tr>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">📋 Системный отчёт</td><td style="padding:8px 12px">Создаёт полный отчёт (дисплеи, API BYD, разрешения) — полезно для поддержки</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">📜 Журналы</td><td style="padding:8px 12px">Просмотр журнала в реальном времени — фильтр по тегу/уровню, отправка по email или файлом</td></tr>
+    <tr style="background:#fff;"><td style="padding:8px 12px">🌐 Язык</td><td style="padding:8px 12px">Возвращает к экрану выбора языка</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">9. FAQ и устранение неполадок</h2>
+<h3>❓ Окно «Разрешить отладку USB?» не появляется</h3>
+
+<p>Проверьте, что <strong>отладка ADB TCP</strong> включена в настройках разработчика мультимедиа. Если пункта нет, сначала включите режим разработчика (7 раз нажмите на номер сборки в разделе «О системе»).</p>
+
+<h3>❓ Приложение не появляется на кластере после выбора</h3>
+
+<ul><li>Убедитесь, что перед выбором приложения вы нажали <strong>Включить проекцию</strong>.</li><li>Некоторые приложения не разрешают запуск на дополнительном дисплее. Проверьте журнал ошибок.</li><li>Попробуйте закрыть и снова открыть DashCast, затем повторите последовательность.</li></ul>
+
+<h3>❓ Содержимое обрезано или смещено на кластере</h3>
+
+<p>Настройте <strong>поля дисплея</strong> в ⋮ → Настройки. Увеличьте Слева/Справа при горизонтальном выходе за края, Сверху/Снизу — при вертикальном. Нажмите <strong>Применить сейчас</strong>, чтобы сразу увидеть результат.</p>
+
+<h3>❓ Кнопки «← Основной» и «✕» остаются видимыми после закрытия приложения</h3>
+
+<p>DashCast автоматически определяет завершение приложения (через мониторинг /proc). Если интерфейс завис, нажмите <strong>Остановить проекцию</strong>, чтобы принудительно сбросить состояние.</p>
+
+<h3>❓ После перезапуска автомобиля нужно всё настраивать заново?</h3>
+
+<p>Нет. <strong>Тип кластера</strong> и <strong>поля overscan</strong> сохраняются. Последнее выведенное приложение также запоминается. Может понадобиться только снова нажать <strong>Включить проекцию</strong> для ADB-подключения.</p>
+
+<hr>
+<p style="text-align:center;color:#999;font-size:0.82rem;">DashCast · Руководство пользователя · Русский · github.com/Kiroha/byd-dashcast</p>
+
+</div>
+</body>
+</html>

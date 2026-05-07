@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DashCast</string>
+
+    <!-- WelcomeActivity -->
+    <string name="welcome_title">DashCast</string>
+    <string name="welcome_subtitle">Контролер панелі приладів</string>
+    <string name="welcome_select_lang">Виберіть мову\nPlease select your language</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
+    <string name="btn_lang_kk">🇰🇿  Қазақша</string>
+    <string name="btn_lang_be">🇧🇾  Беларуская</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
+
+    <!-- MainActivity — status bar -->
+    <string name="status_disconnected">Панель приладів: не підключена</string>
+    <string name="btn_activate_cluster">Увімкнути проекцію</string>
+    <string name="btn_show_mirror">📺 Дзеркало</string>
+    <string name="btn_restore_cluster">Зупинити проекцію</string>
+    <string name="btn_origin_cluster">Відновити штатну панель</string>
+    <string name="title_app_list">Встановлені програми</string>
+    <string name="mirror_placeholder">Активне зображення на кластері ✓</string>
+    <string name="btn_cluster_split">⬛⬛ Розділити</string>
+
+    <!-- Cluster control panel -->
+    <string name="cluster_control_title">Керування кластером</string>
+    <string name="cluster_control_hide">Сховати ▼</string>
+
+    <!-- item_app.xml -->
+    <string name="btn_app_to_main">← Основний</string>
+    <string name="btn_app_to_cluster">→ Кластер</string>
+
+    <!-- MainActivity — status texts -->
+    <string name="status_starting_cluster">Запуск кластера…</string>
+    <string name="status_activating_cluster">Активація кластера…</string>
+    <string name="status_restoring_cluster">Відновлення кластера…</string>
+    <string name="status_restoring_origin">Відновлення штатного кластера…</string>
+    <string name="status_dashboard_byd">Панель приладів: дисплей BYD</string>
+    <string name="status_dashboard_app">Панель приладів: %1$s</string>
+
+    <!-- MainActivity — Toasts -->
+    <string name="toast_app_incompatible">%1$s: не встановлено або несумісне з кількома дисплеями</string>
+    <string name="toast_cluster_unavailable">Служба кластера недоступна</string>
+    <string name="toast_app_already_cluster">Програма вже на кластері</string>
+    <string name="toast_restore_failed">Не вдалося відновити: %1$s</string>
+    <string name="toast_origin_failed">Не вдалося відновити штатний кластер: %1$s</string>
+    <string name="toast_app_stopped">%1$s зупинено</string>
+    <string name="toast_kill_failed">Не вдалося завершити: %1$s</string>
+    <string name="toast_no_app_cluster">На кластері немає програми</string>
+    <string name="toast_cluster_type">Кластер: %1$s</string>
+
+    <!-- MainActivity — overflow menu -->
+    <string name="menu_settings">⚙️ Налаштування</string>
+    <string name="menu_diagnostic">🔧 Діагностика</string>
+    <string name="menu_system_report">📋 Системний звіт</string>
+    <string name="menu_log">📜 Журнали</string>
+    <string name="menu_language">🌐 Мова</string>
+
+    <!-- MainActivity — cluster type dialog -->
+    <string name="dialog_cluster_type_title">Тип кластера</string>
+    <string name="cluster_label_88">8,8 дюйма  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 дюйма (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 дюйма (cmd=31)</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_cancel">Скасувати</string>
+
+    <!-- MainActivity — split menu -->
+    <string name="split_full_screen">⬜ Повний екран</string>
+    <string name="split_left">⬜⬛ Ліворуч (50%%)</string>
+    <string name="split_right">⬛⬜ Праворуч (50%%)</string>
+
+    <string name="btn_send">Надіслати</string>
+
+    <!-- LogActivity -->
+    <string name="log_title">📋 Журнал</string>
+    <string name="log_btn_clear">Очистити</string>
+    <string name="log_btn_share">Поділитися</string>
+    <string name="log_filter_hint">Фільтр (тег / повідомлення / рівень)…</string>
+    <string name="log_autoscroll">Авто↓</string>
+    <string name="log_level_debug">DEBUG </string>
+    <string name="log_level_info">INFO </string>
+    <string name="log_level_warn">WARN </string>
+    <string name="log_level_error">ERROR</string>
+    <string name="log_empty">(немає записів)</string>
+
+    <!-- SysInfoActivity -->
+    <string name="sysinfo_title">Системний звіт BYD</string>
+    <string name="sysinfo_desc">Створює повний звіт: дисплеї, API, пакети BYD, дозволи, ADB. Збережіть його та надішліть для налагодження.</string>
+    <string name="btn_generate_report">▶ Створити звіт</string>
+    <string name="btn_save_report">💾 Зберегти</string>
+    <string name="btn_share_report">📤 Поділитися</string>
+    <string name="sysinfo_hint">Натисніть « Створити звіт », щоб почати.</string>
+    <string name="sysinfo_generating">Створення…\n</string>
+    <string name="toast_write_error">Помилка запису: %1$s</string>
+    <string name="toast_report_saved">Звіт збережено:\n%1$s</string>
+
+    <!-- DiagActivity — layout labels -->
+    <string name="diag_share_result1_btn">Поділитися результатом TEST 1</string>
+    <string name="diag_share_result2_btn">Поділитися результатом TEST 2</string>
+    <string name="diag_share_result3_btn">Поділитися результатом TEST 3</string>
+
+    <!-- DiagActivity — Java status / feedback -->
+    <string name="diag_adb_connecting">Підключення до localhost:5555…\n⏳ Спливне вікно з’явиться на цьому екрані — натисніть ДОЗВОЛИТИ.</string>
+    <string name="diag_adb_connected">✅ Підключення встановлено\n\n</string>
+    <string name="diag_adb_failed">❌ Помилка: %1$s\n\n→ Перевірте, що ввімкнено ADB TCP debugging\n  у Налаштування → Для розробників → USB debugging\n  (або Wireless Debugging у цій ROM)</string>
+    <string name="diag_adb_test1_hint">→ Спочатку запустіть TEST 1, щоб авторизувати ADB-підключення.</string>
+    <string name="diag_launching_display1">⏳ Запуск display 1…</string>
+    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
+    <string name="diag_size_restoring">⏳ Відновлення стандартного розміру (cmd 30 + wm reset)…</string>
+    <string name="diag_size_full_running">⏳ Діагностика розмірів кластера…\nПробуємо cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 секунд)</string>
+    <string name="diag_sf_dumping">Виконується dumpsys SurfaceFlinger…</string>
+    <string name="diag_sf_no_result">(немає результату — дзеркало не зареєстроване в SF)</string>
+    <string name="diag_sf_error">Помилка: %1$s</string>
+    <string name="toast_sniffer_started">Sniffer запущено → %1$s</string>
+
+    <!-- DiagActivity — killAndRestartDaemon -->
+
+    <!-- AppLogger -->
+    <string name="share_log_title">Поділитися журналом…</string>
+    <string name="share_report_title">Поділитися звітом…</string>
+
+        <!-- DiagActivity: layout labels -->
+    <string name="diag_header">Панель діагностики</string>
+    <string name="diag_s1_title">1. Локальний ADB (обов’язково)</string>
+    <string name="diag_s1_desc">Потрібен для впровадження daemon і створення системного VirtualDisplay так, як це робить Dilink5.</string>
+    <string name="diag_s1_initial">Не підключено</string>
+    <string name="diag_btn_adb_connect">Підключити ADB</string>
+    <string name="diag_btn_share_result">Поділитися</string>
+    <string name="diag_s2_title">2. Впровадження daemon &amp; рендеринг</string>
+    <string name="diag_s2_desc">Запускає DashCastDaemon.java в app_process через ADB shell: успадковує CAPTURE_VIDEO_OUTPUT.</string>
+    <string name="diag_btn_create_vd">Створити VirtualDisplay (впровадити daemon)</string>
+    <string name="diag_s3_title">3. Властивості кластера</string>
+    <string name="diag_s3_initial">Розмір дисплея</string>
+    <string name="diag_s3_display1_initial">Відновити дисплей кластера</string>
+    <string name="diag_btn_restore_display">Відновити дисплей</string>
+    <string name="diag_s4_title">4. Аналіз системи (SurfaceFlinger)</string>
+    <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
+    <string name="diag_btn_run_dumpsys">Запустити dumpsys window displays</string>
+    <string name="diag_jni_initial">Результат JNI Probe: --</string>
+    <string name="diag_btn_jni_probe">JNI Probe</string>
+    <string name="diag_btn_jni_start_probe">Start + JNI Probe</string>
+    <string name="diag_sf_initial">SF Dump: --</string>
+    <string name="diag_btn_dump_mirror">Dump Mirror Service</string>
+    <string name="diag_auto_display_title">AutoDisplayService (com.xdja.containerservice)</string>
+    <string name="diag_auto_display_desc">Запускає сервіс Qt→VirtualDisplay напряму. Це внутрішній механізм Dilink5: він отримує native Qt Surface кластера і передає його в createVirtualDisplay.</string>
+    <string name="diag_btn_start_auto_display">START AutoDisplayService</string>
+    <string name="diag_btn_stop">STOP</string>
+    <string name="diag_fission_title">Fission Pipeline (створення VirtualDisplay кластера)</string>
+    <string name="diag_fission_desc">Повна послідовність: sendInfo(30)+sendInfo(16) → Qt реєструє Surface → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay(fission_testVirtualSurface). Потім запускає DashBoard на цьому дисплеї.</string>
+    <string name="diag_btn_sendinf_java">☕ sendInfo Java Direct (v0.1.21)</string>
+    <string name="diag_btn_fission_create">🚀 Створити Fission Display</string>
+    <string name="diag_btn_fission_launch">▶ Запустити Dashboard</string>
+    <string name="diag_s5_title">5. Системний sniffer (Reverse Engineering)</string>
+    <string name="diag_s5_desc">Захоплює logcat (усі релевантні теги) + періодичні snapshots dumpsys в експортований файл. Для reverse engineering: перехоплює display, SF, AM, WM, BYD, autoContainer, Qt, broadcasts.</string>
+    <string name="diag_sniffer_inactive">Неактивний</string>
+    <string name="diag_btn_start">START</string>
+    <string name="diag_btn_snapshot">Snapshot зараз</string>
+    <string name="diag_btn_export_sniffer">Експорт</string>
+        <!-- DiagActivity: dynamic messages -->
+    <string name="diag_auto_starting">Запуск через ADB…</string>
+    <string name="diag_auto_stopping">Зупинка через ADB…</string>
+    <string name="diag_auto_stopped">STOP: %1$s</string>
+    <string name="diag_jni_display_released">Display звільнено. Перевіряємо JNI…</string>
+    <string name="diag_jni_fatal">FATAL: %1$s</string>
+    <string name="diag_jni_send16_failed">Не вдалося надіслати 16: %1$s</string>
+    <string name="diag_running">Діагностика виконується…</string>
+    <string name="diag_dumpsys_running">Виконується через adb local…</string>
+    <string name="diag_dumpsys_error">ПОМИЛКА:\n%1$s</string>
+    <string name="diag_daemon_launching">Запуск daemon через adb local…</string>
+    <string name="diag_daemon_timeout">TIMEOUT: ADB не відповів за %1$ds.</string>
+    <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
+    <string name="diag_daemon_error">ПОМИЛКА: %1$s</string>
+    <string name="diag_apk_path_error">Помилка APK path: %1$s</string>
+    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
+    <string name="diag_fission_running">Послідовність виконується…</string>
+    <string name="diag_fission_no_display">❌ Немає fission display. Спочатку запустіть « Створити Fission Display ».</string>
+    <string name="diag_fission_launching">Запуск на display %1$d…</string>
+    <string name="diag_sniffer_initializing">Ініціалізація…</string>
+    <string name="diag_sniffer_active">АКТИВНИЙ → %1$s</string>
+    <string name="diag_sniffer_init_failed">❌ Помилка init: %1$s</string>
+    <string name="diag_sniffer_stopped">Зупинено — файл: %1$s</string>
+    <string name="toast_sniffer_stopped">Sniffer зупинено.</string>
+    <string name="toast_sniffer_start_first">Спочатку запустіть sniffer.</string>
+    <string name="toast_snapshot_done">Snapshot додано у файл.</string>
+    <string name="toast_sniffer_no_file">Немає файла sniffer для експорту.</string>
+    <string name="toast_no_result_to_share">Немає результату для надсилання.</string>
+    <string name="diag_btn_size_restore">RESTORE</string>
+    <string name="diag_btn_size_full">FULL TEST</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Скидання overscan основного екрана (display 0)</string>
+    <string name="diag_reset_main_overscan_done">Overscan display 0 скинуто — wm overscan reset -d 0</string>
+    <!-- Section 7 — Test resize DiLink5 -->
+    <string name="diag_s7_title">7. Тест Resize DiLink5 (IATM)</string>
+    <string name="diag_s7_desc">Перевіряє послідовність DiLink5 Dashboard: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) через raw Binder на activity_task. Не змінює наявний код проекції. Спочатку запустіть програму на кластері через основну панель.</string>
+    <string name="diag_btn_resize_dilink5_seq">▶ Послідовність DiLink5 (WM:4→5 + resize FORCED=3)</string>
+    <string name="diag_btn_resize_forced_only">▶ Лише resizeTask FORCED=3 (без зміни WM)</string>
+    <string name="diag_btn_resize_inspect_task">🔍 Перевірити task кластера (windowing + bounds)</string>
+
+    <!-- Section 6 — Storage cleanup -->
+    <string name="diag_s6_title">6. Очищення сховища</string>
+    <string name="diag_s6_desc">Видаляє файли журналів і звітів, створені DashCast: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Також очищає буфер журналів у пам’яті. ADB-ключі (adb.key / adb.pub) НЕ видаляються.</string>
+    <string name="diag_btn_cleanup">🗑️ Видалити trace-файли</string>
+    <string name="diag_cleanup_running">Очищення…</string>
+    <string name="diag_cleanup_done">%1$d файл(ів) видалено — залишилось місця: %2$s</string>
+
+    <!-- SettingsActivity -->
+    <string name="settings_header">Налаштування</string>
+    <string name="settings_cluster_type_title">Тип кластера</string>
+    <string name="settings_overscan_section_title">Поля дисплея (overscan)</string>
+    <string name="settings_overscan_desc">Налаштуйте поля, щоб вмістити контент на екрані панелі приладів. Значення застосовуються під час наступного запуску.</string>
+    <string name="settings_inset_h_label">Ліворуч / Праворуч:</string>
+    <string name="settings_inset_v_label">Зверху / Знизу:</string>
+    <string name="settings_btn_apply_overscan">Застосувати зараз</string>
+    <string name="settings_btn_reset_overscan">Скинути (80 / 50)</string>
+    <string name="settings_overscan_applied">✓ Застосовано — Л/П: %1$d px, В/Н: %2$d px</string>
+</resources>

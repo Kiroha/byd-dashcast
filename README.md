@@ -36,7 +36,7 @@ BYD APIs.
 | 9 | **🔧 Diagnostic** | 7 sections: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test (WM:4→5 + resizeTask FORCED) |
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
-| 12 | **Multilingual** | French / English / German / Italian / Turkish, selected on first launch |
+| 12 | **Multilingual** | French / English / German / Italian / Turkish / Russian / Uzbek / Kazakh / Belarusian / Ukrainian, selected on first launch |
 | 13 | **Floating overlay** | Two floating buttons: LOG (opens log) and 📺 Mirror (opens cluster mirror / returns to main screen) |
 
 ---
@@ -368,4 +368,3 @@ This project is licensed under the [MIT License](LICENSE).
 >
 > WindowManagement is a third-party application (not BYD) whose behavior has been
 > analyzed for interoperability purposes only.
-

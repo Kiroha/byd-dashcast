@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
     android:background="#0D0D0D"
-    android:padding="40dp">
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingLeft="40dp"
+        android:paddingTop="32dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="32dp">
 
     <!-- Logo / titre app -->
     <TextView
@@ -25,7 +33,7 @@
         android:textColor="#4A9FDF"
         android:textSize="14sp"
         android:letterSpacing="0.2"
-        android:layout_marginBottom="60dp"/>
+        android:layout_marginBottom="32dp"/>
 
     <!-- Invite bilingue -->
     <TextView
@@ -36,65 +44,127 @@
         android:textSize="15sp"
         android:gravity="center"
         android:lineSpacingMultiplier="1.5"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="24dp"/>
 
     <!-- French button -->
     <Button
         android:id="@+id/btn_lang_fr"
         android:layout_width="260dp"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:text="@string/btn_lang_fr"
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="10dp"/>
 
     <!-- Bouton English -->
     <Button
         android:id="@+id/btn_lang_en"
         android:layout_width="260dp"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:text="@string/btn_lang_en"
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="10dp"/>
 
     <!-- Bouton Deutsch -->
     <Button
         android:id="@+id/btn_lang_de"
         android:layout_width="260dp"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:text="@string/btn_lang_de"
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="10dp"/>
 
     <!-- Bouton Türkçe -->
     <Button
         android:id="@+id/btn_lang_tr"
         android:layout_width="260dp"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:text="@string/btn_lang_tr"
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="10dp"/>
 
     <!-- Bouton Italiano -->
     <Button
         android:id="@+id/btn_lang_it"
         android:layout_width="260dp"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
         android:text="@string/btn_lang_it"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bouton Русский -->
+    <Button
+        android:id="@+id/btn_lang_ru"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="@string/btn_lang_ru"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bouton Oʻzbekcha -->
+    <Button
+        android:id="@+id/btn_lang_uz"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="@string/btn_lang_uz"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bouton Қазақша -->
+    <Button
+        android:id="@+id/btn_lang_kk"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="@string/btn_lang_kk"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bouton Беларуская -->
+    <Button
+        android:id="@+id/btn_lang_be"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="@string/btn_lang_be"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1A237E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bouton Українська -->
+    <Button
+        android:id="@+id/btn_lang_uk"
+        android:layout_width="260dp"
+        android:layout_height="52dp"
+        android:text="@string/btn_lang_uk"
         android:textSize="16sp"
         android:textStyle="bold"
         android:background="#1A237E"
         android:textColor="#FFFFFF"/>
 
-</LinearLayout>
+    </LinearLayout>
+
+</ScrollView>

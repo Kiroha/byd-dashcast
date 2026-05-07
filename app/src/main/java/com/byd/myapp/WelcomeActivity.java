@@ -9,7 +9,7 @@ import android.widget.Button;
 /**
  * WelcomeActivity — shown only on the first launch.
  *
- * Propose le choix de langue (FR / EN).
+ * Propose le choix de langue.
  * Once the user selects a language, the locale is applied, the
  * "setup_done" flag is saved, and MainActivity is started.
  *
@@ -36,44 +36,24 @@ public class WelcomeActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_welcome);
 
-        Button btnFr = (Button) findViewById(R.id.btn_lang_fr);
-        Button btnEn = (Button) findViewById(R.id.btn_lang_en);
-        Button btnDe = (Button) findViewById(R.id.btn_lang_de);
-        Button btnTr = (Button) findViewById(R.id.btn_lang_tr);
-        Button btnIt = (Button) findViewById(R.id.btn_lang_it);
+        setLanguageButton(R.id.btn_lang_fr, LocaleHelper.LANG_FR);
+        setLanguageButton(R.id.btn_lang_en, LocaleHelper.LANG_EN);
+        setLanguageButton(R.id.btn_lang_de, LocaleHelper.LANG_DE);
+        setLanguageButton(R.id.btn_lang_tr, LocaleHelper.LANG_TR);
+        setLanguageButton(R.id.btn_lang_it, LocaleHelper.LANG_IT);
+        setLanguageButton(R.id.btn_lang_ru, LocaleHelper.LANG_RU);
+        setLanguageButton(R.id.btn_lang_uz, LocaleHelper.LANG_UZ);
+        setLanguageButton(R.id.btn_lang_kk, LocaleHelper.LANG_KK);
+        setLanguageButton(R.id.btn_lang_be, LocaleHelper.LANG_BE);
+        setLanguageButton(R.id.btn_lang_uk, LocaleHelper.LANG_UK);
+    }
 
-        btnFr.setOnClickListener(new View.OnClickListener() {
+    private void setLanguageButton(int buttonId, final String lang) {
+        Button button = (Button) findViewById(buttonId);
+        button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                selectLanguage(LocaleHelper.LANG_FR);
-            }
-        });
-
-        btnEn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectLanguage(LocaleHelper.LANG_EN);
-            }
-        });
-
-        btnDe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectLanguage(LocaleHelper.LANG_DE);
-            }
-        });
-
-        btnTr.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectLanguage(LocaleHelper.LANG_TR);
-            }
-        });
-
-        btnIt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectLanguage(LocaleHelper.LANG_IT);
+                selectLanguage(lang);
             }
         });
     }

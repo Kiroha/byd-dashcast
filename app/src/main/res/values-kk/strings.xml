@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DashCast</string>
+
+    <!-- WelcomeActivity -->
+    <string name="welcome_title">DashCast</string>
+    <string name="welcome_subtitle">Аспаптар панелі контроллері</string>
+    <string name="welcome_select_lang">Тілді таңдаңыз\nPlease select your language</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
+    <string name="btn_lang_kk">🇰🇿  Қазақша</string>
+    <string name="btn_lang_be">🇧🇾  Беларуская</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
+
+    <!-- MainActivity — status bar -->
+    <string name="status_disconnected">Аспаптар панелі: қосылмаған</string>
+    <string name="btn_activate_cluster">Проекцияны қосу</string>
+    <string name="btn_show_mirror">📺 Айна</string>
+    <string name="btn_restore_cluster">Проекцияны тоқтату</string>
+    <string name="btn_origin_cluster">Бастапқы панельді қалпына келтіру</string>
+    <string name="title_app_list">Орнатылған қолданбалар</string>
+    <string name="mirror_placeholder">Кластердегі белсенді бейне ✓</string>
+    <string name="btn_cluster_split">⬛⬛ Бөлу</string>
+
+    <!-- Cluster control panel -->
+    <string name="cluster_control_title">Кластерді басқару</string>
+    <string name="cluster_control_hide">Жасыру ▼</string>
+
+    <!-- item_app.xml -->
+    <string name="btn_app_to_main">← Негізгі</string>
+    <string name="btn_app_to_cluster">→ Кластер</string>
+
+    <!-- MainActivity — status texts -->
+    <string name="status_starting_cluster">Кластер іске қосылуда…</string>
+    <string name="status_activating_cluster">Кластер белсендірілуде…</string>
+    <string name="status_restoring_cluster">Кластер қалпына келтірілуде…</string>
+    <string name="status_restoring_origin">Бастапқы кластер қалпына келтірілуде…</string>
+    <string name="status_dashboard_byd">Аспаптар панелі: BYD дисплейі</string>
+    <string name="status_dashboard_app">Аспаптар панелі: %1$s</string>
+
+    <!-- MainActivity — Toasts -->
+    <string name="toast_app_incompatible">%1$s: орнатылмаған немесе бірнеше дисплеймен үйлесімсіз</string>
+    <string name="toast_cluster_unavailable">Кластер қызметі қолжетімсіз</string>
+    <string name="toast_app_already_cluster">Қолданба кластерде бар</string>
+    <string name="toast_restore_failed">Қалпына келтіру сәтсіз: %1$s</string>
+    <string name="toast_origin_failed">Бастапқы кластерді қалпына келтіру сәтсіз: %1$s</string>
+    <string name="toast_app_stopped">%1$s тоқтатылды</string>
+    <string name="toast_kill_failed">Аяқтау сәтсіз: %1$s</string>
+    <string name="toast_no_app_cluster">Кластерде қолданба жоқ</string>
+    <string name="toast_cluster_type">Кластер: %1$s</string>
+
+    <!-- MainActivity — overflow menu -->
+    <string name="menu_settings">⚙️ Баптаулар</string>
+    <string name="menu_diagnostic">🔧 Диагностика</string>
+    <string name="menu_system_report">📋 Жүйе есебі</string>
+    <string name="menu_log">📜 Журналдар</string>
+    <string name="menu_language">🌐 Тіл</string>
+
+    <!-- MainActivity — cluster type dialog -->
+    <string name="dialog_cluster_type_title">Кластер түрі</string>
+    <string name="cluster_label_88">8,8 дюйм  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 дюйм (cmd=31)</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_cancel">Бас тарту</string>
+
+    <!-- MainActivity — split menu -->
+    <string name="split_full_screen">⬜ Толық экран</string>
+    <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
+    <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
+
+    <string name="btn_send">Жіберу</string>
+
+    <!-- LogActivity -->
+    <string name="log_title">📋 Журнал</string>
+    <string name="log_btn_clear">Тазалау</string>
+    <string name="log_btn_share">Бөлісу</string>
+    <string name="log_filter_hint">Сүзгі (тег / хабар / деңгей)…</string>
+    <string name="log_autoscroll">Авто↓</string>
+    <string name="log_level_debug">DEBUG </string>
+    <string name="log_level_info">INFO </string>
+    <string name="log_level_warn">WARN </string>
+    <string name="log_level_error">ERROR</string>
+    <string name="log_empty">(жазба жоқ)</string>
+
+    <!-- SysInfoActivity -->
+    <string name="sysinfo_title">BYD жүйе есебі</string>
+    <string name="sysinfo_desc">Толық есеп жасайды: дисплейлер, APIлер, BYD пакеттері, рұқсаттар, ADB. Оны сақтап, жөндеу үшін жіберіңіз.</string>
+    <string name="btn_generate_report">▶ Есеп жасау</string>
+    <string name="btn_save_report">💾 Сақтау</string>
+    <string name="btn_share_report">📤 Бөлісу</string>
+    <string name="sysinfo_hint">Бастау үшін « Есеп жасау » түймесін басыңыз.</string>
+    <string name="sysinfo_generating">Жасалуда…\n</string>
+    <string name="toast_write_error">Жазу қатесі: %1$s</string>
+    <string name="toast_report_saved">Есеп сақталды:\n%1$s</string>
+
+    <!-- DiagActivity — layout labels -->
+    <string name="diag_share_result1_btn">TEST 1 нәтижесін бөлісу</string>
+    <string name="diag_share_result2_btn">TEST 2 нәтижесін бөлісу</string>
+    <string name="diag_share_result3_btn">TEST 3 нәтижесін бөлісу</string>
+
+    <!-- DiagActivity — Java status / feedback -->
+    <string name="diag_adb_connecting">localhost:5555 мекенжайына қосылу…\n⏳ Қалқымалы терезе осы экранда шығады — РҰҚСАТ БЕРУ түймесін басыңыз.</string>
+    <string name="diag_adb_connected">✅ Қосылым орнатылды\n\n</string>
+    <string name="diag_adb_failed">❌ Қате: %1$s\n\n→ ADB TCP debugging қосылғанын тексеріңіз\n  Баптаулар → Әзірлеуші → USB debugging\n  (немесе осы ROMда Wireless Debugging)</string>
+    <string name="diag_adb_test1_hint">→ ADB қосылымына рұқсат беру үшін алдымен TEST 1 іске қосыңыз.</string>
+    <string name="diag_launching_display1">⏳ display 1 іске қосылуда…</string>
+    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
+    <string name="diag_size_restoring">⏳ Әдепкі өлшем қалпына келтірілуде (cmd 30 + wm reset)…</string>
+    <string name="diag_size_full_running">⏳ Кластер өлшемдерінің диагностикасы…\ncmd=29 / cmd=30 / cmd=31 / wm size тексерілуде…\n(~8 секунд)</string>
+    <string name="diag_sf_dumping">dumpsys SurfaceFlinger орындалуда…</string>
+    <string name="diag_sf_no_result">(нәтиже жоқ — айна SF ішінде тіркелмеген)</string>
+    <string name="diag_sf_error">Қате: %1$s</string>
+    <string name="toast_sniffer_started">Sniffer іске қосылды → %1$s</string>
+
+    <!-- DiagActivity — killAndRestartDaemon -->
+
+    <!-- AppLogger -->
+    <string name="share_log_title">Журналды бөлісу…</string>
+    <string name="share_report_title">Есепті бөлісу…</string>
+
+        <!-- DiagActivity: layout labels -->
+    <string name="diag_header">Диагностика панелі</string>
+    <string name="diag_s1_title">1. Жергілікті ADB (міндетті)</string>
+    <string name="diag_s1_desc">Dilink5 сияқты daemon енгізу және жүйелік VirtualDisplay жасау үшін қажет.</string>
+    <string name="diag_s1_initial">Қосылмаған</string>
+    <string name="diag_btn_adb_connect">ADB қосу</string>
+    <string name="diag_btn_share_result">Бөлісу</string>
+    <string name="diag_s2_title">2. Daemon енгізу &amp; рендеринг</string>
+    <string name="diag_s2_desc">DashCastDaemon.java файлын ADB shell арқылы app_process ішінде іске қосады: CAPTURE_VIDEO_OUTPUT мұраға алады.</string>
+    <string name="diag_btn_create_vd">VirtualDisplay жасау (daemon енгізу)</string>
+    <string name="diag_s3_title">3. Кластер қасиеттері</string>
+    <string name="diag_s3_initial">Дисплей өлшемі</string>
+    <string name="diag_s3_display1_initial">Кластер дисплейін қалпына келтіру</string>
+    <string name="diag_btn_restore_display">Дисплейді қалпына келтіру</string>
+    <string name="diag_s4_title">4. Жүйе талдауы (SurfaceFlinger)</string>
+    <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
+    <string name="diag_btn_run_dumpsys">dumpsys window displays іске қосу</string>
+    <string name="diag_jni_initial">JNI Probe нәтижесі: --</string>
+    <string name="diag_btn_jni_probe">JNI Probe</string>
+    <string name="diag_btn_jni_start_probe">Start + JNI Probe</string>
+    <string name="diag_sf_initial">SF Dump: --</string>
+    <string name="diag_btn_dump_mirror">Dump Mirror Service</string>
+    <string name="diag_auto_display_title">AutoDisplayService (com.xdja.containerservice)</string>
+    <string name="diag_auto_display_desc">Qt→VirtualDisplay қызметін тікелей іске қосады. Бұл Dilink5 ішкі механизмі: кластердің native Qt Surface объектісін алып, createVirtualDisplay ішіне береді.</string>
+    <string name="diag_btn_start_auto_display">START AutoDisplayService</string>
+    <string name="diag_btn_stop">STOP</string>
+    <string name="diag_fission_title">Fission Pipeline (кластер VirtualDisplay жасау)</string>
+    <string name="diag_fission_desc">Толық рет: sendInfo(30)+sendInfo(16) → Qt Surface тіркейді → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay(fission_testVirtualSurface). Содан кейін DashBoard осы дисплейде іске қосылады.</string>
+    <string name="diag_btn_sendinf_java">☕ sendInfo Java Direct (v0.1.21)</string>
+    <string name="diag_btn_fission_create">🚀 Fission Display жасау</string>
+    <string name="diag_btn_fission_launch">▶ Dashboard іске қосу</string>
+    <string name="diag_s5_title">5. Жүйелік sniffer (Reverse Engineering)</string>
+    <string name="diag_s5_desc">Logcat (барлық маңызды тегтер) және мерзімді dumpsys snapshotтарын экспортталатын файлға жазады. Reverse engineering үшін: display, SF, AM, WM, BYD, autoContainer, Qt және broadcastтарды ұстайды.</string>
+    <string name="diag_sniffer_inactive">Белсенді емес</string>
+    <string name="diag_btn_start">START</string>
+    <string name="diag_btn_snapshot">Snapshot қазір</string>
+    <string name="diag_btn_export_sniffer">Экспорт</string>
+        <!-- DiagActivity: dynamic messages -->
+    <string name="diag_auto_starting">ADB арқылы іске қосылуда…</string>
+    <string name="diag_auto_stopping">ADB арқылы тоқтатылуда…</string>
+    <string name="diag_auto_stopped">STOP: %1$s</string>
+    <string name="diag_jni_display_released">Display босатылды. JNI тексерілуде…</string>
+    <string name="diag_jni_fatal">FATAL: %1$s</string>
+    <string name="diag_jni_send16_failed">16 жіберілмеді: %1$s</string>
+    <string name="diag_running">Диагностика орындалуда…</string>
+    <string name="diag_dumpsys_running">adb local арқылы орындалуда…</string>
+    <string name="diag_dumpsys_error">ҚАТЕ:\n%1$s</string>
+    <string name="diag_daemon_launching">daemon adb local арқылы іске қосылуда…</string>
+    <string name="diag_daemon_timeout">TIMEOUT: ADB %1$ds ішінде жауап бермеді.</string>
+    <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
+    <string name="diag_daemon_error">ҚАТЕ: %1$s</string>
+    <string name="diag_apk_path_error">APK path қатесі: %1$s</string>
+    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
+    <string name="diag_fission_running">Рет орындалуда…</string>
+    <string name="diag_fission_no_display">❌ Fission display жоқ. Алдымен « Fission Display жасау » іске қосыңыз.</string>
+    <string name="diag_fission_launching">display %1$d ішінде іске қосылуда…</string>
+    <string name="diag_sniffer_initializing">Инициализация…</string>
+    <string name="diag_sniffer_active">БЕЛСЕНДІ → %1$s</string>
+    <string name="diag_sniffer_init_failed">❌ Init қатесі: %1$s</string>
+    <string name="diag_sniffer_stopped">Тоқтатылды — файл: %1$s</string>
+    <string name="toast_sniffer_stopped">Sniffer тоқтатылды.</string>
+    <string name="toast_sniffer_start_first">Алдымен sniffer іске қосыңыз.</string>
+    <string name="toast_snapshot_done">Snapshot файлға қосылды.</string>
+    <string name="toast_sniffer_no_file">Экспорттайтын sniffer файлы жоқ.</string>
+    <string name="toast_no_result_to_share">Бөлісетін нәтиже жоқ.</string>
+    <string name="diag_btn_size_restore">RESTORE</string>
+    <string name="diag_btn_size_full">FULL TEST</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Негізгі экран overscan reset (display 0)</string>
+    <string name="diag_reset_main_overscan_done">display 0 overscan reset орындалды — wm overscan reset -d 0</string>
+    <!-- Section 7 — Test resize DiLink5 -->
+    <string name="diag_s7_title">7. DiLink5 Resize тесті (IATM)</string>
+    <string name="diag_s7_desc">DiLink5 Dashboard ретін тексереді: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) activity_task үстінде raw Binder арқылы. Қолданыстағы проекция кодына тимейді. Алдымен негізгі панель арқылы кластерде қолданба іске қосыңыз.</string>
+    <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 реті (WM:4→5 + resize FORCED=3)</string>
+    <string name="diag_btn_resize_forced_only">▶ Тек resizeTask FORCED=3 (WM өзгермейді)</string>
+    <string name="diag_btn_resize_inspect_task">🔍 Кластер task тексеру (windowing + bounds)</string>
+
+    <!-- Section 6 — Storage cleanup -->
+    <string name="diag_s6_title">6. Сақтау орнын тазалау</string>
+    <string name="diag_s6_desc">DashCast жасаған журнал және есеп файлдарын жояды: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Жадтағы журнал буферін де тазалайды. ADB кілттері (adb.key / adb.pub) ЖОЙЫЛМАЙДЫ.</string>
+    <string name="diag_btn_cleanup">🗑️ Trace файлдарын жою</string>
+    <string name="diag_cleanup_running">Тазалануда…</string>
+    <string name="diag_cleanup_done">%1$d файл жойылды — қалған сақтау орны: %2$s</string>
+
+    <!-- SettingsActivity -->
+    <string name="settings_header">Баптаулар</string>
+    <string name="settings_cluster_type_title">Кластер түрі</string>
+    <string name="settings_overscan_section_title">Дисплей жиектері (overscan)</string>
+    <string name="settings_overscan_desc">Мазмұнды аспаптар панелі экранына сыйдыру үшін жиектерді баптаңыз. Мәндер келесі іске қосылғанда қолданылады.</string>
+    <string name="settings_inset_h_label">Сол / Оң:</string>
+    <string name="settings_inset_v_label">Жоғары / Төмен:</string>
+    <string name="settings_btn_apply_overscan">Қазір қолдану</string>
+    <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
+    <string name="settings_overscan_applied">✓ Қолданылды — С/О: %1$d px, Ж/Т: %2$d px</string>
+</resources>

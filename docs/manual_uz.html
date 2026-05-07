@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DashCast — Foydalanuvchi qoʻllanmasi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+  h2 { font-size: 1.35rem; font-weight: 700; margin: 40px 0 14px; color: #1A237E; border-left: 4px solid #1A237E; padding-left: 12px; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #333; }
+  p  { margin-bottom: 12px; color: #333; font-size: 0.95rem; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; font-size: 0.95rem; color: #333; }
+  li { margin-bottom: 6px; }
+  .note { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  .warn { background: #FFF3E0; border-left: 4px solid #E65100; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 0.92rem; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  .cover { background: linear-gradient(135deg, #0D1117 0%, #1A237E 100%); color: white; padding: 50px 40px; border-radius: 12px; margin: 30px 0 40px; }
+  .cover h1 { font-size: 2.8rem; letter-spacing: 2px; }
+  .cover .sub { font-size: 1.1rem; color: #90CAF9; margin-top: 6px; }
+  .cover .meta { font-size: 0.85rem; color: #aaa; margin-top: 30px; }
+  .toc { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 28px; margin-bottom: 40px; }
+  .toc h2 { margin-top: 0; font-size: 1.1rem; }
+  .toc a { color: #1A237E; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .device-wrap { display: flex; justify-content: center; margin: 24px 0 8px; }
+  .device { background: #1c1c1e; border-radius: 14px; padding: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.35); width: 100%; max-width: 680px; }
+  .screen { background: #f5f5f5; border-radius: 8px; overflow: hidden; min-height: 200px; }
+  .sb { display: flex; align-items: center; gap: 5px; background: #1A237E; padding: 8px 10px; flex-wrap: wrap; }
+  .sb-text { flex: 1; color: white; font-size: 11px; font-weight: bold; min-width: 120px; }
+  .sb-text.active { color: #A5D6A7; }
+  .btn-ui { border: none; border-radius: 4px; color: white; font-size: 10px; padding: 5px 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+  .btn-blue { background: #1565C0; }
+  .btn-red { background: #B71C1C; }
+  .btn-green { background: #2E7D32; }
+  .btn-teal { background: #00695C; }
+  .btn-gray { background: #455A64; width: 28px; font-size: 13px; padding: 3px 0; }
+  .btn-indigo { background: #5C6BC0; }
+  .btn-dark { background: #2a2a2a; }
+  .btn-small { font-size: 9px; padding: 4px 6px; }
+  .list-title { background: #F5F5F5; padding: 8px 14px; font-size: 12px; font-weight: bold; color: #555; border-bottom: 1px solid #e0e0e0; }
+  .app-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #eee; background: white; }
+  .app-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .app-name { flex: 1; font-size: 13px; color: #111; font-weight: 500; }
+  .active-dot { width: 5px; height: 26px; background: #4CAF50; border-radius: 2px; flex-shrink: 0; }
+  .control-panel { background: #0D1117; }
+  .cp-header { background: #161B22; display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+  .cp-label { color: #4A9FDF; font-size: 10px; font-weight: bold; }
+  .cp-app { flex: 1; color: #aaa; font-size: 10px; }
+  .mirror-area { background: #090C10; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+  .mirror-text { color: #4A9FDF; font-size: 13px; }
+  .welcome-screen { background: #0D0D0D; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; min-height: 280px; gap: 10px; }
+  .wc-title { color: white; font-size: 24px; font-weight: 800; letter-spacing: 3px; }
+  .wc-sub { color: #4A9FDF; font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
+  .wc-hint { color: #888; font-size: 12px; margin-bottom: 18px; text-align: center; }
+  .lang-btn { background: #1A237E; color: white; border: none; border-radius: 6px; padding: 10px 0; width: 220px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .lang-btn.selected { background: #1565C0; outline: 2px solid #90CAF9; }
+  .settings-screen { background: #f2f2f2; padding: 12px; min-height: 220px; }
+  .settings-title { font-size: 18px; font-weight: 800; text-align: center; color: #2E3440; margin-bottom: 14px; }
+  .card { background: white; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .card-title { font-size: 13px; font-weight: 700; color: #3B4252; margin-bottom: 10px; }
+  .radio-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #333; }
+  .radio-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #1A237E; flex-shrink: 0; }
+  .radio-circle.checked { background: #1A237E; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-label { font-size: 11px; color: #3B4252; flex: 1; }
+  .slider-val { font-size: 11px; color: #5E81AC; font-weight: bold; width: 40px; text-align: right; }
+  .slider-bar { flex: 2; height: 6px; background: #e0e0e0; border-radius: 3px; position: relative; }
+  .slider-fill { height: 100%; background: #1565C0; border-radius: 3px; }
+  .slider-thumb { width: 14px; height: 14px; background: #1565C0; border-radius: 50%; position: absolute; top: -4px; }
+  .annotation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .ann { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; color: #333; }
+  .ann-num { background: #1A237E; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ann-num.red { background: #B71C1C; }
+  .ann-num.green { background: #2E7D32; }
+  .ann-num.gray { background: #455A64; }
+  .ann-num.teal { background: #00695C; }
+  .caption { text-align: center; font-size: 0.82rem; color: #777; margin-bottom: 20px; font-style: italic; }
+  .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .step-num { background: #1A237E; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-content { flex: 1; padding-top: 4px; }
+  .log-screen { background: #0D0D0D; padding: 10px 12px; min-height: 180px; }
+  .log-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .log-title-text { color: #4A9FDF; font-size: 13px; font-weight: bold; flex: 1; }
+  .log-entry { font-size: 10px; font-family: monospace; margin-bottom: 3px; padding: 2px 4px; border-radius: 2px; }
+  .log-i { color: #E0E0E0; }
+  .log-w { color: #FFA726; }
+  .log-filter { background: #1c1c1e; border: 1px solid #333; color: #ccc; border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 100%; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="cover">
+  <h1>DashCast</h1>
+  <div class="sub">Foydalanuvchi qoʻllanmasi</div>
+  <div class="meta">v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10</div>
+</div>
+
+<div class="toc">
+  <h2>📋 Mundarija</h2>
+  <ol>
+    <li><a href="#s1">Umumiy koʻrinish</a></li>
+    <li><a href="#s2">Birinchi ishga tushirish — til tanlash</a></li>
+    <li><a href="#s3">Asosiy ekran</a></li>
+    <li><a href="#s4">Ilovani asboblar paneliga chiqarish</a></li>
+    <li><a href="#s5">Proyeksiya vaqtida — boshqaruv paneli</a></li>
+    <li><a href="#s6">Proyeksiyani toʻxtatish</a></li>
+    <li><a href="#s7">Sozlamalar</a></li>
+    <li><a href="#s8">⋮ menyu — qoʻshimcha vositalar</a></li>
+    <li><a href="#s9">FAQ va nosozliklarni bartaraf etish</a></li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Umumiy koʻrinish</h2>
+<p><strong>DashCast</strong> — multimedia ekranidagi istalgan ilovani BYD avtomobilingizning <strong>raqamli asboblar paneliga</strong> chiqarishga imkon beruvchi Android ilovasi. Navigatsiya, musiqa, video — markaziy ekranda ishlayotgan hamma narsani haydovchi oldidagi displeyga yoʻnaltirish mumkin.</p>
+<ul>
+  <li>✅ BYD Seal EU bilan mos (DiLink 3.0, Di3.0 / 6125F firmware)</li>
+  <li>✅ Tizimni oʻzgartirish talab qilinmaydi</li>
+  <li>✅ TCP orqali lokal ADB (localhost) — sozlangandan keyin kompyuter kerak emas</li>
+  <li>✅ Ilova tashqaridan yopilganini avtomatik aniqlaydi</li>
+</ul>
+<div class="note">💡 <strong>Talab:</strong> Sozlamalar → Dasturchi parametrlari → Simsiz debugging (yoki “ADB over network”) boʻlimida <strong>ADB TCP debugging</strong> ni yoqing. Bu bir marta qilinadi. DashCast birinchi ishga tushganda “Allow USB debugging?” oynasi chiqadi — <strong>Always allow from this computer</strong> ni bosing.</div>
+
+<h2 id="s2">2. Birinchi ishga tushirish — til tanlash</h2>
+<p>Birinchi ishga tushganda xush kelibsiz ekrani koʻrsatiladi. Tilni tanlash uchun oʻnta tugmadan birini bosing. Tanlov saqlanadi — tilni ⋮ menyusidan oʻzgartirmaguningizcha bu ekran qayta chiqmaydi.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="welcome-screen">
+        <div class="wc-title">DashCast</div>
+        <div class="wc-sub">Asboblar paneli boshqaruvchisi</div>
+        <div class="wc-hint">Tilni tanlang<br>Please select your language</div>
+        <button class="lang-btn">🇫🇷&nbsp;&nbsp;Français</button>
+        <button class="lang-btn">🇬🇧&nbsp;&nbsp;English</button>
+        <button class="lang-btn">🇩🇪&nbsp;&nbsp;Deutsch</button>
+        <button class="lang-btn">🇹🇷&nbsp;&nbsp;Türkçe</button>
+        <button class="lang-btn">🇮🇹&nbsp;&nbsp;Italiano</button>
+        <button class="lang-btn">🇷🇺&nbsp;&nbsp;Русский</button>
+        <button class="lang-btn selected">🇺🇿&nbsp;&nbsp;Oʻzbekcha</button>
+        <button class="lang-btn">🇰🇿&nbsp;&nbsp;Қазақша</button>
+        <button class="lang-btn">🇧🇾&nbsp;&nbsp;Беларуская</button>
+        <button class="lang-btn">🇺🇦&nbsp;&nbsp;Українська</button>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="caption">Til tanlash ekrani — faqat birinchi ishga tushganda koʻrsatiladi</p>
+
+<h2 id="s3">3. Asosiy ekran</h2>
+<p>Asosiy ekran ikki qismdan iborat: yuqorida <strong>holat satri</strong> (toʻq koʻk) va pastda <strong>oʻrnatilgan ilovalar roʻyxati</strong>.</p>
+
+<div class="device-wrap">
+  <div class="device">
+    <div class="screen">
+      <div class="sb">
+        <span class="sb-text">① Asboblar paneli: ulanmagan</span>
+        <button class="btn-ui btn-blue">② Proyeksiyani yoqish</button>
+        <button class="btn-ui btn-red">③ Proyeksiyani toʻxtatish</button>
+        <button class="btn-ui btn-green btn-small">④ Asl panelni tiklash</button>
+        <button class="btn-ui btn-gray">⑤ ⋮</button>
+      </div>
+      <div class="list-title">⑥ Oʻrnatilgan ilovalar</div>
+      <div class="app-item"><div class="app-icon" style="background:#E3F2FD">🗺</div><div class="app-name">Xaritalar</div><button class="btn-ui btn-red btn-small">✕</button></div>
+      <div class="app-item"><div class="app-icon" style="background:#FCE4EC">▶️</div><div class="app-name">YouTube</div><button class="btn-ui btn-red btn-small">✕</button></div>
+      <div class="app-item"><div class="app-icon" style="background:#E8F5E9">🎵</div><div class="app-name">Spotify</div><button class="btn-ui btn-red btn-small">✕</button></div>
+    </div>
+  </div>
+</div>
+<p class="caption">Asosiy ekran — ilova hali chiqarilmagan (boshlangʻich holat)</p>
+
+<div class="annotation-grid">
+  <div class="ann"><div class="ann-num">①</div><div><strong>Holat</strong> — klaster ulanish holatini koʻrsatadi. Ilova faol boʻlganda «Asboblar paneli: [Ilova nomi]» ga oʻzgaradi.</div></div>
+  <div class="ann"><div class="ann-num">②</div><div><strong>Proyeksiyani yoqish</strong> — klasterni ulaydi va ilovalarni chiqarishga tayyorlaydi. Avval shu tugmani bosing.</div></div>
+  <div class="ann"><div class="ann-num red">③</div><div><strong>Proyeksiyani toʻxtatish</strong> — joriy proyeksiyani BYD asl panelini tiklamasdan tugatadi.</div></div>
+  <div class="ann"><div class="ann-num green">④</div><div><strong>Asl panelni tiklash</strong> — proyeksiyani tugatadi VA BYD klasterini qaytaradi (tezlik, shkala va h. k.).</div></div>
+  <div class="ann"><div class="ann-num gray">⑤</div><div><strong>⋮ menyu</strong> — sozlamalar, diagnostika, tizim hisoboti, jurnallar va til almashtirishga kirish.</div></div>
+  <div class="ann"><div class="ann-num gray">⑥</div><div><strong>Ilovalar roʻyxati</strong> — barcha oʻrnatilgan ilovalar. Chiqarish uchun ilovani bosing yoki majburiy yopish uchun <strong>✕</strong> ni bosing.</div></div>
+</div>
+
+<h2 id="s4">4. Ilovani asboblar paneliga chiqarish</h2>
+<div class="step"><div class="step-num">1</div><div class="step-content"><strong>«Proyeksiyani yoqish» tugmasini bosing</strong> (koʻk tugma). Holat <em>«Klaster ishga tushirilmoqda…»</em> ga oʻzgaradi. Lokal ADB ulanishi oʻrnatiladi va klaster proyeksiya rejimiga oʻtadi.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-content"><strong>Roʻyxatdagi kerakli ilovani bosing</strong>. DashCast ilovani klaster displeyiga koʻchiradi. Holat <em>«Asboblar paneli: [Ilova nomi]»</em> ga oʻzgaradi.</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-content">Ekran pastida <strong>boshqaruv paneli</strong> paydo boʻladi; u orqali chiqarilgan ilova bilan asosiy ekrandan ishlash mumkin.</div></div>
+
+<div class="device-wrap">
+  <div class="device"><div class="screen">
+    <div class="sb"><span class="sb-text active">Asboblar paneli: Xaritalar ✓</span><button class="btn-ui btn-blue">Proyeksiyani yoqish</button><button class="btn-ui btn-teal">📺 Mirror</button><button class="btn-ui btn-red">Proyeksiyani toʻxtatish</button><button class="btn-ui btn-green btn-small">Asl panelni tiklash</button><button class="btn-ui btn-gray">⋮</button></div>
+    <div class="list-title">Oʻrnatilgan ilovalar</div>
+    <div class="app-item"><div class="app-icon" style="background:#E3F2FD">🗺</div><div class="app-name">Xaritalar</div><div class="active-dot"></div><button class="btn-ui btn-dark btn-small">← Asosiy</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="app-item"><div class="app-icon" style="background:#FCE4EC">▶️</div><div class="app-name">YouTube</div><button class="btn-ui btn-blue btn-small">→ Klaster</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="app-item"><div class="app-icon" style="background:#E8F5E9">🎵</div><div class="app-name">Spotify</div><button class="btn-ui btn-blue btn-small">→ Klaster</button><button class="btn-ui btn-red btn-small">✕</button></div>
+    <div class="control-panel"><div class="cp-header"><span class="cp-label">Klaster boshqaruvi</span><span class="cp-app">Xaritalar</span><button class="btn-ui btn-indigo btn-small">⬛⬛ Ajratish</button><button class="btn-ui btn-dark btn-small">Yashirish ▼</button></div><div class="mirror-area"><span class="mirror-text">Klasterda faol tasvir ✓</span></div></div>
+  </div></div>
+</div>
+<p class="caption">Asosiy ekran — Xaritalar asboblar paneliga chiqarilgan</p>
+
+<h2 id="s5">5. Proyeksiya vaqtida — boshqaruv paneli</h2>
+<p>Ilova klasterda faol boʻlganda, asosiy ekran pastida uchta masofadan boshqarish funksiyasiga ega qorongʻi panel paydo boʻladi:</p>
+<h3>5.1 Koʻzgu (📺 Koʻzgu)</h3>
+<p>Klasterdagi kontentning jonli nusxasini DashCast ichida koʻrish uchun holat satrida <strong>📺 Koʻzgu</strong> ni bosing. Nusxa bilan sensor orqali ishlash mumkin — hodisalar klaster displeyiga uzatiladi.</p>
+<div class="note">Koʻzgu displeyni olish uchun SurfaceControl dan foydalanadi. Agar u mavjud boʻlmasa, har 2 soniyada skrinshot olinadigan zaxira rejim ishlatiladi.</div>
+<h3>5.2 Ajratish rejimi (⬛⬛ Ajratish)</h3>
+<p>Klasterni ikki ilova oʻrtasida boʻlish uchun <strong>⬛⬛ Ajratish</strong> ni bosing:</p>
+<ul>
+  <li><strong>Toʻliq ekran</strong> — bitta ilova butun klasterni egallaydi</li>
+  <li><strong>⬜⬛ Chap (50%)</strong> — asosiy ilova chapda, ikkinchi ilova oʻngda</li>
+  <li><strong>⬛⬜ Oʻng (50%)</strong> — asosiy ilova oʻngda</li>
+</ul>
+<h3>5.3 Panelni yashirish</h3>
+<p><strong>Yashirish ▼</strong> tugmasini bosib boshqaruv panelini yigʻing va toʻliq ilovalar roʻyxatini koʻring.</p>
+
+<h2 id="s6">6. Proyeksiyani toʻxtatish</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Tugma</th><th style="padding:8px 12px;text-align:left">Xatti-harakat</th><th style="padding:8px 12px;text-align:left">Qachon ishlatish</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px"><strong style="color:#B71C1C">Proyeksiyani toʻxtatish</strong></td><td style="padding:8px 12px">Proyeksiyani tugatadi. Klaster boʻsh qoladi.</td><td style="padding:8px 12px">Chiqarishni vaqtincha toʻxtatish kerak boʻlganda.</td></tr>
+    <tr style="background:#f9f9f9"><td style="padding:8px 12px"><strong style="color:#2E7D32">Asl panelni tiklash</strong></td><td style="padding:8px 12px">Proyeksiyani tugatadi VA BYD asl klasterini qaytaradi (tezlik, yurish zaxirasi, shkala…).</td><td style="padding:8px 12px">Foydalanish oxirida — odatiy BYD paneliga qaytish uchun.</td></tr>
+  </tbody>
+</table>
+<div class="warn">⚠️ Agar ushbu tugmalardan birini bosmasdan DashCastdan chiqsangiz, xizmat keyingi qayta ishga tushirilguncha proyeksiya klasterda faol qoladi.</div>
+
+<h2 id="s7">7. Sozlamalar</h2>
+<p>Sozlamalarni <strong>⋮ → ⚙️ Sozlamalar</strong> orqali oching.</p>
+<div class="device-wrap"><div class="device"><div class="screen"><div class="settings-screen"><div class="settings-title">Sozlamalar</div><div class="card"><div class="card-title">Klaster turi</div><div class="radio-item"><div class="radio-circle"></div>8.8 inches (cmd=29)</div><div class="radio-item"><div class="radio-circle checked"></div>12.3 inches (cmd=30) — Seal EU</div><div class="radio-item"><div class="radio-circle"></div>10.25 inches (cmd=31)</div></div><div class="card"><div class="card-title">Displey chetlari (overscan)</div><div class="slider-row"><div class="slider-label">Chap / Oʻng:</div><div class="slider-bar"><div class="slider-fill" style="width:40%"></div><div class="slider-thumb" style="left:calc(40% - 7px)"></div></div><div class="slider-val">80 px</div></div><div class="slider-row"><div class="slider-label">Yuqori / Pastki:</div><div class="slider-bar"><div class="slider-fill" style="width:25%"></div><div class="slider-thumb" style="left:calc(25% - 7px)"></div></div><div class="slider-val">50 px</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-ui btn-blue" style="flex:1;padding:8px">Hozir qoʻllash</button><button class="btn-ui" style="flex:1;background:#607D8B;padding:8px">Reset (80 / 50)</button></div></div></div></div></div></div>
+<p class="caption">Sozlamalar</p>
+<h3>7.1 Klaster turi</h3>
+<p>Asboblar paneli ekranining oʻlchamini tanlang. <strong>BYD Seal EU</strong> uchun <strong>12,3 dyuym</strong> (cmd=30) ni tanlang.</p>
+<h3>7.2 Displey chetlari (Overscan)</h3>
+<p>Kontentni klaster ekranining koʻrinadigan qismiga sigʻdirish uchun chetlarni sozlang. Egri oynali klasterlarda jismoniy chetlar foydali maydondan tashqariga chiqishi mumkin.</p>
+<ul>
+  <li><strong>Chap / Oʻng</strong> — gorizontal chet (har tomonda 0–200 px)</li>
+  <li><strong>Yuqori / Pastki</strong> — vertikal chet (yuqori va pastda 0–200 px)</li>
+</ul>
+<p>Agar ilova hozir chiqarilgan boʻlsa, natijani darhol koʻrish uchun <strong>Hozir qoʻllash</strong> ni bosing. Qiymatlar sessiyalar orasida saqlanadi.</p>
+<div class="note">💡 Seal EU uchun tavsiya etilgan qiymatlar: Chap/Oʻng = <strong>80 px</strong>, Yuqori/Pastki = <strong>50 px</strong>.</div>
+
+<h2 id="s8">8. ⋮ menyu — qoʻshimcha vositalar</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:16px;">
+  <thead><tr style="background:#1A237E;color:white;"><th style="padding:8px 12px;text-align:left">Band</th><th style="padding:8px 12px;text-align:left">Tavsif</th></tr></thead>
+  <tbody>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">⚙️ Sozlamalar</td><td style="padding:8px 12px">Klaster turi + overscan chetlarini sozlash</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">🔧 Diagnostika</td><td style="padding:8px 12px">Dasturchi uchun kengaytirilgan testlar — ADB ulanishi, displeylar, klaster ekran oʻlchami</td></tr>
+    <tr style="background:#fff;border-bottom:1px solid #eee"><td style="padding:8px 12px">📋 Tizim hisoboti</td><td style="padding:8px 12px">Toʻliq hisobot yaratadi (displeylar, BYD API, ruxsatlar) — qoʻllab-quvvatlash uchun foydali</td></tr>
+    <tr style="background:#f9f9f9;border-bottom:1px solid #eee"><td style="padding:8px 12px">📜 Jurnallar</td><td style="padding:8px 12px">Jurnalni real vaqtda koʻrish — teg/daraja boʻyicha filtr, email yoki fayl bilan yuborish</td></tr>
+    <tr style="background:#fff;"><td style="padding:8px 12px">🌐 Til</td><td style="padding:8px 12px">Til tanlash ekraniga qaytaradi</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">9. FAQ va nosozliklarni bartaraf etish</h2>
+<h3>❓ “Allow USB debugging?” oynasi chiqmaydi</h3>
+
+<p><strong>ADB TCP debugging</strong> multimedia dasturchi sozlamalarida yoqilganini tekshiring. Agar band yoʻq boʻlsa, avval dasturchi rejimini yoqing (About boʻlimidagi build number ni 7 marta bosing).</p>
+
+<h3>❓ Tanlangandan keyin ilova klasterda koʻrinmaydi</h3>
+
+<ul><li>Ilovani tanlashdan oldin <strong>Proyeksiyani yoqish</strong> tugmasini bosganingizga ishonch hosil qiling.</li><li>Baʼzi ilovalar ikkinchi displeyda ishga tushishga ruxsat bermaydi. Xato xabarini jurnaldan tekshiring.</li><li>DashCastni yopib qayta oching, keyin ketma-ketlikni takrorlang.</li></ul>
+
+<h3>❓ Kontent klasterda qirqilgan yoki siljigan</h3>
+
+<p><strong>Displey chetlari</strong> ni ⋮ → Sozlamalar orqali sozlang. Gorizontal chiqib ketsa Chap/Oʻng qiymatini, vertikal chiqib ketsa Yuqori/Pastki qiymatini oshiring. Natijani darhol koʻrish uchun <strong>Hozir qoʻllash</strong> ni bosing.</p>
+
+<h3>❓ Ilova yopilgandan keyin «← Asosiy» va «✕» tugmalari koʻrinib qoladi</h3>
+
+<p>DashCast ilova tugaganini avtomatik aniqlaydi (/proc monitoring orqali). Interfeys qotib qolsa, holatni majburan tozalash uchun <strong>Proyeksiyani toʻxtatish</strong> ni bosing.</p>
+
+<h3>❓ Avtomobil qayta ishga tushgandan keyin hammasini qayta sozlash kerakmi?</h3>
+
+<p>Yoʻq. <strong>Klaster turi</strong> va <strong>overscan chetlari</strong> saqlanadi. Oxirgi chiqarilgan ilova ham eslab qolinadi. Faqat ADB ulanishi uchun <strong>Proyeksiyani yoqish</strong> tugmasini qayta bosish kerak boʻlishi mumkin.</p>
+
+<hr>
+<p style="text-align:center;color:#999;font-size:0.82rem;">DashCast · Foydalanuvchi qoʻllanmasi · Oʻzbekcha · github.com/Kiroha/byd-dashcast</p>
+
+</div>
+</body>
+</html>

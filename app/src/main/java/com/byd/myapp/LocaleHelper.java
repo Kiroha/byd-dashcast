@@ -25,6 +25,11 @@ public class LocaleHelper {
     public static final String LANG_DE = "de";
     public static final String LANG_TR = "tr";
     public static final String LANG_IT = "it";
+    public static final String LANG_RU = "ru";
+    public static final String LANG_UZ = "uz";
+    public static final String LANG_KK = "kk";
+    public static final String LANG_BE = "be";
+    public static final String LANG_UK = "uk";
 
     /** Applies the saved locale to the given context. */
     public static Context applyLocale(Context context) {
