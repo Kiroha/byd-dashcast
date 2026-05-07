@@ -66,7 +66,8 @@ public class UpdateChecker {
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA check failed", e);
                 if (listener != null) {
-                    ui.post(() -> listener.onError(e.getMessage()));
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    ui.post(() -> listener.onError(msg));
                 }
             }
         }, "ota-update").start();
@@ -187,7 +188,7 @@ public class UpdateChecker {
 
             long total = conn.getContentLengthLong(); // -1 if unknown
             long downloaded = 0;
-            int lastPercent = -1;
+            int lastPercent = -2; // -2 so first call with -1 (indeterminate) always fires
 
             try (InputStream in = conn.getInputStream();
                  FileOutputStream out = new FileOutputStream(dest)) {

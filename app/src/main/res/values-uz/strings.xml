@@ -61,7 +61,6 @@
     <string name="menu_log">📜 Jurnallar</string>
     <string name="menu_language">🌐 Til</string>
     <string name="menu_check_updates">🔄 Yangilanishlarni tekshirish</string>
-    <string name="toast_checking_updates">Yangilanishlar tekshirilmoqda…</string>
     <string name="settings_updates_title">Yangilanishlar</string>
     <string name="settings_prerelease_label">Oldindan chiqarilgan versiyalarni kiritish (alpha/beta)</string>
     <string name="settings_prerelease_hint">Rasmiy chiqarilishidan oldin sinov versiyalarini oling</string>
@@ -225,4 +224,12 @@
     <string name="ota_dialog_title">Yangilanish mavjud</string>
     <string name="ota_installing">O\'rnatilmoqda…</string>
     <string name="ota_up_to_date">DashCast yangilangan</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. No visible effect on Seal EU (2D cluster).</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Sending cmd %1$d2026</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
 </resources>

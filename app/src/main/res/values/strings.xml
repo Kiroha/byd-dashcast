@@ -62,7 +62,6 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Langue</string>
     <string name="menu_check_updates">🔄 Rechercher des mises à jour</string>
-    <string name="toast_checking_updates">Recherche de mises à jour…</string>
     <string name="settings_updates_title">Mises à jour</string>
     <string name="settings_prerelease_label">Inclure les versions pré-release (alpha/beta)</string>
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
