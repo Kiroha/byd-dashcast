@@ -765,15 +765,6 @@ public class AdbLocalClient {
                             + "| head -30 2>&1").getAllOutput().trim();
                     for (String line : perms.split("\n")) AppLogger.i(dTag, "  " + line);
 
-                    AppLogger.i(dTag, "=== Appels signature checks (test direct) ===");
-                    // Tente un am start --display 1 minimal pour confirmer le verdict
-                    AppLogger.i(dTag, "uid=2000 am start --display 1 (notre activity, dry run):");
-                    String testLaunch = dadb.shell(
-                            "am start-activity -W --display 1 "
-                            + "-n " + pkg + "/.dashboard.ClusterTrampolineActivity 2>&1 "
-                            + "| head -20").getAllOutput().trim();
-                    for (String line : testLaunch.split("\n")) AppLogger.i(dTag, "  " + line);
-
                     AppLogger.i(dTag, "=== FIN dump ===");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
