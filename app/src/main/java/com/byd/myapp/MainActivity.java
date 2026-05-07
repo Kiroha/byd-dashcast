@@ -351,6 +351,11 @@ public class MainActivity extends AppCompatActivity
 
         // Async loading of the app list (async to avoid blocking the UI)
         loadAppsAsync();
+
+        // OTA update check — only on fresh launch, not on rotation
+        if (savedInstanceState == null) {
+            UpdateChecker.checkAndInstall(this);
+        }
     }
 
     @Override
