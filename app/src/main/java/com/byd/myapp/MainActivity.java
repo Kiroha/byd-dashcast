@@ -881,12 +881,28 @@ public class MainActivity extends AppCompatActivity
                 if (mCurrentDashboardPkg == null || !packageName.equals(mWatchdogPkg)) return;
                 new Thread(new Runnable() {
                     @Override public void run() {
-                        final boolean alive = isPidAlive(packageName, mWatchdogPid);
+                        boolean alive = isPidAlive(packageName, mWatchdogPid);
+                        // If the known PID is gone, the app may have restarted under a new PID
+                        // (e.g. FLAG_ACTIVITY_CLEAR_TASK kills the old process then spawns a new one).
+                        // Before declaring the app dead, do a full /proc scan for a new PID.
+                        int newPid = -1;
+                        if (!alive) {
+                            newPid = findPid(packageName);
+                            if (newPid > 0) {
+                                alive = true; // alive under new PID
+                                AppLogger.d(TAG, "watchdog: " + packageName
+                                        + " restarted, new pid=" + newPid
+                                        + " (was " + mWatchdogPid + ")");
+                            }
+                        }
+                        final boolean finalAlive = alive;
+                        final int finalNewPid = newPid;
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
                                 if (mCurrentDashboardPkg == null
                                         || !packageName.equals(mWatchdogPkg)) return;
-                                if (!alive) {
+                                if (finalNewPid > 0) mWatchdogPid = finalNewPid; // track new PID
+                                if (!finalAlive) {
                                     AppLogger.d(TAG, "watchdog: " + packageName
                                             + " absent de /proc → cleanup");
                                     onExternalAppKill();
