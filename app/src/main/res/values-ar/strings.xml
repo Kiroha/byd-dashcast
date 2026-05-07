@@ -59,6 +59,8 @@
     <string name="menu_system_report">📋 تقرير النظام</string>
     <string name="menu_log">📜 السجلات</string>
     <string name="menu_language">🌐 اللغة</string>
+    <string name="menu_check_updates">🔄 التحقق من التحديثات</string>
+    <string name="toast_checking_updates">جارٍ البحث عن تحديثات…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">نوع العنقود</string>

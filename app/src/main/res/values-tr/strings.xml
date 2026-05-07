@@ -62,6 +62,8 @@
     <string name="menu_system_report">📋 Sistem raporu</string>
     <string name="menu_log">📜 Günlükler</string>
     <string name="menu_language">🌐 Dil</string>
+    <string name="menu_check_updates">🔄 Güncellemeleri kontrol et</string>
+    <string name="toast_checking_updates">Güncellemeler aranıyor…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Küme türü</string>

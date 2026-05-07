@@ -1328,6 +1328,7 @@ public class MainActivity extends AppCompatActivity
         popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
         popup.getMenu().add(0, 4, 0, getString(R.string.menu_log));
         popup.getMenu().add(0, 5, 0, getString(R.string.menu_language));
+        popup.getMenu().add(0, 6, 0, getString(R.string.menu_check_updates));
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -1343,6 +1344,11 @@ public class MainActivity extends AppCompatActivity
                         Intent intent = new Intent(MainActivity.this, WelcomeActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
+                        return true;
+                    case 6:
+                        Toast.makeText(MainActivity.this,
+                                getString(R.string.toast_checking_updates), Toast.LENGTH_SHORT).show();
+                        UpdateChecker.checkAndInstall(MainActivity.this);
                         return true;
                 }
                 return false;

@@ -60,6 +60,8 @@
     <string name="menu_system_report">📋 Жүйе есебі</string>
     <string name="menu_log">📜 Журналдар</string>
     <string name="menu_language">🌐 Тіл</string>
+    <string name="menu_check_updates">🔄 Жаңартуларды тексеру</string>
+    <string name="toast_checking_updates">Жаңартулар тексерілуде…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Кластер түрі</string>

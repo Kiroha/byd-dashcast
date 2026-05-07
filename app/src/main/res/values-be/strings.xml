@@ -60,6 +60,8 @@
     <string name="menu_system_report">📋 Сістэмная справаздача</string>
     <string name="menu_log">📜 Журналы</string>
     <string name="menu_language">🌐 Мова</string>
+    <string name="menu_check_updates">🔄 Праверыць абнаўленні</string>
+    <string name="toast_checking_updates">Пошук абнаўленняў…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Тып кластара</string>

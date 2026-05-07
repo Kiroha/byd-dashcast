@@ -60,6 +60,8 @@
     <string name="menu_system_report">📋 Tizim hisoboti</string>
     <string name="menu_log">📜 Jurnallar</string>
     <string name="menu_language">🌐 Til</string>
+    <string name="menu_check_updates">🔄 Yangilanishlarni tekshirish</string>
+    <string name="toast_checking_updates">Yangilanishlar tekshirilmoqda…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Klaster turi</string>

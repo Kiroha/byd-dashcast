@@ -62,6 +62,8 @@
     <string name="menu_system_report">📋 Rapporto sistema</string>
     <string name="menu_log">📜 Log</string>
     <string name="menu_language">🌐 Lingua</string>
+    <string name="menu_check_updates">🔄 Cerca aggiornamenti</string>
+    <string name="toast_checking_updates">Ricerca aggiornamenti…</string>
 
     <!-- MainActivity — cluster type dialog -->
     <string name="dialog_cluster_type_title">Tipo cluster</string>
