@@ -15,6 +15,8 @@
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_uk">🇺🇦  Українська</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
 
     <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard : non connecté</string>
@@ -137,6 +139,12 @@
     <string name="diag_s3_initial">Taille du Display</string>
     <string name="diag_s3_display1_initial">Restaurer l\'affichage cluster</string>
     <string name="diag_btn_restore_display">Restaurer Affichage</string>
+    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Afficher ou masquer l\'overlay ADAS sur le tableau de bord. Commandes sendInfo(1000, 12/13). Sans effet notable sur le Seal EU (cluster 2D), à tester si un overlay ADAS est actif.</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Envoi cmd %1$d…</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. Analyses Système (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Exécuter dumpsys window displays</string>

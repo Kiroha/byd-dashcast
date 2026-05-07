@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DashCast</string>
+
+    <!-- WelcomeActivity -->
+    <string name="welcome_title">DashCast</string>
+    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+
+    <!-- MainActivity — status bar -->
+    <string name="status_disconnected">اللوحة: غير متصلة</string>
+    <string name="btn_activate_cluster">تفعيل العرض</string>
+    <string name="btn_show_mirror">📺 المرآة</string>
+    <string name="btn_restore_cluster">إيقاف العرض</string>
+    <string name="btn_origin_cluster">استعادة اللوحة الأصلية</string>
+    <string name="title_app_list">التطبيقات المثبتة</string>
+    <string name="mirror_placeholder">الشاشة النشطة على لوحة العدادات ✓</string>
+    <string name="btn_cluster_split">⬛⬛ تقسيم</string>
+
+    <!-- Cluster control panel -->
+    <string name="cluster_control_title">التحكم في العنقود</string>
+    <string name="cluster_control_hide">إخفاء ▼</string>
+
+    <!-- item_app.xml -->
+    <string name="btn_app_to_main">→ الرئيسية</string>
+    <string name="btn_app_to_cluster">← العنقود</string>
+
+    <!-- MainActivity — status texts -->
+    <string name="status_starting_cluster">بدء تشغيل العنقود…</string>
+    <string name="status_activating_cluster">تفعيل العنقود…</string>
+    <string name="status_restoring_cluster">استعادة العنقود…</string>
+    <string name="status_restoring_origin">استعادة العنقود الأصلي…</string>
+    <string name="status_dashboard_byd">اللوحة: شاشة BYD</string>
+    <string name="status_dashboard_app">اللوحة: %1$s</string>
+
+    <!-- MainActivity — Toasts -->
+    <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
+    <string name="toast_cluster_unavailable">خدمة العنقود غير متاحة</string>
+    <string name="toast_app_already_cluster">التطبيق موجود بالفعل على العنقود</string>
+    <string name="toast_restore_failed">فشل الاستعادة: %1$s</string>
+    <string name="toast_origin_failed">فشل استعادة العنقود الأصلي: %1$s</string>
+    <string name="toast_app_stopped">تم إيقاف %1$s</string>
+    <string name="toast_kill_failed">فشل الإيقاف: %1$s</string>
+    <string name="toast_no_app_cluster">لا توجد تطبيقات على العنقود</string>
+    <string name="toast_cluster_type">العنقود: %1$s</string>
+
+    <!-- MainActivity — overflow menu -->
+    <string name="menu_settings">⚙️ الإعدادات</string>
+    <string name="menu_diagnostic">🔧 التشخيص</string>
+    <string name="menu_system_report">📋 تقرير النظام</string>
+    <string name="menu_log">📜 السجلات</string>
+    <string name="menu_language">🌐 اللغة</string>
+
+    <!-- MainActivity — cluster type dialog -->
+    <string name="dialog_cluster_type_title">نوع العنقود</string>
+    <string name="cluster_label_88">8,8 بوصة  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 بوصة (cmd=31)</string>
+    <string name="btn_ok">موافق</string>
+    <string name="btn_cancel">إلغاء</string>
+
+    <!-- MainActivity — split menu -->
+    <string name="split_full_screen">⬜ ملء الشاشة</string>
+    <string name="split_left">⬛⬜ اليمين (50%)</string>
+    <string name="split_right">⬜⬛ اليسار (50%)</string>
+
+    <string name="btn_send">إرسال</string>
+
+    <!-- LogActivity -->
+    <string name="log_title">📋 السجل</string>
+    <string name="log_btn_clear">مسح</string>
+    <string name="log_btn_share">مشاركة</string>
+    <string name="log_filter_hint">تصفية (علامة / رسالة / مستوى)…</string>
+    <string name="log_autoscroll">تمرير تلقائي↓</string>
+    <string name="log_level_debug">DEBUG </string>
+    <string name="log_level_info">INFO </string>
+    <string name="log_level_warn">WARN </string>
+    <string name="log_level_error">ERROR</string>
+    <string name="log_empty">(لا توجد إدخالات)</string>
+
+    <!-- SysInfoActivity -->
+    <string name="sysinfo_title">تقرير نظام BYD</string>
+    <string name="sysinfo_desc">ينشئ تقريراً شاملاً: الشاشات، واجهات API، حزم BYD، الأذونات، ADB. احفظه وأرسله للتصحيح.</string>
+    <string name="btn_generate_report">▶ إنشاء تقرير</string>
+    <string name="btn_save_report">💾 حفظ</string>
+    <string name="btn_share_report">📤 مشاركة</string>
+    <string name="sysinfo_hint">اضغط «إنشاء تقرير» للبدء.</string>
+    <string name="sysinfo_generating">جارٍ الإنشاء…\n</string>
+    <string name="toast_write_error">خطأ في الكتابة: %1$s</string>
+    <string name="toast_report_saved">تم حفظ التقرير:\n%1$s</string>
+
+    <!-- DiagActivity — layout labels -->
+    <string name="diag_share_result1_btn">مشاركة نتيجة الاختبار 1</string>
+    <string name="diag_share_result2_btn">مشاركة نتيجة الاختبار 2</string>
+    <string name="diag_share_result3_btn">مشاركة نتيجة الاختبار 3</string>
+
+    <!-- DiagActivity — Java status / feedback -->
+    <string name="diag_adb_connecting">الاتصال بـ localhost:5555…\n⏳ ستظهر النافذة المنبثقة على الشاشة — اضغط سماح.</string>
+    <string name="diag_adb_connected">✅ تم إنشاء الاتصال\n\n</string>
+    <string name="diag_adb_failed">❌ خطأ: %1$s\n\n→ تحقق من تفعيل تصحيح ADB عبر TCP\n  في الإعدادات ← المطور ← تصحيح USB</string>
+    <string name="diag_adb_test1_hint">→ نفّذ الاختبار 1 أولاً لتفويض اتصال ADB.</string>
+    <string name="diag_launching_display1">⏳ تشغيل الشاشة 1…</string>
+    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
+    <string name="diag_size_restoring">⏳ استعادة الحجم الافتراضي (cmd 30 + wm reset)…</string>
+    <string name="diag_size_full_running">⏳ تشخيص أبعاد العنقود…\nاختبار cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 ثوانٍ)</string>
+    <string name="diag_sf_dumping">تشغيل dumpsys SurfaceFlinger…</string>
+    <string name="diag_sf_no_result">(لا نتيجة — المرآة غير مسجلة في SF)</string>
+    <string name="diag_sf_error">خطأ: %1$s</string>
+    <string name="toast_sniffer_started">تم تشغيل Sniffer → %1$s</string>
+
+    <!-- AppLogger -->
+    <string name="share_log_title">مشاركة السجل…</string>
+    <string name="share_report_title">مشاركة التقرير…</string>
+
+    <!-- DiagActivity: layout labels -->
+    <string name="diag_header">لوحة التشخيص</string>
+    <string name="diag_s1_title">1. ADB المحلي (مطلوب)</string>
+    <string name="diag_s1_desc">ضروري لحقن البرامج الخلفية وإنشاء VirtualDisplay.</string>
+    <string name="diag_s1_initial">غير متصل</string>
+    <string name="diag_btn_adb_connect">توصيل ADB</string>
+    <string name="diag_btn_share_result">مشاركة</string>
+    <string name="diag_s2_title">2. حقن Daemon والرسم</string>
+    <string name="diag_s2_desc">يشغّل DashCastDaemon.java في app_process عبر ADB shell.</string>
+    <string name="diag_btn_create_vd">إنشاء VirtualDisplay (حقن Daemon)</string>
+    <string name="diag_s3_title">3. خصائص العنقود</string>
+    <string name="diag_s3_initial">حجم الشاشة</string>
+    <string name="diag_s3_display1_initial">استعادة شاشة العنقود</string>
+    <string name="diag_btn_restore_display">استعادة الشاشة</string>
+    <string name="diag_sadas_title">ADAS العنقود (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">إظهار أو إخفاء طبقة ADAS على لوحة العدادات. الأوامر sendInfo(1000, 12/13). لا تأثير مرئي على Seal EU (عنقود ثنائي الأبعاد)، اختبر عند تفعيل طبقة ADAS.</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">إرسال cmd %1$d…</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
+    <string name="diag_s4_title">4. تحليل النظام (SurfaceFlinger)</string>
+    <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
+    <string name="diag_btn_run_dumpsys">تشغيل dumpsys window displays</string>
+    <string name="diag_jni_initial">نتيجة JNI Probe: --</string>
+    <string name="diag_btn_jni_probe">JNI Probe</string>
+    <string name="diag_btn_jni_start_probe">تشغيل + JNI Probe</string>
+    <string name="diag_sf_initial">SF Dump: --</string>
+    <string name="diag_btn_dump_mirror">تفريغ Mirror Service</string>
+    <string name="diag_auto_display_title">AutoDisplayService (com.xdja.containerservice)</string>
+    <string name="diag_auto_display_desc">يشغّل خدمة Qt→VirtualDisplay مباشرة.</string>
+    <string name="diag_btn_start_auto_display">تشغيل AutoDisplayService</string>
+    <string name="diag_btn_stop">إيقاف</string>
+    <string name="diag_fission_title">Pipeline Fission (إنشاء VirtualDisplay العنقود)</string>
+    <string name="diag_fission_desc">التسلسل الكامل: sendInfo(30)+sendInfo(16) → Qt يسجّل Surface → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay.</string>
+    <string name="diag_btn_sendinf_java">☕ sendInfo Java مباشر</string>
+    <string name="diag_btn_fission_create">🚀 إنشاء Fission Display</string>
+    <string name="diag_btn_fission_launch">▶ تشغيل Dashboard</string>
+    <string name="diag_s5_title">5. Sniffer النظام (الهندسة العكسية)</string>
+    <string name="diag_s5_desc">يلتقط logcat (جميع العلامات ذات الصلة) + لقطات dumpsys دورية في ملف قابل للتصدير.</string>
+    <string name="diag_sniffer_inactive">غير نشط</string>
+    <string name="diag_btn_start">تشغيل</string>
+    <string name="diag_btn_snapshot">لقطة الآن</string>
+    <string name="diag_btn_export_sniffer">تصدير</string>
+    <!-- DiagActivity: dynamic messages -->
+    <string name="diag_auto_starting">التشغيل عبر ADB…</string>
+    <string name="diag_auto_stopping">الإيقاف عبر ADB…</string>
+    <string name="diag_auto_stopped">إيقاف: %1$s</string>
+    <string name="diag_jni_display_released">تم تحرير الشاشة. فحص JNI…</string>
+    <string name="diag_jni_fatal">خطأ فادح: %1$s</string>
+    <string name="diag_jni_send16_failed">فشل إرسال 16: %1$s</string>
+    <string name="diag_running">تشغيل التشخيص…</string>
+    <string name="diag_dumpsys_running">التشغيل عبر adb local…</string>
+    <string name="diag_dumpsys_error">خطأ:\n%1$s</string>
+    <string name="diag_daemon_launching">تشغيل البرنامج الخلفي عبر adb local…</string>
+    <string name="diag_daemon_timeout">انتهاء المهلة: لم يستجب ADB خلال %1$d ثانية.</string>
+    <string name="diag_daemon_output">مخرجات البرنامج الخلفي: %1$s</string>
+    <string name="diag_daemon_error">خطأ: %1$s</string>
+    <string name="diag_apk_path_error">خطأ في مسار APK: %1$s</string>
+    <string name="diag_fission_binder_starting">sendInfo Java مباشر…</string>
+    <string name="diag_fission_running">التسلسل قيد التشغيل…</string>
+    <string name="diag_fission_no_display">❌ لا يوجد fission display. شغّل «إنشاء Fission Display» أولاً.</string>
+    <string name="diag_fission_launching">التشغيل على الشاشة %1$d…</string>
+    <string name="diag_sniffer_initializing">تهيئة…</string>
+    <string name="diag_sniffer_active">نشط → %1$s</string>
+    <string name="diag_sniffer_init_failed">❌ فشل التهيئة: %1$s</string>
+    <string name="diag_sniffer_stopped">متوقف — الملف: %1$s</string>
+    <string name="toast_sniffer_stopped">تم إيقاف Sniffer.</string>
+    <string name="toast_sniffer_start_first">شغّل Sniffer أولاً.</string>
+    <string name="toast_snapshot_done">تمت إضافة اللقطة إلى الملف.</string>
+    <string name="toast_sniffer_no_file">لا يوجد ملف Sniffer للتصدير.</string>
+    <string name="toast_no_result_to_share">لا توجد نتيجة للمشاركة.</string>
+    <string name="diag_btn_size_restore">استعادة</string>
+    <string name="diag_btn_size_full">اختبار كامل</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ إعادة تعيين overscan الشاشة الرئيسية (display 0)</string>
+    <string name="diag_reset_main_overscan_done">تم إعادة تعيين overscan الشاشة الرئيسية — wm overscan reset -d 0</string>
+    <!-- Section 7 — DiLink5 resize test -->
+    <string name="diag_s7_title">7. اختبار Resize DiLink5 (IATM)</string>
+    <string name="diag_s7_desc">اختبار تسلسل DiLink5: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) عبر raw Binder على activity_task.</string>
+    <string name="diag_btn_resize_dilink5_seq">▶ تسلسل DiLink5 (WM:4→5 + resize FORCED=3)</string>
+    <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 فقط</string>
+    <string name="diag_btn_resize_inspect_task">🔍 فحص مهمة العنقود (windowing + bounds)</string>
+    <!-- Section 6 — Storage cleanup -->
+    <string name="diag_s6_title">6. تنظيف التخزين</string>
+    <string name="diag_s6_desc">يحذف ملفات السجل والتقارير التي أنشأها DashCast. مفاتيح ADB لا تُحذف.</string>
+    <string name="diag_btn_cleanup">🗑️ حذف ملفات التتبع</string>
+    <string name="diag_cleanup_running">جارٍ التنظيف…</string>
+    <string name="diag_cleanup_done">تم حذف %1$d ملف(ات) — المساحة المتبقية: %2$s</string>
+
+    <!-- SettingsActivity -->
+    <string name="settings_header">الإعدادات</string>
+    <string name="settings_cluster_type_title">نوع العنقود</string>
+    <string name="settings_overscan_section_title">هوامش الشاشة (overscan)</string>
+    <string name="settings_overscan_desc">اضبط الهوامش لعرض المحتوى على شاشة اللوحة. تُطبَّق القيم عند التشغيل التالي.</string>
+    <string name="settings_inset_h_label">يسار / يمين:</string>
+    <string name="settings_inset_v_label">أعلى / أسفل:</string>
+    <string name="settings_btn_apply_overscan">تطبيق الآن</string>
+    <string name="settings_btn_reset_overscan">إعادة تعيين (80 / 50)</string>
+    <string name="settings_overscan_applied">✓ مُطبَّق — ي/ي: %1$d بكسل، أ/أ: %2$d بكسل</string>
+</resources>

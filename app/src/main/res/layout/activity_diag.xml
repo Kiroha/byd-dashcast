@@ -200,6 +200,69 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- ADAS CLUSTER (cmd 12 / 13) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sadas_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sadas_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tv_adas_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_adas_initial"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_adas_show"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_adas_show"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_adas_hide"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_adas_hide"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- 4. ANALYSE SYSTEM ET DUMPSYS -->
         <LinearLayout
             android:layout_width="match_parent"

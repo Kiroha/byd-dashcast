@@ -25,6 +25,9 @@
     <string name="btn_origin_cluster">Восстановить штатную панель</string>
     <string name="title_app_list">Установленные приложения</string>
     <string name="mirror_placeholder">Активное изображение на кластере ✓</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+
     <string name="btn_cluster_split">⬛⬛ Разделить</string>
 
     <!-- Cluster control panel -->
@@ -52,6 +55,7 @@
     <string name="toast_app_stopped">%1$s остановлено</string>
     <string name="toast_kill_failed">Не удалось завершить: %1$s</string>
     <string name="toast_no_app_cluster">На кластере нет приложения</string>
+
     <string name="toast_cluster_type">Кластер: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
@@ -114,6 +118,8 @@
     <string name="diag_size_restoring">⏳ Восстановление размера по умолчанию (cmd 30 + wm reset)…</string>
     <string name="diag_size_full_running">⏳ Диагностика размеров кластера…\nПробуем cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 секунд)</string>
     <string name="diag_sf_dumping">Выполняется dumpsys SurfaceFlinger…</string>
+
+
     <string name="diag_sf_no_result">(нет результата — зеркало не зарегистрировано в SF)</string>
     <string name="diag_sf_error">Ошибка: %1$s</string>
     <string name="toast_sniffer_started">Сниффер запущен → %1$s</string>
@@ -136,8 +142,15 @@
     <string name="diag_btn_create_vd">Создать VirtualDisplay (внедрить daemon)</string>
     <string name="diag_s3_title">3. Свойства кластера</string>
     <string name="diag_s3_initial">Размер дисплея</string>
+
     <string name="diag_s3_display1_initial">Восстановить дисплей кластера</string>
     <string name="diag_btn_restore_display">Восстановить дисплей</string>
+    <string name="diag_sadas_title">ADAS Кластер (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Показать или скрыть оверлей ADAS на приборной панели. Команды sendInfo(1000, 12/13). Нет видимого эффекта на Seal EU (2D-кластер), тестировать при активном оверлее ADAS.</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Отправка cmd %1$d…</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. Анализ системы (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Запустить dumpsys window displays</string>
@@ -206,6 +219,7 @@
     <string name="diag_btn_cleanup">🗑️ Удалить trace-файлы</string>
     <string name="diag_cleanup_running">Очистка…</string>
     <string name="diag_cleanup_done">%1$d файл(ов) удалено — осталось места: %2$s</string>
+    <!-- Section 7 — DiLink5 resize test -->
 
     <!-- SettingsActivity -->
     <string name="settings_header">Настройки</string>

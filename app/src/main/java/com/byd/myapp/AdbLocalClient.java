@@ -626,9 +626,9 @@ public class AdbLocalClient {
      * Origin cluster — restores the Qt cluster to the screen size configured by the user.
      *
      * Sequence:
-     *   1. sendInfo(1000, screenSizeCmd) — switch Qt to the correct resolution
-     *   2. sendInfo(1000, 18)            — close projection (投屏关闭)
-     *   3. sendInfo(1000,  0)            — refresh Qt stream
+     *   1. sendInfo(1000, 18)            — close projection (投屏关闭)          → wait 6s
+     *   2. sendInfo(1000,  0)            — refresh Qt stream                   → wait 6s
+     *   3. sendInfo(1000, screenSizeCmd) — switch Qt to the correct resolution
      *
      * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal U-DMI), 31=10.25" (Seal EU)
      */
@@ -650,18 +650,20 @@ public class AdbLocalClient {
                         Thread.sleep(500);
                     }
 
-                    AdbShellResponse rSize = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
-                    sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
-                    sb.append(rSize.getAllOutput().trim()).append("\n");
-
                     AdbShellResponse rStop = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
+                    Thread.sleep(6000);
 
                     AdbShellResponse rRefresh = dadb.shell(
                         "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
+                    Thread.sleep(6000);
+
+                    AdbShellResponse rSize = dadb.shell(
+                        "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
+                    sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
+                    sb.append(rSize.getAllOutput().trim()).append("\n");
 
                     AppLogger.log(TAG, "restoreOriginCluster -> OK");
                     callback.onSuccess("Origin cluster restored \u2713\n" + sb);

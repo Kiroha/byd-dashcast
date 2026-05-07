@@ -41,11 +41,13 @@ public class WelcomeActivity extends AppCompatActivity {
         setLanguageButton(R.id.btn_lang_de, LocaleHelper.LANG_DE);
         setLanguageButton(R.id.btn_lang_tr, LocaleHelper.LANG_TR);
         setLanguageButton(R.id.btn_lang_it, LocaleHelper.LANG_IT);
+        setLanguageButton(R.id.btn_lang_es, LocaleHelper.LANG_ES);
         setLanguageButton(R.id.btn_lang_ru, LocaleHelper.LANG_RU);
+        setLanguageButton(R.id.btn_lang_uk, LocaleHelper.LANG_UK);
+        setLanguageButton(R.id.btn_lang_ar, LocaleHelper.LANG_AR);
         setLanguageButton(R.id.btn_lang_uz, LocaleHelper.LANG_UZ);
         setLanguageButton(R.id.btn_lang_kk, LocaleHelper.LANG_KK);
         setLanguageButton(R.id.btn_lang_be, LocaleHelper.LANG_BE);
-        setLanguageButton(R.id.btn_lang_uk, LocaleHelper.LANG_UK);
     }
 
     private void setLanguageButton(int buttonId, final String lang) {

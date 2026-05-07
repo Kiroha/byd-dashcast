@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DashCast</string>
+
+    <!-- WelcomeActivity -->
+    <string name="welcome_title">DashCast</string>
+    <string name="welcome_subtitle">Dashboard Controller</string>
+    <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
+    <string name="btn_lang_fr">🇫🇷  Français</string>
+    <string name="btn_lang_en">🇬🇧  English</string>
+    <string name="btn_lang_de">🇩🇪  Deutsch</string>
+    <string name="btn_lang_tr">🇹🇷  Türkçe</string>
+    <string name="btn_lang_it">🇮🇹  Italiano</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ru">🇷🇺  Русский</string>
+    <string name="btn_lang_uk">🇺🇦  Українська</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+
+    <!-- MainActivity — status bar -->
+    <string name="status_disconnected">Panel: no conectado</string>
+    <string name="btn_activate_cluster">Activar proyección</string>
+    <string name="btn_show_mirror">📺 Espejo</string>
+    <string name="btn_restore_cluster">Detener proyección</string>
+    <string name="btn_origin_cluster">Restaurar panel original</string>
+    <string name="title_app_list">Aplicaciones instaladas</string>
+    <string name="mirror_placeholder">Pantalla activa en el clúster ✓</string>
+    <string name="btn_cluster_split">⬛⬛ Dividir</string>
+
+    <!-- Cluster control panel -->
+    <string name="cluster_control_title">Control del clúster</string>
+    <string name="cluster_control_hide">Ocultar ▼</string>
+
+    <!-- item_app.xml -->
+    <string name="btn_app_to_main">← Principal</string>
+    <string name="btn_app_to_cluster">→ Clúster</string>
+
+    <!-- MainActivity — status texts -->
+    <string name="status_starting_cluster">Iniciando clúster…</string>
+    <string name="status_activating_cluster">Activando clúster…</string>
+    <string name="status_restoring_cluster">Restaurando clúster…</string>
+    <string name="status_restoring_origin">Restaurando clúster original…</string>
+    <string name="status_dashboard_byd">Panel: pantalla BYD</string>
+    <string name="status_dashboard_app">Panel: %1$s</string>
+
+    <!-- MainActivity — Toasts -->
+    <string name="toast_app_incompatible">%1$s: no instalado o incompatible con multi-pantalla</string>
+    <string name="toast_cluster_unavailable">Servicio de clúster no disponible</string>
+    <string name="toast_app_already_cluster">App ya está en el clúster</string>
+    <string name="toast_restore_failed">Error al restaurar: %1$s</string>
+    <string name="toast_origin_failed">Error al restaurar clúster original: %1$s</string>
+    <string name="toast_app_stopped">%1$s detenido</string>
+    <string name="toast_kill_failed">Error al detener: %1$s</string>
+    <string name="toast_no_app_cluster">Ninguna app en el clúster</string>
+    <string name="toast_cluster_type">Clúster: %1$s</string>
+
+    <!-- MainActivity — overflow menu -->
+    <string name="menu_settings">⚙️ Configuración</string>
+    <string name="menu_diagnostic">🔧 Diagnóstico</string>
+    <string name="menu_system_report">📋 Informe del sistema</string>
+    <string name="menu_log">📜 Registros</string>
+    <string name="menu_language">🌐 Idioma</string>
+
+    <!-- MainActivity — cluster type dialog -->
+    <string name="dialog_cluster_type_title">Tipo de clúster</string>
+    <string name="cluster_label_88">8,8 pulgadas  (cmd=29)</string>
+    <string name="cluster_label_123">12,3 pulgadas (cmd=30) — Seal EU</string>
+    <string name="cluster_label_1025">10,25 pulgadas (cmd=31)</string>
+    <string name="btn_ok">Aceptar</string>
+    <string name="btn_cancel">Cancelar</string>
+
+    <!-- MainActivity — split menu -->
+    <string name="split_full_screen">⬜ Pantalla completa</string>
+    <string name="split_left">⬜⬛ Izquierda (50%)</string>
+    <string name="split_right">⬛⬜ Derecha (50%)</string>
+
+    <string name="btn_send">Enviar</string>
+
+    <!-- LogActivity -->
+    <string name="log_title">📋 Registro</string>
+    <string name="log_btn_clear">Limpiar</string>
+    <string name="log_btn_share">Compartir</string>
+    <string name="log_filter_hint">Filtrar (etiqueta / mensaje / nivel)…</string>
+    <string name="log_autoscroll">Auto↓</string>
+    <string name="log_level_debug">DEBUG </string>
+    <string name="log_level_info">INFO </string>
+    <string name="log_level_warn">WARN </string>
+    <string name="log_level_error">ERROR</string>
+    <string name="log_empty">(sin entradas)</string>
+
+    <!-- SysInfoActivity -->
+    <string name="sysinfo_title">Informe del sistema BYD</string>
+    <string name="sysinfo_desc">Genera un informe completo: pantallas, APIs, paquetes BYD, permisos, ADB. Guárdalo y envíalo para depuración.</string>
+    <string name="btn_generate_report">▶ Generar informe</string>
+    <string name="btn_save_report">💾 Guardar</string>
+    <string name="btn_share_report">📤 Compartir</string>
+    <string name="sysinfo_hint">Pulsa \'Generar informe\' para comenzar.</string>
+    <string name="sysinfo_generating">Generando…\n</string>
+    <string name="toast_write_error">Error de escritura: %1$s</string>
+    <string name="toast_report_saved">Informe guardado:\n%1$s</string>
+
+    <!-- DiagActivity — layout labels -->
+    <string name="diag_share_result1_btn">Compartir resultado TEST 1</string>
+    <string name="diag_share_result2_btn">Compartir resultado TEST 2</string>
+    <string name="diag_share_result3_btn">Compartir resultado TEST 3</string>
+
+    <!-- DiagActivity — Java status / feedback -->
+    <string name="diag_adb_connecting">Conectando a localhost:5555…\n⏳ El popup aparecerá en esta pantalla — pulsa PERMITIR.</string>
+    <string name="diag_adb_connected">✅ Conexión establecida\n\n</string>
+    <string name="diag_adb_failed">❌ Error: %1$s\n\n→ Verifica que la depuración ADB TCP esté activada\n  en Ajustes → Desarrollador → Depuración USB</string>
+    <string name="diag_adb_test1_hint">→ Ejecuta primero TEST 1 para autorizar la conexión ADB.</string>
+    <string name="diag_launching_display1">⏳ Iniciando pantalla 1…</string>
+    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
+    <string name="diag_size_restoring">⏳ Restaurando tamaño por defecto (cmd 30 + wm reset)…</string>
+    <string name="diag_size_full_running">⏳ Diagnóstico de dimensiones del clúster…\nProbando cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 segundos)</string>
+    <string name="diag_sf_dumping">Ejecutando dumpsys SurfaceFlinger…</string>
+    <string name="diag_sf_no_result">(sin resultado — espejo no registrado en SF)</string>
+    <string name="diag_sf_error">Error: %1$s</string>
+    <string name="toast_sniffer_started">Sniffer iniciado → %1$s</string>
+
+    <!-- AppLogger -->
+    <string name="share_log_title">Compartir registro…</string>
+    <string name="share_report_title">Compartir informe…</string>
+
+    <!-- DiagActivity: layout labels -->
+    <string name="diag_header">Panel de diagnóstico</string>
+    <string name="diag_s1_title">1. ADB local (Requerido)</string>
+    <string name="diag_s1_desc">Necesario para inyectar daemons y crear el VirtualDisplay del sistema.</string>
+    <string name="diag_s1_initial">No conectado</string>
+    <string name="diag_btn_adb_connect">Conectar ADB</string>
+    <string name="diag_btn_share_result">Compartir</string>
+    <string name="diag_s2_title">2. Inyección de Daemon y Renderizado</string>
+    <string name="diag_s2_desc">Lanza DashCastDaemon.java en app_process vía ADB shell.</string>
+    <string name="diag_btn_create_vd">Crear VirtualDisplay (Inyectar Daemon)</string>
+    <string name="diag_s3_title">3. Propiedades del clúster</string>
+    <string name="diag_s3_initial">Tamaño de pantalla</string>
+    <string name="diag_s3_display1_initial">Restaurar pantalla del clúster</string>
+    <string name="diag_btn_restore_display">Restaurar pantalla</string>
+    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Mostrar u ocultar la superposición ADAS en el cuadro de instrumentos. Comandos sendInfo(1000, 12/13). Sin efecto visible en el Seal EU (cluster 2D), probar cuando haya una superposición ADAS activa.</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Enviando cmd %1$d…</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
+    <string name="diag_s4_title">4. Análisis del sistema (SurfaceFlinger)</string>
+    <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
+    <string name="diag_btn_run_dumpsys">Ejecutar dumpsys window displays</string>
+    <string name="diag_jni_initial">Resultado JNI Probe: --</string>
+    <string name="diag_btn_jni_probe">JNI Probe</string>
+    <string name="diag_btn_jni_start_probe">Iniciar + JNI Probe</string>
+    <string name="diag_sf_initial">SF Dump: --</string>
+    <string name="diag_btn_dump_mirror">Volcar servicio Mirror</string>
+    <string name="diag_auto_display_title">AutoDisplayService (com.xdja.containerservice)</string>
+    <string name="diag_auto_display_desc">Inicia el servicio Qt→VirtualDisplay directamente.</string>
+    <string name="diag_btn_start_auto_display">INICIAR AutoDisplayService</string>
+    <string name="diag_btn_stop">DETENER</string>
+    <string name="diag_fission_title">Pipeline Fission (creación de VirtualDisplay del clúster)</string>
+    <string name="diag_fission_desc">Secuencia completa: sendInfo(30)+sendInfo(16) → Qt registra su Surface → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay.</string>
+    <string name="diag_btn_sendinf_java">☕ sendInfo Java Directo</string>
+    <string name="diag_btn_fission_create">🚀 Crear Fission Display</string>
+    <string name="diag_btn_fission_launch">▶ Iniciar Dashboard</string>
+    <string name="diag_s5_title">5. Sniffer del sistema (Ingeniería inversa)</string>
+    <string name="diag_s5_desc">Captura logcat (todas las etiquetas relevantes) + instantáneas periódicas de dumpsys en un archivo exportable.</string>
+    <string name="diag_sniffer_inactive">Inactivo</string>
+    <string name="diag_btn_start">INICIAR</string>
+    <string name="diag_btn_snapshot">Instantánea ahora</string>
+    <string name="diag_btn_export_sniffer">Exportar</string>
+    <!-- DiagActivity: dynamic messages -->
+    <string name="diag_auto_starting">Iniciando vía ADB…</string>
+    <string name="diag_auto_stopping">Deteniendo vía ADB…</string>
+    <string name="diag_auto_stopped">STOP: %1$s</string>
+    <string name="diag_jni_display_released">Pantalla liberada. Ejecutando JNI…</string>
+    <string name="diag_jni_fatal">FATAL: %1$s</string>
+    <string name="diag_jni_send16_failed">Error al enviar 16: %1$s</string>
+    <string name="diag_running">Ejecutando diagnóstico…</string>
+    <string name="diag_dumpsys_running">Ejecutando vía adb local…</string>
+    <string name="diag_dumpsys_error">ERROR:\n%1$s</string>
+    <string name="diag_daemon_launching">Iniciando daemon vía adb local…</string>
+    <string name="diag_daemon_timeout">TIMEOUT: ADB no respondió en %1$ds.</string>
+    <string name="diag_daemon_output">SALIDA DAEMON: %1$s</string>
+    <string name="diag_daemon_error">ERROR: %1$s</string>
+    <string name="diag_apk_path_error">Error de ruta APK: %1$s</string>
+    <string name="diag_fission_binder_starting">sendInfo Java directo…</string>
+    <string name="diag_fission_running">Secuencia en ejecución…</string>
+    <string name="diag_fission_no_display">❌ Sin fission display. Ejecuta primero «Crear Fission Display».</string>
+    <string name="diag_fission_launching">Iniciando en pantalla %1$d…</string>
+    <string name="diag_sniffer_initializing">Inicializando…</string>
+    <string name="diag_sniffer_active">ACTIVO → %1$s</string>
+    <string name="diag_sniffer_init_failed">❌ Error de inicialización: %1$s</string>
+    <string name="diag_sniffer_stopped">Detenido — archivo: %1$s</string>
+    <string name="toast_sniffer_stopped">Sniffer detenido.</string>
+    <string name="toast_sniffer_start_first">Inicia el sniffer primero.</string>
+    <string name="toast_snapshot_done">Instantánea inyectada en el archivo.</string>
+    <string name="toast_sniffer_no_file">No hay archivo de sniffer para exportar.</string>
+    <string name="toast_no_result_to_share">No hay resultado para compartir.</string>
+    <string name="diag_btn_size_restore">RESTAURAR</string>
+    <string name="diag_btn_size_full">TEST COMPLETO</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Restablecer overscan pantalla principal (display 0)</string>
+    <string name="diag_reset_main_overscan_done">Overscan pantalla principal restablecido OK — wm overscan reset -d 0</string>
+    <!-- Section 7 — DiLink5 resize test -->
+    <string name="diag_s7_title">7. Prueba Resize DiLink5 (IATM)</string>
+    <string name="diag_s7_desc">Prueba la secuencia DiLink5: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) vía raw Binder en activity_task.</string>
+    <string name="diag_btn_resize_dilink5_seq">▶ Secuencia DiLink5 (WM:4→5 + resize FORCED=3)</string>
+    <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 únicamente</string>
+    <string name="diag_btn_resize_inspect_task">🔍 Inspeccionar tarea del clúster (windowing + bounds)</string>
+    <!-- Section 6 — Storage cleanup -->
+    <string name="diag_s6_title">6. Limpieza de almacenamiento</string>
+    <string name="diag_s6_desc">Elimina archivos de log e informes generados por DashCast. Las claves ADB NO se eliminan.</string>
+    <string name="diag_btn_cleanup">🗑️ Eliminar archivos de traza</string>
+    <string name="diag_cleanup_running">Limpiando…</string>
+    <string name="diag_cleanup_done">%1$d archivo(s) eliminado(s) — almacenamiento restante: %2$s</string>
+
+    <!-- SettingsActivity -->
+    <string name="settings_header">Configuración</string>
+    <string name="settings_cluster_type_title">Tipo de clúster</string>
+    <string name="settings_overscan_section_title">Márgenes de pantalla (overscan)</string>
+    <string name="settings_overscan_desc">Ajusta los márgenes para enmarcar el contenido en la pantalla del panel. Los valores se aplican en el siguiente inicio.</string>
+    <string name="settings_inset_h_label">Izquierda / Derecha:</string>
+    <string name="settings_inset_v_label">Arriba / Abajo:</string>
+    <string name="settings_btn_apply_overscan">Aplicar ahora</string>
+    <string name="settings_btn_reset_overscan">Restablecer (80 / 50)</string>
+    <string name="settings_overscan_applied">✓ Aplicado — I/D: %1$d px, A/Ab: %2$d px</string>
+</resources>

@@ -47,6 +47,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnDumpSfMirror;
     private TextView tvSfDumpResult;
 
+    // ADAS Cluster (cmd 12 / 13)
+    private Button   btnAdasShow;
+    private Button   btnAdasHide;
+    private TextView tvAdasResult;
+
     // JNI Qt Surface Probe
     private Button   btnTest13;
     private Button   btnJniStartProbe;
@@ -78,6 +83,9 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnReSnifferExport;
     private TextView tvReSnifferStatus;
     private java.io.File mReSnifferFile = null;
+
+    private static final String PREF_SNIFFER = "byd_diag_prefs";
+    private static final String PREF_SNIFFER_PATH = "re_sniffer_file_path";
 
     // [7] Test resize DiLink5
     private Button   btnResizeDilink5Seq;
@@ -128,6 +136,14 @@ public class DiagActivity extends AppCompatActivity {
         btnDumpSfMirror = (Button) findViewById(R.id.btn_dump_sf_mirror);
         tvSfDumpResult = (TextView) findViewById(R.id.tv_sf_dump_result);
         tvSfDumpResult.setTag("SurfaceFlinger Dump");
+
+        // ADAS Cluster
+        btnAdasShow  = (Button)   findViewById(R.id.btn_adas_show);
+        btnAdasHide  = (Button)   findViewById(R.id.btn_adas_hide);
+        tvAdasResult = (TextView) findViewById(R.id.tv_adas_result);
+        tvAdasResult.setTag("ADAS Cluster");
+        btnAdasShow.setOnClickListener(v -> sendAdasCmd(12));
+        btnAdasHide.setOnClickListener(v -> sendAdasCmd(13));
         btnAutoDisplayStart  = (Button)   findViewById(R.id.btn_auto_display_start);
         btnAutoDisplayStop   = (Button)   findViewById(R.id.btn_auto_display_stop);
         tvAutoDisplayResult  = (TextView) findViewById(R.id.tv_auto_display_result);
@@ -182,6 +198,9 @@ public class DiagActivity extends AppCompatActivity {
         btnReSnifferStop    .setOnClickListener(v -> stopReSniffer());
         btnReSnifferSnapshot.setOnClickListener(v -> snapshotReSniffer());
         btnReSnifferExport  .setOnClickListener(v -> exportReSniffer());
+
+        // Restore sniffer state after Activity recreation
+        restoreSnifferState();
 
         setupShareOnLongClick();
 
@@ -1013,6 +1032,40 @@ public class DiagActivity extends AppCompatActivity {
     private static final String RE_SNIFFER_PREFIX  = "BYD_RE_Sniffer_";
 
     // =========================================================================
+    // ADAS Cluster — sendInfo(1000, 12) / sendInfo(1000, 13)
+    // =========================================================================
+
+    private void sendAdasCmd(final int cmd) {
+        btnAdasShow.setEnabled(false);
+        btnAdasHide.setEnabled(false);
+        tvAdasResult.setText(getString(R.string.diag_adas_sending, cmd));
+        tvAdasResult.setBackgroundColor(0xFF111A1A);
+        AppLogger.log("DiagADAS", "sendInfo(1000, " + cmd + ")");
+
+        AdbLocalClient.sendInfo(this, 1000, cmd, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String report) {
+                runOnUiThread(() -> {
+                    String label = cmd == 12 ? "显示ADAS ✅" : "关闭ADAS ✅";
+                    tvAdasResult.setBackgroundColor(0xFF1A2A1A);
+                    tvAdasResult.setText(label + "\n" + report);
+                    btnAdasShow.setEnabled(true);
+                    btnAdasHide.setEnabled(true);
+                    AppLogger.log("DiagADAS", "cmd=" + cmd + " → " + report);
+                });
+            }
+            @Override public void onError(final String error) {
+                runOnUiThread(() -> {
+                    tvAdasResult.setBackgroundColor(0xFF2A1A1A);
+                    tvAdasResult.setText("❌ cmd=" + cmd + " " + error);
+                    btnAdasShow.setEnabled(true);
+                    btnAdasHide.setEnabled(true);
+                    AppLogger.log("DiagADAS", "ERREUR cmd=" + cmd + ": " + error);
+                });
+            }
+        });
+    }
+
+    // =========================================================================
     // Partage rapide — appui long sur n'importe quel TextView résultat
     // =========================================================================
 
@@ -1021,7 +1074,7 @@ public class DiagActivity extends AppCompatActivity {
             tvAdbLocalResult, tvDaemonVdResult, tvDisplaySizeResult,
             tvDisplay1Result, tvDumpsysResult, tvTest13Result, tvSfDumpResult,
             tvAutoDisplayResult, tvFissionResult, tvReSnifferStatus,
-            tvResizeDiagResult
+            tvResizeDiagResult, tvAdasResult
         };
         for (TextView tv : results) {
             if (tv == null) continue;
@@ -1072,10 +1125,58 @@ public class DiagActivity extends AppCompatActivity {
         return new java.io.File(dir, RE_SNIFFER_PREFIX + ts + ".txt");
     }
 
+    /**
+     * Called in onCreate() after Activity recreation.
+     * Checks SharedPreferences for a saved sniffer path and verifies the
+     * .re_sniffer_run tag file still exists on the device (meaning ADB processes
+     * are still running). Restores UI state accordingly.
+     */
+    private void restoreSnifferState() {
+        String saved = getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE)
+                .getString(PREF_SNIFFER_PATH, null);
+        if (saved == null) return;
+
+        java.io.File f = new java.io.File(saved);
+        if (!f.exists() || f.length() == 0) {
+            // File gone — sniffer was stopped or device rebooted
+            getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                    .remove(PREF_SNIFFER_PATH).apply();
+            return;
+        }
+
+        // File exists → assume sniffer is still running (ADB processes are setsid,
+        // they survive Activity destruction). Restore file reference and UI.
+        mReSnifferFile = f;
+        // Check if the tag file is present (means background processes are alive)
+        AdbLocalClient.executeShellWithResult(this,
+                "[ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ] && echo ACTIVE || echo STOPPED",
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                final boolean active = out.trim().equals("ACTIVE");
+                runOnUiThread(() -> {
+                    if (active) {
+                        tvReSnifferStatus.setText(getString(
+                                R.string.diag_sniffer_active, f.getName()));
+                        tvReSnifferStatus.setTextColor(0xFF69F0AE);
+                    } else {
+                        // Processes died (reboot?) — clear prefs
+                        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                                .remove(PREF_SNIFFER_PATH).apply();
+                        mReSnifferFile = null;
+                    }
+                });
+            }
+            @Override public void onError(String err) { /* ADB not connected yet, ignore */ }
+        });
+    }
+
     private void startReSniffer() {
         killReSnifferProcesses();
 
         mReSnifferFile = buildReSnifferFile();
+        // Persist path so it survives Activity recreation
+        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                .putString(PREF_SNIFFER_PATH, mReSnifferFile.getAbsolutePath()).apply();
         final String p  = mReSnifferFile.getAbsolutePath();
         final String pf = "/data/local/tmp/" + RE_SNIFFER_PIDS;
         AppLogger.i("RESniffer", "Starting RE Sniffer → " + p);
@@ -1174,6 +1275,9 @@ public class DiagActivity extends AppCompatActivity {
 
     private void stopReSniffer() {
         killReSnifferProcesses();
+        // Clear persisted path — sniffer is no longer active
+        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                .remove(PREF_SNIFFER_PATH).apply();
         final String fileName = mReSnifferFile != null ? mReSnifferFile.getName() : "aucun";
         if (mReSnifferFile != null) {
             AdbLocalClient.executeShell(this,
@@ -1210,6 +1314,12 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void exportReSniffer() {
+        // Re-check persisted path in case Activity was recreated
+        if (mReSnifferFile == null) {
+            String saved = getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE)
+                    .getString(PREF_SNIFFER_PATH, null);
+            if (saved != null) mReSnifferFile = new java.io.File(saved);
+        }
         java.io.File logFile = mReSnifferFile;
         if (logFile == null || !logFile.exists() || logFile.length() == 0) {
             android.widget.Toast.makeText(this, getString(R.string.toast_sniffer_no_file), android.widget.Toast.LENGTH_SHORT).show();

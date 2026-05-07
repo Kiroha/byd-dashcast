@@ -9,161 +9,216 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:paddingLeft="40dp"
-        android:paddingTop="32dp"
-        android:paddingRight="40dp"
-        android:paddingBottom="32dp">
-
-    <!-- Logo / titre app -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/welcome_title"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.1"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/welcome_subtitle"
-        android:textColor="#4A9FDF"
-        android:textSize="14sp"
-        android:letterSpacing="0.2"
-        android:layout_marginBottom="32dp"/>
-
-    <!-- Invite bilingue -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/welcome_select_lang"
-        android:textColor="#888888"
-        android:textSize="15sp"
         android:gravity="center"
-        android:lineSpacingMultiplier="1.5"
-        android:layout_marginBottom="24dp"/>
+        android:padding="32dp">
 
-    <!-- French button -->
-    <Button
-        android:id="@+id/btn_lang_fr"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_fr"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/welcome_title"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp"/>
 
-    <!-- Bouton English -->
-    <Button
-        android:id="@+id/btn_lang_en"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_en"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/welcome_subtitle"
+            android:textColor="#4A9FDF"
+            android:textSize="14sp"
+            android:letterSpacing="0.2"
+            android:layout_marginBottom="40dp"/>
 
-    <!-- Bouton Deutsch -->
-    <Button
-        android:id="@+id/btn_lang_de"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_de"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/welcome_select_lang"
+            android:textColor="#888888"
+            android:textSize="15sp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.5"
+            android:layout_marginBottom="32dp"/>
 
-    <!-- Bouton Türkçe -->
-    <Button
-        android:id="@+id/btn_lang_tr"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_tr"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        <!-- Row 1: FR/EN/DE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="12dp">
 
-    <!-- Bouton Italiano -->
-    <Button
-        android:id="@+id/btn_lang_it"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_it"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+            <Button
+                android:id="@+id/btn_lang_fr"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_fr"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
 
-    <!-- Bouton Русский -->
-    <Button
-        android:id="@+id/btn_lang_ru"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_ru"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+            <Button
+                android:id="@+id/btn_lang_en"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_en"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
 
-    <!-- Bouton Oʻzbekcha -->
-    <Button
-        android:id="@+id/btn_lang_uz"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_uz"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+            <Button
+                android:id="@+id/btn_lang_de"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_de"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"/>
 
-    <!-- Bouton Қазақша -->
-    <Button
-        android:id="@+id/btn_lang_kk"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_kk"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        </LinearLayout>
 
-    <!-- Bouton Беларуская -->
-    <Button
-        android:id="@+id/btn_lang_be"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_be"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="10dp"/>
+        <!-- Row 2: IT/TR/ES -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="12dp">
 
-    <!-- Bouton Українська -->
-    <Button
-        android:id="@+id/btn_lang_uk"
-        android:layout_width="260dp"
-        android:layout_height="52dp"
-        android:text="@string/btn_lang_uk"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:background="#1A237E"
-        android:textColor="#FFFFFF"/>
+            <Button
+                android:id="@+id/btn_lang_it"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_it"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_tr"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_tr"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_es"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_es"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+        <!-- Row 3: RU/UK/AR -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btn_lang_ru"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_ru"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_uk"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_uk"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_ar"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_ar"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+        <!-- Row 4: UZ/KK/BE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_lang_uz"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_uz"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_kk"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_kk"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_lang_be"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:text="@string/btn_lang_be"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#1A237E"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 

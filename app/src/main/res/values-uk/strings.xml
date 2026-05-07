@@ -25,6 +25,9 @@
     <string name="btn_origin_cluster">Відновити штатну панель</string>
     <string name="title_app_list">Встановлені програми</string>
     <string name="mirror_placeholder">Активне зображення на кластері ✓</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+
     <string name="btn_cluster_split">⬛⬛ Розділити</string>
 
     <!-- Cluster control panel -->
@@ -33,6 +36,7 @@
 
     <!-- item_app.xml -->
     <string name="btn_app_to_main">← Основний</string>
+
     <string name="btn_app_to_cluster">→ Кластер</string>
 
     <!-- MainActivity — status texts -->
@@ -52,6 +56,7 @@
     <string name="toast_app_stopped">%1$s зупинено</string>
     <string name="toast_kill_failed">Не вдалося завершити: %1$s</string>
     <string name="toast_no_app_cluster">На кластері немає програми</string>
+
     <string name="toast_cluster_type">Кластер: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
@@ -120,6 +125,7 @@
 
     <!-- DiagActivity — killAndRestartDaemon -->
 
+
     <!-- AppLogger -->
     <string name="share_log_title">Поділитися журналом…</string>
     <string name="share_report_title">Поділитися звітом…</string>
@@ -138,6 +144,12 @@
     <string name="diag_s3_initial">Розмір дисплея</string>
     <string name="diag_s3_display1_initial">Відновити дисплей кластера</string>
     <string name="diag_btn_restore_display">Відновити дисплей</string>
+    <string name="diag_sadas_title">ADAS Кластер (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Показати або приховати оверлей ADAS на приладовій панелі. Команди sendInfo(1000, 12/13). Без видимого ефекту на Seal EU (2D-кластер), тестувати при активному оверлеї ADAS.</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Надсилання cmd %1$d…</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. Аналіз системи (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Запустити dumpsys window displays</string>
@@ -206,6 +218,7 @@
     <string name="diag_btn_cleanup">🗑️ Видалити trace-файли</string>
     <string name="diag_cleanup_running">Очищення…</string>
     <string name="diag_cleanup_done">%1$d файл(ів) видалено — залишилось місця: %2$s</string>
+    <!-- Section 7 — DiLink5 resize test -->
 
     <!-- SettingsActivity -->
     <string name="settings_header">Налаштування</string>
