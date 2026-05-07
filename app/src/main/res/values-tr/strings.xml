@@ -229,4 +229,7 @@
     <string name="settings_btn_apply_overscan">Şimdi uygula</string>
     <string name="settings_btn_reset_overscan">Sıfırla (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Uygulandı — S/S: %1$d px, Ü/A: %2$d px</string>
+    <string name="ota_dialog_title">Güncelleme mevcut</string>
+    <string name="ota_installing">Yükleniyor…</string>
+    <string name="ota_up_to_date">DashCast güncel</string>
 </resources>

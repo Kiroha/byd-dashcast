@@ -29,6 +29,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -354,7 +355,7 @@ public class MainActivity extends AppCompatActivity
 
         // OTA update check — only on fresh launch, not on rotation
         if (savedInstanceState == null) {
-            UpdateChecker.checkAndInstall(this);
+            UpdateChecker.checkAndInstall(this, makeOtaProgressListener(false));
         }
     }
 
@@ -1321,6 +1322,109 @@ public class MainActivity extends AppCompatActivity
     }
 
     /** ⋮ menu — developer tools accessible without cluttering the toolbar. */
+    // ── OTA progress dialog ───────────────────────────────────────────────────
+
+    /**
+     * Returns a ProgressListener that shows a centered AlertDialog with a ProgressBar
+     * during download, then switches to indeterminate while installing.
+     *
+     * @param notifyIfUpToDate if true, shows a toast when no update is found
+     *                         (use true for manual checks, false for auto-check at launch)
+     */
+    private UpdateChecker.ProgressListener makeOtaProgressListener(boolean notifyIfUpToDate) {
+        final AlertDialog[] dlgHolder  = {null};
+        final ProgressBar[] pbHolder   = {null};
+        final TextView[]    pctHolder  = {null};
+
+        return new UpdateChecker.ProgressListener() {
+            @Override
+            public void onUpdateFound(String version) {
+                if (isFinishing() || isDestroyed()) return;
+
+                LinearLayout layout = new LinearLayout(MainActivity.this);
+                layout.setOrientation(LinearLayout.VERTICAL);
+                int pad = (int) (getResources().getDisplayMetrics().density * 20);
+                layout.setPadding(pad * 2, pad, pad * 2, pad / 2);
+
+                TextView tvVersion = new TextView(MainActivity.this);
+                tvVersion.setText("DashCast " + version);
+                tvVersion.setTextSize(15);
+                tvVersion.setTextColor(0xFF2E3440);
+                layout.addView(tvVersion);
+
+                ProgressBar pb = new ProgressBar(MainActivity.this, null,
+                        android.R.attr.progressBarStyleHorizontal);
+                pb.setMax(100);
+                pb.setProgress(0);
+                LinearLayout.LayoutParams lpPb = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                lpPb.topMargin = pad;
+                layout.addView(pb, lpPb);
+                pbHolder[0] = pb;
+
+                TextView tvPct = new TextView(MainActivity.this);
+                tvPct.setText("0 %");
+                tvPct.setGravity(android.view.Gravity.CENTER);
+                tvPct.setTextSize(12);
+                tvPct.setTextColor(0xFF888888);
+                LinearLayout.LayoutParams lpPct = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                lpPct.topMargin = pad / 2;
+                layout.addView(tvPct, lpPct);
+                pctHolder[0] = tvPct;
+
+                AlertDialog d = new AlertDialog.Builder(MainActivity.this)
+                        .setTitle(getString(R.string.ota_dialog_title))
+                        .setView(layout)
+                        .setCancelable(false)
+                        .create();
+                d.show();
+                dlgHolder[0] = d;
+            }
+
+            @Override
+            public void onDownloadProgress(int percent) {
+                if (pbHolder[0] == null) return;
+                if (percent < 0) {
+                    // Content-Length unknown → indeterminate
+                    pbHolder[0].setIndeterminate(true);
+                    if (pctHolder[0] != null) pctHolder[0].setText("…");
+                } else {
+                    pbHolder[0].setIndeterminate(false);
+                    pbHolder[0].setProgress(percent);
+                    if (pctHolder[0] != null) pctHolder[0].setText(percent + " %");
+                }
+            }
+
+            @Override
+            public void onInstalling() {
+                if (pbHolder[0] != null) pbHolder[0].setIndeterminate(true);
+                if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_installing));
+            }
+
+            @Override
+            public void onUpToDate() {
+                if (notifyIfUpToDate) {
+                    Toast.makeText(MainActivity.this,
+                            getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (dlgHolder[0] != null) {
+                    dlgHolder[0].dismiss();
+                    dlgHolder[0] = null;
+                }
+                AppLogger.e("OTA", "error: " + message);
+            }
+        };
+    }
+
+    // ── Overflow menu ─────────────────────────────────────────────────────────
+
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
@@ -1346,9 +1450,8 @@ public class MainActivity extends AppCompatActivity
                         startActivity(intent);
                         return true;
                     case 6:
-                        Toast.makeText(MainActivity.this,
-                                getString(R.string.toast_checking_updates), Toast.LENGTH_SHORT).show();
-                        UpdateChecker.checkAndInstall(MainActivity.this);
+                        UpdateChecker.checkAndInstall(MainActivity.this,
+                                makeOtaProgressListener(true));
                         return true;
                 }
                 return false;

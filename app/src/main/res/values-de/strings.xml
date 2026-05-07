@@ -229,4 +229,7 @@
     <string name="settings_btn_apply_overscan">Jetzt anwenden</string>
     <string name="settings_btn_reset_overscan">Zurücksetzen (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Angewendet — L/R: %1$d px, O/U: %2$d px</string>
+    <string name="ota_dialog_title">Update verfügbar</string>
+    <string name="ota_installing">Wird installiert…</string>
+    <string name="ota_up_to_date">DashCast ist aktuell</string>
 </resources>

@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,37 +37,56 @@ public class UpdateChecker {
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases?per_page=10";
     private static final String APK_CACHE_NAME = "dashcast-update.apk";
 
+    // ── Progress callback (all methods called on the main thread) ─────────────
+
+    public interface ProgressListener {
+        /** A newer version was found; download is about to start. */
+        void onUpdateFound(String version);
+        /** Download progress, 0-100. -1 = indeterminate (Content-Length unknown). */
+        void onDownloadProgress(int percent);
+        /** Download complete; PackageInstaller session started. */
+        void onInstalling();
+        /** No update available. */
+        void onUpToDate();
+        /** An error occurred. */
+        void onError(String message);
+    }
+
+    // ── Public API ────────────────────────────────────────────────────────────
+
     /**
-     * Call from MainActivity.onCreate() when savedInstanceState == null.
-     * Runs entirely on a background thread; toasts on main thread for status.
+     * Call from MainActivity.onCreate() (fresh launch) or from the overflow menu.
+     * @param listener optional UI callback; all methods dispatched on the main thread.
      */
-    public static void checkAndInstall(final Context context) {
+    public static void checkAndInstall(final Context context, final ProgressListener listener) {
+        final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
-                doCheckAndInstall(context.getApplicationContext());
+                doCheckAndInstall(context.getApplicationContext(), listener, ui);
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA check failed", e);
+                if (listener != null) {
+                    ui.post(() -> listener.onError(e.getMessage()));
+                }
             }
         }, "ota-update").start();
     }
 
-    private static void doCheckAndInstall(Context context) throws Exception {
-        Handler ui = new Handler(Looper.getMainLooper());
-
+    private static void doCheckAndInstall(Context context, ProgressListener listener,
+                                          Handler ui) throws Exception {
         boolean includePrerelease = context
                 .getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(SettingsActivity.PREF_OTA_PRERELEASE,
                         SettingsActivity.DEFAULT_OTA_PRERELEASE);
 
-        // 1. Fetch latest (or latest including pre-release) release info from GitHub API
+        // 1. Fetch latest release info from GitHub API
         JSONObject release;
         if (includePrerelease) {
-            // /releases returns all releases including pre-releases, sorted by creation desc.
-            // Pick the first one (most recent).
             String json = httpGet(RELEASES_LIST_API);
             JSONArray list = new JSONArray(json);
             if (list.length() == 0) {
                 AppLogger.i(TAG, "No releases found");
+                if (listener != null) ui.post(listener::onUpToDate);
                 return;
             }
             release = list.getJSONObject(0);
@@ -82,13 +100,12 @@ public class UpdateChecker {
         if (!isNewer(latestVer, BuildConfig.VERSION_NAME)) {
             AppLogger.i(TAG, "Up to date (current=" + BuildConfig.VERSION_NAME
                     + " latest=" + latestVer + ")");
+            if (listener != null) ui.post(listener::onUpToDate);
             return;
         }
 
         AppLogger.i(TAG, "Update available: " + BuildConfig.VERSION_NAME + " → " + latestVer);
-        ui.post(() -> Toast.makeText(context,
-                "DashCast " + latestVer + " — downloading update…",
-                Toast.LENGTH_LONG).show());
+        if (listener != null) ui.post(() -> listener.onUpdateFound(latestVer));
 
         // 2. Find APK asset URL
         JSONArray assets = release.getJSONArray("assets");
@@ -102,28 +119,22 @@ public class UpdateChecker {
         }
         if (apkUrl == null) {
             AppLogger.e(TAG, "No APK asset found in release " + latestVer);
+            if (listener != null) ui.post(() -> listener.onError("No APK asset in release " + latestVer));
             return;
         }
 
         // 3. Download APK to internal cache
         File apkFile = new File(context.getCacheDir(), APK_CACHE_NAME);
-        downloadToFile(apkUrl, apkFile);
+        downloadToFile(apkUrl, apkFile, listener, ui);
         AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
 
         // 4. Install via PackageInstaller
-        ui.post(() -> Toast.makeText(context,
-                "Installing DashCast " + latestVer + "…",
-                Toast.LENGTH_SHORT).show());
+        if (listener != null) ui.post(listener::onInstalling);
         installApk(context, apkFile);
     }
 
     // ── Version comparison ────────────────────────────────────────────────────
 
-    /**
-     * Returns true if latest > current.
-     * Strips non-numeric suffixes (e.g. "-alpha") before comparing.
-     * "0.1.41-alpha" > "0.1.40-alpha" → true
-     */
     static boolean isNewer(String latest, String current) {
         int[] l = parseVer(latest);
         int[] c = parseVer(current);
@@ -160,7 +171,8 @@ public class UpdateChecker {
         }
     }
 
-    private static void downloadToFile(String urlStr, File dest) throws Exception {
+    private static void downloadToFile(String urlStr, File dest,
+                                       ProgressListener listener, Handler ui) throws Exception {
         HttpURLConnection conn = openConnection(urlStr);
         try {
             int code = conn.getResponseCode();
@@ -172,11 +184,27 @@ public class UpdateChecker {
                 code = conn.getResponseCode();
             }
             if (code != 200) throw new Exception("Download HTTP " + code);
+
+            long total = conn.getContentLengthLong(); // -1 if unknown
+            long downloaded = 0;
+            int lastPercent = -1;
+
             try (InputStream in = conn.getInputStream();
                  FileOutputStream out = new FileOutputStream(dest)) {
                 byte[] buf = new byte[8192];
                 int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                    downloaded += n;
+                    if (listener != null) {
+                        int percent = total > 0 ? (int) (downloaded * 100 / total) : -1;
+                        if (percent != lastPercent) {
+                            lastPercent = percent;
+                            final int p = percent;
+                            ui.post(() -> listener.onDownloadProgress(p));
+                        }
+                    }
+                }
             }
         } finally {
             conn.disconnect();

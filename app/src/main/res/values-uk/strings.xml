@@ -235,4 +235,7 @@
     <string name="settings_btn_apply_overscan">Застосувати зараз</string>
     <string name="settings_btn_reset_overscan">Скинути (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Застосовано — Л/П: %1$d px, В/Н: %2$d px</string>
+    <string name="ota_dialog_title">Доступне оновлення</string>
+    <string name="ota_installing">Встановлення…</string>
+    <string name="ota_up_to_date">DashCast оновлено</string>
 </resources>
