@@ -1,8 +1,6 @@
 package com.byd.myapp;
 
 import android.os.Bundle;
-import android.os.IBinder;
-import android.view.Surface;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -10,7 +8,6 @@ import android.widget.TextView;
 import android.content.Intent;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
-import android.hardware.display.VirtualDisplay;
 
 /**
  * DiagActivity — Diagnostic tools and configuration.
