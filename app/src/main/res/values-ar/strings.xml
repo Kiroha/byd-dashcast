@@ -73,7 +73,6 @@
     <string name="split_left">⬛⬜ اليمين (50%)</string>
     <string name="split_right">⬜⬛ اليسار (50%)</string>
 
-    <string name="btn_send">إرسال</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 السجل</string>

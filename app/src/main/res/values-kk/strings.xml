@@ -74,7 +74,6 @@
     <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
     <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
 
-    <string name="btn_send">Жіберу</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>

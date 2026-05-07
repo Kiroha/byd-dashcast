@@ -72,7 +72,6 @@
     <string name="split_left">⬜⬛ Злева (50%%)</string>
     <string name="split_right">⬛⬜ Справа (50%%)</string>
 
-    <string name="btn_send">Адправіць</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>

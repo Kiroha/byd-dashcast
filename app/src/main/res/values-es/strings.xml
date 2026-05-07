@@ -73,7 +73,6 @@
     <string name="split_left">⬜⬛ Izquierda (50%)</string>
     <string name="split_right">⬛⬜ Derecha (50%)</string>
 
-    <string name="btn_send">Enviar</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Registro</string>

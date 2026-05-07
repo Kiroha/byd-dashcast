@@ -75,7 +75,6 @@
     <string name="split_left">⬜⬛ Left (50%)</string>
     <string name="split_right">⬛⬜ Right (50%)</string>
 
-    <string name="btn_send">Send</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Log</string>

@@ -76,7 +76,6 @@
     <string name="split_left">⬜⬛ Sol (%50)</string>
     <string name="split_right">⬛⬜ Sağ (%50)</string>
 
-    <string name="btn_send">Gönder</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Günlük</string>

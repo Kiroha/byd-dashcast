@@ -75,7 +75,6 @@
     <string name="split_left">⬜⬛ Gauche (50 %)</string>
     <string name="split_right">⬛⬜ Droite (50 %)</string>
 
-    <string name="btn_send">Envoyer</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Journal de bord</string>

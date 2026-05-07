@@ -79,7 +79,6 @@
     <string name="split_left">⬜⬛ Ліворуч (50%%)</string>
     <string name="split_right">⬛⬜ Праворуч (50%%)</string>
 
-    <string name="btn_send">Надіслати</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>

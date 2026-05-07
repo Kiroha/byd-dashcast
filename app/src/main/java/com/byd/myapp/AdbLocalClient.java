@@ -200,10 +200,7 @@ public class AdbLocalClient {
         });
     }
 
-    // Sniffer grep patterns: [x] trick to avoid auto-matching.
-    // The sniffer spawns two background processes: logcat (capture) + sh/sleep (snapshots).
-    private static final String SNIFFER_GREP =
-            "grep -E '[l]ogcat -v threadtime|[s]leep 30'";
+    // Sniffer kill command: removes the tag file and terminates all background processes.
     public static final String SNIFFER_KILL_CMD =
             "rm -f /data/local/tmp/.sniffer_run; "
             + "for p in $(ps -A | awk '/[s]leep 15/ {print $2}; /[s]leep 5/ {print $2}; /[l]ogcat -v threadtime/ {print $2}; /[l]ogcat -b events/ {print $2}'); do kill -9 $p 2>/dev/null; done; "
@@ -1100,8 +1097,7 @@ public class AdbLocalClient {
                     }
 
                     boolean matched = !actual.equals("(not found)")
-                            && actual.contains(expectedBounds.replace(",", ",")
-                                    .replace(",", ","));
+                            && actual.contains(expectedBounds);
                     // Broader check: look for each component of expectedBounds in the line
                     if (!matched && !actual.equals("(not found)")) {
                         String[] parts = expectedBounds.split(",");
