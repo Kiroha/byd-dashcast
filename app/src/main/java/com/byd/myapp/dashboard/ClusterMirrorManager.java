@@ -309,7 +309,7 @@ public class ClusterMirrorManager {
     /**
      * Stops the local preview (called from MainActivity.onStop).
      */
-    public void stopMirror(Context context) {
+    public void stopMirror() {
         stopPreview();
         AppLogger.i(TAG, "ClusterMirrorManager preview stopped");
     }
@@ -318,7 +318,7 @@ public class ClusterMirrorManager {
      * Releases the preview.
      * Must only be called from ClusterService.onDestroy().
      */
-    public void release(Context context) {
+    public void release() {
         stopPreview();
         AppLogger.i(TAG, "ClusterMirrorManager released");
     }

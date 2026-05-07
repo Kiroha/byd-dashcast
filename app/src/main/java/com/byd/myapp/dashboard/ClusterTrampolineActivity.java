@@ -1,11 +1,16 @@
 package com.byd.myapp.dashboard;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 
 import com.byd.myapp.AppLogger;
 
+/**
+ * NEUTRALIZED — kept only to avoid manifest errors.
+ * This activity used to launch com.byd.appstartmanagement as an attempt to spawn the cluster
+ * VirtualDisplay natively, but that approach is broken and dangerous (resets the cluster display).
+ * Nobody calls this activity anymore; it is exported=false in the manifest.
+ */
 public class ClusterTrampolineActivity extends Activity {
 
     private static final String TAG = "ClusterTrampolineActivity";
@@ -13,21 +18,7 @@ public class ClusterTrampolineActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        AppLogger.i(TAG, "ClusterTrampolineActivity onCreate - bypassing Freedom to spawn virtual display directly");
-
-        try {
-            // Trigger com.byd.appstartmanagement to spawn the VirtualDisplay natively on the BYD cluster
-            Intent launchIntent = new Intent();
-            launchIntent.setClassName("com.byd.appstartmanagement", "com.byd.appstartmanagement.frame.AppStartManagement");
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(launchIntent);
-            AppLogger.i(TAG, "Successfully invoked com.byd.appstartmanagement!");
-        } catch (Exception e) {
-            AppLogger.e(TAG, "Error invoking appstartmanagement", e);
-        }
-
-        // Finish the trampoline so it doesn't linger
+        AppLogger.w(TAG, "ClusterTrampolineActivity reached — this activity is neutralized, finishing immediately.");
         finish();
     }
 }

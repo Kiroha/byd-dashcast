@@ -132,6 +132,9 @@ public class UpdateChecker {
         // 4. Install via PackageInstaller
         if (listener != null) ui.post(listener::onInstalling);
         installApk(context, apkFile);
+        // 5. Remove the cached APK — no point keeping ~25 MB after the installer has read it.
+        //noinspection ResultOfMethodCallIgnored
+        apkFile.delete();
     }
 
     // ── Version comparison ────────────────────────────────────────────────────

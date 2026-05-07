@@ -146,7 +146,7 @@
              BYDDashboardActivity (aussi exported=true). -->
         <activity
             android:name=".dashboard.ClusterTrampolineActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="standard"
             android:taskAffinity="com.byd.myapp.cluster"
             android:excludeFromRecents="true"

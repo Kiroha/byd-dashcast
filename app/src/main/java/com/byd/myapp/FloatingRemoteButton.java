@@ -41,8 +41,7 @@ public class FloatingRemoteButton extends Service {
     public static void show() {
         FloatingRemoteButton inst = sInstance;
         if (inst != null && inst.mFloatView != null) {
-            android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-            h.post(new Runnable() {
+            inst.mFloatView.post(new Runnable() {
                 @Override public void run() {
                     FloatingRemoteButton i = sInstance;
                     if (i != null && i.mFloatView != null) {
@@ -54,9 +53,9 @@ public class FloatingRemoteButton extends Service {
     }
 
     public static void hide() {
-        if (sInstance == null) return; // service not started yet — nothing to hide
-        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-        h.post(new Runnable() {
+        FloatingRemoteButton inst = sInstance;
+        if (inst == null || inst.mFloatView == null) return;
+        inst.mFloatView.post(new Runnable() {
             @Override public void run() {
                 FloatingRemoteButton i = sInstance;
                 if (i != null && i.mFloatView != null) {

@@ -121,7 +121,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // on a destroyed service (NPE / ADB thread leak).
         mMainHandler.removeCallbacksAndMessages(null);
         // release() = preview + cluster overlay (stopMirror() only releases the preview)
-        mMirrorManager.release(this);
+        mMirrorManager.release();
         if (mProjectionActive) {
             mDisplayHelper.stop();
         }
@@ -255,9 +255,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         }
                         // Apply the same inset bounds as applyClusterFreeformBounds()
                         try {
+                            int insetH = getInsetH();
+                            int insetV = getInsetV();
                             android.graphics.Rect bounds = new android.graphics.Rect(
-                                    getInsetH(), getInsetV(),
-                                    1920 - getInsetH(), 720 - getInsetV());
+                                    insetH, insetV, 1920 - insetH, 720 - insetV);
                             iAtmClass.getMethod("resizeTask",
                                     int.class, android.graphics.Rect.class, int.class)
                                     .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
@@ -356,6 +357,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     /**
      * Launches an app on the cluster with explicit FREEFORM bounds (split mode).
      * Since the display is already active, the delay is reduced to 500 ms.
+     *
+     * Uses the same IActivityManager path as launchOnDashboard() to avoid the
+     * broadcast-to-daemon approach (registerReceiver removed from daemon — SecurityException
+     * since systemMain()); the broadcast was silently dropped, causing split mode to
+     * report success while the second app was never actually launched.
      */
     public void launchOnDashboardWithBounds(final String packageName,
             final int left, final int top, final int right, final int bottom,
@@ -365,28 +371,46 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
-                AdbLocalClient.launchDirectWithBounds(ClusterService.this, packageName,
-                        displayId, left, top, right, bottom,
-                        new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String report) {
-                        AppLogger.i(TAG, "ADB trampoline bounds OK: "
-                                + report.trim().replace("\n", " "));
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(true); }
-                            });
-                        }
+                try {
+                    android.content.Intent launchIntent =
+                            getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launchIntent == null) {
+                        AppLogger.e(TAG, "launchOnDashboardWithBounds: no launch intent for "
+                                + packageName);
+                        if (callback != null) callback.onResult(false);
+                        return;
                     }
-                    @Override public void onError(String error) {
-                        AppLogger.e(TAG, "ADB trampoline bounds FAILURE — "
-                                + error.replace("\n", " | "));
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(false); }
-                            });
-                        }
+                    launchIntent.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                    opts.setLaunchDisplayId(displayId);
+                    // WINDOWING_MODE_FREEFORM = 5
+                    try {
+                        java.lang.reflect.Method setWM = android.app.ActivityOptions.class
+                                .getDeclaredMethod("setLaunchWindowingMode", int.class);
+                        setWM.setAccessible(true);
+                        setWM.invoke(opts, 5);
+                    } catch (Exception e) {
+                        AppLogger.w(TAG, "setLaunchWindowingMode unavailable: " + e.getMessage());
                     }
-                });
+                    // Explicit bounds from the caller (split slot geometry)
+                    try {
+                        java.lang.reflect.Method setLB = android.app.ActivityOptions.class
+                                .getDeclaredMethod("setLaunchBounds",
+                                        android.graphics.Rect.class);
+                        setLB.setAccessible(true);
+                        setLB.invoke(opts, new android.graphics.Rect(left, top, right, bottom));
+                    } catch (Exception e) {
+                        AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
+                    }
+                    startActivityViaIAM(launchIntent, opts);
+                    AppLogger.i(TAG, "launchOnDashboardWithBounds OK [" + left + "," + top
+                            + "," + right + "," + bottom + "] display=" + displayId);
+                    if (callback != null) callback.onResult(true);
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
+                    if (callback != null) callback.onResult(false);
+                }
             }
         }, 500);
     }
@@ -419,9 +443,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Exception e) {
             AppLogger.w(TAG, "getRealSize failed: " + e.getMessage());
         }
+        int insetH = getInsetH();
+        int insetV = getInsetV();
         android.graphics.Rect bounds = new android.graphics.Rect(
-                getInsetH(), getInsetV(),
-                sz.x - getInsetH(), sz.y - getInsetV());
+                insetH, insetV, sz.x - insetH, sz.y - insetV);
         try {
             java.lang.reflect.Method setLB = android.app.ActivityOptions.class
                     .getDeclaredMethod("setLaunchBounds", android.graphics.Rect.class);

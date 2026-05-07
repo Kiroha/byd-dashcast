@@ -70,7 +70,8 @@ public class AdbLocalClient {
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 AppLogger.e(TAG, "executeShellWithResult ERROR: " + command, e);
-                if (callback != null) callback.onError(e.getMessage());
+                if (callback != null) callback.onError(
+                        e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             }
         });
     }

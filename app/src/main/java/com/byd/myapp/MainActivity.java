@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity
     private static final String PREF_CLUSTER_PKG   = "cluster_active_pkg";
     private static final String PREF_CLUSTER_NAME  = "cluster_active_name";
     /** sendInfo code for cluster screen size: 29=8.8", 30=12.3" (default Seal EU), 31=10.25" */
-    private static final String PREF_CLUSTER_TYPE  = "cluster_screen_size_cmd";
+    private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
@@ -110,10 +110,7 @@ public class MainActivity extends AppCompatActivity
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
-    // External process-death detection.
-    // Primary: OnUidImportanceListener (event-driven, via reflection — may be unsupported on DiLink).
-    // Fallback: /proc watchdog (2 s polling, no permissions needed, always reliable).
-    private Object   mUidImportanceListener = null;
+    // External process-death detection — /proc watchdog (2 s polling, no permissions needed).
     private String   mWatchdogPkg           = null;
     private int      mWatchdogPid           = -1;  // cached PID — avoids full /proc scan each tick
     private boolean  mWatchdogEverHadPid    = false; // true once we confirmed a valid PID
@@ -300,6 +297,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {
                 st.setDefaultBufferSize(w, h);
+                // Release the old Surface before creating a new one to avoid a native
+                // resource leak (Surface wraps an ANativeWindow whose refcount must reach 0).
+                if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
                 mMirrorSurface = new Surface(st);
                 attemptStartMirrorWithCurrentHolder();
             }
@@ -856,21 +856,6 @@ public class MainActivity extends AppCompatActivity
     /** Removes the importance listener and stops the /proc watchdog. */
     private void stopTrackingApp() {
         stopWatchdog();
-        if (mUidImportanceListener == null) return;
-        try {
-            android.app.ActivityManager am =
-                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
-            Class<?> listenerIface = Class.forName(
-                    "android.app.ActivityManager$OnUidImportanceListener");
-            java.lang.reflect.Method removeMethod =
-                    android.app.ActivityManager.class.getMethod(
-                            "removeOnUidImportanceListener", listenerIface);
-            removeMethod.invoke(am, mUidImportanceListener);
-        } catch (Exception e) {
-            AppLogger.w(TAG, "stopTrackingApp: " + e.getMessage());
-        } finally {
-            mUidImportanceListener = null;
-        }
     }
 
     /**
@@ -968,16 +953,16 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Finds the main PID of packageName by scanning /proc/[pid]/cmdline.
-     * Uses the same /proc filesystem as the watchdog tick — no Android API, no permissions.
-     * On Android 10+ (targetSdk=29), getRunningAppProcesses() only returns our own process
-     * for third-party apps (privacy restriction since API 26), so /proc is the only reliable way.
-     * Returns -1 only if /proc is unreadable (should never happen on Android).
+     * Finds the main PID of packageName by scanning /proc/[pid]/cmdline in a single pass.
+     * Exact match (main process) is returned immediately; sub-processes (:remote, :ui) are
+     * kept as a fallback and returned only if no exact match exists.
+     * Returns -1 if not found or /proc is unreadable.
      */
     private int findPid(String packageName) {
         java.io.File procDir = new java.io.File("/proc");
         String[] entries = procDir.list();
         if (entries == null) return -1;
+        int subProcessPid = -1; // fallback: first sub-process found
         for (String entry : entries) {
             boolean isNumeric = true;
             for (int i = 0; i < entry.length(); i++) {
@@ -996,38 +981,11 @@ public class MainActivity extends AppCompatActivity
                         if (buf[i] == 0) { end = i; break; }
                     }
                     String cmdline = new String(buf, 0, end);
-                    // Exact match on main process (packageName == processName)
-                    // or sub-process (e.g. "com.pkg:service") — both start with packageName
                     if (cmdline.equals(packageName)) {
                         return Integer.parseInt(entry); // exact main process — prefer this
                     }
-                }
-            } catch (Exception ignore) {
-            } finally {
-                if (fis != null) try { fis.close(); } catch (Exception ignore) {}
-            }
-        }
-        // Second pass: accept sub-processes (e.g. :remote, :ui) if main not found
-        for (String entry : entries) {
-            boolean isNumeric = true;
-            for (int i = 0; i < entry.length(); i++) {
-                if (entry.charAt(i) < '0' || entry.charAt(i) > '9') { isNumeric = false; break; }
-            }
-            if (!isNumeric) continue;
-            java.io.File cmdlineFile = new java.io.File("/proc/" + entry + "/cmdline");
-            java.io.FileInputStream fis = null;
-            try {
-                fis = new java.io.FileInputStream(cmdlineFile);
-                byte[] buf = new byte[packageName.length() + 2];
-                int read = fis.read(buf);
-                if (read > 0) {
-                    int end = read;
-                    for (int i = 0; i < read; i++) {
-                        if (buf[i] == 0) { end = i; break; }
-                    }
-                    String cmdline = new String(buf, 0, end);
-                    if (cmdline.startsWith(packageName)) {
-                        return Integer.parseInt(entry);
+                    if (subProcessPid == -1 && cmdline.startsWith(packageName)) {
+                        subProcessPid = Integer.parseInt(entry); // sub-process fallback
                     }
                 }
             } catch (Exception ignore) {
@@ -1035,7 +993,7 @@ public class MainActivity extends AppCompatActivity
                 if (fis != null) try { fis.close(); } catch (Exception ignore) {}
             }
         }
-        return -1;
+        return subProcessPid; // -1 if not found at all
     }
 
     /**
@@ -1123,8 +1081,7 @@ public class MainActivity extends AppCompatActivity
     private void onExternalAppKill() {
         if (mCurrentDashboardPkg == null) return; // already cleared by another path
         AppLogger.i(TAG, "App tué externalement: " + mCurrentDashboardPkg);
-        stopWatchdog();
-        stopTrackingApp();
+        stopTrackingApp(); // also calls stopWatchdog() internally
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
@@ -1182,7 +1139,7 @@ public class MainActivity extends AppCompatActivity
                 mClusterService.getMirrorManager().stopMirrorViaDaemon(mDaemonBinder);
             }
             // Local cleanup (direct SurfaceControl token, residual VirtualDisplay)
-            mClusterService.getMirrorManager().stopMirror(this);
+            mClusterService.getMirrorManager().stopMirror();
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
         }
         stopScreenshotLoop();
@@ -1458,43 +1415,6 @@ public class MainActivity extends AppCompatActivity
             }
         });
         popup.show();
-    }
-
-    /** Dialog for selecting the cluster type (screen size). */
-    private void showClusterTypeSettings() {
-        final int[] cmds    = { 29, 30, 31 };
-        final String[] labels = {
-            getString(R.string.cluster_label_88),
-            getString(R.string.cluster_label_123),
-            getString(R.string.cluster_label_1025)
-        };
-        int current = getClusterTypeCmd();
-        int checked = 1; // default 12.3"
-        for (int i = 0; i < cmds.length; i++) {
-            if (cmds[i] == current) { checked = i; break; }
-        }
-        final int[] selected = { checked };
-        new AlertDialog.Builder(this)
-            .setTitle(getString(R.string.dialog_cluster_type_title))
-            .setSingleChoiceItems(labels, checked, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    selected[0] = which;
-                }
-            })
-            .setPositiveButton(getString(R.string.btn_ok), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    int cmd = cmds[selected[0]];
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .edit().putInt(PREF_CLUSTER_TYPE, cmd).apply();
-                    Toast.makeText(MainActivity.this,
-                            getString(R.string.toast_cluster_type, labels[selected[0]]), Toast.LENGTH_SHORT).show();
-                    AppLogger.log(TAG, "Cluster type → sendInfo cmd=" + cmd);
-                }
-            })
-            .setNegativeButton(getString(R.string.btn_cancel), null)
-            .show();
     }
 
     private void restoreBydDashboard() {
