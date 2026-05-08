@@ -50,7 +50,9 @@ public class DashCastDaemon {
             ImageReader reader = null;
             VirtualDisplay vd = null;
             try {
-                reader = ImageReader.newInstance(1920, 720, PixelFormat.RGBA_8888, 2);
+                @SuppressWarnings("WrongConstant")
+                ImageReader r = ImageReader.newInstance(1920, 720, PixelFormat.RGBA_8888, 2);
+                reader = r;
                 System.out.println("[DashCastDaemon] Fake Surface created.");
 
                 vd = tryCreateVirtualDisplay(systemContext, reader);

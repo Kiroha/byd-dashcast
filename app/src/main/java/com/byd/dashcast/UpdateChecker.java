@@ -254,6 +254,7 @@ public class UpdateChecker {
             // FLAG_IMMUTABLE must NOT be used here: PackageInstaller needs to inject
             // EXTRA_STATUS and EXTRA_STATUS_MESSAGE into the intent when delivering the result.
             // With FLAG_IMMUTABLE those extras are silently dropped → status=1/null.
+            @SuppressWarnings("UnspecifiedImmutableFlag")
             PendingIntent pi = PendingIntent.getBroadcast(
                     context, sessionId, resultIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT);

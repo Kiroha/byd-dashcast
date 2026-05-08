@@ -36,6 +36,7 @@ public class FloatingRemoteButton extends Service {
             "com.byd.dashcast.action.SHOW_MIRROR";
 
     // ── Static helpers so MainActivity can show/hide without a Service reference ──
+    @android.annotation.SuppressLint("StaticFieldLeak")
     private static FloatingRemoteButton sInstance;
 
     public static void show() {
