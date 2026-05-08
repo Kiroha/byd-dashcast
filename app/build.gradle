@@ -19,8 +19,8 @@ android {
         applicationId "com.byd.myapp"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 43
-        versionName "0.1.42-alpha"
+        versionCode 44
+        versionName "0.1.43-alpha"
     }
 
     buildTypes {
