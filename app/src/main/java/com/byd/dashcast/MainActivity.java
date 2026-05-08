@@ -1093,8 +1093,12 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onInstalling() {
-                if (pbHolder[0] != null) pbHolder[0].setIndeterminate(true);
-                if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_installing));
+                // Dismiss the dialog — PackageInstaller takes over from here.
+                // InstallResultReceiver handles success (app restarts) and failure (Toast).
+                if (dlgHolder[0] != null) {
+                    dlgHolder[0].dismiss();
+                    dlgHolder[0] = null;
+                }
             }
 
             @Override

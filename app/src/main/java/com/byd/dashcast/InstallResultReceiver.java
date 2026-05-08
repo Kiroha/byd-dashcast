@@ -31,8 +31,9 @@ public class InstallResultReceiver extends BroadcastReceiver {
                 context.startActivity(confirmIntent);
             }
         } else {
+            String displayMsg = (message != null && !message.isEmpty()) ? message : "code=" + status;
             AppLogger.e(TAG, "OTA install failed: status=" + status + " msg=" + message);
-            Toast.makeText(context, "Update install failed: " + message,
+            Toast.makeText(context, "Update install failed: " + displayMsg,
                     Toast.LENGTH_LONG).show();
         }
     }
