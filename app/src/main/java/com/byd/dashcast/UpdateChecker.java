@@ -251,9 +251,12 @@ public class UpdateChecker {
                 session.fsync(out);
             }
             Intent resultIntent = new Intent(context, InstallResultReceiver.class);
+            // FLAG_IMMUTABLE must NOT be used here: PackageInstaller needs to inject
+            // EXTRA_STATUS and EXTRA_STATUS_MESSAGE into the intent when delivering the result.
+            // With FLAG_IMMUTABLE those extras are silently dropped → status=1/null.
             PendingIntent pi = PendingIntent.getBroadcast(
                     context, sessionId, resultIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    PendingIntent.FLAG_UPDATE_CURRENT);
             session.commit(pi.getIntentSender());
             AppLogger.i(TAG, "PackageInstaller session committed, id=" + sessionId);
         } catch (Exception e) {
