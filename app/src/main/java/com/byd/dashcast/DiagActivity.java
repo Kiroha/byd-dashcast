@@ -779,9 +779,10 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── Étape 1 : AutoContainerManager Java direct ──\n");
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try {
-                Object acm = getSystemService("auto_container");
+                @SuppressWarnings("WrongConstant") Object acm = getSystemService("auto_container");
                 if (acm == null) {
-                    acm = getSystemService("Auto_container");
+                    @SuppressWarnings("WrongConstant") Object tmp = getSystemService("Auto_container");
+                    acm = tmp;
                 }
                 if (acm == null) {
                     // Fallback via reflection sur AutoContainerManager.getAutoContainerManager()
