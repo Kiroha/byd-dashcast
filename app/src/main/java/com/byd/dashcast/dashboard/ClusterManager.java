@@ -1,11 +1,11 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.Looper;
-import com.byd.myapp.AdbLocalClient;
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.AppLogger;
 import android.view.Display;
 
 /**

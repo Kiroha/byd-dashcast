@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -70,7 +70,8 @@ public class AdbLocalClient {
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 AppLogger.e(TAG, "executeShellWithResult ERROR: " + command, e);
-                if (callback != null) callback.onError(e.getMessage());
+                if (callback != null) callback.onError(
+                        e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             }
         });
     }
@@ -152,7 +153,7 @@ public class AdbLocalClient {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     // Kill existing daemon if present.
-                    // IMPORTANT: the daemon renames itself to "com.byd.myapp.mirrordaemon" via
+                    // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
                     String psOut = safeOut(dadb.shell(
                             "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
@@ -174,7 +175,7 @@ public class AdbLocalClient {
                     String cmd = "setsid sh -c 'CLASSPATH=" + apkPath
                             + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
                             + " --nice-name=byd.mirror.daemon"
-                            + " com.byd.myapp.daemon.MirrorDaemon"
+                            + " com.byd.dashcast.daemon.MirrorDaemon"
                             + " </dev/null >" + logPath + " 2>&1' &"
                             + " ln -sf " + logPath + " " + latestLink;
                     dadb.shell(cmd);
@@ -199,10 +200,7 @@ public class AdbLocalClient {
         });
     }
 
-    // Sniffer grep patterns: [x] trick to avoid auto-matching.
-    // The sniffer spawns two background processes: logcat (capture) + sh/sleep (snapshots).
-    private static final String SNIFFER_GREP =
-            "grep -E '[l]ogcat -v threadtime|[s]leep 30'";
+    // Sniffer kill command: removes the tag file and terminates all background processes.
     public static final String SNIFFER_KILL_CMD =
             "rm -f /data/local/tmp/.sniffer_run; "
             + "for p in $(ps -A | awk '/[s]leep 15/ {print $2}; /[s]leep 5/ {print $2}; /[l]ogcat -v threadtime/ {print $2}; /[l]ogcat -b events/ {print $2}'); do kill -9 $p 2>/dev/null; done; "
@@ -630,7 +628,7 @@ public class AdbLocalClient {
      *   2. sendInfo(1000,  0)            — refresh Qt stream                   → wait 6s
      *   3. sendInfo(1000, screenSizeCmd) — switch Qt to the correct resolution
      *
-     * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal U-DMI), 31=10.25" (Seal EU)
+     * @param screenSizeCmd  size code: 29=8.8" (Atto 3), 30=12.3" (Seal EU — CONFIRMED), 31=10.25" (Seal U-DMI)
      */
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
@@ -723,10 +721,10 @@ public class AdbLocalClient {
      *
      * Output logged (AppLogger INFO, tag "SigDump"):
      *   - ro.build.tags / ro.build.version.security_patch
-     *   - dumpsys package com.byd.myapp | grep -E "Signature|signatures|version"
+     *   - dumpsys package com.byd.dashcast | grep -E "Signature|signatures|version"
      *   - dumpsys package com.xdja.containerservice | grep -E "Signature|signatures"
-     *   - pm dump com.byd.myapp | grep -E "INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS"
-     *   - dumpsys package com.byd.myapp | grep -A 1 "install permissions:"
+     *   - pm dump com.byd.dashcast | grep -E "INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS"
+     *   - dumpsys package com.byd.dashcast | grep -A 1 "install permissions:"
      *   - id (current shell uid)
      */
     public static void dumpSignatureAndPermissions(final Context context) {
@@ -1031,55 +1029,6 @@ public class AdbLocalClient {
     }
 
     /**
-     * Launches a third-party app via MirrorDaemon (uid=2000) with explicit FREEFORM bounds.
-     */
-    public static void launchDirectWithBounds(final Context context,
-            final String targetPackage, final int displayId,
-            final int left, final int top, final int right, final int bottom,
-            final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try {
-                    android.content.pm.PackageManager pm = context.getPackageManager();
-                    android.content.Intent li = pm.getLaunchIntentForPackage(targetPackage);
-                    if (li == null) {
-                        try {
-                            android.content.pm.PackageInfo pi = pm.getPackageInfo(targetPackage, android.content.pm.PackageManager.GET_ACTIVITIES);
-                            if (pi.activities != null && pi.activities.length > 0) {
-                                li = new android.content.Intent();
-                                li.setComponent(new android.content.ComponentName(targetPackage, pi.activities[0].name));
-                            }
-                        } catch (Exception e) {
-                            AppLogger.d(TAG, "getPackageInfo fallback failed for " + targetPackage + ": " + e.getMessage());
-                        }
-                    }
-                    if (li == null || li.getComponent() == null) {
-                        callback.onError("No activity found for " + targetPackage);
-                        return;
-                    }
-                    
-                    AppLogger.i(TAG, "Broadcast daemon_launch_bounds pour " + targetPackage);
-                    android.content.Intent intent = new android.content.Intent("com.byd.myapp.MIRROR_DAEMON_LAUNCH");
-                    intent.putExtra("pkg", li.getComponent().getPackageName());
-                    intent.putExtra("cls", li.getComponent().getClassName());
-                    intent.putExtra("displayId", displayId);
-                    intent.putExtra("bounds_l", left);
-                    intent.putExtra("bounds_t", top);
-                    intent.putExtra("bounds_r", right);
-                    intent.putExtra("bounds_b", bottom);
-                    context.sendBroadcast(intent);
-                    
-                    callback.onSuccess("Bounds broadcast sent to Daemon.");
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "launchDirectWithBounds failed", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-trampoline-bounds-thread
-    }
-
-    /**
      * Captures a frame of the cluster display via screencap (uid=2000 = guaranteed SurfaceFlinger access).
      * Saves to the app's external cache dir; the app can read it directly (no
      * READ_EXTERNAL_STORAGE required for the package-specific directory o 29).
@@ -1148,8 +1097,7 @@ public class AdbLocalClient {
                     }
 
                     boolean matched = !actual.equals("(not found)")
-                            && actual.contains(expectedBounds.replace(",", ",")
-                                    .replace(",", ","));
+                            && actual.contains(expectedBounds);
                     // Broader check: look for each component of expectedBounds in the line
                     if (!matched && !actual.equals("(not found)")) {
                         String[] parts = expectedBounds.split(",");

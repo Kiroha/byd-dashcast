@@ -52,7 +52,6 @@
     <string name="toast_app_stopped">%1$s тоқтатылды</string>
     <string name="toast_kill_failed">Аяқтау сәтсіз: %1$s</string>
     <string name="toast_no_app_cluster">Кластерде қолданба жоқ</string>
-    <string name="toast_cluster_type">Кластер: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Баптаулар</string>
@@ -60,21 +59,21 @@
     <string name="menu_system_report">📋 Жүйе есебі</string>
     <string name="menu_log">📜 Журналдар</string>
     <string name="menu_language">🌐 Тіл</string>
+    <string name="menu_check_updates">🔄 Жаңартуларды тексеру</string>
+    <string name="settings_updates_title">Жаңартулар</string>
+    <string name="settings_prerelease_label">Алдын нұсқаларды қосу (alpha/beta)</string>
+    <string name="settings_prerelease_hint">Ресми шығарылымға дейін сынақ нұсқаларды алу</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Кластер түрі</string>
     <string name="cluster_label_88">8,8 дюйм  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйм (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Бас тарту</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Толық экран</string>
     <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
     <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
 
-    <string name="btn_send">Жіберу</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>
@@ -217,4 +216,15 @@
     <string name="settings_btn_apply_overscan">Қазір қолдану</string>
     <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Қолданылды — С/О: %1$d px, Ж/Т: %2$d px</string>
+    <string name="ota_dialog_title">Жаңарту қол жетімді</string>
+    <string name="ota_installing">Орнатылуда…</string>
+    <string name="ota_up_to_date">DashCast жаңартылған</string>
+    <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_es">🇪🇸  Español</string>
+    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
+    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. No visible effect on Seal EU (2D cluster).</string>
+    <string name="diag_adas_initial">–</string>
+    <string name="diag_adas_sending">Sending cmd %1$d2026</string>
+    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
+    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
 </resources>

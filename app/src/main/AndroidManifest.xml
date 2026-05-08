@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.byd.myapp">
+    package="com.byd.dashcast">
 
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
@@ -57,6 +57,12 @@
     <!-- Tableau de bord -->
     <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_COMMON"/>
     <uses-permission android:name="android.permission.BYDAUTO_INSTRUMENT_GET"/>
+
+    <!-- OTA update: install APK packages -->
+    <!-- REQUEST_INSTALL_PACKAGES: required on API 26+ to install APKs -->
+    <!-- INSTALL_PACKAGES: signature permission — granted via platform.keystore → silent install -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES"/>
 
     <!-- Lighting -->
     <uses-permission android:name="android.permission.BYDAUTO_LIGHT_COMMON"/>
@@ -131,18 +137,13 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- Trampoline display 1 : permet de lancer une app tierce sur le cluster
-             en passant par notre propre uid (isCallerAllowedToLaunchOnDisplay
-             retourne true quand targetUid == callingUid).
-             EXPORTED=TRUE : le lancement se fait via ADB shell uid=2000
-             which holds INTERNAL_SYSTEM_WINDOW in platform.xml on this ROM.
-             C'est exactement le pattern qui fonctionnait le 12 avril avec
-             BYDDashboardActivity (aussi exported=true). -->
+        <!-- Trampoline display 1 — NEUTRALIZED (v0.1.41+): finishes immediately, launches nothing.
+             exported=false: no external component needs to launch it. -->
         <activity
             android:name=".dashboard.ClusterTrampolineActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="standard"
-            android:taskAffinity="com.byd.myapp.cluster"
+            android:taskAffinity="com.byd.dashcast.cluster"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
 
@@ -163,6 +164,11 @@
             android:name=".FloatingRemoteButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
+
+        <!-- OTA: receives PackageInstaller session result -->
+        <receiver
+            android:name=".InstallResultReceiver"
+            android:exported="false"/>
 
         <!-- FileProvider : partage de fichiers .log avec les apps externes (email, messagerie…) -->
         <provider

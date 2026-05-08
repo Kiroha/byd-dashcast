@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.Context;
 import android.content.res.Configuration;

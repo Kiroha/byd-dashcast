@@ -1,10 +1,10 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
-import com.byd.myapp.AdbLocalClient;
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.AppLogger;
 
 /**
  * DashboardDisplayHelper — detects the secondary display (instrument cluster).
@@ -108,7 +108,7 @@ public class DashboardDisplayHelper {
         // Stopping it would destroy the PRESENTATION VirtualDisplay for the entire Android session.
 
         // Close projection mode via sendInfo(1000, 18) = stop projection + sendInfo(1000, 0) = refresh Qt.
-        // Sent via ADB relay (uid=2000) because com.byd.myapp is blocked by Binder SecurityException.
+        // Sent via ADB relay (uid=2000) because com.byd.dashcast is blocked by Binder SecurityException.
         // Chained: cmd=18 first, then cmd=0 in the callback to guarantee execution order.
         AdbLocalClient.sendInfo(mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",
             new AdbLocalClient.Callback() {

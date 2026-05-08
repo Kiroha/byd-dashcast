@@ -1,10 +1,11 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -33,7 +34,9 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_INSET_V = "overscan_inset_v";
     public static final int    DEFAULT_INSET_H = 80;
     public static final int    DEFAULT_INSET_V = 50;
-
+    // ── OTA pre-release ───────────────────────────────────────────────────────────────
+    public static final String PREF_OTA_PRERELEASE = "ota_include_prerelease";
+    public static final boolean DEFAULT_OTA_PRERELEASE = false;
     // ── Views ────────────────────────────────────────────────────────────────
     private RadioGroup  rgClusterType;
     private SeekBar     sbInsetH;
@@ -43,7 +46,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnApply;
     private Button      btnReset;
     private TextView    tvResult;
-
+    private CheckBox    cbPrerelease;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,6 +82,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnApply      = findViewById(R.id.btn_apply_overscan);
         btnReset      = findViewById(R.id.btn_reset_overscan);
         tvResult      = findViewById(R.id.tv_overscan_result);
+        cbPrerelease  = findViewById(R.id.cb_prerelease);
     }
 
     private void loadPreferences() {
@@ -99,6 +103,9 @@ public class SettingsActivity extends AppCompatActivity {
         sbInsetV.setProgress(v);
         tvInsetHValue.setText(h + " px");
         tvInsetVValue.setText(v + " px");
+
+        // Pre-release toggle
+        cbPrerelease.setChecked(prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE));
     }
 
     private void wireListeners() {
@@ -153,6 +160,13 @@ public class SettingsActivity extends AppCompatActivity {
                 saveInsets(DEFAULT_INSET_H, DEFAULT_INSET_V);
                 applyOverscan();
             }
+        });
+
+        // Pre-release checkbox
+        cbPrerelease.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_OTA_PRERELEASE, isChecked).apply();
+            AppLogger.i("SettingsActivity", "ota_include_prerelease=" + isChecked);
         });
     }
 

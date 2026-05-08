@@ -1,4 +1,4 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.app.ActivityOptions;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
 
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AppLogger;
 
 import java.lang.reflect.Method;
 
@@ -107,7 +107,7 @@ public class DashboardLauncher {
                     targetDisplay.getRealSize(size);
                     AppLogger.i(TAG, "getRealSize display " + displayId + " → " + size.x + "×" + size.y);
                 } else {
-                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×1080");
+                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×720");
                 }
                 setLB.invoke(options, new Rect(0, 0, size.x, size.y));
                 AppLogger.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") applied");

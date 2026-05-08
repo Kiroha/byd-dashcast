@@ -214,5 +214,44 @@
 
         </LinearLayout>
 
+        <!-- ══ SECTION 3 : MISES À JOUR ══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_updates_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp"/>
+
+            <CheckBox
+                android:id="@+id/cb_prerelease"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_prerelease_label"
+                android:textSize="14sp"
+                android:padding="6dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_prerelease_hint"
+                android:textSize="12sp"
+                android:textColor="#888888"
+                android:layout_marginTop="2dp"
+                android:layout_marginStart="36dp"/>
+
+        </LinearLayout>
+
     </LinearLayout>
 </ScrollView>
