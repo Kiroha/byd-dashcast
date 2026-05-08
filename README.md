@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![API 29](https://img.shields.io/badge/API-29%20(Android%2010)-green.svg)](https://developer.android.com/about/versions/10)
-[![Latest Release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?label=stable&color=blue)](https://github.com/Kiroha/byd-dashcast/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?label=beta&color=blue)](https://github.com/Kiroha/byd-dashcast/releases/latest)
 [![Pre-release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?include_prereleases&label=pre-release&color=orange)](https://github.com/Kiroha/byd-dashcast/releases)
 
 Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
@@ -16,15 +16,21 @@ BYD APIs.
 > **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F) — Android 10 (API 29)
 
 > [!WARNING]
-> **Alpha software** — This project is in early alpha. Expect bugs, incomplete features,
-> and breaking changes between releases. Use at your own risk.
+> **Beta software** — This project is in beta. Core features work but some areas (split screen, edge cases) are still being refined. Use at your own risk.
 > The authors are not responsible for any damage to your vehicle's infotainment system.
 
 > [!IMPORTANT]
-> **v0.1.44+ breaking change**: The package name has been renamed from `com.byd.myapp` to
-> `com.byd.dashcast`. You **must uninstall** the previous version (v0.1.40 and earlier)
-> before installing the latest pre-release. Android treats a different package as a
-> completely separate app.
+> **v0.2.0 breaking change — uninstall required**: If you have any version prior to v0.2.0 installed
+> (any alpha, including v0.1.44), you **must uninstall it first** before installing v0.2.0-beta.
+> Two reasons:
+> 1. The package was renamed from `com.byd.myapp` → `com.byd.dashcast` — Android treats them as separate apps.
+> 2. Android blocks downgrades and cross-package upgrades without uninstall.
+>
+> ```bash
+> adb uninstall com.byd.myapp     # remove old alpha
+> adb uninstall com.byd.dashcast  # remove any previous beta
+> adb install DashCast-v0.2.0-beta-debug.apk
+> ```
 
 ---
 
@@ -195,27 +201,39 @@ See [Build requirements](#build-requirements) below.
 
 ## Installation
 
-1. Download the APK from [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases):
-   - **Stable**: [v0.1.40-alpha](https://github.com/Kiroha/byd-dashcast/releases/tag/v0.1.40-alpha) — latest tested release
-   - **Pre-release**: [v0.1.42-alpha](https://github.com/Kiroha/byd-dashcast/releases/tag/v0.1.42-alpha) — latest code (27 sanity fixes, OTA update feature)
-2. Sideload onto the infotainment unit:
+1. Download the latest APK from [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases/latest):
+   - **Beta** (recommended): `DashCast-v0.2.0-beta-debug.apk`
+   - **Pre-release** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
+
+2. **Uninstall any previous version first** (see breaking change notice above):
+```bash
+adb uninstall com.byd.myapp     # if coming from any alpha
+adb uninstall com.byd.dashcast  # if coming from a previous beta
+```
+
+3. Sideload onto the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-# Stable:
-adb install -r DashCast-v0.1.40-alpha-debug.apk
-# Or pre-release:
-adb install -r DashCast-v0.1.42-alpha-debug.apk
+adb install DashCast-v0.2.0-beta-debug.apk
 ```
-3. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
-4. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
+
+4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
+5. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
 
    > On DiLink 3.0 with `platform.keystore` signing, these permissions are typically pre-granted by the ROM at install time and TEST 1 is not required.
 
 > If you don't have the car's IP, the app can also be installed via USB when ADB USB debugging is enabled (developer options).
 
+### OTA updates (v0.2.0+)
+
+Once v0.2.0-beta is installed, future updates are automatic:
+- On every launch, DashCast checks GitHub Releases for a newer version
+- A download progress dialog appears, then the system install prompt
+- Enable **Settings → Pre-release** to also receive alpha builds between beta releases
+
 ---
 
-## Known issues (alpha)
+## Known issues (beta)
 
 - **Reliability**: The cluster activation sequence may fail on the first attempt — retry
 - **Mirror touch (first launch)**: Touch input on the mirror does not work on the very first run. Force-stop the app and relaunch it — touch will work correctly from the second start onwards
