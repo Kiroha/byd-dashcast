@@ -20,6 +20,12 @@ BYD APIs.
 > and breaking changes between releases. Use at your own risk.
 > The authors are not responsible for any damage to your vehicle's infotainment system.
 
+> [!IMPORTANT]
+> **v0.1.44+ breaking change**: The package name has been renamed from `com.byd.myapp` to
+> `com.byd.dashcast`. You **must uninstall** the previous version (v0.1.40 and earlier)
+> before installing the latest pre-release. Android treats a different package as a
+> completely separate app.
+
 ---
 
 ## Features
