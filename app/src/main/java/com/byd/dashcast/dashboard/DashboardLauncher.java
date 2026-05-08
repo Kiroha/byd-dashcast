@@ -1,4 +1,4 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.app.ActivityOptions;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
 
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AppLogger;
 
 import java.lang.reflect.Method;
 

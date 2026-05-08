@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -33,7 +33,7 @@ public class FloatingRemoteButton extends Service {
 
     /** Broadcast action sent to MainActivity to open the mirror panel. */
     public static final String ACTION_SHOW_MIRROR =
-            "com.byd.myapp.action.SHOW_MIRROR";
+            "com.byd.dashcast.action.SHOW_MIRROR";
 
     // ── Static helpers so MainActivity can show/hide without a Service reference ──
     private static FloatingRemoteButton sInstance;

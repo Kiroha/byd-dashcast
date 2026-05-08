@@ -1,11 +1,11 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.content.Context;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.SystemClock;
 import android.view.Display;
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AppLogger;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -136,9 +136,9 @@ public class ClusterInputForwarder {
                         now, now, action, 1, props, coords,
                         0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
                 Parcel data = Parcel.obtain();
-                data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
+                data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
                 data.writeParcelable(ev, 0);
-                mDaemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
+                mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
                         data, null, android.os.IBinder.FLAG_ONEWAY);
                 data.recycle();
                 ev.recycle();
@@ -197,9 +197,9 @@ public class ClusterInputForwarder {
                 KeyEvent up   = new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0);
                 for (KeyEvent kev : new KeyEvent[]{down, up}) {
                     Parcel data = Parcel.obtain();
-                    data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
+                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
                     data.writeParcelable(kev, 0);
-                    mDaemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
                             data, null, android.os.IBinder.FLAG_ONEWAY);
                     data.recycle();
                 }

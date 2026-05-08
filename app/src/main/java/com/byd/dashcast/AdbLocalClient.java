@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -153,7 +153,7 @@ public class AdbLocalClient {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
                     // Kill existing daemon if present.
-                    // IMPORTANT: the daemon renames itself to "com.byd.myapp.mirrordaemon" via
+                    // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
                     String psOut = safeOut(dadb.shell(
                             "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
@@ -175,7 +175,7 @@ public class AdbLocalClient {
                     String cmd = "setsid sh -c 'CLASSPATH=" + apkPath
                             + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
                             + " --nice-name=byd.mirror.daemon"
-                            + " com.byd.myapp.daemon.MirrorDaemon"
+                            + " com.byd.dashcast.daemon.MirrorDaemon"
                             + " </dev/null >" + logPath + " 2>&1' &"
                             + " ln -sf " + logPath + " " + latestLink;
                     dadb.shell(cmd);
@@ -721,10 +721,10 @@ public class AdbLocalClient {
      *
      * Output logged (AppLogger INFO, tag "SigDump"):
      *   - ro.build.tags / ro.build.version.security_patch
-     *   - dumpsys package com.byd.myapp | grep -E "Signature|signatures|version"
+     *   - dumpsys package com.byd.dashcast | grep -E "Signature|signatures|version"
      *   - dumpsys package com.xdja.containerservice | grep -E "Signature|signatures"
-     *   - pm dump com.byd.myapp | grep -E "INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS"
-     *   - dumpsys package com.byd.myapp | grep -A 1 "install permissions:"
+     *   - pm dump com.byd.dashcast | grep -E "INTERNAL_SYSTEM_WINDOW|MANAGE_ACTIVITY_STACKS|INJECT_EVENTS"
+     *   - dumpsys package com.byd.dashcast | grep -A 1 "install permissions:"
      *   - id (current shell uid)
      */
     public static void dumpSignatureAndPermissions(final Context context) {

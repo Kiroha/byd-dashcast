@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -11,10 +11,10 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import android.view.Display;
 
-import com.byd.myapp.dashboard.ClusterInputForwarder;
-import com.byd.myapp.dashboard.ClusterMirrorManager;
-import com.byd.myapp.dashboard.DashboardDisplayHelper;
-import com.byd.myapp.dashboard.DashboardLauncher;
+import com.byd.dashcast.dashboard.ClusterInputForwarder;
+import com.byd.dashcast.dashboard.ClusterMirrorManager;
+import com.byd.dashcast.dashboard.DashboardDisplayHelper;
+import com.byd.dashcast.dashboard.DashboardLauncher;
 
 /**
  * ClusterService — Foreground Service that maintains projection on the cluster

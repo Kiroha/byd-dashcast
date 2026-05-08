@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
@@ -725,7 +725,7 @@ public class DiagActivity extends AppCompatActivity {
 
         try {
             String apkPath = getPackageManager().getApplicationInfo(getPackageName(), 0).sourceDir;
-            String cmd = "app_process -Djava.class.path=" + apkPath + " /system/bin com.byd.myapp.dashboard.DashCastDaemon";
+            String cmd = "app_process -Djava.class.path=" + apkPath + " /system/bin com.byd.dashcast.dashboard.DashCastDaemon";
             AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
                 @Override
                 public void onSuccess(final String report) {

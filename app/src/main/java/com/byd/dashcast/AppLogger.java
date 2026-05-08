@@ -1,11 +1,11 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
 
-import com.byd.myapp.R;
+import com.byd.dashcast.R;
 
 import androidx.core.content.FileProvider;
 
@@ -190,7 +190,7 @@ public class AppLogger {
 
     /**
      * Writes the log buffer to a timestamped .log file in getExternalFilesDir().
-     * Retrievable via: adb pull /sdcard/Android/data/com.byd.myapp/files/
+     * Retrievable via: adb pull /sdcard/Android/data/com.byd.dashcast/files/
      * @return the created File, or null on error
      */
     public static File saveToFile(Context context) {

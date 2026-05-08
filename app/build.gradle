@@ -16,11 +16,11 @@ android {
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
     defaultConfig {
-        applicationId "com.byd.myapp"
+        applicationId "com.byd.dashcast"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 44
-        versionName "0.1.43-alpha"
+        versionCode 45
+        versionName "0.1.44-alpha"
     }
 
     buildTypes {

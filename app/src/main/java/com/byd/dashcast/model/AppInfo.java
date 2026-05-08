@@ -1,4 +1,4 @@
-package com.byd.myapp.model;
+package com.byd.dashcast.model;
 
 import android.graphics.drawable.Drawable;
 

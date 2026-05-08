@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.byd.myapp">
+    package="com.byd.dashcast">
 
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
@@ -143,7 +143,7 @@
             android:name=".dashboard.ClusterTrampolineActivity"
             android:exported="false"
             android:launchMode="standard"
-            android:taskAffinity="com.byd.myapp.cluster"
+            android:taskAffinity="com.byd.dashcast.cluster"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
 

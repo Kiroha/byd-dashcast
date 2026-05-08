@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.ComponentName;
 import android.content.BroadcastReceiver;
@@ -37,8 +37,8 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.byd.myapp.dashboard.DashboardLauncher;
-import com.byd.myapp.model.AppInfo;
+import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.model.AppInfo;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -189,11 +189,11 @@ public class MainActivity extends AppCompatActivity
         // Unlock hidden Android APIs (SurfaceControl, etc.)
         // Must be called before any call to ClusterMirrorManager.startMirror(this, ).
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
-        com.byd.myapp.dashboard.ClusterMirrorManager.unlockHiddenApis();
+        com.byd.dashcast.dashboard.ClusterMirrorManager.unlockHiddenApis();
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
-                new IntentFilter(com.byd.myapp.daemon.MirrorDaemon.ACTION_DAEMON_READY));
+                new IntentFilter(com.byd.dashcast.daemon.MirrorDaemon.ACTION_DAEMON_READY));
 
         // Floating 📺 mirror button — started once, visibility controlled by show()/hide()
         startService(new Intent(this, FloatingRemoteButton.class));
@@ -698,7 +698,7 @@ public class MainActivity extends AppCompatActivity
     // ---- Miroir cluster ----
 
     /** Returns the ClusterInputForwarder from the service if bound, otherwise returns null. */
-    private com.byd.myapp.dashboard.ClusterInputForwarder getInputForwarder() {
+    private com.byd.dashcast.dashboard.ClusterInputForwarder getInputForwarder() {
         if (mServiceBound && mClusterService != null) {
             return mClusterService.getInputForwarder();
         }
@@ -943,10 +943,10 @@ public class MainActivity extends AppCompatActivity
      * the offset the same way setDisplayProjection did.
      */
     private void forwardTouchFromMirror(View mirrorView, MotionEvent event) {
-        com.byd.myapp.dashboard.ClusterInputForwarder forwarder = getInputForwarder();
+        com.byd.dashcast.dashboard.ClusterInputForwarder forwarder = getInputForwarder();
         if (forwarder == null) return;
 
-        com.byd.myapp.dashboard.ClusterMirrorManager mirror =
+        com.byd.dashcast.dashboard.ClusterMirrorManager mirror =
                 mServiceBound && mClusterService != null
                         ? mClusterService.getMirrorManager() : null;
         if (mirror == null) return;

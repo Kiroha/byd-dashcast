@@ -1,9 +1,9 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.app.Activity;
 import android.os.Bundle;
 
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AppLogger;
 
 /**
  * NEUTRALIZED — kept only to avoid manifest errors.
