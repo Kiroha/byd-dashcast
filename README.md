@@ -283,7 +283,7 @@ The `app/build.gradle` signing config applies this keystore for both debug and r
 ```bash
 cd MyBYDApp   # repo folder name
 ./gradlew assembleDebug
-# APK → app/build/outputs/apk/debug/DashCast-v0.1.42-alpha-debug.apk
+# APK → app/build/outputs/apk/debug/DashCast-v0.2.0-beta-debug.apk
 ```
 
 ---

@@ -215,7 +215,6 @@
     <string name="settings_btn_reset_overscan">Скінуць (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Ужыта — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Даступна абнаўленне</string>
-    <string name="ota_installing">Усталяванне…</string>
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
