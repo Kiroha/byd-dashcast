@@ -282,11 +282,12 @@ public class MirrorDaemon {
                         new String[]{"sh", "-c",
                                 "dumpsys SurfaceFlinger 2>/dev/null"
                                 + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
-                java.io.BufferedReader br = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(p.getInputStream()));
                 StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream()))) {
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                }
                 p.waitFor();
                 Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
             } catch (Exception e) {
