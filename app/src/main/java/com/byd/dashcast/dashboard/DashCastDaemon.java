@@ -1,4 +1,4 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.content.Context;
 import android.content.ContextWrapper;

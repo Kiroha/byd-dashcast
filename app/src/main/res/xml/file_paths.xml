@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- /sdcard/Android/data/com.byd.myapp/files/ — accessible via adb pull -->
+    <!-- /sdcard/Android/data/com.byd.dashcast/files/ — accessible via adb pull -->
     <external-files-path name="logs" path="." />
     <!-- Fallback : stockage interne de l'app -->
     <files-path name="logs_internal" path="." />

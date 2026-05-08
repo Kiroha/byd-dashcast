@@ -1,4 +1,4 @@
-package com.byd.myapp.daemon;
+package com.byd.dashcast.daemon;
 
 import android.content.Context;
 import android.content.Intent;
@@ -34,11 +34,10 @@ public class MirrorDaemon {
     private static final String TAG = "MirrorDaemon";
 
     // Actions broadcast
-    public static final String ACTION_DAEMON_READY  = "com.byd.myapp.MIRROR_DAEMON_READY";
-    public static final String ACTION_DAEMON_LAUNCH = "com.byd.myapp.MIRROR_DAEMON_LAUNCH";
+    public static final String ACTION_DAEMON_READY  = "com.byd.dashcast.MIRROR_DAEMON_READY";
 
     // Interface Binder
-    public static final String DESCRIPTOR            = "com.byd.myapp.daemon.IMirrorDaemon";
+    public static final String DESCRIPTOR            = "com.byd.dashcast.daemon.IMirrorDaemon";
     public static final int    TRANSACT_MIRROR_START  = 1;
     public static final int    TRANSACT_INJECT_MOTION = 2;
     public static final int    TRANSACT_INJECT_KEY    = 3;
@@ -70,7 +69,7 @@ public class MirrorDaemon {
         out("main() start uid=" + android.os.Process.myUid());
         try {
             android.os.Process.class.getMethod("setArgV0", String.class)
-                    .invoke(null, "com.byd.myapp.mirrordaemon");
+                    .invoke(null, "com.byd.dashcast.mirrordaemon");
             out("setArgV0 OK");
         } catch (Exception ignored) {
             out("setArgV0 ignored: " + ignored.getMessage());

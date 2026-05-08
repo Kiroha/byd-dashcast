@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -8,7 +8,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.byd.myapp.model.AppInfo;
+import com.byd.dashcast.model.AppInfo;
 
 import java.util.ArrayList;
 import java.util.HashMap;

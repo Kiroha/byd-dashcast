@@ -51,7 +51,6 @@
     <string name="toast_app_stopped">%1$s detenido</string>
     <string name="toast_kill_failed">Error al detener: %1$s</string>
     <string name="toast_no_app_cluster">Ninguna app en el clúster</string>
-    <string name="toast_cluster_type">Clúster: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Configuración</string>
@@ -59,21 +58,21 @@
     <string name="menu_system_report">📋 Informe del sistema</string>
     <string name="menu_log">📜 Registros</string>
     <string name="menu_language">🌐 Idioma</string>
+    <string name="menu_check_updates">🔄 Buscar actualizaciones</string>
+    <string name="settings_updates_title">Actualizaciones</string>
+    <string name="settings_prerelease_label">Incluir versiones pre-release (alpha/beta)</string>
+    <string name="settings_prerelease_hint">Recibe compilaciones de prueba antes del lanzamiento oficial</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Tipo de clúster</string>
     <string name="cluster_label_88">8,8 pulgadas  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pulgadas (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 pulgadas (cmd=31)</string>
-    <string name="btn_ok">Aceptar</string>
-    <string name="btn_cancel">Cancelar</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Pantalla completa</string>
     <string name="split_left">⬜⬛ Izquierda (50%)</string>
     <string name="split_right">⬛⬜ Derecha (50%)</string>
 
-    <string name="btn_send">Enviar</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Registro</string>
@@ -219,4 +218,10 @@
     <string name="settings_btn_apply_overscan">Aplicar ahora</string>
     <string name="settings_btn_reset_overscan">Restablecer (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Aplicado — I/D: %1$d px, A/Ab: %2$d px</string>
+    <string name="ota_dialog_title">Actualización disponible</string>
+    <string name="ota_installing">Instalando…</string>
+    <string name="ota_up_to_date">DashCast está actualizado</string>
+    <string name="btn_lang_be">🇧🇾  Беларуская</string>
+    <string name="btn_lang_kk">🇰🇿  Қазақша</string>
+    <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
 </resources>

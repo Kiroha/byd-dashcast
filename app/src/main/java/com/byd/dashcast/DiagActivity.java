@@ -1,8 +1,6 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.os.Bundle;
-import android.os.IBinder;
-import android.view.Surface;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -10,7 +8,6 @@ import android.widget.TextView;
 import android.content.Intent;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
-import android.hardware.display.VirtualDisplay;
 
 /**
  * DiagActivity — Diagnostic tools and configuration.
@@ -728,7 +725,7 @@ public class DiagActivity extends AppCompatActivity {
 
         try {
             String apkPath = getPackageManager().getApplicationInfo(getPackageName(), 0).sourceDir;
-            String cmd = "app_process -Djava.class.path=" + apkPath + " /system/bin com.byd.myapp.dashboard.DashCastDaemon";
+            String cmd = "app_process -Djava.class.path=" + apkPath + " /system/bin com.byd.dashcast.dashboard.DashCastDaemon";
             AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
                 @Override
                 public void onSuccess(final String report) {

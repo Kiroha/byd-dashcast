@@ -1,4 +1,4 @@
-package com.byd.myapp.dashboard;
+package com.byd.dashcast.dashboard;
 
 import android.content.Context;
 import android.graphics.Point;
@@ -8,7 +8,7 @@ import android.os.Parcel;
 import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceControl;
-import com.byd.myapp.AppLogger;
+import com.byd.dashcast.AppLogger;
 
 import java.lang.reflect.Method;
 
@@ -231,7 +231,7 @@ public class ClusterMirrorManager {
         Parcel data  = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
+            data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
             data.writeInt(layerStack);
             data.writeInt(mClusterW);
             data.writeInt(mClusterH);
@@ -240,7 +240,7 @@ public class ClusterMirrorManager {
             data.writeInt(viewH);
             data.writeParcelable(targetSurface, 0);
             // Synchronous call (not FLAG_ONEWAY) → daemon reply in 'reply' parcel
-            daemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_MIRROR_START,
+            daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_START,
                     data, reply, 0);
             reply.readException();
             boolean daemonOk = reply.readInt() == 1;
@@ -270,8 +270,8 @@ public class ClusterMirrorManager {
         if (daemonBinder == null) return;
         try {
             Parcel data = Parcel.obtain();
-            data.writeInterfaceToken(com.byd.myapp.daemon.MirrorDaemon.DESCRIPTOR);
-            daemonBinder.transact(com.byd.myapp.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
+            data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+            daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
                     data, null, android.os.IBinder.FLAG_ONEWAY);
             data.recycle();
         } catch (Exception e) {
@@ -309,7 +309,7 @@ public class ClusterMirrorManager {
     /**
      * Stops the local preview (called from MainActivity.onStop).
      */
-    public void stopMirror(Context context) {
+    public void stopMirror() {
         stopPreview();
         AppLogger.i(TAG, "ClusterMirrorManager preview stopped");
     }
@@ -318,7 +318,7 @@ public class ClusterMirrorManager {
      * Releases the preview.
      * Must only be called from ClusterService.onDestroy().
      */
-    public void release(Context context) {
+    public void release() {
         stopPreview();
         AppLogger.i(TAG, "ClusterMirrorManager released");
     }

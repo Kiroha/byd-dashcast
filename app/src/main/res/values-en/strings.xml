@@ -53,7 +53,6 @@
     <string name="toast_app_stopped">%1$s stopped</string>
     <string name="toast_kill_failed">Kill failed: %1$s</string>
     <string name="toast_no_app_cluster">No app on the cluster</string>
-    <string name="toast_cluster_type">Cluster: %1$s</string>
 
     <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Settings</string>
@@ -61,21 +60,21 @@
     <string name="menu_system_report">📋 System report</string>
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Language</string>
+    <string name="menu_check_updates">🔄 Check for updates</string>
+    <string name="settings_updates_title">Updates</string>
+    <string name="settings_prerelease_label">Include pre-release builds (alpha/beta)</string>
+    <string name="settings_prerelease_hint">Receive test builds before official releases</string>
 
     <!-- MainActivity — cluster type dialog -->
-    <string name="dialog_cluster_type_title">Cluster type</string>
     <string name="cluster_label_88">8.8 inches  (cmd=29)</string>
     <string name="cluster_label_123">12.3 inches (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10.25 inches (cmd=31)</string>
-    <string name="btn_ok">OK</string>
-    <string name="btn_cancel">Cancel</string>
 
     <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Full screen</string>
     <string name="split_left">⬜⬛ Left (50%)</string>
     <string name="split_right">⬛⬜ Right (50%)</string>
 
-    <string name="btn_send">Send</string>
 
     <!-- LogActivity -->
     <string name="log_title">📋 Log</string>
@@ -223,4 +222,7 @@
     <string name="settings_btn_apply_overscan">Apply now</string>
     <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Applied — L/R: %1$d px, T/B: %2$d px</string>
+    <string name="ota_dialog_title">Update available</string>
+    <string name="ota_installing">Installing…</string>
+    <string name="ota_up_to_date">DashCast is up to date</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.byd.myapp;
+package com.byd.dashcast;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -43,8 +43,8 @@ import java.util.concurrent.Executors;
  *  - ADB TCP connectivity
  *
  * The report is saved in:
- *   /sdcard/Android/data/com.byd.myapp/files/byd_report_<date>.txt
- * Retrievable via: adb pull /sdcard/Android/data/com.byd.myapp/files/
+ *   /sdcard/Android/data/com.byd.dashcast/files/byd_report_<date>.txt
+ * Retrievable via: adb pull /sdcard/Android/data/com.byd.dashcast/files/
  */
 public class SysInfoActivity extends AppCompatActivity {
 
@@ -327,9 +327,9 @@ public class SysInfoActivity extends AppCompatActivity {
                 + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date())
                 + ".txt";
 
-        // getExternalFilesDir() = /sdcard/Android/data/com.byd.myapp/files/
+        // getExternalFilesDir() = /sdcard/Android/data/com.byd.dashcast/files/
         // Accessible without permission on API 25+, retrievable via:
-        //   adb pull /sdcard/Android/data/com.byd.myapp/files/
+        //   adb pull /sdcard/Android/data/com.byd.dashcast/files/
         File outDir = getExternalFilesDir(null);
         if (outDir == null) {
             outDir = getFilesDir(); // fallback internal storage
