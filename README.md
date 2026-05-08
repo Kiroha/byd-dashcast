@@ -1,4 +1,4 @@
-> **About the author** — I am not a professional developer, but I work in IT with a solid understanding of software development. This project was built through **vibe coding** with AI assistance (GitHub Copilot / Claude), which allowed me to ship this app despite having no prior native Android experience. The code reflects that approach: functional and goal-oriented, but with room for improvement. **Expert contributions are very welcome** — whether it's bug fixes, code review, or broader improvements to the app.
+> **About the author** — I am not a professional developer, but I work in IT with a solid understanding of software development. This project was built through **vibe coding** with AI assistance (**Claude Sonnet 4.6** and **Gemini Pro**), which allowed me to ship this app despite having no prior native Android experience. The code reflects that approach: functional and goal-oriented, but with room for improvement. **Expert contributions are very welcome** — whether it's bug fixes, code review, or broader improvements to the app. Version history is available in [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases).
 
 ---
 
@@ -6,7 +6,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![API 29](https://img.shields.io/badge/API-29%20(Android%2010)-green.svg)](https://developer.android.com/about/versions/10)
-[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-red.svg)](CHANGELOG.md)
+[![Latest Release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?label=stable&color=blue)](https://github.com/Kiroha/byd-dashcast/releases/latest)
+[![Pre-release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?include_prereleases&label=pre-release&color=orange)](https://github.com/Kiroha/byd-dashcast/releases)
 
 Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
 onto the instrument cluster display, control it via a real-time touch mirror, and diagnose
@@ -36,8 +37,9 @@ BYD APIs.
 | 9 | **🔧 Diagnostic** | 7 sections: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test (WM:4→5 + resizeTask FORCED) |
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
-| 12 | **Multilingual** | French / English / German / Italian / Turkish / Russian / Uzbek / Kazakh / Belarusian / Ukrainian, selected on first launch |
+| 12 | **Multilingual** | French / English / German / Italian / **Spanish** / Turkish / Russian / Ukrainian / **Arabic** / Uzbek / Kazakh / Belarusian (12 languages), selected on first launch |
 | 13 | **Floating overlay** | Two floating buttons: LOG (opens log) and 📺 Mirror (opens cluster mirror / returns to main screen) |
+| 14 | **OTA update** | Auto-check against GitHub Releases API, silent install via `PackageInstaller` (platform key), fallback to system dialog |
 
 ---
 
@@ -126,15 +128,16 @@ by `AutoContainerService.checkSendPermissionAndAllowType()`.
 
 ### Launching an app on the cluster
 
-`ClusterTrampolineActivity` is **exported** in the Manifest. ADB shell (uid=2000) launches
-it on `display=1` with `--windowingMode 5` (FREEFORM). Once on display 1, the trampoline
-starts the target app via `startActivity()` without `setLaunchDisplayId` — the task
-inherits the source display.
+`ClusterService` calls `startActivityViaIAM()`, which invokes
+`IActivityManager.startActivityAsUser()` via reflection with
+`ActivityOptions.setLaunchDisplayId(clusterDisplayId)` set to the cluster display.
+This requires `INTERNAL_SYSTEM_WINDOW` — granted because the APK is signed with
+`platform.keystore` (AOSP testkey, recognised as the platform cert on this ROM).
+A `Context.startActivity()` fallback is used if the IAM call fails.
 
-> **Why a trampoline?** Our APK is signed with the BYD SDK `platform.keystore`
-> (CN=Android — AOSP testkey), not with the real BYD `auto_api` key (CN=auto_api, O=比亚迪).
-> `INTERNAL_SYSTEM_WINDOW` is therefore not granted to our app (uid=10xxx). ADB shell
-> (uid=2000) holds it on this ROM → it launches our exported trampoline.
+> `ClusterTrampolineActivity` is still present in the manifest but is not exported
+> (`exported="false"`) and its body is a no-op (`finish()` immediately) — kept as
+> an emergency fallback only.
 
 ### Real-time mirror
 
@@ -186,11 +189,16 @@ See [Build requirements](#build-requirements) below.
 
 ## Installation
 
-1. Build the APK (see [Build](#build))
+1. Download the APK from [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases):
+   - **Stable**: [v0.1.40-alpha](https://github.com/Kiroha/byd-dashcast/releases/tag/v0.1.40-alpha) — latest tested release
+   - **Pre-release**: [v0.1.42-alpha](https://github.com/Kiroha/byd-dashcast/releases/tag/v0.1.42-alpha) — latest code (27 sanity fixes, OTA update feature)
 2. Sideload onto the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install -r app/build/outputs/apk/debug/DashCast-v0.1.31-alpha-debug.apk
+# Stable:
+adb install -r DashCast-v0.1.40-alpha-debug.apk
+# Or pre-release:
+adb install -r DashCast-v0.1.42-alpha-debug.apk
 ```
 3. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
 4. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
@@ -251,7 +259,7 @@ The `app/build.gradle` signing config applies this keystore for both debug and r
 ```bash
 cd MyBYDApp   # repo folder name
 ./gradlew assembleDebug
-# APK → app/build/outputs/apk/debug/DashCast-v0.1.31-alpha-debug.apk
+# APK → app/build/outputs/apk/debug/DashCast-v0.1.42-alpha-debug.apk
 ```
 
 ---
@@ -325,30 +333,6 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 ```bash
 adb pull /sdcard/Android/data/com.byd.myapp/files/  # package ID unchanged
 ```
-
----
-
-## Version history
-
-| Version | versionCode | Summary |
-|---------|-------------|--------|
-| **0.1.31-alpha** | 32 | **DiLink5 resize test (Section 7)** — WM:4→5 + resizeTask FORCED=3 via raw Binder; sanity lint fixes; CHANGELOG 0.1.8→0.1.31; docs/ HTML manuals (5 locales) for GitHub Pages — **current** |
-| **0.1.16-alpha** | 17 | Watchdog /proc fallback + PID cache + overscan tuning screen + misc UI renames |
-| **0.1.15-alpha** | 16 | Fix DashCastDaemon UID mismatch bypass |
-| **0.1.14-alpha** | 15 | Display 0 guard-rails — full security audit |
-| **0.1.13-alpha** | 14 | Long-press any result TextView → share via Telegram |
-| **0.1.12-alpha** | 13 | Mirror shortcut floating button (replaces GPS), LogActivity overflow menu entry, dead strings cleanup |
-| **0.1.11-alpha** | 12 | **Sanity checks #5→#8** — JMM volatile, dead code (~120 lines), empty catches logged, orphan imports/strings |
-| **0.1.7-alpha** | 8 | **Freedom-free** — all Freedom (com.xdja.clusterdemo) references removed, VirtualDisplay creation confirmed (sendInfo 30→16→35), fully autonomous |
-| **0.1.6-alpha** | — | DiLink 5 RE sniffer, deep dumpsys, broadcast tracking |
-| **0.1.5-alpha** | — | Stability improvements (last release with Freedom dependency) |
-| **0.1.4-alpha** | — | Fix touch offset bug in cluster mirror input forwarding |
-| **0.1.3-alpha** | — | Full i18n (FR/EN/DE/IT/TR), string externalization |
-| **0.1.2-alpha** | — | EN translation, DashCast rename, new icon — device-validated |
-| **0.1.1-alpha** | — | Bug fixes, code sanity, README improvements |
-| **0.1.0-alpha** | — | First public release — cluster mirror working (image + touch) |
-
-Full internal development history: [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
