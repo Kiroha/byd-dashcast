@@ -7,6 +7,7 @@ public class AppInfo {
     public final String appName;
     public final Drawable icon;
     public boolean isFavorite = false;
+    public boolean isAutoLaunch = false;
 
     public AppInfo(String packageName, String appName, Drawable icon) {
         this.packageName = packageName;

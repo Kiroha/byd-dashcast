@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 
 import com.byd.dashcast.model.AppInfo;
 
@@ -22,6 +24,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         void onSendToMain(AppInfo app);
         void onKillApp(AppInfo app);
         void onToggleFavorite(AppInfo app);
+        void onSetAutoLaunch(AppInfo app, boolean enable);
     }
 
     private List<AppInfo> mApps = new ArrayList<>();
@@ -127,6 +130,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         return mApps.size();
     }
 
+    public List<AppInfo> getApps() { return mApps; }
+
     AppInfo getAppAt(int position) {
         if (position >= 0 && position < mApps.size()) {
             return mApps.get(position);
@@ -141,6 +146,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final Button    btnToMain;
         final Button    btnToCluster;
         final Button    btnKill;
+        final CheckBox  cbAutoLaunch;
 
         ViewHolder(View itemView, final OnSendToDashboardListener listener, final AppListAdapter adapter) {
             super(itemView);
@@ -150,6 +156,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
             btnKill             = (Button)    itemView.findViewById(R.id.btn_kill_app);
+            cbAutoLaunch        = (CheckBox)  itemView.findViewById(R.id.cb_auto_launch);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
