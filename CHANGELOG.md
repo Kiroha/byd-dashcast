@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | **0.2.6-alpha** | 57 | **Floating Button Fix** — Fixed Smart Overlay Button spawn bug (immediate transparency and off-screen misplacement). Elevated opacity and timing logic to restore correct visibility sync. |
 | **0.2.5-alpha** | 56 | **Dark Text Fix** — Grid mode app labels corrected to Dark Gray for visibility against light backgrounds. Duplicate checkbox fixed. |
 | **0.2.4-alpha** | 55 | **Auto-Launch & Grid View** — Implemented 5-column Grid layout. Added Boot Auto-Launch exclusivity (Radio behavior) and "Favorites" persistence via Long-Press. |
@@ -18,6 +19,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | **0.2.1-beta** | 52 | **Bugfixes & Optimizations** — Resources leak fix (`try-with-resources` on MirrorDaemon), `UnspecifiedImmutableFlag` intent fix on UpdateChecker, Manifest `android:exported=true` compliance, `StaticFieldLeak` suppression. Huge storage cleanup removing old 800MB orphaned `PackageInstaller` sessions. App strings purged. |
 | **0.2.0-beta** | 51 | **OTA Update System** — Addition of the self-updating OTA mechanism (Silent update or Prompts). Transitioned project to Beta. |
 | **0.1.49-alpha** | 49 | **Consolidation (Breaking Change)** — Package ID renamed. Heavy README update (badges, ota, compatibility). Diagnostics log crashes fixed. Refined Watchdog reliability. End of the Alpha cycle. |
@@ -61,6 +63,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | 2.52 | 155 | **Mirror fully working** — TextureView (SurfaceFlinger as producer), `hardwareAccelerated=true` in manifest |
 | 2.51 | 154 | SurfaceView → TextureView migration (`new Surface(SurfaceTexture)`) |
 | 2.17 | 122 | Bugfix: Attach click listeners to sniffer & daemon buttons in DiagActivity |
