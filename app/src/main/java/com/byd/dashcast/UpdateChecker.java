@@ -41,7 +41,7 @@ public class UpdateChecker {
 
     public interface ProgressListener {
         /** A newer version was found; download is about to start. */
-        void onUpdateFound(String version);
+        void onUpdateFound(String version, String changelog, String downloadUrl);
         /** Download progress, 0-100. -1 = indeterminate (Content-Length unknown). */
         void onDownloadProgress(int percent);
         /** Download complete; PackageInstaller session started. */
@@ -58,11 +58,31 @@ public class UpdateChecker {
      * Call from MainActivity.onCreate() (fresh launch) or from the overflow menu.
      * @param listener optional UI callback; all methods dispatched on the main thread.
      */
-    public static void checkAndInstall(final Context context, final ProgressListener listener) {
+    public static void startDownload(final Context context, final String apkUrl, final ProgressListener listener) {
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
-                doCheckAndInstall(context.getApplicationContext(), listener, ui);
+                File apkFile = new File(context.getCacheDir(), APK_CACHE_NAME);
+                downloadToFile(apkUrl, apkFile, listener, ui);
+                AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
+                if (listener != null) ui.post(listener::onInstalling);
+                installApk(context, apkFile);
+                apkFile.delete();
+            } catch (Exception e) {
+                AppLogger.e(TAG, "OTA download failed", e);
+                if (listener != null) {
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    ui.post(() -> listener.onError(msg));
+                }
+            }
+        }, "ota-download").start();
+    }
+
+    public static void checkUpdate(final Context context, final ProgressListener listener) {
+        final Handler ui = new Handler(Looper.getMainLooper());
+        new Thread(() -> {
+            try {
+                doCheckUpdate(context.getApplicationContext(), listener, ui);
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA check failed", e);
                 if (listener != null) {
@@ -73,7 +93,7 @@ public class UpdateChecker {
         }, "ota-update").start();
     }
 
-    private static void doCheckAndInstall(Context context, ProgressListener listener,
+    private static void doCheckUpdate(Context context, ProgressListener listener,
                                           Handler ui) throws Exception {
         boolean includePrerelease = context
                 .getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
@@ -105,8 +125,8 @@ public class UpdateChecker {
             return;
         }
 
+        String changelog = release.optString("body", "No changelog provided.");
         AppLogger.i(TAG, "Update available: " + BuildConfig.VERSION_NAME + " → " + latestVer);
-        if (listener != null) ui.post(() -> listener.onUpdateFound(latestVer));
 
         // 2. Find APK asset URL
         JSONArray assets = release.getJSONArray("assets");
@@ -124,17 +144,8 @@ public class UpdateChecker {
             return;
         }
 
-        // 3. Download APK to internal cache
-        File apkFile = new File(context.getCacheDir(), APK_CACHE_NAME);
-        downloadToFile(apkUrl, apkFile, listener, ui);
-        AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
-
-        // 4. Install via PackageInstaller
-        if (listener != null) ui.post(listener::onInstalling);
-        installApk(context, apkFile);
-        // 5. Remove the cached APK — no point keeping ~25 MB after the installer has read it.
-        //noinspection ResultOfMethodCallIgnored
-        apkFile.delete();
+        final String finalApkUrl = apkUrl;
+        if (listener != null) ui.post(() -> listener.onUpdateFound(latestVer, changelog, finalApkUrl));
     }
 
     // ── Version comparison ────────────────────────────────────────────────────
