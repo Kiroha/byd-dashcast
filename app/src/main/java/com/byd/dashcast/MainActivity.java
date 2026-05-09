@@ -708,13 +708,12 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onKillApp(final AppInfo app) {
         // 1. If the app is still on the cluster (mCurrentDashboardPkg matches),
-        //    restore first to free the Qt surface.
+        //    we do NOT stop projection or restore anything. We just kill it in memory.
         boolean isOnCluster = mCurrentDashboardPkg != null
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
-        if (isOnCluster && mServiceBound && mClusterService != null) {
-            mClusterService.stopProjectionNoAdb(); // Ne pas envoyer le restore cluster auto
-        }
+        // [REMOVED] mClusterService.stopProjectionNoAdb()
+
 
         // 2. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
@@ -722,23 +721,19 @@ public class MainActivity extends AppCompatActivity
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        // Force-stop le slot secondaire en mode split
-                        if (mSecondDashboardPkg != null) {
-                            AdbLocalClient.forceStopApp(MainActivity.this, mSecondDashboardPkg, null);
+                        AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
+                        if (isOnCluster) {
+                            mCurrentDashboardApp = null;
+                            mCurrentDashboardPkg = null;
+                            mAdapter.setCurrentPackage(null);
+                            updateDashboardStatus(null);
+                            // We do NOT touch btnActivateCluster or call stopProjectionNoAdb().
+                            // The virtual display remains alive and black, waiting for another app.
                         }
-                        clearSplitState();
-                        // If the killed app was on the main display, clear that state
-                        if (app.packageName != null && app.packageName.equals(mMainDisplayPkg)) {
-                            mMainDisplayPkg = null;
-                            mAdapter.setMainPackage(null);
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                    .edit().remove(PREF_MAIN_PKG).apply();
+                        if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
+                            mSecondDashboardPkg = null;
+                            clearSplitState();
                         }
-                        mAdapter.setCurrentPackage(null);
-                        updateDashboardStatus(null);
-                        btnActivateCluster.setEnabled(true);
                         showAppList();
                         Toast.makeText(MainActivity.this,
                                 getString(R.string.toast_app_stopped, app.appName),
