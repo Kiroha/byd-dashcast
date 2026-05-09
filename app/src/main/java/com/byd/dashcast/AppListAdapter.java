@@ -105,7 +105,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             holder.tvName.setTextColor(Color.parseColor("#FFC107"));
         } else {
             holder.tvName.setText(app.appName);
-            holder.tvName.setTextColor(Color.WHITE); // Default
+            holder.tvName.setTextColor(Color.parseColor("#333333")); // Default dark text
         }
 
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
