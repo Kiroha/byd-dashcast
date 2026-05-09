@@ -144,6 +144,16 @@ public class FloatingRemoteButton extends Service {
         params.x = 12;
         params.y = 220;
 
+        final android.os.Handler dimHandler = new android.os.Handler(getMainLooper());
+        final Runnable dimRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (mFloatView != null) {
+                    mFloatView.animate().alpha(0.35f).setDuration(300).start();
+                }
+            }
+        };
+
         badge.setOnTouchListener(new View.OnTouchListener() {
             private int   initX, initY;
             private float initTX, initTY;
@@ -151,6 +161,15 @@ public class FloatingRemoteButton extends Service {
 
             @Override
             public boolean onTouch(View v, MotionEvent e) {
+                // Reset opacity and cancel pending dim
+                badge.setAlpha(1.0f);
+                dimHandler.removeCallbacks(dimRunnable);
+                
+                // Trigger dim
+                if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
+                    dimHandler.postDelayed(dimRunnable, 3000);
+                }
+
                 switch (e.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         initX  = params.x;
@@ -187,6 +206,27 @@ public class FloatingRemoteButton extends Service {
                                 startActivity(bringFront);
                                 AppLogger.d(TAG, "Tap → ACTION_SHOW_MIRROR");
                             }
+                        } else {
+                            // Snap to edge logic
+                            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+                            int halfWidth = screenWidth / 2;
+                            // Gravity is END, so params.x is the margin from the RIGHT.
+                            // If params.x > halfWidth, it's closer to the LEFT edge.
+                            int targetX = (params.x > halfWidth) ? (screenWidth - badge.getWidth()) : 0;
+                            
+                            android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofInt(params.x, targetX);
+                            anim.setDuration(250);
+                            anim.setInterpolator(new android.view.animation.DecelerateInterpolator());
+                            anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+                                @Override
+                                public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                                    params.x = (Integer) animation.getAnimatedValue();
+                                    try {
+                                        if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params);
+                                    } catch (Exception ignored) {}
+                                }
+                            });
+                            anim.start();
                         }
                         return true;
                 }
@@ -197,6 +237,7 @@ public class FloatingRemoteButton extends Service {
         mFloatView = badge;
         try {
             mWindowManager.addView(mFloatView, params);
+            dimHandler.postDelayed(dimRunnable, 3000);
         } catch (Exception e) {
             AppLogger.e(TAG, "addView overlay failed", e);
             mFloatView = null;
