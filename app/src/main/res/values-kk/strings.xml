@@ -217,7 +217,6 @@
     <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
     <string name="settings_overscan_applied">✓ Қолданылды — С/О: %1$d px, Ж/Т: %2$d px</string>
     <string name="ota_dialog_title">Жаңарту қол жетімді</string>
-    <string name="ota_installing">Орнатылуда…</string>
     <string name="ota_up_to_date">DashCast жаңартылған</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
