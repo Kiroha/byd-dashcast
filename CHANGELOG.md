@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.93-alpha** | 63 | **Hotfix 3: Kill Button Behavior** — Fixed an issue where terminating the active app with the red cross also stopped the ClusterService projection engine. The VirtualDisplay is now left intact when killing an app, allowing the user to seamlessly launch another app to the dashboard without needing to re-activate the engine. |
 | **0.2.92-alpha** | 62 | **Hotfix 2: Android 10 am task compatibility** — Further fallbacks added to delete the ghost tasks in Android UI. Attempts `am task rm`, `am stack remove` or a low-level Binder call `service call activity 23` depending on ROM customizations. Warnings suppressed to allow the final `am force-stop` to execute cleanly. |
 | **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
@@ -23,6 +24,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.93-alpha** | 63 | **Hotfix 3: Kill Button Behavior** — Fixed an issue where terminating the active app with the red cross also stopped the ClusterService projection engine. The VirtualDisplay is now left intact when killing an app, allowing the user to seamlessly launch another app to the dashboard without needing to re-activate the engine. |
 | **0.2.92-alpha** | 62 | **Hotfix 2: Android 10 am task compatibility** — Further fallbacks added to delete the ghost tasks in Android UI. Attempts `am task rm`, `am stack remove` or a low-level Binder call `service call activity 23` depending on ROM customizations. Warnings suppressed to allow the final `am force-stop` to execute cleanly. |
 | **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
@@ -71,6 +73,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.93-alpha** | 63 | **Hotfix 3: Kill Button Behavior** — Fixed an issue where terminating the active app with the red cross also stopped the ClusterService projection engine. The VirtualDisplay is now left intact when killing an app, allowing the user to seamlessly launch another app to the dashboard without needing to re-activate the engine. |
 | **0.2.92-alpha** | 62 | **Hotfix 2: Android 10 am task compatibility** — Further fallbacks added to delete the ghost tasks in Android UI. Attempts `am task rm`, `am stack remove` or a low-level Binder call `service call activity 23` depending on ROM customizations. Warnings suppressed to allow the final `am force-stop` to execute cleanly. |
 | **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
