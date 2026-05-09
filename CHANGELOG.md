@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | **0.2.6-alpha** | 57 | **Floating Button Fix** — Fixed Smart Overlay Button spawn bug (immediate transparency and off-screen misplacement). Elevated opacity and timing logic to restore correct visibility sync. |
@@ -20,6 +21,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | **0.2.1-beta** | 52 | **Bugfixes & Optimizations** — Resources leak fix (`try-with-resources` on MirrorDaemon), `UnspecifiedImmutableFlag` intent fix on UpdateChecker, Manifest `android:exported=true` compliance, `StaticFieldLeak` suppression. Huge storage cleanup removing old 800MB orphaned `PackageInstaller` sessions. App strings purged. |
@@ -65,6 +67,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
 | 2.52 | 155 | **Mirror fully working** — TextureView (SurfaceFlinger as producer), `hardwareAccelerated=true` in manifest |

@@ -1008,7 +1008,14 @@ public class AdbLocalClient {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
                 try (Dadb dadb = connect(context)) {
-                    AdbShellResponse r = dadb.shell("am force-stop " + packageName + " 2>&1 && echo STOPPED");
+                    // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping
+                    String cleanRecentsCmd = 
+                            "TASKS=$( (dumpsys activity recents ; dumpsys activity tasks) " +
+                            "| grep 'TaskRecord{' | grep '" + packageName + "' " +
+                            "| grep -o '#[0-9]*' | tr -d '#' | sort -u); " +
+                            "for t in $TASKS; do am task rm $t; done; ";
+                    
+                    AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
                     String out = r.getAllOutput().trim();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
                     if (callback != null) {
