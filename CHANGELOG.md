@@ -9,6 +9,10 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.1-beta** | 52 | **Bugfixes & Optimizations** — Resources leak fix (`try-with-resources` on MirrorDaemon), `UnspecifiedImmutableFlag` intent fix on UpdateChecker, Manifest `android:exported=true` compliance, `StaticFieldLeak` suppression. Huge storage cleanup removing old 800MB orphaned `PackageInstaller` sessions. App strings purged. |
+| **0.2.0-beta** | 51 | **OTA Update System** — Addition of the self-updating OTA mechanism (Silent update or Prompts). Transitioned project to Beta. |
+| **0.1.49-alpha** | 49 | **Consolidation (Breaking Change)** — Package ID renamed. Heavy README update (badges, ota, compatibility). Diagnostics log crashes fixed. Refined Watchdog reliability. End of the Alpha cycle. |
+| **0.1.39-alpha** | 39 | **Slavic/Central Asian i18n & Core Fixes** — Added ES, RU, UK, AR, BE, KK, UZ languages. Enhanced `restoreOriginCluster` safety with delays. Fixed PID resolution via `/proc` directly. |
 | **0.1.31-alpha** | 32 | **DiLink5 resize test (Section 7)** — Isolated IATM test in DiagActivity: WM:4→5 + `resizeTask(RESIZE_MODE_FORCED=3)` via raw Binder on `activity_task`. Sanity: lint fixes (WrongConstant, DefaultLocale, MissingTranslation ×4 locales, RedundantLabel). |
 | **0.1.30-alpha** | 31 | **Strings + UI cleanup** — Remove cluster keyboard button. Remove ADAS diagnostic buttons (cmd 12/13 confirmed without effect on 2D cluster Seal EU). String cleanup ×5 locales. |
 | **0.1.29-alpha** | 30 | **Settings: overscan tuning** — New SettingsActivity screen: H/V inset tuning with immediate apply. Rename main screen buttons for clarity (Activate / Stop / Restore Original). |
