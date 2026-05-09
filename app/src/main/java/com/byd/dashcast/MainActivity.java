@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.widget.ScrollView;
 import android.os.Bundle;
 import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
@@ -363,7 +364,7 @@ public class MainActivity extends AppCompatActivity
 
         // OTA update check — only on fresh launch, not on rotation
         if (savedInstanceState == null) {
-            UpdateChecker.checkAndInstall(this, makeOtaProgressListener(false));
+            UpdateChecker.checkUpdate(this, makeOtaProgressListener(false));
         }
     }
 
@@ -1095,29 +1096,45 @@ public class MainActivity extends AppCompatActivity
 
         return new UpdateChecker.ProgressListener() {
             @Override
-            public void onUpdateFound(String version) {
+            public void onUpdateFound(final String version, final String changelog, final String downloadUrl) {
                 if (isFinishing() || isDestroyed()) return;
 
                 LinearLayout layout = new LinearLayout(MainActivity.this);
                 layout.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (getResources().getDisplayMetrics().density * 20);
-                layout.setPadding(pad * 2, pad, pad * 2, pad / 2);
+                layout.setPadding(pad, pad, pad, pad / 2);
 
                 TextView tvVersion = new TextView(MainActivity.this);
                 tvVersion.setText("DashCast " + version);
-                tvVersion.setTextSize(15);
-                tvVersion.setTextColor(0xFF2E3440);
+                tvVersion.setTextSize(16);
+                tvVersion.setPadding(pad, 0, pad, pad / 2);
+                tvVersion.setTextColor(android.graphics.Color.parseColor("#1565C0"));
                 layout.addView(tvVersion);
 
-                ProgressBar pb = new ProgressBar(MainActivity.this, null,
-                        android.R.attr.progressBarStyleHorizontal);
+                ScrollView sv = new ScrollView(MainActivity.this);
+                TextView tvChangelog = new TextView(MainActivity.this);
+                tvChangelog.setText(changelog);
+                tvChangelog.setTextSize(13);
+                tvChangelog.setPadding(pad, 0, pad, pad);
+                tvChangelog.setTextColor(android.graphics.Color.parseColor("#333333"));
+                sv.addView(tvChangelog);
+                
+                LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        (int) (getResources().getDisplayMetrics().density * 250) // max height
+                );
+                layout.addView(sv, svParams);
+
+                // Progress bar container (initially hidden)
+                final LinearLayout progressLayout = new LinearLayout(MainActivity.this);
+                progressLayout.setOrientation(LinearLayout.VERTICAL);
+                progressLayout.setPadding(pad, pad, pad, 0);
+                progressLayout.setVisibility(View.GONE);
+
+                ProgressBar pb = new ProgressBar(MainActivity.this, null, android.R.attr.progressBarStyleHorizontal);
                 pb.setMax(100);
                 pb.setProgress(0);
-                LinearLayout.LayoutParams lpPb = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                lpPb.topMargin = pad;
-                layout.addView(pb, lpPb);
+                progressLayout.addView(pb);
                 pbHolder[0] = pb;
 
                 TextView tvPct = new TextView(MainActivity.this);
@@ -1125,20 +1142,32 @@ public class MainActivity extends AppCompatActivity
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
-                LinearLayout.LayoutParams lpPct = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                lpPct.topMargin = pad / 2;
-                layout.addView(tvPct, lpPct);
+                progressLayout.addView(tvPct);
                 pctHolder[0] = tvPct;
 
-                AlertDialog d = new AlertDialog.Builder(MainActivity.this)
+                layout.addView(progressLayout);
+
+                dlgHolder[0] = new AlertDialog.Builder(MainActivity.this)
                         .setTitle(getString(R.string.ota_dialog_title))
                         .setView(layout)
                         .setCancelable(false)
+                        .setPositiveButton("Update Now", null)
+                        .setNegativeButton("Update Later", (dialog, which) -> dialog.dismiss())
                         .create();
-                d.show();
-                dlgHolder[0] = d;
+                
+                dlgHolder[0].setOnShowListener(dialog -> {
+                    Button posButton = dlgHolder[0].getButton(AlertDialog.BUTTON_POSITIVE);
+                    posButton.setOnClickListener(v -> {
+                        posButton.setEnabled(false);
+                        dlgHolder[0].getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
+                        sv.setVisibility(View.GONE);
+                        tvVersion.setText("Downloading update...");
+                        progressLayout.setVisibility(View.VISIBLE);
+                        // Trigger download
+                        UpdateChecker.startDownload(MainActivity.this, downloadUrl, this);
+                    });
+                });
+                dlgHolder[0].show();
             }
 
             @Override
@@ -1225,7 +1254,7 @@ public class MainActivity extends AppCompatActivity
                         startActivity(intent);
                         return true;
                     case 6:
-                        UpdateChecker.checkAndInstall(MainActivity.this,
+                        UpdateChecker.checkUpdate(MainActivity.this,
                                 makeOtaProgressListener(true));
                         return true;
                 }
