@@ -97,6 +97,7 @@
         <!-- Welcome screen: language selection (first launch only) -->
         <activity
             android:name=".WelcomeActivity"
+            android:exported="true"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>

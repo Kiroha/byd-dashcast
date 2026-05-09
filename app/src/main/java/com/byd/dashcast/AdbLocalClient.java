@@ -1042,6 +1042,7 @@ public class AdbLocalClient {
                     if (cacheDir == null) cacheDir = context.getCacheDir();
                     File outFile = new File(cacheDir, "cluster_live.png");
                     // Chemin ADB : /storage/emulated/0 → /sdcard (symlink standard)
+                    @SuppressWarnings("SdCardPath")
                     String remotePath = outFile.getAbsolutePath()
                             .replace("/storage/emulated/0", "/sdcard");
                     dadb.shell("screencap -d " + displayId + " -p " + remotePath);

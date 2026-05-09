@@ -219,7 +219,6 @@
     <string name="settings_btn_reset_overscan">إعادة تعيين (80 / 50)</string>
     <string name="settings_overscan_applied">✓ مُطبَّق — ي/ي: %1$d بكسل، أ/أ: %2$d بكسل</string>
     <string name="ota_dialog_title">تحديث متاح</string>
-    <string name="ota_installing">جارٍ التثبيت…</string>
     <string name="ota_up_to_date">DashCast محدَّث</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
