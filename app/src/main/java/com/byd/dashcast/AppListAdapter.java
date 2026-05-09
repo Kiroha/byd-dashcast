@@ -123,6 +123,20 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         if (holder.btnKill != null) {
             holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
         }
+
+        if (holder.cbAutoLaunch != null) {
+            holder.cbAutoLaunch.setVisibility(View.VISIBLE);
+            holder.cbAutoLaunch.setOnCheckedChangeListener(null); // prevent false triggers
+            holder.cbAutoLaunch.setChecked(app.isAutoLaunch);
+            holder.cbAutoLaunch.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(android.widget.CompoundButton buttonView, boolean isChecked) {
+                    if (mListener != null) {
+                        mListener.onSetAutoLaunch(app, isChecked);
+                    }
+                }
+            });
+        }
     }
 
     @Override
