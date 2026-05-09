@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
@@ -21,6 +22,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |
@@ -67,6 +69,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.2.91-alpha** | 61 | **Hotfix: Android 10 am task compatibility** — Replaced `am task rm` with the formally valid `am task remove` command to ensure the Recents UI ghostly task is successfully deleted before `am force-stop`. |
 | **0.2.9-alpha** | 60 | **Process & Task Killer** — Fixed an issue where terminating an app with the red cross only killed its background processes but left it in the 'Recent Apps' overview. ADB now identifies `TaskRecord` IDs and executes `am task rm` to fully clear them from Recents UI before issuing `force-stop`. |
 | **0.2.8-alpha** | 59 | **Interactive OTA UI** — Enhanced the Over-The-Air updater. Users are now presented with a dialog displaying the full changelog natively fetched from GitHub releases. Added explicit 'Update Now' vs 'Update Later' choices rather than forced auto-download. |
 | **0.2.7-alpha** | 58 | **Auto-Launch Checkbox Fix** — Restored visibility and binding logic for the 'Auto' checkbox in the list/grid views. |

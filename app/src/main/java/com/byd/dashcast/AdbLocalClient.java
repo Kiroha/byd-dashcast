@@ -1013,7 +1013,7 @@ public class AdbLocalClient {
                             "TASKS=$( (dumpsys activity recents ; dumpsys activity tasks) " +
                             "| grep 'TaskRecord{' | grep '" + packageName + "' " +
                             "| grep -o '#[0-9]*' | tr -d '#' | sort -u); " +
-                            "for t in $TASKS; do am task rm $t; done; ";
+                            "for t in $TASKS; do am task remove $t; done; ";
                     
                     AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
                     String out = r.getAllOutput().trim();
