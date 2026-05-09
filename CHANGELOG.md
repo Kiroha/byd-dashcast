@@ -5,6 +5,15 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ---
 
+## Pre-releases
+
+| Version | versionCode | Summary |
+|---------|-------------|---------|
+| **0.2.6-alpha** | 57 | **Floating Button Fix** — Fixed Smart Overlay Button spawn bug (immediate transparency and off-screen misplacement). Elevated opacity and timing logic to restore correct visibility sync. |
+| **0.2.5-alpha** | 56 | **Dark Text Fix** — Grid mode app labels corrected to Dark Gray for visibility against light backgrounds. Duplicate checkbox fixed. |
+| **0.2.4-alpha** | 55 | **Auto-Launch & Grid View** — Implemented 5-column Grid layout. Added Boot Auto-Launch exclusivity (Radio behavior) and "Favorites" persistence via Long-Press. |
+| **0.2.3-alpha** | 54 | **QoL UI Update** — Removed Split-screen logic. Added Top Overflow menu with List/Grid toggle switch. Persistent state management via SharedPreferences. |
+
 ## Public releases
 
 | Version | versionCode | Summary |
