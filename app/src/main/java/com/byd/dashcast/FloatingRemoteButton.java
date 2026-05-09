@@ -39,6 +39,22 @@ public class FloatingRemoteButton extends Service {
     @android.annotation.SuppressLint("StaticFieldLeak")
     private static FloatingRemoteButton sInstance;
 
+    private android.os.Handler mDimHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable mDimRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mFloatView != null) {
+                mFloatView.animate().alpha(0.35f).setDuration(300).start();
+            }
+        }
+    };
+
+    public void triggerDimTimer() {
+        if (mFloatView != null) mFloatView.setAlpha(1.0f);
+        mDimHandler.removeCallbacks(mDimRunnable);
+        mDimHandler.postDelayed(mDimRunnable, 3000);
+    }
+
     public static void show() {
         FloatingRemoteButton inst = sInstance;
         if (inst != null && inst.mFloatView != null) {
@@ -47,6 +63,7 @@ public class FloatingRemoteButton extends Service {
                     FloatingRemoteButton i = sInstance;
                     if (i != null && i.mFloatView != null) {
                         i.mFloatView.setVisibility(View.VISIBLE);
+                        i.triggerDimTimer();
                     }
                 }
             });
@@ -144,17 +161,7 @@ public class FloatingRemoteButton extends Service {
         params.x = 12;
         params.y = 220;
 
-        final android.os.Handler dimHandler = new android.os.Handler(getMainLooper());
-        final Runnable dimRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (mFloatView != null) {
-                    mFloatView.animate().alpha(0.35f).setDuration(300).start();
-                }
-            }
-        };
-
-        badge.setOnTouchListener(new View.OnTouchListener() {
+badge.setOnTouchListener(new View.OnTouchListener() {
             private int   initX, initY;
             private float initTX, initTY;
             private long  downTime;
@@ -163,11 +170,11 @@ public class FloatingRemoteButton extends Service {
             public boolean onTouch(View v, MotionEvent e) {
                 // Reset opacity and cancel pending dim
                 badge.setAlpha(1.0f);
-                dimHandler.removeCallbacks(dimRunnable);
+                mDimHandler.removeCallbacks(mDimRunnable);
                 
                 // Trigger dim
                 if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
-                    dimHandler.postDelayed(dimRunnable, 3000);
+                    mDimHandler.postDelayed(mDimRunnable, 3000);
                 }
 
                 switch (e.getAction()) {
@@ -237,7 +244,7 @@ public class FloatingRemoteButton extends Service {
         mFloatView = badge;
         try {
             mWindowManager.addView(mFloatView, params);
-            dimHandler.postDelayed(dimRunnable, 3000);
+            mDimHandler.postDelayed(mDimRunnable, 3000);
         } catch (Exception e) {
             AppLogger.e(TAG, "addView overlay failed", e);
             mFloatView = null;
