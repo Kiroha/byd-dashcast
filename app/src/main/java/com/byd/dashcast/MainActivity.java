@@ -78,6 +78,10 @@ public class MainActivity extends AppCompatActivity
     private static final String PREF_CLUSTER_NAME  = "cluster_active_name";
     /** sendInfo code for cluster screen size: 29=8.8", 30=12.3" (default Seal EU), 31=10.25" */
     private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
+    
+    private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
+    private static boolean sHasAutoLaunched = false;
+    private String mPendingAutoLaunchPkg = null;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
@@ -484,17 +488,26 @@ public class MainActivity extends AppCompatActivity
                     attemptStartMirrorWithCurrentHolder();
                 }
 
-                // Restore mMainDisplayPkg if Activity was recreated (it is null after onCreate
-                // only if getSharedPreferences returned no value, which should
-                // not happen here, but we re-check for the onClusterDisplayDisconnected case)
+                // Restore mMainDisplayPkg if Activity was recreated
                 if (mMainDisplayPkg == null) {
                     mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .getString(PREF_MAIN_PKG, null);
-                    if (mMainDisplayPkg != null) {
-                        mAdapter.setMainPackage(mMainDisplayPkg);
+                    if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
+                }
+                
+                // Auto-Launch process
+                if (mPendingAutoLaunchPkg != null) {
+                    String targetPkg = mPendingAutoLaunchPkg;
+                    mPendingAutoLaunchPkg = null; // Clear immediately
+                    AppLogger.i(TAG, "Executing pending auto-launch for " + targetPkg);
+                    // Find it and launch it
+                    for (AppInfo a : mAdapter.getApps()) {
+                        if (a.packageName.equals(targetPkg)) {
+                            onSendToDashboard(a);
+                            break;
+                        }
                     }
                 }
-
             }
         });
     }
@@ -522,6 +535,28 @@ public class MainActivity extends AppCompatActivity
     }
 
     // ---- AppListAdapter.OnSendToDashboardListener ----
+
+    @Override
+    public void onSetAutoLaunch(AppInfo app, boolean enable) {
+        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (enable) {
+            p.edit().putString(PREF_AUTO_LAUNCH_PKG, app.packageName).apply();
+            // Clear other auto launches in memory
+            for (AppInfo a : mAdapter.getApps()) {
+                a.isAutoLaunch = a.packageName.equals(app.packageName);
+            }
+        } else {
+            p.edit().remove(PREF_AUTO_LAUNCH_PKG).apply();
+            app.isAutoLaunch = false;
+        }
+        // Use post to avoid IllegalStateException (cannot call notify during bind)
+        rvApps.post(new Runnable() {
+            @Override
+            public void run() {
+                mAdapter.notifyDataSetChanged();
+            }
+        });
+    }
 
     @Override
     public void onToggleFavorite(AppInfo app) {
@@ -1526,10 +1561,14 @@ public class MainActivity extends AppCompatActivity
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                 Set<String> favs = prefs.getStringSet("favorites", new HashSet<>());
+                String autoPkg = prefs.getString(PREF_AUTO_LAUNCH_PKG, null);
 
                 for (AppInfo info : apps) {
                     if (favs.contains(info.packageName)) {
                         info.isFavorite = true;
+                    }
+                    if (autoPkg != null && autoPkg.equals(info.packageName)) {
+                        info.isAutoLaunch = true;
                     }
                 }
 
