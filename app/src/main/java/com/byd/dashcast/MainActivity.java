@@ -9,6 +9,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.os.Bundle;
 import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
@@ -63,6 +64,14 @@ public class MainActivity extends AppCompatActivity
                    AppListAdapter.OnSendToDashboardListener {
 
     private static final String TAG = "BYDApp";
+
+    // --- Resize Zone ---
+    private android.widget.SeekBar sbResizeW;
+    private android.widget.SeekBar sbResizeH;
+    private android.widget.TextView tvResizeW;
+    private android.widget.TextView tvResizeH;
+    private android.widget.Button btnResizeApply;
+
 
     // Cluster service
     private ClusterService          mClusterService;
@@ -277,6 +286,46 @@ public class MainActivity extends AppCompatActivity
         panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
         tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
+        
+        // --- Resize Zone ---
+        sbResizeW = (SeekBar) findViewById(R.id.sb_resize_w);
+        sbResizeH = (SeekBar) findViewById(R.id.sb_resize_h);
+        tvResizeW = (TextView) findViewById(R.id.tv_resize_w_val);
+        tvResizeH = (TextView) findViewById(R.id.tv_resize_h_val);
+        btnResizeApply = (Button) findViewById(R.id.btn_resize_apply);
+        
+        sbResizeW.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeW.setText(String.valueOf(value)); }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        sbResizeH.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeH.setText(String.valueOf(value)); }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        
+        btnResizeApply.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCurrentDashboardPkg == null) return;
+                int w = sbResizeW.getProgress();
+                int h = sbResizeH.getProgress();
+                SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                ed.putInt("inset_h_" + mCurrentDashboardPkg, w);
+                ed.putInt("inset_v_" + mCurrentDashboardPkg, h);
+                ed.apply();
+                
+                AppLogger.i(TAG, "Applied custom resize " + w + "/" + h + " for " + mCurrentDashboardPkg);
+                
+                if (mServiceBound && mClusterService != null) {
+                    // Chercher le taskId et ordonner l'update
+                    int taskId = mClusterService.findRunningTaskId(mCurrentDashboardPkg);
+                    mClusterService.resizeActiveTask(taskId, mCurrentDashboardPkg);
+                }
+            }
+        });
+
         frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
         clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
@@ -902,7 +951,25 @@ public class MainActivity extends AppCompatActivity
         rvApps.setVisibility(View.GONE);
         frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
+        
+        // Init Resize SeekBar based on current app or global prefs
+        if (mCurrentDashboardPkg != null) {
+            SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+            int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+            int curW = p.getInt("inset_h_" + mCurrentDashboardPkg, defH);
+            int curH = p.getInt("inset_v_" + mCurrentDashboardPkg, defV);
+            if (sbResizeW != null) {
+                sbResizeW.setProgress(curW);
+                tvResizeW.setText(String.valueOf(curW));
+            }
+            if (sbResizeH != null) {
+                sbResizeH.setProgress(curH);
+                tvResizeH.setText(String.valueOf(curH));
+            }
+        }
     }
+
 
     /**
      * Hides the mirror and restores the app list.
