@@ -43,7 +43,12 @@ import com.byd.dashcast.model.AppInfo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 /**
  * MainActivity — 15-inch main screen.
@@ -212,7 +217,16 @@ public class MainActivity extends AppCompatActivity
 
         // App list
         mAdapter = new AppListAdapter(this);
-        rvApps.setLayoutManager(new LinearLayoutManager(this));
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean isGrid = prefs.getBoolean("grid_mode", false);
+        mAdapter.setGridMode(isGrid);
+        
+        if (isGrid) {
+            rvApps.setLayoutManager(new GridLayoutManager(this, 5));
+        } else {
+            rvApps.setLayoutManager(new LinearLayoutManager(this));
+        }
+        
         rvApps.setAdapter(mAdapter);
 
         // Button "Activate cluster" — always triggers activateCluster()
@@ -508,6 +522,21 @@ public class MainActivity extends AppCompatActivity
     }
 
     // ---- AppListAdapter.OnSendToDashboardListener ----
+
+    @Override
+    public void onToggleFavorite(AppInfo app) {
+        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        Set<String> favs = new HashSet<>(p.getStringSet("favorites", new HashSet<>()));
+        if (favs.contains(app.packageName)) {
+            favs.remove(app.packageName);
+            app.isFavorite = false;
+        } else {
+            favs.add(app.packageName);
+            app.isFavorite = true;
+        }
+        p.edit().putStringSet("favorites", favs).apply();
+        loadAppsAsync(); // Reload and re-sort
+    }
 
     @Override
     public void onSendToDashboard(AppInfo app) {
@@ -1125,6 +1154,7 @@ public class MainActivity extends AppCompatActivity
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
+        popup.getMenu().add(0, 7, 0, mAdapter.isGridMode() ? "Menu: List Mode" : "Menu: Grid Mode");
         popup.getMenu().add(0, 2, 0, getString(R.string.menu_diagnostic));
         popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
         popup.getMenu().add(0, 4, 0, getString(R.string.menu_log));
@@ -1135,6 +1165,19 @@ public class MainActivity extends AppCompatActivity
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case 1: startActivity(new Intent(MainActivity.this, SettingsActivity.class)); return true;
+                    case 7:
+                        SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        boolean nv = !mAdapter.isGridMode();
+                        p2.edit().putBoolean("grid_mode", nv).apply();
+                        mAdapter.setGridMode(nv);
+                        if (nv) {
+                            rvApps.setLayoutManager(new GridLayoutManager(MainActivity.this, 5));
+                        } else {
+                            rvApps.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                        }
+                        rvApps.setAdapter(mAdapter);
+                        Toast.makeText(MainActivity.this, nv ? "Grid Mode Enabled" : "List Mode Enabled", Toast.LENGTH_SHORT).show();
+                        return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
                     case 4: startActivity(new Intent(MainActivity.this, LogActivity.class)); return true;
@@ -1481,9 +1524,20 @@ public class MainActivity extends AppCompatActivity
                     apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
                 }
 
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                Set<String> favs = prefs.getStringSet("favorites", new HashSet<>());
+
+                for (AppInfo info : apps) {
+                    if (favs.contains(info.packageName)) {
+                        info.isFavorite = true;
+                    }
+                }
+
                 Collections.sort(apps, new Comparator<AppInfo>() {
                     @Override
                     public int compare(AppInfo a, AppInfo b) {
+                        if (a.isFavorite && !b.isFavorite) return -1;
+                        if (!a.isFavorite && b.isFavorite) return 1;
                         return a.appName.compareToIgnoreCase(b.appName);
                     }
                 });
