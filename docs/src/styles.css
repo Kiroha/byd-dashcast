@@ -875,3 +875,9 @@ hr {
     text-align: left;
   }
 }
+
+.btn-yellow {
+  background: #fbc02d;
+  color: #1a1a1a;
+  font-weight: 600;
+}

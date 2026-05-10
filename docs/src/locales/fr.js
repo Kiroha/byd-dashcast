@@ -118,6 +118,7 @@ export default {
       "✕",
       "→ Cluster",
       "✕",
+      "📐 Ajuster",
       "⬛⬛ Split",
       "Masquer ▼"
     ],
@@ -160,7 +161,7 @@ export default {
         "tone": "red",
         "marker": "❌",
         "label": "Croix Rouge (Force Stop)",
-        "text": "Arrête de forcer une application récalcitrante (tue le processus dans le système)."
+        "text": "Force l'arrêt d'une application récalcitrante (tue le processus dans le système)."
       },
       {
         "tone": "gray",
