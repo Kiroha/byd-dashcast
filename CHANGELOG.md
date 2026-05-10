@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
 | **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
@@ -30,6 +31,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
 | **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
@@ -85,6 +87,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
 | **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
