@@ -26,6 +26,10 @@ const projectionCloseButton = computed(() => props.t.projection.buttons[6] || '�
 const projectionClusterButton = computed(() => props.t.projection.buttons[7] || '');
 const splitButton = computed(() => props.t.projection.buttons.at(-2) || '');
 const hideButton = computed(() => props.t.projection.buttons.at(-1) || '');
+const resizeButton = computed(() => {
+  const btn = props.t.projection.buttons.at(-3);
+  return (btn === '✕' || !btn) ? '📐 Ajuster' : btn;
+});
 const resetRowIndex = computed(() => Math.max(0, props.t.stopping.table.rows.length - 1));
 
 function sectionHref(index) {

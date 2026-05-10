@@ -114,6 +114,7 @@ export default {
       "✕",
       "→ Cluster",
       "✕",
+      "📐 Resize",
       "⬛⬛ Split",
       "Hide ▼"
     ],
