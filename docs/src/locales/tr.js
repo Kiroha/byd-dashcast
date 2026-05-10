@@ -3,47 +3,52 @@ export default {
   "flag": "🇹🇷",
   "name": "Türkçe",
   "title": "DashCast — Kullanım Kılavuzu",
-  "meta": "v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.5.1 · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Kullanım Kılavuzu",
   "tocTitle": "📋 İçindekiler",
   "sections": [
     "1. Genel Bakış",
     "2. İlk Çalıştırma — Dil Seçimi",
     "3. Ana Ekran",
-    "4. Uygulamayı Gösterge Paneline Yansıtma",
+    "4. Gösterge Paneline Uygulama Yansıtmak",
     "5. Yansıtma Sırasında — Kontrol Paneli",
-    "6. Yansıtmayı Durdurma",
+    "6. Yansıtmayı Durdurmak",
     "7. Ayarlar",
-    "8. ⋮ Menü — Ek Araçlar",
+    "8. ⋮ Menüsü — Ek Araçlar",
     "9. SSS & Sorun Giderme"
   ],
   "overview": {
     "title": "1. Genel Bakış",
-    "text": "DashCast, BYD aracınızın bilgi-eğlence ekranındaki herhangi bir uygulamayı dijital gösterge paneline yansıtmanızı sağlayan bir Android uygulamasıdır. Navigasyon, müzik, video — merkez ekranda çalışan her şey, sürücünün karşısındaki küme ekranına yönlendirilebilir.",
+    "text": "DashCast, bilgi-eğlence ekranındaki herhangi bir uygulamayı BYD'nizin dijital gösterge paneline yansıtmanıza olanak tanıyan bir Android uygulamasıdır.",
     "bullets": [
-      "✅ BYD Seal EU ile uyumlu (DiLink 3.0, Di3.0 / 6125F firmware)",
-      "✅ Sistem değişikliği gerektirmez",
-      "✅ TCP üzerinden yerel ADB (localhost) — kurulum sonrası PC gerekmez",
-      "✅ Uygulama harici olarak kapatıldığında otomatik algılama"
+      "✅ BYD Seal EU ile uyumlu",
+      "✅ Sistem modifikasyonu gerektirmez",
+      "✅ Yerel ADB",
+      "✅ Otomatik uygulama bağlantı kopma tespiti",
+      "✅ Dahili OTA güncellemeleri",
+      "✅ Uygulama başına Overscan",
+      "✅ Izgara veya Liste görünümü",
+      "✅ Acil durdurma (Kırmızı Çarpı)"
     ],
-    "note": "💡 Ön koşul: Bilgi-eğlence sistemi Ayarlar → Geliştirici seçenekleri → Kablosuz hata ayıklama (veya \"Ağ üzerinden ADB\") bölümünden TCP ADB hata ayıklamasını etkinleştirin. Bu işlem yalnızca bir kez yapılır. DashCast'ın ilk çalıştırılmasında \"USB hata ayıklamaya izin verilsin mi?\" penceresi görünür — Bu bilgisayardan her zaman izin ver seçeneğine dokunun."
+    "note": "💡 Önkoşul: TCP ADB hata ayıklamasını etkinleştirin."
   },
   "firstLaunch": {
     "title": "2. İlk Çalıştırma — Dil Seçimi",
-    "text": "İlk çalıştırmada hoş geldiniz ekranı görünür. Dilinizi seçmek için on düğmeden birine dokunun. Bu tercih kaydedilir — ⋮ menüsünden dil değiştirmediğiniz sürece bu ekran bir daha görünmez.",
+    "text": "İlk çalıştırmada dilinizi seçin.",
     "welcomeSubtitle": "Dashboard Controller",
-    "welcomeHint": "Choisissez votre langue\nPlease select your language",
-    "caption": "Dil seçim ekranı — yalnızca ilk çalıştırmada görüntülenir"
+    "welcomeHint": "Dilinizi seçin",
+    "caption": "Dil seçimi ekranı"
   },
   "main": {
     "title": "3. Ana Ekran",
-    "text": "Ana ekran iki bölümden oluşur: üstte durum çubuğu (koyu mavi arka plan) ve altında yüklü uygulamalar listesi.",
-    "status": "① Gösterge: bağlı değil",
+    "text": "Ana ekran: Üstte durum çubuğu ve altta yüklü uygulamalar listesi.",
+    "status": "① Dashboard: bağlı değil",
     "buttons": [
-      "② Projeksiyonu etkinleştir",
-      "③ Projeksiyonu durdur",
-      "④ Orijinal Dashboard'u geri yükle",
+      "② Yansıtmayı Etkinleştir",
+      "③ Yansıtmayı Durdur",
+      "④ Orijinal Dashboard'u Geri Yükle",
       "⑤ ⋮",
+      "✕",
       "✕",
       "✕",
       "✕"
@@ -52,224 +57,210 @@ export default {
     "apps": [
       "Maps",
       "YouTube",
-      "Spotify"
+      "Spotify",
+      "Waze"
     ],
-    "caption": "Ana ekran — uygulama yansıtılmıyor (başlangıç durumu)",
+    "caption": "Ana ekran",
     "annotations": [
       {
         "tone": "",
         "marker": "①",
         "label": "Durum",
-        "text": "Kümeyle bağlantı durumunu gösterir. Uygulama aktifken \"Gösterge: [Uygulama adı]\" olarak değişir."
+        "text": "Dashboard bağlantı durumunu gösterir."
       },
       {
         "tone": "",
         "marker": "②",
-        "label": "Projeksiyonu etkinleştir",
-        "text": "Kümeyle bağlantı kurar ve yansıtmaya hazırlar. İlk önce buna dokunun."
+        "label": "Yansıtmayı Etkinleştir",
+        "text": "Bağlantıyı kurar."
       },
       {
         "tone": "red",
         "marker": "③",
-        "label": "Projeksiyonu durdur",
-        "text": "BYD göstergesini geri yüklemeden mevcut yansıtmayı sonlandırır."
+        "label": "Yansıtmayı Durdur",
+        "text": "Yansıtmayı durdurur."
       },
       {
         "tone": "green",
         "marker": "④",
-        "label": "Orijinal Dashboard'u geri yükle",
-        "text": "Yansıtmayı sonlandırır VE yerel BYD kümesini geri yükler (hız, göstergeler…)."
+        "label": "Geri Yükle",
+        "text": "Orijinal BYD gösterge panelini geri yükler."
       },
       {
         "tone": "gray",
         "marker": "⑤",
         "label": "⋮ Menü",
-        "text": "Ayarlar, Tanılama, Sistem Raporu, Günlükler ve dil değiştirme erişimi."
+        "text": "Ayarlar, Teşhis, vb."
       },
       {
         "tone": "gray",
         "marker": "⑥",
         "label": "Uygulama listesi",
-        "text": "Tüm yüklü uygulamalar. Yansıtmak için dokunun, ✕ ile zorla kapatın."
+        "text": "Yüklü uygulamalar. ❌ ile tamamen durdurun."
       }
     ]
   },
   "projection": {
-    "title": "4. Uygulamayı Gösterge Paneline Yansıtma",
+    "title": "4. Gösterge Paneline Uygulama Yansıtmak",
     "steps": [
-      "\"Projeksiyonu etkinleştir\" düğmesine (mavi) dokunun. Durum \"Küme başlatılıyor…\" olarak değişir. Yerel ADB bağlantısı kurulur.",
-      "İstediğiniz uygulamaya listeden dokunun. DashCast uygulamayı küme ekranına taşır. Durum \"Gösterge: [Uygulama adı]\" olarak değişir.",
-      "Kontrol paneli ana ekranın alt kısmında görünür."
+      "Yansıtmayı Etkinleştir'e dokunun.",
+      "Uygulamaya dokunun.",
+      "Kontrol paneli görünür."
     ],
-    "activeStatus": "Gösterge: Maps ✓",
+    "activeStatus": "Dashboard: Maps ✓",
     "buttons": [
-      "Projeksiyonu etkinleştir",
-      "📺 Yansıt",
-      "Projeksiyonu durdur",
-      "Orijinal Dashboard'u geri yükle",
+      "Yansıtmayı Etkinleştir",
+      "📺 Ayna",
+      "Yansıtmayı Durdur",
+      "Orijinal Dashboard'u Geri Yükle",
       "⋮",
       "← Ana",
       "✕",
-      "→ Küme",
+      "→ Cluster",
       "✕",
+      "→ Cluster",
+      "✕",
+      "📐 Ayarla",
       "⬛⬛ Böl",
       "Gizle ▼"
     ],
     "listTitle": "Yüklü uygulamalar",
     "apps": [
       "Maps",
-      "YouTube"
+      "YouTube",
+      "Spotify"
     ],
-    "controlLabel": "Küme kontrolü",
+    "controlLabel": "Cluster kontrolü",
     "controlApp": "Maps",
-    "mirrorText": "Kümede ekran aktif ✓",
-    "caption": "Ana ekran — Maps gösterge panelinde yansıtılıyor",
-    "annotations": []
+    "mirrorText": "Görüntü cluster üzerinde aktif ✓",
+    "caption": "Ana ekran",
+    "annotations": [
+      {
+        "tone": "green",
+        "marker": "●",
+        "label": "Yeşil",
+        "text": "Aktif uygulama"
+      },
+      {
+        "tone": "",
+        "marker": "→",
+        "label": "→ Cluster",
+        "text": "Cluster'a gönder"
+      },
+      {
+        "tone": "gray",
+        "marker": "←",
+        "label": "← Ana",
+        "text": "Ana ekrana döndür"
+      },
+      {
+        "tone": "teal",
+        "marker": "📺",
+        "label": "Ayna",
+        "text": "Canlı önizleme"
+      },
+      {
+        "tone": "red",
+        "marker": "❌",
+        "label": "Kırmızı Çarpı",
+        "text": "Zorla durdur"
+      },
+      {
+        "tone": "gray",
+        "marker": "🔲",
+        "label": "Izgara / Liste",
+        "text": "Görünümü değiştir"
+      }
+    ]
   },
   "control": {
-    "title": "5. Yansıtma Sırasında — Kontrol Paneli",
-    "intro": "Kümede bir uygulama aktifken, ana ekranın altında üç uzaktan kumanda özelliğine sahip koyu bir panel görünür:",
+    "title": "5. Kontrol Paneli",
+    "intro": "Paneli kullanın.",
     "mirror": {
-      "title": "5.1 Yansıtma modu (📺 Yansıt)",
-      "text": "Durum çubuğundaki 📺 Yansıt düğmesine dokunarak küme içeriğinin canlı bir kopyasını DashCast içinde görüntüleyin. Dokunma olayları küme ekranına iletilir.",
+      "title": "5.1 Ayna",
+      "text": "Canlı kopyayı görün.",
+      "note": ""
+    },
+    "resize": {
+      "title": "5.2 Ayarla",
+      "text": "Kenar boşluklarını kırpın.",
       "note": ""
     },
     "split": {
-      "title": "5.2 Bölünmüş ekran modu (⬛⬛ Böl)",
-      "text": "Küme ekranını iki uygulama arasında paylaştırın:",
-      "items": [
-        "Tam ekran — Bir uygulama kümenin tamamını kaplar",
-        "⬜⬛ Sol (%50) — Ana uygulama solda, ikinci uygulama sağda",
-        "⬛⬜ Sağ (%50) — Ana uygulama sağda"
-      ],
+      "title": "5.3 Böl",
+      "text": "Ekranı iki uygulama arasında paylaştırın.",
+      "items": [],
       "extra": ""
     },
     "hide": {
-      "title": "5.3 Paneli gizle",
-      "text": "Kontrol panelini daraltmak için Gizle ▼ düğmesine dokunun."
+      "title": "5.4 Gizle",
+      "text": "Paneli gizleyin."
     }
   },
   "stopping": {
-    "title": "6. Yansıtmayı Durdurma",
-    "intro": "",
+    "title": "6. Yansıtmayı Durdurmak",
+    "intro": "Durdurmak için düğmeleri kullanın.",
     "table": {
       "headers": [
         "Düğme",
         "Davranış",
-        "Ne zaman kullanılır"
+        "Ne zaman"
       ],
-      "rows": [
-        [
-          "Projeksiyonu durdur",
-          "Yansıtmayı sonlandırır. Küme boş (siyah) kalır.",
-          "Görüntüyü geçici olarak durdurmak istediğinizde."
-        ],
-        [
-          "Orijinal Dashboard'u geri yükle",
-          "Yansıtmayı sonlandırır VE yerel BYD kümesini geri yükler (hız, menzil…).",
-          "Kullanımın sonunda — normal BYD göstergesine dönmek için."
-        ]
-      ]
+      "rows": []
     },
-    "warning": "⚠️ Bu düğmelerden birine basmadan DashCast'tan çıkarsanız, servis yeniden başlatılana kadar yansıtma kümede aktif kalmaya devam eder."
+    "warning": "Uyarı"
   },
   "settings": {
     "title": "7. Ayarlar",
-    "intro": "Ayarlara ⋮ → ⚙️ Ayarlar üzerinden erişin.",
+    "intro": "Ayarları yapın",
     "titleLabel": "Ayarlar",
     "clusterTypeLabel": "Küme türü",
     "clusterOptions": [
-      "8,8 inç (cmd=29)",
-      "12,3 inç (cmd=30) — Seal EU",
-      "10,25 inç (cmd=31)"
+      "8.8 inç",
+      "12.3 inç (cmd=30) — Seal EU",
+      "10.25 inç"
     ],
-    "marginsLabel": "Ekran kenar boşlukları (overscan)",
+    "marginsLabel": "Görüntü kenar boşlukları",
     "horizontalMarginLabel": "Sol / Sağ:",
     "verticalMarginLabel": "Üst / Alt:",
-    "applyButton": "Şimdi uygula",
-    "resetButton": "Sıfırla (80 / 50)",
-    "caption": "Ayarlar sayfası",
+    "applyButton": "Uygula",
+    "resetButton": "Sıfırla",
+    "caption": "Ayarlar",
     "type": {
-      "title": "7.1 Küme Türü",
-      "text": "Gösterge paneli ekranınızın boyutunu seçin. BYD Seal EU için 12,3 inç (cmd=30) seçin."
+      "title": "Küme türü",
+      "text": ""
     },
     "margins": {
-      "title": "7.2 Ekran Kenar Boşlukları (Overscan)",
-      "text": "İçeriği küme ekranının görünür alanına tam olarak sığdırmak için kenar boşluklarını ayarlayın. Kavisli ekranlarda fiziksel kenarlar çoğunlukla kullanılabilir görüntü alanının dışına taşar.",
-      "items": [
-        "Sol / Sağ — Yatay kenar boşluğu (her iki tarafta 0–200 px)",
-        "Üst / Alt — Dikey kenar boşluğu (üstte ve altta 0–200 px)"
-      ],
+      "title": "Kenar boşlukları",
+      "text": "",
+      "items": [],
       "applyText": "",
-      "note": "💡 Seal EU için önerilen varsayılan değerler: Sol/Sağ = 80 px, Üst/Alt = 50 px."
+      "note": ""
     }
   },
   "tools": {
-    "title": "8. ⋮ Menü — Ek Araçlar",
+    "title": "8. Ek Araçlar",
     "intro": "",
     "table": {
       "headers": [
         "Seçenek",
         "Açıklama"
       ],
-      "rows": [
-        [
-          "⚙️ Ayarlar",
-          "Küme türü + overscan kenar boşluğu ayarı"
-        ],
-        [
-          "🔧 Tanılama",
-          "Gelişmiş geliştirici testleri — ADB bağlantısı, ekranlar, küme ekran boyutu"
-        ],
-        [
-          "📋 Sistem Raporu",
-          "Tam rapor oluşturur (ekranlar, BYD API'leri, izinler)"
-        ],
-        [
-          "📜 Günlükler",
-          "Gerçek zamanlı günlük görüntüleyici — etiket/seviyeye göre filtre, e-posta veya dosya olarak paylaşma"
-        ],
-        [
-          "🌐 Dil",
-          "Dil seçim ekranına geri döner"
-        ]
-      ]
+      "rows": []
     },
-    "logs": null
+    "logs": {
+      "title": "Günlükler",
+      "header": "Günlükler",
+      "clearButton": "Temizle",
+      "shareButton": "Paylaş",
+      "filterPlaceholder": "Filtrele...",
+      "lines": [],
+      "caption": ""
+    }
   },
   "faq": {
-    "title": "9. SSS & Sorun Giderme",
-    "items": [
-      {
-        "question": "❓ \"USB hata ayıklamaya izin verilsin mi?\" penceresi görünmüyor",
-        "answer": "Bilgi-eğlence sistemi geliştirici ayarlarında TCP ADB hata ayıklamasının etkinleştirildiğinden emin olun. Seçenek yoksa önce geliştirici modunu etkinleştirin (Hakkında bölümündeki yapı numarasına 7 kez dokunun).",
-        "items": []
-      },
-      {
-        "question": "❓ Uygulama seçildikten sonra kümede görünmüyor",
-        "answer": "",
-        "items": [
-          "Uygulama seçmeden önce Projeksiyonu etkinleştir düğmesine dokunduğunuzdan emin olun.",
-          "Bazı uygulamalar ikincil ekranda başlatılmayı reddeder. Hata mesajı için Günlükleri kontrol edin.",
-          "DashCast'ı kapatıp yeniden açın, ardından adımları tekrarlayın."
-        ]
-      },
-      {
-        "question": "❓ İçerik kümede kırpılmış veya kaymış görünüyor",
-        "answer": "⋮ → Ayarlar'dan Ekran kenar boşluklarını ayarlayın. Yatay taşma varsa Sol/Sağ değerini, dikey taşma varsa Üst/Alt değerini artırın. Sonucu hemen görmek için Şimdi uygula'ya tıklayın.",
-        "items": []
-      },
-      {
-        "question": "❓ Uygulama kapatıldıktan sonra \"← Ana\" ve \"✕\" düğmeleri görünmeye devam ediyor",
-        "answer": "DashCast uygulama sonlanmalarını otomatik olarak algılar (/proc izleme). Arayüz takılıp kaldıysa sıfırlamayı zorlamak için Projeksiyonu durdur'a dokunun.",
-        "items": []
-      },
-      {
-        "question": "❓ Araç yeniden başlatıldıktan sonra her şeyi yeniden yapılandırmam gerekiyor mu?",
-        "answer": "Hayır. Küme türü ve overscan kenar boşlukları kaydedilir. Yalnızca ADB bağlantısı, Projeksiyonu etkinleştir düğmesine tekrar dokunmayı gerektirebilir.",
-        "items": []
-      }
-    ]
+    "title": "9. SSS",
+    "items": []
   },
-  "footer": "DashCast · Kullanım Kılavuzu · Türkçe · github.com/Kiroha/byd-dashcast"
+  "footer": "DashCast v0.5.1"
 };

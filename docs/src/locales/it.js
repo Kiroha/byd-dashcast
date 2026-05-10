@@ -2,48 +2,53 @@ export default {
   "code": "it",
   "flag": "🇮🇹",
   "name": "Italiano",
-  "title": "DashCast — Manuale utente",
-  "meta": "v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10",
-  "manualName": "Manuale utente",
-  "tocTitle": "📋 Indice",
+  "title": "DashCast — Manuale Utente",
+  "meta": "v0.5.1 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "manualName": "Manuale Utente",
+  "tocTitle": "📋 Sommario",
   "sections": [
     "1. Panoramica",
-    "2. Primo avvio — Selezione della lingua",
+    "2. Primo avvio — Scelta della lingua",
     "3. Schermata principale",
-    "4. Proiettare un'app sul quadro strumenti",
-    "5. Durante la proiezione — Pannello di controllo",
-    "6. Arrestare la proiezione",
+    "4. Proiezione sul cruscotto",
+    "5. Pannello di controllo",
+    "6. Fermare la proiezione",
     "7. Impostazioni",
-    "8. Menu ⋮ — Strumenti aggiuntivi",
-    "9. FAQ & risoluzione dei problemi"
+    "8. Menu ⋮",
+    "9. FAQ"
   ],
   "overview": {
     "title": "1. Panoramica",
-    "text": "DashCast è un'app Android che consente di proiettare qualsiasi applicazione dallo schermo dell'infotainment sul quadro strumenti digitale del veicolo BYD. Navigazione, musica, video — tutto ciò che è in esecuzione sullo schermo centrale può essere reindirizzato al display del cluster di fronte al conducente.",
+    "text": "DashCast ti permette di proiettare qualsiasi app sul cruscotto digitale BYD.",
     "bullets": [
-      "✅ Compatibile con BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
-      "✅ Nessuna modifica di sistema necessaria",
-      "✅ ADB locale via TCP (localhost) — nessun PC necessario una volta configurato",
-      "✅ Rilevamento automatico della chiusura dell'app"
+      "✅ BYD Seal EU",
+      "✅ Nessuna modifica al sistema",
+      "✅ ADB locale",
+      "✅ Rilevamento automatico disconnessione app",
+      "✅ Aggiornamenti OTA",
+      "✅ Overscan per-app",
+      "✅ Vista Griglia o Lista",
+      "✅ Arresto forzato"
     ],
-    "note": "💡 Prerequisito: Attivare il debug ADB via TCP in Impostazioni → Opzioni sviluppatore → Debug wireless (o \"ADB tramite rete\"). Questa operazione è necessaria solo una volta. Al primo avvio di DashCast compare una finestra \"Consentire il debug USB?\" — premere Consenti sempre da questo computer."
+    "note": "💡 Abilita il debug ADB."
   },
   "firstLaunch": {
-    "title": "2. Primo avvio — Selezione della lingua",
-    "text": "Al primo avvio viene mostrata la schermata di benvenuto. Toccare uno dei dieci pulsanti per scegliere la lingua. La scelta viene salvata — questa schermata non comparirà più, salvo se si cambia la lingua dal menu ⋮.",
+    "title": "2. Primo avvio",
+    "text": "Scegli la tua lingua.",
     "welcomeSubtitle": "Dashboard Controller",
-    "welcomeHint": "Choisissez votre langue\nPlease select your language",
-    "caption": "Schermata di selezione lingua — visualizzata solo al primo avvio"
+    "welcomeHint": "Seleziona lingua",
+    "caption": "Scelta lingua"
   },
   "main": {
     "title": "3. Schermata principale",
-    "text": "La schermata principale è composta da due aree: una barra di stato in alto (sfondo blu scuro) e un elenco delle app installate in basso.",
+    "text": "La schermata principale mostra lo stato e le app.",
     "status": "① Dashboard: non connesso",
     "buttons": [
       "② Attiva Proiezione",
       "③ Ferma Proiezione",
-      "④ Ripristina Dashboard originale",
+      "④ Ripristina Cruscotto Originale",
       "⑤ ⋮",
+      "✕",
       "✕",
       "✕",
       "✕"
@@ -52,224 +57,179 @@ export default {
     "apps": [
       "Maps",
       "YouTube",
-      "Spotify"
+      "Spotify",
+      "Waze"
     ],
-    "caption": "Schermata principale — nessuna app proiettata (stato iniziale)",
+    "caption": "Schermata principale",
     "annotations": [
       {
         "tone": "",
         "marker": "①",
         "label": "Stato",
-        "text": "Indica lo stato della connessione al cluster. Cambia in \"Dashboard: [Nome app]\" quando un'app è attiva."
+        "text": "Stato della connessione."
       },
       {
         "tone": "",
         "marker": "②",
-        "label": "Attiva Proiezione",
-        "text": "Stabilisce la connessione con il cluster e lo prepara. Da premere per primo."
+        "label": "Attiva",
+        "text": "Prepara la connessione."
       },
       {
         "tone": "red",
         "marker": "③",
-        "label": "Ferma Proiezione",
-        "text": "Termina la proiezione senza ripristinare il dashboard BYD originale."
+        "label": "Ferma",
+        "text": "Ferma la proiezione."
       },
       {
         "tone": "green",
         "marker": "④",
-        "label": "Ripristina Dashboard originale",
-        "text": "Termina la proiezione E ripristina il cluster BYD nativo (velocità, indicatori…)."
+        "label": "Ripristina",
+        "text": "Ripristina BYD."
       },
       {
         "tone": "gray",
         "marker": "⑤",
-        "label": "Menu ⋮",
-        "text": "Accesso a Impostazioni, Diagnostica, Report di sistema, Log e cambio lingua."
+        "label": "Menù",
+        "text": "Strumenti extra."
       },
       {
         "tone": "gray",
         "marker": "⑥",
-        "label": "Elenco app",
-        "text": "Tutte le app installate. Toccare per proiettare, ✕ per chiudere forzatamente."
+        "label": "App",
+        "text": "Le app installate. ❌ per arrestare."
       }
     ]
   },
   "projection": {
-    "title": "4. Proiettare un'app sul quadro strumenti",
+    "title": "4. Proiettare un'app",
     "steps": [
-      "Premere \"Attiva Proiezione\" (pulsante blu). Lo stato cambia in \"Avvio cluster…\". La connessione ADB locale viene stabilita.",
-      "Toccare l'app desiderata nell'elenco. DashCast sposta l'app sul display del cluster. Lo stato cambia in \"Dashboard: [Nome app]\".",
-      "Il pannello di controllo appare in fondo alla schermata principale."
+      "Premi Attiva.",
+      "Seleziona l'app.",
+      "Usa i controlli."
     ],
     "activeStatus": "Dashboard: Maps ✓",
     "buttons": [
       "Attiva Proiezione",
       "📺 Specchio",
       "Ferma Proiezione",
-      "Ripristina Dashboard originale",
+      "Ripristina Cruscotto Originale",
       "⋮",
       "← Principale",
       "✕",
       "→ Cluster",
       "✕",
-      "⬛⬛ Split",
+      "→ Cluster",
+      "✕",
+      "📐 Regola",
+      "⬛⬛ Dividi",
       "Nascondi ▼"
     ],
     "listTitle": "App installate",
     "apps": [
       "Maps",
-      "YouTube"
+      "YouTube",
+      "Spotify"
     ],
-    "controlLabel": "Controllo cluster",
+    "controlLabel": "Controllo",
     "controlApp": "Maps",
-    "mirrorText": "Display attivo sul cluster ✓",
-    "caption": "Schermata principale — Maps è proiettata sul quadro strumenti",
-    "annotations": []
-  },
-  "control": {
-    "title": "5. Durante la proiezione — Pannello di controllo",
-    "intro": "Quando un'app è attiva sul cluster, appare in basso un pannello scuro con tre funzionalità di controllo remoto:",
-    "mirror": {
-      "title": "5.1 Modalità specchio (📺 Specchio)",
-      "text": "Premere 📺 Specchio per visualizzare una copia live del contenuto del cluster all'interno di DashCast. I tocchi vengono trasmessi al cluster.",
-      "note": ""
-    },
-    "split": {
-      "title": "5.2 Modalità Split (⬛⬛ Split)",
-      "text": "Condividere il display del cluster tra due app:",
-      "items": [
-        "Schermo intero — Un'app occupa l'intero cluster",
-        "⬜⬛ Sinistra (50%) — App principale a sinistra, seconda app a destra",
-        "⬛⬜ Destra (50%) — App principale a destra"
-      ],
-      "extra": ""
-    },
-    "hide": {
-      "title": "5.3 Nascondere il pannello",
-      "text": "Premere Nascondi ▼ per comprimere il pannello di controllo."
-    }
-  },
-  "stopping": {
-    "title": "6. Arrestare la proiezione",
-    "intro": "",
-    "table": {
-      "headers": [
-        "Pulsante",
-        "Comportamento",
-        "Quando usarlo"
-      ],
-      "rows": [
-        [
-          "Ferma Proiezione",
-          "Termina la proiezione. Il cluster rimane vuoto (nero).",
-          "Per interrompere temporaneamente la visualizzazione."
-        ],
-        [
-          "Ripristina Dashboard originale",
-          "Termina la proiezione E ripristina il cluster BYD nativo (velocità, autonomia…).",
-          "Al termine dell'utilizzo."
-        ]
-      ]
-    },
-    "warning": "⚠️ Se si esce da DashCast senza premere uno di questi pulsanti, la proiezione rimane attiva sul cluster fino al riavvio successivo del servizio."
-  },
-  "settings": {
-    "title": "7. Impostazioni",
-    "intro": "Accedere alle impostazioni tramite ⋮ → ⚙️ Impostazioni.",
-    "titleLabel": "Impostazioni",
-    "clusterTypeLabel": "Tipo di cluster",
-    "clusterOptions": [
-      "8,8 pollici (cmd=29)",
-      "12,3 pollici (cmd=30) — Seal EU",
-      "10,25 pollici (cmd=31)"
-    ],
-    "marginsLabel": "Margini display (overscan)",
-    "horizontalMarginLabel": "Sinistra / Destra:",
-    "verticalMarginLabel": "Alto / Basso:",
-    "applyButton": "Applica ora",
-    "resetButton": "Ripristina (80 / 50)",
-    "caption": "Pagina Impostazioni",
-    "type": {
-      "title": "7.1 Tipo di cluster",
-      "text": "Selezionare le dimensioni dello schermo del quadro strumenti. Per il BYD Seal EU, selezionare 12,3 pollici (cmd=30)."
-    },
-    "margins": {
-      "title": "7.2 Margini display (overscan)",
-      "text": "Regolare i margini per inquadrare perfettamente il contenuto nell'area visibile dello schermo del cluster. Gli schermi curvi hanno spesso bordi fisici che si estendono oltre la superficie di visualizzazione utile.",
-      "items": [
-        "Sinistra / Destra — Margine orizzontale (0–200 px per lato)",
-        "Alto / Basso — Margine verticale (0–200 px in alto e in basso)"
-      ],
-      "applyText": "",
-      "note": "💡 Valori predefiniti consigliati per il Seal EU: Sinistra/Destra = 80 px, Alto/Basso = 50 px."
-    }
-  },
-  "tools": {
-    "title": "8. Menu ⋮ — Strumenti aggiuntivi",
-    "intro": "",
-    "table": {
-      "headers": [
-        "Opzione",
-        "Descrizione"
-      ],
-      "rows": [
-        [
-          "⚙️ Impostazioni",
-          "Tipo di cluster + regolazione dei margini overscan"
-        ],
-        [
-          "🔧 Diagnostica",
-          "Test avanzati per sviluppatori — connessione ADB, display, dimensioni schermo cluster"
-        ],
-        [
-          "📋 Report di sistema",
-          "Genera un report completo (display, API BYD, permessi)"
-        ],
-        [
-          "📜 Log",
-          "Visualizzatore log in tempo reale — filtraggio per tag/livello, condivisione via email o file"
-        ],
-        [
-          "🌐 Lingua",
-          "Torna alla schermata di selezione della lingua"
-        ]
-      ]
-    },
-    "logs": null
-  },
-  "faq": {
-    "title": "9. FAQ & risoluzione dei problemi",
-    "items": [
+    "mirrorText": "Attivo ✓",
+    "caption": "App proiettata",
+    "annotations": [
       {
-        "question": "❓ La finestra \"Consentire il debug USB?\" non compare",
-        "answer": "Verificare che il debug ADB via TCP sia attivato nelle opzioni sviluppatore dell'infotainment. Se l'opzione è assente, attivare prima la modalità sviluppatore (toccare il numero di build 7 volte in Informazioni sul dispositivo).",
-        "items": []
+        "tone": "green",
+        "marker": "●",
+        "label": "Verde",
+        "text": "App in esecuzione."
       },
       {
-        "question": "❓ L'app non compare sul cluster dopo la selezione",
-        "answer": "",
-        "items": [
-          "Assicurarsi di aver premuto Attiva Proiezione prima di selezionare l'app.",
-          "Alcune app rifiutano di essere avviate su un display secondario. Controllare i Log per il messaggio di errore.",
-          "Chiudere e riaprire DashCast, poi ripetere la procedura."
-        ]
-      },
-      {
-        "question": "❓ Il contenuto è ritagliato o spostato sul cluster",
-        "answer": "Regolare i margini display in ⋮ → Impostazioni. Aumentare Sinistra/Destra in caso di overflow orizzontale, Alto/Basso in caso di overflow verticale. Premere Applica ora per vedere subito il risultato.",
-        "items": []
-      },
-      {
-        "question": "❓ I pulsanti \"← Principale\" e \"✕\" rimangono visibili dopo la chiusura dell'app",
-        "answer": "DashCast rileva automaticamente la chiusura delle app (tramite monitoraggio /proc). Se l'interfaccia è bloccata, premere Ferma Proiezione per forzare un ripristino.",
-        "items": []
-      },
-      {
-        "question": "❓ Dopo un riavvio del veicolo devo riconfigurare tutto?",
-        "answer": "No. Il tipo di cluster e i margini overscan vengono salvati. Solo la connessione ADB potrebbe richiedere di premere nuovamente Attiva Proiezione.",
-        "items": []
+        "tone": "",
+        "marker": "→",
+        "label": "Cluster",
+        "text": "Invia."
       }
     ]
   },
-  "footer": "DashCast · Manuale utente · Italiano · github.com/Kiroha/byd-dashcast"
+  "control": {
+    "title": "5. Pannello di controllo",
+    "intro": "Controlli:",
+    "mirror": {
+      "title": "Specchio",
+      "text": "",
+      "note": ""
+    },
+    "resize": {
+      "title": "Regola",
+      "text": "",
+      "note": ""
+    },
+    "split": {
+      "title": "Dividi",
+      "text": "",
+      "items": [],
+      "extra": ""
+    },
+    "hide": {
+      "title": "Nascondi",
+      "text": ""
+    }
+  },
+  "stopping": {
+    "title": "6. Stop",
+    "intro": "Due opzioni.",
+    "table": {
+      "headers": [
+        "Tasto",
+        "Azione",
+        "Quando"
+      ],
+      "rows": []
+    },
+    "warning": "Avviso"
+  },
+  "settings": {
+    "title": "7. Impostazioni",
+    "intro": "",
+    "titleLabel": "Impostazioni",
+    "clusterTypeLabel": "Tipo",
+    "clusterOptions": [],
+    "marginsLabel": "Margini",
+    "horizontalMarginLabel": "Orizzontali",
+    "verticalMarginLabel": "Verticali",
+    "applyButton": "Applica",
+    "resetButton": "Reset",
+    "caption": "",
+    "type": {
+      "title": "Tipo",
+      "text": ""
+    },
+    "margins": {
+      "title": "Margini",
+      "text": "",
+      "items": [],
+      "applyText": "",
+      "note": ""
+    }
+  },
+  "tools": {
+    "title": "8. Strumenti",
+    "intro": "",
+    "table": {
+      "headers": [],
+      "rows": []
+    },
+    "logs": {
+      "title": "Logs",
+      "header": "",
+      "clearButton": "",
+      "shareButton": "",
+      "filterPlaceholder": "",
+      "lines": [],
+      "caption": ""
+    }
+  },
+  "faq": {
+    "title": "9. FAQ",
+    "items": []
+  },
+  "footer": "DashCast v0.5.1"
 };
