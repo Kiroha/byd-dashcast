@@ -127,7 +127,20 @@ export default {
     "controlApp": "Maps",
     "mirrorText": "Display active on cluster ✓",
     "caption": "Main screen — Maps is projected on the instrument cluster",
-    "annotations": []
+    "annotations": [
+      {
+        "tone": "red",
+        "marker": "❌",
+        "label": "Red Cross (Force Stop)",
+        "text": "Force stops a stubborn application (kills the process gracefully in the system) and clears it from the Recents menu."
+      },
+      {
+        "tone": "gray",
+        "marker": "🔲",
+        "label": "Grid / List View",
+        "text": "You can toggle the application display between a classic list or a grid (icons) via the app settings."
+      }
+    ]
   },
   "control": {
     "title": "5. During Projection — Control Panel",
