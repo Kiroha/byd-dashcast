@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.os.Bundle;
 import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,7 +45,12 @@ import com.byd.dashcast.model.AppInfo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 /**
  * MainActivity — 15-inch main screen.
@@ -57,6 +64,16 @@ public class MainActivity extends AppCompatActivity
                    AppListAdapter.OnSendToDashboardListener {
 
     private static final String TAG = "BYDApp";
+
+    // --- Resize Zone ---
+    private android.widget.SeekBar sbResizeW;
+    private android.widget.SeekBar sbResizeH;
+    private android.widget.TextView tvResizeW;
+    private android.widget.TextView tvResizeH;
+    private android.widget.Button btnResizeApply;
+    private android.widget.Button btnToggleResize;
+     
+
 
     // Cluster service
     private ClusterService          mClusterService;
@@ -73,6 +90,10 @@ public class MainActivity extends AppCompatActivity
     private static final String PREF_CLUSTER_NAME  = "cluster_active_name";
     /** sendInfo code for cluster screen size: 29=8.8", 30=12.3" (default Seal EU), 31=10.25" */
     private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
+    
+    private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
+    private static boolean sHasAutoLaunched = false;
+    private String mPendingAutoLaunchPkg = null;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
@@ -123,6 +144,7 @@ public class MainActivity extends AppCompatActivity
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
+    private LinearLayout panelResize;
     private TextView     tvControlAppName;
     private android.widget.FrameLayout frameMirror;
     private TextureView clusterMirror;
@@ -212,7 +234,16 @@ public class MainActivity extends AppCompatActivity
 
         // App list
         mAdapter = new AppListAdapter(this);
-        rvApps.setLayoutManager(new LinearLayoutManager(this));
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean isGrid = prefs.getBoolean("grid_mode", false);
+        mAdapter.setGridMode(isGrid);
+        
+        if (isGrid) {
+            rvApps.setLayoutManager(new GridLayoutManager(this, 5));
+        } else {
+            rvApps.setLayoutManager(new LinearLayoutManager(this));
+        }
+        
         rvApps.setAdapter(mAdapter);
 
         // Button "Activate cluster" — always triggers activateCluster()
@@ -258,6 +289,64 @@ public class MainActivity extends AppCompatActivity
         panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
         tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
+        
+        // --- Resize Zone ---
+        btnToggleResize = (Button) findViewById(R.id.btn_toggle_resize);
+        panelResize = (LinearLayout) findViewById(R.id.panel_resize);
+        sbResizeW = (SeekBar) findViewById(R.id.sb_resize_w);
+        sbResizeH = (SeekBar) findViewById(R.id.sb_resize_h);
+        tvResizeW = (TextView) findViewById(R.id.tv_resize_w_val);
+        tvResizeH = (TextView) findViewById(R.id.tv_resize_h_val);
+        btnResizeApply = (Button) findViewById(R.id.btn_resize_apply);
+        if (btnToggleResize != null) {
+            btnToggleResize.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (panelResize != null) {
+                        if (panelResize.getVisibility() == View.VISIBLE) {
+                            panelResize.setVisibility(View.GONE);
+                        } else {
+                            panelResize.setVisibility(View.VISIBLE);
+                        }
+                    }
+                }
+            });
+        }
+        
+        
+        sbResizeW.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeW.setText(String.valueOf(value)); }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        sbResizeH.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeH.setText(String.valueOf(value)); }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        
+        btnResizeApply.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCurrentDashboardPkg == null) return;
+                int w = sbResizeW.getProgress();
+                int h = sbResizeH.getProgress();
+                SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                ed.putInt("inset_h_" + mCurrentDashboardPkg, w);
+                ed.putInt("inset_v_" + mCurrentDashboardPkg, h);
+                ed.apply();
+                
+                AppLogger.i(TAG, "Applied custom resize " + w + "/" + h + " for " + mCurrentDashboardPkg);
+                
+                if (mServiceBound && mClusterService != null) {
+                    // Chercher le taskId et ordonner l'update
+                    int taskId = mClusterService.findRunningTaskId(mCurrentDashboardPkg);
+                    AdbLocalClient.executeShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
+                    mClusterService.resizeActiveTask(taskId, mCurrentDashboardPkg);
+                }
+            }
+        });
+
         frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
         clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
@@ -345,7 +434,7 @@ public class MainActivity extends AppCompatActivity
 
         // OTA update check — only on fresh launch, not on rotation
         if (savedInstanceState == null) {
-            UpdateChecker.checkAndInstall(this, makeOtaProgressListener(false));
+            UpdateChecker.checkUpdate(this, makeOtaProgressListener(false));
         }
     }
 
@@ -470,17 +559,26 @@ public class MainActivity extends AppCompatActivity
                     attemptStartMirrorWithCurrentHolder();
                 }
 
-                // Restore mMainDisplayPkg if Activity was recreated (it is null after onCreate
-                // only if getSharedPreferences returned no value, which should
-                // not happen here, but we re-check for the onClusterDisplayDisconnected case)
+                // Restore mMainDisplayPkg if Activity was recreated
                 if (mMainDisplayPkg == null) {
                     mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .getString(PREF_MAIN_PKG, null);
-                    if (mMainDisplayPkg != null) {
-                        mAdapter.setMainPackage(mMainDisplayPkg);
+                    if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
+                }
+                
+                // Auto-Launch process
+                if (mPendingAutoLaunchPkg != null) {
+                    String targetPkg = mPendingAutoLaunchPkg;
+                    mPendingAutoLaunchPkg = null; // Clear immediately
+                    AppLogger.i(TAG, "Executing pending auto-launch for " + targetPkg);
+                    // Find it and launch it
+                    for (AppInfo a : mAdapter.getApps()) {
+                        if (a.packageName.equals(targetPkg)) {
+                            onSendToDashboard(a);
+                            break;
+                        }
                     }
                 }
-
             }
         });
     }
@@ -508,6 +606,43 @@ public class MainActivity extends AppCompatActivity
     }
 
     // ---- AppListAdapter.OnSendToDashboardListener ----
+
+    @Override
+    public void onSetAutoLaunch(AppInfo app, boolean enable) {
+        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (enable) {
+            p.edit().putString(PREF_AUTO_LAUNCH_PKG, app.packageName).apply();
+            // Clear other auto launches in memory
+            for (AppInfo a : mAdapter.getApps()) {
+                a.isAutoLaunch = a.packageName.equals(app.packageName);
+            }
+        } else {
+            p.edit().remove(PREF_AUTO_LAUNCH_PKG).apply();
+            app.isAutoLaunch = false;
+        }
+        // Use post to avoid IllegalStateException (cannot call notify during bind)
+        rvApps.post(new Runnable() {
+            @Override
+            public void run() {
+                mAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    @Override
+    public void onToggleFavorite(AppInfo app) {
+        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        Set<String> favs = new HashSet<>(p.getStringSet("favorites", new HashSet<>()));
+        if (favs.contains(app.packageName)) {
+            favs.remove(app.packageName);
+            app.isFavorite = false;
+        } else {
+            favs.add(app.packageName);
+            app.isFavorite = true;
+        }
+        p.edit().putStringSet("favorites", favs).apply();
+        loadAppsAsync(); // Reload and re-sort
+    }
 
     @Override
     public void onSendToDashboard(AppInfo app) {
@@ -643,13 +778,11 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onKillApp(final AppInfo app) {
         // 1. If the app is still on the cluster (mCurrentDashboardPkg matches),
-        //    restore first to free the Qt surface.
+        //    we do NOT stop projection or restore anything. We just kill it in memory.
         boolean isOnCluster = mCurrentDashboardPkg != null
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
-        if (isOnCluster && mServiceBound && mClusterService != null) {
-            mClusterService.stopProjectionNoAdb(); // Ne pas envoyer le restore cluster auto
-        }
+
 
         // 2. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
@@ -657,23 +790,19 @@ public class MainActivity extends AppCompatActivity
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        // Force-stop le slot secondaire en mode split
-                        if (mSecondDashboardPkg != null) {
-                            AdbLocalClient.forceStopApp(MainActivity.this, mSecondDashboardPkg, null);
+                        AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
+                        if (isOnCluster) {
+                            mCurrentDashboardApp = null;
+                            mCurrentDashboardPkg = null;
+                            mAdapter.setCurrentPackage(null);
+                            updateDashboardStatus(null);
+                            
+                            // The virtual display remains alive and black, waiting for another app.
                         }
-                        clearSplitState();
-                        // If the killed app was on the main display, clear that state
-                        if (app.packageName != null && app.packageName.equals(mMainDisplayPkg)) {
-                            mMainDisplayPkg = null;
-                            mAdapter.setMainPackage(null);
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                    .edit().remove(PREF_MAIN_PKG).apply();
+                        if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
+                            mSecondDashboardPkg = null;
+                            clearSplitState();
                         }
-                        mAdapter.setCurrentPackage(null);
-                        updateDashboardStatus(null);
-                        btnActivateCluster.setEnabled(true);
                         showAppList();
                         Toast.makeText(MainActivity.this,
                                 getString(R.string.toast_app_stopped, app.appName),
@@ -842,7 +971,25 @@ public class MainActivity extends AppCompatActivity
         rvApps.setVisibility(View.GONE);
         frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
+        
+        // Init Resize SeekBar based on current app or global prefs
+        if (mCurrentDashboardPkg != null) {
+            SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+            int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+            int curW = p.getInt("inset_h_" + mCurrentDashboardPkg, defH);
+            int curH = p.getInt("inset_v_" + mCurrentDashboardPkg, defV);
+            if (sbResizeW != null) {
+                sbResizeW.setProgress(curW);
+                tvResizeW.setText(String.valueOf(curW));
+            }
+            if (sbResizeH != null) {
+                sbResizeH.setProgress(curH);
+                tvResizeH.setText(String.valueOf(curH));
+            }
+        }
     }
+
 
     /**
      * Hides the mirror and restores the app list.
@@ -1031,29 +1178,45 @@ public class MainActivity extends AppCompatActivity
 
         return new UpdateChecker.ProgressListener() {
             @Override
-            public void onUpdateFound(String version) {
+            public void onUpdateFound(final String version, final String changelog, final String downloadUrl) {
                 if (isFinishing() || isDestroyed()) return;
 
                 LinearLayout layout = new LinearLayout(MainActivity.this);
                 layout.setOrientation(LinearLayout.VERTICAL);
                 int pad = (int) (getResources().getDisplayMetrics().density * 20);
-                layout.setPadding(pad * 2, pad, pad * 2, pad / 2);
+                layout.setPadding(pad, pad, pad, pad / 2);
 
                 TextView tvVersion = new TextView(MainActivity.this);
                 tvVersion.setText("DashCast " + version);
-                tvVersion.setTextSize(15);
-                tvVersion.setTextColor(0xFF2E3440);
+                tvVersion.setTextSize(16);
+                tvVersion.setPadding(pad, 0, pad, pad / 2);
+                tvVersion.setTextColor(android.graphics.Color.parseColor("#1565C0"));
                 layout.addView(tvVersion);
 
-                ProgressBar pb = new ProgressBar(MainActivity.this, null,
-                        android.R.attr.progressBarStyleHorizontal);
+                ScrollView sv = new ScrollView(MainActivity.this);
+                TextView tvChangelog = new TextView(MainActivity.this);
+                tvChangelog.setText(changelog);
+                tvChangelog.setTextSize(13);
+                tvChangelog.setPadding(pad, 0, pad, pad);
+                tvChangelog.setTextColor(android.graphics.Color.parseColor("#333333"));
+                sv.addView(tvChangelog);
+                
+                LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        (int) (getResources().getDisplayMetrics().density * 250) // max height
+                );
+                layout.addView(sv, svParams);
+
+                // Progress bar container (initially hidden)
+                final LinearLayout progressLayout = new LinearLayout(MainActivity.this);
+                progressLayout.setOrientation(LinearLayout.VERTICAL);
+                progressLayout.setPadding(pad, pad, pad, 0);
+                progressLayout.setVisibility(View.GONE);
+
+                ProgressBar pb = new ProgressBar(MainActivity.this, null, android.R.attr.progressBarStyleHorizontal);
                 pb.setMax(100);
                 pb.setProgress(0);
-                LinearLayout.LayoutParams lpPb = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                lpPb.topMargin = pad;
-                layout.addView(pb, lpPb);
+                progressLayout.addView(pb);
                 pbHolder[0] = pb;
 
                 TextView tvPct = new TextView(MainActivity.this);
@@ -1061,20 +1224,32 @@ public class MainActivity extends AppCompatActivity
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
-                LinearLayout.LayoutParams lpPct = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                lpPct.topMargin = pad / 2;
-                layout.addView(tvPct, lpPct);
+                progressLayout.addView(tvPct);
                 pctHolder[0] = tvPct;
 
-                AlertDialog d = new AlertDialog.Builder(MainActivity.this)
+                layout.addView(progressLayout);
+
+                dlgHolder[0] = new AlertDialog.Builder(MainActivity.this)
                         .setTitle(getString(R.string.ota_dialog_title))
                         .setView(layout)
                         .setCancelable(false)
+                        .setPositiveButton("Update Now", null)
+                        .setNegativeButton("Update Later", (dialog, which) -> dialog.dismiss())
                         .create();
-                d.show();
-                dlgHolder[0] = d;
+                
+                dlgHolder[0].setOnShowListener(dialog -> {
+                    Button posButton = dlgHolder[0].getButton(AlertDialog.BUTTON_POSITIVE);
+                    posButton.setOnClickListener(v -> {
+                        posButton.setEnabled(false);
+                        dlgHolder[0].getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
+                        sv.setVisibility(View.GONE);
+                        tvVersion.setText("Downloading update...");
+                        progressLayout.setVisibility(View.VISIBLE);
+                        // Trigger download
+                        UpdateChecker.startDownload(MainActivity.this, downloadUrl, this);
+                    });
+                });
+                dlgHolder[0].show();
             }
 
             @Override
@@ -1125,6 +1300,7 @@ public class MainActivity extends AppCompatActivity
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
+        popup.getMenu().add(0, 7, 0, mAdapter.isGridMode() ? "Menu: List Mode" : "Menu: Grid Mode");
         popup.getMenu().add(0, 2, 0, getString(R.string.menu_diagnostic));
         popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
         popup.getMenu().add(0, 4, 0, getString(R.string.menu_log));
@@ -1135,6 +1311,19 @@ public class MainActivity extends AppCompatActivity
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case 1: startActivity(new Intent(MainActivity.this, SettingsActivity.class)); return true;
+                    case 7:
+                        SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        boolean nv = !mAdapter.isGridMode();
+                        p2.edit().putBoolean("grid_mode", nv).apply();
+                        mAdapter.setGridMode(nv);
+                        if (nv) {
+                            rvApps.setLayoutManager(new GridLayoutManager(MainActivity.this, 5));
+                        } else {
+                            rvApps.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                        }
+                        rvApps.setAdapter(mAdapter);
+                        Toast.makeText(MainActivity.this, nv ? "Grid Mode Enabled" : "List Mode Enabled", Toast.LENGTH_SHORT).show();
+                        return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
                     case 4: startActivity(new Intent(MainActivity.this, LogActivity.class)); return true;
@@ -1147,7 +1336,7 @@ public class MainActivity extends AppCompatActivity
                         startActivity(intent);
                         return true;
                     case 6:
-                        UpdateChecker.checkAndInstall(MainActivity.this,
+                        UpdateChecker.checkUpdate(MainActivity.this,
                                 makeOtaProgressListener(true));
                         return true;
                 }
@@ -1481,9 +1670,24 @@ public class MainActivity extends AppCompatActivity
                     apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
                 }
 
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                Set<String> favs = prefs.getStringSet("favorites", new HashSet<>());
+                String autoPkg = prefs.getString(PREF_AUTO_LAUNCH_PKG, null);
+
+                for (AppInfo info : apps) {
+                    if (favs.contains(info.packageName)) {
+                        info.isFavorite = true;
+                    }
+                    if (autoPkg != null && autoPkg.equals(info.packageName)) {
+                        info.isAutoLaunch = true;
+                    }
+                }
+
                 Collections.sort(apps, new Comparator<AppInfo>() {
                     @Override
                     public int compare(AppInfo a, AppInfo b) {
+                        if (a.isFavorite && !b.isFavorite) return -1;
+                        if (!a.isFavorite && b.isFavorite) return 1;
                         return a.appName.compareToIgnoreCase(b.appName);
                     }
                 });

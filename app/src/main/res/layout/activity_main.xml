@@ -90,12 +90,16 @@
         android:padding="12dp"
         android:background="#F5F5F5"/>
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <!-- ===== LISTE DES APPS ===== -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_apps"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:scrollbars="vertical"/>
 
     <!-- ===== MIROIR CLUSTER =====
@@ -105,8 +109,7 @@
     <FrameLayout
         android:id="@+id/frame_cluster_mirror"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:visibility="gone">
 
         <!-- TextureView: SF est le PRODUCTEUR (il rend le contenu du display dans la surface).
@@ -153,8 +156,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#0D1117"
-        android:visibility="gone">
+        android:background="#D90D1117"
+        android:visibility="gone"
+        android:layout_alignParentBottom="true">
 
         <!-- Header: app name + hide button -->
         <LinearLayout
@@ -187,6 +191,17 @@
                 android:maxLines="1"/>
 
             <Button
+                android:id="@+id/btn_toggle_resize"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Ajuster"
+                android:textSize="10sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#00838F"/>
+
+            <Button
                 android:id="@+id/btn_cluster_split"
                 android:layout_width="wrap_content"
                 android:layout_height="30dp"
@@ -209,6 +224,85 @@
 
         </LinearLayout>
 
+
+        <!-- === ZONE REDIMENSIONNEMENT === -->
+        <LinearLayout
+            android:id="@+id/panel_resize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:background="#1C2128"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <TextView
+                    android:id="@+id/tv_resize_w_label"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:text="Width Inset"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"/>
+                <SeekBar
+                    android:id="@+id/sb_resize_w"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="400"/>
+                <TextView
+                    android:id="@+id/tv_resize_w_val"
+                    android:layout_width="35dp"
+                    android:layout_height="wrap_content"
+                    android:textColor="#4A9FDF"
+                    android:textSize="12sp"
+                    android:text="0"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+                <TextView
+                    android:id="@+id/tv_resize_h_label"
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:text="Height Inset"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"/>
+                <SeekBar
+                    android:id="@+id/sb_resize_h"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="400"/>
+                <TextView
+                    android:id="@+id/tv_resize_h_val"
+                    android:layout_width="35dp"
+                    android:layout_height="wrap_content"
+                    android:textColor="#4A9FDF"
+                    android:textSize="12sp"
+                    android:text="0"/>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_resize_apply"
+                android:layout_width="wrap_content"
+                android:layout_height="35dp"
+                android:layout_gravity="end"
+                android:layout_marginTop="4dp"
+                android:text="Appliquer"
+                android:textSize="12sp"
+                android:backgroundTint="#2EA043"/>
+        </LinearLayout>
+
     </LinearLayout>
+
+    </RelativeLayout>
 
 </LinearLayout>

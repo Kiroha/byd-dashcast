@@ -136,15 +136,56 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     }
 
     /** Returns the current horizontal overscan inset (left + right) from persistent settings. */
-    private int getInsetH() {
+
+
+
+    public int getInsetH(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+                    .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+        }
         return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+                .getInt("inset_h_" + packageName, getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+                .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H));
     }
 
-    /** Returns the current vertical overscan inset (top + bottom) from persistent settings. */
-    private int getInsetV() {
+    public int getInsetV(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+                    .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+        }
         return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+                .getInt("inset_v_" + packageName, getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+                .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V));
+    }
+
+
+    
+    public void resizeActiveTask(int taskId, String packageName) {
+        if (taskId <= 0) return;
+        try {
+            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+            Object currentActivityThread = activityThreadClass.getMethod("currentActivityThread").invoke(null);
+            Object am = activityThreadClass.getMethod("getApplicationThread").invoke(currentActivityThread);
+            Class<?> iAtmClass = Class.forName("android.app.IActivityTaskManager");
+            Object iatm;
+            try {
+                iatm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null);
+            } catch (Exception e) {
+                iatm = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null);
+            }
+
+            int insetH = getInsetH(packageName);
+            int insetV = getInsetV(packageName);
+            android.graphics.Rect bounds = new android.graphics.Rect(
+                    insetH, insetV, 1920 - insetH, 720 - insetV);
+            
+            iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
+                    .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
+            AppLogger.i(TAG, "resizeActiveTask " + packageName + " " + bounds + " OK");
+        } catch (Exception e) {
+            AppLogger.w(TAG, "resizeActiveTask failed: " + e.getMessage());
+        }
     }
 
     public void setListener(Listener listener) {
@@ -188,7 +229,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * Must be called from a background thread.
      * Returns -1 if no running task is found.
      */
-    private int findRunningTaskId(String packageName) {
+    public int findRunningTaskId(String packageName) {
         try {
             android.app.ActivityManager am =
                     (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
@@ -255,8 +296,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         }
                         // Apply the same inset bounds as applyClusterFreeformBounds()
                         try {
-                            int insetH = getInsetH();
-                            int insetV = getInsetV();
+                            int insetH = getInsetH(packageName);
+                            int insetV = getInsetV(packageName);
                             android.graphics.Rect bounds = new android.graphics.Rect(
                                     insetH, insetV, 1920 - insetH, 720 - insetV);
                             iAtmClass.getMethod("resizeTask",
@@ -332,7 +373,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                     opts.setLaunchDisplayId(displayId);
-                    if (displayId > 0) applyClusterFreeformBounds(opts, displayId);
+                    if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
 
                     startActivityViaIAM(launchIntent, opts);
 
@@ -425,7 +466,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * Inset (H/V from SettingsActivity prefs) avoids content clipping at the
      * physical curved edges of the BYD Seal EU cluster screen.
      */
-    private void applyClusterFreeformBounds(android.app.ActivityOptions opts, int displayId) {
+    private void applyClusterFreeformBounds(android.app.ActivityOptions opts, int displayId, String packageName) {
         try {
             java.lang.reflect.Method setWM = android.app.ActivityOptions.class
                     .getDeclaredMethod("setLaunchWindowingMode", int.class);
@@ -443,8 +484,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Exception e) {
             AppLogger.w(TAG, "getRealSize failed: " + e.getMessage());
         }
-        int insetH = getInsetH();
-        int insetV = getInsetV();
+        int insetH = getInsetH(packageName);
+        int insetV = getInsetV(packageName);
         android.graphics.Rect bounds = new android.graphics.Rect(
                 insetH, insetV, sz.x - insetH, sz.y - insetV);
         try {
@@ -456,6 +497,15 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     + " display=" + displayId + " " + sz.x + "\u00d7" + sz.y);
         } catch (Exception e) {
             AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
+        }
+        
+        // ---- BYD SPECIFIC FIX ----
+        // Android's setLaunchBounds is ignored on BYD VirtualDisplays (Presentation).
+        // Since we run only one app at a time on the cluster, we apply the app-specific 
+        // bounds directly as a display overscan at launch.
+        if (displayId > 0) {
+            AdbLocalClient.executeShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
+            AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
         }
     }
 
@@ -533,8 +583,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // because apps there are not tracked by the standard WM task system.
         // SAFETY GUARD: never apply overscan to the main display (id 0 or negative).
         if (displayId > 0) {
-            final int insetH = getInsetH();
-            final int insetV = getInsetV();
+            final int insetH = getInsetH(null);
+            final int insetV = getInsetV(null);
             AdbLocalClient.executeShell(this,
                     "wm overscan " + insetH + "," + insetV
                     + "," + insetH + "," + insetV

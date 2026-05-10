@@ -191,6 +191,10 @@ public class DiagActivity extends AppCompatActivity {
         tvCleanupResult = (TextView) findViewById(R.id.tv_cleanup_result);
         btnCleanupFiles.setOnClickListener(v -> cleanupFilesAction());
 
+        // [ADAS]
+        findViewById(R.id.btn_adas_on).setOnClickListener(v -> runAdas(47));
+        findViewById(R.id.btn_adas_off).setOnClickListener(v -> runAdas(48));
+
         btnReSnifferStart   .setOnClickListener(v -> startReSniffer());
         btnReSnifferStop    .setOnClickListener(v -> stopReSniffer());
         btnReSnifferSnapshot.setOnClickListener(v -> snapshotReSniffer());
@@ -1331,7 +1335,10 @@ public class DiagActivity extends AppCompatActivity {
             shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
             shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, logFile.getName());
             shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(android.content.Intent.createChooser(shareIntent, "Exporter Sniffer RE"));
+            shareIntent.setClipData(android.content.ClipData.newRawUri("", uri));
+            android.content.Intent chooser = android.content.Intent.createChooser(shareIntent, "Exporter Sniffer RE");
+            chooser.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
         } catch (Exception e) {
             AppLogger.e("RESniffer", "Export erreur", e);
         }
@@ -1581,6 +1588,29 @@ public class DiagActivity extends AppCompatActivity {
         }, "resize-inspect-thread").start();
     }
 
+
+    private void runAdas(int code) {
+        new Thread(() -> {
+            try {
+                AdbLocalClient.sendInfo(DiagActivity.this, 1000, code, "", new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        runOnUiThread(() -> {
+                            tvAdbLocalResult.setText("ADAS (" + code + ") OK: " + report + "\n" + tvAdbLocalResult.getText());
+                        });
+                    }
+                    @Override public void onError(String error) {
+                        runOnUiThread(() -> {
+                            tvAdbLocalResult.setText("ADAS (" + code + ") ERREUR: " + error + "\n" + tvAdbLocalResult.getText());
+                        });
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    tvAdbLocalResult.setText("Exception: " + e.getMessage() + "\n" + tvAdbLocalResult.getText());
+                });
+            }
+        }).start();
+    }
     private void cleanupFilesAction() {
         btnCleanupFiles.setEnabled(false);
         tvCleanupResult.setText(getString(R.string.diag_cleanup_running));
