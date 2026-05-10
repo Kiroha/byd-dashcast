@@ -170,4 +170,12 @@
     <string name="hint_search_apps">Dastur qidirish…</string>
     <string name="tooltip_tap_send">Klasterga yuborish uchun ilovaga bosing</string>
     <string name="split_btn_exit">↩ Toʻliq ekran</string>
+    <string name="confirm_kill_title">Ilovani toʻxtatish?</string>
+    <string name="confirm_kill_msg">%1$s ni majburiy toʻxtatish?</string>
+    <string name="confirm_kill_ok">Toʻxtatish</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Klaster mavjud emas — qayta urinib koʻring</string>
+    <string name="dialog_reconnect_title">Ilovani qayta ishga tushirish?</string>
+    <string name="dialog_reconnect_msg">%1$s ni klasterda qayta ishga tushirish?</string>
+    <string name="dialog_reconnect_yes">↺ Qayta ishga tushirish</string>
 </resources>

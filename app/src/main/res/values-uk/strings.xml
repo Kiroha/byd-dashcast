@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Пошук застосунку…</string>
     <string name="tooltip_tap_send">Натисніть на застосунок, щоб надіслати його на кластер</string>
     <string name="split_btn_exit">↩ Повний екран</string>
+    <string name="confirm_kill_title">Зупинити застосунок?</string>
+    <string name="confirm_kill_msg">Примусово зупинити %1$s?</string>
+    <string name="confirm_kill_ok">Зупинити</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Кластер недоступний — спробуйте ще раз</string>
+    <string name="dialog_reconnect_title">Перезапустити застосунок?</string>
+    <string name="dialog_reconnect_msg">Перезапустити %1$s на кластері?</string>
+    <string name="dialog_reconnect_yes">↺ Перезапустити</string>
 </resources>

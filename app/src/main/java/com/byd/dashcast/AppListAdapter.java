@@ -148,6 +148,15 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
         }
 
+        // Subtle background tint on the active row — preserves the ripple via setForeground()
+        if (isActive) {
+            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x1A4CAF50)); // green 10%
+        } else if (isOnMain) {
+            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x141565C0)); // blue 8%
+        } else {
+            holder.itemView.setForeground(null);
+        }
+
         if (holder.cbAutoLaunch != null) {
             holder.cbAutoLaunch.setVisibility(View.VISIBLE);
             holder.cbAutoLaunch.setOnCheckedChangeListener(null); // prevent false triggers

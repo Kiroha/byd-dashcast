@@ -171,4 +171,12 @@
     <string name="hint_search_apps">App suchen…</string>
     <string name="tooltip_tap_send">App antippen, um sie zum Cluster-Display zu senden</string>
     <string name="split_btn_exit">↩ Vollbild</string>
+    <string name="confirm_kill_title">App stoppen?</string>
+    <string name="confirm_kill_msg">%1$s erzwingen beenden?</string>
+    <string name="confirm_kill_ok">Stoppen</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Cluster nicht erreichbar — erneut versuchen</string>
+    <string name="dialog_reconnect_title">App neu starten?</string>
+    <string name="dialog_reconnect_msg">%1$s auf dem Cluster neu starten?</string>
+    <string name="dialog_reconnect_yes">↺ Neustarten</string>
 </resources>
