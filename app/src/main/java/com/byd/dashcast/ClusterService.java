@@ -498,6 +498,15 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Exception e) {
             AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
         }
+        
+        // ---- BYD SPECIFIC FIX ----
+        // Android's setLaunchBounds is ignored on BYD VirtualDisplays (Presentation).
+        // Since we run only one app at a time on the cluster, we apply the app-specific 
+        // bounds directly as a display overscan at launch.
+        if (displayId > 0) {
+            AdbLocalClient.executeShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
+            AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
+        }
     }
 
     /**
