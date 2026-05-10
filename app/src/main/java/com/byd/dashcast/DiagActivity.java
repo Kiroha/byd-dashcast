@@ -1335,7 +1335,10 @@ public class DiagActivity extends AppCompatActivity {
             shareIntent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
             shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, logFile.getName());
             shareIntent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(android.content.Intent.createChooser(shareIntent, "Exporter Sniffer RE"));
+            shareIntent.setClipData(android.content.ClipData.newRawUri("", uri));
+            android.content.Intent chooser = android.content.Intent.createChooser(shareIntent, "Exporter Sniffer RE");
+            chooser.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
         } catch (Exception e) {
             AppLogger.e("RESniffer", "Export erreur", e);
         }
