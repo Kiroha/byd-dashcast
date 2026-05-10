@@ -160,5 +160,10 @@
     <string name="app_state_auto">Avto</string>    <string name="ota_btn_update_now">Hozir yangilash</string>
     <string name="ota_btn_later">Keyinroq</string>
     <string name="ota_downloading">Yuklanmoqda…</string>
+    <string name="notif_log_channel_name">Faollik jurnali</string>
+    <string name="notif_log_content">Jurnal faol — ochish uchun bosing</string>
+    <string name="notif_remote_channel_name">Klaster ko\'zgu tugmasi</string>
+    <string name="notif_remote_content">📺 Klaster ko\'zgusi faol</string>
+    <string name="sysinfo_file_saved">\n\nFayl: %1$s\nADB buyrug\'i: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ To\'r rejimi</string>
     <string name="menu_view_list">📋 Ro\'yxat rejimi</string></resources>

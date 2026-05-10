@@ -160,9 +160,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void resizeActiveTask(int taskId, String packageName) {
         if (taskId <= 0) return;
         try {
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Object currentActivityThread = activityThreadClass.getMethod("currentActivityThread").invoke(null);
-            Object am = activityThreadClass.getMethod("getApplicationThread").invoke(currentActivityThread);
             Class<?> iAtmClass = Class.forName("android.app.IActivityTaskManager");
             Object iatm;
             try {

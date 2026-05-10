@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">تحديث الآن</string>
     <string name="ota_btn_later">لاحقاً</string>
     <string name="ota_downloading">جارٍ التنزيل…</string>
+    <string name="notif_log_channel_name">سجل النشاط</string>
+    <string name="notif_log_content">السجل نشط — اضغط للفتح</string>
+    <string name="notif_remote_channel_name">زر مرآة العنقود</string>
+    <string name="notif_remote_content">📺 مرآة العنقود نشطة</string>
+    <string name="sysinfo_file_saved">\n\nالملف: %1$s\nأمر ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ وضع الشبكة</string>
     <string name="menu_view_list">📋 وضع القائمة</string>
 </resources>

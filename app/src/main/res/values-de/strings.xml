@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Jetzt aktualisieren</string>
     <string name="ota_btn_later">Später</string>
     <string name="ota_downloading">Wird geladen…</string>
+    <string name="notif_log_channel_name">Aktivitätsprotokoll</string>
+    <string name="notif_log_content">Protokoll aktiv — antippen zum Öffnen</string>
+    <string name="notif_remote_channel_name">Cluster-Spiegel-Schaltfläche</string>
+    <string name="notif_remote_content">📺 Cluster-Spiegel aktiv</string>
+    <string name="sysinfo_file_saved">\n\nDatei: %1$s\nADB-Befehl: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Rastermodus</string>
     <string name="menu_view_list">📋 Listenmodus</string>
 </resources>
