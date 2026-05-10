@@ -90,12 +90,16 @@
         android:padding="12dp"
         android:background="#F5F5F5"/>
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <!-- ===== LISTE DES APPS ===== -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_apps"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:scrollbars="vertical"/>
 
     <!-- ===== MIROIR CLUSTER =====
@@ -105,8 +109,7 @@
     <FrameLayout
         android:id="@+id/frame_cluster_mirror"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:visibility="gone">
 
         <!-- TextureView: SF est le PRODUCTEUR (il rend le contenu du display dans la surface).
@@ -153,8 +156,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#0D1117"
-        android:visibility="gone">
+        android:background="#D90D1117"
+        android:visibility="gone"
+        android:layout_alignParentBottom="true">
 
         <!-- Header: app name + hide button -->
         <LinearLayout
@@ -286,5 +290,7 @@
         </LinearLayout>
 
     </LinearLayout>
+
+    </RelativeLayout>
 
 </LinearLayout>
