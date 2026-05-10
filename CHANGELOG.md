@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
 | **0.3.0-alpha** | 66 | **Feature: Per-App Resizing!** — You can now save individual Horizontal & Vertical inset values for each application separately using quick-access sliders directly accessible under the Mirror preview panel in DashCast, while the target app is running! (No more global resizing conflicts between Media and Navigation apps) |
 | **0.2.95-alpha** | 65 | **Hotfix 5: Ghost Apps in Recents (Android 10/DiLink 3.0)** — Fixed the regex matching for ADB task removal. DashCast now successfully identifies and removes the active Task ID from the App Manager (Recents) so DiLink no longer mistakenly considers the app as running in the background after clicking the Red Cross. |
@@ -28,6 +29,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
 | **0.3.0-alpha** | 66 | **Feature: Per-App Resizing!** — You can now save individual Horizontal & Vertical inset values for each application separately using quick-access sliders directly accessible under the Mirror preview panel in DashCast, while the target app is running! (No more global resizing conflicts between Media and Navigation apps) |
 | **0.2.95-alpha** | 65 | **Hotfix 5: Ghost Apps in Recents (Android 10/DiLink 3.0)** — Fixed the regex matching for ADB task removal. DashCast now successfully identifies and removes the active Task ID from the App Manager (Recents) so DiLink no longer mistakenly considers the app as running in the background after clicking the Red Cross. |
@@ -81,6 +83,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.3.2-alpha** | 68 | **Diag: ADAS Toggle** — Added two direct ADB buttons in the Diag tool to manually and easily send `sendInfo(1000, 47)` (ON) and `sendInfo(1000, 48)` (OFF) to toggle BYD's secret ADAS debugging mode on the cluster. |
 | **0.3.1-alpha** | 67 | **Optimisation: Elegant App Killer** — Replaced the blind Binder sequence (service call 23/24) with a custom headless Java process (TaskRemover). DashCast now uses Android's native reflection inside an ADB shell to gracefully and accurately find the correct removeTask function regardless of the DiLink version or OEM tweaks. |
 | **0.3.0-alpha** | 66 | **Feature: Per-App Resizing!** — You can now save individual Horizontal & Vertical inset values for each application separately using quick-access sliders directly accessible under the Mirror preview panel in DashCast, while the target app is running! (No more global resizing conflicts between Media and Navigation apps) |
 | **0.2.95-alpha** | 65 | **Hotfix 5: Ghost Apps in Recents (Android 10/DiLink 3.0)** — Fixed the regex matching for ADB task removal. DashCast now successfully identifies and removes the active Task ID from the App Manager (Recents) so DiLink no longer mistakenly considers the app as running in the background after clicking the Red Cross. |
