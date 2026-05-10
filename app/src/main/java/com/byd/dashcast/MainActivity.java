@@ -762,7 +762,6 @@ public class MainActivity extends AppCompatActivity
         boolean isOnCluster = mCurrentDashboardPkg != null
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
-        // [REMOVED] mClusterService.stopProjectionNoAdb()
 
 
         // 2. am force-stop via ADB
@@ -777,7 +776,8 @@ public class MainActivity extends AppCompatActivity
                             mCurrentDashboardPkg = null;
                             mAdapter.setCurrentPackage(null);
                             updateDashboardStatus(null);
-                            // We do NOT touch btnActivateCluster or call stopProjectionNoAdb().
+                            if (mServiceBound && mClusterService != null) mClusterService.stopProjectionNoAdb();
+                            
                             // The virtual display remains alive and black, waiting for another app.
                         }
                         if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
