@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |
 | **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
@@ -32,6 +33,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |
 | **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
@@ -89,6 +91,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |
 | **0.4.0-alpha** | 70 | **Critical BugFix**: Resolved the red-cross force-stop on DiLink 3.0 via strict `app_process64` syntax. When killing an app currently running, DashCast will now automatically release the cluster and return back to the standard BYD Speedometer to prevent the black frozen screen illusion. |
 | **0.3.3-alpha** | 69 | **Fix**: Corrected ADB kill app action (`TaskRemover` headless invocation syntax) and made mirror dynamic \`Apply\` button utilize \`wm overscan\` like the settings. |
