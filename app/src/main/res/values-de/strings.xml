@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nDatei: %1$s\nADB-Befehl: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Rastermodus</string>
     <string name="menu_view_list">📋 Listenmodus</string>
+    <string name="hint_search_apps">App suchen…</string>
+    <string name="tooltip_tap_send">App antippen, um sie zum Cluster-Display zu senden</string>
+    <string name="split_btn_exit">↩ Vollbild</string>
 </resources>

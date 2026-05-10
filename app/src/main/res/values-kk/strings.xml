@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Тор режимі</string>
     <string name="menu_view_list">📋 Тізім режимі</string>
+    <string name="hint_search_apps">Қолданбаны іздеу…</string>
+    <string name="tooltip_tap_send">Кластерге жіберу үшін қолданбаны басыңыз</string>
+    <string name="split_btn_exit">↩ Толық экран</string>
 </resources>

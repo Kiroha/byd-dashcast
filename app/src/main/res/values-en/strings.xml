@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nFile: %1$s\nADB command: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Grid Mode</string>
     <string name="menu_view_list">📋 List Mode</string>
+    <string name="hint_search_apps">Search for an app…</string>
+    <string name="tooltip_tap_send">Tap an app to send it to the cluster display</string>
+    <string name="split_btn_exit">↩ Full screen</string>
 </resources>

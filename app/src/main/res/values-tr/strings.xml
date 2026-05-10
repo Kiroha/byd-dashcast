@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nDosya: %1$s\nADB komutu: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Izgara Modu</string>
     <string name="menu_view_list">📋 Liste Modu</string>
+    <string name="hint_search_apps">Uygulama ara…</string>
+    <string name="tooltip_tap_send">Küme ekranına göndermek için uygulamaya dokunun</string>
+    <string name="split_btn_exit">↩ Tam ekran</string>
 </resources>

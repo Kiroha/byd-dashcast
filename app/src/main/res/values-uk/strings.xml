@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКоманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Режим сітки</string>
     <string name="menu_view_list">📋 Режим списку</string>
+    <string name="hint_search_apps">Пошук застосунку…</string>
+    <string name="tooltip_tap_send">Натисніть на застосунок, щоб надіслати його на кластер</string>
+    <string name="split_btn_exit">↩ Повний екран</string>
 </resources>

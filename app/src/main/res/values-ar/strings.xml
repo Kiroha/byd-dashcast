@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nالملف: %1$s\nأمر ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ وضع الشبكة</string>
     <string name="menu_view_list">📋 وضع القائمة</string>
+    <string name="hint_search_apps">البحث عن تطبيق…</string>
+    <string name="tooltip_tap_send">انقر على تطبيق لإرساله إلى شاشة الكتلة</string>
+    <string name="split_btn_exit">↩ ملء الشاشة</string>
 </resources>

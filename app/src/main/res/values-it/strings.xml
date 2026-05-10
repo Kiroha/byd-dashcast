@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nFile: %1$s\nComando ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Modalità Griglia</string>
     <string name="menu_view_list">📋 Modalità Lista</string>
+    <string name="hint_search_apps">Cerca un\'app…</string>
+    <string name="tooltip_tap_send">Tocca un\'app per inviarla al cluster</string>
+    <string name="split_btn_exit">↩ Schermo intero</string>
 </resources>

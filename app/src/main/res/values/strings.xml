@@ -170,4 +170,7 @@
     <string name="notif_remote_content">📺 Miroir cluster actif</string>
     <!-- SysInfo — chemin du fichier enregistré (%1$s = chemin absolu) -->
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
+    <string name="hint_search_apps">Rechercher une application…</string>
+    <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>
+    <string name="split_btn_exit">↩ Plein écran</string>
 </resources>
