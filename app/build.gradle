@@ -19,8 +19,8 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 29
         targetSdkVersion 29
-        versionCode 66
-        versionName "0.3.0-alpha"
+        versionCode 67
+        versionName "0.3.1-alpha"
     }
 
     buildTypes {
