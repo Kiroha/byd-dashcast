@@ -74,16 +74,9 @@
     <string name="toast_write_error">خطأ في الكتابة: %1$s</string>
     <string name="toast_report_saved">تم حفظ التقرير:\n%1$s</string>
     <string name="diag_share_result1_btn">مشاركة نتيجة الاختبار 1</string>
-    <string name="diag_share_result2_btn">مشاركة نتيجة الاختبار 2</string>
-    <string name="diag_share_result3_btn">مشاركة نتيجة الاختبار 3</string>
     <string name="diag_adb_connecting">الاتصال بـ localhost:5555…\n⏳ ستظهر النافذة المنبثقة على الشاشة — اضغط سماح.</string>
     <string name="diag_adb_connected">✅ تم إنشاء الاتصال\n\n</string>
     <string name="diag_adb_failed">❌ خطأ: %1$s\n\n→ تحقق من تفعيل تصحيح ADB عبر TCP\n  في الإعدادات ← المطور ← تصحيح USB</string>
-    <string name="diag_adb_test1_hint">→ نفّذ الاختبار 1 أولاً لتفويض اتصال ADB.</string>
-    <string name="diag_launching_display1">⏳ تشغيل الشاشة 1…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ استعادة الحجم الافتراضي (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ تشخيص أبعاد العنقود…\nاختبار cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 ثوانٍ)</string>
     <string name="diag_sf_dumping">تشغيل dumpsys SurfaceFlinger…</string>
     <string name="diag_sf_no_result">(لا نتيجة — المرآة غير مسجلة في SF)</string>
     <string name="diag_sf_error">خطأ: %1$s</string>
@@ -99,16 +92,6 @@
     <string name="diag_s2_title">2. حقن Daemon والرسم</string>
     <string name="diag_s2_desc">يشغّل DashCastDaemon.java في app_process عبر ADB shell.</string>
     <string name="diag_btn_create_vd">إنشاء VirtualDisplay (حقن Daemon)</string>
-    <string name="diag_s3_title">3. خصائص العنقود</string>
-    <string name="diag_s3_initial">حجم الشاشة</string>
-    <string name="diag_s3_display1_initial">استعادة شاشة العنقود</string>
-    <string name="diag_btn_restore_display">استعادة الشاشة</string>
-    <string name="diag_sadas_title">ADAS العنقود (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">إظهار أو إخفاء طبقة ADAS على لوحة العدادات. الأوامر sendInfo(1000, 12/13). لا تأثير مرئي على Seal EU (عنقود ثنائي الأبعاد)، اختبر عند تفعيل طبقة ADAS.</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">إرسال cmd %1$d…</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. تحليل النظام (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">تشغيل dumpsys window displays</string>
@@ -132,13 +115,6 @@
     <string name="diag_btn_start">تشغيل</string>
     <string name="diag_btn_snapshot">لقطة الآن</string>
     <string name="diag_btn_export_sniffer">تصدير</string>
-    <string name="diag_auto_starting">التشغيل عبر ADB…</string>
-    <string name="diag_auto_stopping">الإيقاف عبر ADB…</string>
-    <string name="diag_auto_stopped">إيقاف: %1$s</string>
-    <string name="diag_jni_display_released">تم تحرير الشاشة. فحص JNI…</string>
-    <string name="diag_jni_fatal">خطأ فادح: %1$s</string>
-    <string name="diag_jni_send16_failed">فشل إرسال 16: %1$s</string>
-    <string name="diag_running">تشغيل التشخيص…</string>
     <string name="diag_dumpsys_running">التشغيل عبر adb local…</string>
     <string name="diag_dumpsys_error">خطأ:\n%1$s</string>
     <string name="diag_daemon_launching">تشغيل البرنامج الخلفي عبر adb local…</string>
@@ -146,10 +122,6 @@
     <string name="diag_daemon_output">مخرجات البرنامج الخلفي: %1$s</string>
     <string name="diag_daemon_error">خطأ: %1$s</string>
     <string name="diag_apk_path_error">خطأ في مسار APK: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java مباشر…</string>
-    <string name="diag_fission_running">التسلسل قيد التشغيل…</string>
-    <string name="diag_fission_no_display">❌ لا يوجد fission display. شغّل «إنشاء Fission Display» أولاً.</string>
-    <string name="diag_fission_launching">التشغيل على الشاشة %1$d…</string>
     <string name="diag_sniffer_initializing">تهيئة…</string>
     <string name="diag_sniffer_active">نشط → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ فشل التهيئة: %1$s</string>
@@ -159,15 +131,6 @@
     <string name="toast_snapshot_done">تمت إضافة اللقطة إلى الملف.</string>
     <string name="toast_sniffer_no_file">لا يوجد ملف Sniffer للتصدير.</string>
     <string name="toast_no_result_to_share">لا توجد نتيجة للمشاركة.</string>
-    <string name="diag_btn_size_restore">استعادة</string>
-    <string name="diag_btn_size_full">اختبار كامل</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ إعادة تعيين overscan الشاشة الرئيسية (display 0)</string>
-    <string name="diag_reset_main_overscan_done">تم إعادة تعيين overscan الشاشة الرئيسية — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. اختبار Resize DiLink5 (IATM)</string>
-    <string name="diag_s7_desc">اختبار تسلسل DiLink5: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) عبر raw Binder على activity_task.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ تسلسل DiLink5 (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 فقط</string>
-    <string name="diag_btn_resize_inspect_task">🔍 فحص مهمة العنقود (windowing + bounds)</string>
     <string name="diag_s6_title">6. تنظيف التخزين</string>
     <string name="diag_s6_desc">يحذف ملفات السجل والتقارير التي أنشأها DashCast. مفاتيح ADB لا تُحذف.</string>
     <string name="diag_btn_cleanup">🗑️ حذف ملفات التتبع</string>

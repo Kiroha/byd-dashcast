@@ -76,7 +76,7 @@
             android:textSize="18sp"
             android:padding="0dp"
             android:layout_marginStart="8dp"
-            android:contentDescription="Options"/>
+            android:contentDescription="@string/app_name"/>
     </LinearLayout>
 
     <!-- ===== TITRE LISTE ===== -->
@@ -121,7 +121,7 @@
             android:layout_height="match_parent"
             android:clickable="true"
             android:focusable="true"
-            android:contentDescription="Miroir cluster"/>
+            android:contentDescription="Miroir"/>
 
         <!-- Fallback screencap when SurfaceControl.createDisplay() fails (ROM permissions) -->
         <ImageView
@@ -132,7 +132,7 @@
             android:background="#090C10"
             android:clickable="true"
             android:focusable="true"
-            android:contentDescription="Screenshot miroir cluster"
+            android:contentDescription="Screenshot"
             android:visibility="gone"/>
 
         <TextView
