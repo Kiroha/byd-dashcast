@@ -1012,12 +1012,12 @@ public class AdbLocalClient {
                     String apkPath = context.getPackageCodePath();
                     String cleanRecentsCmd = 
                             "APK=" + apkPath + "; " +
-                            "TASKS=$( (dumpsys activity recents ; dumpsys activity tasks) " +
-                            "| grep -E 'TaskRecord\\{|Task\\{' | grep '" + packageName + "' " +
-                            "| grep -o '#[0-9]\\+' | tr -d '#' | sort -u); " +
+                              "TASKS=$( (dumpsys activity recents ; dumpsys activity tasks) " +
+                              "| awk '/TaskRecord\\{|Task\\{/ { t=\\$0 } /" + packageName + "/ { print t }' " +
+                              "| grep -o '#[0-9]\\+' | tr -d '#' | sort -u); " +
                             "for t in $TASKS; do " +
-                                "(am task rm $t 2>/dev/null) || " +
-                                "(am stack remove $t 2>/dev/null) || " +
+                                  "am task rm $t 2>/dev/null; " +
+                                  "am stack remove $t 2>/dev/null; " +
                                   "(export CLASSPATH=$APK; /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover $t 2>&1); " +
                             "done; ";
                     
