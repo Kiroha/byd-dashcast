@@ -3,7 +3,7 @@ export default {
   "flag": "🇫🇷",
   "name": "Français",
   "title": "DashCast — Manuel d'utilisation",
-  "meta": "v0.4.6-alpha · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.5.0-beta · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Manuel d'utilisation",
   "tocTitle": "📋 Sommaire",
   "sections": [
@@ -24,7 +24,9 @@ export default {
       "✅ Compatible BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
       "✅ Aucune modification système nécessaire",
       "✅ ADB local (TCP, localhost) — pas besoin d'ordinateur une fois configuré",
-      "✅ Détection automatique de la déconnexion d'application"
+      "✅ Détection automatique de la déconnexion d'application",
+      "✅ Système de mises à jour OTA (Over-The-Air) intégré",
+      "✅ Paramétrages OverScan précis et sauvegardés par application"
     ],
     "note": "💡 Prérequis : Activez le débogage ADB TCP dans Paramètres → Développeur → Débogage sans fil (ou \"ADB over network\"). Cette opération est à faire une seule fois. Lors du premier lancement de DashCast, une popup « Autoriser le débogage ? » s'affiche — appuyez Toujours autoriser depuis cet ordinateur."
   },
