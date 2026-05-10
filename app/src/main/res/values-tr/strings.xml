@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -18,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Gösterge paneli: bağlı değil</string>
     <string name="btn_activate_cluster">Projeksiyonu etkinleştir</string>
     <string name="btn_show_mirror">📺 Yansıt</string>
@@ -28,24 +24,16 @@
     <string name="title_app_list">Yüklü uygulamalar</string>
     <string name="mirror_placeholder">Kümede aktif ekran ✓</string>
     <string name="btn_cluster_split">⬛⬛ Böl</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Küme kontrolü</string>
     <string name="cluster_control_hide">Gizle ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Ana</string>
     <string name="btn_app_to_cluster">→ Küme</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Küme başlatılıyor…</string>
     <string name="status_activating_cluster">Küme etkinleştiriliyor…</string>
     <string name="status_restoring_cluster">Küme geri yükleniyor…</string>
     <string name="status_restoring_origin">Orijinal küme geri yükleniyor…</string>
     <string name="status_dashboard_byd">Gösterge paneli: BYD ekranı</string>
     <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: yüklü değil veya çoklu ekranla uyumsuz</string>
     <string name="toast_cluster_unavailable">Küme servisi kullanılamıyor</string>
     <string name="toast_app_already_cluster">Uygulama zaten kümede</string>
@@ -54,8 +42,6 @@
     <string name="toast_app_stopped">%1$s durduruldu</string>
     <string name="toast_kill_failed">Sonlandırma başarısız: %1$s</string>
     <string name="toast_no_app_cluster">Kümede uygulama yok</string>
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Ayarlar</string>
     <string name="menu_diagnostic">🔧 Tanılama</string>
     <string name="menu_system_report">📋 Sistem raporu</string>
@@ -65,19 +51,12 @@
     <string name="settings_updates_title">Güncellemeler</string>
     <string name="settings_prerelease_label">Ön sürümleri dahil et (alpha/beta)</string>
     <string name="settings_prerelease_hint">Resmi sürümden önce test sürümlerini al</string>
-
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8,8 inç  (cmd=29)</string>
     <string name="cluster_label_123">12,3 inç (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 inç (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Tam ekran</string>
     <string name="split_left">⬜⬛ Sol (%50)</string>
     <string name="split_right">⬛⬜ Sağ (%50)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Günlük</string>
     <string name="log_btn_clear">Temizle</string>
     <string name="log_btn_share">Paylaş</string>
@@ -88,8 +67,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(giriş yok)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">BYD Sistem Raporu</string>
     <string name="sysinfo_desc">Eksiksiz rapor oluşturur: ekranlar, API\'ler, BYD paketleri, izinler, ADB. Kaydedin ve hata ayıklama için gönderin.</string>
     <string name="btn_generate_report">▶ Rapor oluştur</string>
@@ -99,13 +76,9 @@
     <string name="sysinfo_generating">Oluşturuluyor…\n</string>
     <string name="toast_write_error">Yazma hatası: %1$s</string>
     <string name="toast_report_saved">Rapor kaydedildi:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">TEST 1 sonucunu paylaş</string>
     <string name="diag_share_result2_btn">TEST 2 sonucunu paylaş</string>
     <string name="diag_share_result3_btn">TEST 3 sonucunu paylaş</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">localhost:5555\'e bağlanılıyor…\n⏳ Açılır pencere bu ekranda görünecek — İZİN VER\'e basın.</string>
     <string name="diag_adb_connected">✅ Bağlantı kuruldu\n\n</string>
     <string name="diag_adb_failed">❌ Başarısız: %1$s\n\n→ ADB TCP hata ayıklamanın etkin olduğunu doğrulayın\n  Ayarlar → Geliştirici → USB Hata Ayıklama\n  (veya bu ROM\'da Kablosuz Hata Ayıklama)</string>
@@ -118,14 +91,8 @@
     <string name="diag_sf_no_result">(sonuç yok — mirror SF\'de kayıtlı değil)</string>
     <string name="diag_sf_error">Hata: %1$s</string>
     <string name="toast_sniffer_started">Sniffer başlatıldı → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Günlüğü paylaş…</string>
     <string name="share_report_title">Raporu paylaş…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Tanılama Panosu</string>
     <string name="diag_s1_title">1. Yerel ADB (Gereklilik)</string>
     <string name="diag_s1_desc">Dilink5 ile aynı şekilde daemon enjekte etmek ve sistem VirtualDisplay oluşturmak için gereklidir.</string>
@@ -168,7 +135,6 @@
     <string name="diag_btn_start">BAŞLAT</string>
     <string name="diag_btn_snapshot">Şimdi snapshot al</string>
     <string name="diag_btn_export_sniffer">Dışa Aktar</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">ADB üzerinden başlatılıyor…</string>
     <string name="diag_auto_stopping">ADB üzerinden durduruluyor…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -200,20 +166,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Ana ekran overscan sıfırla (display 0)</string>
     <string name="diag_reset_main_overscan_done">Display 0 overscan sıfırlandı — wm overscan reset -d 0</string>
-    <!-- Bölüm 7 — DiLink5 Yeniden Boyutlandırma Testi -->
     <string name="diag_s7_title">7. DiLink5 Yeniden Boyutlandırma Testi (IATM)</string>
     <string name="diag_s7_desc">DiLink5 Dashboard dizisini test eder: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) activity_task üzerinde ham Binder ile. Mevcut projeksiyon koduna dokunmaz. Önce ana panel üzerinden cluster’a bir uygulama başlatın.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 dizisi (WM:4→5 + resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 tek başına (WM değişikliği yok)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Cluster görevini incele (windowing + bounds)</string>
-    <!-- Bölüm 6 — Depolama temizliği -->
     <string name="diag_s6_title">6. Depolama Temizliği</string>
     <string name="diag_s6_desc">DashCast tarafından oluşturulan log ve rapor dosyalarını siler: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Bellek log arabellerini de temizler. ADB anahtarları (adb.key / adb.pub) SİLİNMEZ.</string>
     <string name="diag_btn_cleanup">🗑️ İzleme dosyalarını sil</string>
     <string name="diag_cleanup_running">Temizleniyor…</string>
     <string name="diag_cleanup_done">%1$d dosya silindi — kalan depolama: %2$s</string>
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Ayarlar</string>
     <string name="settings_cluster_type_title">Küme tipi</string>
     <string name="settings_overscan_section_title">Ekran kenar boşlukları (overscan)</string>
@@ -225,4 +187,12 @@
     <string name="settings_overscan_applied">✓ Uygulandı — S/S: %1$d px, Ü/A: %2$d px</string>
     <string name="ota_dialog_title">Güncelleme mevcut</string>
     <string name="ota_up_to_date">DashCast güncel</string>
+    <string name="btn_adjust">Ayarla</string>
+    <string name="label_width_inset">Genişlik Boşluğu</string>
+    <string name="label_height_inset">Yükseklik Boşluğu</string>
+    <string name="btn_apply">Uygula</string>
+    <string name="toast_grid_mode_enabled">Izgara Modu Etkin</string>
+    <string name="toast_list_mode_enabled">Liste Modu Etkin</string>
+    <string name="toast_update_install_failed">Güncelleme yüklemesi başarısız: </string>
+    <string name="app_state_auto">Otomatik</string>
 </resources>

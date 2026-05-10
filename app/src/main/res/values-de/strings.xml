@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -18,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard: nicht verbunden</string>
     <string name="btn_activate_cluster">Projektion aktivieren</string>
     <string name="btn_show_mirror">📺 Spiegeln</string>
@@ -28,24 +24,16 @@
     <string name="title_app_list">Installierte Apps</string>
     <string name="mirror_placeholder">Aktive Anzeige auf Cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Cluster-Steuerung</string>
     <string name="cluster_control_hide">Ausblenden ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Haupt</string>
     <string name="btn_app_to_cluster">→ Cluster</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Cluster wird gestartet…</string>
     <string name="status_activating_cluster">Cluster wird aktiviert…</string>
     <string name="status_restoring_cluster">Cluster wird wiederhergestellt…</string>
     <string name="status_restoring_origin">Original-Cluster wird wiederhergestellt…</string>
     <string name="status_dashboard_byd">Dashboard: BYD-Anzeige</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: nicht installiert oder inkompatibel mit Multi-Display</string>
     <string name="toast_cluster_unavailable">Cluster-Dienst nicht verfügbar</string>
     <string name="toast_app_already_cluster">App bereits auf dem Cluster</string>
@@ -54,8 +42,6 @@
     <string name="toast_app_stopped">%1$s gestoppt</string>
     <string name="toast_kill_failed">Beenden fehlgeschlagen: %1$s</string>
     <string name="toast_no_app_cluster">Keine App auf dem Cluster</string>
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Einstellungen</string>
     <string name="menu_diagnostic">🔧 Diagnose</string>
     <string name="menu_system_report">📋 Systembericht</string>
@@ -65,19 +51,12 @@
     <string name="settings_updates_title">Updates</string>
     <string name="settings_prerelease_label">Vorabversionen einschließen (alpha/beta)</string>
     <string name="settings_prerelease_hint">Testversionen vor offiziellem Release erhalten</string>
-
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8,8 Zoll  (cmd=29)</string>
     <string name="cluster_label_123">12,3 Zoll (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 Zoll (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Vollbild</string>
     <string name="split_left">⬜⬛ Links (50 %)</string>
     <string name="split_right">⬛⬜ Rechts (50 %)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Protokoll</string>
     <string name="log_btn_clear">Löschen</string>
     <string name="log_btn_share">Teilen</string>
@@ -88,8 +67,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(keine Einträge)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">BYD-Systembericht</string>
     <string name="sysinfo_desc">Erstellt einen vollständigen Bericht: Displays, APIs, BYD-Pakete, Berechtigungen, ADB. Speichern und senden zur Fehleranalyse.</string>
     <string name="btn_generate_report">▶ Bericht erstellen</string>
@@ -99,13 +76,9 @@
     <string name="sysinfo_generating">Wird erstellt…\n</string>
     <string name="toast_write_error">Schreibfehler: %1$s</string>
     <string name="toast_report_saved">Bericht gespeichert:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">TEST 1-Ergebnis teilen</string>
     <string name="diag_share_result2_btn">TEST 2-Ergebnis teilen</string>
     <string name="diag_share_result3_btn">TEST 3-Ergebnis teilen</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">Verbindung zu localhost:5555…\n⏳ Das Popup erscheint auf diesem Bildschirm — ERLAUBEN drücken.</string>
     <string name="diag_adb_connected">✅ Verbindung hergestellt\n\n</string>
     <string name="diag_adb_failed">❌ Fehlgeschlagen: %1$s\n\n→ Prüfen, ob ADB-TCP-Debugging aktiviert ist\n  in Einstellungen → Entwickler → USB-Debugging\n  (oder Wireless-Debugging auf diesem ROM)</string>
@@ -118,14 +91,8 @@
     <string name="diag_sf_no_result">(kein Ergebnis — Mirror nicht in SF registriert)</string>
     <string name="diag_sf_error">Fehler: %1$s</string>
     <string name="toast_sniffer_started">Sniffer gestartet → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Protokoll teilen…</string>
     <string name="share_report_title">Bericht teilen…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Diagnose-Dashboard</string>
     <string name="diag_s1_title">1. Lokales ADB (Voraussetzung)</string>
     <string name="diag_s1_desc">Erforderlich zum Injizieren von Daemons und Erstellen des System-VirtualDisplays wie Dilink5.</string>
@@ -168,7 +135,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot jetzt</string>
     <string name="diag_btn_export_sniffer">Exportieren</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">Starten via ADB…</string>
     <string name="diag_auto_stopping">Stoppen via ADB…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -200,20 +166,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Overscan Hauptbildschirm zurücksetzen (Display 0)</string>
     <string name="diag_reset_main_overscan_done">Overscan Display 0 zurückgesetzt — wm overscan reset -d 0</string>
-    <!-- Abschnitt 7 — DiLink5 Resize-Test -->
     <string name="diag_s7_title">7. DiLink5 Resize-Test (IATM)</string>
     <string name="diag_s7_desc">Testet die DiLink5-Dashboard-Sequenz: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) über Raw-Binder auf activity_task. Ändert den bestehenden Projektionscode nicht. Starten Sie zuerst eine App auf dem Cluster über das Hauptpanel.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ DiLink5-Sequenz (WM:4→5 + Resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 allein (ohne WM-Änderung)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Cluster-Task prüfen (Windowing + Bounds)</string>
-    <!-- Section 6 — Speicher bereinigen -->
     <string name="diag_s6_title">6. Speicherbereinigung</string>
     <string name="diag_s6_desc">Löscht von DashCast erzeugte Log- und Berichtsdateien: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Löscht auch den In-Memory-Logpuffer. ADB-Schlüssel (adb.key / adb.pub) werden NICHT gelöscht.</string>
     <string name="diag_btn_cleanup">🗑️ Trace-Dateien löschen</string>
     <string name="diag_cleanup_running">Bereinigung läuft…</string>
     <string name="diag_cleanup_done">%1$d Datei(en) gelöscht — verbleibender Speicher: %2$s</string>
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Einstellungen</string>
     <string name="settings_cluster_type_title">Cluster-Typ</string>
     <string name="settings_overscan_section_title">Anzeigeränder (Overscan)</string>
@@ -225,4 +187,12 @@
     <string name="settings_overscan_applied">✓ Angewendet — L/R: %1$d px, O/U: %2$d px</string>
     <string name="ota_dialog_title">Update verfügbar</string>
     <string name="ota_up_to_date">DashCast ist aktuell</string>
+    <string name="btn_adjust">Anpassen</string>
+    <string name="label_width_inset">Breitenrand</string>
+    <string name="label_height_inset">Höhenrand</string>
+    <string name="btn_apply">Anwenden</string>
+    <string name="toast_grid_mode_enabled">Rastermodus aktiviert</string>
+    <string name="toast_list_mode_enabled">Listenmodus aktiviert</string>
+    <string name="toast_update_install_failed">Update-Installation fehlgeschlagen: </string>
+    <string name="app_state_auto">Auto</string>
 </resources>

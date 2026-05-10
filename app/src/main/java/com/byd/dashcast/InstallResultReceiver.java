@@ -33,7 +33,7 @@ public class InstallResultReceiver extends BroadcastReceiver {
         } else {
             String displayMsg = (message != null && !message.isEmpty()) ? message : "code=" + status;
             AppLogger.e(TAG, "OTA install failed: status=" + status + " msg=" + message);
-            Toast.makeText(context, "Update install failed: " + displayMsg,
+            Toast.makeText(context, context.getString(R.string.toast_update_install_failed) + displayMsg,
                     Toast.LENGTH_LONG).show();
         }
     }

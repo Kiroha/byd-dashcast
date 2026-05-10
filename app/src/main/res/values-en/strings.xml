@@ -1,7 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -17,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Dashboard: not connected</string>
     <string name="btn_activate_cluster">Activate Projection</string>
     <string name="btn_show_mirror">📺 Mirror</string>
@@ -27,24 +24,16 @@
     <string name="title_app_list">Installed applications</string>
     <string name="mirror_placeholder">Active display on cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Cluster control</string>
     <string name="cluster_control_hide">Hide ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Main</string>
     <string name="btn_app_to_cluster">→ Cluster</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Starting cluster…</string>
     <string name="status_activating_cluster">Activating cluster…</string>
     <string name="status_restoring_cluster">Restoring cluster…</string>
     <string name="status_restoring_origin">Restoring original cluster…</string>
     <string name="status_dashboard_byd">Dashboard: BYD display</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: not installed or incompatible with multi-display</string>
     <string name="toast_cluster_unavailable">Cluster service unavailable</string>
     <string name="toast_app_already_cluster">App already on the cluster</string>
@@ -53,8 +42,6 @@
     <string name="toast_app_stopped">%1$s stopped</string>
     <string name="toast_kill_failed">Kill failed: %1$s</string>
     <string name="toast_no_app_cluster">No app on the cluster</string>
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Settings</string>
     <string name="menu_diagnostic">🔧 Diagnostic</string>
     <string name="menu_system_report">📋 System report</string>
@@ -64,19 +51,12 @@
     <string name="settings_updates_title">Updates</string>
     <string name="settings_prerelease_label">Include pre-release builds (alpha/beta)</string>
     <string name="settings_prerelease_hint">Receive test builds before official releases</string>
-
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8.8 inches  (cmd=29)</string>
     <string name="cluster_label_123">12.3 inches (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10.25 inches (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Full screen</string>
     <string name="split_left">⬜⬛ Left (50%)</string>
     <string name="split_right">⬛⬜ Right (50%)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Log</string>
     <string name="log_btn_clear">Clear</string>
     <string name="log_btn_share">Share</string>
@@ -87,8 +67,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(no entries)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">BYD System Report</string>
     <string name="sysinfo_desc">Generates a complete report: displays, APIs, BYD packages, permissions, ADB. Save it then send it for debugging.</string>
     <string name="btn_generate_report">▶ Generate report</string>
@@ -98,13 +76,9 @@
     <string name="sysinfo_generating">Generating…\n</string>
     <string name="toast_write_error">Write error: %1$s</string>
     <string name="toast_report_saved">Report saved:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">Share TEST 1 result</string>
     <string name="diag_share_result2_btn">Share TEST 2 result</string>
     <string name="diag_share_result3_btn">Share TEST 3 result</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">Connecting to localhost:5555…\n⏳ The popup will appear on this screen — press ALLOW.</string>
     <string name="diag_adb_connected">✅ Connection established\n\n</string>
     <string name="diag_adb_failed">❌ Failed: %1$s\n\n→ Verify that ADB TCP debugging is enabled\n  in Settings → Developer → USB Debugging\n  (or Wireless Debugging on this ROM)</string>
@@ -117,14 +91,8 @@
     <string name="diag_sf_no_result">(no result — mirror not registered in SF)</string>
     <string name="diag_sf_error">Error: %1$s</string>
     <string name="toast_sniffer_started">Sniffer started → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Share log…</string>
     <string name="share_report_title">Share report…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Diagnostic Dashboard</string>
     <string name="diag_s1_title">1. Local ADB (Required)</string>
     <string name="diag_s1_desc">Required to inject daemons and create the system VirtualDisplay the same way as Dilink5.</string>
@@ -167,7 +135,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot now</string>
     <string name="diag_btn_export_sniffer">Export</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">Starting via ADB…</string>
     <string name="diag_auto_stopping">Stopping via ADB…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -199,20 +166,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Reset main display overscan (display 0)</string>
     <string name="diag_reset_main_overscan_done">Main display overscan reset OK — wm overscan reset -d 0</string>
-    <!-- Section 7 — DiLink5 resize test -->
     <string name="diag_s7_title">7. DiLink5 Resize Test (IATM)</string>
     <string name="diag_s7_desc">Tests the DiLink5 Dashboard sequence: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) via raw Binder on activity_task. Does not touch the existing projection code. Launch an app on the cluster first via the main panel.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 sequence (WM:4→5 + resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 only (no WM change)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Inspect cluster task (windowing + bounds)</string>
-    <!-- Section 6 — Storage cleanup -->
     <string name="diag_s6_title">6. Storage Cleanup</string>
     <string name="diag_s6_desc">Deletes DashCast-generated log and report files: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Also clears the in-memory log buffer. ADB keys (adb.key / adb.pub) are NOT deleted.</string>
     <string name="diag_btn_cleanup">🗑️ Delete trace files</string>
     <string name="diag_cleanup_running">Cleaning up…</string>
     <string name="diag_cleanup_done">%1$d file(s) deleted — remaining storage: %2$s</string>
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Settings</string>
     <string name="settings_cluster_type_title">Cluster type</string>
     <string name="settings_overscan_section_title">Display margins (overscan)</string>
@@ -224,4 +187,12 @@
     <string name="settings_overscan_applied">✓ Applied — L/R: %1$d px, T/B: %2$d px</string>
     <string name="ota_dialog_title">Update available</string>
     <string name="ota_up_to_date">DashCast is up to date</string>
+    <string name="btn_adjust">Adjust</string>
+    <string name="label_width_inset">Width Inset</string>
+    <string name="label_height_inset">Height Inset</string>
+    <string name="btn_apply">Apply</string>
+    <string name="toast_grid_mode_enabled">Grid Mode Enabled</string>
+    <string name="toast_list_mode_enabled">List Mode Enabled</string>
+    <string name="toast_update_install_failed">Update install failed: </string>
+    <string name="app_state_auto">Auto</string>
 </resources>

@@ -1322,7 +1322,7 @@ public class MainActivity extends AppCompatActivity
                             rvApps.setLayoutManager(new LinearLayoutManager(MainActivity.this));
                         }
                         rvApps.setAdapter(mAdapter);
-                        Toast.makeText(MainActivity.this, nv ? "Grid Mode Enabled" : "List Mode Enabled", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, nv ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
                         return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;

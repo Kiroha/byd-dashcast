@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Аспаптар панелі контроллері</string>
     <string name="welcome_select_lang">Тілді таңдаңыз\nPlease select your language</string>
@@ -16,8 +14,6 @@
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_uk">🇺🇦  Українська</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Аспаптар панелі: қосылмаған</string>
     <string name="btn_activate_cluster">Проекцияны қосу</string>
     <string name="btn_show_mirror">📺 Айна</string>
@@ -26,24 +22,16 @@
     <string name="title_app_list">Орнатылған қолданбалар</string>
     <string name="mirror_placeholder">Кластердегі белсенді бейне ✓</string>
     <string name="btn_cluster_split">⬛⬛ Бөлу</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Кластерді басқару</string>
     <string name="cluster_control_hide">Жасыру ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Негізгі</string>
     <string name="btn_app_to_cluster">→ Кластер</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Кластер іске қосылуда…</string>
     <string name="status_activating_cluster">Кластер белсендірілуде…</string>
     <string name="status_restoring_cluster">Кластер қалпына келтірілуде…</string>
     <string name="status_restoring_origin">Бастапқы кластер қалпына келтірілуде…</string>
     <string name="status_dashboard_byd">Аспаптар панелі: BYD дисплейі</string>
     <string name="status_dashboard_app">Аспаптар панелі: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: орнатылмаған немесе бірнеше дисплеймен үйлесімсіз</string>
     <string name="toast_cluster_unavailable">Кластер қызметі қолжетімсіз</string>
     <string name="toast_app_already_cluster">Қолданба кластерде бар</string>
@@ -52,8 +40,6 @@
     <string name="toast_app_stopped">%1$s тоқтатылды</string>
     <string name="toast_kill_failed">Аяқтау сәтсіз: %1$s</string>
     <string name="toast_no_app_cluster">Кластерде қолданба жоқ</string>
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Баптаулар</string>
     <string name="menu_diagnostic">🔧 Диагностика</string>
     <string name="menu_system_report">📋 Жүйе есебі</string>
@@ -63,19 +49,12 @@
     <string name="settings_updates_title">Жаңартулар</string>
     <string name="settings_prerelease_label">Алдын нұсқаларды қосу (alpha/beta)</string>
     <string name="settings_prerelease_hint">Ресми шығарылымға дейін сынақ нұсқаларды алу</string>
-
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8,8 дюйм  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйм (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Толық экран</string>
     <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
     <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>
     <string name="log_btn_clear">Тазалау</string>
     <string name="log_btn_share">Бөлісу</string>
@@ -86,8 +65,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(жазба жоқ)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">BYD жүйе есебі</string>
     <string name="sysinfo_desc">Толық есеп жасайды: дисплейлер, APIлер, BYD пакеттері, рұқсаттар, ADB. Оны сақтап, жөндеу үшін жіберіңіз.</string>
     <string name="btn_generate_report">▶ Есеп жасау</string>
@@ -97,13 +74,9 @@
     <string name="sysinfo_generating">Жасалуда…\n</string>
     <string name="toast_write_error">Жазу қатесі: %1$s</string>
     <string name="toast_report_saved">Есеп сақталды:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">TEST 1 нәтижесін бөлісу</string>
     <string name="diag_share_result2_btn">TEST 2 нәтижесін бөлісу</string>
     <string name="diag_share_result3_btn">TEST 3 нәтижесін бөлісу</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">localhost:5555 мекенжайына қосылу…\n⏳ Қалқымалы терезе осы экранда шығады — РҰҚСАТ БЕРУ түймесін басыңыз.</string>
     <string name="diag_adb_connected">✅ Қосылым орнатылды\n\n</string>
     <string name="diag_adb_failed">❌ Қате: %1$s\n\n→ ADB TCP debugging қосылғанын тексеріңіз\n  Баптаулар → Әзірлеуші → USB debugging\n  (немесе осы ROMда Wireless Debugging)</string>
@@ -116,14 +89,8 @@
     <string name="diag_sf_no_result">(нәтиже жоқ — айна SF ішінде тіркелмеген)</string>
     <string name="diag_sf_error">Қате: %1$s</string>
     <string name="toast_sniffer_started">Sniffer іске қосылды → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Журналды бөлісу…</string>
     <string name="share_report_title">Есепті бөлісу…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Диагностика панелі</string>
     <string name="diag_s1_title">1. Жергілікті ADB (міндетті)</string>
     <string name="diag_s1_desc">Dilink5 сияқты daemon енгізу және жүйелік VirtualDisplay жасау үшін қажет.</string>
@@ -160,7 +127,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot қазір</string>
     <string name="diag_btn_export_sniffer">Экспорт</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">ADB арқылы іске қосылуда…</string>
     <string name="diag_auto_stopping">ADB арқылы тоқтатылуда…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -192,21 +158,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Негізгі экран overscan reset (display 0)</string>
     <string name="diag_reset_main_overscan_done">display 0 overscan reset орындалды — wm overscan reset -d 0</string>
-    <!-- Section 7 — Test resize DiLink5 -->
     <string name="diag_s7_title">7. DiLink5 Resize тесті (IATM)</string>
     <string name="diag_s7_desc">DiLink5 Dashboard ретін тексереді: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) activity_task үстінде raw Binder арқылы. Қолданыстағы проекция кодына тимейді. Алдымен негізгі панель арқылы кластерде қолданба іске қосыңыз.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 реті (WM:4→5 + resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ Тек resizeTask FORCED=3 (WM өзгермейді)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Кластер task тексеру (windowing + bounds)</string>
-
-    <!-- Section 6 — Storage cleanup -->
     <string name="diag_s6_title">6. Сақтау орнын тазалау</string>
     <string name="diag_s6_desc">DashCast жасаған журнал және есеп файлдарын жояды: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Жадтағы журнал буферін де тазалайды. ADB кілттері (adb.key / adb.pub) ЖОЙЫЛМАЙДЫ.</string>
     <string name="diag_btn_cleanup">🗑️ Trace файлдарын жою</string>
     <string name="diag_cleanup_running">Тазалануда…</string>
     <string name="diag_cleanup_done">%1$d файл жойылды — қалған сақтау орны: %2$s</string>
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Баптаулар</string>
     <string name="settings_cluster_type_title">Кластер түрі</string>
     <string name="settings_overscan_section_title">Дисплей жиектері (overscan)</string>
@@ -226,4 +187,12 @@
     <string name="diag_adas_sending">Sending cmd %1$d2026</string>
     <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
     <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
+    <string name="btn_adjust">Реттеу</string>
+    <string name="label_width_inset">Ені бойынша шегініс</string>
+    <string name="label_height_inset">Биіктігі бойынша шегініс</string>
+    <string name="btn_apply">Қолдану</string>
+    <string name="toast_grid_mode_enabled">Тор режимі қосылды</string>
+    <string name="toast_list_mode_enabled">Тізім режимі қосылды</string>
+    <string name="toast_update_install_failed">Орнату қатесі: </string>
+    <string name="app_state_auto">Авто</string>
 </resources>
