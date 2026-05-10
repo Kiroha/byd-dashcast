@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?android:attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/iv_app_icon"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:scaleType="fitCenter"/>
+
+    <TextView
+        android:id="@+id/tv_app_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:ellipsize="end"
+        android:textColor="#333333"
+        android:maxLines="2"
+        android:minLines="2"/>
+
+    <!-- Green indicator below the text -->
+    <View
+        android:id="@+id/view_active_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_marginTop="4dp"
+        android:background="#4CAF50"
+        android:visibility="gone"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="4dp">
+        
+        <CheckBox
+            android:id="@+id/cb_auto_launch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Auto"
+            android:textSize="10sp"
+            android:layout_marginEnd="4dp"
+            android:buttonTint="#FFC107"
+            android:textColor="#888888"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btn_to_main"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="@string/btn_app_to_main"
+            android:textSize="9sp"
+            android:padding="0dp"
+            android:visibility="gone"/>
+            
+        <Button
+            android:id="@+id/btn_to_cluster"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="@string/btn_app_to_cluster"
+            android:textSize="9sp"
+            android:padding="0dp"
+            android:backgroundTint="#1565C0"
+            android:visibility="gone"/>
+
+        <Button
+            android:id="@+id/btn_kill_app"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:text="✕"
+            android:textSize="10sp"
+            android:padding="0dp"
+            android:layout_marginStart="4dp"
+            android:backgroundTint="#F44336"
+            android:visibility="gone"/>
+    </LinearLayout>
+
+</LinearLayout>

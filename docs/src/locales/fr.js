@@ -3,7 +3,7 @@ export default {
   "flag": "🇫🇷",
   "name": "Français",
   "title": "DashCast — Manuel d'utilisation",
-  "meta": "v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.4.6-alpha · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Manuel d'utilisation",
   "tocTitle": "📋 Sommaire",
   "sections": [
@@ -174,8 +174,12 @@ export default {
       ],
       "extra": "En mode Split, une deuxième application peut être sélectionnée dans la liste. Elle occupera l'autre moitié du cluster."
     },
+    "resize": {
+      "title": "5.3 Ajuster (Redimensionnement / Overscan)",
+      "text": "Le bouton « Ajuster » affiche des curseurs permettant de rogner les bords (Largeur / Hauteur) de l'image projetée. Cela est particulièrement utile sur l'écran panoramique et étiré du cluster. Ces valeurs d'Overscan sont sauvegardées indépendamment pour chaque application et ré-appliquées automatiquement à chaque lancement !"
+    },
     "hide": {
-      "title": "5.3 Masquer le panneau",
+      "title": "5.4 Masquer le panneau",
       "text": "Appuyez sur Masquer ▼ pour replier le panneau de contrôle et retrouver la liste complète des applications."
     }
   },

@@ -3,7 +3,7 @@ export default {
   "flag": "🇬🇧",
   "name": "English",
   "title": "DashCast — User Manual",
-  "meta": "v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.4.6-alpha · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "User Manual",
   "tocTitle": "📋 Contents",
   "sections": [
