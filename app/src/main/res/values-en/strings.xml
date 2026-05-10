@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Update Now</string>
     <string name="ota_btn_later">Later</string>
     <string name="ota_downloading">Downloading…</string>
+    <string name="notif_log_channel_name">Activity Log</string>
+    <string name="notif_log_content">Log active — tap to open</string>
+    <string name="notif_remote_channel_name">Cluster mirror button</string>
+    <string name="notif_remote_content">📺 Cluster mirror active</string>
+    <string name="sysinfo_file_saved">\n\nFile: %1$s\nADB command: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Grid Mode</string>
     <string name="menu_view_list">📋 List Mode</string>
 </resources>

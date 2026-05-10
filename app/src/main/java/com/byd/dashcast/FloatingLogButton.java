@@ -183,7 +183,7 @@ public class FloatingLogButton extends Service {
     private void startForegroundCompat() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(
-                CHANNEL, "Journal de bord", NotificationManager.IMPORTANCE_MIN));
+                CHANNEL, getString(R.string.notif_log_channel_name), NotificationManager.IMPORTANCE_MIN));
 
         Intent tapIntent = new Intent(this, LogActivity.class);
         tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -193,7 +193,7 @@ public class FloatingLogButton extends Service {
         Notification notif = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
                 .setContentTitle("DashCast")
-                .setContentText("Journal actif — tap pour ouvrir")
+                .setContentText(getString(R.string.notif_log_content))
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .build();

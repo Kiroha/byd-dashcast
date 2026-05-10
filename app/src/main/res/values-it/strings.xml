@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Aggiorna ora</string>
     <string name="ota_btn_later">Più tardi</string>
     <string name="ota_downloading">Download…</string>
+    <string name="notif_log_channel_name">Registro attività</string>
+    <string name="notif_log_content">Registro attivo — tocca per aprire</string>
+    <string name="notif_remote_channel_name">Pulsante specchio cluster</string>
+    <string name="notif_remote_content">📺 Specchio cluster attivo</string>
+    <string name="sysinfo_file_saved">\n\nFile: %1$s\nComando ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Modalità Griglia</string>
     <string name="menu_view_list">📋 Modalità Lista</string>
 </resources>

@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Actualizar ahora</string>
     <string name="ota_btn_later">Más tarde</string>
     <string name="ota_downloading">Descargando…</string>
+    <string name="notif_log_channel_name">Registro de actividad</string>
+    <string name="notif_log_content">Registro activo — toca para abrir</string>
+    <string name="notif_remote_channel_name">Botón espejo del clúster</string>
+    <string name="notif_remote_content">📺 Espejo del clúster activo</string>
+    <string name="sysinfo_file_saved">\n\nArchivo: %1$s\nComando ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Modo Cuadrícula</string>
     <string name="menu_view_list">📋 Modo Lista</string>
 </resources>

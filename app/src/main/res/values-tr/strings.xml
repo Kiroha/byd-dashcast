@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Şimdi güncelle</string>
     <string name="ota_btn_later">Daha sonra</string>
     <string name="ota_downloading">İndiriliyor…</string>
+    <string name="notif_log_channel_name">Etkinlik günlüğü</string>
+    <string name="notif_log_content">Günlük aktif — açmak için dokunun</string>
+    <string name="notif_remote_channel_name">Küme ayna düğmesi</string>
+    <string name="notif_remote_content">📺 Küme aynası aktif</string>
+    <string name="sysinfo_file_saved">\n\nDosya: %1$s\nADB komutu: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Izgara Modu</string>
     <string name="menu_view_list">📋 Liste Modu</string>
 </resources>

@@ -161,6 +161,11 @@
     <string name="ota_btn_update_now">Абнавіць</string>
     <string name="ota_btn_later">Пазней</string>
     <string name="ota_downloading">Загрузка…</string>
+    <string name="notif_log_channel_name">Журнал дзейнасці</string>
+    <string name="notif_log_content">Журнал актыўны — дакраніцеся, каб адкрыць</string>
+    <string name="notif_remote_channel_name">Кнопка люстэрка кластара</string>
+    <string name="notif_remote_content">📺 Люстэрка кластара актыўнае</string>
+    <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКаманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Рэжым сеткі</string>
     <string name="menu_view_list">📋 Рэжым спісу</string>
 </resources>
