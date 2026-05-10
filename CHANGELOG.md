@@ -9,6 +9,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.5.1** | 78 | **Release**: Out of beta! Comprehensive i18n support localized hardcoded strings across UI, overscan layouts, and system Toasts in all 12 supported languages. Fixed missing "Adjust" button from the manual UI diagram. |
 | **0.4.3-alpha** | 73 | **Enhancement / Fix**: Removed Native Library extraction (\`extractNativeLibs=false\`) to drastically reduce install time and zero-out duplicate storage load. Corrected the URI Share Permission flags across all FileProvider Intents so Logs and Sniffers export successfully without crashing the OS. |
 | **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |
@@ -34,6 +35,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.5.1** | 78 | **Release**: Out of beta! Comprehensive i18n support localized hardcoded strings across UI, overscan layouts, and system Toasts in all 12 supported languages. Fixed missing "Adjust" button from the manual UI diagram. |
 | **0.4.3-alpha** | 73 | **Enhancement / Fix**: Removed Native Library extraction (\`extractNativeLibs=false\`) to drastically reduce install time and zero-out duplicate storage load. Corrected the URI Share Permission flags across all FileProvider Intents so Logs and Sniffers export successfully without crashing the OS. |
 | **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |
@@ -93,6 +95,7 @@ See [README.md](README.md) for the project overview and installation instruction
 
 | Version | versionCode | Summary |
 |---------|-------------|---------|
+| **0.5.1** | 78 | **Release**: Out of beta! Comprehensive i18n support localized hardcoded strings across UI, overscan layouts, and system Toasts in all 12 supported languages. Fixed missing "Adjust" button from the manual UI diagram. |
 | **0.4.3-alpha** | 73 | **Enhancement / Fix**: Removed Native Library extraction (\`extractNativeLibs=false\`) to drastically reduce install time and zero-out duplicate storage load. Corrected the URI Share Permission flags across all FileProvider Intents so Logs and Sniffers export successfully without crashing the OS. |
 | **0.4.2-alpha** | 72 | **Critical BugFix**: Re-engineered ADB Task Identifier extractor using \`awk\` pattern matching to properly correlate BYD's multiline \`dumpsys\` outputs, ensuring the Red Cross accurately finds and removes orphaned Tasks in the Recents pool. |
 | **0.4.1-alpha** | 71 | **Revert**: The red-cross kill button no longer drops the cluster projection. It only stops the app memory process, leaving the cluster display ready (black screen) for a new app cast without needing to restart the whole projection layer. |

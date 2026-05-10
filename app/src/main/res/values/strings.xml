@@ -187,12 +187,12 @@
     <string name="settings_overscan_applied">✓ Appliqué — G/D : %1$d px, H/B : %2$d px</string>
     <string name="ota_dialog_title">Mise à jour disponible</string>
     <string name="ota_up_to_date">DashCast est à jour</string>
-    <string name="btn_adjust">Adjust</string>
-    <string name="label_width_inset">Width Inset</string>
-    <string name="label_height_inset">Height Inset</string>
-    <string name="btn_apply">Apply</string>
-    <string name="toast_grid_mode_enabled">Grid Mode Enabled</string>
-    <string name="toast_list_mode_enabled">List Mode Enabled</string>
-    <string name="toast_update_install_failed">Update install failed: </string>
+    <string name="btn_adjust">Ajuster</string>
+    <string name="label_width_inset">Marge Largeur</string>
+    <string name="label_height_inset">Marge Hauteur</string>
+    <string name="btn_apply">Appliquer</string>
+    <string name="toast_grid_mode_enabled">Mode Grille activé</string>
+    <string name="toast_list_mode_enabled">Mode Liste activé</string>
+    <string name="toast_update_install_failed">Échec de l\'installation : </string>
     <string name="app_state_auto">Auto</string>
 </resources>
