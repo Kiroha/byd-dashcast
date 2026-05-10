@@ -1,6 +1,8 @@
 # ── Build outputs ──────────────────────────────────────────
 /build/
 /app/build/
+/docs/dist/
+/docs/node_modules/
 /.gradle/
 *.iml
 
