@@ -20,7 +20,7 @@ android {
         minSdkVersion 29
         targetSdkVersion 29
         versionCode 79
-        versionName "0.6-alpha"
+        versionName "0.6.0-alpha"
     }
 
     buildTypes {
