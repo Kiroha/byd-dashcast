@@ -77,16 +77,9 @@
     <string name="toast_write_error">Помилка запису: %1$s</string>
     <string name="toast_report_saved">Звіт збережено:\n%1$s</string>
     <string name="diag_share_result1_btn">Поділитися результатом TEST 1</string>
-    <string name="diag_share_result2_btn">Поділитися результатом TEST 2</string>
-    <string name="diag_share_result3_btn">Поділитися результатом TEST 3</string>
     <string name="diag_adb_connecting">Підключення до localhost:5555…\n⏳ Спливне вікно з’явиться на цьому екрані — натисніть ДОЗВОЛИТИ.</string>
     <string name="diag_adb_connected">✅ Підключення встановлено\n\n</string>
     <string name="diag_adb_failed">❌ Помилка: %1$s\n\n→ Перевірте, що ввімкнено ADB TCP debugging\n  у Налаштування → Для розробників → USB debugging\n  (або Wireless Debugging у цій ROM)</string>
-    <string name="diag_adb_test1_hint">→ Спочатку запустіть TEST 1, щоб авторизувати ADB-підключення.</string>
-    <string name="diag_launching_display1">⏳ Запуск display 1…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ Відновлення стандартного розміру (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ Діагностика розмірів кластера…\nПробуємо cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 секунд)</string>
     <string name="diag_sf_dumping">Виконується dumpsys SurfaceFlinger…</string>
     <string name="diag_sf_no_result">(немає результату — дзеркало не зареєстроване в SF)</string>
     <string name="diag_sf_error">Помилка: %1$s</string>
@@ -102,16 +95,6 @@
     <string name="diag_s2_title">2. Впровадження daemon &amp; рендеринг</string>
     <string name="diag_s2_desc">Запускає DashCastDaemon.java в app_process через ADB shell: успадковує CAPTURE_VIDEO_OUTPUT.</string>
     <string name="diag_btn_create_vd">Створити VirtualDisplay (впровадити daemon)</string>
-    <string name="diag_s3_title">3. Властивості кластера</string>
-    <string name="diag_s3_initial">Розмір дисплея</string>
-    <string name="diag_s3_display1_initial">Відновити дисплей кластера</string>
-    <string name="diag_btn_restore_display">Відновити дисплей</string>
-    <string name="diag_sadas_title">ADAS Кластер (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">Показати або приховати оверлей ADAS на приладовій панелі. Команди sendInfo(1000, 12/13). Без видимого ефекту на Seal EU (2D-кластер), тестувати при активному оверлеї ADAS.</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">Надсилання cmd %1$d…</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. Аналіз системи (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Запустити dumpsys window displays</string>
@@ -135,13 +118,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot зараз</string>
     <string name="diag_btn_export_sniffer">Експорт</string>
-    <string name="diag_auto_starting">Запуск через ADB…</string>
-    <string name="diag_auto_stopping">Зупинка через ADB…</string>
-    <string name="diag_auto_stopped">STOP: %1$s</string>
-    <string name="diag_jni_display_released">Display звільнено. Перевіряємо JNI…</string>
-    <string name="diag_jni_fatal">FATAL: %1$s</string>
-    <string name="diag_jni_send16_failed">Не вдалося надіслати 16: %1$s</string>
-    <string name="diag_running">Діагностика виконується…</string>
     <string name="diag_dumpsys_running">Виконується через adb local…</string>
     <string name="diag_dumpsys_error">ПОМИЛКА:\n%1$s</string>
     <string name="diag_daemon_launching">Запуск daemon через adb local…</string>
@@ -149,10 +125,6 @@
     <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
     <string name="diag_daemon_error">ПОМИЛКА: %1$s</string>
     <string name="diag_apk_path_error">Помилка APK path: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
-    <string name="diag_fission_running">Послідовність виконується…</string>
-    <string name="diag_fission_no_display">❌ Немає fission display. Спочатку запустіть « Створити Fission Display ».</string>
-    <string name="diag_fission_launching">Запуск на display %1$d…</string>
     <string name="diag_sniffer_initializing">Ініціалізація…</string>
     <string name="diag_sniffer_active">АКТИВНИЙ → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ Помилка init: %1$s</string>
@@ -162,15 +134,6 @@
     <string name="toast_snapshot_done">Snapshot додано у файл.</string>
     <string name="toast_sniffer_no_file">Немає файла sniffer для експорту.</string>
     <string name="toast_no_result_to_share">Немає результату для надсилання.</string>
-    <string name="diag_btn_size_restore">RESTORE</string>
-    <string name="diag_btn_size_full">FULL TEST</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Скидання overscan основного екрана (display 0)</string>
-    <string name="diag_reset_main_overscan_done">Overscan display 0 скинуто — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. Тест Resize DiLink5 (IATM)</string>
-    <string name="diag_s7_desc">Перевіряє послідовність DiLink5 Dashboard: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) через raw Binder на activity_task. Не змінює наявний код проекції. Спочатку запустіть програму на кластері через основну панель.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ Послідовність DiLink5 (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ Лише resizeTask FORCED=3 (без зміни WM)</string>
-    <string name="diag_btn_resize_inspect_task">🔍 Перевірити task кластера (windowing + bounds)</string>
     <string name="diag_s6_title">6. Очищення сховища</string>
     <string name="diag_s6_desc">Видаляє файли журналів і звітів, створені DashCast: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Також очищає буфер журналів у пам’яті. ADB-ключі (adb.key / adb.pub) НЕ видаляються.</string>
     <string name="diag_btn_cleanup">🗑️ Видалити trace-файли</string>

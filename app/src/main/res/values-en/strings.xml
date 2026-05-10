@@ -77,16 +77,9 @@
     <string name="toast_write_error">Write error: %1$s</string>
     <string name="toast_report_saved">Report saved:\n%1$s</string>
     <string name="diag_share_result1_btn">Share TEST 1 result</string>
-    <string name="diag_share_result2_btn">Share TEST 2 result</string>
-    <string name="diag_share_result3_btn">Share TEST 3 result</string>
     <string name="diag_adb_connecting">Connecting to localhost:5555…\n⏳ The popup will appear on this screen — press ALLOW.</string>
     <string name="diag_adb_connected">✅ Connection established\n\n</string>
     <string name="diag_adb_failed">❌ Failed: %1$s\n\n→ Verify that ADB TCP debugging is enabled\n  in Settings → Developer → USB Debugging\n  (or Wireless Debugging on this ROM)</string>
-    <string name="diag_adb_test1_hint">→ Run TEST 1 first to authorize the ADB connection.</string>
-    <string name="diag_launching_display1">⏳ Launching display 1…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ Restoring default size (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ Cluster dimensions diagnostic…\nTrying cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 seconds)</string>
     <string name="diag_sf_dumping">Running dumpsys SurfaceFlinger…</string>
     <string name="diag_sf_no_result">(no result — mirror not registered in SF)</string>
     <string name="diag_sf_error">Error: %1$s</string>
@@ -102,16 +95,6 @@
     <string name="diag_s2_title">2. Daemon Injection &amp; Rendering</string>
     <string name="diag_s2_desc">Launches DashCastDaemon.java in app_process via ADB shell: inherits CAPTURE_VIDEO_OUTPUT.</string>
     <string name="diag_btn_create_vd">Create VirtualDisplay (Inject Daemon)</string>
-    <string name="diag_s3_title">3. Cluster Properties</string>
-    <string name="diag_s3_initial">Display Size</string>
-    <string name="diag_s3_display1_initial">Restore cluster display</string>
-    <string name="diag_btn_restore_display">Restore Display</string>
-    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. Commands sendInfo(1000, 12/13). No visible effect on the Seal EU (2D cluster), test when an ADAS overlay is active.</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">Sending cmd %1$d…</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="diag_s4_title">4. System Analysis (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Run dumpsys window displays</string>
@@ -135,13 +118,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot now</string>
     <string name="diag_btn_export_sniffer">Export</string>
-    <string name="diag_auto_starting">Starting via ADB…</string>
-    <string name="diag_auto_stopping">Stopping via ADB…</string>
-    <string name="diag_auto_stopped">STOP: %1$s</string>
-    <string name="diag_jni_display_released">Display released. Probing JNI…</string>
-    <string name="diag_jni_fatal">FATAL: %1$s</string>
-    <string name="diag_jni_send16_failed">Failed to send 16: %1$s</string>
-    <string name="diag_running">Running diagnostics…</string>
     <string name="diag_dumpsys_running">Running via adb local…</string>
     <string name="diag_dumpsys_error">ERROR:\n%1$s</string>
     <string name="diag_daemon_launching">Launching daemon via adb local…</string>
@@ -149,10 +125,6 @@
     <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
     <string name="diag_daemon_error">ERROR: %1$s</string>
     <string name="diag_apk_path_error">APK path error: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
-    <string name="diag_fission_running">Sequence running…</string>
-    <string name="diag_fission_no_display">❌ No fission display. First run « Create Fission Display ».</string>
-    <string name="diag_fission_launching">Launching on display %1$d…</string>
     <string name="diag_sniffer_initializing">Initializing…</string>
     <string name="diag_sniffer_active">ACTIVE → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ Init failed: %1$s</string>
@@ -162,15 +134,6 @@
     <string name="toast_snapshot_done">Snapshot injected into file.</string>
     <string name="toast_sniffer_no_file">No sniffer file to export.</string>
     <string name="toast_no_result_to_share">No result to share.</string>
-    <string name="diag_btn_size_restore">RESTORE</string>
-    <string name="diag_btn_size_full">FULL TEST</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Reset main display overscan (display 0)</string>
-    <string name="diag_reset_main_overscan_done">Main display overscan reset OK — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. DiLink5 Resize Test (IATM)</string>
-    <string name="diag_s7_desc">Tests the DiLink5 Dashboard sequence: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) via raw Binder on activity_task. Does not touch the existing projection code. Launch an app on the cluster first via the main panel.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 sequence (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ resizeTask FORCED=3 only (no WM change)</string>
-    <string name="diag_btn_resize_inspect_task">🔍 Inspect cluster task (windowing + bounds)</string>
     <string name="diag_s6_title">6. Storage Cleanup</string>
     <string name="diag_s6_desc">Deletes DashCast-generated log and report files: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Also clears the in-memory log buffer. ADB keys (adb.key / adb.pub) are NOT deleted.</string>
     <string name="diag_btn_cleanup">🗑️ Delete trace files</string>

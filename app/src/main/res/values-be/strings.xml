@@ -74,16 +74,9 @@
     <string name="toast_write_error">Памылка запісу: %1$s</string>
     <string name="toast_report_saved">Справаздача захавана:\n%1$s</string>
     <string name="diag_share_result1_btn">Падзяліцца вынікам TEST 1</string>
-    <string name="diag_share_result2_btn">Падзяліцца вынікам TEST 2</string>
-    <string name="diag_share_result3_btn">Падзяліцца вынікам TEST 3</string>
     <string name="diag_adb_connecting">Падключэнне да localhost:5555…\n⏳ Усплывальнае акно з’явіцца на гэтым экране — націсніце ДАЗВОЛІЦЬ.</string>
     <string name="diag_adb_connected">✅ Падключэнне ўсталявана\n\n</string>
     <string name="diag_adb_failed">❌ Памылка: %1$s\n\n→ Праверце, што ўключана ADB TCP debugging\n  у Налады → Для распрацоўшчыкаў → USB debugging\n  (або Wireless Debugging у гэтай ROM)</string>
-    <string name="diag_adb_test1_hint">→ Спачатку запусціце TEST 1, каб аўтарызаваць ADB-падключэнне.</string>
-    <string name="diag_launching_display1">⏳ Запуск display 1…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ Аднаўленне стандартнага памеру (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ Дыягностыка памераў кластара…\nСпрабуем cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 секунд)</string>
     <string name="diag_sf_dumping">Выконваецца dumpsys SurfaceFlinger…</string>
     <string name="diag_sf_no_result">(няма выніку — люстэрка не зарэгістравана ў SF)</string>
     <string name="diag_sf_error">Памылка: %1$s</string>
@@ -99,10 +92,6 @@
     <string name="diag_s2_title">2. Укараненне daemon &amp; рэндэрынг</string>
     <string name="diag_s2_desc">Запускае DashCastDaemon.java ў app_process праз ADB shell: успадкоўвае CAPTURE_VIDEO_OUTPUT.</string>
     <string name="diag_btn_create_vd">Стварыць VirtualDisplay (укараніць daemon)</string>
-    <string name="diag_s3_title">3. Уласцівасці кластара</string>
-    <string name="diag_s3_initial">Памер дысплея</string>
-    <string name="diag_s3_display1_initial">Аднавіць дысплей кластара</string>
-    <string name="diag_btn_restore_display">Аднавіць дысплей</string>
     <string name="diag_s4_title">4. Аналіз сістэмы (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">Запусціць dumpsys window displays</string>
@@ -126,13 +115,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot цяпер</string>
     <string name="diag_btn_export_sniffer">Экспарт</string>
-    <string name="diag_auto_starting">Запуск праз ADB…</string>
-    <string name="diag_auto_stopping">Спыненне праз ADB…</string>
-    <string name="diag_auto_stopped">STOP: %1$s</string>
-    <string name="diag_jni_display_released">Display вызвалены. Правяраем JNI…</string>
-    <string name="diag_jni_fatal">FATAL: %1$s</string>
-    <string name="diag_jni_send16_failed">Не ўдалося адправіць 16: %1$s</string>
-    <string name="diag_running">Дыягностыка выконваецца…</string>
     <string name="diag_dumpsys_running">Выконваецца праз adb local…</string>
     <string name="diag_dumpsys_error">ПАМЫЛКА:\n%1$s</string>
     <string name="diag_daemon_launching">Запуск daemon праз adb local…</string>
@@ -140,10 +122,6 @@
     <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
     <string name="diag_daemon_error">ПАМЫЛКА: %1$s</string>
     <string name="diag_apk_path_error">Памылка APK path: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
-    <string name="diag_fission_running">Паслядоўнасць выконваецца…</string>
-    <string name="diag_fission_no_display">❌ Няма fission display. Спачатку запусціце « Стварыць Fission Display ».</string>
-    <string name="diag_fission_launching">Запуск на display %1$d…</string>
     <string name="diag_sniffer_initializing">Ініцыялізацыя…</string>
     <string name="diag_sniffer_active">АКТЫЎНЫ → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ Памылка init: %1$s</string>
@@ -153,15 +131,6 @@
     <string name="toast_snapshot_done">Snapshot дададзены ў файл.</string>
     <string name="toast_sniffer_no_file">Няма файла sniffer для экспарту.</string>
     <string name="toast_no_result_to_share">Няма выніку для адпраўкі.</string>
-    <string name="diag_btn_size_restore">RESTORE</string>
-    <string name="diag_btn_size_full">FULL TEST</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Скід overscan асноўнага экрана (display 0)</string>
-    <string name="diag_reset_main_overscan_done">Overscan display 0 скінуты — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. Тэст Resize DiLink5 (IATM)</string>
-    <string name="diag_s7_desc">Правярае паслядоўнасць DiLink5 Dashboard: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) праз raw Binder на activity_task. Не змяняе існы код праекцыі. Спачатку запусціце праграму на кластары праз асноўную панэль.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ Паслядоўнасць DiLink5 (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ Толькі resizeTask FORCED=3 (без змены WM)</string>
-    <string name="diag_btn_resize_inspect_task">🔍 Праверыць task кластара (windowing + bounds)</string>
     <string name="diag_s6_title">6. Ачыстка сховішча</string>
     <string name="diag_s6_desc">Выдаляе файлы журналаў і справаздач, створаныя DashCast: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Таксама ачышчае буфер журналаў у памяці. ADB-ключы (adb.key / adb.pub) НЕ выдаляюцца.</string>
     <string name="diag_btn_cleanup">🗑️ Выдаліць trace-файлы</string>
@@ -180,12 +149,6 @@
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
-    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. No visible effect on Seal EU (2D cluster).</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">Sending cmd %1$d2026</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="settings_updates_title">Абнаўленні</string>
     <string name="btn_adjust">Наладзіць</string>
     <string name="label_width_inset">Водступ шырыні</string>
