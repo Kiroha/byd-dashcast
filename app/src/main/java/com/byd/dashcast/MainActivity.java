@@ -846,6 +846,7 @@ public class MainActivity extends AppCompatActivity
                     updateDashboardStatus(appName);
                     updateControlLabel();
                     startClusterMirror();
+                    autoApplyInsetsIfNeeded(pkgName);
                 } else {
                     Toast.makeText(MainActivity.this,
                             getString(R.string.toast_app_incompatible, appName),
@@ -1125,6 +1126,40 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+
+    /**
+     * If per-app insets have been saved for {@code pkg}, automatically applies them
+     * (wm overscan + resizeActiveTask) 500 ms after a successful launch so the user
+     * doesn't have to press Apply every time.
+     */
+    private void autoApplyInsetsIfNeeded(final String pkg) {
+        if (pkg == null) return;
+        final SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        final int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+        final int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+        final int savedW = p.getInt("inset_h_" + pkg, defH);
+        final int savedH = p.getInt("inset_v_" + pkg, defV);
+        // Only apply if there are per-app custom insets (different from global defaults)
+        if (savedW == defH && savedH == defV) return;
+        AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " w=" + savedW + " h=" + savedH);
+        // Small delay: give the app time to render on the cluster before resizing
+        mScreenshotHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (!pkg.equals(mCurrentDashboardPkg)) return; // app changed in the meantime
+                AdbLocalClient.executeShell(MainActivity.this,
+                        "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH + " -d 1");
+                if (mServiceBound && mClusterService != null) {
+                    final ClusterService svc = mClusterService;
+                    new Thread(new Runnable() {
+                        @Override public void run() {
+                            int taskId = svc.findRunningTaskId(pkg);
+                            svc.resizeActiveTask(taskId, pkg);
+                        }
+                    }, "auto-resize-thread").start();
+                }
+            }
+        }, 500);
+    }
 
     /**
      * Hides the mirror and restores the app list.
