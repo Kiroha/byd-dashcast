@@ -776,7 +776,6 @@ public class MainActivity extends AppCompatActivity
                             mCurrentDashboardPkg = null;
                             mAdapter.setCurrentPackage(null);
                             updateDashboardStatus(null);
-                            if (mServiceBound && mClusterService != null) mClusterService.stopProjectionNoAdb();
                             
                             // The virtual display remains alive and black, waiting for another app.
                         }
