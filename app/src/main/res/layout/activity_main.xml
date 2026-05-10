@@ -194,7 +194,7 @@
                 android:id="@+id/btn_toggle_resize"
                 android:layout_width="wrap_content"
                 android:layout_height="30dp"
-                android:text="Ajuster"
+                android:text="@string/btn_adjust"
                 android:textSize="10sp"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
@@ -244,7 +244,7 @@
                     android:id="@+id/tv_resize_w_label"
                     android:layout_width="80dp"
                     android:layout_height="wrap_content"
-                    android:text="Width Inset"
+                    android:text="@string/label_width_inset"
                     android:textColor="#FFFFFF"
                     android:textSize="12sp"/>
                 <SeekBar
@@ -272,7 +272,7 @@
                     android:id="@+id/tv_resize_h_label"
                     android:layout_width="80dp"
                     android:layout_height="wrap_content"
-                    android:text="Height Inset"
+                    android:text="@string/label_height_inset"
                     android:textColor="#FFFFFF"
                     android:textSize="12sp"/>
                 <SeekBar
@@ -296,7 +296,7 @@
                 android:layout_height="35dp"
                 android:layout_gravity="end"
                 android:layout_marginTop="4dp"
-                android:text="Appliquer"
+                android:text="@string/btn_apply"
                 android:textSize="12sp"
                 android:backgroundTint="#2EA043"/>
         </LinearLayout>
