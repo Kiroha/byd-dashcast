@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Пошук праграмы…</string>
     <string name="tooltip_tap_send">Націсніце на праграму, каб адправіць яе на кластар</string>
     <string name="split_btn_exit">↩ Паўнаэкранны</string>
+    <string name="confirm_kill_title">Спыніць праграму?</string>
+    <string name="confirm_kill_msg">Прымусова спыніць %1$s?</string>
+    <string name="confirm_kill_ok">Спыніць</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Кластар недаступны — паўтарыце спробу</string>
+    <string name="dialog_reconnect_title">Перазапусціць праграму?</string>
+    <string name="dialog_reconnect_msg">Перазапусціць %1$s на кластары?</string>
+    <string name="dialog_reconnect_yes">↺ Перазапусціць</string>
 </resources>

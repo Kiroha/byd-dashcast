@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Buscar aplicación…</string>
     <string name="tooltip_tap_send">Toca una app para enviarla al clúster</string>
     <string name="split_btn_exit">↩ Pantalla completa</string>
+    <string name="confirm_kill_title">¿Detener app?</string>
+    <string name="confirm_kill_msg">¿Forzar cierre de %1$s?</string>
+    <string name="confirm_kill_ok">Detener</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Clúster inaccesible — inténtelo de nuevo</string>
+    <string name="dialog_reconnect_title">¿Relanzar app?</string>
+    <string name="dialog_reconnect_msg">¿Relanzar %1$s en el clúster?</string>
+    <string name="dialog_reconnect_yes">↺ Relanzar</string>
 </resources>

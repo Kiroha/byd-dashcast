@@ -171,4 +171,12 @@
     <string name="hint_search_apps">البحث عن تطبيق…</string>
     <string name="tooltip_tap_send">انقر على تطبيق لإرساله إلى شاشة الكتلة</string>
     <string name="split_btn_exit">↩ ملء الشاشة</string>
+    <string name="confirm_kill_title">إيقاف التطبيق؟</string>
+    <string name="confirm_kill_msg">إجبار إيقاف %1$s؟</string>
+    <string name="confirm_kill_ok">إيقاف</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">العنقود غير متاح — أعد المحاولة</string>
+    <string name="dialog_reconnect_title">إعادة تشغيل التطبيق؟</string>
+    <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
+    <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
 </resources>

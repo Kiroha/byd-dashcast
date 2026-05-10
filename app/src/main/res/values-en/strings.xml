@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Search for an app…</string>
     <string name="tooltip_tap_send">Tap an app to send it to the cluster display</string>
     <string name="split_btn_exit">↩ Full screen</string>
+    <string name="confirm_kill_title">Stop app?</string>
+    <string name="confirm_kill_msg">Force-stop %1$s?</string>
+    <string name="confirm_kill_ok">Stop</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Cluster unreachable — please retry</string>
+    <string name="dialog_reconnect_title">Relaunch app?</string>
+    <string name="dialog_reconnect_msg">Relaunch %1$s on the cluster?</string>
+    <string name="dialog_reconnect_yes">↺ Relaunch</string>
 </resources>

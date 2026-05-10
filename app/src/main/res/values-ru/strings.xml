@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Поиск приложения…</string>
     <string name="tooltip_tap_send">Нажмите на приложение, чтобы отправить его на кластер</string>
     <string name="split_btn_exit">↩ Полный экран</string>
+    <string name="confirm_kill_title">Остановить приложение?</string>
+    <string name="confirm_kill_msg">Принудительно остановить %1$s?</string>
+    <string name="confirm_kill_ok">Остановить</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Кластер недоступен — повторите попытку</string>
+    <string name="dialog_reconnect_title">Перезапустить приложение?</string>
+    <string name="dialog_reconnect_msg">Перезапустить %1$s на кластере?</string>
+    <string name="dialog_reconnect_yes">↺ Перезапустить</string>
 </resources>

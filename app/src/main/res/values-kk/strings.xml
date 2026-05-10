@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Қолданбаны іздеу…</string>
     <string name="tooltip_tap_send">Кластерге жіберу үшін қолданбаны басыңыз</string>
     <string name="split_btn_exit">↩ Толық экран</string>
+    <string name="confirm_kill_title">Қолданбаны тоқтату?</string>
+    <string name="confirm_kill_msg">%1$s мәжбүрлеп тоқтату?</string>
+    <string name="confirm_kill_ok">Тоқтату</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Кластер қолжетімсіз — қайталап көріңіз</string>
+    <string name="dialog_reconnect_title">Қолданбаны қайта іске қосу?</string>
+    <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
+    <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
 </resources>

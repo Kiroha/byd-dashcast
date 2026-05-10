@@ -39,7 +39,12 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
+import android.graphics.Typeface;
 
 import com.byd.dashcast.dashboard.DashboardLauncher;
 import com.byd.dashcast.model.AppInfo;
@@ -130,7 +135,15 @@ public class MainActivity extends AppCompatActivity
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
-    private static final String PREF_FIRST_LAUNCH_TIP = "first_launch_tip_shown";
+    private static final String PREF_FIRST_LAUNCH_TIP   = "first_launch_tip_shown";
+    /** Last app voluntarily launched on the cluster — never cleared on disconnect, for reconnect reminder. */
+    private static final String PREF_LAST_CLUSTER_PKG  = "last_cluster_pkg";
+    private static final String PREF_LAST_CLUSTER_NAME = "last_cluster_name";
+    /** Timeout before re-enabling the Activate button if the cluster never connects. */
+    private static final long   ACTIVATE_TIMEOUT_MS    = 30_000;
+    private Runnable            mActivateTimeoutRunnable = null;
+    /** True if the current activation was triggered by the user (not Activity restore). */
+    private boolean             mWasManualActivation   = false;
 
     // Status dot colors
     private static final int DOT_COLOR_OFF     = 0xFF888888;
@@ -146,6 +159,7 @@ public class MainActivity extends AppCompatActivity
     private Button   btnOverflow;
     private Button   btnShowMirror;
     private Button   btnSplitLayout;
+    private Button   btnRelaunch;
     private Button   btnViewToggle;
     private RecyclerView rvApps;
     private AppListAdapter mAdapter;
@@ -469,6 +483,13 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) { showSplitMenu(v); }
         });
 
+        // Relaunch button — force-stops current cluster app then relaunches it
+        btnRelaunch = (Button) findViewById(R.id.btn_relaunch);
+        btnRelaunch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { relaunchCurrentApp(); }
+        });
+
         // Cluster mirror: touch → map coordinates → inject on display 1
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -590,6 +611,9 @@ public class MainActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                cancelActivateTimeout();
+                final boolean wasManual = mWasManualActivation;
+                mWasManualActivation = false;
                 updateDashboardStatus(null);
                 btnActivateCluster.setEnabled(true);
 
@@ -636,6 +660,31 @@ public class MainActivity extends AppCompatActivity
                         }
                     }
                 }
+
+                // Reconnect reminder: if cluster was manually re-activated and
+                // there was a last known app, offer to relaunch it.
+                if (wasManual && mCurrentDashboardPkg == null) {
+                    final SharedPreferences _pp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    final String lastPkg  = _pp.getString(PREF_LAST_CLUSTER_PKG, null);
+                    final String lastName = _pp.getString(PREF_LAST_CLUSTER_NAME, null);
+                    if (lastPkg != null && lastName != null) {
+                        new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.dialog_reconnect_title))
+                            .setMessage(getString(R.string.dialog_reconnect_msg, lastName))
+                            .setPositiveButton(getString(R.string.dialog_reconnect_yes), new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) {
+                                    for (AppInfo a : mAdapter.getApps()) {
+                                        if (a.packageName.equals(lastPkg)) {
+                                            onSendToDashboard(a);
+                                            break;
+                                        }
+                                    }
+                                }
+                            })
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                    }
+                }
             }
         });
     }
@@ -646,6 +695,8 @@ public class MainActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                cancelActivateTimeout();
+                mWasManualActivation = false;
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
                 btnActivateCluster.setEnabled(true);
@@ -788,7 +839,9 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardPkg = pkgName;
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                             .putString(PREF_CLUSTER_PKG, pkgName)
-                            .putString(PREF_CLUSTER_NAME, appName).apply();
+                            .putString(PREF_CLUSTER_NAME, appName)
+                            .putString(PREF_LAST_CLUSTER_PKG, pkgName)
+                            .putString(PREF_LAST_CLUSTER_NAME, appName).apply();
                     mAdapter.setCurrentPackage(pkgName);
                     updateDashboardStatus(appName);
                     updateControlLabel();
@@ -835,12 +888,24 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onKillApp(final AppInfo app) {
+        // Confirm before killing — accidental taps are easy on a car touchscreen
+        new AlertDialog.Builder(this)
+            .setTitle(getString(R.string.confirm_kill_title))
+            .setMessage(getString(R.string.confirm_kill_msg, app.appName))
+            .setPositiveButton(getString(R.string.confirm_kill_ok), new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int w) { doKillApp(app); }
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    /** Performs the actual force-stop after the user confirmed. */
+    private void doKillApp(final AppInfo app) {
         // 1. If the app is still on the cluster (mCurrentDashboardPkg matches),
         //    we do NOT stop projection or restore anything. We just kill it in memory.
-        boolean isOnCluster = mCurrentDashboardPkg != null
+        final boolean isOnCluster = mCurrentDashboardPkg != null
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
-
 
         // 2. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
@@ -1069,8 +1134,12 @@ public class MainActivity extends AppCompatActivity
         stopClusterMirror();
         frameMirror.setVisibility(View.GONE);
         panelClusterControl.setVisibility(View.GONE);
+        llAppListSection.setAlpha(0f);
         llAppListSection.setVisibility(View.VISIBLE);
+        llAppListSection.animate().alpha(1f).setDuration(150).start();
+        rvApps.setAlpha(0f);
         rvApps.setVisibility(View.VISIBLE);
+        rvApps.animate().alpha(1f).setDuration(150).start();
     }
 
     /**
@@ -1080,6 +1149,8 @@ public class MainActivity extends AppCompatActivity
     private void startClusterMirror() {
         AppLogger.d(TAG, "startClusterMirror app=" + mCurrentDashboardApp);
         showMirrorView();
+        frameMirror.setAlpha(0f);
+        frameMirror.animate().alpha(1f).setDuration(150).start();
         attemptStartMirrorWithCurrentHolder();
     }
 
@@ -1202,6 +1273,8 @@ public class MainActivity extends AppCompatActivity
         btnActivateCluster.setEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_activating_cluster));
         setStatusDot(DOT_COLOR_PENDING);
+        mWasManualActivation = true;
+        startActivateTimeout();
         AppLogger.log(TAG, "activateCluster() — serviceBound=" + mServiceBound
                 + " bindRequested=" + mBindRequested
                 + " displayId=" + (mClusterService != null ? mClusterService.getDisplayId() : "N/A"));
@@ -1267,7 +1340,7 @@ public class MainActivity extends AppCompatActivity
 
                 ScrollView sv = new ScrollView(MainActivity.this);
                 TextView tvChangelog = new TextView(MainActivity.this);
-                tvChangelog.setText(changelog);
+                tvChangelog.setText(renderMarkdown(changelog));
                 tvChangelog.setTextSize(13);
                 tvChangelog.setPadding(pad, 0, pad, pad);
                 tvChangelog.setTextColor(android.graphics.Color.parseColor("#333333"));
@@ -1539,6 +1612,129 @@ public class MainActivity extends AppCompatActivity
         com.byd.dashcast.dashboard.ClusterMirrorManager mirror = mClusterService.getMirrorManager();
         mInsetOverlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX(), mirror.getProjOffsetY());
         mInsetOverlay.setInsets(sbResizeW.getProgress(), sbResizeH.getProgress());
+    }
+
+    // ── Activate timeout ──────────────────────────────────────────────────────
+
+    /** Posts a 30-second timeout that re-enables the Activate button if the cluster never connects. */
+    private void startActivateTimeout() {
+        cancelActivateTimeout();
+        mActivateTimeoutRunnable = new Runnable() {
+            @Override public void run() {
+                mActivateTimeoutRunnable = null;
+                mWasManualActivation = false;
+                btnActivateCluster.setEnabled(true);
+                setStatusDot(DOT_COLOR_OFF);
+                tvDashboardStatus.setText(getString(R.string.status_disconnected));
+                Toast.makeText(MainActivity.this,
+                        getString(R.string.toast_activate_timeout), Toast.LENGTH_LONG).show();
+                AppLogger.w(TAG, "Activate cluster timeout (30s)");
+            }
+        };
+        mScreenshotHandler.postDelayed(mActivateTimeoutRunnable, ACTIVATE_TIMEOUT_MS);
+    }
+
+    /** Cancels the pending activate timeout if any. */
+    private void cancelActivateTimeout() {
+        if (mActivateTimeoutRunnable != null) {
+            mScreenshotHandler.removeCallbacks(mActivateTimeoutRunnable);
+            mActivateTimeoutRunnable = null;
+        }
+    }
+
+    // ── Relaunch current cluster app ─────────────────────────────────────────
+
+    /** Force-stops then relaunches the app currently active on the cluster. */
+    private void relaunchCurrentApp() {
+        if (mCurrentDashboardPkg == null) return;
+        final String pkg  = mCurrentDashboardPkg;
+        final String name = mCurrentDashboardApp;
+        AppLogger.i(TAG, "relaunchCurrentApp → " + pkg);
+        AdbLocalClient.forceStopApp(this, pkg, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String ignored) {
+                // Find AppInfo and relaunch through normal flow
+                for (AppInfo a : mAdapter.getApps()) {
+                    if (pkg.equals(a.packageName)) {
+                        mCurrentDashboardPkg = null; // clear so onSendToDashboard doesn't bail early
+                        mCurrentDashboardApp = null;
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() { onSendToDashboard(a); }
+                        });
+                        return;
+                    }
+                }
+                AppLogger.w(TAG, "relaunchCurrentApp: pkg not found in list — " + pkg);
+            }
+            @Override public void onError(String error) {
+                AppLogger.w(TAG, "relaunchCurrentApp: forceStop error: " + error);
+                // Try relaunch anyway
+                for (AppInfo a : mAdapter.getApps()) {
+                    if (pkg.equals(a.packageName)) {
+                        mCurrentDashboardPkg = null;
+                        mCurrentDashboardApp = null;
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() { onSendToDashboard(a); }
+                        });
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Markdown renderer for OTA changelog ──────────────────────────────────
+
+    /**
+     * Converts a simple GitHub Markdown string to a styled SpannableStringBuilder.
+     * Handles: ## heading, ### heading, - bullet, * bullet, **bold**.
+     */
+    private static CharSequence renderMarkdown(String raw) {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        String[] lines = raw.split("\n");
+        for (int li = 0; li < lines.length; li++) {
+            String line = lines[li];
+            boolean bold = false;
+            float relSize = 0f;
+            if (line.startsWith("## ")) {
+                line = line.substring(3);
+                bold = true; relSize = 1.15f;
+            } else if (line.startsWith("### ")) {
+                line = line.substring(4);
+                bold = true;
+            } else if (line.startsWith("- ") || line.startsWith("* ")) {
+                line = "\u2022 " + line.substring(2);
+            }
+            int lineStart = sb.length();
+            appendWithInlineBold(sb, line);
+            int lineEnd = sb.length();
+            if (bold) {
+                sb.setSpan(new StyleSpan(Typeface.BOLD),
+                        lineStart, lineEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (relSize > 0f) {
+                sb.setSpan(new RelativeSizeSpan(relSize),
+                        lineStart, lineEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (li < lines.length - 1) sb.append('\n');
+        }
+        return sb;
+    }
+
+    /** Appends {@code text} to {@code sb}, converting **bold** markers to bold spans. */
+    private static void appendWithInlineBold(SpannableStringBuilder sb, String text) {
+        int i = 0;
+        while (i < text.length()) {
+            int boldStart = text.indexOf("**", i);
+            if (boldStart < 0) { sb.append(text.substring(i)); break; }
+            sb.append(text.substring(i, boldStart));
+            int boldEnd = text.indexOf("**", boldStart + 2);
+            if (boldEnd < 0) { sb.append(text.substring(boldStart)); break; }
+            int spanStart = sb.length();
+            sb.append(text.substring(boldStart + 2, boldEnd));
+            sb.setSpan(new StyleSpan(Typeface.BOLD),
+                    spanStart, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            i = boldEnd + 2;
+        }
     }
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */

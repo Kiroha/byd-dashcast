@@ -171,4 +171,12 @@
     <string name="hint_search_apps">Uygulama ara…</string>
     <string name="tooltip_tap_send">Küme ekranına göndermek için uygulamaya dokunun</string>
     <string name="split_btn_exit">↩ Tam ekran</string>
+    <string name="confirm_kill_title">Uygulamayı durdur?</string>
+    <string name="confirm_kill_msg">%1$s zorla durdurulsun mu?</string>
+    <string name="confirm_kill_ok">Durdur</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Küme erişilemiyor — tekrar deneyin</string>
+    <string name="dialog_reconnect_title">Uygulamayı yeniden başlat?</string>
+    <string name="dialog_reconnect_msg">%1$s kümede yeniden başlatılsın mı?</string>
+    <string name="dialog_reconnect_yes">↺ Başlat</string>
 </resources>

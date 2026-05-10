@@ -173,4 +173,12 @@
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>
     <string name="split_btn_exit">↩ Plein écran</string>
+    <string name="confirm_kill_title">Arrêter l\'app ?</string>
+    <string name="confirm_kill_msg">Forcer l\'arrêt de %1$s ?</string>
+    <string name="confirm_kill_ok">Arrêter</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
+    <string name="dialog_reconnect_title">Relancer l\'app ?</string>
+    <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
+    <string name="dialog_reconnect_yes">↺ Relancer</string>
 </resources>
