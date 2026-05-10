@@ -3,7 +3,7 @@ export default {
   "flag": "🇫🇷",
   "name": "Français",
   "title": "DashCast — Manuel d'utilisation",
-  "meta": "v0.5.0-beta · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.5.1 · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Manuel d'utilisation",
   "tocTitle": "📋 Sommaire",
   "sections": [
@@ -19,27 +19,29 @@ export default {
   ],
   "overview": {
     "title": "1. Présentation",
-    "text": "DashCast est une application Android qui permet de projeter n'importe quelle application de l'écran d'infodivertissement sur le tableau de bord numérique de votre BYD (affichage combiné). La navigation, la musique, les vidéos — tout ce qui tourne sur l'écran central peut être redirigé vers le cluster en face du conducteur.",
+    "text": "DashCast est une application Android qui permet de projeter n'importe quelle application de l'écran d'infodivertissement sur le tableau de bord numérique de votre BYD (affichage combiné). La navigation, la musique, les vidéos — tout ce qui tourne sur l'écran central peut être redirigé vers le cluster.",
     "bullets": [
       "✅ Compatible BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
       "✅ Aucune modification système nécessaire",
       "✅ ADB local (TCP, localhost) — pas besoin d'ordinateur une fois configuré",
       "✅ Détection automatique de la déconnexion d'application",
-      "✅ Système de mises à jour OTA (Over-The-Air) intégré",
-      "✅ Paramétrages OverScan précis et sauvegardés par application"
+      "✅ Mises à jour OTA (Over-The-Air) intégrées",
+      "✅ Overscan sauvegardé indépendamment par application",
+      "✅ Affichage en mode Grille ou Liste",
+      "✅ Force-stop d'urgence (Croix Rouge) par application"
     ],
-    "note": "💡 Prérequis : Activez le débogage ADB TCP dans Paramètres → Développeur → Débogage sans fil (ou \"ADB over network\"). Cette opération est à faire une seule fois. Lors du premier lancement de DashCast, une popup « Autoriser le débogage ? » s'affiche — appuyez Toujours autoriser depuis cet ordinateur."
+    "note": "💡 Prérequis : Activez le débogage ADB TCP dans Paramètres → Développeur → Débogage sans fil. Cette opération est à faire une seule fois. Au premier lancement, une popup « Autoriser le débogage ? » s'affiche — appuyez Toujours autoriser."
   },
   "firstLaunch": {
     "title": "2. Premier démarrage — Choix de la langue",
-    "text": "Au premier lancement, l'écran de bienvenue s'affiche. Choisissez votre langue en tapant l'un des dix boutons. Ce choix est mémorisé — vous ne le reverrez plus sauf si vous changez la langue depuis le menu ⋮.",
+    "text": "Au premier lancement, l'écran de bienvenue s'affiche. Choisissez votre langue parmi les boutons disponibles. Ce choix est mémorisé — vous ne le reverrez plus sauf si vous changez la langue depuis le menu ⋮.",
     "welcomeSubtitle": "Dashboard Controller",
     "welcomeHint": "Choisissez votre langue\nPlease select your language",
     "caption": "Écran de sélection de langue — affiché uniquement au premier lancement"
   },
   "main": {
     "title": "3. Écran principal",
-    "text": "L'écran principal est composé de deux zones : une barre de statut en haut (fond bleu foncé) et une liste d'applications installées en dessous.",
+    "text": "L'écran principal est composé de deux zones : une barre de statut en haut (fond bleu foncé) et une liste d'applications installées en dessous. Vous pouvez basculer entre affichage en liste classique ou en grille (icônes) via le menu ⋮.",
     "status": "① Dashboard : non connecté",
     "buttons": [
       "② Activer Projection",
@@ -88,22 +90,22 @@ export default {
         "tone": "gray",
         "marker": "⑤",
         "label": "Menu ⋮",
-        "text": "Accès aux Paramètres, Diagnostic, Rapport système, Logs et changement de langue."
+        "text": "Accès aux Paramètres, Diagnostic, Rapport système, Logs, changement de langue et bascule Grille/Liste."
       },
       {
         "tone": "gray",
         "marker": "⑥",
         "label": "Liste des applications",
-        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ou sur ✕ pour la fermer."
+        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ✕ pour la fermer, ❌ pour forcer l'arrêt complet du processus."
       }
     ]
   },
   "projection": {
     "title": "4. Projeter une application sur le tableau de bord",
     "steps": [
-      "Appuyez sur « Activer Projection » (bouton bleu en haut à droite). Le statut passe à « Démarrage cluster… ». La connexion ADB locale s'établit et le cluster passe en mode projection.",
+      "Appuyez sur « Activer Projection » (bouton bleu en haut). Le statut passe à « Démarrage cluster… ». La connexion ADB locale s'établit et le cluster passe en mode projection.",
       "Tapez sur l'application souhaitée dans la liste. DashCast déplace l'application vers le display du tableau de bord. Le statut passe à « Dashboard : [Nom de l'app] ».",
-      "Le panneau de contrôle apparaît en bas de l'écran, permettant d'interagir avec l'application projetée depuis l'écran principal."
+      "Le panneau de contrôle apparaît en bas de l'écran. Les valeurs d'overscan sauvegardées pour cette application sont appliquées automatiquement."
     ],
     "activeStatus": "Dashboard : Maps ✓",
     "buttons": [
@@ -161,26 +163,31 @@ export default {
         "tone": "red",
         "marker": "❌",
         "label": "Croix Rouge (Force Stop)",
-        "text": "Force l'arrêt d'une application récalcitrante (tue le processus dans le système)."
+        "text": "Force l'arrêt complet du processus d'une application bloquée et la retire des Récents."
       },
       {
         "tone": "gray",
         "marker": "🔲",
         "label": "Vue Grille / Liste",
-        "text": "Vous pouvez basculer l'affichage des applications sous forme de liste classique ou de grille (icônes) via les options de l'application."
+        "text": "Basculez l'affichage entre liste classique et grille d'icônes via le menu ⋮."
       }
     ]
   },
   "control": {
     "title": "5. Pendant la projection — Panneau de contrôle",
-    "intro": "Lorsqu'une application est active sur le cluster, un panneau sombre apparaît en bas de l'écran principal. Il offre trois fonctionnalités de contrôle à distance :",
+    "intro": "Lorsqu'une application est active sur le cluster, un panneau sombre apparaît en bas de l'écran principal avec quatre fonctionnalités :",
     "mirror": {
       "title": "5.1 Miroir (📺 Miroir)",
       "text": "Appuyez sur 📺 Miroir dans la barre de statut pour afficher une copie du tableau de bord directement dans DashCast. Vous pouvez interagir avec cette copie par toucher — les événements sont transmis au cluster.",
       "note": "Le miroir utilise SurfaceControl pour capturer le display. Si le miroir ne s'affiche pas, un screenshot automatique toutes les 2 secondes prend le relais."
     },
+    "resize": {
+      "title": "5.2 Ajuster (📐 Overscan par application)",
+      "text": "Le bouton 📐 Ajuster affiche deux curseurs : Marge Largeur et Marge Hauteur. Ces valeurs rognent les bords de l'image projetée sur le cluster. Elles sont sauvegardées individuellement pour chaque application et ré-appliquées automatiquement à chaque lancement via wm overscan.",
+      "note": "💡 Valeurs recommandées pour le Seal EU : Largeur 80 px, Hauteur 50 px."
+    },
     "split": {
-      "title": "5.2 Mode Split (⬛⬛ Split)",
+      "title": "5.3 Mode Split (⬛⬛ Split)",
       "text": "Appuyez sur ⬛⬛ Split pour partager le tableau de bord entre deux applications :",
       "items": [
         "Plein écran — Une seule app occupe tout le cluster",
@@ -188,10 +195,6 @@ export default {
         "⬛⬜ Droite (50 %) — L'app principale à droite"
       ],
       "extra": "En mode Split, une deuxième application peut être sélectionnée dans la liste. Elle occupera l'autre moitié du cluster."
-    },
-    "resize": {
-      "title": "5.3 Ajuster (Redimensionnement / Overscan)",
-      "text": "Le bouton « Ajuster » affiche des curseurs permettant de rogner les bords (Largeur / Hauteur) de l'image projetée. Cela est particulièrement utile sur l'écran panoramique et étiré du cluster. Ces valeurs d'Overscan sont sauvegardées indépendamment pour chaque application et ré-appliquées automatiquement à chaque lancement !"
     },
     "hide": {
       "title": "5.4 Masquer le panneau",
@@ -232,7 +235,7 @@ export default {
       "12,3 pouces (cmd=30) — Seal EU",
       "10,25 pouces (cmd=31)"
     ],
-    "marginsLabel": "Marges d'affichage (overscan)",
+    "marginsLabel": "Marges d'affichage (overscan global)",
     "horizontalMarginLabel": "Gauche / Droite :",
     "verticalMarginLabel": "Haut / Bas :",
     "applyButton": "Appliquer maintenant",
@@ -243,8 +246,8 @@ export default {
       "text": "Sélectionnez la taille de l'écran de votre tableau de bord. Pour le BYD Seal EU, sélectionnez 12,3 pouces (cmd=30). Ce réglage détermine la commande envoyée au cluster lors de l'activation."
     },
     "margins": {
-      "title": "7.2 Marges d'affichage (overscan)",
-      "text": "Réglez les marges pour cadrer parfaitement le contenu dans la zone visible de l'écran. Les dalles courbes du cluster ont souvent des bords physiques qui débordent par rapport à la surface d'affichage utile.",
+      "title": "7.2 Marges d'affichage globales (overscan)",
+      "text": "Réglez les marges pour cadrer parfaitement le contenu dans la zone visible de l'écran. Ces marges s'appliquent globalement. Pour des réglages par application, utilisez le bouton 📐 Ajuster dans le panneau de contrôle.",
       "items": [
         "Gauche / Droite — Marge horizontale (0–200 px des deux côtés)",
         "Haut / Bas — Marge verticale (0–200 px en haut et en bas)"
@@ -264,11 +267,15 @@ export default {
       "rows": [
         [
           "⚙️ Paramètres",
-          "Type de cluster + réglage des marges overscan"
+          "Type de cluster + réglage des marges overscan globales"
+        ],
+        [
+          "🔲 Grille / Liste",
+          "Bascule l'affichage des applications entre liste classique et grille d'icônes (5 colonnes)"
         ],
         [
           "🔧 Diagnostic",
-          "Tests avancés pour les développeurs — connexion ADB, displays, taille écran cluster"
+          "Tests avancés pour développeurs — connexion ADB, displays, taille écran cluster, sniffer ADB"
         ],
         [
           "📋 Rapport système",
@@ -276,7 +283,7 @@ export default {
         ],
         [
           "📜 Logs",
-          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier"
+          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier (appui long pour Telegram)"
         ],
         [
           "🌐 Langue",
@@ -319,20 +326,20 @@ export default {
       },
       {
         "question": "❓ Le contenu est rogné ou décalé sur le cluster",
-        "answer": "Ajustez les marges d'affichage dans ⋮ → Paramètres. Augmentez les valeurs Gauche/Droite si le contenu déborde horizontalement, et Haut/Bas s'il déborde verticalement. Cliquez Appliquer maintenant pour voir immédiatement le résultat.",
+        "answer": "Utilisez le bouton 📐 Ajuster dans le panneau de contrôle pour régler précisément les marges par application. Les valeurs globales dans Paramètres s'appliquent en fallback.",
         "items": []
       },
       {
-        "question": "❓ Les boutons « ← Principal » et « ✕ » restent visibles après avoir fermé l'app",
+        "question": "❓ Une application est bloquée / figée sur le cluster",
+        "answer": "Appuyez sur la ❌ Croix Rouge à côté de l'application dans la liste. Cela force l'arrêt complet du processus et nettoie les Récents. L'application est alors prête à être relancée.",
+        "items": []
+      },
+      {
+        "question": "❓ Les boutons ← Principal et ✕ restent visibles après avoir fermé l'app",
         "answer": "DashCast détecte automatiquement la fermeture des applications (surveillance via /proc). Si l'interface reste bloquée, appuyez sur Arrêter Projection pour forcer la réinitialisation.",
-        "items": []
-      },
-      {
-        "question": "❓ Après un redémarrage de la voiture, dois-je tout reconfigurer ?",
-        "answer": "Non. Le type de cluster et les marges overscan sont mémorisés. L'application que vous aviez projetée l'est également (reprise automatique si possible). Seule la connexion ADB peut nécessiter de réappuyer sur Activer Projection.",
         "items": []
       }
     ]
   },
-  "footer": "DashCast · Manuel d'utilisation · Français · github.com/Kiroha/byd-dashcast"
+  "footer": "DashCast v0.5.1 — BYD Seal EU · DiLink 3.0 · Android 10 · github.com/Kiroha/byd-dashcast"
 };
