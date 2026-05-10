@@ -71,6 +71,8 @@ public class MainActivity extends AppCompatActivity
     private android.widget.TextView tvResizeW;
     private android.widget.TextView tvResizeH;
     private android.widget.Button btnResizeApply;
+    private android.widget.Button btnToggleResize;
+     
 
 
     // Cluster service
@@ -142,6 +144,7 @@ public class MainActivity extends AppCompatActivity
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
+    private LinearLayout panelResize;
     private TextView     tvControlAppName;
     private android.widget.FrameLayout frameMirror;
     private TextureView clusterMirror;
@@ -288,11 +291,28 @@ public class MainActivity extends AppCompatActivity
         tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
         
         // --- Resize Zone ---
+        btnToggleResize = (Button) findViewById(R.id.btn_toggle_resize);
+        panelResize = (LinearLayout) findViewById(R.id.panel_resize);
         sbResizeW = (SeekBar) findViewById(R.id.sb_resize_w);
         sbResizeH = (SeekBar) findViewById(R.id.sb_resize_h);
         tvResizeW = (TextView) findViewById(R.id.tv_resize_w_val);
         tvResizeH = (TextView) findViewById(R.id.tv_resize_h_val);
         btnResizeApply = (Button) findViewById(R.id.btn_resize_apply);
+        if (btnToggleResize != null) {
+            btnToggleResize.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (panelResize != null) {
+                        if (panelResize.getVisibility() == View.VISIBLE) {
+                            panelResize.setVisibility(View.GONE);
+                        } else {
+                            panelResize.setVisibility(View.VISIBLE);
+                        }
+                    }
+                }
+            });
+        }
+        
         
         sbResizeW.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeW.setText(String.valueOf(value)); }

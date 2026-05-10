@@ -191,6 +191,17 @@
                 android:maxLines="1"/>
 
             <Button
+                android:id="@+id/btn_toggle_resize"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Ajuster"
+                android:textSize="10sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#00838F"/>
+
+            <Button
                 android:id="@+id/btn_cluster_split"
                 android:layout_width="wrap_content"
                 android:layout_height="30dp"
@@ -221,7 +232,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="8dp"
-            android:background="#1C2128">
+            android:background="#1C2128"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
