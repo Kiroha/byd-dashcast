@@ -158,4 +158,9 @@
     <string name="toast_list_mode_enabled">Режим списку увімкнено</string>
     <string name="toast_update_install_failed">Помилка встановлення: </string>
     <string name="app_state_auto">Авто</string>
+    <string name="ota_btn_update_now">Оновити</string>
+    <string name="ota_btn_later">Пізніше</string>
+    <string name="ota_downloading">Завантаження…</string>
+    <string name="menu_view_grid">⊞ Режим сітки</string>
+    <string name="menu_view_list">📋 Режим списку</string>
 </resources>

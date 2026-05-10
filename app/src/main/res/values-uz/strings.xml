@@ -157,5 +157,8 @@
     <string name="toast_grid_mode_enabled">To\'r rejimi yoqildi</string>
     <string name="toast_list_mode_enabled">Ro\'yxat rejimi yoqildi</string>
     <string name="toast_update_install_failed">O\'rnatishda xatolik: </string>
-    <string name="app_state_auto">Avto</string>
-</resources>
+    <string name="app_state_auto">Avto</string>    <string name="ota_btn_update_now">Hozir yangilash</string>
+    <string name="ota_btn_later">Keyinroq</string>
+    <string name="ota_downloading">Yuklanmoqda…</string>
+    <string name="menu_view_grid">⊞ To\'r rejimi</string>
+    <string name="menu_view_list">📋 Ro\'yxat rejimi</string></resources>

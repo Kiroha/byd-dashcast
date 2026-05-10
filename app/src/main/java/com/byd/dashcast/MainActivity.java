@@ -45,8 +45,6 @@ import com.byd.dashcast.model.AppInfo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -794,9 +792,12 @@ public class MainActivity extends AppCompatActivity
                         if (isOnCluster) {
                             mCurrentDashboardApp = null;
                             mCurrentDashboardPkg = null;
+                            // Clear persisted state so the killed app is not ghost-restored
+                            // if the Activity is destroyed and recreated later.
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
                             mAdapter.setCurrentPackage(null);
                             updateDashboardStatus(null);
-                            
                             // The virtual display remains alive and black, waiting for another app.
                         }
                         if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
@@ -1233,8 +1234,8 @@ public class MainActivity extends AppCompatActivity
                         .setTitle(getString(R.string.ota_dialog_title))
                         .setView(layout)
                         .setCancelable(false)
-                        .setPositiveButton("Update Now", null)
-                        .setNegativeButton("Update Later", (dialog, which) -> dialog.dismiss())
+                        .setPositiveButton(getString(R.string.ota_btn_update_now), null)
+                        .setNegativeButton(getString(R.string.ota_btn_later), (dialog, which) -> dialog.dismiss())
                         .create();
                 
                 dlgHolder[0].setOnShowListener(dialog -> {
@@ -1243,7 +1244,7 @@ public class MainActivity extends AppCompatActivity
                         posButton.setEnabled(false);
                         dlgHolder[0].getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
                         sv.setVisibility(View.GONE);
-                        tvVersion.setText("Downloading update...");
+                        tvVersion.setText(getString(R.string.ota_downloading));
                         progressLayout.setVisibility(View.VISIBLE);
                         // Trigger download
                         UpdateChecker.startDownload(MainActivity.this, downloadUrl, this);
@@ -1300,7 +1301,7 @@ public class MainActivity extends AppCompatActivity
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
-        popup.getMenu().add(0, 7, 0, mAdapter.isGridMode() ? "Menu: List Mode" : "Menu: Grid Mode");
+        popup.getMenu().add(0, 7, 0, mAdapter.isGridMode() ? getString(R.string.menu_view_list) : getString(R.string.menu_view_grid));
         popup.getMenu().add(0, 2, 0, getString(R.string.menu_diagnostic));
         popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
         popup.getMenu().add(0, 4, 0, getString(R.string.menu_log));

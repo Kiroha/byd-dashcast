@@ -158,4 +158,9 @@
     <string name="toast_list_mode_enabled">Listenmodus aktiviert</string>
     <string name="toast_update_install_failed">Update-Installation fehlgeschlagen: </string>
     <string name="app_state_auto">Auto</string>
+    <string name="ota_btn_update_now">Jetzt aktualisieren</string>
+    <string name="ota_btn_later">Später</string>
+    <string name="ota_downloading">Wird geladen…</string>
+    <string name="menu_view_grid">⊞ Rastermodus</string>
+    <string name="menu_view_list">📋 Listenmodus</string>
 </resources>

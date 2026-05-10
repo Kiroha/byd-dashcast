@@ -158,4 +158,9 @@
     <string name="toast_list_mode_enabled">Тізім режимі қосылды</string>
     <string name="toast_update_install_failed">Орнату қатесі: </string>
     <string name="app_state_auto">Авто</string>
+    <string name="ota_btn_update_now">Қазір жаңарту</string>
+    <string name="ota_btn_later">Кейінірек</string>
+    <string name="ota_downloading">Жүктелуде…</string>
+    <string name="menu_view_grid">⊞ Тор режимі</string>
+    <string name="menu_view_list">📋 Тізім режимі</string>
 </resources>
