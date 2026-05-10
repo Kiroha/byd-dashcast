@@ -96,11 +96,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final AppInfo app = mApps.get(position);
         holder.ivIcon.setImageDrawable(app.icon);
         
-        // Indicate pinned state with a star prefix or bold text in List mode
-        if (app.isFavorite && !mIsGridMode) {
-            holder.tvName.setText("⭐ " + app.appName);
-            holder.tvName.setTextColor(Color.parseColor("#FFC107"));
-        } else if (app.isFavorite && mIsGridMode) {
+        // Indicate pinned state with a star prefix
+        if (app.isFavorite) {
             holder.tvName.setText("⭐ " + app.appName);
             holder.tvName.setTextColor(Color.parseColor("#FFC107"));
         } else {

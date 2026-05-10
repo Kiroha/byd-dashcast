@@ -158,4 +158,9 @@
     <string name="toast_list_mode_enabled">Modo Lista activado</string>
     <string name="toast_update_install_failed">Error en la instalación: </string>
     <string name="app_state_auto">Auto</string>
+    <string name="ota_btn_update_now">Actualizar ahora</string>
+    <string name="ota_btn_later">Más tarde</string>
+    <string name="ota_downloading">Descargando…</string>
+    <string name="menu_view_grid">⊞ Modo Cuadrícula</string>
+    <string name="menu_view_list">📋 Modo Lista</string>
 </resources>

@@ -158,4 +158,9 @@
     <string name="toast_list_mode_enabled">List Mode Enabled</string>
     <string name="toast_update_install_failed">Update install failed: </string>
     <string name="app_state_auto">Auto</string>
+    <string name="ota_btn_update_now">Update Now</string>
+    <string name="ota_btn_later">Later</string>
+    <string name="ota_downloading">Downloading…</string>
+    <string name="menu_view_grid">⊞ Grid Mode</string>
+    <string name="menu_view_list">📋 List Mode</string>
 </resources>
