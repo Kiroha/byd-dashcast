@@ -337,10 +337,16 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.i(TAG, "Applied custom resize " + w + "/" + h + " for " + mCurrentDashboardPkg);
                 
                 if (mServiceBound && mClusterService != null) {
-                    // Chercher le taskId et ordonner l'update
-                    int taskId = mClusterService.findRunningTaskId(mCurrentDashboardPkg);
+                    // findRunningTaskId() calls getRunningTasks() — must run off the main thread.
+                    final String pkg = mCurrentDashboardPkg;
+                    final ClusterService svc = mClusterService;
                     AdbLocalClient.executeShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
-                    mClusterService.resizeActiveTask(taskId, mCurrentDashboardPkg);
+                    new Thread(new Runnable() {
+                        @Override public void run() {
+                            int taskId = svc.findRunningTaskId(pkg);
+                            svc.resizeActiveTask(taskId, pkg);
+                        }
+                    }, "resize-task-thread").start();
                 }
             }
         });
