@@ -206,6 +206,7 @@ watch(
             <div class="cp-header">
               <span class="cp-label">{{ t.projection.controlLabel }}</span>
               <span class="cp-app">{{ t.projection.controlApp }}</span>
+              <button class="btn-ui btn-yellow btn-small" type="button">{{ resizeButton }}</button>
               <button class="btn-ui btn-indigo btn-small" type="button">{{ splitButton }}</button>
               <button class="btn-ui btn-dark btn-small" type="button">{{ hideButton }}</button>
             </div>
@@ -232,6 +233,9 @@ watch(
     <h3>{{ t.control.mirror.title }}</h3>
     <p>{{ t.control.mirror.text }}</p>
     <div class="note">{{ t.control.mirror.note }}</div>
+    <h3>{{ t.control.resize.title }}</h3>
+    <p>{{ t.control.resize.text }}</p>
+    <div class="note" v-if="t.control.resize.note">{{ t.control.resize.note }}</div>
     <h3>{{ t.control.split.title }}</h3>
     <p>{{ t.control.split.text }}</p>
     <ul>

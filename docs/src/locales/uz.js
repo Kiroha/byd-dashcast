@@ -3,7 +3,7 @@ export default {
   "flag": "🇺🇿",
   "name": "Oʻzbekcha",
   "title": "DashCast — Foydalanuvchi qoʻllanmasi",
-  "meta": "v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.5.1 · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Foydalanuvchi qoʻllanmasi",
   "tocTitle": "📋 Mundarija",
   "sections": [
@@ -21,10 +21,14 @@ export default {
     "title": "1. Umumiy koʻrinish",
     "text": "DashCast — multimedia ekranidagi istalgan ilovani BYD avtomobilingizning raqamli asboblar paneliga chiqarishga imkon beruvchi Android ilovasi. Navigatsiya, musiqa, video — markaziy ekranda ishlayotgan hamma narsani haydovchi oldidagi displeyga yoʻnaltirish mumkin.",
     "bullets": [
-      "✅ BYD Seal EU bilan mos (DiLink 3.0, Di3.0 / 6125F firmware)",
-      "✅ Tizimni oʻzgartirish talab qilinmaydi",
-      "✅ TCP orqali lokal ADB (localhost) — sozlangandan keyin kompyuter kerak emas",
-      "✅ Ilova tashqaridan yopilganini avtomatik aniqlaydi"
+      "✅ Compatible BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
+      "✅ Aucune modification système nécessaire",
+      "✅ ADB local (TCP, localhost) — pas besoin d'ordinateur une fois configuré",
+      "✅ Détection automatique de la déconnexion d'application",
+      "✅ Mises à jour OTA (Over-The-Air) intégrées",
+      "✅ Overscan sauvegardé indépendamment par application",
+      "✅ Affichage en mode Grille ou Liste",
+      "✅ Force-stop d'urgence (Croix Rouge) par application"
     ],
     "note": "💡 Talab: Sozlamalar → Dasturchi parametrlari → Simsiz debugging (yoki “ADB over network”) boʻlimida ADB TCP debugging ni yoqing. Bu bir marta qilinadi. DashCast birinchi ishga tushganda “Allow USB debugging?” oynasi chiqadi — Always allow from this computer ni bosing."
   },
@@ -36,243 +40,306 @@ export default {
     "caption": "Til tanlash ekrani — faqat birinchi ishga tushganda koʻrsatiladi"
   },
   "main": {
-    "title": "3. Asosiy ekran",
-    "text": "Asosiy ekran ikki qismdan iborat: yuqorida holat satri (toʻq koʻk) va pastda oʻrnatilgan ilovalar roʻyxati.",
-    "status": "① Asboblar paneli: ulanmagan",
+    "title": "3. Écran principal",
+    "text": "L'écran principal est composé de deux zones : une barre de statut en haut (fond bleu foncé) et une liste d'applications installées en dessous. Vous pouvez basculer entre affichage en liste classique ou en grille (icônes) via le menu ⋮.",
+    "status": "① Dashboard : non connecté",
     "buttons": [
-      "② Proyeksiyani yoqish",
-      "③ Proyeksiyani toʻxtatish",
-      "④ Asl panelni tiklash",
+      "② Activer Projection",
+      "③ Arrêter Projection",
+      "④ Restaurer Dashboard d'origine",
       "⑤ ⋮",
+      "✕",
       "✕",
       "✕",
       "✕"
     ],
-    "listTitle": "⑥ Oʻrnatilgan ilovalar",
+    "listTitle": "⑥ Applications installées",
     "apps": [
-      "Xaritalar",
+      "Maps",
       "YouTube",
-      "Spotify"
+      "Spotify",
+      "Waze"
     ],
-    "caption": "Asosiy ekran — ilova hali chiqarilmagan (boshlangʻich holat)",
+    "caption": "Écran principal — aucune application projetée (état initial)",
     "annotations": [
       {
         "tone": "",
         "marker": "①",
-        "label": "Holat",
-        "text": "klaster ulanish holatini koʻrsatadi. Ilova faol boʻlganda «Asboblar paneli: [Ilova nomi]» ga oʻzgaradi."
+        "label": "Statut",
+        "text": "Indique l'état de la connexion au tableau de bord. Passe à « Dashboard : [NomApp] » quand une application est active."
       },
       {
         "tone": "",
         "marker": "②",
-        "label": "Proyeksiyani yoqish",
-        "text": "klasterni ulaydi va ilovalarni chiqarishga tayyorlaydi. Avval shu tugmani bosing."
+        "label": "Activer Projection",
+        "text": "Établit la connexion avec le cluster et prépare l'envoi d'une application. À appuyer en premier."
       },
       {
         "tone": "red",
         "marker": "③",
-        "label": "Proyeksiyani toʻxtatish",
-        "text": "joriy proyeksiyani BYD asl panelini tiklamasdan tugatadi."
+        "label": "Arrêter Projection",
+        "text": "Ferme la projection en cours sans restaurer le tableau de bord d'origine BYD."
       },
       {
         "tone": "green",
         "marker": "④",
-        "label": "Asl panelni tiklash",
-        "text": "proyeksiyani tugatadi VA BYD klasterini qaytaradi (tezlik, shkala va h. k.)."
+        "label": "Restaurer Dashboard d'origine",
+        "text": "Ferme la projection ET réaffiche le tableau de bord BYD natif (vitesse, jauges…)."
       },
       {
         "tone": "gray",
         "marker": "⑤",
-        "label": "⋮ menyu",
-        "text": "sozlamalar, diagnostika, tizim hisoboti, jurnallar va til almashtirishga kirish."
+        "label": "Menu ⋮",
+        "text": "Accès aux Paramètres, Diagnostic, Rapport système, Logs, changement de langue et bascule Grille/Liste."
       },
       {
         "tone": "gray",
         "marker": "⑥",
-        "label": "Ilovalar roʻyxati",
-        "text": "barcha oʻrnatilgan ilovalar. Chiqarish uchun ilovani bosing yoki majburiy yopish uchun ✕ ni bosing."
+        "label": "Liste des applications",
+        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ✕ pour la fermer, ❌ pour forcer l'arrêt complet du processus."
       }
     ]
   },
   "projection": {
-    "title": "4. Ilovani asboblar paneliga chiqarish",
+    "title": "4. Projeter une application sur le tableau de bord",
     "steps": [
-      "«Proyeksiyani yoqish» tugmasini bosing (koʻk tugma). Holat «Klaster ishga tushirilmoqda…» ga oʻzgaradi. Lokal ADB ulanishi oʻrnatiladi va klaster proyeksiya rejimiga oʻtadi.",
-      "Roʻyxatdagi kerakli ilovani bosing. DashCast ilovani klaster displeyiga koʻchiradi. Holat «Asboblar paneli: [Ilova nomi]» ga oʻzgaradi.",
-      "Ekran pastida boshqaruv paneli paydo boʻladi; u orqali chiqarilgan ilova bilan asosiy ekrandan ishlash mumkin."
+      "Appuyez sur « Activer Projection » (bouton bleu en haut). Le statut passe à « Démarrage cluster… ». La connexion ADB locale s'établit et le cluster passe en mode projection.",
+      "Tapez sur l'application souhaitée dans la liste. DashCast déplace l'application vers le display du tableau de bord. Le statut passe à « Dashboard : [Nom de l'app] ».",
+      "Le panneau de contrôle apparaît en bas de l'écran. Les valeurs d'overscan sauvegardées pour cette application sont appliquées automatiquement."
     ],
-    "activeStatus": "Asboblar paneli: Xaritalar ✓",
+    "activeStatus": "Dashboard : Maps ✓",
     "buttons": [
-      "Proyeksiyani yoqish",
-      "📺 Mirror",
-      "Proyeksiyani toʻxtatish",
-      "Asl panelni tiklash",
+      "Activer Projection",
+      "📺 Miroir",
+      "Arrêter Projection",
+      "Restaurer Dashboard d'origine",
       "⋮",
-      "← Asosiy",
+      "← Principal",
       "✕",
-      "→ Klaster",
+      "→ Cluster",
       "✕",
-      "→ Klaster",
+      "→ Cluster",
       "✕",
-      "⬛⬛ Ajratish",
-      "Yashirish ▼"
+      "📐 Ajuster",
+      "⬛⬛ Split",
+      "Masquer ▼"
     ],
-    "listTitle": "Oʻrnatilgan ilovalar",
+    "listTitle": "Applications installées",
     "apps": [
-      "Xaritalar",
+      "Maps",
       "YouTube",
       "Spotify"
     ],
-    "controlLabel": "Klaster boshqaruvi",
-    "controlApp": "Xaritalar",
-    "mirrorText": "Klasterda faol tasvir ✓",
-    "caption": "Asosiy ekran — Xaritalar asboblar paneliga chiqarilgan",
-    "annotations": []
+    "controlLabel": "Contrôle cluster",
+    "controlApp": "Maps",
+    "mirrorText": "Affichage actif sur le cluster ✓",
+    "caption": "Écran principal — Maps est projetée sur le tableau de bord",
+    "annotations": [
+      {
+        "tone": "green",
+        "marker": "●",
+        "label": "Barre verte",
+        "text": "Indicateur visuel sur chaque item : l'app est actuellement sur le cluster."
+      },
+      {
+        "tone": "",
+        "marker": "→",
+        "label": "→ Cluster",
+        "text": "Envoie une autre application sur le cluster (remplace celle en cours)."
+      },
+      {
+        "tone": "gray",
+        "marker": "←",
+        "label": "← Principal",
+        "text": "Renvoie l'application vers l'écran central (la retire du cluster)."
+      },
+      {
+        "tone": "teal",
+        "marker": "📺",
+        "label": "Miroir",
+        "text": "Affiche un aperçu en temps réel du contenu du tableau de bord dans DashCast."
+      },
+      {
+        "tone": "red",
+        "marker": "❌",
+        "label": "Croix Rouge (Force Stop)",
+        "text": "Force l'arrêt complet du processus d'une application bloquée et la retire des Récents."
+      },
+      {
+        "tone": "gray",
+        "marker": "🔲",
+        "label": "Vue Grille / Liste",
+        "text": "Basculez l'affichage entre liste classique et grille d'icônes via le menu ⋮."
+      }
+    ]
   },
   "control": {
-    "title": "5. Proyeksiya vaqtida — boshqaruv paneli",
-    "intro": "Ilova klasterda faol boʻlganda, asosiy ekran pastida uchta masofadan boshqarish funksiyasiga ega qorongʻi panel paydo boʻladi:",
+    "title": "5. Pendant la projection — Panneau de contrôle",
+    "intro": "Lorsqu'une application est active sur le cluster, un panneau sombre apparaît en bas de l'écran principal avec quatre fonctionnalités :",
     "mirror": {
-      "title": "5.1 Koʻzgu (📺 Koʻzgu)",
-      "text": "Klasterdagi kontentning jonli nusxasini DashCast ichida koʻrish uchun holat satrida 📺 Koʻzgu ni bosing. Nusxa bilan sensor orqali ishlash mumkin — hodisalar klaster displeyiga uzatiladi.",
-      "note": "Koʻzgu displeyni olish uchun SurfaceControl dan foydalanadi. Agar u mavjud boʻlmasa, har 2 soniyada skrinshot olinadigan zaxira rejim ishlatiladi."
+      "title": "5.1 Miroir (📺 Miroir)",
+      "text": "Appuyez sur 📺 Miroir dans la barre de statut pour afficher une copie du tableau de bord directement dans DashCast. Vous pouvez interagir avec cette copie par toucher — les événements sont transmis au cluster.",
+      "note": "Le miroir utilise SurfaceControl pour capturer le display. Si le miroir ne s'affiche pas, un screenshot automatique toutes les 2 secondes prend le relais."
+    },
+    "resize": {
+      "title": "5.2 Ajuster (📐 Overscan par application)",
+      "text": "Le bouton 📐 Ajuster affiche deux curseurs : Marge Largeur et Marge Hauteur. Ces valeurs rognent les bords de l'image projetée sur le cluster. Elles sont sauvegardées individuellement pour chaque application et ré-appliquées automatiquement à chaque lancement via wm overscan.",
+      "note": "💡 Valeurs recommandées pour le Seal EU : Largeur 80 px, Hauteur 50 px."
     },
     "split": {
-      "title": "5.2 Ajratish rejimi (⬛⬛ Ajratish)",
-      "text": "Klasterni ikki ilova oʻrtasida boʻlish uchun ⬛⬛ Ajratish ni bosing:",
+      "title": "5.3 Mode Split (⬛⬛ Split)",
+      "text": "Appuyez sur ⬛⬛ Split pour partager le tableau de bord entre deux applications :",
       "items": [
-        "Toʻliq ekran — bitta ilova butun klasterni egallaydi",
-        "⬜⬛ Chap (50%) — asosiy ilova chapda, ikkinchi ilova oʻngda",
-        "⬛⬜ Oʻng (50%) — asosiy ilova oʻngda"
+        "Plein écran — Une seule app occupe tout le cluster",
+        "⬜⬛ Gauche (50 %) — L'app principale à gauche, la seconde à droite",
+        "⬛⬜ Droite (50 %) — L'app principale à droite"
       ],
-      "extra": ""
+      "extra": "En mode Split, une deuxième application peut être sélectionnée dans la liste. Elle occupera l'autre moitié du cluster."
     },
     "hide": {
-      "title": "5.3 Panelni yashirish",
-      "text": "Yashirish ▼ tugmasini bosib boshqaruv panelini yigʻing va toʻliq ilovalar roʻyxatini koʻring."
+      "title": "5.4 Masquer le panneau",
+      "text": "Appuyez sur Masquer ▼ pour replier le panneau de contrôle et retrouver la liste complète des applications."
     }
   },
   "stopping": {
-    "title": "6. Proyeksiyani toʻxtatish",
-    "intro": "",
+    "title": "6. Arrêter la projection",
+    "intro": "Deux boutons permettent d'arrêter la projection :",
     "table": {
       "headers": [
-        "Tugma",
-        "Xatti-harakat",
-        "Qachon ishlatish"
+        "Bouton",
+        "Comportement",
+        "Quand l'utiliser"
       ],
       "rows": [
         [
-          "Proyeksiyani toʻxtatish",
-          "Proyeksiyani tugatadi. Klaster boʻsh qoladi.",
-          "Chiqarishni vaqtincha toʻxtatish kerak boʻlganda."
+          "Arrêter Projection",
+          "Coupe la projection. Le tableau de bord reste vide (noir).",
+          "Si vous souhaitez juste stopper l'affichage provisoirement."
         ],
         [
-          "Asl panelni tiklash",
-          "Proyeksiyani tugatadi VA BYD asl klasterini qaytaradi (tezlik, yurish zaxirasi, shkala…).",
-          "Foydalanish oxirida — odatiy BYD paneliga qaytish uchun."
+          "Restaurer Dashboard d'origine",
+          "Coupe la projection ET réactive l'affichage BYD natif (vitesse, autonomie, jauges…).",
+          "En fin d'utilisation — pour retrouver le tableau de bord BYD normal."
         ]
       ]
     },
-    "warning": "⚠️ Agar ushbu tugmalardan birini bosmasdan DashCastdan chiqsangiz, xizmat keyingi qayta ishga tushirilguncha proyeksiya klasterda faol qoladi."
+    "warning": "⚠️ Si vous quittez DashCast sans appuyer sur l'un de ces boutons, la projection reste active sur le cluster jusqu'au prochain redémarrage du service."
   },
   "settings": {
-    "title": "7. Sozlamalar",
-    "intro": "Sozlamalarni ⋮ → ⚙️ Sozlamalar orqali oching.",
-    "titleLabel": "Sozlamalar",
-    "clusterTypeLabel": "Klaster turi",
+    "title": "7. Paramètres",
+    "intro": "Accédez aux Paramètres via le menu ⋮ → ⚙️ Paramètres. L'écran contient deux sections :",
+    "titleLabel": "Paramètres",
+    "clusterTypeLabel": "Type de cluster",
     "clusterOptions": [
-      "8.8 inches (cmd=29)",
-      "12.3 inches (cmd=30) — Seal EU",
-      "10.25 inches (cmd=31)"
+      "8,8 pouces (cmd=29)",
+      "12,3 pouces (cmd=30) — Seal EU",
+      "10,25 pouces (cmd=31)"
     ],
-    "marginsLabel": "Displey chetlari (overscan)",
-    "horizontalMarginLabel": "Chap / Oʻng:",
-    "verticalMarginLabel": "Yuqori / Pastki:",
-    "applyButton": "Hozir qoʻllash",
-    "resetButton": "Reset (80 / 50)",
-    "caption": "Sozlamalar",
+    "marginsLabel": "Marges d'affichage (overscan global)",
+    "horizontalMarginLabel": "Gauche / Droite :",
+    "verticalMarginLabel": "Haut / Bas :",
+    "applyButton": "Appliquer maintenant",
+    "resetButton": "Réinitialiser (80 / 50)",
+    "caption": "Page Paramètres",
     "type": {
-      "title": "7.1 Klaster turi",
-      "text": "Asboblar paneli ekranining oʻlchamini tanlang. BYD Seal EU uchun 12,3 dyuym (cmd=30) ni tanlang."
+      "title": "7.1 Type de cluster",
+      "text": "Sélectionnez la taille de l'écran de votre tableau de bord. Pour le BYD Seal EU, sélectionnez 12,3 pouces (cmd=30). Ce réglage détermine la commande envoyée au cluster lors de l'activation."
     },
     "margins": {
-      "title": "7.2 Displey chetlari (Overscan)",
-      "text": "Kontentni klaster ekranining koʻrinadigan qismiga sigʻdirish uchun chetlarni sozlang. Egri oynali klasterlarda jismoniy chetlar foydali maydondan tashqariga chiqishi mumkin.",
+      "title": "7.2 Marges d'affichage globales (overscan)",
+      "text": "Réglez les marges pour cadrer parfaitement le contenu dans la zone visible de l'écran. Ces marges s'appliquent globalement. Pour des réglages par application, utilisez le bouton 📐 Ajuster dans le panneau de contrôle.",
       "items": [
-        "Chap / Oʻng — gorizontal chet (har tomonda 0–200 px)",
-        "Yuqori / Pastki — vertikal chet (yuqori va pastda 0–200 px)"
+        "Gauche / Droite — Marge horizontale (0–200 px des deux côtés)",
+        "Haut / Bas — Marge verticale (0–200 px en haut et en bas)"
       ],
-      "applyText": "Agar ilova hozir chiqarilgan boʻlsa, natijani darhol koʻrish uchun Hozir qoʻllash ni bosing. Qiymatlar sessiyalar orasida saqlanadi.",
-      "note": "💡 Seal EU uchun tavsiya etilgan qiymatlar: Chap/Oʻng = 80 px, Yuqori/Pastki = 50 px."
+      "applyText": "Cliquez Appliquer maintenant pour voir le résultat immédiatement si une application est en cours de projection. Les valeurs sont mémorisées entre les sessions.",
+      "note": "💡 Valeurs par défaut recommandées pour le Seal EU : Gauche/Droite = 80 px, Haut/Bas = 50 px."
     }
   },
   "tools": {
-    "title": "8. ⋮ menyu — qoʻshimcha vositalar",
-    "intro": "",
+    "title": "8. Menu ⋮ — Outils supplémentaires",
+    "intro": "Le bouton ⋮ en haut à droite ouvre un menu avec les entrées suivantes :",
     "table": {
       "headers": [
-        "Band",
-        "Tavsif"
+        "Option",
+        "Description"
       ],
       "rows": [
         [
-          "⚙️ Sozlamalar",
-          "Klaster turi + overscan chetlarini sozlash"
+          "⚙️ Paramètres",
+          "Type de cluster + réglage des marges overscan globales"
         ],
         [
-          "🔧 Diagnostika",
-          "Dasturchi uchun kengaytirilgan testlar — ADB ulanishi, displeylar, klaster ekran oʻlchami"
+          "🔲 Grille / Liste",
+          "Bascule l'affichage des applications entre liste classique et grille d'icônes (5 colonnes)"
         ],
         [
-          "📋 Tizim hisoboti",
-          "Toʻliq hisobot yaratadi (displeylar, BYD API, ruxsatlar) — qoʻllab-quvvatlash uchun foydali"
+          "🔧 Diagnostic",
+          "Tests avancés pour développeurs — connexion ADB, displays, taille écran cluster, sniffer ADB"
         ],
         [
-          "📜 Jurnallar",
-          "Jurnalni real vaqtda koʻrish — teg/daraja boʻyicha filtr, email yoki fayl bilan yuborish"
+          "📋 Rapport système",
+          "Génère un rapport complet (displays, APIs BYD, permissions) — utile pour le support"
         ],
         [
-          "🌐 Til",
-          "Til tanlash ekraniga qaytaradi"
+          "📜 Logs",
+          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier (appui long pour Telegram)"
+        ],
+        [
+          "🌐 Langue",
+          "Retourne à l'écran de sélection de langue"
         ]
       ]
     },
-    "logs": null
+    "logs": {
+      "title": "Journal de bord (📜 Logs)",
+      "header": "📋 Journal de bord",
+      "clearButton": "Effacer",
+      "shareButton": "Partager",
+      "filterPlaceholder": "Filtrer (tag / message / niveau)…",
+      "lines": [
+        "[INFO ] ClusterService → Cluster display connected: id=1",
+        "[INFO ] launchOnDashboard OK → com.google.android.apps.maps",
+        "[DEBUG] watchdog started for com.google.android.apps.maps pid=4821",
+        "[WARN ] setTaskWindowingMode: SecurityException (expected)",
+        "[INFO ] wm overscan applied on display 1 inset=80,50"
+      ],
+      "caption": "Journal de bord — filtre en temps réel, export disponible"
+    }
   },
   "faq": {
-    "title": "9. FAQ va nosozliklarni bartaraf etish",
+    "title": "9. FAQ & Résolution de problèmes",
     "items": [
       {
-        "question": "❓ “Allow USB debugging?” oynasi chiqmaydi",
-        "answer": "ADB TCP debugging multimedia dasturchi sozlamalarida yoqilganini tekshiring. Agar band yoʻq boʻlsa, avval dasturchi rejimini yoqing (About boʻlimidagi build number ni 7 marta bosing).",
+        "question": "❓ La popup « Autoriser le débogage ADB ? » ne s'affiche pas",
+        "answer": "Vérifiez que le Débogage ADB TCP est bien activé dans les paramètres développeur de l'infodivertissement. Si l'option est absente, activez d'abord le mode développeur (appuyer 7 fois sur le numéro de build dans À propos).",
         "items": []
       },
       {
-        "question": "❓ Tanlangandan keyin ilova klasterda koʻrinmaydi",
+        "question": "❓ L'application ne s'affiche pas sur le cluster après la sélection",
         "answer": "",
         "items": [
-          "Ilovani tanlashdan oldin Proyeksiyani yoqish tugmasini bosganingizga ishonch hosil qiling.",
-          "Baʼzi ilovalar ikkinchi displeyda ishga tushishga ruxsat bermaydi. Xato xabarini jurnaldan tekshiring.",
-          "DashCastni yopib qayta oching, keyin ketma-ketlikni takrorlang."
+          "Assurez-vous d'avoir appuyé sur Activer Projection avant de sélectionner l'app.",
+          "Certaines applications refusent d'être lancées sur un display secondaire (restrictions internes). Consultez les Logs pour voir le message d'erreur.",
+          "Essayez de fermer puis rouvrir DashCast, puis recommencez la séquence."
         ]
       },
       {
-        "question": "❓ Kontent klasterda qirqilgan yoki siljigan",
-        "answer": "Displey chetlari ni ⋮ → Sozlamalar orqali sozlang. Gorizontal chiqib ketsa Chap/Oʻng qiymatini, vertikal chiqib ketsa Yuqori/Pastki qiymatini oshiring. Natijani darhol koʻrish uchun Hozir qoʻllash ni bosing.",
+        "question": "❓ Le contenu est rogné ou décalé sur le cluster",
+        "answer": "Utilisez le bouton 📐 Ajuster dans le panneau de contrôle pour régler précisément les marges par application. Les valeurs globales dans Paramètres s'appliquent en fallback.",
         "items": []
       },
       {
-        "question": "❓ Ilova yopilgandan keyin «← Asosiy» va «✕» tugmalari koʻrinib qoladi",
-        "answer": "DashCast ilova tugaganini avtomatik aniqlaydi (/proc monitoring orqali). Interfeys qotib qolsa, holatni majburan tozalash uchun Proyeksiyani toʻxtatish ni bosing.",
+        "question": "❓ Une application est bloquée / figée sur le cluster",
+        "answer": "Appuyez sur la ❌ Croix Rouge à côté de l'application dans la liste. Cela force l'arrêt complet du processus et nettoie les Récents. L'application est alors prête à être relancée.",
         "items": []
       },
       {
-        "question": "❓ Avtomobil qayta ishga tushgandan keyin hammasini qayta sozlash kerakmi?",
-        "answer": "Yoʻq. Klaster turi va overscan chetlari saqlanadi. Oxirgi chiqarilgan ilova ham eslab qolinadi. Faqat ADB ulanishi uchun Proyeksiyani yoqish tugmasini qayta bosish kerak boʻlishi mumkin.",
+        "question": "❓ Les boutons ← Principal et ✕ restent visibles après avoir fermé l'app",
+        "answer": "DashCast détecte automatiquement la fermeture des applications (surveillance via /proc). Si l'interface reste bloquée, appuyez sur Arrêter Projection pour forcer la réinitialisation.",
         "items": []
       }
     ]
   },
-  "footer": "DashCast · Foydalanuvchi qoʻllanmasi · Oʻzbekcha · github.com/Kiroha/byd-dashcast"
+  "footer": "DashCast v0.5.1 — BYD Seal EU · DiLink 3.0 · Android 10 · github.com/Kiroha/byd-dashcast"
 };
