@@ -24,20 +24,8 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnAdbShare;
 
     // [2] Cluster restore
-    private TextView tvDisplay1Result;
-    private Button   btnDisplay1;
-    private Button   btnDisplay1Share;
 
-    // [3] Propriétés Cluster — display size
-    private TextView tvDisplaySizeResult;
-    private Button   btnDisplaySize88;       // cmd 29 — 8.8"
-    private Button   btnDisplaySize123;      // cmd 30 — 12.3"
-    private Button   btnDisplaySize1025;     // cmd 31 — 10.25"
-    private Button   btnDisplaySizeRestore;  // restore
-    private Button   btnDisplaySizeFull;     // full diagnostic
-    private Button   btnDisplaySizeShare;
-    private Button   btnResetMainOverscan;   // safety: reset wm overscan on display 0
-    private TextView tvResetMainOverscanResult;
+    // [3] Propriétés Cluster — display size       // cmd 29 — 8.8"      // cmd 30 — 12.3"     // cmd 31 — 10.25"  // restore     // full diagnostic   // safety: reset wm overscan on display 0
 
 
     // [4] Analyses Système
@@ -45,14 +33,8 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvSfDumpResult;
 
     // ADAS Cluster (cmd 12 / 13)
-    private Button   btnAdasShow;
-    private Button   btnAdasHide;
-    private TextView tvAdasResult;
 
     // JNI Qt Surface Probe
-    private Button   btnTest13;
-    private Button   btnJniStartProbe;
-    private TextView tvTest13Result;
 
     // Dumpsys Windows
     private Button   btnDumpsysWindows;
@@ -63,15 +45,8 @@ public class DiagActivity extends AppCompatActivity {
     private TextView tvDaemonVdResult;
 
     // AutoDisplayService
-    private Button   btnAutoDisplayStart;
-    private Button   btnAutoDisplayStop;
-    private TextView tvAutoDisplayResult;
 
     // [5] Fission via IBinder direct (mécanisme Freedom)
-    private Button        btnFissionViaBinder;
-    private Button        btnFissionPipeline;
-    private Button        btnFissionLaunch;
-    private TextView      tvFissionResult;
     private int           mFissionDisplayId = -1;
 
     private Button   btnReSnifferStart;
@@ -85,10 +60,6 @@ public class DiagActivity extends AppCompatActivity {
     private static final String PREF_SNIFFER_PATH = "re_sniffer_file_path";
 
     // [7] Test resize DiLink5
-    private Button   btnResizeDilink5Seq;
-    private Button   btnResizeForcedOnly;
-    private Button   btnResizeInspectTask;
-    private TextView tvResizeDiagResult;
 
     // [6] Nettoyage stockage
     private Button   btnCleanupFiles;
@@ -110,24 +81,6 @@ public class DiagActivity extends AppCompatActivity {
         btnAdbLocal           = (Button)   findViewById(R.id.btn_adb_local);
         btnAdbShare           = (Button)   findViewById(R.id.btn_adb_share);
 
-        tvDisplay1Result      = (TextView) findViewById(R.id.tv_display1_result);
-        tvDisplay1Result.setTag("Display Info");
-        btnDisplay1           = (Button)   findViewById(R.id.btn_display1);
-        btnDisplay1Share      = (Button)   findViewById(R.id.btn_display1_share);
-
-        tvDisplaySizeResult    = (TextView) findViewById(R.id.tv_display_size_result);
-        tvDisplaySizeResult.setTag("Display Size");
-        btnDisplaySize88       = (Button)   findViewById(R.id.btn_display_size_88);
-        btnDisplaySize123      = (Button)   findViewById(R.id.btn_display_size_123);
-        btnDisplaySize1025     = (Button)   findViewById(R.id.btn_display_size_1025);
-        btnDisplaySizeRestore  = (Button)   findViewById(R.id.btn_display_size_restore);
-        btnDisplaySizeFull     = (Button)   findViewById(R.id.btn_display_size_full);
-        btnDisplaySizeShare    = (Button)   findViewById(R.id.btn_display_size_share);
-
-        btnResetMainOverscan       = (Button)   findViewById(R.id.btn_reset_main_overscan);
-        tvResetMainOverscanResult  = (TextView) findViewById(R.id.tv_reset_main_overscan_result);
-        btnResetMainOverscan.setOnClickListener(v -> resetMainDisplayOverscan());
-
 
 
         btnDumpSfMirror = (Button) findViewById(R.id.btn_dump_sf_mirror);
@@ -135,28 +88,8 @@ public class DiagActivity extends AppCompatActivity {
         tvSfDumpResult.setTag("SurfaceFlinger Dump");
 
         // ADAS Cluster
-        btnAdasShow  = (Button)   findViewById(R.id.btn_adas_show);
-        btnAdasHide  = (Button)   findViewById(R.id.btn_adas_hide);
-        tvAdasResult = (TextView) findViewById(R.id.tv_adas_result);
-        tvAdasResult.setTag("ADAS Cluster");
-        btnAdasShow.setOnClickListener(v -> sendAdasCmd(12));
-        btnAdasHide.setOnClickListener(v -> sendAdasCmd(13));
-        btnAutoDisplayStart  = (Button)   findViewById(R.id.btn_auto_display_start);
-        btnAutoDisplayStop   = (Button)   findViewById(R.id.btn_auto_display_stop);
-        tvAutoDisplayResult  = (TextView) findViewById(R.id.tv_auto_display_result);
-
-        btnFissionViaBinder = (Button)   findViewById(R.id.btn_fission_via_binder);
-        btnFissionPipeline  = (Button)   findViewById(R.id.btn_fission_pipeline);
-        btnFissionLaunch    = (Button)   findViewById(R.id.btn_fission_launch);
-        tvFissionResult     = (TextView) findViewById(R.id.tv_fission_result);
-        tvFissionResult.setTag("Fission Pipeline");
-        tvAutoDisplayResult.setTag("AutoDisplayService");
 
         // JNI Qt Surface Probe
-        btnTest13      = (Button)   findViewById(R.id.btn_test_13);
-        btnJniStartProbe = (Button) findViewById(R.id.btn_jni_start_probe);
-        tvTest13Result = (TextView) findViewById(R.id.tv_test_13_result);
-        tvTest13Result.setTag("JNI Qt Surface Probe");
 
         // TEST 15
         btnDumpsysWindows = (Button) findViewById(R.id.btn_dumpsys_windows);
@@ -177,14 +110,6 @@ public class DiagActivity extends AppCompatActivity {
         tvReSnifferStatus.setTag("RE Sniffer");
 
         // [7] Test resize DiLink5
-        btnResizeDilink5Seq   = (Button)   findViewById(R.id.btn_resize_dilink5_seq);
-        btnResizeForcedOnly   = (Button)   findViewById(R.id.btn_resize_forced_only);
-        btnResizeInspectTask  = (Button)   findViewById(R.id.btn_resize_inspect_task);
-        tvResizeDiagResult    = (TextView) findViewById(R.id.tv_resize_diag_result);
-        tvResizeDiagResult.setTag("Resize DiLink5");
-        btnResizeDilink5Seq  .setOnClickListener(v -> runResizeDilink5Seq());
-        btnResizeForcedOnly  .setOnClickListener(v -> runResizeForcedOnly());
-        btnResizeInspectTask .setOnClickListener(v -> runResizeInspectTask());
 
         // [6] Nettoyage stockage
         btnCleanupFiles = (Button)   findViewById(R.id.btn_cleanup_files);
@@ -192,8 +117,6 @@ public class DiagActivity extends AppCompatActivity {
         btnCleanupFiles.setOnClickListener(v -> cleanupFilesAction());
 
         // [ADAS]
-        findViewById(R.id.btn_adas_on).setOnClickListener(v -> runAdas(47));
-        findViewById(R.id.btn_adas_off).setOnClickListener(v -> runAdas(48));
 
         btnReSnifferStart   .setOnClickListener(v -> startReSniffer());
         btnReSnifferStop    .setOnClickListener(v -> stopReSniffer());
@@ -206,15 +129,6 @@ public class DiagActivity extends AppCompatActivity {
         setupShareOnLongClick();
 
         btnDumpSfMirror.setOnClickListener(v -> dumpSurfaceFlinger());
-        btnAutoDisplayStart.setOnClickListener(v -> startAutoDisplayService());
-        btnAutoDisplayStop .setOnClickListener(v -> stopAutoDisplayService());
-
-        btnFissionViaBinder.setOnClickListener(v -> runFissionViaBinder());
-        btnFissionPipeline.setOnClickListener(v -> runFissionPipeline());
-        btnFissionLaunch  .setOnClickListener(v -> launchOnFissionDisplay());
-
-        btnTest13.setOnClickListener(v -> runJniSurfaceProbe());
-        btnJniStartProbe.setOnClickListener(v -> runStartAndProbe());
         btnDumpsysWindows.setOnClickListener(v -> runDumpsysWindows());
         btnDaemonVdTest.setOnClickListener(v -> runDaemonVdTest());
 
@@ -260,52 +174,8 @@ public class DiagActivity extends AppCompatActivity {
         });
 
         // TEST 2 — Restauration cluster
-        btnDisplay1Share.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_TEXT, tvDisplay1Result.getText().toString());
-                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result2_btn)));
-            }
-        });
-        btnDisplay1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                runDisplayOneLaunch();
-            }
-        });
 
         // TEST 3 — Taille display cluster
-        btnDisplaySizeShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_TEXT, tvDisplaySizeResult.getText().toString());
-                startActivity(Intent.createChooser(intent, getString(R.string.diag_share_result3_btn)));
-            }
-        });
-        btnDisplaySize88.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { sendScreenSize(29); }
-        });
-        btnDisplaySize123.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { sendScreenSize(30); }
-        });
-        btnDisplaySize1025.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { sendScreenSize(31); }
-        });
-        btnDisplaySizeRestore.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { restoreDisplaySize(); }
-        });
-        btnDisplaySizeFull.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { runClusterDisplaySizeTest(); }
-        });
 
     }
 
@@ -315,35 +185,23 @@ public class DiagActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void setDisplaySizeBtnsEnabled(boolean enabled) {
-        btnDisplaySize88.setEnabled(enabled);
-        btnDisplaySize123.setEnabled(enabled);
-        btnDisplaySize1025.setEnabled(enabled);
-        btnDisplaySizeRestore.setEnabled(enabled);
-        btnDisplaySizeFull.setEnabled(enabled);
     }
 
     private void sendScreenSize(final int sizeCmd) {
         setDisplaySizeBtnsEnabled(false);
         String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
-        tvDisplaySizeResult.setText(getString(R.string.diag_size_sending, sizeCmd, label));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "sendClusterScreenSize(" + sizeCmd + ")");
 
         AdbLocalClient.sendClusterScreenSize(DiagActivity.this, sizeCmd,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF1A2A1A);
-                    tvDisplaySizeResult.setText(report);
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", report);
                 }});
             }
             @Override public void onError(final String error) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
-                    tvDisplaySizeResult.setText("❌ " + error
-                            + "\n\n" + getString(R.string.diag_adb_test1_hint));
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
                 }});
@@ -353,24 +211,18 @@ public class DiagActivity extends AppCompatActivity {
 
     private void restoreDisplaySize() {
         setDisplaySizeBtnsEnabled(false);
-        tvDisplaySizeResult.setText(getString(R.string.diag_size_restoring));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "resetClusterDisplaySize");
 
         AdbLocalClient.resetClusterDisplaySize(DiagActivity.this,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF1A1A2A);
-                    tvDisplaySizeResult.setText(report);
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", report);
                 }});
             }
             @Override public void onError(final String error) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
-                    tvDisplaySizeResult.setText("❌ " + error);
                     setDisplaySizeBtnsEnabled(true);
                 }});
             }
@@ -379,8 +231,6 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runClusterDisplaySizeTest() {
         setDisplaySizeBtnsEnabled(false);
-        tvDisplaySizeResult.setText(getString(R.string.diag_size_full_running));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagDisplaySize", "Lancement TEST 3 complet");
 
         AdbLocalClient.runClusterDisplaySizeTest(DiagActivity.this, new AdbLocalClient.Callback() {
@@ -388,8 +238,6 @@ public class DiagActivity extends AppCompatActivity {
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplaySizeResult.setBackgroundColor(0xFF1A2A1A);
-                        tvDisplaySizeResult.setText(report);
                         setDisplaySizeBtnsEnabled(true);
                         AppLogger.log("DiagDisplaySize", report);
                     }
@@ -399,9 +247,6 @@ public class DiagActivity extends AppCompatActivity {
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
-                        tvDisplaySizeResult.setText("❌ " + error
-                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         setDisplaySizeBtnsEnabled(true);
                         AppLogger.log("DiagDisplaySize", "ERREUR: " + error);
                     }
@@ -415,8 +260,6 @@ public class DiagActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void runDisplayOneLaunch() {
-        btnDisplay1.setEnabled(false);
-        tvDisplay1Result.setText(getString(R.string.diag_launching_display1));
         AppLogger.log("DiagDisplay1", "display 1 launch started");
 
         AdbLocalClient.runDisplayOneLaunch(DiagActivity.this, new AdbLocalClient.Callback() {
@@ -430,9 +273,6 @@ public class DiagActivity extends AppCompatActivity {
                         boolean ok = !report.contains("Exception")
                                 && !report.contains("Error:")
                                 && !report.contains("FAILED");
-                        tvDisplay1Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF1A1A2A);
-                        tvDisplay1Result.setText(report);
-                        btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", report);
                     }
                 });
@@ -441,10 +281,6 @@ public class DiagActivity extends AppCompatActivity {
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplay1Result.setBackgroundColor(0xFF2A1A1A);
-                        tvDisplay1Result.setText("❌ " + error
-                                + "\n\n" + getString(R.string.diag_adb_test1_hint));
-                        btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", "ERREUR: " + error);
                     }
                 });
@@ -463,9 +299,6 @@ public class DiagActivity extends AppCompatActivity {
     private static final String AUTO_DISPLAY_SVC = AUTO_DISPLAY_PKG + "/.AutoDisplayService";
 
     private void startAutoDisplayService() {
-        tvAutoDisplayResult.setText(getString(R.string.diag_auto_starting));
-        tvAutoDisplayResult.setTextColor(0xFFFFAB40);
-        btnAutoDisplayStart.setEnabled(false);
 
         String cmd = "am startservice " + AUTO_DISPLAY_SVC
                 + " 2>&1"
@@ -483,38 +316,26 @@ public class DiagActivity extends AppCompatActivity {
                     String status = started ? "✅ Service démarré\n" : "⚠️ Réponse inattendue\n";
                     status += newDisplay ? "✅ Nouveau display détecté !\n" : "⚠️ Aucun nouveau display (normal si Qt pas prêt)\n";
                     status += "\n" + report.trim();
-                    tvAutoDisplayResult.setText(status);
-                    tvAutoDisplayResult.setTextColor(newDisplay ? 0xFF69F0AE : 0xFFFFAB40);
-                    btnAutoDisplayStart.setEnabled(true);
                     AppLogger.i("AutoDisplay", report);
                 });
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvAutoDisplayResult.setText("❌ " + error);
-                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
-                    btnAutoDisplayStart.setEnabled(true);
                 });
             }
         });
     }
 
     private void stopAutoDisplayService() {
-        tvAutoDisplayResult.setText(getString(R.string.diag_auto_stopping));
-        tvAutoDisplayResult.setTextColor(0xFFFFAB40);
         AdbLocalClient.executeShellWithResult(this,
                 "am stopservice " + AUTO_DISPLAY_SVC + " 2>&1",
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(String report) {
                 runOnUiThread(() -> {
-                    tvAutoDisplayResult.setText(getString(R.string.diag_auto_stopped, report.trim()));
-                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
                 });
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    tvAutoDisplayResult.setText("❌ " + error);
-                    tvAutoDisplayResult.setTextColor(0xFFFF5252);
                 });
             }
         });
@@ -554,7 +375,6 @@ public class DiagActivity extends AppCompatActivity {
         AdbLocalClient.sendInfo(this, 1000, 16, "", new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(String ignored) {
-                runOnUiThread(() -> tvTest13Result.setText(getString(R.string.diag_jni_display_released)));
                 new Thread(() -> {
                     try {
                         Thread.sleep(1000);
@@ -580,14 +400,10 @@ public class DiagActivity extends AppCompatActivity {
 
                         AppLogger.log("DiagJNI", res.toString());
                         runOnUiThread(() -> {
-                            tvTest13Result.setText(res.toString());
-                            btnTest13.setEnabled(true);
                         });
                     } catch (Exception e) {
                         AppLogger.e("DiagJNI", "Exception", e);
                         runOnUiThread(() -> {
-                            tvTest13Result.setText(getString(R.string.diag_jni_fatal, e.getMessage()));
-                            btnTest13.setEnabled(true);
                         });
                     }
                 }).start();
@@ -596,8 +412,6 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onError(String e) {
                 runOnUiThread(() -> {
-                    tvTest13Result.setText(getString(R.string.diag_jni_send16_failed, e));
-                    btnTest13.setEnabled(true);
                 });
             }
         });
@@ -619,9 +433,6 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void runStartAndProbe() {
-        tvTest13Result.setText(getString(R.string.diag_running));
-        btnJniStartProbe.setEnabled(false);
-        btnTest13.setEnabled(false);
 
         new Thread(() -> {
             StringBuilder res = new StringBuilder();
@@ -637,12 +448,10 @@ public class DiagActivity extends AppCompatActivity {
             String dispBefore = shellSync("dumpsys display | grep -E 'mDisplayId|mName|fission|remote_dash'");
             res.append("── Displays avant start ──\n").append(dispBefore.isEmpty() ? "(aucun fission/remote_dashboard)" : dispBefore).append("\n\n");
 
-            runOnUiThread(() -> tvTest13Result.setText(res.toString()));
 
             // 3. Démarrer AutoDisplayService
             String startResult = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
             res.append("── am startservice ──\n").append(startResult).append("\n\n");
-            runOnUiThread(() -> tvTest13Result.setText(res.toString()));
 
             try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
@@ -681,9 +490,6 @@ public class DiagActivity extends AppCompatActivity {
 
             AppLogger.log("DiagJNI", res.toString());
             runOnUiThread(() -> {
-                tvTest13Result.setText(res.toString());
-                btnJniStartProbe.setEnabled(true);
-                btnTest13.setEnabled(true);
             });
         }).start();
     }
@@ -768,10 +574,6 @@ public class DiagActivity extends AppCompatActivity {
     // =========================================================================
 
     private void runFissionViaBinder() {
-        if (tvFissionResult == null) return;
-        tvFissionResult.setText(getString(R.string.diag_fission_binder_starting));
-        btnFissionViaBinder.setEnabled(false);
-        btnFissionLaunch.setEnabled(false);
         mFissionDisplayId = -1;
 
         new Thread(() -> {
@@ -781,7 +583,6 @@ public class DiagActivity extends AppCompatActivity {
             // LOG montre : shell → callingUid=2000, Qt refuse JNI.
             // Java direct → callingUid = notre uid app → Qt devrait accepter.
             res.append("── Étape 1 : AutoContainerManager Java direct ──\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try {
                 @SuppressWarnings("WrongConstant") Object acm = getSystemService("auto_container");
                 if (acm == null) {
@@ -814,11 +615,9 @@ public class DiagActivity extends AppCompatActivity {
                     Thread.sleep(6000); // Freedom: sleep 6s before sendInfo(35)
                     sendM.invoke(acm, 1000, 35, ""); // Di4.0 mode → Qt registers Surface via JNI
                     res.append("  sendInfo(1000,35) ✅\n");
-                    runOnUiThread(() -> tvFissionResult.setText(res.toString()));
                 } else {
                     res.append("❌ AutoContainerManager null via getSystemService\n");
                     res.append("→ Fallback shell...\n");
-                    runOnUiThread(() -> tvFissionResult.setText(res.toString()));
                     shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\""); // workaround ADAS
                     Thread.sleep(6000);
                     shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
@@ -829,7 +628,6 @@ public class DiagActivity extends AppCompatActivity {
             } catch (Exception e) {
                 res.append("⚠ Exception AutoContainerManager: ").append(e.getMessage()).append("\n");
                 res.append("→ Fallback shell...\n");
-                runOnUiThread(() -> tvFissionResult.setText(res.toString()));
                 shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\""); // workaround ADAS
                 try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
                 shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
@@ -837,18 +635,15 @@ public class DiagActivity extends AppCompatActivity {
                 shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
                 res.append("  shell sendInfo(30→16→35) envoyés\n");
             }
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // ── Étape 2 : attendre 5s que Qt prépare son end-point JNI ──
             res.append("\n── Étape 2 : attendre 5s Qt end-point JNI ──\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
 
             // ── Étape 3 : démarrer AutoDisplayService ──
             res.append("\n── Étape 3 : am startservice AutoDisplayService ──\n");
             String startResult = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
             res.append(startResult.isEmpty() ? "❌ pas de réponse\n" : startResult + "\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
 
             // ── Étape 4 : vérifier les displays via DisplayManager Java (API 29) ──
@@ -885,9 +680,6 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.i("FissionJavaDirect", "foundId=" + foundId);
             final int finalId = foundId;
             runOnUiThread(() -> {
-                tvFissionResult.setText(res.toString());
-                btnFissionViaBinder.setEnabled(true);
-                btnFissionLaunch.setEnabled(finalId > 0);
             });
         }).start();
     }
@@ -906,9 +698,6 @@ public class DiagActivity extends AppCompatActivity {
     // =========================================================================
 
     private void runFissionPipeline() {
-        tvFissionResult.setText(getString(R.string.diag_fission_running));
-        btnFissionPipeline.setEnabled(false);
-        btnFissionLaunch.setEnabled(false);
         mFissionDisplayId = -1;
 
         new Thread(() -> {
@@ -917,7 +706,6 @@ public class DiagActivity extends AppCompatActivity {
             // ── Étape 0 : état initial displays ────────────────────────────
             String dispBefore = shellSync("dumpsys display | grep -E 'mDisplayId|mName'");
             res.append("── Displays AVANT ──\n").append(dispBefore.isEmpty() ? "(vide)" : dispBefore).append("\n\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // ── Étape 1 : sendInfo(30→sleep6s→16→sleep6s→35) ─────────────────
             // sendInfo(30) = correctif maison écrans 8.8"/10.25" : bascule cluster
@@ -929,7 +717,6 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── sendInfo(1000,30) workaround ADAS 8.8\"/10.25\" ──\n");
             String r30 = shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\"");
             res.append(r30.isEmpty() ? "⚠ pas de réponse AutoContainer" : r30).append("\n\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // sleep(6s) — laisser Qt absorber sendInfo(30)
             try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
@@ -937,7 +724,6 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── sendInfo(1000,16) → Qt projection plein écran ON ──\n");
             String r16 = shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
             res.append(r16.isEmpty() ? "❌ AutoContainer non disponible" : r16).append("\n\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // sleep(6s) — Freedom: délai entre sendInfo(16) et sendInfo(35)
             try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
@@ -945,7 +731,6 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── sendInfo(1000,35) → Di4.0 mode / Qt enregistre Surface JNI ──\n");
             String r35 = shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
             res.append(r35.isEmpty() ? "⚠" : r35).append("\n\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // ── Étape 2 : démarrer AutoDisplayService ──────────────────────
             // onStart() → updateDisplay() → getQtProjectionDispInfo(0)
@@ -953,7 +738,6 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── am startservice AutoDisplayService ──\n");
             String startSvc = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
             res.append(startSvc.isEmpty() ? "❌ startservice échoué" : startSvc).append("\n\n");
-            runOnUiThread(() -> tvFissionResult.setText(res.toString()));
             try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
             // ── Étape 4 : vérifier les displays créés via DisplayManager Java ──
@@ -989,20 +773,14 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.i("FissionPipeline", res.toString());
             final boolean canLaunch = mFissionDisplayId != -1;
             runOnUiThread(() -> {
-                tvFissionResult.setText(res.toString());
-                btnFissionPipeline.setEnabled(true);
-                btnFissionLaunch.setEnabled(canLaunch);
             });
         }).start();
     }
 
     private void launchOnFissionDisplay() {
         if (mFissionDisplayId == -1) {
-            tvFissionResult.setText(getString(R.string.diag_fission_no_display));
             return;
         }
-        tvFissionResult.setText(getString(R.string.diag_fission_launching, mFissionDisplayId));
-        btnFissionLaunch.setEnabled(false);
 
         new Thread(() -> {
             StringBuilder res = new StringBuilder();
@@ -1015,8 +793,6 @@ public class DiagActivity extends AppCompatActivity {
             res.append(result.isEmpty() ? "❌ Pas de réponse" : result);
             AppLogger.i("FissionLaunch", "displayId=" + mFissionDisplayId + " → " + result);
             runOnUiThread(() -> {
-                tvFissionResult.setText(res.toString());
-                btnFissionLaunch.setEnabled(true);
             });
         }).start();
     }
@@ -1038,29 +814,17 @@ public class DiagActivity extends AppCompatActivity {
     // =========================================================================
 
     private void sendAdasCmd(final int cmd) {
-        btnAdasShow.setEnabled(false);
-        btnAdasHide.setEnabled(false);
-        tvAdasResult.setText(getString(R.string.diag_adas_sending, cmd));
-        tvAdasResult.setBackgroundColor(0xFF111A1A);
         AppLogger.log("DiagADAS", "sendInfo(1000, " + cmd + ")");
 
         AdbLocalClient.sendInfo(this, 1000, cmd, "", new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(() -> {
                     String label = cmd == 12 ? "显示ADAS ✅" : "关闭ADAS ✅";
-                    tvAdasResult.setBackgroundColor(0xFF1A2A1A);
-                    tvAdasResult.setText(label + "\n" + report);
-                    btnAdasShow.setEnabled(true);
-                    btnAdasHide.setEnabled(true);
                     AppLogger.log("DiagADAS", "cmd=" + cmd + " → " + report);
                 });
             }
             @Override public void onError(final String error) {
                 runOnUiThread(() -> {
-                    tvAdasResult.setBackgroundColor(0xFF2A1A1A);
-                    tvAdasResult.setText("❌ cmd=" + cmd + " " + error);
-                    btnAdasShow.setEnabled(true);
-                    btnAdasHide.setEnabled(true);
                     AppLogger.log("DiagADAS", "ERREUR cmd=" + cmd + ": " + error);
                 });
             }
@@ -1073,10 +837,6 @@ public class DiagActivity extends AppCompatActivity {
 
     private void setupShareOnLongClick() {
         TextView[] results = {
-            tvAdbLocalResult, tvDaemonVdResult, tvDisplaySizeResult,
-            tvDisplay1Result, tvDumpsysResult, tvTest13Result, tvSfDumpResult,
-            tvAutoDisplayResult, tvFissionResult, tvReSnifferStatus,
-            tvResizeDiagResult, tvAdasResult
         };
         for (TextView tv : results) {
             if (tv == null) continue;
@@ -1345,21 +1105,15 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void resetMainDisplayOverscan() {
-        btnResetMainOverscan.setEnabled(false);
         AdbLocalClient.executeShellWithResult(this, "wm overscan reset -d 0",
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(String result) {
                 runOnUiThread(() -> {
-                    btnResetMainOverscan.setEnabled(true);
-                    tvResetMainOverscanResult.setText(
-                            getString(R.string.diag_reset_main_overscan_done));
                     AppLogger.i("Overscan", "reset -d 0 OK: " + result.trim());
                 });
             }
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
-                    btnResetMainOverscan.setEnabled(true);
-                    tvResetMainOverscanResult.setText("ERROR: " + error.trim());
                     AppLogger.e("Overscan", "reset -d 0 FAILED: " + error);
                 });
             }
@@ -1416,9 +1170,6 @@ public class DiagActivity extends AppCompatActivity {
      *   resizeTask(taskId, bounds, 3)           [RESIZE_MODE_FORCED]
      */
     private void runResizeDilink5Seq() {
-        tvResizeDiagResult.setText("En cours…");
-        btnResizeDilink5Seq.setEnabled(false);
-        btnResizeForcedOnly.setEnabled(false);
 
         new Thread(() -> {
             StringBuilder sb = new StringBuilder();
@@ -1429,7 +1180,6 @@ public class DiagActivity extends AppCompatActivity {
             sb.append("Task cluster : ").append(taskId == -1 ? "❌ non trouvée (aucune app sur cluster)" : "taskId=" + taskId).append("\n");
             if (taskId == -1) {
                 final String out = sb.toString();
-                runOnUiThread(() -> { tvResizeDiagResult.setText(out); btnResizeDilink5Seq.setEnabled(true); btnResizeForcedOnly.setEnabled(true); });
                 return;
             }
 
@@ -1485,9 +1235,6 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.i("ResizeDiag", sb.toString());
             final String out = sb.toString();
             runOnUiThread(() -> {
-                tvResizeDiagResult.setText(out);
-                btnResizeDilink5Seq.setEnabled(true);
-                btnResizeForcedOnly.setEnabled(true);
             });
         }, "resize-dilink5-thread").start();
     }
@@ -1497,9 +1244,6 @@ public class DiagActivity extends AppCompatActivity {
      * Permet de tester si le problème vient du resizeMode ou du windowing mode.
      */
     private void runResizeForcedOnly() {
-        tvResizeDiagResult.setText("En cours…");
-        btnResizeDilink5Seq.setEnabled(false);
-        btnResizeForcedOnly.setEnabled(false);
 
         new Thread(() -> {
             StringBuilder sb = new StringBuilder();
@@ -1509,7 +1253,6 @@ public class DiagActivity extends AppCompatActivity {
             sb.append("Task cluster : ").append(taskId == -1 ? "❌ non trouvée" : "taskId=" + taskId).append("\n");
             if (taskId == -1) {
                 final String out = sb.toString();
-                runOnUiThread(() -> { tvResizeDiagResult.setText(out); btnResizeDilink5Seq.setEnabled(true); btnResizeForcedOnly.setEnabled(true); });
                 return;
             }
 
@@ -1527,9 +1270,6 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.i("ResizeDiag", sb.toString());
             final String out = sb.toString();
             runOnUiThread(() -> {
-                tvResizeDiagResult.setText(out);
-                btnResizeDilink5Seq.setEnabled(true);
-                btnResizeForcedOnly.setEnabled(true);
             });
         }, "resize-forced-thread").start();
     }
@@ -1539,8 +1279,6 @@ public class DiagActivity extends AppCompatActivity {
      * Utilise am stack list + am task info (shell) sans modifier quoi que ce soit.
      */
     private void runResizeInspectTask() {
-        tvResizeDiagResult.setText("Inspection en cours…");
-        btnResizeInspectTask.setEnabled(false);
 
         new Thread(() -> {
             StringBuilder sb = new StringBuilder();
@@ -1582,8 +1320,6 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.i("ResizeDiag", sb.toString());
             final String out = sb.toString();
             runOnUiThread(() -> {
-                tvResizeDiagResult.setText(out);
-                btnResizeInspectTask.setEnabled(true);
             });
         }, "resize-inspect-thread").start();
     }
