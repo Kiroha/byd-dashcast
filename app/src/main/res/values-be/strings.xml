@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Кантролер панэлі прыбораў</string>
     <string name="welcome_select_lang">Выберыце мову\nPlease select your language</string>
@@ -16,8 +14,6 @@
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_uk">🇺🇦  Українська</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Панэль прыбораў: не падключана</string>
     <string name="btn_activate_cluster">Уключыць праекцыю</string>
     <string name="btn_show_mirror">📺 Люстэрка</string>
@@ -26,24 +22,16 @@
     <string name="title_app_list">Усталяваныя праграмы</string>
     <string name="mirror_placeholder">Актыўны відарыс на кластары ✓</string>
     <string name="btn_cluster_split">⬛⬛ Падзяліць</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Кіраванне кластарам</string>
     <string name="cluster_control_hide">Схаваць ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Асноўны</string>
     <string name="btn_app_to_cluster">→ Кластар</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Запуск кластара…</string>
     <string name="status_activating_cluster">Актывацыя кластара…</string>
     <string name="status_restoring_cluster">Аднаўленне кластара…</string>
     <string name="status_restoring_origin">Аднаўленне штатнага кластара…</string>
     <string name="status_dashboard_byd">Панэль прыбораў: дысплей BYD</string>
     <string name="status_dashboard_app">Панэль прыбораў: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: не ўсталявана або несумяшчальна з некалькімі дысплеямі</string>
     <string name="toast_cluster_unavailable">Служба кластара недаступная</string>
     <string name="toast_app_already_cluster">Праграма ўжо на кластары</string>
@@ -52,8 +40,6 @@
     <string name="toast_app_stopped">%1$s спынена</string>
     <string name="toast_kill_failed">Не ўдалося завяршыць: %1$s</string>
     <string name="toast_no_app_cluster">На кластары няма праграмы</string>
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Налады</string>
     <string name="menu_diagnostic">🔧 Дыягностыка</string>
     <string name="menu_system_report">📋 Сістэмная справаздача</string>
@@ -62,18 +48,12 @@
     <string name="menu_check_updates">🔄 Праверыць абнаўленні</string>
     <string name="settings_prerelease_label">Уключыць прэдвыпускнія версіі (alpha/beta)</string>
     <string name="settings_prerelease_hint">Атрымліваць тэставыя зборкі да афіцыйнага выпуску</string>
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8,8 цалі  (cmd=29)</string>
     <string name="cluster_label_123">12,3 цалі (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 цалі (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ На ўвесь экран</string>
     <string name="split_left">⬜⬛ Злева (50%%)</string>
     <string name="split_right">⬛⬜ Справа (50%%)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>
     <string name="log_btn_clear">Ачысціць</string>
     <string name="log_btn_share">Падзяліцца</string>
@@ -84,8 +64,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(няма запісаў)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">Сістэмная справаздача BYD</string>
     <string name="sysinfo_desc">Стварае поўную справаздачу: дысплеі, API, пакеты BYD, дазволы, ADB. Захавайце яе і адпраўце для адладкі.</string>
     <string name="btn_generate_report">▶ Стварыць справаздачу</string>
@@ -95,13 +73,9 @@
     <string name="sysinfo_generating">Стварэнне…\n</string>
     <string name="toast_write_error">Памылка запісу: %1$s</string>
     <string name="toast_report_saved">Справаздача захавана:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">Падзяліцца вынікам TEST 1</string>
     <string name="diag_share_result2_btn">Падзяліцца вынікам TEST 2</string>
     <string name="diag_share_result3_btn">Падзяліцца вынікам TEST 3</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">Падключэнне да localhost:5555…\n⏳ Усплывальнае акно з’явіцца на гэтым экране — націсніце ДАЗВОЛІЦЬ.</string>
     <string name="diag_adb_connected">✅ Падключэнне ўсталявана\n\n</string>
     <string name="diag_adb_failed">❌ Памылка: %1$s\n\n→ Праверце, што ўключана ADB TCP debugging\n  у Налады → Для распрацоўшчыкаў → USB debugging\n  (або Wireless Debugging у гэтай ROM)</string>
@@ -114,14 +88,8 @@
     <string name="diag_sf_no_result">(няма выніку — люстэрка не зарэгістравана ў SF)</string>
     <string name="diag_sf_error">Памылка: %1$s</string>
     <string name="toast_sniffer_started">Sniffer запушчаны → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Падзяліцца журналам…</string>
     <string name="share_report_title">Падзяліцца справаздачай…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Панэль дыягностыкі</string>
     <string name="diag_s1_title">1. Лакальны ADB (абавязкова)</string>
     <string name="diag_s1_desc">Патрэбны для ўкаранення daemon і стварэння сістэмнага VirtualDisplay так, як гэта робіць Dilink5.</string>
@@ -158,7 +126,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot цяпер</string>
     <string name="diag_btn_export_sniffer">Экспарт</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">Запуск праз ADB…</string>
     <string name="diag_auto_stopping">Спыненне праз ADB…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -190,21 +157,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Скід overscan асноўнага экрана (display 0)</string>
     <string name="diag_reset_main_overscan_done">Overscan display 0 скінуты — wm overscan reset -d 0</string>
-    <!-- Section 7 — Test resize DiLink5 -->
     <string name="diag_s7_title">7. Тэст Resize DiLink5 (IATM)</string>
     <string name="diag_s7_desc">Правярае паслядоўнасць DiLink5 Dashboard: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) праз raw Binder на activity_task. Не змяняе існы код праекцыі. Спачатку запусціце праграму на кластары праз асноўную панэль.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ Паслядоўнасць DiLink5 (WM:4→5 + resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ Толькі resizeTask FORCED=3 (без змены WM)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Праверыць task кластара (windowing + bounds)</string>
-
-    <!-- Section 6 — Storage cleanup -->
     <string name="diag_s6_title">6. Ачыстка сховішча</string>
     <string name="diag_s6_desc">Выдаляе файлы журналаў і справаздач, створаныя DashCast: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Таксама ачышчае буфер журналаў у памяці. ADB-ключы (adb.key / adb.pub) НЕ выдаляюцца.</string>
     <string name="diag_btn_cleanup">🗑️ Выдаліць trace-файлы</string>
     <string name="diag_cleanup_running">Ачыстка…</string>
     <string name="diag_cleanup_done">%1$d файл(аў) выдалена — засталося месца: %2$s</string>
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Налады</string>
     <string name="settings_cluster_type_title">Тып кластара</string>
     <string name="settings_overscan_section_title">Палі дысплея (overscan)</string>
@@ -225,4 +187,12 @@
     <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
     <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="settings_updates_title">Абнаўленні</string>
+    <string name="btn_adjust">Наладзіць</string>
+    <string name="label_width_inset">Водступ шырыні</string>
+    <string name="label_height_inset">Водступ вышыні</string>
+    <string name="btn_apply">Ужыць</string>
+    <string name="toast_grid_mode_enabled">Рэжым сеткі ўключаны</string>
+    <string name="toast_list_mode_enabled">Рэжым спісу ўключаны</string>
+    <string name="toast_update_install_failed">Памылка ўстаноўкі: </string>
+    <string name="app_state_auto">Аўта</string>
 </resources>

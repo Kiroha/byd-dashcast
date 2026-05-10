@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-
-    <!-- WelcomeActivity -->
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Контроллер панели приборов</string>
     <string name="welcome_select_lang">Выберите язык\nPlease select your language</string>
@@ -16,8 +14,6 @@
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_uk">🇺🇦  Українська</string>
-
-    <!-- MainActivity — status bar -->
     <string name="status_disconnected">Панель приборов: не подключена</string>
     <string name="btn_activate_cluster">Включить проекцию</string>
     <string name="btn_show_mirror">📺 Зеркало</string>
@@ -27,26 +23,17 @@
     <string name="mirror_placeholder">Активное изображение на кластере ✓</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
-
     <string name="btn_cluster_split">⬛⬛ Разделить</string>
-
-    <!-- Cluster control panel -->
     <string name="cluster_control_title">Управление кластером</string>
     <string name="cluster_control_hide">Скрыть ▼</string>
-
-    <!-- item_app.xml -->
     <string name="btn_app_to_main">← Основной</string>
     <string name="btn_app_to_cluster">→ Кластер</string>
-
-    <!-- MainActivity — status texts -->
     <string name="status_starting_cluster">Запуск кластера…</string>
     <string name="status_activating_cluster">Активация кластера…</string>
     <string name="status_restoring_cluster">Восстановление кластера…</string>
     <string name="status_restoring_origin">Восстановление штатного кластера…</string>
     <string name="status_dashboard_byd">Панель приборов: дисплей BYD</string>
     <string name="status_dashboard_app">Панель приборов: %1$s</string>
-
-    <!-- MainActivity — Toasts -->
     <string name="toast_app_incompatible">%1$s: не установлено или несовместимо с несколькими дисплеями</string>
     <string name="toast_cluster_unavailable">Служба кластера недоступна</string>
     <string name="toast_app_already_cluster">Приложение уже на кластере</string>
@@ -55,9 +42,6 @@
     <string name="toast_app_stopped">%1$s остановлено</string>
     <string name="toast_kill_failed">Не удалось завершить: %1$s</string>
     <string name="toast_no_app_cluster">На кластере нет приложения</string>
-
-
-    <!-- MainActivity — overflow menu -->
     <string name="menu_settings">⚙️ Настройки</string>
     <string name="menu_diagnostic">🔧 Диагностика</string>
     <string name="menu_system_report">📋 Системный отчет</string>
@@ -67,19 +51,12 @@
     <string name="settings_updates_title">Обновления</string>
     <string name="settings_prerelease_label">Включать предварительные версии (alpha/beta)</string>
     <string name="settings_prerelease_hint">Получать тестовые сборки до официального выпуска</string>
-
-    <!-- MainActivity — cluster type dialog -->
     <string name="cluster_label_88">8,8 дюйма  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйма (cmd=30) — Seal EU</string>
     <string name="cluster_label_1025">10,25 дюйма (cmd=31)</string>
-
-    <!-- MainActivity — split menu -->
     <string name="split_full_screen">⬜ Полный экран</string>
     <string name="split_left">⬜⬛ Слева (50%%)</string>
     <string name="split_right">⬛⬜ Справа (50%%)</string>
-
-
-    <!-- LogActivity -->
     <string name="log_title">📋 Журнал</string>
     <string name="log_btn_clear">Очистить</string>
     <string name="log_btn_share">Поделиться</string>
@@ -90,8 +67,6 @@
     <string name="log_level_warn">WARN </string>
     <string name="log_level_error">ERROR</string>
     <string name="log_empty">(нет записей)</string>
-
-    <!-- SysInfoActivity -->
     <string name="sysinfo_title">Системный отчет BYD</string>
     <string name="sysinfo_desc">Создает полный отчет: дисплеи, API, пакеты BYD, разрешения, ADB. Сохраните его и отправьте для отладки.</string>
     <string name="btn_generate_report">▶ Создать отчет</string>
@@ -101,13 +76,9 @@
     <string name="sysinfo_generating">Создание…\n</string>
     <string name="toast_write_error">Ошибка записи: %1$s</string>
     <string name="toast_report_saved">Отчет сохранен:\n%1$s</string>
-
-    <!-- DiagActivity — layout labels -->
     <string name="diag_share_result1_btn">Поделиться результатом TEST 1</string>
     <string name="diag_share_result2_btn">Поделиться результатом TEST 2</string>
     <string name="diag_share_result3_btn">Поделиться результатом TEST 3</string>
-
-    <!-- DiagActivity — Java status / feedback -->
     <string name="diag_adb_connecting">Подключение к localhost:5555…\n⏳ Всплывающее окно появится на этом экране — нажмите РАЗРЕШИТЬ.</string>
     <string name="diag_adb_connected">✅ Подключение установлено\n\n</string>
     <string name="diag_adb_failed">❌ Ошибка: %1$s\n\n→ Проверьте, что включена отладка ADB TCP\n  в Настройки → Для разработчиков → Отладка USB\n  (или Беспроводная отладка в этой ROM)</string>
@@ -117,19 +88,11 @@
     <string name="diag_size_restoring">⏳ Восстановление размера по умолчанию (cmd 30 + wm reset)…</string>
     <string name="diag_size_full_running">⏳ Диагностика размеров кластера…\nПробуем cmd=29 / cmd=30 / cmd=31 / wm size…\n(~8 секунд)</string>
     <string name="diag_sf_dumping">Выполняется dumpsys SurfaceFlinger…</string>
-
-
     <string name="diag_sf_no_result">(нет результата — зеркало не зарегистрировано в SF)</string>
     <string name="diag_sf_error">Ошибка: %1$s</string>
     <string name="toast_sniffer_started">Сниффер запущен → %1$s</string>
-
-    <!-- DiagActivity — killAndRestartDaemon -->
-
-    <!-- AppLogger -->
     <string name="share_log_title">Поделиться журналом…</string>
     <string name="share_report_title">Поделиться отчетом…</string>
-
-        <!-- DiagActivity: layout labels -->
     <string name="diag_header">Панель диагностики</string>
     <string name="diag_s1_title">1. Локальный ADB (обязательно)</string>
     <string name="diag_s1_desc">Нужен для внедрения daemon и создания системного VirtualDisplay тем же способом, что в Dilink5.</string>
@@ -141,7 +104,6 @@
     <string name="diag_btn_create_vd">Создать VirtualDisplay (внедрить daemon)</string>
     <string name="diag_s3_title">3. Свойства кластера</string>
     <string name="diag_s3_initial">Размер дисплея</string>
-
     <string name="diag_s3_display1_initial">Восстановить дисплей кластера</string>
     <string name="diag_btn_restore_display">Восстановить дисплей</string>
     <string name="diag_sadas_title">ADAS Кластер (cmd 12 / 13)</string>
@@ -173,7 +135,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot сейчас</string>
     <string name="diag_btn_export_sniffer">Экспорт</string>
-        <!-- DiagActivity: dynamic messages -->
     <string name="diag_auto_starting">Запуск через ADB…</string>
     <string name="diag_auto_stopping">Остановка через ADB…</string>
     <string name="diag_auto_stopped">STOP: %1$s</string>
@@ -205,22 +166,16 @@
     <string name="diag_btn_size_full">FULL TEST</string>
     <string name="diag_btn_reset_main_overscan">⚠️ Сброс overscan основного экрана (display 0)</string>
     <string name="diag_reset_main_overscan_done">Overscan display 0 сброшен — wm overscan reset -d 0</string>
-    <!-- Section 7 — Test resize DiLink5 -->
     <string name="diag_s7_title">7. Тест Resize DiLink5 (IATM)</string>
     <string name="diag_s7_desc">Проверяет последовательность DiLink5 Dashboard: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) через raw Binder на activity_task. Не меняет существующий код проекции. Сначала запустите приложение на кластере через основную панель.</string>
     <string name="diag_btn_resize_dilink5_seq">▶ Последовательность DiLink5 (WM:4→5 + resize FORCED=3)</string>
     <string name="diag_btn_resize_forced_only">▶ Только resizeTask FORCED=3 (без смены WM)</string>
     <string name="diag_btn_resize_inspect_task">🔍 Проверить task кластера (windowing + bounds)</string>
-
-    <!-- Section 6 — Storage cleanup -->
     <string name="diag_s6_title">6. Очистка хранилища</string>
     <string name="diag_s6_desc">Удаляет созданные DashCast файлы журналов и отчетов: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Также очищает буфер журналов в памяти. ADB-ключи (adb.key / adb.pub) НЕ удаляются.</string>
     <string name="diag_btn_cleanup">🗑️ Удалить trace-файлы</string>
     <string name="diag_cleanup_running">Очистка…</string>
     <string name="diag_cleanup_done">%1$d файл(ов) удалено — осталось места: %2$s</string>
-    <!-- Section 7 — DiLink5 resize test -->
-
-    <!-- SettingsActivity -->
     <string name="settings_header">Настройки</string>
     <string name="settings_cluster_type_title">Тип кластера</string>
     <string name="settings_overscan_section_title">Поля дисплея (overscan)</string>
@@ -232,4 +187,12 @@
     <string name="settings_overscan_applied">✓ Применено — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Доступно обновление</string>
     <string name="ota_up_to_date">DashCast обновлён</string>
+    <string name="btn_adjust">Настроить</string>
+    <string name="label_width_inset">Отступ ширины</string>
+    <string name="label_height_inset">Отступ высоты</string>
+    <string name="btn_apply">Применить</string>
+    <string name="toast_grid_mode_enabled">Режим сетки включен</string>
+    <string name="toast_list_mode_enabled">Режим списка включен</string>
+    <string name="toast_update_install_failed">Ошибка установки: </string>
+    <string name="app_state_auto">Авто</string>
 </resources>
