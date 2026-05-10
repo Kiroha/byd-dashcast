@@ -166,4 +166,8 @@
     <string name="notif_remote_content">📺 Klaster ko\'zgusi faol</string>
     <string name="sysinfo_file_saved">\n\nFayl: %1$s\nADB buyrug\'i: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ To\'r rejimi</string>
-    <string name="menu_view_list">📋 Ro\'yxat rejimi</string></resources>
+    <string name="menu_view_list">📋 Ro\'yxat rejimi</string>
+    <string name="hint_search_apps">Dastur qidirish…</string>
+    <string name="tooltip_tap_send">Klasterga yuborish uchun ilovaga bosing</string>
+    <string name="split_btn_exit">↩ Toʻliq ekran</string>
+</resources>

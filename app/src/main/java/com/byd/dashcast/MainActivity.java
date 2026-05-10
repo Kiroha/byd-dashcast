@@ -38,6 +38,8 @@ import android.widget.Toast;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 
 import com.byd.dashcast.dashboard.DashboardLauncher;
 import com.byd.dashcast.model.AppInfo;
@@ -128,22 +130,34 @@ public class MainActivity extends AppCompatActivity
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
+    private static final String PREF_FIRST_LAUNCH_TIP = "first_launch_tip_shown";
+
+    // Status dot colors
+    private static final int DOT_COLOR_OFF     = 0xFF888888;
+    private static final int DOT_COLOR_PENDING = 0xFFFFC107;
+    private static final int DOT_COLOR_ACTIVE  = 0xFF4CAF50;
+
     // UI — barre statut
+    private View     mStatusDot;
     private TextView tvDashboardStatus;
-    private TextView     tvAppListTitle;
+    private View     llAppListSection;  // wrapper for title header + search bar
     private Button   btnActivateCluster;
     private Button   btnRestoreCluster;
-    private Button   btnOriginCluster;
     private Button   btnOverflow;
     private Button   btnShowMirror;
     private Button   btnSplitLayout;
+    private Button   btnViewToggle;
     private RecyclerView rvApps;
     private AppListAdapter mAdapter;
+    private android.widget.EditText etSearch;
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
     private LinearLayout panelResize;
+    private LinearLayout panelControlsContent;
+    private Button       btnPanelToggle;
     private TextView     tvControlAppName;
+    private InsetOverlayView mInsetOverlay;
     private android.widget.FrameLayout frameMirror;
     private TextureView clusterMirror;
     private TextView     tvMirrorPlaceholder;
@@ -222,19 +236,23 @@ public class MainActivity extends AppCompatActivity
         // (Activity exists in back stack → onNewIntent fires instead of onCreate)
         handleShowMirrorIntent(getIntent());
 
+        mStatusDot          = (View)     findViewById(R.id.view_status_dot);
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
-        btnOriginCluster    = (Button)   findViewById(R.id.btn_origin_cluster);
         btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
         btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
+        llAppListSection    = (View)     findViewById(R.id.ll_app_list_section);
         rvApps             = (RecyclerView) findViewById(R.id.rv_apps);
+        etSearch           = (android.widget.EditText) findViewById(R.id.et_search_apps);
+        btnViewToggle      = (Button)   findViewById(R.id.btn_view_toggle);
 
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean isGrid = prefs.getBoolean("grid_mode", false);
         mAdapter.setGridMode(isGrid);
+        updateViewToggleButton();
         
         if (isGrid) {
             rvApps.setLayoutManager(new GridLayoutManager(this, 5));
@@ -243,6 +261,15 @@ public class MainActivity extends AppCompatActivity
         }
         
         rvApps.setAdapter(mAdapter);
+
+        // Search bar
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                mAdapter.filter(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
         // Button "Activate cluster" — always triggers activateCluster()
         btnActivateCluster.setOnClickListener(new View.OnClickListener() {
@@ -256,10 +283,10 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) { restoreBydDashboard(); }
         });
 
-        // Button "Original cluster" — restores the configured screen size and restores Qt
-        btnOriginCluster.setOnClickListener(new View.OnClickListener() {
+        // Button &#9654; View toggle (list ↔ grid) in the title header
+        btnViewToggle.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { originCluster(); }
+            public void onClick(View v) { toggleViewMode(); }
         });
 
         // Button ⋮ overflow — dev tools + manual activation
@@ -284,9 +311,21 @@ public class MainActivity extends AppCompatActivity
         mDashboardLauncher = new DashboardLauncher(this); // temporary until bind
 
         // Cluster control panel
-        panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
-        tvControlAppName    = (TextView)     findViewById(R.id.tv_control_app_name);
-        tvAppListTitle      = (TextView)     findViewById(R.id.tv_app_list_title);
+        panelClusterControl   = (LinearLayout) findViewById(R.id.panel_cluster_control);
+        panelControlsContent  = (LinearLayout) findViewById(R.id.panel_controls_content);
+        tvControlAppName      = (TextView)     findViewById(R.id.tv_control_app_name);
+        // llAppListSection replaces tvAppListTitle (see field declaration)
+        btnPanelToggle        = (Button)       findViewById(R.id.btn_panel_toggle);
+
+        // Panel collapse toggle
+        btnPanelToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean visible = panelControlsContent.getVisibility() == View.VISIBLE;
+                panelControlsContent.setVisibility(visible ? View.GONE : View.VISIBLE);
+                btnPanelToggle.setText(visible ? "\u25b2" : "\u25bc");
+            }
+        });
         
         // --- Resize Zone ---
         btnToggleResize = (Button) findViewById(R.id.btn_toggle_resize);
@@ -303,8 +342,15 @@ public class MainActivity extends AppCompatActivity
                     if (panelResize != null) {
                         if (panelResize.getVisibility() == View.VISIBLE) {
                             panelResize.setVisibility(View.GONE);
+                            if (mInsetOverlay != null) mInsetOverlay.setOverlayVisible(false);
+                            btnToggleResize.setText(getString(R.string.btn_adjust));
                         } else {
                             panelResize.setVisibility(View.VISIBLE);
+                            if (mInsetOverlay != null) {
+                                refreshInsetOverlay();
+                                mInsetOverlay.setOverlayVisible(true);
+                            }
+                            btnToggleResize.setText("\u25b2 " + getString(R.string.btn_adjust));
                         }
                     }
                 }
@@ -313,12 +359,18 @@ public class MainActivity extends AppCompatActivity
         
         
         sbResizeW.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeW.setText(String.valueOf(value)); }
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) {
+                tvResizeW.setText(String.valueOf(value));
+                if (mInsetOverlay != null) mInsetOverlay.setInsets(value, sbResizeH.getProgress());
+            }
             @Override public void onStartTrackingTouch(SeekBar sb) {}
             @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
         sbResizeH.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) { tvResizeH.setText(String.valueOf(value)); }
+            @Override public void onProgressChanged(SeekBar sb, int value, boolean b) {
+                tvResizeH.setText(String.valueOf(value));
+                if (mInsetOverlay != null) mInsetOverlay.setInsets(sbResizeW.getProgress(), value);
+            }
             @Override public void onStartTrackingTouch(SeekBar sb) {}
             @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
@@ -355,6 +407,7 @@ public class MainActivity extends AppCompatActivity
         clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
         clusterMirrorScreenshot = (ImageView) findViewById(R.id.cluster_mirror_screenshot);
+        mInsetOverlay       = (InsetOverlayView) findViewById(R.id.inset_overlay);
 
         // Restore mMainDisplayPkg (lost if Activity is destroyed and recreated)
         mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -604,6 +657,7 @@ public class MainActivity extends AppCompatActivity
                 mAdapter.setCurrentPackage(null);
                 mAdapter.setMainPackage(null);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
+                setStatusDot(DOT_COLOR_OFF);
                 showAppList();
             }
         });
@@ -974,10 +1028,19 @@ public class MainActivity extends AppCompatActivity
      * Called from startClusterMirror().
      */
     private void showMirrorView() {
-        tvAppListTitle.setVisibility(View.GONE);
+        llAppListSection.setVisibility(View.GONE);
         rvApps.setVisibility(View.GONE);
         frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
+        // Always restore the controls panel when mirror is shown
+        if (panelControlsContent != null) {
+            panelControlsContent.setVisibility(View.VISIBLE);
+            if (btnPanelToggle != null) btnPanelToggle.setText("\u25bc");
+        }
+        // Also hide overlay when switching app (resize not open by default)
+        if (mInsetOverlay != null) mInsetOverlay.setOverlayVisible(false);
+        if (btnToggleResize != null) btnToggleResize.setText(getString(R.string.btn_adjust));
+        if (panelResize != null) panelResize.setVisibility(View.GONE);
         
         // Init Resize SeekBar based on current app or global prefs
         if (mCurrentDashboardPkg != null) {
@@ -1006,7 +1069,7 @@ public class MainActivity extends AppCompatActivity
         stopClusterMirror();
         frameMirror.setVisibility(View.GONE);
         panelClusterControl.setVisibility(View.GONE);
-        tvAppListTitle.setVisibility(View.VISIBLE);
+        llAppListSection.setVisibility(View.VISIBLE);
         rvApps.setVisibility(View.VISIBLE);
     }
 
@@ -1138,6 +1201,7 @@ public class MainActivity extends AppCompatActivity
     private void activateCluster() {
         btnActivateCluster.setEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_activating_cluster));
+        setStatusDot(DOT_COLOR_PENDING);
         AppLogger.log(TAG, "activateCluster() — serviceBound=" + mServiceBound
                 + " bindRequested=" + mBindRequested
                 + " displayId=" + (mClusterService != null ? mClusterService.getDisplayId() : "N/A"));
@@ -1153,7 +1217,8 @@ public class MainActivity extends AppCompatActivity
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
             }
             tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
-            // Button is re-enabled natively by onClusterDisplayConnected or onClusterDisplayDisconnected callbacks.
+                setStatusDot(DOT_COLOR_PENDING);
+                // Button is re-enabled natively by onClusterDisplayConnected or onClusterDisplayDisconnected callbacks.
         } else {
             // Service already up → manually restart projection natively without ADB
             AppLogger.log(TAG, "Calling native restartProjection via ClusterService");
@@ -1306,31 +1371,32 @@ public class MainActivity extends AppCompatActivity
 
     private void showOverflowMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
+        // Group 0: user actions (Settings, Language, Updates, View toggle)
         popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
-        popup.getMenu().add(0, 7, 0, mAdapter.isGridMode() ? getString(R.string.menu_view_list) : getString(R.string.menu_view_grid));
-        popup.getMenu().add(0, 2, 0, getString(R.string.menu_diagnostic));
-        popup.getMenu().add(0, 3, 0, getString(R.string.menu_system_report));
-        popup.getMenu().add(0, 4, 0, getString(R.string.menu_log));
-        popup.getMenu().add(0, 5, 0, getString(R.string.menu_language));
-        popup.getMenu().add(0, 6, 0, getString(R.string.menu_check_updates));
+        popup.getMenu().add(0, 5, 1, getString(R.string.menu_language));
+        popup.getMenu().add(0, 6, 2, getString(R.string.menu_check_updates));
+        popup.getMenu().add(0, 7, 3, mAdapter.isGridMode() ? getString(R.string.menu_view_list) : getString(R.string.menu_view_grid));
+        popup.getMenu().add(0, 8, 4, getString(R.string.btn_origin_cluster));
+        // Group 1: dev tools (with divider)
+        popup.getMenu().add(1, 2, 5, getString(R.string.menu_diagnostic));
+        popup.getMenu().add(1, 3, 6, getString(R.string.menu_system_report));
+        popup.getMenu().add(1, 4, 7, getString(R.string.menu_log));
+        // Enable visual divider between groups (API 28+, safe on our API 29 target)
+        try {
+            popup.getMenu().getClass()
+                    .getDeclaredMethod("setGroupDividerEnabled", boolean.class)
+                    .invoke(popup.getMenu(), true);
+        } catch (Exception ignored) {}
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case 1: startActivity(new Intent(MainActivity.this, SettingsActivity.class)); return true;
                     case 7:
-                        SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                        boolean nv = !mAdapter.isGridMode();
-                        p2.edit().putBoolean("grid_mode", nv).apply();
-                        mAdapter.setGridMode(nv);
-                        if (nv) {
-                            rvApps.setLayoutManager(new GridLayoutManager(MainActivity.this, 5));
-                        } else {
-                            rvApps.setLayoutManager(new LinearLayoutManager(MainActivity.this));
-                        }
-                        rvApps.setAdapter(mAdapter);
-                        Toast.makeText(MainActivity.this, nv ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
+                        toggleViewMode();
+                        Toast.makeText(MainActivity.this, mAdapter.isGridMode() ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
                         return true;
+                    case 8: originCluster(); return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
                     case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
                     case 4: startActivity(new Intent(MainActivity.this, LogActivity.class)); return true;
@@ -1356,6 +1422,7 @@ public class MainActivity extends AppCompatActivity
     private void restoreBydDashboard() {
         btnRestoreCluster.setEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_restoring_cluster));
+        setStatusDot(DOT_COLOR_PENDING);
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
         // Split mode: force-stop the second app before sendInfo(18)
         // (prevents it from relocating to the main display)
@@ -1418,13 +1485,66 @@ public class MainActivity extends AppCompatActivity
             btnShowMirror.setVisibility(View.VISIBLE);
             FloatingRemoteButton.show();
         }
+        setStatusDot(DOT_COLOR_ACTIVE);
         btnRestoreCluster.setEnabled(true);
+    }
+
+    /** Sets the status dot to a given ARGB color using an oval GradientDrawable. */
+    private void setStatusDot(int color) {
+        if (mStatusDot == null) return;
+        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
+        shape.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        shape.setColor(color);
+        mStatusDot.setBackground(shape);
+    }
+
+    /** Toggles list ↔ grid mode, updates the toggle button icon and adapter layout. */
+    private void toggleViewMode() {
+        SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean nv = !mAdapter.isGridMode();
+        p2.edit().putBoolean("grid_mode", nv).apply();
+        mAdapter.setGridMode(nv);
+        if (nv) {
+            rvApps.setLayoutManager(new GridLayoutManager(this, 5));
+        } else {
+            rvApps.setLayoutManager(new LinearLayoutManager(this));
+        }
+        rvApps.setAdapter(mAdapter);
+        updateViewToggleButton();
+    }
+
+    /** Syncs the view-toggle button icon to the current mode. */
+    private void updateViewToggleButton() {
+        if (btnViewToggle == null) return;
+        btnViewToggle.setText(mAdapter.isGridMode() ? "\u2630" : "\u229e");
+    }
+
+    /** Updates the split button text/tint to reflect the current slot. */
+    private void updateSplitButton() {
+        if (btnSplitLayout == null) return;
+        if (mCurrentSplitSlot != 0) {
+            btnSplitLayout.setText(getString(R.string.split_btn_exit));
+            btnSplitLayout.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#E65100")));
+        } else {
+            btnSplitLayout.setText(getString(R.string.btn_cluster_split));
+            btnSplitLayout.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#5C6BC0")));
+        }
+    }
+
+    /** Refreshes the InsetOverlayView projection params from the current mirror state. */
+    private void refreshInsetOverlay() {
+        if (mInsetOverlay == null || !mServiceBound || mClusterService == null) return;
+        com.byd.dashcast.dashboard.ClusterMirrorManager mirror = mClusterService.getMirrorManager();
+        mInsetOverlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX(), mirror.getProjOffsetY());
+        mInsetOverlay.setInsets(sbResizeW.getProgress(), sbResizeH.getProgress());
     }
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private void originCluster() {
-        btnOriginCluster.setEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
+        setStatusDot(DOT_COLOR_PENDING);
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
         // Split mode: force-stop the second app before restoration
         if (mSecondDashboardPkg != null) {
@@ -1448,7 +1568,6 @@ public class MainActivity extends AppCompatActivity
                         updateDashboardStatus(null);
                         btnActivateCluster.setEnabled(true);
                         showAppList();
-                        btnOriginCluster.setEnabled(true);
                         AppLogger.log(TAG, "Original cluster restored ✓");
                     }
                 });
@@ -1457,7 +1576,6 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        btnOriginCluster.setEnabled(true);
                         Toast.makeText(MainActivity.this,
                                 getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "originCluster FAILED: " + error);
@@ -1536,12 +1654,14 @@ public class MainActivity extends AppCompatActivity
                                     AppLogger.i(TAG, "split slot " + slot + " OK ["
                                             + splitL + "," + splitT + "," + splitR + "," + splitB + "]");
                                     updateControlLabel();
+                                    updateSplitButton();
                                 } else {
                                     AppLogger.e(TAG, "split relaunch FAILED slot=" + slot);
                                     Toast.makeText(MainActivity.this,
                                             getString(R.string.toast_app_incompatible, splitApp),
                                             Toast.LENGTH_SHORT).show();
                                     mCurrentSplitSlot = 0;
+                                    updateSplitButton();
                                 }
                             }
                         });
@@ -1579,6 +1699,7 @@ public class MainActivity extends AppCompatActivity
         mSecondDashboardApp = null;
         mSecondDashboardPkg = null;
         mCurrentSplitSlot   = 0;
+        runOnUiThread(new Runnable() { @Override public void run() { updateSplitButton(); } });
     }
 
     /**
@@ -1700,7 +1821,21 @@ public class MainActivity extends AppCompatActivity
                 });
 
                 final List<AppInfo> result = apps;
-                runOnUiThread(() -> mAdapter.setApps(result));
+                runOnUiThread(() -> {
+                    mAdapter.setApps(result);
+                    // One-shot tip: show once, on first ever launch
+                    SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {
+                        _p.edit().putBoolean(PREF_FIRST_LAUNCH_TIP, true).apply();
+                        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override public void run() {
+                                Toast.makeText(MainActivity.this,
+                                        getString(R.string.tooltip_tap_send),
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        }, 1200);
+                    }
+                });
             }
         });
         loader.shutdown(); // thread ends as soon as the above task finishes

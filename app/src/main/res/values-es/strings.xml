@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nArchivo: %1$s\nComando ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Modo Cuadrícula</string>
     <string name="menu_view_list">📋 Modo Lista</string>
+    <string name="hint_search_apps">Buscar aplicación…</string>
+    <string name="tooltip_tap_send">Toca una app para enviarla al clúster</string>
+    <string name="split_btn_exit">↩ Pantalla completa</string>
 </resources>

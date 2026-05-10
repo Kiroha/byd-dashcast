@@ -27,12 +27,14 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         void onSetAutoLaunch(AppInfo app, boolean enable);
     }
 
-    private List<AppInfo> mApps = new ArrayList<>();
+    private List<AppInfo> mAllApps = new ArrayList<>();   // full unfiltered list
+    private List<AppInfo> mApps    = new ArrayList<>();   // currently displayed (filtered)
     private final OnSendToDashboardListener mListener;
     private String mCurrentPackage = null;
     private String mMainPackage = null;
     private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
-    
+    private String mCurrentFilter = "";
+
     private boolean mIsGridMode = false;
 
     public AppListAdapter(OnSendToDashboardListener listener) {
@@ -51,10 +53,35 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     }
 
     public void setApps(List<AppInfo> apps) {
-        mApps = apps;
+        mAllApps = apps;
+        applyFilter(mCurrentFilter);
+    }
+
+    /**
+     * Filters the displayed list to entries whose name contains {@code query}.
+     * Pass an empty string to clear the filter.
+     */
+    public void filter(String query) {
+        mCurrentFilter = query == null ? "" : query;
+        applyFilter(mCurrentFilter);
+    }
+
+    private void applyFilter(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            mApps = new ArrayList<>(mAllApps);
+        } else {
+            String lower = query.trim().toLowerCase(java.util.Locale.ROOT);
+            List<AppInfo> filtered = new ArrayList<>();
+            for (AppInfo a : mAllApps) {
+                if (a.appName.toLowerCase(java.util.Locale.ROOT).contains(lower)) {
+                    filtered.add(a);
+                }
+            }
+            mApps = filtered;
+        }
         mPackageIndexMap.clear();
-        for (int i = 0; i < apps.size(); i++) {
-            mPackageIndexMap.put(apps.get(i).packageName, i);
+        for (int i = 0; i < mApps.size(); i++) {
+            mPackageIndexMap.put(mApps.get(i).packageName, i);
         }
         notifyDataSetChanged();
     }
@@ -141,7 +168,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         return mApps.size();
     }
 
-    public List<AppInfo> getApps() { return mApps; }
+    /** Returns the full unfiltered app list (used for auto-launch lookup etc.). */
+    public List<AppInfo> getApps() { return mAllApps; }
 
     AppInfo getAppAt(int position) {
         if (position >= 0 && position < mApps.size()) {

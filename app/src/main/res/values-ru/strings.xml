@@ -168,4 +168,7 @@
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКоманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Режим сетки</string>
     <string name="menu_view_list">📋 Режим списка</string>
+    <string name="hint_search_apps">Поиск приложения…</string>
+    <string name="tooltip_tap_send">Нажмите на приложение, чтобы отправить его на кластер</string>
+    <string name="split_btn_exit">↩ Полный экран</string>
 </resources>
