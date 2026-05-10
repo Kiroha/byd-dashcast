@@ -1,112 +1,703 @@
-<?xml version='1.0' encoding='utf-8'?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="#f2f2f2">
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#f2f2f2">
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp" android:clipToPadding="false">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:clipToPadding="false">
 
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_header" android:textSize="26sp" android:textColor="#2E3440" android:textStyle="bold" android:layout_marginTop="8dp" android:layout_marginBottom="16dp" android:gravity="center_horizontal" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/diag_header"
+            android:textSize="26sp"
+            android:textColor="#2E3440"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="center_horizontal"/>
 
-        
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#ffffff" android:elevation="3dp" android:padding="16dp" android:layout_marginBottom="16dp" android:layout_marginHorizontal="4dp">
+        <!-- 1. CONNEXION ADB LOCAL -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
             
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s1_title" android:textSize="18sp" android:textColor="#3B4252" android:textStyle="bold" android:layout_marginBottom="6dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s1_desc" android:textSize="12sp" android:textColor="#4C566A" android:layout_marginBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s1_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s1_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
                 
-            <TextView android:id="@+id/tv_adb_local_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s1_initial" android:textSize="13sp" android:fontFamily="monospace" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
+            <TextView
+                android:id="@+id/tv_adb_local_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s1_initial"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_adb_local" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_adb_connect" android:backgroundTint="#5E81AC" android:layout_marginRight="4dp" />
-                <Button android:id="@+id/btn_adb_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result" android:backgroundTint="#88C0D0" />
+                <Button
+                    android:id="@+id/btn_adb_local"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_adb_connect"
+                    android:backgroundTint="#5E81AC"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_adb_share"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_share_result"
+                    android:backgroundTint="#88C0D0"/>
             </LinearLayout>
         </LinearLayout>
 
-        
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#ffffff" android:elevation="3dp" android:padding="16dp" android:layout_marginBottom="16dp" android:layout_marginHorizontal="4dp">
+        <!-- 2. INJECTION DAEMON & VIRTUALDISPLAY -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
             
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s2_title" android:textSize="18sp" android:textColor="#3B4252" android:textStyle="bold" android:layout_marginBottom="6dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s2_desc" android:textSize="12sp" android:textColor="#4C566A" android:layout_marginBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s2_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s2_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
                 
-            <TextView android:id="@+id/tv_daemon_vd_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--" android:textSize="12sp" android:fontFamily="monospace" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
-            <Button android:id="@+id/btn_daemon_vd_test" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_btn_create_vd" android:backgroundTint="#A3BE8C" android:textColor="#ffffff" android:layout_marginBottom="12dp" />
+            <TextView
+                android:id="@+id/tv_daemon_vd_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_daemon_vd_test"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_create_vd"
+                android:backgroundTint="#A3BE8C"
+                android:textColor="#ffffff"
+                android:layout_marginBottom="12dp"/>
 
         </LinearLayout>
 
-        
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#ffffff" android:elevation="3dp" android:padding="16dp" android:layout_marginBottom="16dp" android:layout_marginHorizontal="4dp">
+        <!-- 3. CONFIGURATION CLUSTER -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
             
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s4_title" android:textSize="18sp" android:textColor="#3B4252" android:textStyle="bold" android:layout_marginBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s3_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
 
+            <TextView
+                android:id="@+id/tv_display_size_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s3_initial"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
             
-            <TextView android:id="@+id/tv_dumpsys_result" android:layout_width="match_parent" android:layout_height="120dp" android:text="@string/diag_dumpsys_initial" android:textSize="10sp" android:fontFamily="monospace" android:scrollbars="vertical" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
-            <Button android:id="@+id/btn_dumpsys_windows" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_btn_run_dumpsys" android:backgroundTint="#434C5E" android:layout_marginBottom="16dp" />
-
-            
-            <TextView android:id="@+id/tv_test_13_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_jni_initial" android:textSize="12sp" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
+                <Button android:id="@+id/btn_display_size_88" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="8.8&quot;" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_1025" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="10.25&quot;" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_123" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="12.3&quot;"/>
+            </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
-                <Button android:id="@+id/btn_test_13" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_jni_probe" android:backgroundTint="#434C5E" android:layout_marginEnd="4dp" />
-                <Button android:id="@+id/btn_jni_start_probe" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_jni_start_probe" android:backgroundTint="#5E81AC" />
+                <Button android:id="@+id/btn_display_size_restore" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_size_restore" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_full" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_size_full" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display_size_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result"/>
             </LinearLayout>
 
-            
-            <TextView android:id="@+id/tv_sf_dump_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_sf_initial" android:textSize="12sp" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
-            <Button android:id="@+id/btn_dump_sf_mirror" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_btn_dump_mirror" android:backgroundTint="#434C5E" android:layout_marginBottom="16dp" />
+            <!-- Garde-fou écran principal -->
+            <Button
+                android:id="@+id/btn_reset_main_overscan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_reset_main_overscan"
+                android:backgroundTint="#D08770"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tv_reset_main_overscan_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"
+                android:text=""/>
 
-            
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_auto_display_title" android:textSize="13sp" android:textStyle="bold" android:textColor="#3B4252" android:layout_marginBottom="4dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_auto_display_desc" android:textSize="11sp" android:textColor="#4C566A" android:layout_marginBottom="8dp" />
-            <TextView android:id="@+id/tv_auto_display_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--" android:textSize="12sp" android:fontFamily="monospace" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
+            <TextView
+                android:id="@+id/tv_display1_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s3_display1_initial"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_auto_display_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_start_auto_display" android:backgroundTint="#A3BE8C" android:layout_marginRight="4dp" />
-                <Button android:id="@+id/btn_auto_display_stop" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_stop" android:backgroundTint="#BF616A" />
-            </LinearLayout>
-
-            
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#D8DEE9" android:layout_marginVertical="12dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_fission_title" android:textSize="13sp" android:textStyle="bold" android:textColor="#3B4252" android:layout_marginBottom="4dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_fission_desc" android:textSize="11sp" android:textColor="#4C566A" android:layout_marginBottom="8dp" />
-            <TextView android:id="@+id/tv_fission_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--" android:textSize="11sp" android:fontFamily="monospace" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_fission_via_binder" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_btn_sendinf_java" android:backgroundTint="#BF616A" android:textColor="#FFFFFF" android:layout_marginBottom="4dp" />
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_fission_pipeline" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_fission_create" android:backgroundTint="#5E81AC" android:textColor="#FFFFFF" android:layout_marginRight="4dp" />
-                <Button android:id="@+id/btn_fission_launch" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_fission_launch" android:backgroundTint="#A3BE8C" android:textColor="#FFFFFF" android:enabled="false" />
+                <Button android:id="@+id/btn_display1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_restore_display" android:layout_marginRight="4dp"/>
+                <Button android:id="@+id/btn_display1_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result"/>
             </LinearLayout>
         </LinearLayout>
 
-        
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#ffffff" android:elevation="3dp" android:padding="16dp" android:layout_marginBottom="32dp" android:layout_marginHorizontal="4dp">
+        <!-- ADAS CLUSTER (cmd 12 / 13) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s5_title" android:textSize="18sp" android:textColor="#3B4252" android:textStyle="bold" android:layout_marginBottom="6dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s5_desc" android:textSize="12sp" android:textColor="#4C566A" android:layout_marginBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sadas_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sadas_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tv_adas_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_adas_initial"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_adas_show"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_adas_show"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_adas_hide"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_adas_hide"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 4. ANALYSE SYSTEM ET DUMPSYS -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
             
-            <TextView android:id="@+id/tv_re_sniffer_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_sniffer_inactive" android:textSize="13sp" android:fontFamily="monospace" android:background="#E5E9F0" android:padding="8dp" android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s4_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
 
-            
+            <!-- Dumpsys -->
+            <TextView
+                android:id="@+id/tv_dumpsys_result"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:text="@string/diag_dumpsys_initial"
+                android:textSize="10sp"
+                android:fontFamily="monospace"
+                android:scrollbars="vertical"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_dumpsys_windows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_run_dumpsys"
+                android:backgroundTint="#434C5E"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- JNI Surface -->
+            <TextView
+                android:id="@+id/tv_test_13_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_jni_initial"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
+                <Button
+                    android:id="@+id/btn_test_13"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_jni_probe"
+                    android:backgroundTint="#434C5E"
+                    android:layout_marginEnd="4dp"/>
+                <Button
+                    android:id="@+id/btn_jni_start_probe"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_jni_start_probe"
+                    android:backgroundTint="#5E81AC"/>
+            </LinearLayout>
+
+            <!-- Dump SF Mirror -->
+            <TextView
+                android:id="@+id/tv_sf_dump_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sf_initial"
+                android:textSize="12sp"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btn_dump_sf_mirror"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_dump_mirror"
+                android:backgroundTint="#434C5E"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- AutoDisplayService — chemin direct Qt Surface → VirtualDisplay -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_auto_display_title"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#3B4252"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_auto_display_desc"
+                android:textSize="11sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tv_auto_display_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_auto_display_start"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_start_auto_display"
+                    android:backgroundTint="#A3BE8C"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_auto_display_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_stop"
+                    android:backgroundTint="#BF616A"/>
+            </LinearLayout>
+
+            <!-- ═══ PIPELINE FISSION (création VirtualDisplay cluster) ═══ -->
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="#D8DEE9" android:layout_marginVertical="12dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_title"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#3B4252"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_desc"
+                android:textSize="11sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tv_fission_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="11sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_via_binder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_sendinf_java"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="4dp"/>
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_pipeline"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_create"
+                    android:backgroundTint="#5E81AC"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_launch"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_launch"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="#FFFFFF"
+                    android:enabled="false"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 5. SNIFFER SYSTÈME (Reverse Engineering) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="32dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s5_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s5_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Status -->
+            <TextView
+                android:id="@+id/tv_re_sniffer_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_sniffer_inactive"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Start / Stop -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                <Button android:id="@+id/btn_re_sniffer_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_start" android:backgroundTint="#A3BE8C" android:layout_marginRight="4dp" />
-                <Button android:id="@+id/btn_re_sniffer_stop" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_stop" android:backgroundTint="#BF616A" />
+                <Button
+                    android:id="@+id/btn_re_sniffer_start"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_start"
+                    android:backgroundTint="#A3BE8C"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_re_sniffer_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_stop"
+                    android:backgroundTint="#BF616A"/>
             </LinearLayout>
 
-            
+            <!-- Snapshot on demand + Export -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btn_re_sniffer_snapshot" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_snapshot" android:backgroundTint="#5E81AC" android:layout_marginRight="4dp" />
-                <Button android:id="@+id/btn_re_sniffer_export" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_export_sniffer" android:backgroundTint="#88C0D0" />
+                <Button
+                    android:id="@+id/btn_re_sniffer_snapshot"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_snapshot"
+                    android:backgroundTint="#5E81AC"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_re_sniffer_export"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_export_sniffer"
+                    android:backgroundTint="#88C0D0"/>
             </LinearLayout>
         </LinearLayout>
 
-        
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="#ffffff" android:elevation="3dp" android:padding="16dp" android:layout_marginBottom="16dp" android:layout_marginHorizontal="4dp">
+        <!-- 7. TEST RESIZE DILINK5 (setTaskWindowingMode 4→5 + resizeTask FORCED=3) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s6_title" android:textSize="18sp" android:textColor="#3B4252" android:textStyle="bold" android:layout_marginBottom="6dp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_s6_desc" android:textSize="12sp" android:textColor="#4C566A" android:layout_marginBottom="12dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s7_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s7_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
 
-            <Button android:id="@+id/btn_cleanup_files" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/diag_btn_cleanup" android:backgroundTint="#BF616A" />
+            <TextView
+                android:id="@+id/tv_resize_diag_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="11sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
 
-            <TextView android:id="@+id/tv_cleanup_result" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textSize="12sp" android:textColor="#4C566A" android:text="" />
+            <!-- Bouton 1 : séquence exacte DiLink5 (4→5→resize FORCED=3) -->
+            <Button
+                android:id="@+id/btn_resize_dilink5_seq"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_resize_dilink5_seq"
+                android:backgroundTint="#5E81AC"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- Bouton 2 : resizeTask seul avec FORCED=3 (sans changement windowing) -->
+            <Button
+                android:id="@+id/btn_resize_forced_only"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_resize_forced_only"
+                android:backgroundTint="#88C0D0"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- Bouton 3 : inspecter la task actuelle (windowing mode, stack id, bounds) -->
+            <Button
+                android:id="@+id/btn_resize_inspect_task"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_resize_inspect_task"
+                android:backgroundTint="#434C5E"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="6dp"/>
+
+        </LinearLayout>
+
+        <!-- 6. NETTOYAGE STOCKAGE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s6_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s6_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btn_cleanup_files"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_btn_cleanup"
+                android:backgroundTint="#BF616A"/>
+
+            <TextView
+                android:id="@+id/tv_cleanup_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:text=""/>
 
         </LinearLayout>
 
 
-        
+        <!-- 7. ADAS DEBUG -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ADAS DEBUG [sendInfo]"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Activer ou désactiver le mode de diagnostic ADAS sur le Cluster"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                
+                <Button
+                    android:id="@+id/btn_adas_on"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="ADAS ON (47)"
+                    android:backgroundTint="#A3BE8C"
+                    android:layout_marginEnd="4dp"/>
+
+                <Button
+                    android:id="@+id/btn_adas_off"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="ADAS OFF (48)"
+                    android:backgroundTint="#BF616A"/>
+            </LinearLayout>
+
         </LinearLayout>
+
+    </LinearLayout>
 </ScrollView>
