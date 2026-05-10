@@ -188,11 +188,11 @@
     <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
     <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="btn_adjust">Moslash</string>
-    <string name="label_width_inset">Kenglik bo'shlig'i</string>
-    <string name="label_height_inset">Balandlik bo'shlig'i</string>
-    <string name="btn_apply">Qo'llash</string>
-    <string name="toast_grid_mode_enabled">To'r rejimi yoqildi</string>
-    <string name="toast_list_mode_enabled">Ro'yxat rejimi yoqildi</string>
-    <string name="toast_update_install_failed">O'rnatishda xatolik: </string>
+    <string name="label_width_inset">Kenglik bo\'shlig\'i</string>
+    <string name="label_height_inset">Balandlik bo\'shlig\'i</string>
+    <string name="btn_apply">Qo\'llash</string>
+    <string name="toast_grid_mode_enabled">To\'r rejimi yoqildi</string>
+    <string name="toast_list_mode_enabled">Ro\'yxat rejimi yoqildi</string>
+    <string name="toast_update_install_failed">O\'rnatishda xatolik: </string>
     <string name="app_state_auto">Avto</string>
 </resources>
