@@ -155,6 +155,18 @@ export default {
         "marker": "📺",
         "label": "Miroir",
         "text": "Affiche un aperçu en temps réel du contenu du tableau de bord dans DashCast."
+      },
+      {
+        "tone": "red",
+        "marker": "❌",
+        "label": "Croix Rouge (Force Stop)",
+        "text": "Arrête de forcer une application récalcitrante (tue le processus dans le système)."
+      },
+      {
+        "tone": "gray",
+        "marker": "🔲",
+        "label": "Vue Grille / Liste",
+        "text": "Vous pouvez basculer l'affichage des applications sous forme de liste classique ou de grille (icônes) via les options de l'application."
       }
     ]
   },
