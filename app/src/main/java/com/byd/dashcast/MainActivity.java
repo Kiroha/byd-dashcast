@@ -321,6 +321,7 @@ public class MainActivity extends AppCompatActivity
                 if (mServiceBound && mClusterService != null) {
                     // Chercher le taskId et ordonner l'update
                     int taskId = mClusterService.findRunningTaskId(mCurrentDashboardPkg);
+                    AdbLocalClient.executeShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
                     mClusterService.resizeActiveTask(taskId, mCurrentDashboardPkg);
                 }
             }

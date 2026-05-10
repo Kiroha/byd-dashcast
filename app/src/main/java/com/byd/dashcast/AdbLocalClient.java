@@ -1018,7 +1018,7 @@ public class AdbLocalClient {
                             "for t in $TASKS; do " +
                                 "(am task rm $t 2>/dev/null) || " +
                                 "(am stack remove $t 2>/dev/null) || " +
-                                "(CLASSPATH=$APK /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover $t > /dev/null 2>&1); " +
+                                "(export CLASSPATH=$APK; app_process / com.byd.dashcast.daemon.TaskRemover $t > /dev/null 2>&1); " +
                             "done; ";
                     
                     AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
