@@ -537,6 +537,20 @@ hr {
   font-size: 10px;
 }
 
+.cp-resize-panel {
+  padding: 8px 12px 4px;
+  background: #161b22;
+  border-top: 1px solid #1e2530;
+}
+
+.cp-resize-panel .slider-label {
+  color: #8b949e;
+}
+
+.cp-resize-panel .slider-val {
+  color: #58a6ff;
+}
+
 .mirror-area {
   display: flex;
   min-height: 70px;
@@ -812,6 +826,10 @@ hr {
 
 .ann-num.teal {
   background: #00695c;
+}
+
+.ann-num.orange {
+  background: #e65100;
 }
 
 .caption {
