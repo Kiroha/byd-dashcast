@@ -34,7 +34,7 @@ export default {
   },
   "firstLaunch": {
     "title": "2. Erster Start — Sprachauswahl",
-    "text": "Beim ersten Start erscheint der Begrüßungsbildschirm. Wählen Sie Ihre Sprache aus den verfügbaren Schaltflächen. Diese Auswahl wird gespeichert — Sie sehen diesen Bildschirm nicht erneut, es sei denn, Sie ändern die Sprache über das ⋮ Menü.",
+    "text": "Beim ersten Start erscheint der Begrüßungsbildschirm mit einem 4×3-Raster (3 Spalten × 4 Zeilen) für die 12 verfügbaren Sprachen. Tippen Sie auf die Schaltfläche Ihrer Sprache. Diese Auswahl wird gespeichert — der Bildschirm erscheint nicht erneut, es sei denn, Sie ändern die Sprache über ⋮ → 🌐 Sprache.",
     "welcomeSubtitle": "Dashboard Controller",
     "welcomeHint": "Choisissez votre langue\nBitte Sprache wählen",
     "caption": "Sprachauswahl — nur beim ersten Start angezeigt"
@@ -81,10 +81,10 @@ export default {
         "text": "Beendet die aktuelle Projektion, ohne das Original-BYD-Dashboard wiederherzustellen."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Original-Dashboard wiederherstellen",
-        "text": "Beendet die Projektion UND stellt das native BYD-Dashboard wieder her (Geschwindigkeit, Anzeigen…)."
+        "label": "Originalanzeige wiederherstellen (⋮ Menü)",
+        "text": "Über das ⋮ Menü erreichbar. Beendet die Projektion UND stellt das native BYD-Dashboard wieder her (Geschwindigkeit, Anzeigen, Reichweite…). Am Ende der Nutzung bevorzugt gegenüber 'Projektion beenden'."
       },
       {
         "tone": "gray",
@@ -96,7 +96,7 @@ export default {
         "tone": "gray",
         "marker": "⑥",
         "label": "App-Liste",
-        "text": "Alle installierten Apps. Antippen zum Projizieren, ✕ zum Schließen, ❌ zum vollständigen Beenden des Prozesses."
+        "text": "Tippen Sie auf eine App, um sie auf den Cluster zu projizieren. Langes Drücken → App anheften (⭐, wird an den Listenanfang verschoben). Das Kontrollkästchen 'Auto' markiert eine App für den automatischen Start: Sie wird gesendet, sobald die Projektion beginnt. Die Schaltfläche ✕ und die Pfeile ← / → erscheinen nur bei der aktuell aktiven App (im Cluster oder auf dem Hauptbildschirm)."
       }
     ]
   },
@@ -186,6 +186,10 @@ export default {
       "text": "Die Schaltfläche 📐 Anpassen zeigt zwei Schieberegler: Breitenrand und Höhenrand. Diese schneiden die Ränder des projizierten Bildes ab. Werte werden pro App gespeichert und bei jedem Start automatisch via wm overscan angewendet.",
       "note": "💡 Empfohlene Werte für Seal EU: Breite 80 px, Höhe 50 px."
     },
+    "relaunch": {
+      "title": "5.5 Neu starten (↺)",
+      "text": "Die ↺-Schaltfläche (orange) beendet die aktuell auf dem Cluster projizierte App erzwungen und startet sie sofort neu. Nützlich, wenn die App eingefroren ist oder die Anzeige auf dem Cluster blockiert ist."
+    },
     "split": {
       "title": "5.3 Split-Modus (⬛⬛ Split)",
       "text": "Tippen Sie auf ⬛⬛ Split, um das Cluster zwischen zwei Apps aufzuteilen:",
@@ -227,7 +231,7 @@ export default {
   },
   "settings": {
     "title": "7. Einstellungen",
-    "intro": "Öffnen Sie Einstellungen über ⋮ → ⚙️ Einstellungen. Der Bildschirm hat zwei Abschnitte:",
+    "intro": "Öffnen Sie die Einstellungen über ⋮ → ⚙️ Einstellungen. Der Bildschirm enthält drei Abschnitte:",
     "titleLabel": "Einstellungen",
     "clusterTypeLabel": "Cluster-Typ",
     "clusterOptions": [
@@ -240,6 +244,9 @@ export default {
     "verticalMarginLabel": "Oben / Unten:",
     "applyButton": "Jetzt anwenden",
     "resetButton": "Zurücksetzen (80 / 50)",
+    "updatesLabel": "Aktualisierungen",
+    "prereleaseLabel": "Vorabversionen einschließen (Alpha/Beta)",
+    "prereleaseHint": "Testversionen vor der offiziellen Veröffentlichung erhalten.",
     "caption": "Einstellungsseite",
     "type": {
       "title": "7.1 Cluster-Typ",
@@ -254,6 +261,10 @@ export default {
       ],
       "applyText": "Klicken Sie auf Jetzt anwenden, um das Ergebnis sofort zu sehen, falls eine App projiziert wird. Werte werden gespeichert.",
       "note": "💡 Empfohlene Standardwerte für Seal EU: Links/Rechts = 80 px, Oben/Unten = 50 px."
+    },
+    "updates": {
+      "title": "7.3 Aktualisierungen",
+      "text": "Aktivieren Sie 'Vorabversionen einschließen (Alpha/Beta)', um Testbuilds vor dem offiziellen Release zu erhalten. Für eine manuelle Prüfung: ⋮ → 🔄 Nach Aktualisierungen suchen. Updates werden direkt von GitHub Releases heruntergeladen — kein Play Store erforderlich."
     }
   },
   "tools": {
@@ -265,30 +276,14 @@ export default {
         "Beschreibung"
       ],
       "rows": [
-        [
-          "⚙️ Einstellungen",
-          "Cluster-Typ + globale Overscan-Einstellungen"
-        ],
-        [
-          "🔲 Raster / Liste",
-          "App-Anzeige zwischen Listenansicht und Rasteransicht umschalten (5 Spalten)"
-        ],
-        [
-          "🔧 Diagnose",
-          "Erweiterte Entwicklertools — ADB-Verbindung, Displays, Cluster-Bildschirmgröße, ADB-Sniffer"
-        ],
-        [
-          "📋 Systembericht",
-          "Vollständiger Bericht (Displays, BYD-APIs, Berechtigungen) — nützlich für Support"
-        ],
-        [
-          "📜 Logs",
-          "Echtzeit-Protokollbetrachter — Filter nach Tag/Level, Teilen per E-Mail oder Datei (Langes Drücken für Telegram)"
-        ],
-        [
-          "🌐 Sprache",
-          "Kehrt zum Sprachauswahlbildschirm zurück"
-        ]
+        ["⚙️ Einstellungen", "Öffnet die Einstellungen: Cluster-Typ, Globale Overscan-Ränder, Aktualisierungen (Vorabversionen)."],
+        ["🌐 Sprache", "Kehrt zum Sprachauswahlbildschirm zurück, um die Sprache der Benutzeroberfläche zu ändern."],
+        ["🔄 Nach Updates suchen", "Prüft, ob eine neue Version von DashCast auf GitHub verfügbar ist. Falls Vorabversionen in Einstellungen aktiviert, werden auch Alpha/Beta-Versionen angeboten."],
+        ["⊞ Rasteransicht / 📋 Listenansicht", "Schaltet die App-Liste zwischen Listenansicht (1 Spalte) und Rasteransicht (5 Spalten) um. Auch über die ⊞-Schaltfläche im Listenkopf erreichbar."],
+        ["Originalanzeige wiederherstellen", "Beendet die Projektion UND stellt das native BYD-Dashboard wieder her. Nur während einer Projektion aktiv."],
+        ["🔧 Diagnose", "Erweiterte Entwicklertools — ADB-Verbindung, VirtualDisplay-Erstellung, SurfaceFlinger-Analyse, Logcat-Sniffer für Reverse Engineering."],
+        ["📋 Systembericht", "Erstellt einen vollständigen Bericht (Displays, BYD APIs, Berechtigungen, Pakete) — nützlich für den Support oder Fehlerberichte."],
+        ["📜 Protokoll", "Echtzeit-Protokollansicht — nach Tag/Level filtern, per E-Mail oder Datei teilen."]
       ]
     },
     "logs": {
