@@ -1008,17 +1008,25 @@ public class AdbLocalClient {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
                 try (Dadb dadb = connect(context)) {
-                    // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping
+                    // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping.
+                    // On Android 10, dumpsys activity recents prints lines like:
+                    //   * Recent #0: TaskRecord{3a9c7f5 #42 A=com.example.app U=0 StackId=1 sz=1}
+                    // We extract the task ID (#42) using sed BRE — NOT grep -o (its \+ is unsupported
+                    // on Android's busybox grep). We also must NOT match the recents index (#0).
                     String apkPath = context.getPackageCodePath();
-                    String cleanRecentsCmd = 
-                            "APK=" + apkPath + "; " +
-                              "TASKS=$( (dumpsys activity recents ; dumpsys activity tasks) " +
-                              "| awk '/TaskRecord\\{|Task\\{/ { t=\\$0 } /" + packageName + "/ { print t }' " +
-                              "| grep -o '#[0-9]\\+' | tr -d '#' | sort -u); " +
+                    String cleanRecentsCmd =
+                            // 1. Find TaskRecord lines containing this package, extract the task ID
+                            //    (the number inside "TaskRecord{<hash> #<ID> ...}")
+                            "TASKS=$(dumpsys activity recents 2>/dev/null | grep 'TaskRecord' | grep -F '" + packageName + "' " +
+                            "| sed -n 's/.*TaskRecord{[^ ]* #\\([0-9]*\\).*/\\1/p' | sort -u); " +
+                            "echo \"[DashCast-recents] pkg=" + packageName + " tasks=$TASKS\"; " +
+                            // 2. Remove each task: try IActivityTaskManager.removeTask() via reflection
+                            //    (app_process, uid=2000 shell). Also try am task remove as OEM fallback.
                             "for t in $TASKS; do " +
-                                  "am task rm $t 2>/dev/null; " +
-                                  "am stack remove $t 2>/dev/null; " +
-                                  "(export CLASSPATH=$APK; /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover $t 2>&1); " +
+                            "  am task remove $t 2>/dev/null; " +
+                            "  export CLASSPATH=" + apkPath + "; " +
+                            "  /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover \"$t\" 2>/dev/null; " +
+                            "  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover \"$t\" 2>/dev/null; " +
                             "done; ";
                     
                     AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");

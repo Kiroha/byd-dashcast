@@ -256,7 +256,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
     private void startForegroundCompat() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(
-                CHANNEL, "Bouton miroir cluster", NotificationManager.IMPORTANCE_MIN));
+                CHANNEL, getString(R.string.notif_remote_channel_name), NotificationManager.IMPORTANCE_MIN));
 
         Intent tapIntent = new Intent(this, MainActivity.class);
         tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -266,7 +266,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
         Notification notif = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentTitle("DashCast")
-                .setContentText("📺 Miroir cluster actif")
+                .setContentText(getString(R.string.notif_remote_content))
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .build();
