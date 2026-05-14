@@ -188,4 +188,47 @@
     <string name="diag_88_stopping">Wird gestoppt…</string>
     <string name="diag_88_activated">Projektion gestartet ✅</string>
     <string name="diag_88_stopped">Projektion gestoppt ✅</string>
+
+
+    <!-- Auto-filled missing diag translations from base (Lot 1) -->
+    <string name="diag_adas_initial">ADAS : --</string>
+    <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
+    <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
+    <string name="diag_auto_starting">Démarrage AutoDisplayService…</string>
+    <string name="diag_auto_stopped">Arrêté : %s</string>
+    <string name="diag_auto_stopping">Arrêt AutoDisplayService…</string>
+    <string name="diag_btn_adas_hide">ADAS OFF (cmd=13)</string>
+    <string name="diag_btn_adas_show">ADAS ON (cmd=12)</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Reset overscan écran principal</string>
+    <string name="diag_btn_resize_dilink5_seq">Séquence DiLink5 (WM:4→5 + resize)</string>
+    <string name="diag_btn_resize_forced_only">resizeTask seul (FORCED=3)</string>
+    <string name="diag_btn_resize_inspect_task">Inspecter la task cluster</string>
+    <string name="diag_btn_restore_display">Restaurer display 1</string>
+    <string name="diag_btn_size_full">Plein écran</string>
+    <string name="diag_btn_size_restore">Restaurer</string>
+    <string name="diag_error_prefix">ERROR: </string>
+    <string name="diag_fission_binder_starting">Démarrage via IBinder direct…</string>
+    <string name="diag_fission_launching">Lancement dashboard (display %d)…</string>
+    <string name="diag_fission_no_display">❌ Aucun display cluster trouvé</string>
+    <string name="diag_fission_running">Fission en cours…</string>
+    <string name="diag_jni_display_released">sendInfo(16) OK — JNI probe en cours…</string>
+    <string name="diag_jni_fatal">FATAL : %s</string>
+    <string name="diag_jni_send16_failed">Échec sendInfo(16) : %s</string>
+    <string name="diag_launching_display1">Lancement display 1…</string>
+    <string name="diag_reset_main_overscan_done">Reset overscan écran principal OK</string>
+    <string name="diag_running">En cours…</string>
+    <string name="diag_s3_display1_initial">Display 1 : --</string>
+    <string name="diag_s3_initial">Résultat : --</string>
+    <string name="diag_s3_title">3. Taille d\'affichage (cmd 29/30/31)</string>
+    <string name="diag_s7_desc">Séquence DiLink5 : WM:4→5 + resizeTask(RESIZE_MODE_FORCED=3)</string>
+    <string name="diag_s7_title">7. Test resize DiLink5</string>
+    <string name="diag_sadas_desc">Commandes ADAS — sans effet sur le cluster 2D Seal EU</string>
+    <string name="diag_sadas_title">ADAS (cmd 12/13)</string>
+    <string name="diag_share_result2_btn">Partager le résultat</string>
+    <string name="diag_share_result3_btn">Partager le résultat</string>
+    <string name="diag_size_full_running">Test taille complète en cours…</string>
+    <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
+    <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
+    <string name="favorite_prefix">⭐ </string>
+    <string name="log_badge_label">LOG</string>
 </resources>
