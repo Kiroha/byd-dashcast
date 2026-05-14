@@ -37,7 +37,7 @@ public class FloatingRemoteButton extends Service {
 
     // ── Static helpers so MainActivity can show/hide without a Service reference ──
     @android.annotation.SuppressLint("StaticFieldLeak")
-    private static FloatingRemoteButton sInstance;
+    private static volatile FloatingRemoteButton sInstance;
 
     private android.os.Handler mDimHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable mDimRunnable = new Runnable() {
@@ -58,13 +58,11 @@ public class FloatingRemoteButton extends Service {
     public static void show() {
         FloatingRemoteButton inst = sInstance;
         if (inst != null && inst.mFloatView != null) {
-            inst.mFloatView.post(new Runnable() {
-                @Override public void run() {
-                    FloatingRemoteButton i = sInstance;
-                    if (i != null && i.mFloatView != null) {
-                        i.mFloatView.setVisibility(View.VISIBLE);
-                        i.triggerDimTimer();
-                    }
+            inst.mFloatView.post(() -> {
+                FloatingRemoteButton i = sInstance;
+                if (i != null && i.mFloatView != null) {
+                    i.mFloatView.setVisibility(View.VISIBLE);
+                    i.triggerDimTimer();
                 }
             });
         }
@@ -73,12 +71,10 @@ public class FloatingRemoteButton extends Service {
     public static void hide() {
         FloatingRemoteButton inst = sInstance;
         if (inst == null || inst.mFloatView == null) return;
-        inst.mFloatView.post(new Runnable() {
-            @Override public void run() {
-                FloatingRemoteButton i = sInstance;
-                if (i != null && i.mFloatView != null) {
-                    i.mFloatView.setVisibility(View.GONE);
-                }
+        inst.mFloatView.post(() -> {
+            FloatingRemoteButton i = sInstance;
+            if (i != null && i.mFloatView != null) {
+                i.mFloatView.setVisibility(View.GONE);
             }
         });
     }

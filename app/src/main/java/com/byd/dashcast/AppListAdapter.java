@@ -125,7 +125,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         
         // Indicate pinned state with a star prefix
         if (app.isFavorite) {
-            holder.tvName.setText("⭐ " + app.appName);
+            holder.tvName.setText(holder.tvName.getContext().getString(R.string.favorite_prefix) + app.appName);
             holder.tvName.setTextColor(Color.parseColor("#FFC107"));
         } else {
             holder.tvName.setText(app.appName);

@@ -104,7 +104,7 @@ public class FloatingLogButton extends Service {
 
         // Badge textuel compact
         final TextView badge = new TextView(this);
-        badge.setText("LOG");
+        badge.setText(getString(R.string.log_badge_label));
         badge.setTextColor(Color.WHITE);
         badge.setTextSize(11f);
         badge.setBackgroundColor(Color.argb(220, 20, 90, 180)); // bleu semi-transparent

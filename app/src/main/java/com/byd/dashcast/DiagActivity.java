@@ -644,7 +644,7 @@ public class DiagActivity extends AppCompatActivity {
             res.append("── am startservice ──\n").append(startResult).append("\n\n");
             runOnUiThread(() -> tvTest13Result.setText(res.toString()));
 
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             // 4. Vérifier les displays APRÈS
             String dispAfter = shellSync("dumpsys display | grep -E 'mDisplayId|mName|fission|remote_dash'");
@@ -831,9 +831,9 @@ public class DiagActivity extends AppCompatActivity {
                 res.append("→ Fallback shell...\n");
                 runOnUiThread(() -> tvFissionResult.setText(res.toString()));
                 shellSync("service call AutoContainer 2 i32 1000 i32 30 s16 \"\""); // workaround ADAS
-                try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
                 shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
-                try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
                 shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
                 res.append("  shell sendInfo(30→16→35) envoyés\n");
             }
@@ -842,14 +842,14 @@ public class DiagActivity extends AppCompatActivity {
             // ── Étape 2 : attendre 5s que Qt prépare son end-point JNI ──
             res.append("\n── Étape 2 : attendre 5s Qt end-point JNI ──\n");
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
-            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             // ── Étape 3 : démarrer AutoDisplayService ──
             res.append("\n── Étape 3 : am startservice AutoDisplayService ──\n");
             String startResult = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
             res.append(startResult.isEmpty() ? "❌ pas de réponse\n" : startResult + "\n");
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
-            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(3000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             // ── Étape 4 : vérifier les displays via DisplayManager Java (API 29) ──
             res.append("\n── Étape 4 : displays présents ──\n");
@@ -932,7 +932,7 @@ public class DiagActivity extends AppCompatActivity {
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // sleep(6s) — laisser Qt absorber sendInfo(30)
-            try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             res.append("── sendInfo(1000,16) → Qt projection plein écran ON ──\n");
             String r16 = shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\"");
@@ -940,7 +940,7 @@ public class DiagActivity extends AppCompatActivity {
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
 
             // sleep(6s) — Freedom: délai entre sendInfo(16) et sendInfo(35)
-            try { Thread.sleep(6000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             res.append("── sendInfo(1000,35) → Di4.0 mode / Qt enregistre Surface JNI ──\n");
             String r35 = shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\"");
@@ -954,7 +954,7 @@ public class DiagActivity extends AppCompatActivity {
             String startSvc = shellSync("am startservice com.xdja.containerservice/.AutoDisplayService");
             res.append(startSvc.isEmpty() ? "❌ startservice échoué" : startSvc).append("\n\n");
             runOnUiThread(() -> tvFissionResult.setText(res.toString()));
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
             // ── Étape 4 : vérifier les displays créés via DisplayManager Java ──
             DisplayManager dm2 = (DisplayManager) getSystemService(DISPLAY_SERVICE);
@@ -1359,7 +1359,7 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onError(String error) {
                 runOnUiThread(() -> {
                     btnResetMainOverscan.setEnabled(true);
-                    tvResetMainOverscanResult.setText("ERROR: " + error.trim());
+                    tvResetMainOverscanResult.setText(getString(R.string.diag_error_prefix) + error.trim());
                     AppLogger.e("Overscan", "reset -d 0 FAILED: " + error);
                 });
             }
@@ -1456,7 +1456,7 @@ public class DiagActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     sb.append("setTaskWindowingMode(4) : ❌ ").append(e.getMessage()).append("\n");
                 }
-                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(200); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
                 // 4. setTaskWindowingMode(taskId, 5, true) — FREEFORM
                 try {
@@ -1466,7 +1466,7 @@ public class DiagActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     sb.append("setTaskWindowingMode(5) : ❌ ").append(e.getMessage()).append("\n");
                 }
-                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(200); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
 
                 // 5. resizeTask(taskId, bounds, 3=RESIZE_MODE_FORCED)
                 try {
@@ -1541,7 +1541,7 @@ public class DiagActivity extends AppCompatActivity {
      * Utilise am stack list + am task info (shell) sans modifier quoi que ce soit.
      */
     private void runResizeInspectTask() {
-        tvResizeDiagResult.setText("Inspection en cours…");
+        tvResizeDiagResult.setText(getString(R.string.diag_running));
         btnResizeInspectTask.setEnabled(false);
 
         new Thread(() -> {

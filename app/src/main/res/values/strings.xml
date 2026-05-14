@@ -228,4 +228,8 @@
     <string name="diag_size_full_running">Test taille complète en cours…</string>
     <string name="diag_share_result2_btn">Partager le résultat</string>
     <string name="diag_share_result3_btn">Partager le résultat</string>
+    <!-- Externalized string literals (formerly hardcoded in Java) -->
+    <string name="diag_error_prefix">ERROR: </string>
+    <string name="favorite_prefix">⭐ </string>
+    <string name="log_badge_label">LOG</string>
 </resources>
