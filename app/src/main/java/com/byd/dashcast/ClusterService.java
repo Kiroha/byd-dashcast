@@ -140,23 +140,19 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
 
     public int getInsetH(String packageName) {
-        if (packageName == null || packageName.isEmpty()) {
-            return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                    .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        }
-        return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt("inset_h_" + packageName, getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H));
+        android.content.SharedPreferences prefs =
+                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+        int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+        if (packageName == null || packageName.isEmpty()) return defaultVal;
+        return prefs.getInt("inset_h_" + packageName, defaultVal);
     }
 
     public int getInsetV(String packageName) {
-        if (packageName == null || packageName.isEmpty()) {
-            return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                    .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        }
-        return getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt("inset_v_" + packageName, getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V));
+        android.content.SharedPreferences prefs =
+                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+        int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+        if (packageName == null || packageName.isEmpty()) return defaultVal;
+        return prefs.getInt("inset_v_" + packageName, defaultVal);
     }
 
 
@@ -164,9 +160,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void resizeActiveTask(int taskId, String packageName) {
         if (taskId <= 0) return;
         try {
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Object currentActivityThread = activityThreadClass.getMethod("currentActivityThread").invoke(null);
-            Object am = activityThreadClass.getMethod("getApplicationThread").invoke(currentActivityThread);
             Class<?> iAtmClass = Class.forName("android.app.IActivityTaskManager");
             Object iatm;
             try {

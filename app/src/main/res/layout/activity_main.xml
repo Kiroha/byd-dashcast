@@ -13,6 +13,14 @@
         android:background="#1A237E"
         android:padding="12dp">
 
+        <!-- Status dot: grey=off, yellow=pending, green=active -->
+        <View
+            android:id="@+id/view_status_dot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="8dp"
+            android:background="#888888"/>
+
         <TextView
             android:id="@+id/tv_dashboard_status"
             android:layout_width="0dp"
@@ -56,18 +64,7 @@
             android:layout_marginStart="6dp"
             android:backgroundTint="#B71C1C"/>
 
-        <Button
-            android:id="@+id/btn_origin_cluster"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="@string/btn_origin_cluster"
-            android:textSize="12sp"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:layout_marginStart="6dp"
-            android:backgroundTint="#2E7D32"/>
-
-        <!-- ⋮ : access dev tools (Activate, Diag, Report, Language, Live log) -->
+        <!-- ⋮ : settings + dev tools (Diag, Report, Log, Language, etc.) -->
         <Button
             android:id="@+id/btn_overflow"
             android:layout_width="36dp"
@@ -76,19 +73,66 @@
             android:textSize="18sp"
             android:padding="0dp"
             android:layout_marginStart="8dp"
-            android:contentDescription="Options"/>
+            android:contentDescription="@string/app_name"/>
     </LinearLayout>
 
-    <!-- ===== TITRE LISTE ===== -->
-    <TextView
-        android:id="@+id/tv_app_list_title"
+    <!-- ===== EN-TÊTE LISTE + BARRE DE RECHERCHE ===== -->
+    <LinearLayout
+        android:id="@+id/ll_app_list_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/title_app_list"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:padding="12dp"
-        android:background="#F5F5F5"/>
+        android:orientation="vertical">
+
+        <!-- Title row: label + list/grid toggle button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#F5F5F5"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/title_app_list"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
+            <Button
+                android:id="@+id/btn_view_toggle"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="⊞"
+                android:textSize="16sp"
+                android:padding="0dp"
+                android:backgroundTint="#DDDDDD"
+                android:textColor="#333333"
+                android:contentDescription="@string/menu_view_grid"/>
+
+        </LinearLayout>
+
+        <!-- Search bar -->
+        <EditText
+            android:id="@+id/et_search_apps"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:hint="@string/hint_search_apps"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:background="#E8E8E8"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:singleLine="true"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="8dp"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -121,7 +165,7 @@
             android:layout_height="match_parent"
             android:clickable="true"
             android:focusable="true"
-            android:contentDescription="Miroir cluster"/>
+            android:contentDescription="Miroir"/>
 
         <!-- Fallback screencap when SurfaceControl.createDisplay() fails (ROM permissions) -->
         <ImageView
@@ -132,7 +176,7 @@
             android:background="#090C10"
             android:clickable="true"
             android:focusable="true"
-            android:contentDescription="Screenshot miroir cluster"
+            android:contentDescription="Screenshot"
             android:visibility="gone"/>
 
         <TextView
@@ -145,6 +189,14 @@
             android:textSize="18sp"
             android:background="#090C10"
             android:visibility="gone"/>
+
+        <!-- Overlay: shows inset margins during resize adjustment -->
+        <com.byd.dashcast.InsetOverlayView
+            android:id="@+id/inset_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="false"
+            android:focusable="false"/>
 
     </FrameLayout>
 
@@ -160,7 +212,35 @@
         android:visibility="gone"
         android:layout_alignParentBottom="true">
 
-        <!-- Header: app name + hide button -->
+        <!-- Collapse strip: always visible, toggles controls below -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical"
+            android:background="#111111"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/btn_panel_toggle"
+                android:layout_width="60dp"
+                android:layout_height="22dp"
+                android:text="&#9660;"
+                android:textSize="10sp"
+                android:padding="0dp"
+                android:backgroundTint="#333333"
+                android:textColor="#AAAAAA"/>
+
+        </LinearLayout>
+
+        <!-- Collapsible controls (header row + resize zone) -->
+        <LinearLayout
+            android:id="@+id/panel_controls_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+        <!-- Header: app name + action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="40dp"
@@ -200,6 +280,18 @@
                 android:paddingEnd="10dp"
                 android:layout_marginEnd="6dp"
                 android:backgroundTint="#00838F"/>
+
+            <Button
+                android:id="@+id/btn_relaunch"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:text="&#8635;"
+                android:textSize="14sp"
+                android:padding="0dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#E65100"
+                android:textColor="#FFFFFF"
+                android:contentDescription="@string/btn_relaunch"/>
 
             <Button
                 android:id="@+id/btn_cluster_split"
@@ -300,6 +392,8 @@
                 android:textSize="12sp"
                 android:backgroundTint="#2EA043"/>
         </LinearLayout>
+
+        </LinearLayout> <!-- end panel_controls_content -->
 
     </LinearLayout>
 

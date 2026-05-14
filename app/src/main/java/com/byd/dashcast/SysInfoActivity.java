@@ -350,8 +350,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 Toast.LENGTH_LONG).show();
 
         // Display the path in the report itself
-        tvReport.append("\n\nFichier : " + outFile.getAbsolutePath()
-                + "\nCommande ADB : adb pull \"" + outFile.getAbsolutePath() + "\"");
+        tvReport.append(getString(R.string.sysinfo_file_saved, outFile.getAbsolutePath()));
     }
 
     // =========================================================================

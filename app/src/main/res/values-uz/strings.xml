@@ -75,16 +75,9 @@
     <string name="toast_write_error">Yozish xatosi: %1$s</string>
     <string name="toast_report_saved">Hisobot saqlandi:\n%1$s</string>
     <string name="diag_share_result1_btn">TEST 1 natijasini ulashish</string>
-    <string name="diag_share_result2_btn">TEST 2 natijasini ulashish</string>
-    <string name="diag_share_result3_btn">TEST 3 natijasini ulashish</string>
     <string name="diag_adb_connecting">localhost:5555 ga ulanmoqda…\n⏳ Oyna shu ekranda paydo boʻladi — RUXSAT BERISH tugmasini bosing.</string>
     <string name="diag_adb_connected">✅ Ulanish oʻrnatildi\n\n</string>
     <string name="diag_adb_failed">❌ Xato: %1$s\n\n→ ADB TCP debugging yoqilganini tekshiring\n  Sozlamalar → Dasturchi → USB debugging\n  (yoki ushbu ROMda Wireless Debugging)</string>
-    <string name="diag_adb_test1_hint">→ ADB ulanishiga ruxsat berish uchun avval TEST 1 ni ishga tushiring.</string>
-    <string name="diag_launching_display1">⏳ display 1 ishga tushirilmoqda…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ Standart oʻlcham tiklanmoqda (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ Klaster oʻlchamlari diagnostikasi…\ncmd=29 / cmd=30 / cmd=31 / wm size sinab koʻrilmoqda…\n(~8 soniya)</string>
     <string name="diag_sf_dumping">dumpsys SurfaceFlinger bajarilmoqda…</string>
     <string name="diag_sf_no_result">(natija yoʻq — koʻzgu SFda roʻyxatdan oʻtmagan)</string>
     <string name="diag_sf_error">Xato: %1$s</string>
@@ -100,10 +93,6 @@
     <string name="diag_s2_title">2. Daemon kiritish &amp; rendering</string>
     <string name="diag_s2_desc">DashCastDaemon.java ni ADB shell orqali app_process ichida ishga tushiradi: CAPTURE_VIDEO_OUTPUT ni meros oladi.</string>
     <string name="diag_btn_create_vd">VirtualDisplay yaratish (daemon kiritish)</string>
-    <string name="diag_s3_title">3. Klaster xususiyatlari</string>
-    <string name="diag_s3_initial">Displey oʻlchami</string>
-    <string name="diag_s3_display1_initial">Klaster displeyini tiklash</string>
-    <string name="diag_btn_restore_display">Displeyni tiklash</string>
     <string name="diag_s4_title">4. Tizim tahlili (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">dumpsys window displays ni ishga tushirish</string>
@@ -127,13 +116,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot hozir</string>
     <string name="diag_btn_export_sniffer">Eksport</string>
-    <string name="diag_auto_starting">ADB orqali ishga tushirilmoqda…</string>
-    <string name="diag_auto_stopping">ADB orqali toʻxtatilmoqda…</string>
-    <string name="diag_auto_stopped">STOP: %1$s</string>
-    <string name="diag_jni_display_released">Display boʻshatildi. JNI tekshirilmoqda…</string>
-    <string name="diag_jni_fatal">FATAL: %1$s</string>
-    <string name="diag_jni_send16_failed">16 yuborilmadi: %1$s</string>
-    <string name="diag_running">Diagnostika bajarilmoqda…</string>
     <string name="diag_dumpsys_running">adb local orqali bajarilmoqda…</string>
     <string name="diag_dumpsys_error">XATO:\n%1$s</string>
     <string name="diag_daemon_launching">daemon adb local orqali ishga tushirilmoqda…</string>
@@ -141,10 +123,6 @@
     <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
     <string name="diag_daemon_error">XATO: %1$s</string>
     <string name="diag_apk_path_error">APK path xatosi: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
-    <string name="diag_fission_running">Ketma-ketlik bajarilmoqda…</string>
-    <string name="diag_fission_no_display">❌ Fission display yoʻq. Avval « Fission Display yaratish » ni ishga tushiring.</string>
-    <string name="diag_fission_launching">display %1$d da ishga tushirilmoqda…</string>
     <string name="diag_sniffer_initializing">Boshlanmoqda…</string>
     <string name="diag_sniffer_active">FAOL → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ Init xatosi: %1$s</string>
@@ -154,15 +132,6 @@
     <string name="toast_snapshot_done">Snapshot faylga qoʻshildi.</string>
     <string name="toast_sniffer_no_file">Eksport qilish uchun sniffer fayli yoʻq.</string>
     <string name="toast_no_result_to_share">Ulashish uchun natija yoʻq.</string>
-    <string name="diag_btn_size_restore">RESTORE</string>
-    <string name="diag_btn_size_full">FULL TEST</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Asosiy ekran overscanini reset qilish (display 0)</string>
-    <string name="diag_reset_main_overscan_done">display 0 overscani reset qilindi — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. DiLink5 Resize testi (IATM)</string>
-    <string name="diag_s7_desc">DiLink5 Dashboard ketma-ketligini tekshiradi: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) activity_task ustida raw Binder orqali. Mavjud proyeksiya kodiga tegmaydi. Avval asosiy panel orqali klasterda ilova ishga tushiring.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 ketma-ketligi (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ Faqat resizeTask FORCED=3 (WM oʻzgarmaydi)</string>
-    <string name="diag_btn_resize_inspect_task">🔍 Klaster taskini tekshirish (windowing + bounds)</string>
     <string name="diag_s6_title">6. Xotirani tozalash</string>
     <string name="diag_s6_desc">DashCast yaratgan jurnal va hisobot fayllarini oʻchiradi: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Xotiradagi jurnal buferini ham tozalaydi. ADB kalitlari (adb.key / adb.pub) OʻCHIRILMAYDI.</string>
     <string name="diag_btn_cleanup">🗑️ Trace fayllarni oʻchirish</string>
@@ -181,12 +150,6 @@
     <string name="ota_up_to_date">DashCast yangilangan</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
-    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. No visible effect on Seal EU (2D cluster).</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">Sending cmd %1$d2026</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="btn_adjust">Moslash</string>
     <string name="label_width_inset">Kenglik bo\'shlig\'i</string>
     <string name="label_height_inset">Balandlik bo\'shlig\'i</string>
@@ -194,5 +157,25 @@
     <string name="toast_grid_mode_enabled">To\'r rejimi yoqildi</string>
     <string name="toast_list_mode_enabled">Ro\'yxat rejimi yoqildi</string>
     <string name="toast_update_install_failed">O\'rnatishda xatolik: </string>
-    <string name="app_state_auto">Avto</string>
+    <string name="app_state_auto">Avto</string>    <string name="ota_btn_update_now">Hozir yangilash</string>
+    <string name="ota_btn_later">Keyinroq</string>
+    <string name="ota_downloading">Yuklanmoqda…</string>
+    <string name="notif_log_channel_name">Faollik jurnali</string>
+    <string name="notif_log_content">Jurnal faol — ochish uchun bosing</string>
+    <string name="notif_remote_channel_name">Klaster ko\'zgu tugmasi</string>
+    <string name="notif_remote_content">📺 Klaster ko\'zgusi faol</string>
+    <string name="sysinfo_file_saved">\n\nFayl: %1$s\nADB buyrug\'i: adb pull \"%1$s\"</string>
+    <string name="menu_view_grid">⊞ To\'r rejimi</string>
+    <string name="menu_view_list">📋 Ro\'yxat rejimi</string>
+    <string name="hint_search_apps">Dastur qidirish…</string>
+    <string name="tooltip_tap_send">Klasterga yuborish uchun ilovaga bosing</string>
+    <string name="split_btn_exit">↩ Toʻliq ekran</string>
+    <string name="confirm_kill_title">Ilovani toʻxtatish?</string>
+    <string name="confirm_kill_msg">%1$s ni majburiy toʻxtatish?</string>
+    <string name="confirm_kill_ok">Toʻxtatish</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Klaster mavjud emas — qayta urinib koʻring</string>
+    <string name="dialog_reconnect_title">Ilovani qayta ishga tushirish?</string>
+    <string name="dialog_reconnect_msg">%1$s ni klasterda qayta ishga tushirish?</string>
+    <string name="dialog_reconnect_yes">↺ Qayta ishga tushirish</string>
 </resources>
