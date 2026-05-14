@@ -139,16 +139,6 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- Trampoline display 1 — NEUTRALIZED (v0.1.41+): finishes immediately, launches nothing.
-             exported=false: no external component needs to launch it. -->
-        <activity
-            android:name=".dashboard.ClusterTrampolineActivity"
-            android:exported="false"
-            android:launchMode="standard"
-            android:taskAffinity="com.byd.dashcast.cluster"
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
-
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"

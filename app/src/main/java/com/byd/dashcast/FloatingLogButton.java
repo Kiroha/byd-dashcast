@@ -57,7 +57,9 @@ public class FloatingLogButton extends Service {
     public void onDestroy() {
         super.onDestroy();
         if (mFloatView != null) {
-            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {}
+            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {
+                AppLogger.d(TAG, "removeView skipped (view already detached): " + ignored.getMessage());
+            }
             mFloatView = null;
         }
     }

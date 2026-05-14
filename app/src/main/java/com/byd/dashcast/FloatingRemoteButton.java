@@ -106,7 +106,9 @@ public class FloatingRemoteButton extends Service {
         super.onDestroy();
         sInstance = null;
         if (mFloatView != null) {
-            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {}
+            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {
+                AppLogger.d(TAG, "removeView skipped (view already detached): " + ignored.getMessage());
+            }
             mFloatView = null;
         }
     }
@@ -230,7 +232,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                                     params.x = (Integer) animation.getAnimatedValue();
                                     try {
                                         if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params);
-                                    } catch (Exception ignored) {}
+                                    } catch (Exception ignored) {
+                                        AppLogger.d(TAG, "updateViewLayout skipped: " + ignored.getMessage());
+                                    }
                                 }
                             });
                             anim.start();

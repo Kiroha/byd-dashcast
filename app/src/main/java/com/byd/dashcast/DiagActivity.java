@@ -1389,7 +1389,9 @@ public class DiagActivity extends AppCompatActivity {
                 // ActivityManager.RunningTaskInfo (base class) has displayId since API 29 hidden
                 java.lang.reflect.Field dispField = null;
                 try { dispField = t.getClass().getField("displayId"); } catch (NoSuchFieldException e2) {
-                    try { dispField = t.getClass().getSuperclass().getField("displayId"); } catch (Exception e3) {}
+                    try { dispField = t.getClass().getSuperclass().getField("displayId"); } catch (Exception e3) {
+                    AppLogger.d("ResizeDiag", "displayId field not found in superclass: " + e3.getMessage());
+                }
                 }
                 if (dispField == null) continue;
                 int dId = (int) dispField.get(t);
@@ -1416,7 +1418,7 @@ public class DiagActivity extends AppCompatActivity {
      *   resizeTask(taskId, bounds, 3)           [RESIZE_MODE_FORCED]
      */
     private void runResizeDilink5Seq() {
-        tvResizeDiagResult.setText("En cours…");
+        tvResizeDiagResult.setText(getString(R.string.diag_running));
         btnResizeDilink5Seq.setEnabled(false);
         btnResizeForcedOnly.setEnabled(false);
 
@@ -1497,7 +1499,7 @@ public class DiagActivity extends AppCompatActivity {
      * Permet de tester si le problème vient du resizeMode ou du windowing mode.
      */
     private void runResizeForcedOnly() {
-        tvResizeDiagResult.setText("En cours…");
+        tvResizeDiagResult.setText(getString(R.string.diag_running));
         btnResizeDilink5Seq.setEnabled(false);
         btnResizeForcedOnly.setEnabled(false);
 

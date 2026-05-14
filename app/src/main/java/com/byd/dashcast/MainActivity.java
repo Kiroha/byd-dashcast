@@ -1494,7 +1494,9 @@ public class MainActivity extends AppCompatActivity
             popup.getMenu().getClass()
                     .getDeclaredMethod("setGroupDividerEnabled", boolean.class)
                     .invoke(popup.getMenu(), true);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            AppLogger.d(TAG, "setGroupDividerEnabled unavailable: " + ignored.getMessage());
+        }
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
