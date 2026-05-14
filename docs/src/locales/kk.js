@@ -9,17 +9,17 @@ export default {
   "sections": [
     "1. Шолу",
     "2. Бірінші іске қосу — тілді таңдау",
-    "3. Негізгі экран",
-    "4. Қолданбаны аспаптар панеліне шығару",
-    "5. Проекция кезінде — басқару панелі",
-    "6. Проекцияны тоқтату",
-    "7. Баптаулар",
-    "8. ⋮ мәзірі — қосымша құралдар",
-    "9. FAQ және ақауларды жою"
+    "3. Басты экран",
+    "4. Қосымшаны бортты дисплейге шығару",
+    "5. Шығару кезінде — Басқару тақтасы",
+    "6. Шығаруды тоқтату",
+    "7. Параметрлер",
+    "8. ⋮ мәзірі — Қосымша құралдар",
+    "9. FAQ және ақаулықтарды жою"
   ],
   "overview": {
     "title": "1. Шолу",
-    "text": "DashCast — мультимедиа экранындағы кез келген қолданбаны BYD көлігіңіздің цифрлық аспаптар панеліне шығаруға мүмкіндік беретін Android қолданбасы. Навигация, музыка, видео — орталық экранда жұмыс істейтіннің бәрін жүргізуші алдындағы дисплейге бағыттауға болады.",
+    "text": "DashCast — BYD-дің цифрлық аспаптар тақтасына инфотейнмент экранынан кез келген қосымшаны шығаруға мүмкіндік беретін Android қосымшасы. Навигация, музыка, бейне — орталық экранда жұмыс істейтіннің барлығын жүргізуші алдындағы кластерге бағыттауға болады.",
     "bullets": [
       "✅ Compatible BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
       "✅ Aucune modification système nécessaire",
@@ -30,273 +30,268 @@ export default {
       "✅ Affichage en mode Grille ou Liste",
       "✅ Force-stop d'urgence (Croix Rouge) par application"
     ],
-    "note": "💡 Алғышарт: Баптаулар → Әзірлеуші параметрлері → Сымсыз debugging (немесе «ADB over network») бөлімінде ADB TCP debugging қосыңыз. Бұл бір рет жасалады. DashCast алғаш іске қосылғанда “Allow USB debugging?” терезесі шығады — Always allow from this computer түймесін басыңыз."
+    "note": "💡 Алғышарт: Параметрлер → Әзірлеуші параметрлері → Сымсыз жөндеу (немесе «Желі арқылы ADB») ішінен ADB TCP жөндеуді қосыңыз. Бұл бір рет жасалуы керек. DashCast-ты бірінші рет іске қосқанда «USB жөндеуге рұқсат беру?» терезесі шығады — Осы компьютерге әрдайым рұқсат ет деп басыңыз."
   },
   "firstLaunch": {
     "title": "2. Бірінші іске қосу — тілді таңдау",
-    "text": "Бірінші іске қосқанда сәлемдесу экраны көрсетіледі. Тілді таңдау үшін он түйменің бірін басыңыз. Таңдау сақталады — тілді ⋮ мәзірінен өзгертпейінше, бұл экран қайта шықпайды.",
-    "welcomeSubtitle": "Аспаптар панелі контроллері",
-    "welcomeHint": "Тілді таңдаңыз\nPlease select your language",
-    "caption": "Тілді таңдау экраны — тек бірінші іске қосқанда көрсетіледі"
+    "text": "Бірінші іске қосқанда 12 қолжетімді тілді 4×3 торда (3 баған × 4 жол) ұсынатын қарсы алу экраны пайда болады. Тіліңізді таңдау үшін тілдік батырманы басыңыз. Бұл таңдау сақталады — ⋮ → 🌐 Тіл мәзірі арқылы тілді өзгерткенше экран қайта пайда болмайды.",
+    "welcomeSubtitle": "Dashboard Controller",
+    "welcomeHint": "Choisissez votre langue\nPlease select your language",
+    "caption": "Тілді таңдау экраны — тек бірінші іске қосқанда пайда болады"
   },
   "main": {
-    "title": "3. Écran principal",
-    "text": "L'écran principal est composé de deux zones : une barre de statut en haut (fond bleu foncé) et une liste d'applications installées en dessous. Vous pouvez basculer entre affichage en liste classique ou en grille (icônes) via le menu ⋮.",
-    "status": "① Dashboard : non connecté",
+    "title": "3. Басты экран",
+    "text": "Басты экран екі аймақтан тұрады: жоғарыда күй жолағы (қою көк фон) және төменде орнатылған қосымшалар тізімі. Тізім мен тор (белгішелер) арасын ауыстыру ⋮ мәзірі арқылы қолжетімді.",
+    "status": "① Бортты дисплей: қосылмаған",
     "buttons": [
-      "② Activer Projection",
-      "③ Arrêter Projection",
-      "④ Restaurer Dashboard d'origine",
+      "② Шығаруды белсендіру",
+      "③ Шығаруды тоқтату",
+      "④ Бастапқы панельді қалпына келтіру",
       "⑤ ⋮",
       "✕",
       "✕",
       "✕",
       "✕"
     ],
-    "listTitle": "⑥ Applications installées",
+    "listTitle": "⑥ Орнатылған қосымшалар",
     "apps": [
       "Maps",
       "YouTube",
       "Spotify",
       "Waze"
     ],
-    "caption": "Écran principal — aucune application projetée (état initial)",
+    "caption": "Басты экран — ешбір қосымша шығарылмаған (бастапқы күй)",
     "annotations": [
       {
         "tone": "",
         "marker": "①",
-        "label": "Statut",
-        "text": "Indique l'état de la connexion au tableau de bord. Passe à « Dashboard : [NomApp] » quand une application est active."
+        "label": "Күй",
+        "text": "Бортты дисплейге қосылу күйін көрсетеді. Қосымша белсенді болған кезде «Бортты дисплей: [ҚосымшаАты]» болып өзгереді."
       },
       {
         "tone": "",
         "marker": "②",
-        "label": "Activer Projection",
-        "text": "Établit la connexion avec le cluster et prépare l'envoi d'une application. À appuyer en premier."
+        "label": "Шығаруды белсендіру",
+        "text": "Кластермен байланыс орнатады және қосымшаны жіберуге дайындайды. Алдымен осыны басыңыз."
       },
       {
         "tone": "red",
         "marker": "③",
-        "label": "Arrêter Projection",
-        "text": "Ferme la projection en cours sans restaurer le tableau de bord d'origine BYD."
+        "label": "Шығаруды тоқтату",
+        "text": "BYD бастапқы аспаптар тақтасын қалпына келтірмей ағымдағы шығаруды жабады."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Restaurer Dashboard d'origine",
-        "text": "Ferme la projection ET réaffiche le tableau de bord BYD natif (vitesse, jauges…)."
+        "label": "Бастапқы панельді қалпына келтіру (⋮ мәзірі)",
+        "text": "⋮ мәзірі арқылы қолжетімді. Шығаруды ТОҚТАТАДЫ және BYD бастапқы аспаптар тақтасын қалпына келтіреді (жылдамдық, датчиктер, жүріс қоры…). Пайдалану соңында «Шығаруды тоқтату» орнына артықшылықты."
       },
       {
         "tone": "gray",
         "marker": "⑤",
-        "label": "Menu ⋮",
-        "text": "Accès aux Paramètres, Diagnostic, Rapport système, Logs, changement de langue et bascule Grille/Liste."
+        "label": "⋮ мәзірі",
+        "text": "Параметрлерге, Диагностикаға, Жүйелік есепке, Журналға, тілді өзгертуге және Тор/Тізім ауысуына кіру."
       },
       {
         "tone": "gray",
         "marker": "⑥",
-        "label": "Liste des applications",
-        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ✕ pour la fermer, ❌ pour forcer l'arrêt complet du processus."
+        "label": "Қосымшалар тізімі",
+        "text": "Кластерге жіберу үшін қосымшаны басыңыз. Ұзақ басу → бекіту (⭐, тізім басына). «Авто» жалаушасы қосымшаны автоматты іске қосуға белгілейді: шығару басталысымен автоматты жіберіледі. ✕ пен ← / → тек белсенді қосымшада пайда болады."
       }
     ]
   },
   "projection": {
-    "title": "4. Projeter une application sur le tableau de bord",
+    "title": "4. Қосымшаны бортты дисплейге шығару",
     "steps": [
-      "Appuyez sur « Activer Projection » (bouton bleu en haut). Le statut passe à « Démarrage cluster… ». La connexion ADB locale s'établit et le cluster passe en mode projection.",
-      "Tapez sur l'application souhaitée dans la liste. DashCast déplace l'application vers le display du tableau de bord. Le statut passe à « Dashboard : [Nom de l'app] ».",
-      "Le panneau de contrôle apparaît en bas de l'écran. Les valeurs d'overscan sauvegardées pour cette application sont appliquées automatiquement."
+      "«Шығаруды белсендіру» (жоғарыдағы көк батырма) батырмасын басыңыз. Күй «Кластерді іске қосу…» болып өзгереді. Жергілікті ADB байланысы орнатылады және кластер шығару режиміне өтеді.",
+      "Тізімдегі қажетті қосымшаны басыңыз. DashCast қосымшаны аспаптар тақтасының дисплейіне жылжытады. Күй «Бортты дисплей: [Қосымша атауы]» болып өзгереді.",
+      "Басқару тақтасы экранның төменгі жағында пайда болады. Осы қосымша үшін сақталған overscan мәндері автоматты түрде қолданылады."
     ],
-    "activeStatus": "Dashboard : Maps ✓",
+    "activeStatus": "Бортты дисплей: Maps ✓",
     "buttons": [
-      "Activer Projection",
-      "📺 Miroir",
-      "Arrêter Projection",
-      "Restaurer Dashboard d'origine",
+      "Шығаруды белсендіру",
+      "📺 Айна",
+      "Шығаруды тоқтату",
+      "Бастапқы панельді қалпына келтіру",
       "⋮",
-      "← Principal",
+      "← Басты экран",
       "✕",
-      "→ Cluster",
+      "→ Кластер",
       "✕",
-      "→ Cluster",
+      "→ Кластер",
       "✕",
-      "📐 Ajuster",
-      "⬛⬛ Split",
-      "Masquer ▼"
+      "📐 Реттеу",
+      "⬛⬛ Бөлу",
+      "Жасыру ▼"
     ],
-    "listTitle": "Applications installées",
+    "listTitle": "Орнатылған қосымшалар",
     "apps": [
       "Maps",
       "YouTube",
       "Spotify"
     ],
-    "controlLabel": "Contrôle cluster",
+    "controlLabel": "Кластер басқармасы",
     "controlApp": "Maps",
-    "mirrorText": "Affichage actif sur le cluster ✓",
-    "caption": "Écran principal — Maps est projetée sur le tableau de bord",
+    "mirrorText": "Кластерде белсенді ✓",
+    "caption": "Басты экран — Maps бортты дисплейге шығарылуда",
     "annotations": [
       {
         "tone": "green",
         "marker": "●",
-        "label": "Barre verte",
-        "text": "Indicateur visuel sur chaque item : l'app est actuellement sur le cluster."
+        "label": "Жасыл жолақ",
+        "text": "Визуалды индикатор: қосымша қазір кластерде."
       },
       {
         "tone": "",
         "marker": "→",
-        "label": "→ Cluster",
-        "text": "Envoie une autre application sur le cluster (remplace celle en cours)."
+        "label": "→ Кластер",
+        "text": "Басқа қосымшаны кластерге жіберу (ағымдағысын ауыстырады)."
       },
       {
         "tone": "gray",
         "marker": "←",
-        "label": "← Principal",
-        "text": "Renvoie l'application vers l'écran central (la retire du cluster)."
+        "label": "← Басты экран",
+        "text": "Қосымшаны орталық экранға қайтару (кластерден алып тастау)."
       },
       {
         "tone": "teal",
         "marker": "📺",
-        "label": "Miroir",
-        "text": "Affiche un aperçu en temps réel du contenu du tableau de bord dans DashCast."
+        "label": "Айна",
+        "text": "DashCast-та бортты дисплейдің нақты уақыттағы көшірмесін көрсетеді."
       },
       {
         "tone": "red",
         "marker": "❌",
-        "label": "Croix Rouge (Force Stop)",
-        "text": "Force l'arrêt complet du processus d'une application bloquée et la retire des Récents."
+        "label": "Қызыл крест (Force Stop)",
+        "text": "Іліп қалған қосымшаны мәжбүрлеп тоқтатады және Жақынды тазартады."
       },
       {
         "tone": "gray",
         "marker": "🔲",
-        "label": "Vue Grille / Liste",
-        "text": "Basculez l'affichage entre liste classique et grille d'icônes via le menu ⋮."
+        "label": "Тор / Тізім",
+        "text": "⋮ мәзірі арқылы тізім мен тор арасын ауыстыру."
       }
     ]
   },
   "control": {
-    "title": "5. Pendant la projection — Panneau de contrôle",
-    "intro": "Lorsqu'une application est active sur le cluster, un panneau sombre apparaît en bas de l'écran principal avec quatre fonctionnalités :",
+    "title": "5. Шығару кезінде — Басқару тақтасы",
+    "intro": "Кластерде қосымша белсенді болған кезде, басты экранның төменгі жағында төрт функциясы бар қара тақта пайда болады:",
     "mirror": {
-      "title": "5.1 Miroir (📺 Miroir)",
-      "text": "Appuyez sur 📺 Miroir dans la barre de statut pour afficher une copie du tableau de bord directement dans DashCast. Vous pouvez interagir avec cette copie par toucher — les événements sont transmis au cluster.",
-      "note": "Le miroir utilise SurfaceControl pour capturer le display. Si le miroir ne s'affiche pas, un screenshot automatique toutes les 2 secondes prend le relais."
+      "title": "5.1 Айна (📺 Айна)",
+      "text": "DashCast-та бортты дисплейдің көшірмесін көру үшін күй жолағындағы 📺 Айна батырмасын басыңыз. Оны сенсормен басу арқылы өзара әрекеттесе аласыз — оқиғалар кластерге жіберіледі.",
+      "note": "Айна дисплейді түсіру үшін SurfaceControl пайдаланады. Айна көрсетілмесе, ауыстырып қосу ретінде 2 секунд сайын автоматты скриншот жасалады."
     },
     "resize": {
-      "title": "5.2 Ajuster (📐 Overscan par application)",
-      "text": "Le bouton 📐 Ajuster affiche deux curseurs : Marge Largeur et Marge Hauteur. Ces valeurs rognent les bords de l'image projetée sur le cluster. Elles sont sauvegardées individuellement pour chaque application et ré-appliquées automatiquement à chaque lancement via wm overscan.",
-      "note": "💡 Valeurs recommandées pour le Seal EU : Largeur 80 px, Hauteur 50 px."
+      "title": "5.2 Реттеу (📐 Қосымша бойынша Overscan)",
+      "text": "📐 Реттеу батырмасы екі сырғытпаны ашады: Ені бойынша шеті және Биіктігі бойынша шеті. Бұл мәндер кластерге шығарылатын кескіннің жиектерін кесіп алады. Әр қосымша үшін жеке сақталады және әр іске қосқанда автоматты қолданылады.",
+      "note": "💡 Seal EU үшін ұсынылатын мәндер: Ені 80 пкс, Биіктігі 50 пкс."
+    },
+    "relaunch": {
+      "title": "5.5 Қайта іске қосу (↺)",
+      "text": "↺ (қызғылт сары) батырмасы кластерге шығарылып жатқан қосымшаны мәжбүрлеп тоқтатады, содан кейін бірден қайта іске қосады. Қосымша іліп қалса немесе кластерде дисплей блокталса пайдалы."
     },
     "split": {
-      "title": "5.3 Mode Split (⬛⬛ Split)",
-      "text": "Appuyez sur ⬛⬛ Split pour partager le tableau de bord entre deux applications :",
+      "title": "5.3 Бөлу режимі (⬛⬛ Бөлу)",
+      "text": "Бортты дисплейді екі қосымша арасында бөлу үшін ⬛⬛ Бөлу батырмасын басыңыз:",
       "items": [
-        "Plein écran — Une seule app occupe tout le cluster",
-        "⬜⬛ Gauche (50 %) — L'app principale à gauche, la seconde à droite",
-        "⬛⬜ Droite (50 %) — L'app principale à droite"
+        "Толық экран — бір қосымша бүкіл кластерді алады",
+        "⬜⬛ Сол жақ (50%) — негізгі қосымша солда, екіншісі оңда",
+        "⬛⬜ Оң жақ (50%) — негізгі қосымша оңда"
       ],
-      "extra": "En mode Split, une deuxième application peut être sélectionnée dans la liste. Elle occupera l'autre moitié du cluster."
+      "extra": "Бөлу режимінде тізімнен екінші қосымшаны таңдауға болады. Ол кластердің екінші жартысын алады."
     },
     "hide": {
-      "title": "5.4 Masquer le panneau",
-      "text": "Appuyez sur Masquer ▼ pour replier le panneau de contrôle et retrouver la liste complète des applications."
+      "title": "5.4 Тақтаны жасыру",
+      "text": "Басқару тақтасын жиып, қосымшалардың толық тізіміне оралу үшін Жасыру ▼ батырмасын басыңыз."
     }
   },
   "stopping": {
-    "title": "6. Arrêter la projection",
-    "intro": "Deux boutons permettent d'arrêter la projection :",
+    "title": "6. Шығаруды тоқтату",
+    "intro": "Шығаруды тоқтатудың екі жолы:",
     "table": {
       "headers": [
-        "Bouton",
-        "Comportement",
-        "Quand l'utiliser"
+        "Батырма",
+        "Мінез-құлық",
+        "Қашан пайдалану керек"
       ],
       "rows": [
         [
-          "Arrêter Projection",
-          "Coupe la projection. Le tableau de bord reste vide (noir).",
-          "Si vous souhaitez juste stopper l'affichage provisoirement."
+          "Шығаруды тоқтату",
+          "Шығаруды тоқтатады. Бортты дисплей бос (қара) болып қалады.",
+          "Дисплейді уақытша тоқтату қажет болса."
         ],
         [
-          "Restaurer Dashboard d'origine",
-          "Coupe la projection ET réactive l'affichage BYD natif (vitesse, autonomie, jauges…).",
-          "En fin d'utilisation — pour retrouver le tableau de bord BYD normal."
+          "Бастапқы панельді қалпына келтіру",
+          "Шығаруды тоқтатады ЖӘНЕ BYD бастапқы аспаптар тақтасын қалпына келтіреді (жылдамдық, жүріс қоры, датчиктер…).",
+          "Пайдалану соңында — BYD қалыпты аспаптар тақтасына оралу үшін."
         ]
       ]
     },
-    "warning": "⚠️ Si vous quittez DashCast sans appuyer sur l'un de ces boutons, la projection reste active sur le cluster jusqu'au prochain redémarrage du service."
+    "warning": "⚠️ Осы батырмаларды баспай DashCast-тан шықсаңыз, сервис қайта іске қосылғанша шығару кластерде белсенді болып қала береді."
   },
   "settings": {
-    "title": "7. Paramètres",
-    "intro": "Accédez aux Paramètres via le menu ⋮ → ⚙️ Paramètres. L'écran contient deux sections :",
-    "titleLabel": "Paramètres",
-    "clusterTypeLabel": "Type de cluster",
+    "title": "7. Параметрлер",
+    "intro": "Параметрлерді ⋮ → ⚙️ Параметрлер арқылы ашыңыз. Экранда үш бөлім бар:",
+    "titleLabel": "Параметрлер",
+    "clusterTypeLabel": "Кластер түрі",
     "clusterOptions": [
-      "8,8 pouces (cmd=29)",
-      "12,3 pouces (cmd=30) — Seal EU",
-      "10,25 pouces (cmd=31)"
+      "8,8 дюйм (cmd=29)",
+      "12,3 дюйм (cmd=30) — Seal EU",
+      "10,25 дюйм (cmd=31)"
     ],
-    "marginsLabel": "Marges d'affichage (overscan global)",
-    "horizontalMarginLabel": "Gauche / Droite :",
-    "verticalMarginLabel": "Haut / Bas :",
-    "applyButton": "Appliquer maintenant",
-    "resetButton": "Réinitialiser (80 / 50)",
-    "caption": "Page Paramètres",
+    "marginsLabel": "Дисплей шеттері (жаһандық overscan)",
+    "horizontalMarginLabel": "Сол / Оң:",
+    "verticalMarginLabel": "Жоғары / Төмен:",
+    "applyButton": "Қолдану",
+    "resetButton": "Қалпына келтіру (80 / 50)",
+    "updatesLabel": "Жаңартулар",
+    "prereleaseLabel": "Алдын ала шығарылым нұсқаларын қосу (альфа/бета)",
+    "prereleaseHint": "Ресми шығарылымға дейін сынақ нұсқаларын алыңыз.",
+    "caption": "Параметрлер беті",
     "type": {
-      "title": "7.1 Type de cluster",
-      "text": "Sélectionnez la taille de l'écran de votre tableau de bord. Pour le BYD Seal EU, sélectionnez 12,3 pouces (cmd=30). Ce réglage détermine la commande envoyée au cluster lors de l'activation."
+      "title": "7.1 Кластер түрі",
+      "text": "Аспаптар тақтаңыздың экран өлшемін таңдаңыз. BYD Seal EU үшін 12,3 дюйм (cmd=30) таңдаңыз. Бұл параметр белсендіру кезінде кластерге жіберілетін командаларды анықтайды."
     },
     "margins": {
-      "title": "7.2 Marges d'affichage globales (overscan)",
-      "text": "Réglez les marges pour cadrer parfaitement le contenu dans la zone visible de l'écran. Ces marges s'appliquent globalement. Pour des réglages par application, utilisez le bouton 📐 Ajuster dans le panneau de contrôle.",
+      "title": "7.2 Жаһандық дисплей шеттері (overscan)",
+      "text": "Экранның көрінетін аймағында мазмұнды мінсіз кадрлау үшін шеттерді реттеңіз. Жаһандық түрде қолданылады. Қосымша бойынша реттеу үшін басқару тақтасындағы 📐 Реттеу батырмасын пайдаланыңыз.",
       "items": [
-        "Gauche / Droite — Marge horizontale (0–200 px des deux côtés)",
-        "Haut / Bas — Marge verticale (0–200 px en haut et en bas)"
+        "Сол / Оң — горизонталь шеті (әр жақта 0–200 пкс)",
+        "Жоғары / Төмен — вертикаль шеті (жоғарыда және төменде 0–200 пкс)"
       ],
-      "applyText": "Cliquez Appliquer maintenant pour voir le résultat immédiatement si une application est en cours de projection. Les valeurs sont mémorisées entre les sessions.",
-      "note": "💡 Valeurs par défaut recommandées pour le Seal EU : Gauche/Droite = 80 px, Haut/Bas = 50 px."
+      "applyText": "Қосымша шығарылып жатса жедел нәтиже үшін Қолдану батырмасын басыңыз. Мәндер сессиялар арасында сақталады.",
+      "note": "💡 Seal EU үшін ұсынылатын әдепкі мәндер: Сол/Оң = 80 пкс, Жоғары/Төмен = 50 пкс."
+    },
+    "updates": {
+      "title": "7.3 Жаңартулар",
+      "text": "Ресми шығарылымға дейін сынақ нұсқаларын алу үшін «Алдын ала шығарылым нұсқаларын қосу (альфа/бета)» параметрін қосыңыз. Қолмен тексеру: ⋮ → 🔄 Жаңартуларды тексеру. Жаңартулар GitHub Releases-тен жүктеледі — Play Store қажет емес."
     }
   },
   "tools": {
-    "title": "8. Menu ⋮ — Outils supplémentaires",
-    "intro": "Le bouton ⋮ en haut à droite ouvre un menu avec les entrées suivantes :",
+    "title": "8. ⋮ мәзірі — Қосымша құралдар",
+    "intro": "Жоғарғы оң жақтағы ⋮ батырмасы келесі элементтері бар мәзірді ашады:",
     "table": {
       "headers": [
-        "Option",
-        "Description"
+        "Опция",
+        "Сипаттама"
       ],
       "rows": [
-        [
-          "⚙️ Paramètres",
-          "Type de cluster + réglage des marges overscan globales"
-        ],
-        [
-          "🔲 Grille / Liste",
-          "Bascule l'affichage des applications entre liste classique et grille d'icônes (5 colonnes)"
-        ],
-        [
-          "🔧 Diagnostic",
-          "Tests avancés pour développeurs — connexion ADB, displays, taille écran cluster, sniffer ADB"
-        ],
-        [
-          "📋 Rapport système",
-          "Génère un rapport complet (displays, APIs BYD, permissions) — utile pour le support"
-        ],
-        [
-          "📜 Logs",
-          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier (appui long pour Telegram)"
-        ],
-        [
-          "🌐 Langue",
-          "Retourne à l'écran de sélection de langue"
-        ]
+        ["⚙️ Параметрлер", "Параметрлерді ашады: Кластер түрі, Жаһандық overscan шеттері, Жаңартулар (алдын ала нұсқалар)."],
+        ["🌐 Тіл", "Интерфейс тілін өзгерту үшін тілді таңдау экранына оралады."],
+        ["🔄 Жаңартуларды тексеру", "GitHub-та DashCast-тың жаңа нұсқасы бар-жоғын тексереді. Параметрлерде алдын ала нұсқалар қосулы болса, альфа/бета нұсқаларын да ұсынады."],
+        ["⊞ Тор режимі / 📋 Тізім режимі", "Қосымшалар тізімін тізім режимі (1 баған) мен тор (5 баған) арасында ауыстырады. Тізім тақырыбындағы ⊞ батырмасы арқылы да қолжетімді."],
+        ["Бастапқы панельді қалпына келтіру", "Шығаруды тоқтатады ЖӘНЕ BYD бастапқы аспаптар тақтасын қалпына келтіреді. Тек шығару кезінде белсенді."],
+        ["🔧 Диагностика", "Әзірлеушілерге арналған кеңейтілген құралдар — ADB байланысы, VirtualDisplay жасау, SurfaceFlinger талдауы, кері инжинирингке арналған logcat sniffer."],
+        ["📋 Жүйелік есеп", "Толық есеп жасайды (дисплейлер, BYD API, рұқсаттар, пакеттер) — қолдау немесе қате туралы есеп жасауға пайдалы."],
+        ["📜 Журнал", "Нақты уақыттағы журнал — тег/деңгей бойынша сүзгі, пошта немесе файл арқылы экспорт."]
       ]
     },
     "logs": {
-      "title": "Journal de bord (📜 Logs)",
-      "header": "📋 Journal de bord",
-      "clearButton": "Effacer",
-      "shareButton": "Partager",
-      "filterPlaceholder": "Filtrer (tag / message / niveau)…",
+      "title": "Журнал (📜 Журнал)",
+      "header": "📋 Журнал",
+      "clearButton": "Тазалау",
+      "shareButton": "Бөлісу",
+      "filterPlaceholder": "Сүзгі (тег / хабар / деңгей)…",
       "lines": [
         "[INFO ] ClusterService → Cluster display connected: id=1",
         "[INFO ] launchOnDashboard OK → com.google.android.apps.maps",
@@ -304,39 +299,39 @@ export default {
         "[WARN ] setTaskWindowingMode: SecurityException (expected)",
         "[INFO ] wm overscan applied on display 1 inset=80,50"
       ],
-      "caption": "Journal de bord — filtre en temps réel, export disponible"
+      "caption": "Журнал — нақты уақыттағы сүзгі, экспорт қолжетімді"
     }
   },
   "faq": {
-    "title": "9. FAQ & Résolution de problèmes",
+    "title": "9. FAQ және ақаулықтарды жою",
     "items": [
       {
-        "question": "❓ La popup « Autoriser le débogage ADB ? » ne s'affiche pas",
-        "answer": "Vérifiez que le Débogage ADB TCP est bien activé dans les paramètres développeur de l'infodivertissement. Si l'option est absente, activez d'abord le mode développeur (appuyer 7 fois sur le numéro de build dans À propos).",
+        "question": "❓ «ADB жөндеуге рұқсат беру?» қалқымалы терезесі пайда болмайды",
+        "answer": "Инфотейнменттің әзірлеуші параметрлерінде TCP ADB жөндеуінің қосулы екенін тексеріңіз. Опция жоқ болса, алдымен әзірлеуші режимін іске қосыңыз («Жүйе туралы» ішіндегі құрастыру нөмірін 7 рет басыңыз).",
         "items": []
       },
       {
-        "question": "❓ L'application ne s'affiche pas sur le cluster après la sélection",
+        "question": "❓ Таңдалғаннан кейін қосымша кластерде пайда болмайды",
         "answer": "",
         "items": [
-          "Assurez-vous d'avoir appuyé sur Activer Projection avant de sélectionner l'app.",
-          "Certaines applications refusent d'être lancées sur un display secondaire (restrictions internes). Consultez les Logs pour voir le message d'erreur.",
-          "Essayez de fermer puis rouvrir DashCast, puis recommencez la séquence."
+          "Қосымшаны таңдамас бұрын «Шығаруды белсендіру» батырмасын басқаныңызды тексеріңіз.",
+          "Кейбір қосымшалар қосымша дисплейде іске қосылудан бас тартады (ішкі шектеулер). Қате хабарын көру үшін Журналды қараңыз.",
+          "DashCast-ты жауып, қайта ашып, реттілікті қайталаңыз."
         ]
       },
       {
-        "question": "❓ Le contenu est rogné ou décalé sur le cluster",
-        "answer": "Utilisez le bouton 📐 Ajuster dans le panneau de contrôle pour régler précisément les marges par application. Les valeurs globales dans Paramètres s'appliquent en fallback.",
+        "question": "❓ Мазмұн кластерде кесілген немесе жылжытылған",
+        "answer": "Қосымша бойынша шеттерді дәл реттеу үшін басқару тақтасындағы 📐 Реттеу батырмасын пайдаланыңыз. Параметрлердегі жаһандық мәндер резервтік ретінде қолданылады.",
         "items": []
       },
       {
-        "question": "❓ Une application est bloquée / figée sur le cluster",
-        "answer": "Appuyez sur la ❌ Croix Rouge à côté de l'application dans la liste. Cela force l'arrêt complet du processus et nettoie les Récents. L'application est alors prête à être relancée.",
+        "question": "❓ Кластерде қосымша іліп қалды",
+        "answer": "Тізімдегі қосымша жанындағы ❌ Қызыл крест батырмасын басыңыз. Бұл процесті мәжбүрлеп тоқтатады және Жақынды тазалайды. Қосымша қайта іске қосуға дайын.",
         "items": []
       },
       {
-        "question": "❓ Les boutons ← Principal et ✕ restent visibles après avoir fermé l'app",
-        "answer": "DashCast détecte automatiquement la fermeture des applications (surveillance via /proc). Si l'interface reste bloquée, appuyez sur Arrêter Projection pour forcer la réinitialisation.",
+        "question": "❓ Қосымшаны жапқаннан кейін ← Басты экран және ✕ батырмалары көрінеді",
+        "answer": "DashCast қосымшалардың жабылуын автоматты анықтайды (/proc арқылы бақылау). Интерфейс іліп қалса, мәжбүрлеп қалпына келтіру үшін «Шығаруды тоқтату» батырмасын басыңыз.",
         "items": []
       }
     ]

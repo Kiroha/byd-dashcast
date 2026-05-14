@@ -34,7 +34,7 @@ export default {
   },
   "firstLaunch": {
     "title": "2. Primer inicio — Selección de idioma",
-    "text": "En el primer inicio aparece la pantalla de bienvenida. Elige tu idioma tocando uno de los botones disponibles. Esta elección se guarda: no volverás a ver esta pantalla salvo que cambies el idioma desde el menú ⋮.",
+    "text": "Al primer inicio, aparece la pantalla de bienvenida con una cuadrícula 4×3 (3 columnas × 4 filas) que muestra los 12 idiomas disponibles. Toca el botón de tu idioma para seleccionarlo. Esta elección se guarda — la pantalla no reaparecerá a menos que cambies el idioma mediante ⋮ → 🌐 Idioma.",
     "welcomeSubtitle": "Controlador del cuadro",
     "welcomeHint": "Elige tu idioma\nPlease select your language",
     "caption": "Pantalla de selección de idioma: solo aparece en el primer inicio"
@@ -81,10 +81,10 @@ export default {
         "text": "Detiene la proyección en curso sin restaurar el cuadro BYD original."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Restaurar cuadro original",
-        "text": "Detiene la proyección Y restaura el cuadro BYD nativo (velocidad, indicadores…)."
+        "label": "Restaurar Panel original (menú ⋮)",
+        "text": "Accesible desde el menú ⋮. Detiene la proyección Y restaura el panel BYD nativo (velocidad, indicadores, autonomía…). Preferible a 'Detener Proyección' al finalizar el uso."
       },
       {
         "tone": "gray",
@@ -96,7 +96,7 @@ export default {
         "tone": "gray",
         "marker": "⑥",
         "label": "Lista de apps",
-        "text": "Todas las apps instaladas. Toca una app para proyectarla, ✕ para cerrarla y ❌ para forzar la detención total del proceso."
+        "text": "Toca una app para proyectarla en el cluster. Pulsación larga → fijar la app (⭐, sube al inicio de la lista). La casilla 'Auto' marca una app para inicio automático: se envía al cluster en cuanto comienza la proyección. El botón ✕ y las flechas ← / → sólo aparecen en la app actualmente activa (en el cluster o en la pantalla principal)."
       }
     ]
   },
@@ -186,6 +186,10 @@ export default {
       "text": "El botón 📐 Ajustar muestra dos deslizadores: margen horizontal y margen vertical. Recortan los bordes de la imagen proyectada en el cuadro. Los valores se guardan por aplicación y se reaplican automáticamente en cada inicio mediante wm overscan.",
       "note": "💡 Valores recomendados para Seal EU: ancho 80 px, alto 50 px."
     },
+    "relaunch": {
+      "title": "5.5 Relanzar (↺)",
+      "text": "El botón ↺ (naranja) fuerza el cierre de la app proyectada actualmente en el cluster y la relanza de inmediato. Útil si la app se ha bloqueado o la visualización del cluster está congelada."
+    },
     "split": {
       "title": "5.3 Modo dividido (⬛⬛ División)",
       "text": "Pulsa ⬛⬛ División para compartir el cuadro entre dos apps:",
@@ -227,7 +231,7 @@ export default {
   },
   "settings": {
     "title": "7. Ajustes",
-    "intro": "Accede a Ajustes desde ⋮ → ⚙️ Ajustes. La pantalla tiene dos secciones:",
+    "intro": "Accede a Ajustes mediante ⋮ → ⚙️ Ajustes. La pantalla tiene tres secciones:",
     "titleLabel": "Ajustes",
     "clusterTypeLabel": "Tipo de cuadro",
     "clusterOptions": [
@@ -240,6 +244,9 @@ export default {
     "verticalMarginLabel": "Arriba / Abajo:",
     "applyButton": "Aplicar ahora",
     "resetButton": "Restablecer (80 / 50)",
+    "updatesLabel": "Actualizaciones",
+    "prereleaseLabel": "Incluir versiones pre-release (alfa/beta)",
+    "prereleaseHint": "Recibe versiones de prueba antes del lanzamiento oficial.",
     "caption": "Página de ajustes",
     "type": {
       "title": "7.1 Tipo de cuadro",
@@ -265,30 +272,14 @@ export default {
         "Descripción"
       ],
       "rows": [
-        [
-          "⚙️ Ajustes",
-          "Tipo de cuadro + configuración global de márgenes de overscan"
-        ],
-        [
-          "🔲 Cuadrícula / Lista",
-          "Alterna la visualización de apps entre lista clásica y cuadrícula de iconos (5 columnas)"
-        ],
-        [
-          "🔧 Diagnóstico",
-          "Herramientas avanzadas de desarrollador: conexión ADB, pantallas, tamaño de cuadro, sniffer ADB"
-        ],
-        [
-          "📋 Informe del sistema",
-          "Genera un informe completo (pantallas, APIs BYD, permisos), útil para soporte"
-        ],
-        [
-          "📜 Registros",
-          "Visor de logs en tiempo real: filtro por etiqueta/nivel, compartir por correo o archivo (pulsación larga para Telegram)"
-        ],
-        [
-          "🌐 Idioma",
-          "Vuelve a la pantalla de selección de idioma"
-        ]
+        ["⚙️ Ajustes", "Abre los ajustes: Tipo de panel, Márgenes overscan globales, Actualizaciones (pre-release)."],
+        ["🌐 Idioma", "Vuelve a la pantalla de selección de idioma para cambiar el idioma de la interfaz."],
+        ["🔄 Buscar actualizaciones", "Comprueba si hay una nueva versión de DashCast en GitHub. Si está activada la pre-release en Ajustes, también ofrece versiones alfa/beta."],
+        ["⊞ Modo Cuadrícula / 📋 Modo Lista", "Alterna la lista de apps entre modo lista (1 columna) y cuadrícula (5 columnas). También accesible mediante el botón ⊞ en el encabezado de la lista."],
+        ["Restaurar Panel original", "Detiene la proyección Y restaura el panel BYD nativo. Solo activo durante una proyección."],
+        ["🔧 Diagnóstico", "Herramientas avanzadas para desarrolladores — conexión ADB, creación de VirtualDisplay, análisis de SurfaceFlinger, sniffer logcat para ingeniería inversa."],
+        ["📋 Informe del sistema", "Genera un informe completo (pantallas, APIs BYD, permisos, paquetes) — útil para soporte o para abrir un ticket."],
+        ["📜 Registros", "Visor de logs en tiempo real — filtro por etiqueta/nivel, compartir por correo o archivo."]
       ]
     },
     "logs": {
