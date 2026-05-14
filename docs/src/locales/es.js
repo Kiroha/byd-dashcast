@@ -261,6 +261,10 @@ export default {
       ],
       "applyText": "Pulsa Aplicar ahora para ver el resultado al instante si hay una app proyectada. Los valores se guardan entre sesiones.",
       "note": "💡 Valores por defecto recomendados para Seal EU: Izquierda/Derecha = 80 px, Arriba/Abajo = 50 px."
+    },
+    "updates": {
+      "title": "7.3 Actualizaciones",
+      "text": "Activa 'Incluir versiones pre-release (alfa/beta)' para recibir compilaciones de prueba antes del lanzamiento oficial. Para verificar manualmente: ⋮ → 🔄 Buscar actualizaciones. Las actualizaciones se descargan directamente de GitHub Releases — no se requiere Play Store."
     }
   },
   "tools": {
