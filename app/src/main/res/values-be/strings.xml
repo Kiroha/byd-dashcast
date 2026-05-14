@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">Перазапусціць праграму?</string>
     <string name="dialog_reconnect_msg">Перазапусціць %1$s на кластары?</string>
     <string name="dialog_reconnect_yes">↺ Перазапусціць</string>
+    <string name="diag_s88_title">Экран 8.8" — Прамая праекцыя</string>
+    <string name="diag_s88_desc">На кластарах 8.8" каманда sendInfo(30) выклікае збой. Гэты раздзел актывуе праекцыю, адпраўляючы толькі sendInfo(16) і sendInfo(35).</string>
+    <string name="diag_s88_initial">Праекцыя 8.8": --</string>
+    <string name="diag_btn_88_activate">Уключыць праекцыю</string>
+    <string name="diag_btn_88_stop">Спыніць праекцыю</string>
+    <string name="diag_88_activating">Актывацыя…</string>
+    <string name="diag_88_stopping">Спыненне…</string>
+    <string name="diag_88_activated">Праекцыя ўключана ✅</string>
+    <string name="diag_88_stopped">Праекцыя спынена ✅</string>
 </resources>

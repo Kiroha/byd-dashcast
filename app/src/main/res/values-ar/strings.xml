@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">إعادة تشغيل التطبيق؟</string>
     <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
     <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
+    <string name="diag_s88_title">شاشة 8.8" — عرض مباشر</string>
+    <string name="diag_s88_desc">في شاشات العنقود 8.8"، تتسبب sendInfo(30) في عطل. يُفعّل هذا القسم العرض بإرسال sendInfo(16) ثم sendInfo(35) فقط.</string>
+    <string name="diag_s88_initial">عرض 8.8": --</string>
+    <string name="diag_btn_88_activate">تفعيل العرض</string>
+    <string name="diag_btn_88_stop">إيقاف العرض</string>
+    <string name="diag_88_activating">جارل التفعيل…</string>
+    <string name="diag_88_stopping">جارل الإيقاف…</string>
+    <string name="diag_88_activated">تم تفعيل العرض ✅</string>
+    <string name="diag_88_stopped">تم إيقاف العرض ✅</string>
 </resources>

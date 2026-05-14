@@ -178,4 +178,13 @@
     <string name="dialog_reconnect_title">Ilovani qayta ishga tushirish?</string>
     <string name="dialog_reconnect_msg">%1$s ni klasterda qayta ishga tushirish?</string>
     <string name="dialog_reconnect_yes">↺ Qayta ishga tushirish</string>
+    <string name="diag_s88_title">8.8" ekran — Toʻgʻri proyeksiya</string>
+    <string name="diag_s88_desc">8.8" klasterlarida sendInfo(30) xatoga olib keladi. Bu boʻlim faqat sendInfo(16) va sendInfo(35) yuborish orqali proyeksiyani faollashtiradi.</string>
+    <string name="diag_s88_initial">8.8" proyeksiya: --</string>
+    <string name="diag_btn_88_activate">Proyeksiyani faollashtirish</string>
+    <string name="diag_btn_88_stop">Proyeksiyani toʻxtatish</string>
+    <string name="diag_88_activating">Faollashtirilmoqda…</string>
+    <string name="diag_88_stopping">Toʻxtatilmoqda…</string>
+    <string name="diag_88_activated">Proyeksiya faollashtirildi ✅</string>
+    <string name="diag_88_stopped">Proyeksiya toʻxtatildi ✅</string>
 </resources>

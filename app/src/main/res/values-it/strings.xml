@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">Riavviare l\'app?</string>
     <string name="dialog_reconnect_msg">Riavviare %1$s sul cluster?</string>
     <string name="dialog_reconnect_yes">↺ Riavvia</string>
+    <string name="diag_s88_title">Schermo 8.8" — Proiezione Diretta</string>
+    <string name="diag_s88_desc">Nei cluster da 8.8", sendInfo(30) provoca un crash. Questa sezione attiva la proiezione inviando solo sendInfo(16) poi sendInfo(35).</string>
+    <string name="diag_s88_initial">Proiezione 8.8": --</string>
+    <string name="diag_btn_88_activate">Attiva Proiezione</string>
+    <string name="diag_btn_88_stop">Ferma Proiezione</string>
+    <string name="diag_88_activating">Attivazione in corso…</string>
+    <string name="diag_88_stopping">Arresto in corso…</string>
+    <string name="diag_88_activated">Proiezione attivata ✅</string>
+    <string name="diag_88_stopped">Proiezione fermata ✅</string>
 </resources>

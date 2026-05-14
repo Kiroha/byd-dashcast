@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">App neu starten?</string>
     <string name="dialog_reconnect_msg">%1$s auf dem Cluster neu starten?</string>
     <string name="dialog_reconnect_yes">↺ Neustarten</string>
+    <string name="diag_s88_title">8.8" Display — Direkte Projektion</string>
+    <string name="diag_s88_desc">Bei 8.8"-Clustern verursacht sendInfo(30) einen Absturz. Dieser Abschnitt aktiviert die Projektion nur mit sendInfo(16) und sendInfo(35).</string>
+    <string name="diag_s88_initial">8.8" Projektion: --</string>
+    <string name="diag_btn_88_activate">Projektion starten</string>
+    <string name="diag_btn_88_stop">Projektion stoppen</string>
+    <string name="diag_88_activating">Wird gestartet…</string>
+    <string name="diag_88_stopping">Wird gestoppt…</string>
+    <string name="diag_88_activated">Projektion gestartet ✅</string>
+    <string name="diag_88_stopped">Projektion gestoppt ✅</string>
 </resources>

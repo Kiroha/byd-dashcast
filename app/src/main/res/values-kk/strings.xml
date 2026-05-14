@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">Қолданбаны қайта іске қосу?</string>
     <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
     <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
+    <string name="diag_s88_title">8.8" экран — Тікелей проекция</string>
+    <string name="diag_s88_desc">8.8" кластерлерінде sendInfo(30) бұзылуға әкеледі. Бұл бөлім тек sendInfo(16) және sendInfo(35) жіберу арқылы проекцияны іске қосады.</string>
+    <string name="diag_s88_initial">8.8" проекция: --</string>
+    <string name="diag_btn_88_activate">Проекцияны іске қосу</string>
+    <string name="diag_btn_88_stop">Проекцияны тоқтату</string>
+    <string name="diag_88_activating">Іске қосылуда…</string>
+    <string name="diag_88_stopping">Тоқтатылуда…</string>
+    <string name="diag_88_activated">Проекция іске қосылды ✅</string>
+    <string name="diag_88_stopped">Проекция тоқтатылды ✅</string>
 </resources>
