@@ -10,16 +10,16 @@ export default {
     "1. Обзор",
     "2. Первый запуск — выбор языка",
     "3. Главный экран",
-    "4. Проекция приложения на панель приборов",
-    "5. Во время проекции — панель управления",
+    "4. Проецирование приложения на дашборд",
+    "5. Во время проекции — Панель управления",
     "6. Остановка проекции",
     "7. Настройки",
-    "8. Меню ⋮ — дополнительные инструменты",
+    "8. Меню ⋮ — Дополнительные инструменты",
     "9. FAQ и устранение неполадок"
   ],
   "overview": {
     "title": "1. Обзор",
-    "text": "DashCast — Android-приложение, которое позволяет вывести любое приложение с экрана мультимедиа на цифровую панель приборов вашего BYD. Навигация, музыка, видео — всё, что работает на центральном экране, можно перенаправить на дисплей перед водителем.",
+    "text": "DashCast — приложение Android, которое позволяет проецировать любое приложение с экрана инфотейнмента на цифровой дашборд вашего BYD. Навигация, музыка, видео — всё, что работает на центральном экране, можно перенаправить на кластер перед водителем.",
     "bullets": [
       "✅ Compatible BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
       "✅ Aucune modification système nécessaire",
@@ -34,269 +34,264 @@ export default {
   },
   "firstLaunch": {
     "title": "2. Первый запуск — выбор языка",
-    "text": "При первом запуске отображается экран приветствия. Нажмите одну из десяти кнопок, чтобы выбрать язык. Выбор сохраняется — экран больше не появится, пока вы не смените язык через меню ⋮.",
-    "welcomeSubtitle": "Контроллер панели приборов",
-    "welcomeHint": "Выберите язык\nPlease select your language",
+    "text": "При первом запуске отображается экран приветствия с сеткой 4×3 (3 столбца × 4 строки), на которой представлены 12 доступных языков. Нажмите кнопку вашего языка для выбора. Этот выбор сохраняется — экран не появится снова, пока вы не смените язык через меню ⋮ → 🌐 Язык.",
+    "welcomeSubtitle": "Dashboard Controller",
+    "welcomeHint": "Choisissez votre langue\nPlease select your language",
     "caption": "Экран выбора языка — отображается только при первом запуске"
   },
   "main": {
-    "title": "3. Écran principal",
-    "text": "L'écran principal est composé de deux zones : une barre de statut en haut (fond bleu foncé) et une liste d'applications installées en dessous. Vous pouvez basculer entre affichage en liste classique ou en grille (icônes) via le menu ⋮.",
-    "status": "① Dashboard : non connecté",
+    "title": "3. Главный экран",
+    "text": "Главный экран состоит из двух зон: строка статуса вверху (тёмно-синий фон) и список установленных приложений ниже. Переключение между списком и сеткой (иконки) доступно через меню ⋮.",
+    "status": "① Дашборд: не подключён",
     "buttons": [
-      "② Activer Projection",
-      "③ Arrêter Projection",
-      "④ Restaurer Dashboard d'origine",
+      "② Активировать проекцию",
+      "③ Остановить проекцию",
+      "④ Восстановить оригинальный дашборд",
       "⑤ ⋮",
       "✕",
       "✕",
       "✕",
       "✕"
     ],
-    "listTitle": "⑥ Applications installées",
+    "listTitle": "⑥ Установленные приложения",
     "apps": [
       "Maps",
       "YouTube",
       "Spotify",
       "Waze"
     ],
-    "caption": "Écran principal — aucune application projetée (état initial)",
+    "caption": "Главный экран — приложение не проецируется (начальное состояние)",
     "annotations": [
       {
         "tone": "",
         "marker": "①",
-        "label": "Statut",
-        "text": "Indique l'état de la connexion au tableau de bord. Passe à « Dashboard : [NomApp] » quand une application est active."
+        "label": "Статус",
+        "text": "Показывает состояние подключения к дашборду. Меняется на «Дашборд: [ИмяПриложения]», когда приложение активно."
       },
       {
         "tone": "",
         "marker": "②",
-        "label": "Activer Projection",
-        "text": "Établit la connexion avec le cluster et prépare l'envoi d'une application. À appuyer en premier."
+        "label": "Активировать проекцию",
+        "text": "Устанавливает соединение с кластером и подготавливает отправку приложения. Нажать первым."
       },
       {
         "tone": "red",
         "marker": "③",
-        "label": "Arrêter Projection",
-        "text": "Ferme la projection en cours sans restaurer le tableau de bord d'origine BYD."
+        "label": "Остановить проекцию",
+        "text": "Закрывает текущую проекцию без восстановления оригинального дашборда BYD."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Restaurer Dashboard d'origine",
-        "text": "Ferme la projection ET réaffiche le tableau de bord BYD natif (vitesse, jauges…)."
+        "label": "Восстановить оригинальный дашборд (меню ⋮)",
+        "text": "Доступно через меню ⋮. Завершает проецирование И восстанавливает нативный дашборд BYD (скорость, датчики, запас хода…). Предпочтительнее «Остановить проекцию» по окончании использования."
       },
       {
         "tone": "gray",
         "marker": "⑤",
-        "label": "Menu ⋮",
-        "text": "Accès aux Paramètres, Diagnostic, Rapport système, Logs, changement de langue et bascule Grille/Liste."
+        "label": "Меню ⋮",
+        "text": "Доступ к Настройкам, Диагностике, Системному отчёту, Журналу, смене языка и переключению Сетка/Список."
       },
       {
         "tone": "gray",
         "marker": "⑥",
-        "label": "Liste des applications",
-        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ✕ pour la fermer, ❌ pour forcer l'arrêt complet du processus."
+        "label": "Список приложений",
+        "text": "Нажмите на приложение, чтобы отправить его на кластер. Долгое нажатие → закрепить (⭐, перемещается в начало). Флажок «Авто» помечает приложение для автоматического запуска: оно отправляется автоматически при старте проецирования. Кнопка ✕ и стрелки ← / → появляются только на активном приложении."
       }
     ]
   },
   "projection": {
-    "title": "4. Projeter une application sur le tableau de bord",
+    "title": "4. Проецирование приложения на дашборд",
     "steps": [
-      "Appuyez sur « Activer Projection » (bouton bleu en haut). Le statut passe à « Démarrage cluster… ». La connexion ADB locale s'établit et le cluster passe en mode projection.",
-      "Tapez sur l'application souhaitée dans la liste. DashCast déplace l'application vers le display du tableau de bord. Le statut passe à « Dashboard : [Nom de l'app] ».",
-      "Le panneau de contrôle apparaît en bas de l'écran. Les valeurs d'overscan sauvegardées pour cette application sont appliquées automatiquement."
+      "Нажмите «Активировать проекцию» (синяя кнопка вверху). Статус меняется на «Запуск кластера…». Устанавливается локальное ADB-соединение и кластер переходит в режим проекции.",
+      "Нажмите на нужное приложение в списке. DashCast перемещает приложение на дисплей дашборда. Статус меняется на «Дашборд: [Имя приложения]».",
+      "Панель управления появляется внизу экрана. Сохранённые значения overscan для этого приложения применяются автоматически."
     ],
-    "activeStatus": "Dashboard : Maps ✓",
+    "activeStatus": "Дашборд: Maps ✓",
     "buttons": [
-      "Activer Projection",
-      "📺 Miroir",
-      "Arrêter Projection",
-      "Restaurer Dashboard d'origine",
+      "Активировать проекцию",
+      "📺 Зеркало",
+      "Остановить проекцию",
+      "Восстановить оригинальный дашборд",
       "⋮",
-      "← Principal",
+      "← Главный экран",
       "✕",
-      "→ Cluster",
+      "→ Кластер",
       "✕",
-      "→ Cluster",
+      "→ Кластер",
       "✕",
-      "📐 Ajuster",
-      "⬛⬛ Split",
-      "Masquer ▼"
+      "📐 Настроить",
+      "⬛⬛ Разделить",
+      "Скрыть ▼"
     ],
-    "listTitle": "Applications installées",
+    "listTitle": "Установленные приложения",
     "apps": [
       "Maps",
       "YouTube",
       "Spotify"
     ],
-    "controlLabel": "Contrôle cluster",
+    "controlLabel": "Управление кластером",
     "controlApp": "Maps",
-    "mirrorText": "Affichage actif sur le cluster ✓",
-    "caption": "Écran principal — Maps est projetée sur le tableau de bord",
+    "mirrorText": "Активно на кластере ✓",
+    "caption": "Главный экран — Maps проецируется на дашборд",
     "annotations": [
       {
         "tone": "green",
         "marker": "●",
-        "label": "Barre verte",
-        "text": "Indicateur visuel sur chaque item : l'app est actuellement sur le cluster."
+        "label": "Зелёная полоса",
+        "text": "Визуальный индикатор: приложение сейчас на кластере."
       },
       {
         "tone": "",
         "marker": "→",
-        "label": "→ Cluster",
-        "text": "Envoie une autre application sur le cluster (remplace celle en cours)."
+        "label": "→ Кластер",
+        "text": "Отправить другое приложение на кластер (заменяет текущее)."
       },
       {
         "tone": "gray",
         "marker": "←",
-        "label": "← Principal",
-        "text": "Renvoie l'application vers l'écran central (la retire du cluster)."
+        "label": "← Главный экран",
+        "text": "Переместить приложение обратно на центральный экран (убрать с кластера)."
       },
       {
         "tone": "teal",
         "marker": "📺",
-        "label": "Miroir",
-        "text": "Affiche un aperçu en temps réel du contenu du tableau de bord dans DashCast."
+        "label": "Зеркало",
+        "text": "Показывает копию дашборда в реальном времени в DashCast."
       },
       {
         "tone": "red",
         "marker": "❌",
-        "label": "Croix Rouge (Force Stop)",
-        "text": "Force l'arrêt complet du processus d'une application bloquée et la retire des Récents."
+        "label": "Красный крест (Force Stop)",
+        "text": "Принудительно останавливает зависшее приложение и удаляет из Недавних."
       },
       {
         "tone": "gray",
         "marker": "🔲",
-        "label": "Vue Grille / Liste",
-        "text": "Basculez l'affichage entre liste classique et grille d'icônes via le menu ⋮."
+        "label": "Сетка / Список",
+        "text": "Переключить отображение между списком и сеткой через меню ⋮."
       }
     ]
   },
   "control": {
-    "title": "5. Pendant la projection — Panneau de contrôle",
-    "intro": "Lorsqu'une application est active sur le cluster, un panneau sombre apparaît en bas de l'écran principal avec quatre fonctionnalités :",
+    "title": "5. Во время проекции — Панель управления",
+    "intro": "Когда приложение активно на кластере, тёмная панель появляется внизу главного экрана с четырьмя функциями:",
     "mirror": {
-      "title": "5.1 Miroir (📺 Miroir)",
-      "text": "Appuyez sur 📺 Miroir dans la barre de statut pour afficher une copie du tableau de bord directement dans DashCast. Vous pouvez interagir avec cette copie par toucher — les événements sont transmis au cluster.",
-      "note": "Le miroir utilise SurfaceControl pour capturer le display. Si le miroir ne s'affiche pas, un screenshot automatique toutes les 2 secondes prend le relais."
+      "title": "5.1 Зеркало (📺 Зеркало)",
+      "text": "Нажмите 📺 Зеркало в строке статуса, чтобы увидеть копию дашборда прямо в DashCast. Вы можете взаимодействовать с ней касанием — события передаются на кластер.",
+      "note": "Зеркало использует SurfaceControl для захвата дисплея. Если зеркало не отображается, автоматический скриншот каждые 2 секунды обеспечивает резервный режим."
     },
     "resize": {
-      "title": "5.2 Ajuster (📐 Overscan par application)",
-      "text": "Le bouton 📐 Ajuster affiche deux curseurs : Marge Largeur et Marge Hauteur. Ces valeurs rognent les bords de l'image projetée sur le cluster. Elles sont sauvegardées individuellement pour chaque application et ré-appliquées automatiquement à chaque lancement via wm overscan.",
-      "note": "💡 Valeurs recommandées pour le Seal EU : Largeur 80 px, Hauteur 50 px."
+      "title": "5.2 Настроить (📐 Overscan для приложения)",
+      "text": "Кнопка 📐 Настроить открывает два ползунка: Отступ по ширине и Отступ по высоте. Эти значения обрезают края изображения, проецируемого на кластер. Сохраняются для каждого приложения отдельно и применяются автоматически при каждом запуске.",
+      "note": "💡 Рекомендуемые значения для Seal EU: Ширина 80 пкс, Высота 50 пкс."
+    },
+    "relaunch": {
+      "title": "5.5 Перезапустить (↺)",
+      "text": "Кнопка ↺ (оранжевая) принудительно останавливает приложение, проецируемое на кластер, затем немедленно перезапускает его. Полезно, если приложение зависло или отображение заблокировано на кластере."
     },
     "split": {
-      "title": "5.3 Mode Split (⬛⬛ Split)",
-      "text": "Appuyez sur ⬛⬛ Split pour partager le tableau de bord entre deux applications :",
+      "title": "5.3 Режим разделения (⬛⬛ Разделить)",
+      "text": "Нажмите ⬛⬛ Разделить, чтобы поделить дашборд между двумя приложениями:",
       "items": [
-        "Plein écran — Une seule app occupe tout le cluster",
-        "⬜⬛ Gauche (50 %) — L'app principale à gauche, la seconde à droite",
-        "⬛⬜ Droite (50 %) — L'app principale à droite"
+        "Полный экран — одно приложение занимает весь кластер",
+        "⬜⬛ Лево (50%) — основное приложение слева, второе справа",
+        "⬛⬜ Право (50%) — основное приложение справа"
       ],
-      "extra": "En mode Split, une deuxième application peut être sélectionnée dans la liste. Elle occupera l'autre moitié du cluster."
+      "extra": "В режиме разделения второе приложение можно выбрать из списка. Оно займёт вторую половину кластера."
     },
     "hide": {
-      "title": "5.4 Masquer le panneau",
-      "text": "Appuyez sur Masquer ▼ pour replier le panneau de contrôle et retrouver la liste complète des applications."
+      "title": "5.4 Скрыть панель",
+      "text": "Нажмите Скрыть ▼, чтобы свернуть панель управления и вернуться к полному списку приложений."
     }
   },
   "stopping": {
-    "title": "6. Arrêter la projection",
-    "intro": "Deux boutons permettent d'arrêter la projection :",
+    "title": "6. Остановка проекции",
+    "intro": "Два способа остановить проекцию:",
     "table": {
       "headers": [
-        "Bouton",
-        "Comportement",
-        "Quand l'utiliser"
+        "Кнопка",
+        "Поведение",
+        "Когда использовать"
       ],
       "rows": [
         [
-          "Arrêter Projection",
-          "Coupe la projection. Le tableau de bord reste vide (noir).",
-          "Si vous souhaitez juste stopper l'affichage provisoirement."
+          "Остановить проекцию",
+          "Прерывает проекцию. Дашборд остаётся пустым (чёрным).",
+          "Если нужно временно остановить отображение."
         ],
         [
-          "Restaurer Dashboard d'origine",
-          "Coupe la projection ET réactive l'affichage BYD natif (vitesse, autonomie, jauges…).",
-          "En fin d'utilisation — pour retrouver le tableau de bord BYD normal."
+          "Восстановить оригинальный дашборд",
+          "Прерывает проекцию И восстанавливает нативный дашборд BYD (скорость, запас хода, датчики…).",
+          "По окончании использования — для возврата к обычному дашборду BYD."
         ]
       ]
     },
-    "warning": "⚠️ Si vous quittez DashCast sans appuyer sur l'un de ces boutons, la projection reste active sur le cluster jusqu'au prochain redémarrage du service."
+    "warning": "⚠️ Если выйти из DashCast без нажатия этих кнопок, проекция останется активной на кластере до следующего перезапуска сервиса."
   },
   "settings": {
-    "title": "7. Paramètres",
-    "intro": "Accédez aux Paramètres via le menu ⋮ → ⚙️ Paramètres. L'écran contient deux sections :",
-    "titleLabel": "Paramètres",
-    "clusterTypeLabel": "Type de cluster",
+    "title": "7. Настройки",
+    "intro": "Откройте Настройки через меню ⋮ → ⚙️ Настройки. Экран содержит три раздела:",
+    "titleLabel": "Настройки",
+    "clusterTypeLabel": "Тип кластера",
     "clusterOptions": [
-      "8,8 pouces (cmd=29)",
-      "12,3 pouces (cmd=30) — Seal EU",
-      "10,25 pouces (cmd=31)"
+      "8,8 дюйма (cmd=29)",
+      "12,3 дюйма (cmd=30) — Seal EU",
+      "10,25 дюйма (cmd=31)"
     ],
-    "marginsLabel": "Marges d'affichage (overscan global)",
-    "horizontalMarginLabel": "Gauche / Droite :",
-    "verticalMarginLabel": "Haut / Bas :",
-    "applyButton": "Appliquer maintenant",
-    "resetButton": "Réinitialiser (80 / 50)",
-    "caption": "Page Paramètres",
+    "marginsLabel": "Отступы отображения (глобальный overscan)",
+    "horizontalMarginLabel": "Лево / Право:",
+    "verticalMarginLabel": "Верх / Низ:",
+    "applyButton": "Применить",
+    "resetButton": "Сбросить (80 / 50)",
+    "updatesLabel": "Обновления",
+    "prereleaseLabel": "Включить предварительные версии (альфа/бета)",
+    "prereleaseHint": "Получать тестовые версии до официального выпуска.",
+    "caption": "Страница Настроек",
     "type": {
-      "title": "7.1 Type de cluster",
-      "text": "Sélectionnez la taille de l'écran de votre tableau de bord. Pour le BYD Seal EU, sélectionnez 12,3 pouces (cmd=30). Ce réglage détermine la commande envoyée au cluster lors de l'activation."
+      "title": "7.1 Тип кластера",
+      "text": "Выберите размер экрана вашего дашборда. Для BYD Seal EU выберите 12,3 дюйма (cmd=30). Этот параметр определяет команду, отправляемую на кластер при активации."
     },
     "margins": {
-      "title": "7.2 Marges d'affichage globales (overscan)",
-      "text": "Réglez les marges pour cadrer parfaitement le contenu dans la zone visible de l'écran. Ces marges s'appliquent globalement. Pour des réglages par application, utilisez le bouton 📐 Ajuster dans le panneau de contrôle.",
+      "title": "7.2 Глобальные отступы отображения (overscan)",
+      "text": "Настройте отступы для идеального кадрирования содержимого в видимой области экрана. Применяются глобально. Для настроек по приложению используйте кнопку 📐 Настроить в панели управления.",
       "items": [
-        "Gauche / Droite — Marge horizontale (0–200 px des deux côtés)",
-        "Haut / Bas — Marge verticale (0–200 px en haut et en bas)"
+        "Лево / Право — горизонтальный отступ (0–200 пкс с каждой стороны)",
+        "Верх / Низ — вертикальный отступ (0–200 пкс сверху и снизу)"
       ],
-      "applyText": "Cliquez Appliquer maintenant pour voir le résultat immédiatement si une application est en cours de projection. Les valeurs sont mémorisées entre les sessions.",
-      "note": "💡 Valeurs par défaut recommandées pour le Seal EU : Gauche/Droite = 80 px, Haut/Bas = 50 px."
+      "applyText": "Нажмите Применить для немедленного результата, если приложение проецируется. Значения сохраняются между сессиями.",
+      "note": "💡 Рекомендуемые значения по умолчанию для Seal EU: Лево/Право = 80 пкс, Верх/Низ = 50 пкс."
+    },
+    "updates": {
+      "title": "7.3 Обновления",
+      "text": "Включите «Включить предварительные версии (альфа/бета)», чтобы получать тестовые сборки до официального выпуска. Для ручной проверки: ⋮ → 🔄 Проверить обновления. Обновления загружаются с GitHub Releases — Play Store не требуется."
     }
   },
   "tools": {
-    "title": "8. Menu ⋮ — Outils supplémentaires",
-    "intro": "Le bouton ⋮ en haut à droite ouvre un menu avec les entrées suivantes :",
+    "title": "8. Меню ⋮ — Дополнительные инструменты",
+    "intro": "Кнопка ⋮ в правом верхнем углу открывает меню со следующими пунктами:",
     "table": {
       "headers": [
-        "Option",
-        "Description"
+        "Опция",
+        "Описание"
       ],
       "rows": [
-        [
-          "⚙️ Paramètres",
-          "Type de cluster + réglage des marges overscan globales"
-        ],
-        [
-          "🔲 Grille / Liste",
-          "Bascule l'affichage des applications entre liste classique et grille d'icônes (5 colonnes)"
-        ],
-        [
-          "🔧 Diagnostic",
-          "Tests avancés pour développeurs — connexion ADB, displays, taille écran cluster, sniffer ADB"
-        ],
-        [
-          "📋 Rapport système",
-          "Génère un rapport complet (displays, APIs BYD, permissions) — utile pour le support"
-        ],
-        [
-          "📜 Logs",
-          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier (appui long pour Telegram)"
-        ],
-        [
-          "🌐 Langue",
-          "Retourne à l'écran de sélection de langue"
-        ]
+        ["⚙️ Настройки", "Открывает настройки: Тип кластера, Глобальные отступы overscan, Обновления (предварительные версии)."],
+        ["🌐 Язык", "Возвращает к экрану выбора языка для смены языка интерфейса."],
+        ["🔄 Проверить обновления", "Проверяет наличие новой версии DashCast на GitHub. Если предварительные версии включены в Настройках, предлагает также альфа/бета версии."],
+        ["⊞ Режим сетки / 📋 Режим списка", "Переключает список приложений между режимом списка (1 столбец) и сеткой (5 столбцов). Также доступно через кнопку ⊞ в заголовке списка."],
+        ["Восстановить оригинальный дашборд", "Останавливает проекцию И восстанавливает нативный дашборд BYD. Активно только во время проекции."],
+        ["🔧 Диагностика", "Расширенные инструменты для разработчиков — ADB-соединение, создание VirtualDisplay, анализ SurfaceFlinger, sniffer logcat для реверс-инжиниринга."],
+        ["📋 Системный отчёт", "Генерирует полный отчёт (дисплеи, BYD API, разрешения, пакеты) — полезно для поддержки или создания баг-репорта."],
+        ["📜 Журнал", "Журнал в реальном времени — фильтр по тегу/уровню, экспорт по почте или файлом."]
       ]
     },
     "logs": {
-      "title": "Journal de bord (📜 Logs)",
-      "header": "📋 Journal de bord",
-      "clearButton": "Effacer",
-      "shareButton": "Partager",
-      "filterPlaceholder": "Filtrer (tag / message / niveau)…",
+      "title": "Журнал (📜 Журнал)",
+      "header": "📋 Журнал",
+      "clearButton": "Очистить",
+      "shareButton": "Поделиться",
+      "filterPlaceholder": "Фильтр (тег / сообщение / уровень)…",
       "lines": [
         "[INFO ] ClusterService → Cluster display connected: id=1",
         "[INFO ] launchOnDashboard OK → com.google.android.apps.maps",
@@ -304,39 +299,39 @@ export default {
         "[WARN ] setTaskWindowingMode: SecurityException (expected)",
         "[INFO ] wm overscan applied on display 1 inset=80,50"
       ],
-      "caption": "Journal de bord — filtre en temps réel, export disponible"
+      "caption": "Журнал — фильтр в реальном времени, экспорт доступен"
     }
   },
   "faq": {
-    "title": "9. FAQ & Résolution de problèmes",
+    "title": "9. FAQ и устранение неполадок",
     "items": [
       {
-        "question": "❓ La popup « Autoriser le débogage ADB ? » ne s'affiche pas",
-        "answer": "Vérifiez que le Débogage ADB TCP est bien activé dans les paramètres développeur de l'infodivertissement. Si l'option est absente, activez d'abord le mode développeur (appuyer 7 fois sur le numéro de build dans À propos).",
+        "question": "❓ Всплывающее окно «Разрешить отладку ADB?» не появляется",
+        "answer": "Убедитесь, что TCP-отладка ADB включена в настройках разработчика инфотейнмента. Если опция отсутствует, сначала включите режим разработчика (нажмите 7 раз на номер сборки в разделе «О системе»).",
         "items": []
       },
       {
-        "question": "❓ L'application ne s'affiche pas sur le cluster après la sélection",
+        "question": "❓ Приложение не отображается на кластере после выбора",
         "answer": "",
         "items": [
-          "Assurez-vous d'avoir appuyé sur Activer Projection avant de sélectionner l'app.",
-          "Certaines applications refusent d'être lancées sur un display secondaire (restrictions internes). Consultez les Logs pour voir le message d'erreur.",
-          "Essayez de fermer puis rouvrir DashCast, puis recommencez la séquence."
+          "Убедитесь, что вы нажали «Активировать проекцию» перед выбором приложения.",
+          "Некоторые приложения отказываются запускаться на дополнительном дисплее (внутренние ограничения). Проверьте Журнал для просмотра сообщения об ошибке.",
+          "Попробуйте закрыть и снова открыть DashCast, затем повторите последовательность."
         ]
       },
       {
-        "question": "❓ Le contenu est rogné ou décalé sur le cluster",
-        "answer": "Utilisez le bouton 📐 Ajuster dans le panneau de contrôle pour régler précisément les marges par application. Les valeurs globales dans Paramètres s'appliquent en fallback.",
+        "question": "❓ Содержимое обрезано или смещено на кластере",
+        "answer": "Используйте кнопку 📐 Настроить в панели управления для точной настройки отступов по приложению. Глобальные значения в Настройках применяются как резервные.",
         "items": []
       },
       {
-        "question": "❓ Une application est bloquée / figée sur le cluster",
-        "answer": "Appuyez sur la ❌ Croix Rouge à côté de l'application dans la liste. Cela force l'arrêt complet du processus et nettoie les Récents. L'application est alors prête à être relancée.",
+        "question": "❓ Приложение зависло на кластере",
+        "answer": "Нажмите ❌ Красный крест рядом с приложением в списке. Это принудительно останавливает процесс и очищает Недавние. Приложение готово к повторному запуску.",
         "items": []
       },
       {
-        "question": "❓ Les boutons ← Principal et ✕ restent visibles après avoir fermé l'app",
-        "answer": "DashCast détecte automatiquement la fermeture des applications (surveillance via /proc). Si l'interface reste bloquée, appuyez sur Arrêter Projection pour forcer la réinitialisation.",
+        "question": "❓ Кнопки ← Главный экран и ✕ остаются видимыми после закрытия приложения",
+        "answer": "DashCast автоматически обнаруживает закрытие приложений (слежение через /proc). Если интерфейс завис, нажмите «Остановить проекцию» для принудительного сброса.",
         "items": []
       }
     ]

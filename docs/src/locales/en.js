@@ -34,7 +34,7 @@ export default {
   },
   "firstLaunch": {
     "title": "2. First Launch — Language Selection",
-    "text": "On first launch, the welcome screen appears. Choose your language by tapping one of the available buttons. This choice is remembered — you won't see this screen again unless you change language from the ⋮ menu.",
+    "text": "On first launch, the welcome screen appears with a 4×3 grid (3 columns × 4 rows) showing the 12 available languages. Tap your language button to select. This choice is remembered — the screen won't reappear unless you change language via the ⋮ → 🌐 Language menu.",
     "welcomeSubtitle": "Dashboard Controller",
     "welcomeHint": "Choisissez votre langue\nPlease select your language",
     "caption": "Language selection screen — shown only on first launch"
@@ -81,10 +81,10 @@ export default {
         "text": "Stops the ongoing projection without restoring the original BYD dashboard."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Restore Original Dashboard",
-        "text": "Stops the projection AND restores the native BYD dashboard (speed, gauges…)."
+        "label": "Restore Original Dashboard (⋮ menu)",
+        "text": "Accessible via the ⋮ menu. Stops the projection AND restores the native BYD dashboard (speed, gauges, range…). Preferred over 'Stop Projection' at end of use."
       },
       {
         "tone": "gray",
@@ -96,7 +96,7 @@ export default {
         "tone": "gray",
         "marker": "⑥",
         "label": "App list",
-        "text": "All installed apps. Tap an app to project it, ✕ to close it, ❌ to force-stop the process entirely."
+        "text": "Tap an app to project it to the cluster. Long-press → pin the app (⭐, moves to top of list). The 'Auto' checkbox marks an app for automatic launch: it is sent to the cluster as soon as projection starts. The ✕ button and ← / → arrows only appear on the currently active app (on cluster or on main display)."
       }
     ]
   },
@@ -186,6 +186,10 @@ export default {
       "text": "The 📐 Adjust button reveals two sliders: Width Margin and Height Margin. These crop the edges of the projected image on the cluster. Values are saved per application and automatically re-applied on each launch via wm overscan.",
       "note": "💡 Recommended values for Seal EU: Width 80 px, Height 50 px."
     },
+    "relaunch": {
+      "title": "5.5 Relaunch (↺)",
+      "text": "The ↺ (orange) button force-stops the app currently projected on the cluster, then immediately relaunches it from the start. Useful if the app is frozen or the display is stuck on the cluster."
+    },
     "split": {
       "title": "5.3 Split Mode (⬛⬛ Split)",
       "text": "Tap ⬛⬛ Split to share the cluster between two apps:",
@@ -227,7 +231,7 @@ export default {
   },
   "settings": {
     "title": "7. Settings",
-    "intro": "Access Settings via ⋮ → ⚙️ Settings. The screen has two sections:",
+    "intro": "Access Settings via ⋮ → ⚙️ Settings. The screen has three sections:",
     "titleLabel": "Settings",
     "clusterTypeLabel": "Cluster type",
     "clusterOptions": [
@@ -240,6 +244,9 @@ export default {
     "verticalMarginLabel": "Top / Bottom:",
     "applyButton": "Apply now",
     "resetButton": "Reset (80 / 50)",
+    "updatesLabel": "Updates",
+    "prereleaseLabel": "Include pre-release versions (alpha/beta)",
+    "prereleaseHint": "Receive test versions before official release.",
     "caption": "Settings page",
     "type": {
       "title": "7.1 Cluster type",
@@ -254,6 +261,10 @@ export default {
       ],
       "applyText": "Click Apply now to see the result immediately if an app is being projected. Values are saved between sessions.",
       "note": "💡 Recommended defaults for Seal EU: Left/Right = 80 px, Top/Bottom = 50 px."
+    },
+    "updates": {
+      "title": "7.3 Updates",
+      "text": "Enable 'Include pre-release versions (alpha/beta)' to receive test builds before the official release. To check manually, use ⋮ → 🔄 Check for updates. Updates are downloaded directly from GitHub Releases — no Play Store required."
     }
   },
   "tools": {
@@ -265,30 +276,14 @@ export default {
         "Description"
       ],
       "rows": [
-        [
-          "⚙️ Settings",
-          "Cluster type + global overscan margin settings"
-        ],
-        [
-          "🔲 Grid / List",
-          "Toggle app display between classic list and icon grid (5 columns)"
-        ],
-        [
-          "🔧 Diagnostics",
-          "Advanced developer tools — ADB connection, displays, cluster screen size, ADB sniffer"
-        ],
-        [
-          "📋 System Report",
-          "Generates a full report (displays, BYD APIs, permissions) — useful for support"
-        ],
-        [
-          "📜 Logs",
-          "Real-time log viewer — filter by tag/level, share via email or file (long-press for Telegram)"
-        ],
-        [
-          "🌐 Language",
-          "Returns to the language selection screen"
-        ]
+        ["⚙️ Settings", "Opens settings: Cluster type, Global overscan margins, Updates (pre-release)."],
+        ["🌐 Language", "Returns to the language selection screen to change the interface language."],
+        ["🔄 Check for updates", "Checks if a new version of DashCast is available on GitHub. If pre-release enabled in Settings, also offers alpha/beta versions."],
+        ["⊞ Grid mode / 📋 List mode", "Toggles the app list between list mode (1 column) and grid mode (5 columns). Also accessible via the ⊞ button in the list header."],
+        ["Restore Original Dashboard", "Stops projection AND restores the native BYD dashboard. Only active during a projection."],
+        ["🔧 Diagnostics", "Advanced developer tools — ADB connection, VirtualDisplay creation, SurfaceFlinger analysis, logcat sniffer for reverse engineering."],
+        ["📋 System Report", "Generates a full report (displays, BYD APIs, permissions, packages) — useful for support or filing a bug report."],
+        ["📜 Logs", "Real-time log viewer — filter by tag/level, share via email or file."]
       ]
     },
     "logs": {
