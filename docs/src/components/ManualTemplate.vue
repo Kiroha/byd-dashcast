@@ -210,6 +210,18 @@ watch(
               <button class="btn-ui btn-indigo btn-small" type="button">{{ splitButton }}</button>
               <button class="btn-ui btn-dark btn-small" type="button">{{ hideButton }}</button>
             </div>
+            <div class="cp-resize-panel">
+              <div class="slider-row">
+                <div class="slider-label">{{ t.settings.horizontalMarginLabel }}</div>
+                <div class="slider-bar"><div class="slider-fill slider-fill-horizontal"></div><div class="slider-thumb slider-thumb-horizontal"></div></div>
+                <div class="slider-val">80 px</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">{{ t.settings.verticalMarginLabel }}</div>
+                <div class="slider-bar"><div class="slider-fill slider-fill-vertical"></div><div class="slider-thumb slider-thumb-vertical"></div></div>
+                <div class="slider-val">50 px</div>
+              </div>
+            </div>
             <div class="mirror-area">
               <span class="mirror-text">{{ t.projection.mirrorText }}</span>
             </div>
@@ -222,6 +234,10 @@ watch(
       <div v-for="annotation in t.projection.annotations" :key="annotation.marker + annotation.label" class="ann">
         <div :class="markerClass(annotation)">{{ annotation.marker }}</div>
         <div><strong>{{ annotation.label }}</strong> - {{ annotation.text }}</div>
+      </div>
+      <div class="ann">
+        <div class="ann-num orange">↺</div>
+        <div><strong>{{ t.control.relaunch.title }}</strong> — {{ t.control.relaunch.text }}</div>
       </div>
     </div>
 
