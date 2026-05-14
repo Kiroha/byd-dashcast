@@ -75,16 +75,9 @@
     <string name="toast_write_error">Жазу қатесі: %1$s</string>
     <string name="toast_report_saved">Есеп сақталды:\n%1$s</string>
     <string name="diag_share_result1_btn">TEST 1 нәтижесін бөлісу</string>
-    <string name="diag_share_result2_btn">TEST 2 нәтижесін бөлісу</string>
-    <string name="diag_share_result3_btn">TEST 3 нәтижесін бөлісу</string>
     <string name="diag_adb_connecting">localhost:5555 мекенжайына қосылу…\n⏳ Қалқымалы терезе осы экранда шығады — РҰҚСАТ БЕРУ түймесін басыңыз.</string>
     <string name="diag_adb_connected">✅ Қосылым орнатылды\n\n</string>
     <string name="diag_adb_failed">❌ Қате: %1$s\n\n→ ADB TCP debugging қосылғанын тексеріңіз\n  Баптаулар → Әзірлеуші → USB debugging\n  (немесе осы ROMда Wireless Debugging)</string>
-    <string name="diag_adb_test1_hint">→ ADB қосылымына рұқсат беру үшін алдымен TEST 1 іске қосыңыз.</string>
-    <string name="diag_launching_display1">⏳ display 1 іске қосылуда…</string>
-    <string name="diag_size_sending">⏳ sendInfo(1000, %1$d) → %2$s…</string>
-    <string name="diag_size_restoring">⏳ Әдепкі өлшем қалпына келтірілуде (cmd 30 + wm reset)…</string>
-    <string name="diag_size_full_running">⏳ Кластер өлшемдерінің диагностикасы…\ncmd=29 / cmd=30 / cmd=31 / wm size тексерілуде…\n(~8 секунд)</string>
     <string name="diag_sf_dumping">dumpsys SurfaceFlinger орындалуда…</string>
     <string name="diag_sf_no_result">(нәтиже жоқ — айна SF ішінде тіркелмеген)</string>
     <string name="diag_sf_error">Қате: %1$s</string>
@@ -100,10 +93,6 @@
     <string name="diag_s2_title">2. Daemon енгізу &amp; рендеринг</string>
     <string name="diag_s2_desc">DashCastDaemon.java файлын ADB shell арқылы app_process ішінде іске қосады: CAPTURE_VIDEO_OUTPUT мұраға алады.</string>
     <string name="diag_btn_create_vd">VirtualDisplay жасау (daemon енгізу)</string>
-    <string name="diag_s3_title">3. Кластер қасиеттері</string>
-    <string name="diag_s3_initial">Дисплей өлшемі</string>
-    <string name="diag_s3_display1_initial">Кластер дисплейін қалпына келтіру</string>
-    <string name="diag_btn_restore_display">Дисплейді қалпына келтіру</string>
     <string name="diag_s4_title">4. Жүйе талдауы (SurfaceFlinger)</string>
     <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
     <string name="diag_btn_run_dumpsys">dumpsys window displays іске қосу</string>
@@ -127,13 +116,6 @@
     <string name="diag_btn_start">START</string>
     <string name="diag_btn_snapshot">Snapshot қазір</string>
     <string name="diag_btn_export_sniffer">Экспорт</string>
-    <string name="diag_auto_starting">ADB арқылы іске қосылуда…</string>
-    <string name="diag_auto_stopping">ADB арқылы тоқтатылуда…</string>
-    <string name="diag_auto_stopped">STOP: %1$s</string>
-    <string name="diag_jni_display_released">Display босатылды. JNI тексерілуде…</string>
-    <string name="diag_jni_fatal">FATAL: %1$s</string>
-    <string name="diag_jni_send16_failed">16 жіберілмеді: %1$s</string>
-    <string name="diag_running">Диагностика орындалуда…</string>
     <string name="diag_dumpsys_running">adb local арқылы орындалуда…</string>
     <string name="diag_dumpsys_error">ҚАТЕ:\n%1$s</string>
     <string name="diag_daemon_launching">daemon adb local арқылы іске қосылуда…</string>
@@ -141,10 +123,6 @@
     <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
     <string name="diag_daemon_error">ҚАТЕ: %1$s</string>
     <string name="diag_apk_path_error">APK path қатесі: %1$s</string>
-    <string name="diag_fission_binder_starting">sendInfo Java direct…</string>
-    <string name="diag_fission_running">Рет орындалуда…</string>
-    <string name="diag_fission_no_display">❌ Fission display жоқ. Алдымен « Fission Display жасау » іске қосыңыз.</string>
-    <string name="diag_fission_launching">display %1$d ішінде іске қосылуда…</string>
     <string name="diag_sniffer_initializing">Инициализация…</string>
     <string name="diag_sniffer_active">БЕЛСЕНДІ → %1$s</string>
     <string name="diag_sniffer_init_failed">❌ Init қатесі: %1$s</string>
@@ -154,15 +132,6 @@
     <string name="toast_snapshot_done">Snapshot файлға қосылды.</string>
     <string name="toast_sniffer_no_file">Экспорттайтын sniffer файлы жоқ.</string>
     <string name="toast_no_result_to_share">Бөлісетін нәтиже жоқ.</string>
-    <string name="diag_btn_size_restore">RESTORE</string>
-    <string name="diag_btn_size_full">FULL TEST</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Негізгі экран overscan reset (display 0)</string>
-    <string name="diag_reset_main_overscan_done">display 0 overscan reset орындалды — wm overscan reset -d 0</string>
-    <string name="diag_s7_title">7. DiLink5 Resize тесті (IATM)</string>
-    <string name="diag_s7_desc">DiLink5 Dashboard ретін тексереді: setTaskWindowingMode(4) → setTaskWindowingMode(5) → resizeTask(RESIZE_MODE_FORCED=3) activity_task үстінде raw Binder арқылы. Қолданыстағы проекция кодына тимейді. Алдымен негізгі панель арқылы кластерде қолданба іске қосыңыз.</string>
-    <string name="diag_btn_resize_dilink5_seq">▶ DiLink5 реті (WM:4→5 + resize FORCED=3)</string>
-    <string name="diag_btn_resize_forced_only">▶ Тек resizeTask FORCED=3 (WM өзгермейді)</string>
-    <string name="diag_btn_resize_inspect_task">🔍 Кластер task тексеру (windowing + bounds)</string>
     <string name="diag_s6_title">6. Сақтау орнын тазалау</string>
     <string name="diag_s6_desc">DashCast жасаған журнал және есеп файлдарын жояды: byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Жадтағы журнал буферін де тазалайды. ADB кілттері (adb.key / adb.pub) ЖОЙЫЛМАЙДЫ.</string>
     <string name="diag_btn_cleanup">🗑️ Trace файлдарын жою</string>
@@ -181,12 +150,6 @@
     <string name="ota_up_to_date">DashCast жаңартылған</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
-    <string name="diag_sadas_title">ADAS Cluster (cmd 12 / 13)</string>
-    <string name="diag_sadas_desc">Show or hide the ADAS overlay on the dashboard. No visible effect on Seal EU (2D cluster).</string>
-    <string name="diag_adas_initial">–</string>
-    <string name="diag_adas_sending">Sending cmd %1$d2026</string>
-    <string name="diag_btn_adas_show">显示 ADAS (cmd 12)</string>
-    <string name="diag_btn_adas_hide">关闭 ADAS (cmd 13)</string>
     <string name="btn_adjust">Реттеу</string>
     <string name="label_width_inset">Ені бойынша шегініс</string>
     <string name="label_height_inset">Биіктігі бойынша шегініс</string>
@@ -195,4 +158,25 @@
     <string name="toast_list_mode_enabled">Тізім режимі қосылды</string>
     <string name="toast_update_install_failed">Орнату қатесі: </string>
     <string name="app_state_auto">Авто</string>
+    <string name="ota_btn_update_now">Қазір жаңарту</string>
+    <string name="ota_btn_later">Кейінірек</string>
+    <string name="ota_downloading">Жүктелуде…</string>
+    <string name="notif_log_channel_name">Белсенділік журналы</string>
+    <string name="notif_log_content">Журнал белсенді — ашу үшін басыңыз</string>
+    <string name="notif_remote_channel_name">Кластер айнасының батырмасы</string>
+    <string name="notif_remote_content">📺 Кластер айнасы белсенді</string>
+    <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
+    <string name="menu_view_grid">⊞ Тор режимі</string>
+    <string name="menu_view_list">📋 Тізім режимі</string>
+    <string name="hint_search_apps">Қолданбаны іздеу…</string>
+    <string name="tooltip_tap_send">Кластерге жіберу үшін қолданбаны басыңыз</string>
+    <string name="split_btn_exit">↩ Толық экран</string>
+    <string name="confirm_kill_title">Қолданбаны тоқтату?</string>
+    <string name="confirm_kill_msg">%1$s мәжбүрлеп тоқтату?</string>
+    <string name="confirm_kill_ok">Тоқтату</string>
+    <string name="btn_relaunch">↺</string>
+    <string name="toast_activate_timeout">Кластер қолжетімсіз — қайталап көріңіз</string>
+    <string name="dialog_reconnect_title">Қолданбаны қайта іске қосу?</string>
+    <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
+    <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
 </resources>
