@@ -3,7 +3,7 @@ export default {
   "flag": "🇺🇦",
   "name": "Українська",
   "title": "DashCast — Посібник користувача",
-  "meta": "v0.5.1 · BYD Seal EU · DiLink 3.0 · Android 10",
+  "meta": "v0.7.2 · BYD Seal EU · DiLink 3.0 · Android 10",
   "manualName": "Посібник користувача",
   "tocTitle": "📋 Зміст",
   "sections": [
@@ -341,5 +341,5 @@ export default {
       }
     ]
   },
-  "footer": "DashCast v0.5.1 — BYD Seal EU · DiLink 3.0 · Android 10 · github.com/Kiroha/byd-dashcast"
+  "footer": "DashCast v0.7.2 — BYD Seal EU · DiLink 3.0 · Android 10 · github.com/Kiroha/byd-dashcast"
 };

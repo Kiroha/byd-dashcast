@@ -133,6 +133,10 @@ watch(
       </div>
     </div>
     <p class="caption">{{ t.firstLaunch.caption }}</p>
+    <figure class="manual-image-card">
+      <img class="manual-image" src="/images/manual-first-launch.svg" :alt="t.firstLaunch.caption">
+      <figcaption>{{ t.firstLaunch.caption }}</figcaption>
+    </figure>
 
     <h2 id="s3" class="section-heading">
       <span>{{ t.main.title }}</span>
@@ -161,6 +165,10 @@ watch(
       </div>
     </div>
     <p class="caption">{{ t.main.caption }}</p>
+    <figure class="manual-image-card">
+      <img class="manual-image" src="/images/manual-main-screen.svg" :alt="t.main.caption">
+      <figcaption>{{ t.main.caption }}</figcaption>
+    </figure>
     <div class="annotation-grid">
       <div v-for="annotation in t.main.annotations" :key="annotation.marker + annotation.label" class="ann">
         <div :class="markerClass(annotation)">{{ annotation.marker }}</div>
@@ -218,6 +226,10 @@ watch(
       </div>
     </div>
     <p class="caption">{{ t.projection.caption }}</p>
+    <figure class="manual-image-card">
+      <img class="manual-image" src="/images/manual-projection.svg" :alt="t.projection.caption">
+      <figcaption>{{ t.projection.caption }}</figcaption>
+    </figure>
     <div v-if="t.projection.annotations.length" class="annotation-grid">
       <div v-for="annotation in t.projection.annotations" :key="annotation.marker + annotation.label" class="ann">
         <div :class="markerClass(annotation)">{{ annotation.marker }}</div>
@@ -308,6 +320,10 @@ watch(
       </div>
     </div>
     <p class="caption">{{ t.settings.caption }}</p>
+    <figure class="manual-image-card">
+      <img class="manual-image" src="/images/manual-settings.svg" :alt="t.settings.caption">
+      <figcaption>{{ t.settings.caption }}</figcaption>
+    </figure>
     <h3>{{ t.settings.type.title }}</h3>
     <p>{{ t.settings.type.text }}</p>
     <h3>{{ t.settings.margins.title }}</h3>

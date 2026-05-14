@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#0d0d0d"/>
+
+  <text x="640" y="110" fill="#ffffff" font-family="sans-serif" font-size="66" font-weight="700" text-anchor="middle">DashCast</text>
+  <text x="640" y="158" fill="#4a9fdf" font-family="sans-serif" font-size="26" text-anchor="middle">Dashboard Controller</text>
+  <text x="640" y="212" fill="#8b8b8b" font-family="sans-serif" font-size="23" text-anchor="middle">Choisissez votre langue</text>
+  <text x="640" y="244" fill="#8b8b8b" font-family="sans-serif" font-size="23" text-anchor="middle">Please select your language</text>
+
+  <g font-family="sans-serif" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">
+    <rect x="170" y="280" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="320" y="314">🇫🇷  Francais</text>
+    <rect x="490" y="280" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="640" y="314">🇬🇧  English</text>
+    <rect x="810" y="280" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="960" y="314">🇩🇪  Deutsch</text>
+
+    <rect x="170" y="350" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="320" y="384">🇮🇹  Italiano</text>
+    <rect x="490" y="350" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="640" y="384">🇹🇷  Turkce</text>
+    <rect x="810" y="350" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="960" y="384">🇪🇸  Espanol</text>
+
+    <rect x="170" y="420" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="320" y="454">🇷🇺  Russkij</text>
+    <rect x="490" y="420" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="640" y="454">🇺🇦  Ukrainska</text>
+    <rect x="810" y="420" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="960" y="454">🇲🇦  العربية</text>
+
+    <rect x="170" y="490" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="320" y="524">🇺🇿  O&apos;zbekcha</text>
+    <rect x="490" y="490" width="300" height="52" rx="8" fill="#1a237e"/>
+    <text x="640" y="524">🇰🇿  Қазақша</text>
+    <rect x="810" y="490" width="300" height="52" rx="8" fill="#1565c0"/>
+    <text x="960" y="524">🇧🇾  Беларуская</text>
+  </g>
+
+  <text x="640" y="680" fill="#7b86a2" font-family="sans-serif" font-size="22" text-anchor="middle">Ecran de bienvenue 0.6.8 - selection de langue</text>
+</svg>
