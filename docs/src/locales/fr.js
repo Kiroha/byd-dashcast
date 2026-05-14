@@ -34,7 +34,7 @@ export default {
   },
   "firstLaunch": {
     "title": "2. Premier démarrage — Choix de la langue",
-    "text": "Au premier lancement, l'écran de bienvenue s'affiche. Choisissez votre langue parmi les boutons disponibles. Ce choix est mémorisé — vous ne le reverrez plus sauf si vous changez la langue depuis le menu ⋮.",
+    "text": "Au premier lancement, l'écran de bienvenue s'affiche avec une grille 4×3 (3 colonnes × 4 lignes) présentant les 12 langues disponibles. Appuyez sur le bouton de votre langue pour sélectionner. Ce choix est mémorisé — l'écran ne réapparaîtra que si vous changez la langue via le menu ⋮ → 🌐 Langue.",
     "welcomeSubtitle": "Dashboard Controller",
     "welcomeHint": "Choisissez votre langue\nPlease select your language",
     "caption": "Écran de sélection de langue — affiché uniquement au premier lancement"
@@ -81,10 +81,10 @@ export default {
         "text": "Ferme la projection en cours sans restaurer le tableau de bord d'origine BYD."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Restaurer Dashboard d'origine",
-        "text": "Ferme la projection ET réaffiche le tableau de bord BYD natif (vitesse, jauges…)."
+        "label": "Restaurer Dashboard d'origine (menu ⋮)",
+        "text": "Accessible via le menu ⋮. Ferme la projection ET réaffiche le tableau de bord BYD natif (vitesse, jauges, autonomie…). À préférer à 'Arrêter Projection' en fin d'utilisation."
       },
       {
         "tone": "gray",
@@ -96,7 +96,7 @@ export default {
         "tone": "gray",
         "marker": "⑥",
         "label": "Liste des applications",
-        "text": "Toutes les apps installées. Appuyez sur une app pour la projeter, ✕ pour la fermer, ❌ pour forcer l'arrêt complet du processus."
+        "text": "Appuyez sur une app pour la projeter sur le cluster. Appui long → épingler l'app (⭐, remonte en tête de liste). La case 'Auto' marque une app comme lancement automatique : elle est envoyée automatiquement dès que la projection démarre. Le bouton ✕ et les flèches ← / → n'apparaissent que sur l'app actuellement active (sur le cluster ou sur l'écran principal)."
       }
     ]
   },
@@ -186,6 +186,10 @@ export default {
       "text": "Le bouton 📐 Ajuster affiche deux curseurs : Marge Largeur et Marge Hauteur. Ces valeurs rognent les bords de l'image projetée sur le cluster. Elles sont sauvegardées individuellement pour chaque application et ré-appliquées automatiquement à chaque lancement via wm overscan.",
       "note": "💡 Valeurs recommandées pour le Seal EU : Largeur 80 px, Hauteur 50 px."
     },
+    "relaunch": {
+      "title": "5.5 Relancer (↺)",
+      "text": "Le bouton ↺ (orange) force-arrête l'application actuellement projetée sur le cluster, puis la relance immédiatement depuis le début. Utile si l'application est gelée ou si l'affichage est bloqué sur le cluster."
+    },
     "split": {
       "title": "5.3 Mode Split (⬛⬛ Split)",
       "text": "Appuyez sur ⬛⬛ Split pour partager le tableau de bord entre deux applications :",
@@ -227,7 +231,7 @@ export default {
   },
   "settings": {
     "title": "7. Paramètres",
-    "intro": "Accédez aux Paramètres via le menu ⋮ → ⚙️ Paramètres. L'écran contient deux sections :",
+    "intro": "Accédez aux Paramètres via le menu ⋮ → ⚙️ Paramètres. L'écran contient trois sections :",
     "titleLabel": "Paramètres",
     "clusterTypeLabel": "Type de cluster",
     "clusterOptions": [
@@ -240,6 +244,9 @@ export default {
     "verticalMarginLabel": "Haut / Bas :",
     "applyButton": "Appliquer maintenant",
     "resetButton": "Réinitialiser (80 / 50)",
+    "updatesLabel": "Mises à jour",
+    "prereleaseLabel": "Inclure les versions pré-release (alpha/beta)",
+    "prereleaseHint": "Reçoit les versions de test avant leur publication officielle.",
     "caption": "Page Paramètres",
     "type": {
       "title": "7.1 Type de cluster",
@@ -254,6 +261,10 @@ export default {
       ],
       "applyText": "Cliquez Appliquer maintenant pour voir le résultat immédiatement si une application est en cours de projection. Les valeurs sont mémorisées entre les sessions.",
       "note": "💡 Valeurs par défaut recommandées pour le Seal EU : Gauche/Droite = 80 px, Haut/Bas = 50 px."
+    },
+    "updates": {
+      "title": "7.3 Mises à jour",
+      "text": "Activez la case 'Inclure les versions pré-release (alpha/beta)' pour recevoir les versions de test avant leur publication officielle. Pour vérifier manuellement, utilisez le menu ⋮ → 🔄 Rechercher des mises à jour. Les mises à jour sont téléchargées directement depuis GitHub Releases — aucune connexion Play Store requise."
     }
   },
   "tools": {
@@ -267,27 +278,35 @@ export default {
       "rows": [
         [
           "⚙️ Paramètres",
-          "Type de cluster + réglage des marges overscan globales"
-        ],
-        [
-          "🔲 Grille / Liste",
-          "Bascule l'affichage des applications entre liste classique et grille d'icônes (5 colonnes)"
-        ],
-        [
-          "🔧 Diagnostic",
-          "Tests avancés pour développeurs — connexion ADB, displays, taille écran cluster, sniffer ADB"
-        ],
-        [
-          "📋 Rapport système",
-          "Génère un rapport complet (displays, APIs BYD, permissions) — utile pour le support"
-        ],
-        [
-          "📜 Logs",
-          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier (appui long pour Telegram)"
+          "Ouvre les réglages : Type de cluster, Marges overscan globales, Mises à jour (pré-release)."
         ],
         [
           "🌐 Langue",
-          "Retourne à l'écran de sélection de langue"
+          "Retourne à l'écran de sélection de langue pour changer la langue de l'interface."
+        ],
+        [
+          "🔄 Rechercher des mises à jour",
+          "Vérifie si une nouvelle version de DashCast est disponible sur GitHub. Si pré-release activée dans Paramètres, propose aussi les versions alpha/beta."
+        ],
+        [
+          "⊞ Mode Grille / 📋 Mode Liste",
+          "Bascule l'affichage entre liste (1 colonne) et grille (5 colonnes). Aussi accessible via le bouton ⊞ dans l'en-tête de la liste."
+        ],
+        [
+          "Restaurer Dashboard d'origine",
+          "Ferme la projection ET réaffiche le tableau de bord BYD natif. Actif uniquement pendant une projection."
+        ],
+        [
+          "🔧 Diagnostic",
+          "Tests avancés pour développeurs — connexion ADB, création VirtualDisplay, analyses SurfaceFlinger, sniffer logcat pour le reverse engineering."
+        ],
+        [
+          "📋 Rapport système",
+          "Génère un rapport complet (displays, APIs BYD, permissions, packages) — utile pour le support ou pour ouvrir un ticket."
+        ],
+        [
+          "📜 Logs",
+          "Journal de bord en temps réel — filtre par tag/niveau, partage par mail ou fichier."
         ]
       ]
     },

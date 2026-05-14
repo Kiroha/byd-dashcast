@@ -11,7 +11,7 @@ import tr from './tr.js';
 import uk from './uk.js';
 import uz from './uz.js';
 
-export const localeOrder = ['fr', 'en', 'de', 'tr', 'it', 'ru', 'uz', 'kk', 'be', 'uk', 'es', 'ar'];
+export const localeOrder = ['fr', 'en', 'de', 'it', 'tr', 'es', 'ru', 'uk', 'ar', 'uz', 'kk', 'be']; // Matches activity_welcome.xml Row1=FR/EN/DE Row2=IT/TR/ES Row3=RU/UK/AR Row4=UZ/KK/BE
 
 export const locales = {
   ar,
