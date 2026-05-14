@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#eef2f7"/>
+
+  <rect x="24" y="20" width="1232" height="84" rx="8" fill="#1a237e"/>
+  <circle cx="52" cy="62" r="7" fill="#4caf50"/>
+  <text x="68" y="69" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="700">Dashboard : Maps ✓</text>
+
+  <rect x="610" y="36" width="160" height="50" rx="8" fill="#1565c0"/>
+  <text x="690" y="68" fill="#fff" font-family="sans-serif" font-size="17" text-anchor="middle">Activer</text>
+
+  <rect x="780" y="36" width="140" height="50" rx="8" fill="#00695c"/>
+  <text x="850" y="68" fill="#fff" font-family="sans-serif" font-size="17" text-anchor="middle">📺 Miroir</text>
+
+  <rect x="930" y="36" width="170" height="50" rx="8" fill="#b71c1c"/>
+  <text x="1015" y="68" fill="#fff" font-family="sans-serif" font-size="17" text-anchor="middle">Arreter</text>
+
+  <rect x="1110" y="36" width="50" height="50" rx="8" fill="#d9d9d9"/>
+  <text x="1135" y="70" fill="#333" font-family="sans-serif" font-size="28" text-anchor="middle">⋮</text>
+
+  <rect x="24" y="112" width="1232" height="390" fill="#ffffff" stroke="#d5dce4"/>
+  <rect x="24" y="112" width="1232" height="46" fill="#f5f5f5"/>
+  <text x="46" y="142" fill="#1f2937" font-family="sans-serif" font-size="26" font-weight="700">Applications installees</text>
+
+  <g>
+    <rect x="24" y="158" width="1232" height="74" fill="#f8fafc"/>
+    <rect x="46" y="173" width="42" height="42" rx="8" fill="#dbeafe"/>
+    <text x="67" y="200" fill="#1d4ed8" font-family="sans-serif" font-size="20" text-anchor="middle">🗺</text>
+    <text x="102" y="201" fill="#111827" font-family="sans-serif" font-size="24">Maps</text>
+    <rect x="116" y="222" width="1120" height="3" fill="#4caf50"/>
+    <rect x="990" y="175" width="120" height="40" rx="7" fill="#2a2a2a"/>
+    <text x="1050" y="201" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">← Principal</text>
+    <rect x="1120" y="175" width="44" height="40" rx="7" fill="#f44336"/>
+    <text x="1142" y="201" fill="#fff" font-family="sans-serif" font-size="23" text-anchor="middle">✕</text>
+  </g>
+
+  <g>
+    <rect x="24" y="232" width="1232" height="74" fill="#ffffff"/>
+    <rect x="46" y="247" width="42" height="42" rx="8" fill="#fee2e2"/>
+    <text x="67" y="274" fill="#dc2626" font-family="sans-serif" font-size="20" text-anchor="middle">▶</text>
+    <text x="102" y="275" fill="#111827" font-family="sans-serif" font-size="24">YouTube</text>
+    <rect x="960" y="249" width="150" height="40" rx="7" fill="#1565c0"/>
+    <text x="1035" y="275" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">→ Cluster</text>
+    <rect x="1120" y="249" width="44" height="40" rx="7" fill="#f44336"/>
+    <text x="1142" y="275" fill="#fff" font-family="sans-serif" font-size="23" text-anchor="middle">✕</text>
+  </g>
+
+  <g>
+    <rect x="24" y="306" width="1232" height="74" fill="#f8fafc"/>
+    <rect x="46" y="321" width="42" height="42" rx="8" fill="#dcfce7"/>
+    <text x="67" y="348" fill="#15803d" font-family="sans-serif" font-size="20" text-anchor="middle">♪</text>
+    <text x="102" y="349" fill="#111827" font-family="sans-serif" font-size="24">Spotify</text>
+    <rect x="960" y="323" width="150" height="40" rx="7" fill="#1565c0"/>
+    <text x="1035" y="349" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">→ Cluster</text>
+    <rect x="1120" y="323" width="44" height="40" rx="7" fill="#f44336"/>
+    <text x="1142" y="349" fill="#fff" font-family="sans-serif" font-size="23" text-anchor="middle">✕</text>
+  </g>
+
+  <rect x="24" y="502" width="1232" height="188" fill="#0d1117"/>
+
+  <rect x="24" y="502" width="1232" height="26" fill="#111111"/>
+  <rect x="1166" y="505" width="72" height="20" rx="4" fill="#333333"/>
+  <text x="1202" y="520" fill="#aaaaaa" font-family="sans-serif" font-size="12" text-anchor="middle">Masquer ▼</text>
+
+  <rect x="24" y="528" width="1232" height="44" fill="#161b22"/>
+  <text x="42" y="556" fill="#4a9fdf" font-family="sans-serif" font-size="16" font-weight="700">Controle cluster</text>
+  <text x="198" y="556" fill="#aaaaaa" font-family="sans-serif" font-size="16" font-weight="700">Maps</text>
+
+  <rect x="790" y="536" width="90" height="28" rx="6" fill="#00838f"/>
+  <text x="835" y="555" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">Ajuster</text>
+
+  <rect x="888" y="536" width="34" height="28" rx="6" fill="#e65100"/>
+  <text x="905" y="555" fill="#fff" font-family="sans-serif" font-size="16" text-anchor="middle">↺</text>
+
+  <rect x="930" y="536" width="95" height="28" rx="6" fill="#5c6bc0"/>
+  <text x="978" y="555" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">⬛⬛ Split</text>
+
+  <rect x="1033" y="536" width="110" height="28" rx="6" fill="#3f4650"/>
+  <text x="1088" y="555" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">Masquer</text>
+
+  <rect x="36" y="582" width="1208" height="98" rx="8" fill="#090c10"/>
+  <text x="640" y="638" fill="#4a9fdf" font-family="sans-serif" font-size="24" text-anchor="middle">Affichage actif sur le cluster ✓</text>
+
+  <text x="640" y="708" fill="#607d8b" font-family="sans-serif" font-size="20" text-anchor="middle">Projection active 0.6.8 - liste apps + panneau controle cluster</text>
+</svg>

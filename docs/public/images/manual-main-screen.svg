@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#eceff1"/>
+
+  <rect x="32" y="28" width="1216" height="82" rx="8" fill="#1a237e"/>
+  <circle cx="58" cy="69" r="7" fill="#888888"/>
+  <text x="74" y="75" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="700">Dashboard : non connecte</text>
+
+  <rect x="655" y="44" width="180" height="50" rx="8" fill="#1565c0"/>
+  <text x="745" y="76" fill="#ffffff" font-family="sans-serif" font-size="18" text-anchor="middle">Activer Projection</text>
+
+  <rect x="846" y="44" width="180" height="50" rx="8" fill="#b71c1c"/>
+  <text x="936" y="76" fill="#ffffff" font-family="sans-serif" font-size="18" text-anchor="middle">Arreter Projection</text>
+
+  <rect x="1038" y="44" width="50" height="50" rx="8" fill="#d9d9d9"/>
+  <text x="1063" y="78" fill="#333333" font-family="sans-serif" font-size="28" text-anchor="middle">⋮</text>
+
+  <rect x="32" y="122" width="1216" height="46" fill="#f5f5f5"/>
+  <text x="52" y="152" fill="#1f2937" font-family="sans-serif" font-size="28" font-weight="700">Applications installees</text>
+  <rect x="1188" y="127" width="44" height="36" rx="6" fill="#dddddd"/>
+  <text x="1210" y="151" fill="#333333" font-family="sans-serif" font-size="22" text-anchor="middle">⊞</text>
+
+  <rect x="32" y="168" width="1216" height="44" fill="#e8e8e8"/>
+  <text x="62" y="197" fill="#7a7a7a" font-family="sans-serif" font-size="20">🔍  Rechercher une application...</text>
+
+  <g>
+    <rect x="32" y="212" width="1216" height="72" fill="#ffffff"/>
+    <rect x="56" y="226" width="42" height="42" rx="9" fill="#dbeafe"/>
+    <text x="77" y="253" fill="#1d4ed8" font-family="sans-serif" font-size="20" text-anchor="middle">🗺</text>
+    <text x="115" y="254" fill="#111827" font-family="sans-serif" font-size="25">Maps</text>
+    <rect x="1172" y="228" width="44" height="40" rx="8" fill="#f44336"/>
+    <text x="1194" y="254" fill="#ffffff" font-family="sans-serif" font-size="24" text-anchor="middle">✕</text>
+  </g>
+
+  <g>
+    <rect x="32" y="284" width="1216" height="72" fill="#f9fafb"/>
+    <rect x="56" y="298" width="42" height="42" rx="9" fill="#fee2e2"/>
+    <text x="77" y="325" fill="#dc2626" font-family="sans-serif" font-size="20" text-anchor="middle">▶</text>
+    <text x="115" y="326" fill="#111827" font-family="sans-serif" font-size="25">YouTube</text>
+    <rect x="1172" y="300" width="44" height="40" rx="8" fill="#f44336"/>
+    <text x="1194" y="326" fill="#ffffff" font-family="sans-serif" font-size="24" text-anchor="middle">✕</text>
+  </g>
+
+  <g>
+    <rect x="32" y="356" width="1216" height="72" fill="#ffffff"/>
+    <rect x="56" y="370" width="42" height="42" rx="9" fill="#dcfce7"/>
+    <text x="77" y="397" fill="#15803d" font-family="sans-serif" font-size="20" text-anchor="middle">♪</text>
+    <text x="115" y="398" fill="#111827" font-family="sans-serif" font-size="25">Spotify</text>
+    <rect x="1172" y="372" width="44" height="40" rx="8" fill="#f44336"/>
+    <text x="1194" y="398" fill="#ffffff" font-family="sans-serif" font-size="24" text-anchor="middle">✕</text>
+  </g>
+
+  <g>
+    <rect x="32" y="428" width="1216" height="72" fill="#f9fafb"/>
+    <rect x="56" y="442" width="42" height="42" rx="9" fill="#fff7ed"/>
+    <text x="77" y="469" fill="#ea580c" font-family="sans-serif" font-size="20" text-anchor="middle">🧭</text>
+    <text x="115" y="470" fill="#111827" font-family="sans-serif" font-size="25">Waze</text>
+    <rect x="1172" y="444" width="44" height="40" rx="8" fill="#f44336"/>
+    <text x="1194" y="470" fill="#ffffff" font-family="sans-serif" font-size="24" text-anchor="middle">✕</text>
+  </g>
+
+  <text x="640" y="684" fill="#607d8b" font-family="sans-serif" font-size="22" text-anchor="middle">Ecran principal 0.6.8 - barre statut, recherche et liste d apps</text>
+</svg>
