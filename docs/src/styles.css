@@ -705,6 +705,29 @@ hr {
   text-align: center;
 }
 
+.manual-image-card {
+  margin: 12px auto 26px;
+  border: 1px solid #d7dee8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+  padding: 12px;
+}
+
+.manual-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.manual-image-card figcaption {
+  margin-top: 8px;
+  color: #5e6f91;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .step {
   display: flex;
   gap: 12px;

@@ -41,6 +41,7 @@ const isManual = computed(() => Boolean(currentLocale.value));
 
 watchEffect(() => {
   document.documentElement.lang = currentLocale.value?.code || 'en';
+  document.documentElement.dir = currentLocale.value?.code === 'ar' ? 'rtl' : 'ltr';
   document.title = currentLocale.value?.title || 'DashCast Documentation';
 });
 
@@ -60,7 +61,7 @@ onBeforeUnmount(() => {
     <section class="landing-wrap" aria-labelledby="landing-title">
       <h1 id="landing-title">DashCast</h1>
       <p class="landing-sub">Dashboard Controller - User Manual</p>
-      <p class="landing-version">v0.1.31 · BYD Seal EU · DiLink 3.0 · Android 10</p>
+      <p class="landing-version">v0.7.2 · BYD Seal EU · DiLink 3.0 · Android 10</p>
 
       <nav class="landing-languages" aria-label="Documentation languages">
         <button
