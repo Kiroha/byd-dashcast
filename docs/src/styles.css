@@ -325,6 +325,18 @@ hr {
   background: #f5f5f5;
 }
 
+.status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.status-dot.active {
+  background: #4caf50;
+}
+
 .sb {
   display: flex;
   flex-wrap: wrap;
@@ -388,6 +400,10 @@ hr {
   background: #2a2a2a;
 }
 
+.btn-orange {
+  background: #e65100;
+}
+
 .btn-secondary {
   background: #607d8b;
 }
@@ -404,6 +420,39 @@ hr {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: bold;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  padding: 6px 8px 6px 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.list-header-text {
+  flex: 1;
+  color: #333;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.btn-toggle {
+  background: #dddddd;
+  color: #333;
+  padding: 3px 7px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 0;
+  cursor: pointer;
+}
+
+.list-search {
+  background: #e8e8e8;
+  padding: 5px 14px;
+  font-size: 11px;
+  color: #9e9e9e;
+  border-bottom: 1px solid #ddd;
 }
 
 .app-item {
