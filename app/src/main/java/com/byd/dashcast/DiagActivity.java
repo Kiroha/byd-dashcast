@@ -94,6 +94,11 @@ public class DiagActivity extends AppCompatActivity {
     private Button   btnCleanupFiles;
     private TextView tvCleanupResult;
 
+    // [8.8"] Direct projection (no sendInfo 30)
+    private Button   btnScreen88Activate;
+    private Button   btnScreen88Stop;
+    private TextView tvScreen88Result;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -194,6 +199,14 @@ public class DiagActivity extends AppCompatActivity {
         // [ADAS]
         findViewById(R.id.btn_adas_on).setOnClickListener(v -> runAdas(47));
         findViewById(R.id.btn_adas_off).setOnClickListener(v -> runAdas(48));
+
+        // [8.8"] Direct projection
+        btnScreen88Activate = (Button)   findViewById(R.id.btn_screen88_activate);
+        btnScreen88Stop     = (Button)   findViewById(R.id.btn_screen88_stop);
+        tvScreen88Result    = (TextView) findViewById(R.id.tv_screen88_result);
+        tvScreen88Result.setTag("8.8\" Projection");
+        btnScreen88Activate.setOnClickListener(v -> runScreen88Activate());
+        btnScreen88Stop    .setOnClickListener(v -> runScreen88Stop());
 
         btnReSnifferStart   .setOnClickListener(v -> startReSniffer());
         btnReSnifferStop    .setOnClickListener(v -> stopReSniffer());
@@ -1034,6 +1047,79 @@ public class DiagActivity extends AppCompatActivity {
     private static final String RE_SNIFFER_PREFIX  = "BYD_RE_Sniffer_";
 
     // =========================================================================
+    // 8.8" SCREEN — Direct projection (sendInfo 16 → 35, skipping 30)
+    // sendInfo(30) crashes 8.8" clusters — do NOT send it.
+    // Activation : sendInfo(16) → sleep 6s → sendInfo(35)
+    // Stop       : sendInfo(18) → sleep 1s → sendInfo(0)
+    // =========================================================================
+
+    private void runScreen88Activate() {
+        tvScreen88Result.setText(getString(R.string.diag_88_activating));
+        tvScreen88Result.setBackgroundColor(0xFF111A2A);
+        btnScreen88Activate.setEnabled(false);
+        btnScreen88Stop.setEnabled(false);
+
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("── sendInfo(16) → Qt standby / projection ON ──\n");
+            String r16 = shellSync("service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
+            sb.append(r16.isEmpty() ? "❌ AutoContainer non disponible" : r16).append("\n\n");
+            runOnUiThread(() -> tvScreen88Result.setText(sb.toString()));
+
+            try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+
+            sb.append("── sendInfo(35) → Di4.0 mode / Qt enregistre Surface JNI ──\n");
+            String r35 = shellSync("service call AutoContainer 2 i32 1000 i32 35 s16 \"\" 2>&1");
+            sb.append(r35.isEmpty() ? "⚠ pas de réponse" : r35).append("\n\n");
+
+            boolean ok = !r16.isEmpty() && !r35.isEmpty();
+            sb.append(getString(ok ? R.string.diag_88_activated : R.string.diag_error_prefix)).append("\n");
+
+            AppLogger.i("Screen88", "activate → r16=" + r16.trim() + " r35=" + r35.trim());
+            final String out = sb.toString();
+            runOnUiThread(() -> {
+                tvScreen88Result.setText(out);
+                tvScreen88Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                btnScreen88Activate.setEnabled(true);
+                btnScreen88Stop.setEnabled(true);
+            });
+        }).start();
+    }
+
+    private void runScreen88Stop() {
+        tvScreen88Result.setText(getString(R.string.diag_88_stopping));
+        tvScreen88Result.setBackgroundColor(0xFF1A1A2A);
+        btnScreen88Activate.setEnabled(false);
+        btnScreen88Stop.setEnabled(false);
+
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("── sendInfo(18) → fermer projection ──\n");
+            String r18 = shellSync("service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+            sb.append(r18.isEmpty() ? "❌ AutoContainer non disponible" : r18).append("\n\n");
+            runOnUiThread(() -> tvScreen88Result.setText(sb.toString()));
+
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+
+            sb.append("── sendInfo(0) → refresh Qt stream ──\n");
+            String r0 = shellSync("service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+            sb.append(r0.isEmpty() ? "⚠ pas de réponse" : r0).append("\n\n");
+
+            boolean ok = !r18.isEmpty() && !r0.isEmpty();
+            sb.append(getString(ok ? R.string.diag_88_stopped : R.string.diag_error_prefix)).append("\n");
+
+            AppLogger.i("Screen88", "stop → r18=" + r18.trim() + " r0=" + r0.trim());
+            final String out = sb.toString();
+            runOnUiThread(() -> {
+                tvScreen88Result.setText(out);
+                tvScreen88Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                btnScreen88Activate.setEnabled(true);
+                btnScreen88Stop.setEnabled(true);
+            });
+        }).start();
+    }
+
+    // =========================================================================
     // ADAS Cluster — sendInfo(1000, 12) / sendInfo(1000, 13)
     // =========================================================================
 
@@ -1076,7 +1162,7 @@ public class DiagActivity extends AppCompatActivity {
             tvAdbLocalResult, tvDaemonVdResult, tvDisplaySizeResult,
             tvDisplay1Result, tvDumpsysResult, tvTest13Result, tvSfDumpResult,
             tvAutoDisplayResult, tvFissionResult, tvReSnifferStatus,
-            tvResizeDiagResult, tvAdasResult
+            tvResizeDiagResult, tvAdasResult, tvScreen88Result
         };
         for (TextView tv : results) {
             if (tv == null) continue;

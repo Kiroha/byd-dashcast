@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">¿Relanzar app?</string>
     <string name="dialog_reconnect_msg">¿Relanzar %1$s en el clúster?</string>
     <string name="dialog_reconnect_yes">↺ Relanzar</string>
+    <string name="diag_s88_title">Pantalla 8.8" — Proyección Directa</string>
+    <string name="diag_s88_desc">En los clústeres de 8.8", sendInfo(30) provoca un bloqueo. Esta sección activa la proyección enviando solo sendInfo(16) y sendInfo(35).</string>
+    <string name="diag_s88_initial">Proyección 8.8": --</string>
+    <string name="diag_btn_88_activate">Activar Proyección</string>
+    <string name="diag_btn_88_stop">Detener Proyección</string>
+    <string name="diag_88_activating">Activando…</string>
+    <string name="diag_88_stopping">Deteniendo…</string>
+    <string name="diag_88_activated">Proyección activada ✅</string>
+    <string name="diag_88_stopped">Proyección detenida ✅</string>
 </resources>

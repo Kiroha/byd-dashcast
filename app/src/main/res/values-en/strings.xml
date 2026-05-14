@@ -179,4 +179,13 @@
     <string name="dialog_reconnect_title">Relaunch app?</string>
     <string name="dialog_reconnect_msg">Relaunch %1$s on the cluster?</string>
     <string name="dialog_reconnect_yes">↺ Relaunch</string>
+    <string name="diag_s88_title">8.8" Screen — Direct Projection</string>
+    <string name="diag_s88_desc">On 8.8" clusters, sendInfo(30) causes a crash. This section activates projection by sending only sendInfo(16) then sendInfo(35).</string>
+    <string name="diag_s88_initial">8.8" projection: --</string>
+    <string name="diag_btn_88_activate">Activate Projection</string>
+    <string name="diag_btn_88_stop">Stop Projection</string>
+    <string name="diag_88_activating">Activating…</string>
+    <string name="diag_88_stopping">Stopping…</string>
+    <string name="diag_88_activated">Projection activated ✅</string>
+    <string name="diag_88_stopped">Projection stopped ✅</string>
 </resources>

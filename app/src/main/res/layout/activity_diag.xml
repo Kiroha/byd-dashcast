@@ -647,6 +647,69 @@
         </LinearLayout>
 
 
+        <!-- 8.8" SCREEN — DIRECT PROJECTION (no sendInfo 30) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s88_title"
+                android:textSize="18sp"
+                android:textColor="#3B4252"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s88_desc"
+                android:textSize="12sp"
+                android:textColor="#4C566A"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tv_screen88_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s88_initial"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="#E5E9F0"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_screen88_activate"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_88_activate"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_screen88_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_88_stop"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- 7. ADAS DEBUG -->
         <LinearLayout
             android:layout_width="match_parent"

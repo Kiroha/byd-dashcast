@@ -232,4 +232,15 @@
     <string name="diag_error_prefix">ERROR: </string>
     <string name="favorite_prefix">⭐ </string>
     <string name="log_badge_label">LOG</string>
+
+    <!-- Section 8.8" — Projection directe (sans sendInfo 30) -->
+    <string name="diag_s88_title">Écran 8.8\" — Projection directe</string>
+    <string name="diag_s88_desc">Sur les clusters 8.8\", sendInfo(30) provoque un plantage. Cette section active la projection en envoyant uniquement sendInfo(16) puis sendInfo(35).</string>
+    <string name="diag_s88_initial">Projection 8.8\" : --</string>
+    <string name="diag_btn_88_activate">Activer Projection</string>
+    <string name="diag_btn_88_stop">Arrêter Projection</string>
+    <string name="diag_88_activating">Activation en cours…</string>
+    <string name="diag_88_stopping">Arrêt en cours…</string>
+    <string name="diag_88_activated">Projection activée ✅</string>
+    <string name="diag_88_stopped">Projection arrêtée ✅</string>
 </resources>
