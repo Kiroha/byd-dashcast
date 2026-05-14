@@ -126,14 +126,16 @@ watch(
                 {{ line }}
               </template>
             </div>
-            <button
-              v-for="language in languages"
-              :key="language.code"
-              :class="['lang-btn', { selected: language.code === t.code }]"
-              type="button"
-            >
-              {{ language.flag }}&nbsp;&nbsp;{{ language.name }}
-            </button>
+            <div class="lang-grid">
+              <button
+                v-for="language in languages"
+                :key="language.code"
+                :class="['lang-btn', { selected: language.code === t.code }]"
+                type="button"
+              >
+                {{ language.flag }}&nbsp;{{ language.name }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -165,7 +167,7 @@ watch(
               {{ appIcons[index % appIcons.length] }}
             </div>
             <div class="app-name">{{ app }}</div>
-            <button class="btn-ui btn-red btn-small" type="button">{{ mainCloseButton }}</button>
+            <span class="auto-badge">Auto</span>
           </div>
         </div>
       </div>
@@ -207,14 +209,12 @@ watch(
               {{ appIcons[index % appIcons.length] }}
             </div>
             <div class="app-name">{{ app }}</div>
-            <div v-if="index === 0" class="active-dot"></div>
-            <button
-              :class="['btn-ui', index === 0 ? 'btn-dark' : 'btn-blue', 'btn-small']"
-              type="button"
-            >
-              {{ index === 0 ? projectionMainButton : projectionClusterButton }}
-            </button>
-            <button class="btn-ui btn-red btn-small" type="button">{{ projectionCloseButton }}</button>
+            <template v-if="index === 0">
+              <div class="active-dot"></div>
+              <button class="btn-ui btn-dark btn-small" type="button">{{ projectionMainButton }}</button>
+              <button class="btn-ui btn-red btn-small" type="button">{{ projectionCloseButton }}</button>
+            </template>
+            <span v-else class="auto-badge">Auto</span>
           </div>
           <div class="control-panel">
             <div class="cp-collapse-strip">
@@ -254,6 +254,8 @@ watch(
     <h3>{{ t.control.resize.title }}</h3>
     <p>{{ t.control.resize.text }}</p>
     <div class="note" v-if="t.control.resize.note">{{ t.control.resize.note }}</div>
+    <h3>{{ t.control.relaunch.title }}</h3>
+    <p>{{ t.control.relaunch.text }}</p>
     <h3>{{ t.control.split.title }}</h3>
     <p>{{ t.control.split.text }}</p>
     <ul>
@@ -321,6 +323,14 @@ watch(
                 <button class="btn-ui btn-secondary" type="button">{{ t.settings.resetButton }}</button>
               </div>
             </div>
+            <div class="card">
+              <div class="card-title">{{ t.settings.updatesLabel }}</div>
+              <div class="checkbox-item">
+                <div class="checkbox-box"></div>
+                <span class="checkbox-text">{{ t.settings.prereleaseLabel }}</span>
+              </div>
+              <div class="checkbox-hint">{{ t.settings.prereleaseHint }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -335,6 +345,8 @@ watch(
     </ul>
     <p>{{ t.settings.margins.applyText }}</p>
     <div class="note">{{ t.settings.margins.note }}</div>
+    <h3>{{ t.settings.updates.title }}</h3>
+    <p>{{ t.settings.updates.text }}</p>
 
     <h2 id="s8" class="section-heading">
       <span>{{ t.tools.title }}</span>

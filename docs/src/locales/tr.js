@@ -34,7 +34,7 @@ export default {
   },
   "firstLaunch": {
     "title": "2. İlk Çalıştırma — Dil Seçimi",
-    "text": "İlk çalıştırmada dilinizi seçin.",
+    "text": "İlk çalıştırmada, 12 mevcut dili 4×3 ızgara (3 sütun × 4 satır) ile sunan hoş geldiniz ekranı belirir. Dilini seçmek için dil düğmesine dokunun. Bu tercih kaydedilir — ⋮ → 🌐 Dil menüsü üzerinden dil değiştirilmedikçe ekran tekrar görünmez.",
     "welcomeSubtitle": "Dashboard Controller",
     "welcomeHint": "Dilinizi seçin",
     "caption": "Dil seçimi ekranı"
@@ -81,10 +81,10 @@ export default {
         "text": "Yansıtmayı durdurur."
       },
       {
-        "tone": "green",
+        "tone": "gray",
         "marker": "④",
-        "label": "Geri Yükle",
-        "text": "Orijinal BYD gösterge panelini geri yükler."
+        "label": "Orijinal Göstergeler (⋮ menüsü)",
+        "text": "⋮ menüsünden erişilir. Yansımayı DURDURUR ve yerel BYD gösterge panelini geri yükler (hız, göstergeler, menzil…). Kullanım sonunda 'Yansımayı Durdur' yerine tercih edilir."
       },
       {
         "tone": "gray",
@@ -96,7 +96,7 @@ export default {
         "tone": "gray",
         "marker": "⑥",
         "label": "Uygulama listesi",
-        "text": "Yüklü uygulamalar. ❌ ile tamamen durdurun."
+        "text": "Uygulamaı kümeye yansıtmak için üzerine dokunun. Uzun basın → uygulamaı sabitle (⭐, listenin başına taşır). 'Otomatik' onay kutusu bir uygulamaı otomatik başlatma için işaretler: yansıtma başladığında kümeye gönderilir. ✕ düğmesi ve ← / → okları yalnızca şu anda aktif uygulamada görünür (kümede veya ana ekranda)."
       }
     ]
   },
@@ -186,6 +186,10 @@ export default {
       "text": "Kenar boşluklarını kırpın.",
       "note": ""
     },
+    "relaunch": {
+      "title": "5.5 Yeniden Başlat (↺)",
+      "text": "↺ (turuncu) düğmesi, kümede o anda yansıtılan uygulamayı zorla durdurur ve ardından hemen yeniden başlatır. Uygulama donmuşsa veya kümede ekran bloke olduysa kullanışlıdır."
+    },
     "split": {
       "title": "5.3 Böl",
       "text": "Ekranı iki uygulama arasında paylaştırın.",
@@ -212,7 +216,7 @@ export default {
   },
   "settings": {
     "title": "7. Ayarlar",
-    "intro": "Ayarları yapın",
+    "intro": "Ayarlara ⋮ → ⚙️ Ayarlar üzerinden erişin. Ekranda üç bölüm bulunur:",
     "titleLabel": "Ayarlar",
     "clusterTypeLabel": "Küme türü",
     "clusterOptions": [
@@ -225,6 +229,9 @@ export default {
     "verticalMarginLabel": "Üst / Alt:",
     "applyButton": "Uygula",
     "resetButton": "Sıfırla",
+    "updatesLabel": "Güncellemeler",
+    "prereleaseLabel": "Ön yayın sürümlerini dahil et (alfa/beta)",
+    "prereleaseHint": "Resmi sürümden önce test sürümlerini alın.",
     "caption": "Ayarlar",
     "type": {
       "title": "Küme türü",
@@ -236,6 +243,10 @@ export default {
       "items": [],
       "applyText": "",
       "note": ""
+    },
+    "updates": {
+      "title": "7.3 Güncellemeler",
+      "text": "'Ön yayın sürümlerini dahil et (alfa/beta)' seçeneğini etkinleştirerek resmi sürümden önce test derlemelerini alın. Manuel kontrol için: ⋮ → 🔄 Güncellemeleri Kontrol Et. Güncellemeler doğrudan GitHub Releases'den indirilir — Play Store gerekmez."
     }
   },
   "tools": {
@@ -246,7 +257,16 @@ export default {
         "Seçenek",
         "Açıklama"
       ],
-      "rows": []
+      "rows": [
+        ["⚙️ Ayarlar", "Ayarları açar: Küme türü, Global taşma kenar boşlukları, Güncellemeler (ön yayın)."],
+        ["🌐 Dil", "Arayüz dilini değiştirmek için dil seçim ekranına döner."],
+        ["🔄 Güncellemeleri Kontrol Et", "GitHub'da yeni bir DashCast sürümünün mevcut olup olmadığını kontrol eder. Ayarlarda ön yayın etkinleştirilirse alfa/beta sürümleri de önerilir."],
+        ["⊞ Izgara modu / 📋 Liste modu", "Uygulama listesini liste modu (1 sütun) ve ızgara modu (5 sütun) arasında değiştirir. Liste başlığındaki ⊞ düğmesiyle de erişilebilir."],
+        ["Orijinal Gösterge Panelini Geri Yükle", "Yansımayı durdurur VE yerel BYD gösterge panelini geri yükler. Yalnızca bir yansıma sırasında etkin."],
+        ["🔧 Tanılama", "Gelişmiş geliştirici araçları — ADB bağlantısı, VirtualDisplay oluşturma, SurfaceFlinger analizi, tersine mühendislik için logcat sniffer."],
+        ["📋 Sistem Raporu", "Tam rapor oluşturur (ekranlar, BYD API'leri, izinler, paketler) — destek veya hata raporu için kullanışlı."],
+        ["📜 Günlükler", "Gerçek zamanlı günlük görüntüleyici — etiket/seviyeye göre filtrele, e-posta veya dosya ile paylaş."]
+      ]
     },
     "logs": {
       "title": "Günlükler",
