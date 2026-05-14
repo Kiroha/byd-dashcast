@@ -161,6 +161,9 @@
     <string name="ota_btn_update_now">Mettre à jour</string>
     <string name="ota_btn_later">Plus tard</string>
     <string name="ota_downloading">Téléchargement…</string>
+    <string name="ota_version_label" translatable="false">DashCast %1$s</string>
+    <string name="ota_progress_unknown" translatable="false">…</string>
+    <string name="ota_progress_percent" translatable="false">%1$d %%</string>
     <string name="menu_view_grid">⊞ Mode Grille</string>
     <string name="menu_view_list">📋 Mode Liste</string>
     <!-- Notifications flottantes -->
@@ -243,4 +246,10 @@
     <string name="diag_88_stopping">Arrêt en cours…</string>
     <string name="diag_88_activated">Projection activée ✅</string>
     <string name="diag_88_stopped">Projection arrêtée ✅</string>
+
+    <!-- ADAS debug (47/48) labels kept non-translatable to avoid locale drift -->
+    <string name="diag_adas47_title" translatable="false">ADAS DEBUG (cmd 47/48)</string>
+    <string name="diag_adas47_desc" translatable="false">Advanced ADAS diagnostic toggles for cluster testing.</string>
+    <string name="diag_adas47_on" translatable="false">ADAS ON (47)</string>
+    <string name="diag_adas47_off" translatable="false">ADAS OFF (48)</string>
 </resources>

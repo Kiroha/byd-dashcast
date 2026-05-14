@@ -724,7 +724,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ADAS DEBUG [sendInfo]"
+                android:text="@string/diag_adas47_title"
                 android:textSize="18sp"
                 android:textColor="#3B4252"
                 android:textStyle="bold"
@@ -732,7 +732,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Activer ou désactiver le mode de diagnostic ADAS sur le Cluster"
+                android:text="@string/diag_adas47_desc"
                 android:textSize="12sp"
                 android:textColor="#4C566A"
                 android:layout_marginBottom="12dp"/>
@@ -747,7 +747,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="ADAS ON (47)"
+                    android:text="@string/diag_adas47_on"
                     android:backgroundTint="#A3BE8C"
                     android:layout_marginEnd="4dp"/>
 
@@ -756,7 +756,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="ADAS OFF (48)"
+                    android:text="@string/diag_adas47_off"
                     android:backgroundTint="#BF616A"/>
             </LinearLayout>
 

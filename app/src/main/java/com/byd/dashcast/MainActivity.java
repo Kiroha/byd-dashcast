@@ -1367,7 +1367,7 @@ public class MainActivity extends AppCompatActivity
                 layout.setPadding(pad, pad, pad, pad / 2);
 
                 TextView tvVersion = new TextView(MainActivity.this);
-                tvVersion.setText("DashCast " + version);
+                tvVersion.setText(getString(R.string.ota_version_label, version));
                 tvVersion.setTextSize(16);
                 tvVersion.setPadding(pad, 0, pad, pad / 2);
                 tvVersion.setTextColor(android.graphics.Color.parseColor("#1565C0"));
@@ -1400,7 +1400,7 @@ public class MainActivity extends AppCompatActivity
                 pbHolder[0] = pb;
 
                 TextView tvPct = new TextView(MainActivity.this);
-                tvPct.setText("0 %");
+                tvPct.setText(getString(R.string.ota_progress_percent, 0));
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
@@ -1438,11 +1438,11 @@ public class MainActivity extends AppCompatActivity
                 if (percent < 0) {
                     // Content-Length unknown → indeterminate
                     pbHolder[0].setIndeterminate(true);
-                    if (pctHolder[0] != null) pctHolder[0].setText("…");
+                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_unknown));
                 } else {
                     pbHolder[0].setIndeterminate(false);
                     pbHolder[0].setProgress(percent);
-                    if (pctHolder[0] != null) pctHolder[0].setText(percent + " %");
+                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_percent, percent));
                 }
             }
 
