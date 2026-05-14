@@ -2060,13 +2060,11 @@ public class MainActivity extends AppCompatActivity
                     SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {
                         _p.edit().putBoolean(PREF_FIRST_LAUNCH_TIP, true).apply();
-                        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                            @Override public void run() {
+                        mScreenshotHandler.postDelayed(() ->
                                 Toast.makeText(MainActivity.this,
                                         getString(R.string.tooltip_tap_send),
-                                        Toast.LENGTH_LONG).show();
-                            }
-                        }, 1200);
+                                        Toast.LENGTH_LONG).show(),
+                                1200);
                     }
                 });
             }
