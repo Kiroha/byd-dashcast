@@ -18,8 +18,13 @@ const appIcons = ['🗺', '▶️', '🎵', '🧭'];
 const logClasses = ['log-i', 'log-i', 'log-d', 'log-w', 'log-i'];
 
 const welcomeHintLines = computed(() => props.t.firstLaunch.welcomeHint.split('\n'));
-const mainActivateButton = computed(() => props.t.main.buttons[0]?.replace(/^[①-⑩]\s*/, '') || '');
-const mainStopButton = computed(() => props.t.main.buttons[1]?.replace(/^[①-⑩]\s*/, '') || '');
+const stripAnnotation = (s) => (s || '').replace(/^[①-⑩]\s*/, '').trim();
+const stripEmoji = (s) => (s || '').replace(/^[^\p{L}\d]+/u, '').trim();
+
+const mainStatusText = computed(() => stripAnnotation(props.t.main.status));
+const mainListTitle = computed(() => stripAnnotation(props.t.main.listTitle));
+const mainActivateButton = computed(() => stripAnnotation(props.t.main.buttons[0]));
+const mainStopButton = computed(() => stripAnnotation(props.t.main.buttons[1]));
 const mainCloseButton = computed(() => '✕');
 const projectionButtons = computed(() => props.t.projection.buttons.slice(0, 3));
 const projectionMainButton = computed(() => props.t.projection.buttons[5] || '');
@@ -29,7 +34,7 @@ const splitButton = computed(() => props.t.projection.buttons.at(-2) || '');
 const hideButton = computed(() => props.t.projection.buttons.at(-1) || '');
 const resizeButton = computed(() => {
   const btn = props.t.projection.buttons.at(-3);
-  return (btn === '✕' || !btn) ? '📐 Ajuster' : btn;
+  return (btn === '✕' || !btn) ? 'Ajuster' : stripEmoji(btn);
 });
 const resetRowIndex = computed(() => Math.max(0, props.t.stopping.table.rows.length - 1));
 
@@ -145,13 +150,13 @@ watch(
         <div class="screen">
           <div class="sb">
             <span class="status-dot"></span>
-            <span class="sb-text">{{ t.main.status }}</span>
+            <span class="sb-text">{{ mainStatusText }}</span>
             <button class="btn-ui btn-blue" type="button">{{ mainActivateButton }}</button>
             <button class="btn-ui btn-red" type="button">{{ mainStopButton }}</button>
             <button class="btn-ui btn-gray" type="button">⋮</button>
           </div>
           <div class="list-header">
-            <span class="list-header-text">{{ t.main.listTitle }}</span>
+            <span class="list-header-text">{{ mainListTitle }}</span>
             <button class="btn-ui btn-toggle" type="button">⊞</button>
           </div>
           <div class="list-search">🔍</div>
@@ -212,10 +217,13 @@ watch(
             <button class="btn-ui btn-red btn-small" type="button">{{ projectionCloseButton }}</button>
           </div>
           <div class="control-panel">
+            <div class="cp-collapse-strip">
+              <button class="btn-ui btn-dark btn-tiny" type="button">▼</button>
+            </div>
             <div class="cp-header">
               <span class="cp-label">{{ t.projection.controlLabel }}</span>
               <span class="cp-app">{{ t.projection.controlApp }}</span>
-              <button class="btn-ui btn-yellow btn-small" type="button">{{ resizeButton }}</button>
+              <button class="btn-ui btn-cyan btn-small" type="button">{{ resizeButton }}</button>
               <button class="btn-ui btn-orange btn-small" type="button">↺</button>
               <button class="btn-ui btn-indigo btn-small" type="button">{{ splitButton }}</button>
               <button class="btn-ui btn-dark btn-small" type="button">{{ hideButton }}</button>

@@ -385,6 +385,10 @@ hr {
   background: #00695c;
 }
 
+.btn-cyan {
+  background: #00838f;
+}
+
 .btn-gray {
   width: 28px;
   background: #455a64;
@@ -402,6 +406,21 @@ hr {
 
 .btn-orange {
   background: #e65100;
+}
+
+.btn-tiny {
+  padding: 1px 6px;
+  font-size: 9px;
+  height: 20px;
+}
+
+.cp-collapse-strip {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: #111111;
+  padding: 2px 4px;
+  height: 20px;
 }
 
 .btn-secondary {
