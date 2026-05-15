@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#1A237E"
+        android:background="#161B22"
         android:padding="12dp">
 
         <!-- Status dot: grey=off, yellow=pending, green=active -->
@@ -39,7 +39,8 @@
             android:textSize="12sp"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
-            android:backgroundTint="#1565C0"/>
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#1976D2"/>
 
         <Button
             android:id="@+id/btn_show_mirror"
@@ -50,7 +51,8 @@
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:layout_marginStart="6dp"
-            android:backgroundTint="#00695C"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#00897B"
             android:visibility="gone"/>
 
         <Button
@@ -62,7 +64,8 @@
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:layout_marginStart="6dp"
-            android:backgroundTint="#B71C1C"/>
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#D32F2F"/>
 
         <!-- ⋮ : settings + dev tools (Diag, Report, Log, Language, etc.) -->
         <Button
