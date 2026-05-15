@@ -166,10 +166,8 @@
     <string name="ota_progress_percent" translatable="false">%1$d %%</string>
     <string name="menu_view_grid">⊞ Mode Grille</string>
     <string name="menu_view_list">📋 Mode Liste</string>
-    <!-- Notifications flottantes -->
     <string name="notif_remote_channel_name">Bouton miroir cluster</string>
     <string name="notif_remote_content">📺 Miroir cluster actif</string>
-    <!-- SysInfo — chemin du fichier enregistré (%1$s = chemin absolu) -->
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>
@@ -182,10 +180,6 @@
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
     <string name="dialog_reconnect_yes">↺ Relancer</string>
-
-    <!-- ===================================================================== -->
-    <!-- Diagnostic — section 3 : taille d'affichage (cmd 29/30/31)            -->
-    <!-- ===================================================================== -->
     <string name="diag_s3_title">3. Taille d\'affichage (cmd 29/30/31)</string>
     <string name="diag_s3_initial">Résultat : --</string>
     <string name="diag_btn_size_restore">Restaurer</string>
@@ -193,22 +187,16 @@
     <string name="diag_btn_reset_main_overscan">⚠️ Reset overscan écran principal</string>
     <string name="diag_s3_display1_initial">Display 1 : --</string>
     <string name="diag_btn_restore_display">Restaurer display 1</string>
-
-    <!-- Diagnostic — section ADAS (cmd 12/13) -->
     <string name="diag_sadas_title">ADAS (cmd 12/13)</string>
     <string name="diag_sadas_desc">Commandes ADAS — sans effet sur le cluster 2D Seal EU</string>
     <string name="diag_adas_initial">ADAS : --</string>
     <string name="diag_btn_adas_show">ADAS ON (cmd=12)</string>
     <string name="diag_btn_adas_hide">ADAS OFF (cmd=13)</string>
-
-    <!-- Diagnostic — section 7 : test resize DiLink5 -->
     <string name="diag_s7_title">7. Test resize DiLink5</string>
     <string name="diag_s7_desc">Séquence DiLink5 : WM:4→5 + resizeTask(RESIZE_MODE_FORCED=3)</string>
     <string name="diag_btn_resize_dilink5_seq">Séquence DiLink5 (WM:4→5 + resize)</string>
     <string name="diag_btn_resize_forced_only">resizeTask seul (FORCED=3)</string>
     <string name="diag_btn_resize_inspect_task">Inspecter la task cluster</string>
-
-    <!-- Diagnostic — statuts dynamiques utilisés depuis Java -->
     <string name="diag_running">En cours…</string>
     <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
     <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
@@ -229,11 +217,8 @@
     <string name="diag_size_full_running">Test taille complète en cours…</string>
     <string name="diag_share_result2_btn">Partager le résultat</string>
     <string name="diag_share_result3_btn">Partager le résultat</string>
-    <!-- Externalized string literals (formerly hardcoded in Java) -->
     <string name="diag_error_prefix">ERROR: </string>
     <string name="favorite_prefix">⭐ </string>
-
-    <!-- Section 8.8" — Projection directe (sans sendInfo 30) -->
     <string name="diag_s88_title">Écran 8.8\" — Projection directe</string>
     <string name="diag_s88_desc">Sur les clusters 8.8\", sendInfo(30) provoque un plantage. Cette section active la projection en envoyant uniquement sendInfo(16) puis sendInfo(35).</string>
     <string name="diag_s88_initial">Projection 8.8\" : --</string>
@@ -243,10 +228,11 @@
     <string name="diag_88_stopping">Arrêt en cours…</string>
     <string name="diag_88_activated">Projection activée ✅</string>
     <string name="diag_88_stopped">Projection arrêtée ✅</string>
-
-    <!-- ADAS debug (47/48) labels kept non-translatable to avoid locale drift -->
     <string name="diag_adas47_title" translatable="false">ADAS DEBUG (cmd 47/48)</string>
     <string name="diag_adas47_desc" translatable="false">Advanced ADAS diagnostic toggles for cluster testing.</string>
     <string name="diag_adas47_on" translatable="false">ADAS ON (47)</string>
     <string name="diag_adas47_off" translatable="false">ADAS OFF (48)</string>
+    <string name="visual_overscan_use_visual_mode">Utiliser le mode visuel directionnel</string>
+    <string name="visual_overscan_height">↕ Hauteur</string>
+    <string name="visual_overscan_width">↔ Largeur</string>
 </resources>
