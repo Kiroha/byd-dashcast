@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
 
 import com.byd.dashcast.model.AppInfo;
 
@@ -144,6 +145,46 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             }
         }
 
+        // Render shortcuts if available
+        if (holder.llShortcutsContainer != null) {
+            holder.llShortcutsContainer.removeAllViews();
+            if (app.shortcuts != null && !app.shortcuts.isEmpty()) {
+                holder.llShortcutsContainer.setVisibility(View.VISIBLE);
+                for (final com.byd.dashcast.model.AppShortcut shortcut : app.shortcuts) {
+                    Button btn = new Button(holder.llShortcutsContainer.getContext());
+                    btn.setText(shortcut.label);
+                    btn.setTextSize(9);
+                    btn.setAllCaps(false);
+                    btn.setPadding(8, 0, 8, 0);
+                    
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        48
+                    );
+                    params.setMarginEnd(8);
+                    btn.setLayoutParams(params);
+                    
+                    btn.setBackgroundColor(Color.parseColor("#331565C0"));
+                    btn.setTextColor(Color.parseColor("#1565C0"));
+                    
+                    btn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // On the UI side, we forward these intents via the AppListAdapter
+                            if (mListener != null) {
+                                mListener.onSendToDashboard(app); // Wake up the display and switch to app
+                                v.getContext().startActivity(shortcut.intent); // Fire shortcut behind it
+                            }
+                        }
+                    });
+                    
+                    holder.llShortcutsContainer.addView(btn);
+                }
+            } else {
+                holder.llShortcutsContainer.setVisibility(View.GONE);
+            }
+        }
+
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
         boolean isOnMain = app.packageName != null && app.packageName.equals(mMainPackage);
         
@@ -203,6 +244,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final ImageView ivIcon;
         final TextView  tvName;
         final TextView  tvCategory;
+        final LinearLayout llShortcutsContainer;
         final View      viewActiveIndicator;
         final Button    btnToMain;
         final Button    btnToCluster;
@@ -214,6 +256,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             ivIcon              = (ImageView) itemView.findViewById(R.id.iv_app_icon);
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
             tvCategory          = (TextView)  itemView.findViewById(R.id.tv_app_category);
+            llShortcutsContainer = itemView.findViewById(R.id.ll_shortcuts_container);
             viewActiveIndicator = itemView.findViewById(R.id.view_active_indicator);
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);

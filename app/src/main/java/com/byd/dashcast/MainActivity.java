@@ -40,6 +40,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
+import com.byd.dashcast.model.AppShortcut;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.RelativeSizeSpan;
@@ -2036,7 +2037,35 @@ public class MainActivity extends AppCompatActivity
                     String pkg = ri.activityInfo.packageName;
                     if (pkg.equals(ownPackage)) continue;
                     String name = ri.loadLabel(pm).toString();
-                    apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
+                    AppInfo appInfo = new AppInfo(pkg, name, ri.loadIcon(pm));
+                    
+                    // Fetch shortcuts (API 25+)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+                        try {
+                            android.content.pm.LauncherApps launcherApps = (android.content.pm.LauncherApps) getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                            if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
+                                android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
+                                query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
+                                query.setPackage(pkg);
+                                
+                                java.util.List<android.content.pm.ShortcutInfo> shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
+                                if (shortcuts != null) {
+                                    for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
+                                        android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
+                                        // We have to build an Intent to launch this shortcut
+                                        Intent shortcutIntent = new Intent("com.byd.dashcast.LAUNCH_SHORTCUT");
+                                        shortcutIntent.putExtra("shortcut_id", shortcut.getId());
+                                        shortcutIntent.putExtra("shortcut_package", pkg);
+                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon, shortcutIntent));
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Ignored: app has no shortcuts or no permission
+                        }
+                    }
+                    
+                    apps.add(appInfo);
                 }
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
