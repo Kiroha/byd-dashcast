@@ -229,4 +229,5 @@
     <string name="visual_overscan_height">↕ Yükseklik</string>
     <string name="visual_overscan_width">↔ Genişlik</string>
     <string name="setting_boot_overscan">Başlangıçta projeksiyonu başlat ve Overscan\'i geri yükle (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Başlangıçta projeksiyonu otomatik başlat (Auto-Boot)</string>
 </resources>
