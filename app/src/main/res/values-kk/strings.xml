@@ -229,4 +229,5 @@
     <string name="visual_overscan_height">↕ Биіктігі</string>
     <string name="visual_overscan_width">↔ Ені</string>
     <string name="setting_boot_overscan">Іске қосылғанда проекцияны бастау және Overscan қалпына келтіру (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Іске қосылғанда проекцияны автоматты түрде бастау (Auto-Boot)</string>
 </resources>

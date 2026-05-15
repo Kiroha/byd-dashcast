@@ -113,10 +113,10 @@
                 android:layout_marginBottom="12dp"/>
 
             <CheckBox
-                android:id="@+id/cb_boot_overscan"
+                android:id="@+id/cb_boot_auto_start"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/setting_boot_overscan"
+                android:text="@string/setting_boot_auto_start"
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp"/>
 

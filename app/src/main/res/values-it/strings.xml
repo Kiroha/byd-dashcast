@@ -229,4 +229,5 @@
     <string name="visual_overscan_height">↕ Altezza</string>
     <string name="visual_overscan_width">↔ Larghezza</string>
     <string name="setting_boot_overscan">Avviare la proiezione e ripristinare l\'Overscan all\'avvio (Auto-Boot)</string>
+    <string name="setting_boot_auto_start">Avviare automaticamente la proiezione all\'avvio (Auto-Boot)</string>
 </resources>

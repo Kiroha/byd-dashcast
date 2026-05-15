@@ -48,7 +48,7 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView    tvResult;
     private CheckBox    cbPrerelease;
     private CheckBox    cbVisualMode;
-    private CheckBox    cbBootOverscan;
+    private CheckBox    cbBootAutoStart;
     private View        llSlidersMode;
     private View        llVisualMode;
     private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
@@ -90,7 +90,7 @@ public class SettingsActivity extends AppCompatActivity {
         tvResult      = findViewById(R.id.tv_overscan_result);
         cbPrerelease  = findViewById(R.id.cb_prerelease);
         cbVisualMode  = findViewById(R.id.cb_visual_mode);
-        cbBootOverscan= findViewById(R.id.cb_boot_overscan);
+        cbBootAutoStart = findViewById(R.id.cb_boot_auto_start);
         llSlidersMode = findViewById(R.id.ll_sliders_mode);
         llVisualMode  = findViewById(R.id.ll_visual_overscan);
         btnHMinus     = findViewById(R.id.btn_h_minus);
@@ -127,9 +127,9 @@ public class SettingsActivity extends AppCompatActivity {
         updateVisualModeState(visualMode);
         updateVisualMockup();
         
-        // Auto Boot toggle state
-        boolean bootOverscan = prefs.getBoolean("boot_overscan_enabled", false);
-        cbBootOverscan.setChecked(bootOverscan);
+        // Auto Boot Projection toggle state
+        boolean bootAutoStart = prefs.getBoolean("boot_auto_start_enabled", false);
+        cbBootAutoStart.setChecked(bootAutoStart);
     }
 
     private void wireListeners() {
@@ -200,10 +200,10 @@ public class SettingsActivity extends AppCompatActivity {
             updateVisualModeState(isChecked);
         });
 
-        // Auto Boot checkbox
-        cbBootOverscan.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        // Auto Start Projection checkbox
+        cbBootAutoStart.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean("boot_overscan_enabled", isChecked).apply();
+                    .putBoolean("boot_auto_start_enabled", isChecked).apply();
         });
 
         View.OnClickListener dpadListener = new View.OnClickListener() {
