@@ -23,7 +23,7 @@
         android:textSize="12sp"
         android:gravity="center"
         android:ellipsize="end"
-        android:textColor="#333333"
+        android:textColor="@color/text_primary"
         android:maxLines="2"
         android:minLines="2"/>
 

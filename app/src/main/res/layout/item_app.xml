@@ -35,7 +35,7 @@
         android:layout_height="wrap_content"
         android:text="@string/app_state_auto"
         android:textSize="10sp"
-        android:textColor="#AAAAAA"
+        android:textColor="@color/text_secondary"
         android:layout_marginEnd="4dp"
         android:buttonTint="#FFC107"
         android:visibility="gone"/>

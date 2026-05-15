@@ -188,7 +188,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_btn_apply_overscan"
                     android:backgroundTint="#1565C0"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginEnd="6dp"/>
 
                 <Button
@@ -198,7 +198,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_btn_reset_overscan"
                     android:backgroundTint="#607D8B"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
 
             <TextView

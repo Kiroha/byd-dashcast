@@ -16,7 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/welcome_title"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="28sp"
             android:textStyle="bold"
             android:letterSpacing="0.1"
@@ -26,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/welcome_subtitle"
-            android:textColor="#4A9FDF"
+            android:textColor="@color/text_accent"
             android:textSize="14sp"
             android:letterSpacing="0.2"
             android:layout_marginBottom="40dp"/>
@@ -58,7 +58,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -70,7 +70,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -82,7 +82,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@color/text_primary"/>
 
         </LinearLayout>
 
@@ -103,7 +103,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -115,7 +115,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -127,7 +127,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@color/text_primary"/>
 
         </LinearLayout>
 
@@ -148,7 +148,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -160,7 +160,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -172,7 +172,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@color/text_primary"/>
 
         </LinearLayout>
 
@@ -192,7 +192,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -204,7 +204,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginEnd="8dp"/>
 
             <Button
@@ -216,7 +216,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="#1A237E"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@color/text_primary"/>
 
         </LinearLayout>
 

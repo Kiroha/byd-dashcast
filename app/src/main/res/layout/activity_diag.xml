@@ -250,7 +250,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_adas_show"
                     android:backgroundTint="#A3BE8C"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
                     android:id="@+id/btn_adas_hide"
@@ -259,7 +259,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_adas_hide"
                     android:backgroundTint="#BF616A"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -428,7 +428,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_sendinf_java"
                     android:backgroundTint="#BF616A"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginBottom="4dp"/>
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -439,7 +439,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_fission_create"
                     android:backgroundTint="#5E81AC"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
                     android:id="@+id/btn_fission_launch"
@@ -448,7 +448,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_fission_launch"
                     android:backgroundTint="#A3BE8C"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:enabled="false"/>
             </LinearLayout>
         </LinearLayout>
@@ -576,7 +576,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_dilink5_seq"
                 android:backgroundTint="#5E81AC"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
             <!-- Bouton 2 : resizeTask seul avec FORCED=3 (sans changement windowing) -->
@@ -586,7 +586,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_forced_only"
                 android:backgroundTint="#88C0D0"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
             <!-- Bouton 3 : inspecter la task actuelle (windowing mode, stack id, bounds) -->
@@ -596,7 +596,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_inspect_task"
                 android:backgroundTint="#434C5E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
         </LinearLayout>
@@ -697,7 +697,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_88_activate"
                     android:backgroundTint="#A3BE8C"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
                     android:id="@+id/btn_screen88_stop"
@@ -706,7 +706,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_88_stop"
                     android:backgroundTint="#BF616A"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
         </LinearLayout>
 

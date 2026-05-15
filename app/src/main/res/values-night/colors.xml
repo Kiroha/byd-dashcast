@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Backgrounds (NIGHT MODE) -->
+    <color name="bg_main">#090C10</color>
+    <color name="bg_top_bar">#161B22</color>
+    <color name="bg_card">#111111</color>
+    <color name="bg_dialog">#1C2128</color>
+    <color name="bg_button_secondary">#333333</color>
+
+    <!-- Text (NIGHT MODE) -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#AAAAAA</color>
+    <color name="text_accent">#4A9FDF</color>
+</resources>
