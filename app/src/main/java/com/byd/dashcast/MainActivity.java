@@ -2056,11 +2056,18 @@ public class MainActivity extends AppCompatActivity
                 Collections.sort(apps, new Comparator<AppInfo>() {
                     @Override
                     public int compare(AppInfo a, AppInfo b) {
+                        // 1. Group automatically by Category (Navigation -> Media -> Others)
+                        if (a.category != b.category) {
+                            return Integer.compare(a.category, b.category);
+                        }
+                        // 2. Inside the category, push Favorites to the top
                         if (a.isFavorite && !b.isFavorite) return -1;
                         if (!a.isFavorite && b.isFavorite) return 1;
+                        // 3. Then sort by usage frequency
                         if (a.launchCount != b.launchCount) {
                             return Integer.compare(b.launchCount, a.launchCount); // descending
                         }
+                        // 4. Alphabetical fallback
                         return a.appName.compareToIgnoreCase(b.appName);
                     }
                 });

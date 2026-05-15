@@ -132,6 +132,18 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             holder.tvName.setTextColor(Color.parseColor("#333333")); // Default dark text
         }
 
+        if (holder.tvCategory != null) {
+            if (app.category == AppInfo.CATEGORY_NAVIGATION) {
+                holder.tvCategory.setText("🗺 Navigation");
+                holder.tvCategory.setVisibility(View.VISIBLE);
+            } else if (app.category == AppInfo.CATEGORY_MEDIA) {
+                holder.tvCategory.setText("🎵 Media");
+                holder.tvCategory.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvCategory.setVisibility(View.GONE);
+            }
+        }
+
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
         boolean isOnMain = app.packageName != null && app.packageName.equals(mMainPackage);
         
@@ -190,6 +202,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     static class ViewHolder extends RecyclerView.ViewHolder {
         final ImageView ivIcon;
         final TextView  tvName;
+        final TextView  tvCategory;
         final View      viewActiveIndicator;
         final Button    btnToMain;
         final Button    btnToCluster;
@@ -200,6 +213,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             super(itemView);
             ivIcon              = (ImageView) itemView.findViewById(R.id.iv_app_icon);
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
+            tvCategory          = (TextView)  itemView.findViewById(R.id.tv_app_category);
             viewActiveIndicator = itemView.findViewById(R.id.view_active_indicator);
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
