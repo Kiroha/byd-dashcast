@@ -230,4 +230,6 @@
     <string name="visual_overscan_width">↔ Ширина</string>
     <string name="setting_boot_overscan">Запустить проекцию и восстановить Overscan при запуске (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Автоматически запускать проекцию при запуске (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Навигация</string>
+    <string name="category_media">🎵 Медиа</string>
 </resources>

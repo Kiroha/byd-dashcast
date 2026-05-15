@@ -230,4 +230,6 @@
     <string name="visual_overscan_width">↔ Genişlik</string>
     <string name="setting_boot_overscan">Başlangıçta projeksiyonu başlat ve Overscan\'i geri yükle (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Başlangıçta projeksiyonu otomatik başlat (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Navigasyon</string>
+    <string name="category_media">🎵 Medya</string>
 </resources>

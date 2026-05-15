@@ -237,4 +237,6 @@
     <string name="visual_overscan_width">↔ Largeur</string>
     <string name="setting_boot_overscan">Activer la projection et restaurer l\'Overscan au démarrage (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Activer automatiquement la projection au démarrage (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Navigation</string>
+    <string name="category_media">🎵 Média</string>
 </resources>

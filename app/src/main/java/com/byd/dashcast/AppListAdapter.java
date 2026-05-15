@@ -135,10 +135,10 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         if (holder.tvCategory != null) {
             if (app.category == AppInfo.CATEGORY_NAVIGATION) {
-                holder.tvCategory.setText("🗺 Navigation");
+                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_navigation));
                 holder.tvCategory.setVisibility(View.VISIBLE);
             } else if (app.category == AppInfo.CATEGORY_MEDIA) {
-                holder.tvCategory.setText("🎵 Media");
+                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_media));
                 holder.tvCategory.setVisibility(View.VISIBLE);
             } else {
                 holder.tvCategory.setVisibility(View.GONE);

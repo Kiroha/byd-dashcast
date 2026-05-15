@@ -230,4 +230,6 @@
     <string name="visual_overscan_width">↔ Kengligi</string>
     <string name="setting_boot_overscan">Ishga tushganda proyeksiyani boshlash va Overscan\'ni tiklash (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Ishga tushganda proyeksiyani avtomatik boshlash (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Navigatsiya</string>
+    <string name="category_media">🎵 Media</string>
 </resources>
