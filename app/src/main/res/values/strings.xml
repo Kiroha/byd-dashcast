@@ -235,5 +235,5 @@
     <string name="visual_overscan_use_visual_mode">Utiliser le mode visuel directionnel</string>
     <string name="visual_overscan_height">↕ Hauteur</string>
     <string name="visual_overscan_width">↔ Largeur</string>
-    <string name="setting_boot_overscan">Appliquer automatiquement cet Overscan au démarrage de la voiture (Auto-Boot)</string>
+    <string name="setting_boot_overscan">Activer la projection et restaurer l\'Overscan au démarrage (Auto-Boot)</string>
 </resources>

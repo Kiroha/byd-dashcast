@@ -228,5 +228,5 @@
     <string name="visual_overscan_use_visual_mode">Використовувати візуальний режим</string>
     <string name="visual_overscan_height">↕ Висота</string>
     <string name="visual_overscan_width">↔ Ширина</string>
-    <string name="setting_boot_overscan">Автоматично застосовувати цей Overscan при запуску автомобіля (Auto-Boot)</string>
+    <string name="setting_boot_overscan">Запустити проекцію та відновити Overscan під час запуску (Auto-Boot)</string>
 </resources>

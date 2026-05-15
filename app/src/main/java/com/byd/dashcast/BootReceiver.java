@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Log;
 
 public class BootReceiver extends BroadcastReceiver {
@@ -23,18 +24,30 @@ public class BootReceiver extends BroadcastReceiver {
                 int bottom = prefs.getInt("overscan_bottom", 0);
                 
                 String cmd = String.format("wm overscan %d,%d,%d,%d -d 1", left, top, right, bottom);
-                Log.d("BootReceiver", "DashCast Auto-Boot Overscan triggered: " + cmd);
+                Log.d("BootReceiver", "DashCast Auto-Boot: Restoring overscan and starting projection... " + cmd);
                 
+                // 1. Restaurer l'overscan
                 try {
-                    // Start process as standard Android shell does for adb-like permissions
-                    // Since it relies on BYD system specifics, this process will restore the user config
                     Process p = Runtime.getRuntime().exec(new String[]{"sh", "-c", cmd});
                     p.waitFor();
                 } catch (Exception e) {
                     Log.e("BootReceiver", "Error applying overscan on boot: " + e.getMessage());
                 }
+
+                // 2. Démarrer automatiquement le service de projection
+                try {
+                    Intent serviceIntent = new Intent(context, ClusterService.class);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent);
+                    } else {
+                        context.startService(serviceIntent);
+                    }
+                } catch (Exception e) {
+                    Log.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
+                }
+
             } else {
-                Log.d("BootReceiver", "DashCast Auto-Boot Overscan is disabled by user.");
+                Log.d("BootReceiver", "DashCast Auto-Boot is disabled by user.");
             }
         }
     }
