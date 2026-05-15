@@ -53,7 +53,7 @@
             android:orientation="vertical"
             android:gravity="center"
             android:layout_marginEnd="32dp">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="↕ Hauteur" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/visual_overscan_height" android:textColor="@color/text_secondary" android:textSize="12sp"/>
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
                 <Button android:id="@+id/btn_v_minus" android:layout_width="48dp" android:layout_height="36dp" android:text="➖" android:backgroundTint="@color/bg_button_secondary" android:textColor="@color/text_primary"/>
                 <Button android:id="@+id/btn_v_plus" android:layout_width="48dp" android:layout_height="36dp" android:text="➕" android:layout_marginStart="8dp" android:backgroundTint="@color/bg_button_secondary" android:textColor="@color/text_primary"/>
@@ -65,7 +65,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="↔ Largeur" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/visual_overscan_width" android:textColor="@color/text_secondary" android:textSize="12sp"/>
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
                 <Button android:id="@+id/btn_h_minus" android:layout_width="48dp" android:layout_height="36dp" android:text="➖" android:backgroundTint="@color/bg_button_secondary" android:textColor="@color/text_primary"/>
                 <Button android:id="@+id/btn_h_plus" android:layout_width="48dp" android:layout_height="36dp" android:text="➕" android:layout_marginStart="8dp" android:backgroundTint="@color/bg_button_secondary" android:textColor="@color/text_primary"/>

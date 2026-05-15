@@ -186,9 +186,6 @@
     <string name="diag_88_stopping">Deteniendo…</string>
     <string name="diag_88_activated">Proyección activada ✅</string>
     <string name="diag_88_stopped">Proyección detenida ✅</string>
-
-
-    <!-- Auto-filled missing diag translations from base (Lot 1) -->
     <string name="diag_adas_initial">ADAS : --</string>
     <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
     <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
@@ -228,4 +225,7 @@
     <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
     <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
     <string name="favorite_prefix">⭐ </string>
+    <string name="visual_overscan_use_visual_mode">Usar el modo visual direccional</string>
+    <string name="visual_overscan_height">↕ Altura</string>
+    <string name="visual_overscan_width">↔ Anchura</string>
 </resources>

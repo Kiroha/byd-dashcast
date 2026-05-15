@@ -108,7 +108,7 @@
                 android:id="@+id/cb_visual_mode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Utiliser le mode visuel directionnel"
+                android:text="@string/visual_overscan_use_visual_mode"
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp"/>
 
