@@ -27,6 +27,18 @@
         android:maxLines="2"
         android:minLines="2"/>
 
+    <TextView
+        android:id="@+id/tv_app_category"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="9sp"
+        android:textColor="@color/text_secondary"
+        android:background="#22888888"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:layout_marginTop="2dp"
+        android:visibility="gone"/>
+
     <!-- Green indicator below the text -->
     <View
         android:id="@+id/view_active_indicator"
