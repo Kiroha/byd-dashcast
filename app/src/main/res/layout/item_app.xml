@@ -46,6 +46,15 @@
             android:paddingEnd="4dp"
             android:layout_marginTop="2dp"
             android:visibility="gone"/>
+
+        <!-- Container for Shortcuts -->
+        <LinearLayout
+            android:id="@+id/ll_shortcuts_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <CheckBox

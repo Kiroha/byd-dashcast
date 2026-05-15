@@ -1,6 +1,8 @@
 package com.byd.dashcast.model;
 
 import android.graphics.drawable.Drawable;
+import java.util.List;
+import java.util.ArrayList;
 
 public class AppInfo {
     public static final int CATEGORY_NAVIGATION = 1;
@@ -15,6 +17,7 @@ public class AppInfo {
     public int launchCount = 0;
     
     public int category = CATEGORY_OTHER;
+    public List<AppShortcut> shortcuts = new ArrayList<>();
 
     public AppInfo(String packageName, String appName, Drawable icon) {
         this.packageName = packageName;
