@@ -161,8 +161,6 @@
     <string name="ota_btn_update_now">Қазір жаңарту</string>
     <string name="ota_btn_later">Кейінірек</string>
     <string name="ota_downloading">Жүктелуде…</string>
-    <string name="notif_log_channel_name">Белсенділік журналы</string>
-    <string name="notif_log_content">Журнал белсенді — ашу үшін басыңыз</string>
     <string name="notif_remote_channel_name">Кластер айнасының батырмасы</string>
     <string name="notif_remote_content">📺 Кластер айнасы белсенді</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
@@ -230,5 +228,4 @@
     <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
     <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="log_badge_label">LOG</string>
 </resources>

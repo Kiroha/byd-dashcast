@@ -145,12 +145,6 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
-        <!-- Service overlay bouton journal flottant -->
-        <service
-            android:name=".FloatingLogButton"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-
         <!-- Overlay service: quick-return icon to the streaming view -->
         <service
             android:name=".FloatingRemoteButton"

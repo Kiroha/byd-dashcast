@@ -86,7 +86,6 @@ public class MainActivity extends AppCompatActivity
     private boolean                 mBindRequested   = false; // true as soon as a bindService is in progress
     private DashboardLauncher       mDashboardLauncher; // local reference updated after bind
 
-    // savedItem: package of the last app sent to the cluster (removed, see history)
     private static final String PREFS_NAME         = SettingsActivity.PREFS_NAME;
     /** Package of the app sent to the main display — persisted to survive Activity recreation */
     private static final String PREF_MAIN_PKG      = "main_display_pkg";
@@ -97,7 +96,6 @@ public class MainActivity extends AppCompatActivity
     private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
     
     private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
-    private static boolean sHasAutoLaunched = false;
     private String mPendingAutoLaunchPkg = null;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {

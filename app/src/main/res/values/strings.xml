@@ -167,8 +167,6 @@
     <string name="menu_view_grid">⊞ Mode Grille</string>
     <string name="menu_view_list">📋 Mode Liste</string>
     <!-- Notifications flottantes -->
-    <string name="notif_log_channel_name">Journal de bord</string>
-    <string name="notif_log_content">Journal actif — tap pour ouvrir</string>
     <string name="notif_remote_channel_name">Bouton miroir cluster</string>
     <string name="notif_remote_content">📺 Miroir cluster actif</string>
     <!-- SysInfo — chemin du fichier enregistré (%1$s = chemin absolu) -->
@@ -234,7 +232,6 @@
     <!-- Externalized string literals (formerly hardcoded in Java) -->
     <string name="diag_error_prefix">ERROR: </string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="log_badge_label">LOG</string>
 
     <!-- Section 8.8" — Projection directe (sans sendInfo 30) -->
     <string name="diag_s88_title">Écran 8.8\" — Projection directe</string>
