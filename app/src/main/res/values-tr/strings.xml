@@ -228,5 +228,5 @@
     <string name="visual_overscan_use_visual_mode">Yönsel görsel modu kullan</string>
     <string name="visual_overscan_height">↕ Yükseklik</string>
     <string name="visual_overscan_width">↔ Genişlik</string>
-    <string name="setting_boot_overscan">Araç başladığında bu Overscan\'i otomatik olarak uygula (Auto-Boot)</string>
+    <string name="setting_boot_overscan">Başlangıçta projeksiyonu başlat ve Overscan\'i geri yükle (Auto-Boot)</string>
 </resources>

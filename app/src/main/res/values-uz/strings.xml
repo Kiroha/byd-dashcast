@@ -228,5 +228,5 @@
     <string name="visual_overscan_use_visual_mode">Vizual rejimdan foydalanish</string>
     <string name="visual_overscan_height">↕ Balandligi</string>
     <string name="visual_overscan_width">↔ Kengligi</string>
-    <string name="setting_boot_overscan">Avtomobil ishga tushganda ushbu Overscan ni avtomatik ravishda qo\'llash (Auto-Boot)</string>
+    <string name="setting_boot_overscan">Ishga tushganda proyeksiyani boshlash va Overscan\'ni tiklash (Auto-Boot)</string>
 </resources>
