@@ -112,6 +112,14 @@
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp"/>
 
+            <CheckBox
+                android:id="@+id/cb_boot_overscan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_boot_overscan"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
             <!-- Bloc Sliders Classique -->
             <LinearLayout
                 android:id="@+id/ll_sliders_mode"

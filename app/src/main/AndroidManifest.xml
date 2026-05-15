@@ -4,6 +4,9 @@
 
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
+    <!-- Auto-Boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
@@ -167,6 +170,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Auto-Boot Overscan restoration -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
