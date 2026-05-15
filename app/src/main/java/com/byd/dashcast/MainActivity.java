@@ -753,6 +753,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSendToDashboard(AppInfo app) {
+        incrementLaunchCount(app.packageName);
         // Java displayId may not be resolved even when the cluster is active
         // (internal state unreliable on DiLink 3.0). We no longer block here:
         // ClusterService.launchOnDashboard() tries direct Binder then ADB relay
@@ -854,8 +855,17 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
+    private void incrementLaunchCount(String pkgName) {
+        if (pkgName == null) return;
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String key = "launch_count_" + pkgName;
+        int count = prefs.getInt(key, 0);
+        prefs.edit().putInt(key, count + 1).apply();
+    }
+
     @Override
     public void onSendToMain(AppInfo app) {
+        incrementLaunchCount(app.packageName);
         // Clean up cluster state before move
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
@@ -2040,6 +2050,7 @@ public class MainActivity extends AppCompatActivity
                     if (autoPkg != null && autoPkg.equals(info.packageName)) {
                         info.isAutoLaunch = true;
                     }
+                    info.launchCount = prefs.getInt("launch_count_" + info.packageName, 0);
                 }
 
                 Collections.sort(apps, new Comparator<AppInfo>() {
@@ -2047,6 +2058,9 @@ public class MainActivity extends AppCompatActivity
                     public int compare(AppInfo a, AppInfo b) {
                         if (a.isFavorite && !b.isFavorite) return -1;
                         if (!a.isFavorite && b.isFavorite) return 1;
+                        if (a.launchCount != b.launchCount) {
+                            return Integer.compare(b.launchCount, a.launchCount); // descending
+                        }
                         return a.appName.compareToIgnoreCase(b.appName);
                     }
                 });
