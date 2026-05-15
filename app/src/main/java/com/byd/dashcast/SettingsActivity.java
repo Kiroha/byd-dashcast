@@ -47,6 +47,11 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnReset;
     private TextView    tvResult;
     private CheckBox    cbPrerelease;
+    private CheckBox    cbVisualMode;
+    private View        llSlidersMode;
+    private View        llVisualMode;
+    private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,6 +88,13 @@ public class SettingsActivity extends AppCompatActivity {
         btnReset      = findViewById(R.id.btn_reset_overscan);
         tvResult      = findViewById(R.id.tv_overscan_result);
         cbPrerelease  = findViewById(R.id.cb_prerelease);
+        cbVisualMode  = findViewById(R.id.cb_visual_mode);
+        llSlidersMode = findViewById(R.id.ll_sliders_mode);
+        llVisualMode  = findViewById(R.id.ll_visual_overscan);
+        btnHMinus     = findViewById(R.id.btn_h_minus);
+        btnHPlus      = findViewById(R.id.btn_h_plus);
+        btnVMinus     = findViewById(R.id.btn_v_minus);
+        btnVPlus      = findViewById(R.id.btn_v_plus);
     }
 
     private void loadPreferences() {
@@ -106,6 +118,12 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Pre-release toggle
         cbPrerelease.setChecked(prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE));
+        
+        // Visual Mode toggle state
+        boolean visualMode = prefs.getBoolean("visual_overscan_mode", false);
+        cbVisualMode.setChecked(visualMode);
+        updateVisualModeState(visualMode);
+        updateVisualMockup();
     }
 
     private void wireListeners() {
@@ -168,6 +186,56 @@ public class SettingsActivity extends AppCompatActivity {
                     .putBoolean(PREF_OTA_PRERELEASE, isChecked).apply();
             AppLogger.i("SettingsActivity", "ota_include_prerelease=" + isChecked);
         });
+
+        // Visual Mode checkbox
+        cbVisualMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean("visual_overscan_mode", isChecked).apply();
+            updateVisualModeState(isChecked);
+        });
+
+        View.OnClickListener dpadListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int h = sbInsetH.getProgress();
+                int val_v = sbInsetV.getProgress();
+                if (v == btnHMinus) h = Math.max(0, h - 10);
+                if (v == btnHPlus)  h = Math.min(200, h + 10);
+                if (v == btnVMinus) val_v = Math.max(0, val_v - 10);
+                if (v == btnVPlus)  val_v = Math.min(200, val_v + 10);
+                
+                sbInsetH.setProgress(h);
+                sbInsetV.setProgress(val_v);
+                updateVisualMockup();
+                // To keep it real-time as requested:
+                applyOverscan(); 
+            }
+        };
+
+        btnHMinus.setOnClickListener(dpadListener);
+        btnHPlus.setOnClickListener(dpadListener);
+        btnVMinus.setOnClickListener(dpadListener);
+        btnVPlus.setOnClickListener(dpadListener);
+    }
+
+    private void updateVisualModeState(boolean visual) {
+        llSlidersMode.setVisibility(visual ? View.GONE : View.VISIBLE);
+        llVisualMode.setVisibility(visual ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateVisualMockup() {
+        int h = sbInsetH.getProgress();
+        int v = sbInsetV.getProgress();
+        View flSafeZone = findViewById(R.id.fl_safe_zone);
+        if (flSafeZone != null) {
+            android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) flSafeZone.getLayoutParams();
+            // Scale logic: Mockup is 320x120. Real cluster is 1920x720. Scale is 1/6.
+            params.leftMargin = (int) (h / 6f);
+            params.rightMargin = (int) (h / 6f);
+            params.topMargin = (int) (v / 6f);
+            params.bottomMargin = (int) (v / 6f);
+            flSafeZone.setLayoutParams(params);
+        }
     }
 
     // ── Logic ─────────────────────────────────────────────────────────────────

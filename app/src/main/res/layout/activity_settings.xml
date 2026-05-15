@@ -102,15 +102,30 @@
                 android:text="@string/settings_overscan_desc"
                 android:textSize="12sp"
                 android:textColor="#4C566A"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="12dp"/>
 
-            <!-- Gauche / Droite -->
-            <LinearLayout
+            <CheckBox
+                android:id="@+id/cb_visual_mode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
+                android:text="Utiliser le mode visuel directionnel"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Bloc Sliders Classique -->
+            <LinearLayout
+                android:id="@+id/ll_sliders_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                
+                <!-- Gauche / Droite -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
 
                 <TextView
                     android:layout_width="0dp"
@@ -173,6 +188,10 @@
                 android:max="200"
                 android:progress="50"
                 android:layout_marginBottom="20dp"/>
+            </LinearLayout>
+
+            <!-- Mode Visuel -->
+            <include layout="@layout/layout_visual_overscan" />
 
             <!-- Boutons -->
             <LinearLayout
