@@ -9,11 +9,28 @@
     android:focusable="true"
     android:background="?android:attr/selectableItemBackground">
 
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
     <ImageView
         android:id="@+id/iv_app_icon"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:scaleType="fitCenter"/>
+                android:scaleType="fitCenter"/>
+
+        <TextView
+            android:id="@+id/tv_btn_shortcuts"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="bottom|end"
+            android:background="@drawable/bg_shortcut_badge"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:text="⚡"
+            android:textSize="9sp"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tv_app_name"

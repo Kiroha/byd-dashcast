@@ -184,6 +184,42 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                 holder.llShortcutsContainer.setVisibility(View.GONE);
             }
         }
+        
+        // Handle shortcuts for Grid Mode via PopupMenu
+        if (holder.tvBtnShortcuts != null) {
+            if (app.shortcuts != null && !app.shortcuts.isEmpty()) {
+                holder.tvBtnShortcuts.setVisibility(View.VISIBLE);
+                holder.tvBtnShortcuts.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        android.widget.PopupMenu popup = new android.widget.PopupMenu(v.getContext(), v);
+                        for (int i = 0; i < app.shortcuts.size(); i++) {
+                            popup.getMenu().add(0, i, 0, app.shortcuts.get(i).label);
+                        }
+                        popup.setOnMenuItemClickListener(new android.widget.PopupMenu.OnMenuItemClickListener() {
+                            @Override
+                            public boolean onMenuItemClick(android.view.MenuItem item) {
+                                com.byd.dashcast.model.AppShortcut chosenShortcut = app.shortcuts.get(item.getItemId());
+                                if (holder.btnToCluster != null && holder.btnToCluster.getVisibility() == View.VISIBLE) {
+                                    holder.btnToCluster.performClick();
+                                } else {
+                                    if (mListener != null) {
+                                        mListener.onSendToDashboard(app);
+                                    }
+                                }
+                                if (chosenShortcut.intent != null) {
+                                    v.getContext().startActivity(chosenShortcut.intent);
+                                }
+                                return true;
+                            }
+                        });
+                        popup.show();
+                    }
+                });
+            } else {
+                holder.tvBtnShortcuts.setVisibility(View.GONE);
+            }
+        }
 
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
         boolean isOnMain = app.packageName != null && app.packageName.equals(mMainPackage);
@@ -245,6 +281,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final TextView  tvName;
         final TextView  tvCategory;
         final LinearLayout llShortcutsContainer;
+        final TextView  tvBtnShortcuts; // Shortcut popup trigger for grid mode
         final View      viewActiveIndicator;
         final Button    btnToMain;
         final Button    btnToCluster;
@@ -257,6 +294,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
             tvCategory          = (TextView)  itemView.findViewById(R.id.tv_app_category);
             llShortcutsContainer = itemView.findViewById(R.id.ll_shortcuts_container);
+            tvBtnShortcuts      = itemView.findViewById(R.id.tv_btn_shortcuts);
             viewActiveIndicator = itemView.findViewById(R.id.view_active_indicator);
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
