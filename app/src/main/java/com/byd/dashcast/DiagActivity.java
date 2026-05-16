@@ -339,14 +339,14 @@ public class DiagActivity extends AppCompatActivity {
         setDisplaySizeBtnsEnabled(false);
         String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
         tvDisplaySizeResult.setText(getString(R.string.diag_size_sending, sizeCmd, label));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
+        tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_neutral));
         AppLogger.log("DiagDisplaySize", "sendClusterScreenSize(" + sizeCmd + ")");
 
         AdbLocalClient.sendClusterScreenSize(DiagActivity.this, sizeCmd,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF1A2A1A);
+                    tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_success));
                     tvDisplaySizeResult.setText(report);
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", report);
@@ -354,7 +354,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onError(final String error) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
+                    tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_error));
                     tvDisplaySizeResult.setText("❌ " + error
                             + "\n\n" + getString(R.string.diag_adb_test1_hint));
                     setDisplaySizeBtnsEnabled(true);
@@ -367,14 +367,14 @@ public class DiagActivity extends AppCompatActivity {
     private void restoreDisplaySize() {
         setDisplaySizeBtnsEnabled(false);
         tvDisplaySizeResult.setText(getString(R.string.diag_size_restoring));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
+        tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_neutral));
         AppLogger.log("DiagDisplaySize", "resetClusterDisplaySize");
 
         AdbLocalClient.resetClusterDisplaySize(DiagActivity.this,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF1A1A2A);
+                    tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_info));
                     tvDisplaySizeResult.setText(report);
                     setDisplaySizeBtnsEnabled(true);
                     AppLogger.log("DiagDisplaySize", report);
@@ -382,7 +382,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onError(final String error) {
                 runOnUiThread(new Runnable() { @Override public void run() {
-                    tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
+                    tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_error));
                     tvDisplaySizeResult.setText("❌ " + error);
                     setDisplaySizeBtnsEnabled(true);
                 }});
@@ -393,7 +393,7 @@ public class DiagActivity extends AppCompatActivity {
     private void runClusterDisplaySizeTest() {
         setDisplaySizeBtnsEnabled(false);
         tvDisplaySizeResult.setText(getString(R.string.diag_size_full_running));
-        tvDisplaySizeResult.setBackgroundColor(0xFF111A1A);
+        tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_neutral));
         AppLogger.log("DiagDisplaySize", "Lancement TEST 3 complet");
 
         AdbLocalClient.runClusterDisplaySizeTest(DiagActivity.this, new AdbLocalClient.Callback() {
@@ -401,7 +401,7 @@ public class DiagActivity extends AppCompatActivity {
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplaySizeResult.setBackgroundColor(0xFF1A2A1A);
+                        tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_success));
                         tvDisplaySizeResult.setText(report);
                         setDisplaySizeBtnsEnabled(true);
                         AppLogger.log("DiagDisplaySize", report);
@@ -412,7 +412,7 @@ public class DiagActivity extends AppCompatActivity {
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplaySizeResult.setBackgroundColor(0xFF2A1A1A);
+                        tvDisplaySizeResult.setBackgroundColor(getColor(R.color.bg_diag_error));
                         tvDisplaySizeResult.setText("❌ " + error
                                 + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         setDisplaySizeBtnsEnabled(true);
@@ -443,7 +443,7 @@ public class DiagActivity extends AppCompatActivity {
                         boolean ok = !report.contains("Exception")
                                 && !report.contains("Error:")
                                 && !report.contains("FAILED");
-                        tvDisplay1Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF1A1A2A);
+                        tvDisplay1Result.setBackgroundColor(ok ? getColor(R.color.bg_diag_success) : getColor(R.color.bg_diag_info));
                         tvDisplay1Result.setText(report);
                         btnDisplay1.setEnabled(true);
                         AppLogger.log("DiagDisplay1", report);
@@ -454,7 +454,7 @@ public class DiagActivity extends AppCompatActivity {
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        tvDisplay1Result.setBackgroundColor(0xFF2A1A1A);
+                        tvDisplay1Result.setBackgroundColor(getColor(R.color.bg_diag_error));
                         tvDisplay1Result.setText("❌ " + error
                                 + "\n\n" + getString(R.string.diag_adb_test1_hint));
                         btnDisplay1.setEnabled(true);
@@ -1055,7 +1055,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runScreen88Activate() {
         tvScreen88Result.setText(getString(R.string.diag_88_activating));
-        tvScreen88Result.setBackgroundColor(0xFF111A2A);
+        tvScreen88Result.setBackgroundColor(getColor(R.color.bg_diag_neutral));
         btnScreen88Activate.setEnabled(false);
         btnScreen88Stop.setEnabled(false);
 
@@ -1079,7 +1079,7 @@ public class DiagActivity extends AppCompatActivity {
             final String out = sb.toString();
             runOnUiThread(() -> {
                 tvScreen88Result.setText(out);
-                tvScreen88Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                tvScreen88Result.setBackgroundColor(ok ? getColor(R.color.bg_diag_success) : getColor(R.color.bg_diag_error));
                 btnScreen88Activate.setEnabled(true);
                 btnScreen88Stop.setEnabled(true);
             });
@@ -1088,7 +1088,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runScreen88Stop() {
         tvScreen88Result.setText(getString(R.string.diag_88_stopping));
-        tvScreen88Result.setBackgroundColor(0xFF1A1A2A);
+        tvScreen88Result.setBackgroundColor(getColor(R.color.bg_diag_info));
         btnScreen88Activate.setEnabled(false);
         btnScreen88Stop.setEnabled(false);
 
@@ -1112,7 +1112,7 @@ public class DiagActivity extends AppCompatActivity {
             final String out = sb.toString();
             runOnUiThread(() -> {
                 tvScreen88Result.setText(out);
-                tvScreen88Result.setBackgroundColor(ok ? 0xFF1A2A1A : 0xFF2A1A1A);
+                tvScreen88Result.setBackgroundColor(ok ? getColor(R.color.bg_diag_success) : getColor(R.color.bg_diag_error));
                 btnScreen88Activate.setEnabled(true);
                 btnScreen88Stop.setEnabled(true);
             });
@@ -1127,14 +1127,14 @@ public class DiagActivity extends AppCompatActivity {
         btnAdasShow.setEnabled(false);
         btnAdasHide.setEnabled(false);
         tvAdasResult.setText(getString(R.string.diag_adas_sending, cmd));
-        tvAdasResult.setBackgroundColor(0xFF111A1A);
+        tvAdasResult.setBackgroundColor(getColor(R.color.bg_diag_neutral));
         AppLogger.log("DiagADAS", "sendInfo(1000, " + cmd + ")");
 
         AdbLocalClient.sendInfo(this, 1000, cmd, "", new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 runOnUiThread(() -> {
                     String label = cmd == 12 ? "显示ADAS ✅" : "关闭ADAS ✅";
-                    tvAdasResult.setBackgroundColor(0xFF1A2A1A);
+                    tvAdasResult.setBackgroundColor(getColor(R.color.bg_diag_success));
                     tvAdasResult.setText(label + "\n" + report);
                     btnAdasShow.setEnabled(true);
                     btnAdasHide.setEnabled(true);
@@ -1143,7 +1143,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onError(final String error) {
                 runOnUiThread(() -> {
-                    tvAdasResult.setBackgroundColor(0xFF2A1A1A);
+                    tvAdasResult.setBackgroundColor(getColor(R.color.bg_diag_error));
                     tvAdasResult.setText("❌ cmd=" + cmd + " " + error);
                     btnAdasShow.setEnabled(true);
                     btnAdasHide.setEnabled(true);

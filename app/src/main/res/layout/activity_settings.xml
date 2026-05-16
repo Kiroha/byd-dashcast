@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#f2f2f2">
+    android:background="@color/bg_main">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:text="@string/settings_header"
             android:textSize="26sp"
-            android:textColor="#2E3440"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_cluster_type_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="10dp"/>
 
@@ -81,7 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -92,7 +92,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_overscan_section_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
 
@@ -101,7 +101,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_overscan_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
 
             <CheckBox
@@ -141,7 +141,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_inset_h_label"
                     android:textSize="14sp"
-                    android:textColor="#3B4252"/>
+                    android:textColor="@color/text_primary"/>
 
                 <TextView
                     android:id="@+id/tv_inset_h_value"
@@ -149,7 +149,7 @@
                     android:layout_height="wrap_content"
                     android:text="80 px"
                     android:textSize="14sp"
-                    android:textColor="#5E81AC"
+                    android:textColor="@color/text_accent"
                     android:textStyle="bold"
                     android:gravity="end"/>
             </LinearLayout>
@@ -176,7 +176,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_inset_v_label"
                     android:textSize="14sp"
-                    android:textColor="#3B4252"/>
+                    android:textColor="@color/text_primary"/>
 
                 <TextView
                     android:id="@+id/tv_inset_v_value"
@@ -184,7 +184,7 @@
                     android:layout_height="wrap_content"
                     android:text="50 px"
                     android:textSize="14sp"
-                    android:textColor="#5E81AC"
+                    android:textColor="@color/text_accent"
                     android:textStyle="bold"
                     android:gravity="end"/>
             </LinearLayout>
@@ -235,7 +235,7 @@
                 android:text=""
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:visibility="gone"/>
 
@@ -246,7 +246,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -257,7 +257,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_updates_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="10dp"/>
 
@@ -274,7 +274,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_prerelease_hint"
                 android:textSize="12sp"
-                android:textColor="#888888"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="2dp"
                 android:layout_marginStart="36dp"/>
 

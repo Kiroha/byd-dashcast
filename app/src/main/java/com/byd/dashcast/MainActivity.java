@@ -1379,7 +1379,7 @@ public class MainActivity extends AppCompatActivity
                 tvVersion.setText(getString(R.string.ota_version_label, version));
                 tvVersion.setTextSize(16);
                 tvVersion.setPadding(pad, 0, pad, pad / 2);
-                tvVersion.setTextColor(android.graphics.Color.parseColor("#1565C0"));
+                tvVersion.setTextColor(getColor(R.color.text_accent));
                 layout.addView(tvVersion);
 
                 ScrollView sv = new ScrollView(MainActivity.this);
@@ -1387,7 +1387,7 @@ public class MainActivity extends AppCompatActivity
                 tvChangelog.setText(renderMarkdown(changelog));
                 tvChangelog.setTextSize(13);
                 tvChangelog.setPadding(pad, 0, pad, pad);
-                tvChangelog.setTextColor(android.graphics.Color.parseColor("#333333"));
+                tvChangelog.setTextColor(getColor(R.color.text_primary));
                 sv.addView(tvChangelog);
                 
                 LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
@@ -1644,11 +1644,11 @@ public class MainActivity extends AppCompatActivity
         if (mCurrentSplitSlot != 0) {
             btnSplitLayout.setText(getString(R.string.split_btn_exit));
             btnSplitLayout.setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#E65100")));
+                android.content.res.ColorStateList.valueOf(getColor(R.color.split_active)));
         } else {
             btnSplitLayout.setText(getString(R.string.btn_cluster_split));
             btnSplitLayout.setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#5C6BC0")));
+                android.content.res.ColorStateList.valueOf(getColor(R.color.split_inactive)));
         }
     }
 

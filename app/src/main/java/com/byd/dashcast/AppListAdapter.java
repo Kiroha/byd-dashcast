@@ -127,7 +127,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         // Indicate pinned state with a star prefix
         if (app.isFavorite) {
             holder.tvName.setText(holder.tvName.getContext().getString(R.string.favorite_prefix) + app.appName);
-            holder.tvName.setTextColor(Color.parseColor("#FFC107"));
+            holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.favorite_gold));
         } else {
             holder.tvName.setText(app.appName);
             holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.text_primary));
@@ -164,8 +164,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                     params.setMarginEnd(8);
                     btn.setLayoutParams(params);
                     
-                    btn.setBackgroundColor(Color.parseColor("#331565C0"));
-                    btn.setTextColor(Color.parseColor("#1565C0"));
+                    btn.setBackgroundColor(btn.getContext().getColor(R.color.shortcut_btn_bg));
+                    btn.setTextColor(btn.getContext().getColor(R.color.shortcut_btn_text));
                     
                     btn.setOnClickListener(new View.OnClickListener() {
                         @Override

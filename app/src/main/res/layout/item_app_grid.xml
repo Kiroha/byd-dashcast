@@ -25,7 +25,7 @@
             android:layout_height="16dp"
             android:layout_gravity="bottom|end"
             android:background="@drawable/bg_shortcut_badge"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/pure_white"
             android:gravity="center"
             android:text="⚡"
             android:textSize="9sp"
@@ -80,7 +80,7 @@
             android:textSize="10sp"
             android:layout_marginEnd="4dp"
             android:buttonTint="#FFC107"
-            android:textColor="#888888"
+            android:textColor="@color/auto_launch_text"
             android:visibility="gone"/>
 
         <Button

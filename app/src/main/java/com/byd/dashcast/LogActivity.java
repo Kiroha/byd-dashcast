@@ -86,7 +86,7 @@ public class LogActivity extends AppCompatActivity {
         btnClear     = (Button)      findViewById(R.id.log_btn_clear);
 
         // Fond sombre pour le log
-        tvLog.setBackgroundColor(Color.parseColor("#1A1A1A"));
+        tvLog.setBackgroundColor(getColor(R.color.bg_log));
         tvLog.setTextColor(COLOR_INFO);
 
         cbAutoScroll.setChecked(true);

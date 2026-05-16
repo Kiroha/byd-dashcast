@@ -17,6 +17,27 @@
     <color name="text_secondary">#555555</color>
     <color name="text_accent">#1565C0</color>
 
+    <!-- Shortcut buttons -->
+    <color name="shortcut_btn_bg">#331565C0</color>
+    <color name="shortcut_btn_text">#1565C0</color>
+
+    <!-- Favorite gold (same in both modes) -->
+    <color name="favorite_gold">#FFC107</color>
+
+    <!-- Split button states -->
+    <color name="split_active">#E65100</color>
+    <color name="split_inactive">#5C6BC0</color>
+
+    <!-- Auto-launch checkbox -->
+    <color name="auto_launch_text">#888888</color>
+
+    <!-- Log / Diag backgrounds -->
+    <color name="bg_log">#F0F0F0</color>
+    <color name="bg_diag_neutral">#EAEEF0</color>
+    <color name="bg_diag_success">#E0F0E0</color>
+    <color name="bg_diag_error">#F0E0E0</color>
+    <color name="bg_diag_info">#E0E0F0</color>
+
     <!-- Static pure colors -->
     <color name="pure_white">#FFFFFF</color>
     <color name="pure_black">#000000</color>
