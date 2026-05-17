@@ -51,6 +51,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox    cbBootAutoStart;
     private View        llSlidersMode;
     private View        llVisualMode;
+    private View        flSafeZone;
     private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
 
     @Override
@@ -97,6 +98,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnHPlus      = findViewById(R.id.btn_h_plus);
         btnVMinus     = findViewById(R.id.btn_v_minus);
         btnVPlus      = findViewById(R.id.btn_v_plus);
+        flSafeZone    = findViewById(R.id.fl_safe_zone);
     }
 
     private void loadPreferences() {
@@ -238,7 +240,6 @@ public class SettingsActivity extends AppCompatActivity {
     private void updateVisualMockup() {
         int h = sbInsetH.getProgress();
         int v = sbInsetV.getProgress();
-        View flSafeZone = findViewById(R.id.fl_safe_zone);
         if (flSafeZone != null) {
             android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) flSafeZone.getLayoutParams();
             // Scale logic: Mockup is 320x120. Real cluster is 1920x720. Scale is 1/6.

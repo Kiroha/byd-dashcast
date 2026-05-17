@@ -67,7 +67,8 @@ public class UpdateChecker {
                 AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
                 if (listener != null) ui.post(listener::onInstalling);
                 installApk(context, apkFile);
-                apkFile.delete();
+                // Do NOT delete apkFile here — PackageInstaller reads it asynchronously.
+                // The cached file will be overwritten on the next OTA download.
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA download failed", e);
                 if (listener != null) {
@@ -192,12 +193,16 @@ public class UpdateChecker {
         try {
             int code = conn.getResponseCode();
             // Manual redirect handling for cross-scheme redirects (GitHub CDN)
-            if (code == 301 || code == 302 || code == 307 || code == 308) {
+            int redirectCount = 0;
+            while ((code == 301 || code == 302 || code == 307 || code == 308) && redirectCount < 5) {
                 String location = conn.getHeaderField("Location");
                 conn.disconnect();
+                if (location == null) throw new Exception("Redirect " + code + " with no Location header");
                 conn = openConnection(location);
                 code = conn.getResponseCode();
+                redirectCount++;
             }
+            if (redirectCount >= 5) throw new Exception("Too many redirects (" + redirectCount + ")");
             if (code != 200) throw new Exception("Download HTTP " + code);
 
             long total = conn.getContentLengthLong(); // -1 if unknown

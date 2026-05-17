@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.util.Log;
 
 public class BootReceiver extends BroadcastReceiver {
 
@@ -18,7 +17,7 @@ public class BootReceiver extends BroadcastReceiver {
             boolean autoStartEnabled = prefs.getBoolean("boot_auto_start_enabled", false);
             
             if (autoStartEnabled) {
-                Log.d("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");
+                AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");
                 
                 // Démarrer automatiquement le service de projection (ClusterService)
                 try {
@@ -29,10 +28,10 @@ public class BootReceiver extends BroadcastReceiver {
                         context.startService(serviceIntent);
                     }
                 } catch (Exception e) {
-                    Log.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
+                    AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
                 }
             } else {
-                Log.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.");
+                AppLogger.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.");
             }
         }
     }

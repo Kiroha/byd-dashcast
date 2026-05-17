@@ -100,6 +100,7 @@ public class FloatingRemoteButton extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
         if (mFloatView != null) {
             try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {

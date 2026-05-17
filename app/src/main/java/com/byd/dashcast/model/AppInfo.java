@@ -28,7 +28,7 @@ public class AppInfo {
         String pkg = packageName.toLowerCase();
         if (pkg.contains("maps") || pkg.contains("waze") || pkg.contains("tomtom") || 
             pkg.contains("sygic") || pkg.contains("navigation") || pkg.contains("here") || 
-            pkg.contains("yandex.navi") || pkg.contains("radarbot") || pkg.contains("coyote") || pkg.contains("osmand")) {
+            pkg.contains("yandex.navi") || pkg.contains("telenav") || pkg.contains("radarbot") || pkg.contains("coyote") || pkg.contains("osmand")) {
             category = CATEGORY_NAVIGATION;
         } else if (pkg.contains("spotify") || pkg.contains("music") || pkg.contains("youtube") || 
                    pkg.contains("podcast") || pkg.contains("radio") || pkg.contains("vlc") || 
