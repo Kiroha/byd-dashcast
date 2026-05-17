@@ -54,10 +54,12 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox    cbPrerelease;
     private CheckBox    cbVisualMode;
     private CheckBox    cbBootAutoStart;
+    private CheckBox    cbShowCategoryFilters;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
     private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
+    private TextView    tvProfileDrivingApp, tvProfileParkingApp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +106,9 @@ public class SettingsActivity extends AppCompatActivity {
         btnVMinus     = findViewById(R.id.btn_v_minus);
         btnVPlus      = findViewById(R.id.btn_v_plus);
         flSafeZone    = findViewById(R.id.fl_safe_zone);
+        cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
+        tvProfileDrivingApp   = findViewById(R.id.tv_profile_driving_app);
+        tvProfileParkingApp   = findViewById(R.id.tv_profile_parking_app);
     }
 
     private void loadPreferences() {
@@ -137,6 +142,13 @@ public class SettingsActivity extends AppCompatActivity {
         // Auto Boot Projection toggle state
         boolean bootAutoStart = prefs.getBoolean("boot_auto_start_enabled", false);
         cbBootAutoStart.setChecked(bootAutoStart);
+        
+        // Category filters toggle
+        boolean showCatFilters = prefs.getBoolean("show_category_filters", false);
+        cbShowCategoryFilters.setChecked(showCatFilters);
+        
+        // Profile app labels
+        updateProfileLabels(prefs);
     }
 
     private void wireListeners() {
@@ -235,6 +247,16 @@ public class SettingsActivity extends AppCompatActivity {
         btnHPlus.setOnClickListener(dpadListener);
         btnVMinus.setOnClickListener(dpadListener);
         btnVPlus.setOnClickListener(dpadListener);
+
+        // Category filters checkbox
+        cbShowCategoryFilters.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean("show_category_filters", isChecked).apply();
+        });
+
+        // Profile app pickers — tap to open app chooser dialog
+        tvProfileDrivingApp.setOnClickListener(v -> showAppChooser("profile_driving_pkg", tvProfileDrivingApp));
+        tvProfileParkingApp.setOnClickListener(v -> showAppChooser("profile_parking_pkg", tvProfileParkingApp));
     }
 
     private void updateVisualModeState(boolean visual) {
@@ -297,5 +319,58 @@ public class SettingsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    // ── Profile helpers ─────────────────────────────────────────────────────
+
+    private void updateProfileLabels(SharedPreferences prefs) {
+        String drivePkg  = prefs.getString("profile_driving_pkg", null);
+        String parkPkg   = prefs.getString("profile_parking_pkg", null);
+        tvProfileDrivingApp.setText(resolveAppName(drivePkg));
+        tvProfileParkingApp.setText(resolveAppName(parkPkg));
+    }
+
+    private String resolveAppName(String pkg) {
+        if (pkg == null) return getString(R.string.settings_profile_none_selected);
+        try {
+            android.content.pm.ApplicationInfo ai = getPackageManager().getApplicationInfo(pkg, 0);
+            CharSequence label = getPackageManager().getApplicationLabel(ai);
+            return label != null ? label.toString() : pkg;
+        } catch (Exception e) {
+            return pkg;
+        }
+    }
+
+    private void showAppChooser(final String prefKey, final TextView label) {
+        // Build list of launchable apps
+        android.content.Intent launcherIntent = new android.content.Intent(android.content.Intent.ACTION_MAIN, null);
+        launcherIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> apps = getPackageManager().queryIntentActivities(launcherIntent, 0);
+        final java.util.List<String> names = new java.util.ArrayList<>();
+        final java.util.List<String> pkgs  = new java.util.ArrayList<>();
+        names.add(getString(R.string.settings_profile_none_selected));
+        pkgs.add(null);
+        for (android.content.pm.ResolveInfo ri : apps) {
+            String pkg = ri.activityInfo.packageName;
+            // Skip own package
+            if (pkg.equals(getPackageName())) continue;
+            CharSequence appLabel = ri.loadLabel(getPackageManager());
+            names.add(appLabel != null ? appLabel.toString() : pkg);
+            pkgs.add(pkg);
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(prefKey.contains("driving") ? getString(R.string.settings_profile_driving_app) : getString(R.string.settings_profile_parking_app))
+                .setItems(names.toArray(new String[0]), (dialog, which) -> {
+                    String chosen = pkgs.get(which);
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    if (chosen == null) {
+                        prefs.edit().remove(prefKey).apply();
+                    } else {
+                        prefs.edit().putString(prefKey, chosen).apply();
+                    }
+                    label.setText(resolveAppName(chosen));
+                    AppLogger.i("SettingsActivity", prefKey + " → " + chosen);
+                })
+                .show();
     }
 }

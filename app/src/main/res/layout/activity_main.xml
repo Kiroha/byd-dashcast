@@ -135,6 +135,77 @@
             android:drawablePadding="8dp"
             android:textSize="14sp"/>
 
+        <!-- Category filter buttons (hidden by default, toggled via Settings) -->
+        <LinearLayout
+            android:id="@+id/ll_category_filters"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@color/bg_top_bar"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_filter_all"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:text="@string/filter_all"
+                android:textSize="12sp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="4dp"
+                android:backgroundTint="#1976D2"
+                android:textColor="@color/text_primary"/>
+
+            <Button
+                android:id="@+id/btn_filter_nav"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:text="@string/filter_nav"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:backgroundTint="#607D8B"
+                android:textColor="@color/text_primary"/>
+
+            <Button
+                android:id="@+id/btn_filter_media"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:text="@string/filter_media"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="#607D8B"
+                android:textColor="@color/text_primary"/>
+        </LinearLayout>
+
+        <!-- Profile selector (spinner) -->
+        <LinearLayout
+            android:id="@+id/ll_profile_selector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="4dp"
+            android:background="@color/bg_top_bar">
+
+            <android.widget.Spinner
+                android:id="@+id/spinner_profile"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:background="@color/bg_button_secondary"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"/>
+        </LinearLayout>
+
     </LinearLayout>
 
     <RelativeLayout

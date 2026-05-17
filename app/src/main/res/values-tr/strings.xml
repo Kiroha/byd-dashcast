@@ -231,4 +231,21 @@
     <string name="setting_boot_auto_start">Başlangıçta projeksiyonu otomatik başlat (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigasyon</string>
     <string name="category_media">🎵 Medya</string>
+    <string name="filter_all">Tümü</string>
+    <string name="filter_nav">🗺 Nav</string>
+    <string name="filter_media">🎵 Medya</string>
+    <string name="settings_show_category_filters">Kategori filtrelerini göster (Tümü / Nav / Medya)</string>
+    <string name="quick_switch_title">Son uygulamalar</string>
+    <string name="quick_switch_empty">Son uygulama yok</string>
+    <string name="profile_none">Profil yok</string>
+    <string name="profile_driving">🚗 Sürüş</string>
+    <string name="profile_parking">🅿️ Park</string>
+    <string name="settings_profiles_title">Otomatik başlatma profilleri</string>
+    <string name="settings_profile_driving_app">Sürüş modu uygulaması:</string>
+    <string name="settings_profile_parking_app">Park modu uygulaması:</string>
+    <string name="settings_profile_none_selected">(uygulama seçilmedi)</string>
+    <string name="menu_usage_stats">📊 Kullanım istatistikleri</string>
+    <string name="usage_title">Cluster kullanım süresi</string>
+    <string name="usage_empty">Kullanım verisi yok</string>
+    <string name="usage_reset">Sıfırla</string>
 </resources>

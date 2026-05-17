@@ -231,4 +231,21 @@
     <string name="setting_boot_auto_start">Автоматично запускати проекцію під час запуску (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навігація</string>
     <string name="category_media">🎵 Медіа</string>
+    <string name="filter_all">Всі</string>
+    <string name="filter_nav">🗺 Нав</string>
+    <string name="filter_media">🎵 Медіа</string>
+    <string name="settings_show_category_filters">Показати фільтри за категоріями (Всі / Нав / Медіа)</string>
+    <string name="quick_switch_title">Останні додатки</string>
+    <string name="quick_switch_empty">Немає останніх додатків</string>
+    <string name="profile_none">Без профілю</string>
+    <string name="profile_driving">🚗 Водіння</string>
+    <string name="profile_parking">🅿️ Паркування</string>
+    <string name="settings_profiles_title">Профілі автозапуску</string>
+    <string name="settings_profile_driving_app">Додаток у режимі водіння:</string>
+    <string name="settings_profile_parking_app">Додаток у режимі паркування:</string>
+    <string name="settings_profile_none_selected">(додаток не обрано)</string>
+    <string name="menu_usage_stats">📊 Статистика використання</string>
+    <string name="usage_title">Час використання на кластері</string>
+    <string name="usage_empty">Немає даних використання</string>
+    <string name="usage_reset">Скинути</string>
 </resources>

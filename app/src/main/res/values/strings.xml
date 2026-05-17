@@ -238,4 +238,25 @@
     <string name="setting_boot_auto_start">Activer automatiquement la projection au démarrage (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Média</string>
+    <!-- Feature: Category filters -->
+    <string name="filter_all">Tout</string>
+    <string name="filter_nav">🗺 Nav</string>
+    <string name="filter_media">🎵 Média</string>
+    <string name="settings_show_category_filters">Afficher les filtres par catégorie (Tout / Nav / Média)</string>
+    <!-- Feature: Quick-switch -->
+    <string name="quick_switch_title">Apps récentes</string>
+    <string name="quick_switch_empty">Aucune app récente</string>
+    <!-- Feature: Auto-launch profiles -->
+    <string name="profile_none">Aucun profil</string>
+    <string name="profile_driving">🚗 Conduite</string>
+    <string name="profile_parking">🅿️ Stationnement</string>
+    <string name="settings_profiles_title">Profils de lancement automatique</string>
+    <string name="settings_profile_driving_app">App en mode Conduite :</string>
+    <string name="settings_profile_parking_app">App en mode Stationnement :</string>
+    <string name="settings_profile_none_selected">(aucune app sélectionnée)</string>
+    <!-- Feature: Usage stats -->
+    <string name="menu_usage_stats">📊 Statistiques d\'utilisation</string>
+    <string name="usage_title">Temps d\'utilisation sur le cluster</string>
+    <string name="usage_empty">Aucune donnée d\'utilisation</string>
+    <string name="usage_reset">Réinitialiser</string>
 </resources>

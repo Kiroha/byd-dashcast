@@ -120,6 +120,14 @@
                 android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp"/>
 
+            <CheckBox
+                android:id="@+id/cb_show_category_filters"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_show_category_filters"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
             <!-- Bloc Sliders Classique -->
             <LinearLayout
                 android:id="@+id/ll_sliders_mode"
@@ -239,6 +247,65 @@
                 android:padding="8dp"
                 android:visibility="gone"/>
 
+        </LinearLayout>
+
+        <!-- ══ SECTION 2b : PROFILS DE LANCEMENT ══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/bg_card"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_profiles_title"
+                android:textSize="18sp"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_profile_driving_app"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_profile_driving_app"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_profile_none_selected"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:background="@color/bg_button_secondary"
+                android:padding="10dp"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_profile_parking_app"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_profile_parking_app"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_profile_none_selected"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:background="@color/bg_button_secondary"
+                android:padding="10dp"
+                android:layout_marginBottom="6dp"/>
         </LinearLayout>
 
         <!-- ══ SECTION 3 : MISES À JOUR ══ -->
