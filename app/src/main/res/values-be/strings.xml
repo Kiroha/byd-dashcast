@@ -228,7 +228,6 @@
     <string name="visual_overscan_use_visual_mode">Выкарыстоўваць візуальны рэжым</string>
     <string name="visual_overscan_height">↕ Вышыня</string>
     <string name="visual_overscan_width">↔ Шырыня</string>
-    <string name="setting_boot_overscan">Запусціць праекцыю і аднавіць Overscan пры запуску (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Аўтаматычна запускаць праекцыю пры запуску (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навігацыя</string>
     <string name="category_media">🎵 Медыя</string>

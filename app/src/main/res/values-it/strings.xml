@@ -228,7 +228,6 @@
     <string name="visual_overscan_use_visual_mode">Utilizzare la modalità visiva direzionale</string>
     <string name="visual_overscan_height">↕ Altezza</string>
     <string name="visual_overscan_width">↔ Larghezza</string>
-    <string name="setting_boot_overscan">Avviare la proiezione e ripristinare l\'Overscan all\'avvio (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Avviare automaticamente la proiezione all\'avvio (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigazione</string>
     <string name="category_media">🎵 Media</string>
