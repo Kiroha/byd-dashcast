@@ -22,6 +22,11 @@ import androidx.appcompat.app.AppCompatActivity;
  */
 public class SettingsActivity extends AppCompatActivity {
 
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(LocaleHelper.applyLocale(base));
+    }
+
     // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
     static final String PREFS_NAME      = "byd_app_prefs";
 
