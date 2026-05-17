@@ -1029,15 +1029,21 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
 
-        // 2. am force-stop via ADB
+        // 2. Move the app back to Display 0 before killing — safety net so that
+        //    if force-stop fails silently, Android won't re-launch it on Display 1.
+        if (mSessionClusterPackages.contains(app.packageName)
+                && mServiceBound && mClusterService != null) {
+            mClusterService.moveTaskToDisplay(app.packageName, 0, null);
+        }
+        mSessionClusterPackages.remove(app.packageName);
+
+        // 3. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
-                        // Force-stop clears display affinity, no need to moveTaskToDisplay
-                        mSessionClusterPackages.remove(app.packageName);
                         if (isOnCluster) {
                             mCurrentDashboardApp = null;
                             mCurrentDashboardPkg = null;
