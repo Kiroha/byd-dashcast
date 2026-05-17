@@ -34,6 +34,8 @@
     <string name="status_dashboard_app">Панэль прыбораў: %1$s</string>
     <string name="toast_app_incompatible">%1$s: не ўсталявана або несумяшчальна з некалькімі дысплеямі</string>
     <string name="toast_cluster_unavailable">Служба кластара недаступная</string>
+    <string name="dialog_cluster_not_active">Праекцыя на прыборную панэль не актыўная. Актываваць зараз?</string>
+    <string name="dialog_activate_now">Актываваць</string>
     <string name="toast_app_already_cluster">Праграма ўжо на кластары</string>
     <string name="toast_restore_failed">Не ўдалося аднавіць: %1$s</string>
     <string name="toast_origin_failed">Не ўдалося аднавіць штатны кластар: %1$s</string>

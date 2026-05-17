@@ -33,6 +33,8 @@
     <string name="status_dashboard_app">اللوحة: %1$s</string>
     <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
     <string name="toast_cluster_unavailable">خدمة العنقود غير متاحة</string>
+    <string name="dialog_cluster_not_active">إسقاط لوحة العدادات غير مفعّل. هل تريد تفعيله الآن؟</string>
+    <string name="dialog_activate_now">تفعيل</string>
     <string name="toast_app_already_cluster">التطبيق موجود بالفعل على العنقود</string>
     <string name="toast_restore_failed">فشل الاستعادة: %1$s</string>
     <string name="toast_origin_failed">فشل استعادة العنقود الأصلي: %1$s</string>

@@ -36,6 +36,8 @@
     <string name="status_dashboard_app">Панель приборов: %1$s</string>
     <string name="toast_app_incompatible">%1$s: не установлено или несовместимо с несколькими дисплеями</string>
     <string name="toast_cluster_unavailable">Служба кластера недоступна</string>
+    <string name="dialog_cluster_not_active">Проекция на приборную панель не активна. Активировать сейчас?</string>
+    <string name="dialog_activate_now">Активировать</string>
     <string name="toast_app_already_cluster">Приложение уже на кластере</string>
     <string name="toast_restore_failed">Не удалось восстановить: %1$s</string>
     <string name="toast_origin_failed">Не удалось восстановить штатный кластер: %1$s</string>

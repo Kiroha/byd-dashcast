@@ -36,6 +36,8 @@
     <string name="status_dashboard_app">Dashboard: %1$s</string>
     <string name="toast_app_incompatible">%1$s: non installato o incompatibile con multi-display</string>
     <string name="toast_cluster_unavailable">Servizio cluster non disponibile</string>
+    <string name="dialog_cluster_not_active">La proiezione cluster non è attiva. Vuoi attivarla ora?</string>
+    <string name="dialog_activate_now">Attiva</string>
     <string name="toast_app_already_cluster">App già sul cluster</string>
     <string name="toast_restore_failed">Ripristino fallito: %1$s</string>
     <string name="toast_origin_failed">Ripristino cluster originale fallito: %1$s</string>

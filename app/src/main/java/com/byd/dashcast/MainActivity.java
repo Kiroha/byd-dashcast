@@ -98,6 +98,7 @@ public class MainActivity extends AppCompatActivity
     
     private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
     private String mPendingAutoLaunchPkg = null;
+    private AppInfo mPendingAppAfterActivation = null;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
@@ -735,6 +736,14 @@ public class MainActivity extends AppCompatActivity
                     if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
                 }
                 
+                // Pending app from "activate cluster" dialog
+                if (mPendingAppAfterActivation != null) {
+                    final AppInfo pending = mPendingAppAfterActivation;
+                    mPendingAppAfterActivation = null;
+                    AppLogger.i(TAG, "Auto-sending pending app after activation: " + pending.packageName);
+                    onSendToDashboard(pending);
+                }
+
                 // Auto-Launch process
                 if (mPendingAutoLaunchPkg != null) {
                     String targetPkg = mPendingAutoLaunchPkg;
@@ -849,8 +858,8 @@ public class MainActivity extends AppCompatActivity
         // ClusterService.launchOnDashboard() tries direct Binder then ADB relay
         // with displayId=1 hardcoded (Seal EU) as fallback → always functional.
         if (mClusterService == null) {
-            AppLogger.e(TAG, "ClusterService null — send cancelled for " + app.packageName);
-            Toast.makeText(this, getString(R.string.toast_cluster_unavailable), Toast.LENGTH_SHORT).show();
+            AppLogger.e(TAG, "ClusterService null — prompt user to activate for " + app.packageName);
+            showActivateClusterDialog(app);
             return;
         }
 
@@ -1407,6 +1416,19 @@ public class MainActivity extends AppCompatActivity
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----
+
+    private void showActivateClusterDialog(final AppInfo pendingApp) {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.toast_cluster_unavailable))
+                .setMessage(getString(R.string.dialog_cluster_not_active))
+                .setPositiveButton(getString(R.string.dialog_activate_now), (dialog, which) -> {
+                    activateCluster();
+                    // After activation, auto-send the app once connected
+                    mPendingAppAfterActivation = pendingApp;
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
 
     private void activateCluster() {
         btnActivateCluster.setEnabled(false);
