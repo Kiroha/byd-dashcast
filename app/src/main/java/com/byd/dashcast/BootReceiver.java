@@ -8,7 +8,7 @@ import android.os.Build;
 
 public class BootReceiver extends BroadcastReceiver {
 
-    private static final String PREFS_NAME = "DashCastPrefs";
+    private static final String PREFS_NAME = SettingsActivity.PREFS_NAME;
 
     @Override
     public void onReceive(Context context, Intent intent) {

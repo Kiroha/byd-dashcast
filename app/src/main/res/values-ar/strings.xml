@@ -228,7 +228,6 @@
     <string name="visual_overscan_use_visual_mode">استخدام الوضع المرئي الاتجاهي</string>
     <string name="visual_overscan_height">↕ الارتفاع</string>
     <string name="visual_overscan_width">↔ العرض</string>
-    <string name="setting_boot_overscan">بدء العرض واستعادة Overscan عند بدء التشغيل (Auto-Boot)</string>
     <string name="setting_boot_auto_start">بدء العرض التلقائي عند بدء التشغيل (Auto-Boot)</string>
     <string name="category_navigation">🗺 الملاحة</string>
     <string name="category_media">🎵 وسائط</string>

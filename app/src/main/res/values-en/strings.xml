@@ -228,7 +228,6 @@
     <string name="visual_overscan_use_visual_mode">Use directional visual mode</string>
     <string name="visual_overscan_height">↕ Height</string>
     <string name="visual_overscan_width">↔ Width</string>
-    <string name="setting_boot_overscan">Start projection and restore Overscan on startup (Auto-Boot)</string>
     <string name="setting_boot_auto_start">Automatically start projection on startup (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Media</string>

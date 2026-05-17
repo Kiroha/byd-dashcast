@@ -27,7 +27,7 @@ import com.byd.dashcast.dashboard.DashboardLauncher;
  *   - Started by MainActivity.onCreate() via startForegroundService()
  *   - MainActivity binds/unbinds in onStart()/onStop() to access data
  *   - The service keeps running until stopSelf() is called
- *   - stopProjection() is called explicitly (Restore BYD button or app destruction)
+ *   - stopProjectionNoAdb() is called explicitly (Restore BYD button or app destruction)
  *
  * Communication with MainActivity:
  *   - LocalBinder.getService() returns the service instance
@@ -544,17 +544,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         if (mDisplayHelper != null) {
             mDisplayHelper.start();
         }
-    }
-
-    /** Cleanly stops the projection (sendInfo(0) + stopService AutoDisplayService). */
-    public void stopProjection() {
-        AppLogger.log(TAG, "stopProjection requested");
-        AdbLocalClient.executeShell(this, "wm overscan reset -d 1");
-        mProjectionActive = false;
-        mDisplayHelper.stop();
-        mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: stopped");
-        stopSelf();
     }
 
     /**

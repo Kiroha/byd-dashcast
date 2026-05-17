@@ -40,5 +40,4 @@
 
     <!-- Static pure colors -->
     <color name="pure_white">#FFFFFF</color>
-    <color name="pure_black">#000000</color>
 </resources>
