@@ -34,6 +34,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private String mMainPackage = null;
     private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
     private String mCurrentFilter = "";
+    private int mCategoryFilter = 0; // 0=all, 1=nav, 2=media
 
     private boolean mIsGridMode = false;
 
@@ -66,13 +67,34 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         applyFilter(mCurrentFilter);
     }
 
+    /**
+     * Filters the displayed list by category.
+     * @param category 0=all, AppInfo.CATEGORY_NAVIGATION, AppInfo.CATEGORY_MEDIA
+     */
+    public void filterByCategory(int category) {
+        mCategoryFilter = category;
+        applyFilter(mCurrentFilter);
+    }
+
+    public int getCategoryFilter() {
+        return mCategoryFilter;
+    }
+
     private void applyFilter(String query) {
+        List<AppInfo> base = mAllApps;
+        // Category filter
+        if (mCategoryFilter != 0) {
+            base = new ArrayList<>();
+            for (AppInfo a : mAllApps) {
+                if (a.category == mCategoryFilter) base.add(a);
+            }
+        }
         if (query == null || query.trim().isEmpty()) {
-            mApps = new ArrayList<>(mAllApps);
+            mApps = new ArrayList<>(base);
         } else {
             String lower = query.trim().toLowerCase(java.util.Locale.ROOT);
             List<AppInfo> filtered = new ArrayList<>();
-            for (AppInfo a : mAllApps) {
+            for (AppInfo a : base) {
                 if (a.appName.toLowerCase(java.util.Locale.ROOT).contains(lower)) {
                     filtered.add(a);
                 }

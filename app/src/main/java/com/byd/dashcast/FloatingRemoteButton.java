@@ -199,9 +199,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                         long held = System.currentTimeMillis() - downTime;
                         if (movX < 12 && movY < 12) {
                             if (held > 600) {
-                                // Long press → close overlay
-                                AppLogger.i(TAG, "Long-press → stop FloatingRemoteButton");
-                                stopSelf();
+                                // Long press → show recent apps popup for quick switching
+                                AppLogger.i(TAG, "Long-press → show quick-switch popup");
+                                showQuickSwitchPopup();
                             } else {
                                 // Tap → bring MainActivity to front + open mirror panel
                                 Intent bringFront = new Intent(
@@ -250,6 +250,43 @@ badge.setOnTouchListener(new View.OnTouchListener() {
             AppLogger.e(TAG, "addView overlay failed", e);
             mFloatView = null;
         }
+    }
+
+    /** Broadcast action sent to MainActivity to quick-switch to a specific app. */
+    public static final String ACTION_QUICK_SWITCH =
+            "com.byd.dashcast.action.QUICK_SWITCH";
+    public static final String EXTRA_QUICK_SWITCH_PKG = "quick_switch_pkg";
+
+    private void showQuickSwitchPopup() {
+        android.content.SharedPreferences prefs =
+                getSharedPreferences("byd_app_prefs", MODE_PRIVATE);
+        String raw = prefs.getString("recent_cluster_apps", "");
+        if (raw.isEmpty()) {
+            android.widget.Toast.makeText(this,
+                    getString(R.string.quick_switch_empty), android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] entries = raw.split(";;");
+        final String[] names = new String[entries.length];
+        final String[] pkgs  = new String[entries.length];
+        for (int i = 0; i < entries.length; i++) {
+            String[] parts = entries[i].split("\\|", 2);
+            pkgs[i]  = parts[0];
+            names[i] = parts.length > 1 ? parts[1] : parts[0];
+        }
+        new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(getString(R.string.quick_switch_title))
+                .setItems(names, (dialog, which) -> {
+                    Intent intent = new Intent(FloatingRemoteButton.this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    intent.setAction(ACTION_QUICK_SWITCH);
+                    intent.putExtra(EXTRA_QUICK_SWITCH_PKG, pkgs[which]);
+                    startActivity(intent);
+                    AppLogger.d(TAG, "Quick-switch → " + pkgs[which]);
+                })
+                .show();
     }
 
     // ── Foreground service ────────────────────────────────────────────────────

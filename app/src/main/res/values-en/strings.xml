@@ -231,4 +231,21 @@
     <string name="setting_boot_auto_start">Automatically start projection on startup (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Media</string>
+    <string name="filter_all">All</string>
+    <string name="filter_nav">🗺 Nav</string>
+    <string name="filter_media">🎵 Media</string>
+    <string name="settings_show_category_filters">Show category filters (All / Nav / Media)</string>
+    <string name="quick_switch_title">Recent apps</string>
+    <string name="quick_switch_empty">No recent apps</string>
+    <string name="profile_none">No profile</string>
+    <string name="profile_driving">🚗 Driving</string>
+    <string name="profile_parking">🅿️ Parking</string>
+    <string name="settings_profiles_title">Auto-launch profiles</string>
+    <string name="settings_profile_driving_app">Driving mode app:</string>
+    <string name="settings_profile_parking_app">Parking mode app:</string>
+    <string name="settings_profile_none_selected">(no app selected)</string>
+    <string name="menu_usage_stats">📊 Usage statistics</string>
+    <string name="usage_title">Cluster usage time</string>
+    <string name="usage_empty">No usage data</string>
+    <string name="usage_reset">Reset</string>
 </resources>

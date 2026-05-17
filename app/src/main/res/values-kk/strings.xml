@@ -231,4 +231,21 @@
     <string name="setting_boot_auto_start">Іске қосылғанда проекцияны автоматты түрде бастау (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навигация</string>
     <string name="category_media">🎵 Медиа</string>
+    <string name="filter_all">Барлығы</string>
+    <string name="filter_nav">🗺 Нав</string>
+    <string name="filter_media">🎵 Медиа</string>
+    <string name="settings_show_category_filters">Санат сүзгілерін көрсету (Барлығы / Нав / Медиа)</string>
+    <string name="quick_switch_title">Соңғы қолданбалар</string>
+    <string name="quick_switch_empty">Соңғы қолданба жоқ</string>
+    <string name="profile_none">Профиль жоқ</string>
+    <string name="profile_driving">🚗 Жүргізу</string>
+    <string name="profile_parking">🅿️ Тұрақ</string>
+    <string name="settings_profiles_title">Автоіске профильдер</string>
+    <string name="settings_profile_driving_app">Жүргізу режимінің қолданбасы:</string>
+    <string name="settings_profile_parking_app">Тұрақ режимінің қолданбасы:</string>
+    <string name="settings_profile_none_selected">(қолданба таңдалмаған)</string>
+    <string name="menu_usage_stats">📊 Пайдалану статистикасы</string>
+    <string name="usage_title">Кластерде пайдалану уақыты</string>
+    <string name="usage_empty">Пайдалану деректері жоқ</string>
+    <string name="usage_reset">Тазалау</string>
 </resources>
