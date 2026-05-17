@@ -36,6 +36,8 @@
     <string name="status_dashboard_app">Dashboard : %1$s</string>
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
     <string name="toast_cluster_unavailable">Service cluster indisponible</string>
+    <string name="dialog_cluster_not_active">La projection cluster n\'est pas activée. Voulez-vous l\'activer maintenant ?</string>
+    <string name="dialog_activate_now">Activer</string>
     <string name="toast_app_already_cluster">App déjà sur le cluster</string>
     <string name="toast_restore_failed">Échec restauration : %1$s</string>
     <string name="toast_origin_failed">Échec restauration cluster d\'origine : %1$s</string>

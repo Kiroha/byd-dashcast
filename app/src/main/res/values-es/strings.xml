@@ -32,8 +32,8 @@
     <string name="status_dashboard_byd">Panel: pantalla BYD</string>
     <string name="status_dashboard_app">Panel: %1$s</string>
     <string name="toast_app_incompatible">%1$s: no instalado o incompatible con multi-pantalla</string>
-    <string name="toast_cluster_unavailable">Servicio de clúster no disponible</string>
-    <string name="toast_app_already_cluster">App ya está en el clúster</string>
+    <string name="toast_cluster_unavailable">Servicio de clúster no disponible</string>    <string name="dialog_cluster_not_active">La proyección del clúster no está activa. ¿Desea activarla ahora?</string>
+    <string name="dialog_activate_now">Activar</string>    <string name="toast_app_already_cluster">App ya está en el clúster</string>
     <string name="toast_restore_failed">Error al restaurar: %1$s</string>
     <string name="toast_origin_failed">Error al restaurar clúster original: %1$s</string>
     <string name="toast_app_stopped">%1$s detenido</string>

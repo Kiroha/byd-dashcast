@@ -36,6 +36,8 @@
     <string name="status_dashboard_app">Dashboard: %1$s</string>
     <string name="toast_app_incompatible">%1$s: not installed or incompatible with multi-display</string>
     <string name="toast_cluster_unavailable">Cluster service unavailable</string>
+    <string name="dialog_cluster_not_active">Cluster projection is not active. Do you want to activate it now?</string>
+    <string name="dialog_activate_now">Activate</string>
     <string name="toast_app_already_cluster">App already on the cluster</string>
     <string name="toast_restore_failed">Restore failed: %1$s</string>
     <string name="toast_origin_failed">Original cluster restore failed: %1$s</string>

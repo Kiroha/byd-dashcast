@@ -34,6 +34,8 @@
     <string name="status_dashboard_app">Asboblar paneli: %1$s</string>
     <string name="toast_app_incompatible">%1$s: oʻrnatilmagan yoki bir nechta displey bilan mos emas</string>
     <string name="toast_cluster_unavailable">Klaster xizmati mavjud emas</string>
+    <string name="dialog_cluster_not_active">Klaster proyeksiyasi faol emas. Hozir faollashtirilsinmi?</string>
+    <string name="dialog_activate_now">Faollashtirish</string>
     <string name="toast_app_already_cluster">Ilova allaqachon klasterda</string>
     <string name="toast_restore_failed">Tiklab boʻlmadi: %1$s</string>
     <string name="toast_origin_failed">Asl klasterni tiklab boʻlmadi: %1$s</string>

@@ -36,6 +36,8 @@
     <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
     <string name="toast_app_incompatible">%1$s: yüklü değil veya çoklu ekranla uyumsuz</string>
     <string name="toast_cluster_unavailable">Küme servisi kullanılamıyor</string>
+    <string name="dialog_cluster_not_active">Küme projeksiyonu etkin değil. Şimdi etkinleştirmek ister misiniz?</string>
+    <string name="dialog_activate_now">Etkinleştir</string>
     <string name="toast_app_already_cluster">Uygulama zaten kümede</string>
     <string name="toast_restore_failed">Geri yükleme başarısız: %1$s</string>
     <string name="toast_origin_failed">Orijinal küme geri yüklemesi başarısız: %1$s</string>

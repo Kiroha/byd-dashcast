@@ -34,6 +34,8 @@
     <string name="status_dashboard_app">Аспаптар панелі: %1$s</string>
     <string name="toast_app_incompatible">%1$s: орнатылмаған немесе бірнеше дисплеймен үйлесімсіз</string>
     <string name="toast_cluster_unavailable">Кластер қызметі қолжетімсіз</string>
+    <string name="dialog_cluster_not_active">Кластер проекциясы белсенді емес. Қазір белсендіру керек пе?</string>
+    <string name="dialog_activate_now">Белсендіру</string>
     <string name="toast_app_already_cluster">Қолданба кластерде бар</string>
     <string name="toast_restore_failed">Қалпына келтіру сәтсіз: %1$s</string>
     <string name="toast_origin_failed">Бастапқы кластерді қалпына келтіру сәтсіз: %1$s</string>
