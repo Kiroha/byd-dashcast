@@ -253,8 +253,21 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      *
      * Callback is always called on the main thread.
      */
+    // TeleNav nav app is auto-started by BYD at boot; its process is often a zombie
+    // that moveTaskToDisplay() moves as-is → black screen on cluster.  Force a fresh
+    // launch instead (launchOnDashboard uses FLAG_ACTIVITY_CLEAR_TASK).
+    private static final String PKG_FORCE_FRESH_LAUNCH = "com.telenav.app.arp";
+
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
+        // ── Ghost-nav workaround: always fresh-launch TeleNav instead of moving ──
+        if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
+            AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName
+                    + " (ghost-nav workaround)");
+            fallbackLaunch(packageName, targetDisplayId, callback);
+            return;
+        }
+
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
