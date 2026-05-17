@@ -225,7 +225,7 @@
     <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
     <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Usar el modo visual direccional</string>
+    <string name="visual_overscan_use_visual_mode">Ajustar con flechas (en lugar de deslizadores)</string>
     <string name="visual_overscan_height">↕ Altura</string>
     <string name="visual_overscan_width">↔ Anchura</string>
     <string name="setting_boot_auto_start">Iniciar proyección automáticamente al inicio (Auto-Boot)</string>

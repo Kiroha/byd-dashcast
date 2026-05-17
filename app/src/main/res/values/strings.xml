@@ -232,7 +232,7 @@
     <string name="diag_adas47_desc" translatable="false">Advanced ADAS diagnostic toggles for cluster testing.</string>
     <string name="diag_adas47_on" translatable="false">ADAS ON (47)</string>
     <string name="diag_adas47_off" translatable="false">ADAS OFF (48)</string>
-    <string name="visual_overscan_use_visual_mode">Utiliser le mode visuel directionnel</string>
+    <string name="visual_overscan_use_visual_mode">Ajuster avec des flèches (au lieu des curseurs)</string>
     <string name="visual_overscan_height">↕ Hauteur</string>
     <string name="visual_overscan_width">↔ Largeur</string>
     <string name="setting_boot_auto_start">Activer automatiquement la projection au démarrage (Auto-Boot)</string>
