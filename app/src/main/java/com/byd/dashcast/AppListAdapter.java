@@ -1,7 +1,6 @@
 package com.byd.dashcast;
 
 import androidx.recyclerview.widget.RecyclerView;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -170,10 +169,17 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                     btn.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            // On the UI side, we forward these intents via the AppListAdapter
                             if (mListener != null) {
-                                mListener.onSendToDashboard(app); // Wake up the display and switch to app
-                                v.getContext().startActivity(shortcut.intent); // Fire shortcut behind it
+                                mListener.onSendToDashboard(app);
+                                try {
+                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
+                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    if (la != null) {
+                                        la.startShortcut(app.packageName, shortcut.id, null, null, android.os.Process.myUserHandle());
+                                    }
+                                } catch (Exception ignored) {
+                                    // Shortcut may have been removed or app uninstalled
+                                }
                             }
                         }
                     });
@@ -207,8 +213,14 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                                         mListener.onSendToDashboard(app);
                                     }
                                 }
-                                if (chosenShortcut.intent != null) {
-                                    v.getContext().startActivity(chosenShortcut.intent);
+                                try {
+                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
+                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    if (la != null) {
+                                        la.startShortcut(app.packageName, chosenShortcut.id, null, null, android.os.Process.myUserHandle());
+                                    }
+                                } catch (Exception ignored) {
+                                    // Shortcut may have been removed or app uninstalled
                                 }
                                 return true;
                             }

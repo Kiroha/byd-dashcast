@@ -2052,11 +2052,7 @@ public class MainActivity extends AppCompatActivity
                                 if (shortcuts != null) {
                                     for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
                                         android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
-                                        // We have to build an Intent to launch this shortcut
-                                        Intent shortcutIntent = new Intent("com.byd.dashcast.LAUNCH_SHORTCUT");
-                                        shortcutIntent.putExtra("shortcut_id", shortcut.getId());
-                                        shortcutIntent.putExtra("shortcut_package", pkg);
-                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon, shortcutIntent));
+                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon, null));
                                     }
                                 }
                             }
