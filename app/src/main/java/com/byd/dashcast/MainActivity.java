@@ -173,6 +173,11 @@ public class MainActivity extends AppCompatActivity
     // Usage tracking
     private long mClusterAppStartTime = 0;
 
+    // Session-scoped set of all packages that were launched on the cluster (display != 0).
+    // Used to move them all back to Display 0 when the user stops the projection,
+    // so Android doesn't re-launch them on the (still-alive) VirtualDisplay later.
+    private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
+
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
     private LinearLayout panelResize;
@@ -591,6 +596,7 @@ public class MainActivity extends AppCompatActivity
             @Override public void onResult(boolean launched) {
                 if (launched) {
                     mCurrentDashboardPkg = pkgName;
+                    mSessionClusterPackages.add(pkgName);
                     // Resolve app name
                     String name = pkgName;
                     try {
@@ -911,6 +917,7 @@ public class MainActivity extends AppCompatActivity
                     if (launched) {
                         mSecondDashboardApp = appName;
                         mSecondDashboardPkg = pkgName;
+                        mSessionClusterPackages.add(pkgName);
                         updateControlLabel();
                     } else {
                         Toast.makeText(MainActivity.this,
@@ -937,6 +944,7 @@ public class MainActivity extends AppCompatActivity
                     trackUsageStop(mCurrentDashboardPkg);
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
+                    mSessionClusterPackages.add(pkgName);
                     addToRecentApps(pkgName, appName);
                     trackUsageStart();
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
@@ -1028,6 +1036,8 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
+                        // Force-stop clears display affinity, no need to moveTaskToDisplay
+                        mSessionClusterPackages.remove(app.packageName);
                         if (isOnCluster) {
                             mCurrentDashboardApp = null;
                             mCurrentDashboardPkg = null;
@@ -1664,6 +1674,12 @@ public class MainActivity extends AppCompatActivity
         tvDashboardStatus.setText(getString(R.string.status_restoring_cluster));
         setStatusDot(DOT_COLOR_PENDING);
         trackUsageStop(mCurrentDashboardPkg);
+
+        // Move ALL apps that were launched on the cluster during this session back to Display 0.
+        // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
+        // when the user opens the app from the BYD launcher after stopping the projection.
+        moveSessionAppsToMainDisplay();
+
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
         // Split mode: force-stop the second app before sendInfo(18)
         // (prevents it from relocating to the main display)
@@ -1711,6 +1727,26 @@ public class MainActivity extends AppCompatActivity
                 });
             }
         });
+    }
+
+    /**
+     * Moves every app that was launched on the cluster during this session back to Display 0.
+     * Uses moveTaskToDisplay(pkg, 0) via ClusterService so Android remembers Display 0
+     * as the last display for each app. Clears the session set afterwards.
+     */
+    private void moveSessionAppsToMainDisplay() {
+        if (mSessionClusterPackages.isEmpty()) return;
+        if (!mServiceBound || mClusterService == null) {
+            AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, clearing set only");
+            mSessionClusterPackages.clear();
+            return;
+        }
+        AppLogger.i(TAG, "moveSessionAppsToMainDisplay: " + mSessionClusterPackages.size()
+                + " apps → " + mSessionClusterPackages);
+        for (String pkg : mSessionClusterPackages) {
+            mClusterService.moveTaskToDisplay(pkg, 0, null);
+        }
+        mSessionClusterPackages.clear();
     }
 
     private void updateDashboardStatus(String appName) {
@@ -1909,6 +1945,7 @@ public class MainActivity extends AppCompatActivity
     private void originCluster() {
         tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
         setStatusDot(DOT_COLOR_PENDING);
+        moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
         // Split mode: force-stop the second app before restoration
         if (mSecondDashboardPkg != null) {
