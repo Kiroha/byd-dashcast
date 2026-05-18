@@ -29,11 +29,21 @@ import java.io.File;
  */
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AdbLocalClient {
     // Capped at 4 threads to avoid OutOfMemoryError or socket exhaustion
     // if the user hammers the UI triggering slow ADB commands.
-    private static final ExecutorService sExecutor = Executors.newFixedThreadPool(4);
+    // Named daemon threads → easier debugging and won't keep the process alive.
+    private static final ExecutorService sExecutor = Executors.newFixedThreadPool(4, new ThreadFactory() {
+        private final AtomicInteger seq = new AtomicInteger(1);
+        @Override public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "adb-local-" + seq.getAndIncrement());
+            t.setDaemon(true);
+            return t;
+        }
+    });
 
     private static final String TAG = "AdbLocalClient";
 
