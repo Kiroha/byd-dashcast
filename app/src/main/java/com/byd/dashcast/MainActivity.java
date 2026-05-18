@@ -692,6 +692,9 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
+        // Cancel all pending runnables (anonymous lambdas posted via postDelayed that
+        // individual removeCallbacks() calls may have missed).
+        mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
         try { unregisterReceiver(mShowMirrorReceiver); } catch (IllegalArgumentException ignored) {}
         if (mServiceBound) {
@@ -1850,8 +1853,8 @@ public class MainActivity extends AppCompatActivity
                     return true;
                 }
             }
-            AppLogger.w("DisplayCleanup", "No running task found for " + packageName);
-            return false;
+            AppLogger.d("DisplayCleanup", "No running task found for " + packageName + " — already gone, skipping");
+            return true; // not an error: task no longer exists, nothing to move
         } catch (Exception e) {
             AppLogger.w("DisplayCleanup", "Could not move " + packageName + " to Display 0: " + e.getMessage());
             return false;
@@ -2320,7 +2323,7 @@ public class MainActivity extends AppCompatActivity
                                 if (shortcuts != null) {
                                     for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
                                         android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
-                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon, null));
+                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon));
                                     }
                                 }
                             }
@@ -2498,8 +2501,9 @@ public class MainActivity extends AppCompatActivity
                 .setPositiveButton(android.R.string.ok, null)
                 .setNeutralButton(getString(R.string.usage_reset), (d, w) -> {
                     SharedPreferences.Editor editor = prefs.edit();
-                    for (java.util.Map.Entry<String, ?> entry : all.entrySet()) {
-                        if (entry.getKey().startsWith("usage_ms_")) editor.remove(entry.getKey());
+                    // Re-read at click time: new usage entries may have been added since the dialog opened.
+                    for (String key : prefs.getAll().keySet()) {
+                        if (key.startsWith("usage_ms_")) editor.remove(key);
                     }
                     editor.apply();
                     Toast.makeText(this, "✓", Toast.LENGTH_SHORT).show();
