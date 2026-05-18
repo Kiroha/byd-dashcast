@@ -584,12 +584,6 @@ public class MainActivity extends AppCompatActivity
             String pkg = intent.getStringExtra(FloatingRemoteButton.EXTRA_QUICK_SWITCH_PKG);
             if (pkg != null) {
                 AppLogger.i(TAG, "Quick-switch intent → " + pkg);
-                // Find the AppInfo for this package and send it to dashboard
-                if (mAdapter != null) {
-                    for (int i = 0; i < mAdapter.getItemCount(); i++) {
-                        // We need to find the app in mAllApps — access via adapter is indirect
-                    }
-                }
                 // Simpler: use ClusterService directly to move/launch by package name
                 quickSwitchToApp(pkg);
             }
@@ -1783,9 +1777,8 @@ public class MainActivity extends AppCompatActivity
     private void moveSessionAppsToMainDisplay() {
         if (mSessionClusterPackages.isEmpty()) return;
         if (!mServiceBound || mClusterService == null) {
-            AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, clearing set only");
-            mSessionClusterPackages.clear();
-            persistSessionClusterPackages();
+            // Keep the persisted set intact so boot/onCreate cleanup can still recover.
+            AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, preserving set for later cleanup");
             return;
         }
         AppLogger.i(TAG, "moveSessionAppsToMainDisplay: " + mSessionClusterPackages.size()
@@ -1817,27 +1810,33 @@ public class MainActivity extends AppCompatActivity
             AppLogger.d("DisplayCleanup", "No session cluster packages to clean up");
             return;
         }
+        java.util.Set<String> remaining = new java.util.HashSet<>(pkgs);
         AppLogger.i("DisplayCleanup", "Cleaning up " + pkgs.size() + " apps → Display 0: " + pkgs);
         for (String pkg : pkgs) {
-            moveTaskToDisplayZero(pkg);
+            if (moveTaskToDisplayZero(pkg)) {
+                remaining.remove(pkg);
+            }
         }
-        // Clear the persisted set
-        prefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+        // Keep only failed packages for a later retry (next boot/app launch).
+        if (remaining.isEmpty()) {
+            prefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+        } else {
+            prefs.edit().putStringSet(PREF_SESSION_CLUSTER_PKGS, remaining).apply();
+            AppLogger.w("DisplayCleanup", "Cleanup partially failed, keeping pending set: " + remaining);
+        }
     }
 
     /** Moves a single package's task to Display 0 via IActivityTaskManager reflection. */
-    private static void moveTaskToDisplayZero(String packageName) {
+    private static boolean moveTaskToDisplayZero(String packageName) {
         try {
             // Find the task ID
             Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
             Object iatm = atmClass.getMethod("getService").invoke(null);
-            // getAppTasks() won't work from static context; use getRunningTasks with large count
-            Class<?> amClass = Class.forName("android.app.ActivityManager");
             // Use IActivityTaskManager.getTasks(100) — hidden but available with platform signing
             @SuppressWarnings("unchecked")
             java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
                     .getMethod("getTasks", int.class).invoke(iatm, 100);
-            if (tasks == null) return;
+            if (tasks == null) return false;
             for (Object taskInfo : tasks) {
                 // RecentTaskInfo or RunningTaskInfo — both extend TaskInfo with baseActivity
                 android.content.ComponentName base = (android.content.ComponentName)
@@ -1848,11 +1847,14 @@ public class MainActivity extends AppCompatActivity
                             .invoke(iatm, taskId, 0);
                     AppLogger.i("DisplayCleanup", "Moved " + packageName
                             + " (taskId=" + taskId + ") → Display 0");
-                    break;
+                    return true;
                 }
             }
+            AppLogger.w("DisplayCleanup", "No running task found for " + packageName);
+            return false;
         } catch (Exception e) {
             AppLogger.w("DisplayCleanup", "Could not move " + packageName + " to Display 0: " + e.getMessage());
+            return false;
         }
     }
 

@@ -142,7 +142,7 @@ public class LogActivity extends AppCompatActivity {
     private void refreshLog() {
         // Skip buffer copy if neither the entry count nor the filter has changed.
         int currentCount = AppLogger.getEntriesCount();
-        String filter = mFilter.toLowerCase(Locale.getDefault());
+        String filter = mFilter.toLowerCase(Locale.ROOT);
         if (currentCount == mLastEntryCount && filter.equals(mLastFilter)) return;
         // Buffer or filter changed: copy and rebuild.
         List<AppLogger.Entry> entries = AppLogger.getEntries();
@@ -175,9 +175,9 @@ public class LogActivity extends AppCompatActivity {
         for (AppLogger.Entry e : entries) {
             // Filtre
             if (!filter.isEmpty()) {
-                boolean match = e.tag.toLowerCase(Locale.getDefault()).contains(filter)
-                        || e.message.toLowerCase(Locale.getDefault()).contains(filter)
-                        || e.level.name().toLowerCase(Locale.getDefault()).contains(filter);
+                boolean match = containsIgnoreCase(e.tag, filter)
+                        || containsIgnoreCase(e.message, filter)
+                        || containsIgnoreCase(e.level.name(), filter);
                 if (!match) continue;
             }
 
@@ -222,6 +222,18 @@ public class LogActivity extends AppCompatActivity {
         }
 
         return span;
+    }
+
+    /** Case-insensitive contains without allocating lowercase copies on every call. */
+    private static boolean containsIgnoreCase(String text, String needleLowercase) {
+        if (text == null) return false;
+        if (needleLowercase == null || needleLowercase.isEmpty()) return true;
+        int n = needleLowercase.length();
+        int limit = text.length() - n;
+        for (int i = 0; i <= limit; i++) {
+            if (text.regionMatches(true, i, needleLowercase, 0, n)) return true;
+        }
+        return false;
     }
 
     private int levelColor(AppLogger.Level level) {
