@@ -178,10 +178,10 @@ public class ClusterInputForwarder {
 
         if (!mAvailable) return;
 
+        MotionEvent ev = MotionEvent.obtain(
+                mTouchDownTime, now, action, pointerCount, props, coords,
+                0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
         try {
-            MotionEvent ev = MotionEvent.obtain(
-                    mTouchDownTime, now, action, pointerCount, props, coords,
-                    0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
             // setDisplayId is a @hide API — using the Method cached in the constructor
             if (mSetDisplayIdMethod != null) {
                 try {
@@ -191,10 +191,11 @@ public class ClusterInputForwarder {
                 }
             }
             mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
-            ev.recycle();
         } catch (Exception e) {
             AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
                     + " ptrs=" + pointerCount + " disp=" + mClusterDisplayId, e);
+        } finally {
+            ev.recycle();
         }
 
         if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {

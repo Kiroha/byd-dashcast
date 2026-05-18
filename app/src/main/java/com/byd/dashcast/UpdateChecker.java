@@ -181,7 +181,9 @@ public class UpdateChecker {
         try {
             int code = conn.getResponseCode();
             if (code != 200) throw new Exception("HTTP " + code + " for " + urlStr);
-            return readStream(conn.getInputStream());
+            try (InputStream in = conn.getInputStream()) {
+                return readStream(in);
+            }
         } finally {
             conn.disconnect();
         }
