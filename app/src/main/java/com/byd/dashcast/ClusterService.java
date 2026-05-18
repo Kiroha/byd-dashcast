@@ -144,7 +144,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
         int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
         if (packageName == null || packageName.isEmpty()) return defaultVal;
-        return prefs.getInt("inset_h_" + packageName, defaultVal);
+        return prefs.getInt(SettingsActivity.PREF_INSET_H_PREFIX + packageName, defaultVal);
     }
 
     public int getInsetV(String packageName) {
@@ -152,7 +152,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
         int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
         if (packageName == null || packageName.isEmpty()) return defaultVal;
-        return prefs.getInt("inset_v_" + packageName, defaultVal);
+        return prefs.getInt(SettingsActivity.PREF_INSET_V_PREFIX + packageName, defaultVal);
     }
 
 
