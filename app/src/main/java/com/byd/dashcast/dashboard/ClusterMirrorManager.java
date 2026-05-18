@@ -100,7 +100,7 @@ public class ClusterMirrorManager {
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
-    public boolean startMirror(Context context, Display clusterDisplay, Surface targetSurface,
+    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         if (mMirrorActive) {
             AppLogger.d(TAG, "Mirror already active");

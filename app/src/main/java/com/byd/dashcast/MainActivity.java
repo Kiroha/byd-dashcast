@@ -195,17 +195,6 @@ public class MainActivity extends AppCompatActivity
     // Screenshot mirror loop (fallback when SurfaceControl.createDisplay() fails)
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
 
-    // Receiver for FloatingRemoteButton tap → open mirror panel from overlay
-    private final BroadcastReceiver mShowMirrorReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (mCurrentDashboardApp == null) return; // no app on cluster
-            showMirrorView();
-            attemptStartMirrorWithCurrentHolder();
-            AppLogger.d(TAG, "mShowMirrorReceiver → showMirrorView");
-        }
-    };
-
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private IBinder mDaemonBinder = null;
     private final BroadcastReceiver mDaemonReadyReceiver = new BroadcastReceiver() {
@@ -633,8 +622,6 @@ public class MainActivity extends AppCompatActivity
         if (llCategoryFilters != null) {
             llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         }
-        registerReceiver(mShowMirrorReceiver,
-                new IntentFilter(FloatingRemoteButton.ACTION_SHOW_MIRROR));
         // Retrieve the daemon Binder from ServiceManager if not yet available.
         // ACTION_REQUEST_BINDER no longer works: the daemon no longer has a registerReceiver
         // (forbidden since systemMain() — AMS rejects IApplicationThread).
@@ -670,7 +657,6 @@ public class MainActivity extends AppCompatActivity
     protected void onStop() {
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
-        try { unregisterReceiver(mShowMirrorReceiver); } catch (IllegalArgumentException ignored) {}
         // Remove the listener but keep the service active: projection continues.
         // Stop the mirror: the HandlerThread must not capture frames in the background.
         // The mirror restarts automatically via the savedItem mechanism in
@@ -689,7 +675,6 @@ public class MainActivity extends AppCompatActivity
         // individual removeCallbacks() calls may have missed).
         mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
-        try { unregisterReceiver(mShowMirrorReceiver); } catch (IllegalArgumentException ignored) {}
         if (mServiceBound) {
             unbindService(mServiceConn);
             mServiceBound  = false;
@@ -1187,7 +1172,7 @@ public class MainActivity extends AppCompatActivity
         }
         // Fallback: direct SurfaceControl uid=10100 (fails if ACCESS_SURFACE_FLINGER missing)
         if (!mirrorOk) {
-            mirrorOk = mClusterService.getMirrorManager().startMirror(this,
+            mirrorOk = mClusterService.getMirrorManager().startMirror(
                     clusterDisplay, mMirrorSurface, viewW, viewH);
         }
 
