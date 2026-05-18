@@ -1432,20 +1432,43 @@ public class MainActivity extends AppCompatActivity
         int   clusterH = mirror.getClusterHeight();
         if (clusterW <= 0 || clusterH <= 0) return;
 
-        float clusterX = (event.getX() - offsetX) / scale;
-        float clusterY = (event.getY() - offsetY) / scale;
-        clusterX = Math.max(0, Math.min(clusterX, clusterW - 1));
-        clusterY = Math.max(0, Math.min(clusterY, clusterH - 1));
+        int pointerCount = event.getPointerCount();
+        if (pointerCount <= 0) return;
 
-        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-            AppLogger.d(TAG, "touch → view(" + (int)event.getX() + "," + (int)event.getY()
-                    + ") off=(" + (int)offsetX + "," + (int)offsetY + ")"
-                    + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
-                    + " cluster=(" + (int)clusterX + "," + (int)clusterY
-                    + ")/" + clusterW + "×" + clusterH);
+        int[] pointerIds = new int[pointerCount];
+        float[] clusterXs = new float[pointerCount];
+        float[] clusterYs = new float[pointerCount];
+        for (int i = 0; i < pointerCount; i++) {
+            pointerIds[i] = event.getPointerId(i);
+            float cx = (event.getX(i) - offsetX) / scale;
+            float cy = (event.getY(i) - offsetY) / scale;
+            clusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
+            clusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
         }
 
-        forwarder.forwardTouchFinal(clusterX, clusterY, event.getAction());
+        if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
+                || event.getActionMasked() == android.view.MotionEvent.ACTION_POINTER_DOWN) {
+            int ai = event.getActionIndex();
+            if (ai >= 0 && ai < pointerCount) {
+                AppLogger.d(TAG, "touch → ptrs=" + pointerCount
+                        + " action=" + event.getActionMasked()
+                        + " idx=" + ai
+                        + " view(" + (int)event.getX(ai) + "," + (int)event.getY(ai) + ")"
+                        + " off=(" + (int)offsetX + "," + (int)offsetY + ")"
+                        + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
+                        + " cluster=(" + (int)clusterXs[ai] + "," + (int)clusterYs[ai]
+                        + ")/" + clusterW + "×" + clusterH);
+            }
+        }
+
+        forwarder.forwardTouchFinalMulti(
+                pointerIds,
+                clusterXs,
+                clusterYs,
+                event.getActionMasked(),
+                event.getActionIndex(),
+                pointerCount
+        );
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----

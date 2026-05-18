@@ -44,6 +44,7 @@ public class ClusterInputForwarder {
     private Method mInjectMethod;
     private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event
     private boolean mAvailable = false;
+    private long mTouchDownTime = 0L;
 
     public ClusterInputForwarder(Context context) {
         try {
@@ -111,29 +112,75 @@ public class ClusterInputForwarder {
      * @param action    MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
      */
     public void forwardTouchFinal(float clusterX, float clusterY, final int action) {
-        injectTouchAt(clusterX, clusterY, action);
+        forwardTouchFinalMulti(
+                new int[] {0},
+                new float[] {clusterX},
+                new float[] {clusterY},
+                MotionEvent.ACTION_MASK & action,
+                0,
+                1
+        );
     }
 
-    /** Internal: build and inject a MotionEvent at the given cluster coordinates. */
-    private void injectTouchAt(final float clusterX, final float clusterY, final int action) {
+    /**
+     * Forwards already-mapped cluster coordinates for N pointers (multi-touch).
+     * This enables pinch gestures (ACTION_POINTER_DOWN/MOVE/POINTER_UP).
+     */
+    public void forwardTouchFinalMulti(int[] pointerIds,
+                                       float[] clusterXs,
+                                       float[] clusterYs,
+                                       int actionMasked,
+                                       int actionIndex,
+                                       int pointerCount) {
+        if (pointerIds == null || clusterXs == null || clusterYs == null) return;
+        if (pointerCount <= 0) return;
+        if (pointerCount > pointerIds.length
+                || pointerCount > clusterXs.length
+                || pointerCount > clusterYs.length) {
+            return;
+        }
+        injectTouchAtMulti(pointerIds, clusterXs, clusterYs, actionMasked, actionIndex, pointerCount);
+    }
+
+    /** Internal: build and inject a multi-pointer MotionEvent at cluster coordinates. */
+    private void injectTouchAtMulti(final int[] pointerIds,
+                                    final float[] clusterXs,
+                                    final float[] clusterYs,
+                                    final int actionMasked,
+                                    final int actionIndex,
+                                    final int pointerCount) {
+        if (actionMasked == MotionEvent.ACTION_DOWN || mTouchDownTime == 0L) {
+            mTouchDownTime = SystemClock.uptimeMillis();
+        }
+        long now = SystemClock.uptimeMillis();
+        int safeActionIndex = Math.max(0, Math.min(actionIndex, pointerCount - 1));
+        int action;
+        if (actionMasked == MotionEvent.ACTION_POINTER_DOWN
+                || actionMasked == MotionEvent.ACTION_POINTER_UP) {
+            action = actionMasked | (safeActionIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+        } else {
+            action = actionMasked;
+        }
+
+        MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[pointerCount];
+        MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[pointerCount];
+        for (int i = 0; i < pointerCount; i++) {
+            props[i] = new MotionEvent.PointerProperties();
+            props[i].id = pointerIds[i];
+            props[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
+
+            coords[i] = new MotionEvent.PointerCoords();
+            coords[i].x = clusterXs[i];
+            coords[i].y = clusterYs[i];
+            coords[i].pressure = 1.0f;
+            coords[i].size = 1.0f;
+        }
+
         // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
         if (mDaemonBinder != null) {
             try {
-                long now = android.os.SystemClock.uptimeMillis();
-                MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[1];
-                props[0] = new MotionEvent.PointerProperties();
-                props[0].id = 0;
-                props[0].toolType = MotionEvent.TOOL_TYPE_FINGER;
-
-                MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[1];
-                coords[0] = new MotionEvent.PointerCoords();
-                coords[0].x = clusterX;
-                coords[0].y = clusterY;
-                coords[0].pressure = 1.0f;
-                coords[0].size = 1.0f;
-
                 MotionEvent ev = MotionEvent.obtain(
-                        now, now, action, 1, props, coords,
+                        mTouchDownTime, now, action, pointerCount, props, coords,
                         0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
                 Parcel data = Parcel.obtain();
                 data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
@@ -151,21 +198,8 @@ public class ClusterInputForwarder {
         if (!mAvailable) return;
 
         try {
-            MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[1];
-            props[0] = new MotionEvent.PointerProperties();
-            props[0].id = 0;
-            props[0].toolType = MotionEvent.TOOL_TYPE_FINGER;
-
-            MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[1];
-            coords[0] = new MotionEvent.PointerCoords();
-            coords[0].x = clusterX;
-            coords[0].y = clusterY;
-            coords[0].pressure = 1.0f;
-            coords[0].size = 1.0f;
-
-            long now = SystemClock.uptimeMillis();
             MotionEvent ev = MotionEvent.obtain(
-                    now, now, action, 1, props, coords,
+                    mTouchDownTime, now, action, pointerCount, props, coords,
                     0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
             // setDisplayId is a @hide API — using the Method cached in the constructor
             if (mSetDisplayIdMethod != null) {
@@ -178,8 +212,12 @@ public class ClusterInputForwarder {
             mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
             ev.recycle();
         } catch (Exception e) {
-            AppLogger.e(TAG, "injectTouchAt inject failed x=" + (int)clusterX
-                    + " y=" + (int)clusterY + " disp=" + mClusterDisplayId, e);
+            AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
+                    + " ptrs=" + pointerCount + " disp=" + mClusterDisplayId, e);
+        }
+
+        if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+            mTouchDownTime = 0L;
         }
     }
 
