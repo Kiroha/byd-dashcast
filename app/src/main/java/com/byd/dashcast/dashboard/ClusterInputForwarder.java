@@ -158,19 +158,20 @@ public class ClusterInputForwarder {
 
         // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
         if (mDaemonBinder != null) {
+            MotionEvent ev = MotionEvent.obtain(
+                    mTouchDownTime, now, action, pointerCount, props, coords,
+                    0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+            Parcel data = Parcel.obtain();
             try {
-                MotionEvent ev = MotionEvent.obtain(
-                        mTouchDownTime, now, action, pointerCount, props, coords,
-                        0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-                Parcel data = Parcel.obtain();
                 data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
                 data.writeParcelable(ev, 0);
                 mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
                         data, null, android.os.IBinder.FLAG_ONEWAY);
-                data.recycle();
-                ev.recycle();
             } catch (Exception e) {
                 AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+            } finally {
+                data.recycle();
+                ev.recycle();
             }
             return;
         }
@@ -215,11 +216,14 @@ public class ClusterInputForwarder {
                 KeyEvent up   = new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0);
                 for (KeyEvent kev : new KeyEvent[]{down, up}) {
                     Parcel data = Parcel.obtain();
-                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
-                    data.writeParcelable(kev, 0);
-                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
-                            data, null, android.os.IBinder.FLAG_ONEWAY);
-                    data.recycle();
+                    try {
+                        data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                        data.writeParcelable(kev, 0);
+                        mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                                data, null, android.os.IBinder.FLAG_ONEWAY);
+                    } finally {
+                        data.recycle();
+                    }
                 }
             } catch (Exception e) {
                 AppLogger.e(TAG, "injectKey via daemon failed", e);

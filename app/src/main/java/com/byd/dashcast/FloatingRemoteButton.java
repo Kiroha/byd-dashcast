@@ -120,13 +120,11 @@ public class FloatingRemoteButton extends Service {
             }
             mGrantAttempted = true;
             AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW not granted — attempting auto-grant via ADB…");
-            final android.os.Handler mainHandler =
-                    new android.os.Handler(getMainLooper());
             AdbLocalClient.grantOverlayPermission(this, new AdbLocalClient.Callback() {
                 @Override
                 public void onSuccess(String report) {
                     AppLogger.i(TAG, "SYSTEM_ALERT_WINDOW granted via ADB ✓");
-                    mainHandler.post(new Runnable() {
+                    mDimHandler.post(new Runnable() {
                         @Override public void run() { createOverlay(); }
                     });
                 }

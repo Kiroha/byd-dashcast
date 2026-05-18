@@ -277,14 +277,15 @@ public class ClusterMirrorManager {
      */
     public void stopMirrorViaDaemon(IBinder daemonBinder) {
         if (daemonBinder == null) return;
+        Parcel data = Parcel.obtain();
         try {
-            Parcel data = Parcel.obtain();
             data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
             daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
                     data, null, android.os.IBinder.FLAG_ONEWAY);
-            data.recycle();
         } catch (Exception e) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: " + e.getMessage());
+        } finally {
+            data.recycle();
         }
         mMirrorActive  = false;
         mMirrorSurface = null;
