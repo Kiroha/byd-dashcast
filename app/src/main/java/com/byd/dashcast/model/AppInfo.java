@@ -3,6 +3,7 @@ package com.byd.dashcast.model;
 import android.graphics.drawable.Drawable;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class AppInfo {
     public static final int CATEGORY_NAVIGATION = 1;
@@ -25,7 +26,7 @@ public class AppInfo {
         this.icon        = icon;
         
         // Auto-Categorization logic based on package name or app name
-        String pkg = packageName.toLowerCase();
+        String pkg = packageName.toLowerCase(Locale.ROOT);
         if (pkg.contains("maps") || pkg.contains("waze") || pkg.contains("tomtom") || 
             pkg.contains("sygic") || pkg.contains("navigation") || pkg.contains("here") || 
             pkg.contains("yandex.navi") || pkg.contains("telenav") || pkg.contains("radarbot") || pkg.contains("coyote") || pkg.contains("osmand")) {

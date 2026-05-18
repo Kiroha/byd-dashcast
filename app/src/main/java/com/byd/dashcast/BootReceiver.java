@@ -35,11 +35,13 @@ public class BootReceiver extends BroadcastReceiver {
                 // Projection not auto-started: move any apps that were on the cluster
                 // (from the previous session) back to Display 0 so they don't get stuck
                 // on the (possibly still-alive) VirtualDisplay.
-                try {
-                    MainActivity.cleanupDisplayAffinityAtBoot(context);
-                } catch (Exception e) {
-                    AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
-                }
+                new Thread(() -> {
+                    try {
+                        MainActivity.cleanupDisplayAffinityAtBoot(context);
+                    } catch (Exception e) {
+                        AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
+                    }
+                }, "boot-display-cleanup").start();
             }
         }
     }
