@@ -55,6 +55,8 @@ public class SysInfoActivity extends AppCompatActivity {
     private Button btnShare;
     private StringBuilder mReport;
 
+    private volatile boolean mDestroyed = false;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -93,12 +95,18 @@ public class SysInfoActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mDestroyed = true;
+    }
+
     // =========================================================================
     // Report generation (ExecutorService — network off main thread)
     // =========================================================================
-
     /** Publishes an incremental update to the TextView from a worker thread. */
     private void publishUpdate(final String text) {
+        if (mDestroyed) return;
         runOnUiThread(new Runnable() {
             @Override public void run() {
                 tvReport.setText(text);
@@ -120,6 +128,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 final String result = generateReport();
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         AppLogger.log("SysInfo", "Report generated");
                         mReport = new StringBuilder(result);
                         tvReport.setText(result);

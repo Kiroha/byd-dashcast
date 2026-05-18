@@ -14,7 +14,7 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            boolean autoStartEnabled = prefs.getBoolean("boot_auto_start_enabled", false);
+            boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
             
             if (autoStartEnabled) {
                 AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");

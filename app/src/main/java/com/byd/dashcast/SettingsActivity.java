@@ -42,6 +42,10 @@ public class SettingsActivity extends AppCompatActivity {
     // ── OTA pre-release ───────────────────────────────────────────────────────────────
     public static final String PREF_OTA_PRERELEASE = "ota_include_prerelease";
     public static final boolean DEFAULT_OTA_PRERELEASE = false;
+    // ── Boot / UI toggles ───────────────────────────────────────────────────────────────
+    public static final String PREF_BOOT_AUTO_START       = "boot_auto_start_enabled";
+    public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
+    public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
     // ── Views ────────────────────────────────────────────────────────────────
     private RadioGroup  rgClusterType;
     private SeekBar     sbInsetH;
@@ -60,6 +64,8 @@ public class SettingsActivity extends AppCompatActivity {
     private View        flSafeZone;
     private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
 
+    private volatile boolean mDestroyed = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +79,12 @@ public class SettingsActivity extends AppCompatActivity {
         bindViews();
         loadPreferences();
         wireListeners();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mDestroyed = true;
     }
 
     @Override
@@ -131,17 +143,17 @@ public class SettingsActivity extends AppCompatActivity {
         cbPrerelease.setChecked(prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE));
         
         // Visual Mode toggle state
-        boolean visualMode = prefs.getBoolean("visual_overscan_mode", false);
+        boolean visualMode = prefs.getBoolean(PREF_VISUAL_OVERSCAN_MODE, false);
         cbVisualMode.setChecked(visualMode);
         updateVisualModeState(visualMode);
         updateVisualMockup();
         
         // Auto Boot Projection toggle state
-        boolean bootAutoStart = prefs.getBoolean("boot_auto_start_enabled", false);
+        boolean bootAutoStart = prefs.getBoolean(PREF_BOOT_AUTO_START, false);
         cbBootAutoStart.setChecked(bootAutoStart);
         
         // Category filters toggle
-        boolean showCatFilters = prefs.getBoolean("show_category_filters", false);
+        boolean showCatFilters = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false);
         cbShowCategoryFilters.setChecked(showCatFilters);
     }
 
@@ -209,14 +221,14 @@ public class SettingsActivity extends AppCompatActivity {
         // Visual Mode checkbox
         cbVisualMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean("visual_overscan_mode", isChecked).apply();
+                    .putBoolean(PREF_VISUAL_OVERSCAN_MODE, isChecked).apply();
             updateVisualModeState(isChecked);
         });
 
         // Auto Start Projection checkbox
         cbBootAutoStart.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean("boot_auto_start_enabled", isChecked).apply();
+                    .putBoolean(PREF_BOOT_AUTO_START, isChecked).apply();
         });
 
         View.OnClickListener dpadListener = new View.OnClickListener() {
@@ -245,7 +257,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Category filters checkbox
         cbShowCategoryFilters.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean("show_category_filters", isChecked).apply();
+                    .putBoolean(PREF_SHOW_CATEGORY_FILTERS, isChecked).apply();
         });
     }
 
@@ -293,6 +305,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
                         tvResult.setText(getString(R.string.settings_overscan_applied, h, v));
                         AppLogger.i("SettingsActivity", "overscan applied OK h=" + h + " v=" + v);
@@ -302,6 +315,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override public void onError(String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
                         tvResult.setText("❌ " + error.trim());
                         AppLogger.e("SettingsActivity", "overscan error: " + error);

@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity
         // Safety-net: if projection auto-start is disabled, move any leftover
         // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
         SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        if (!bootPrefs.getBoolean("boot_auto_start_enabled", false)) {
+        if (!bootPrefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false)) {
             cleanupDisplayAffinityAtBoot(this);
         } else {
             // Auto-start enabled: clear the persisted set (projection is active,
@@ -302,7 +302,7 @@ public class MainActivity extends AppCompatActivity
         btnFilterAll   = (Button) findViewById(R.id.btn_filter_all);
         btnFilterNav   = (Button) findViewById(R.id.btn_filter_nav);
         btnFilterMedia = (Button) findViewById(R.id.btn_filter_media);
-        boolean showFilters = prefs.getBoolean("show_category_filters", false);
+        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
         llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         View.OnClickListener filterClick = new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -618,7 +618,7 @@ public class MainActivity extends AppCompatActivity
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getBoolean("show_category_filters", false);
+                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
         if (llCategoryFilters != null) {
             llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         }

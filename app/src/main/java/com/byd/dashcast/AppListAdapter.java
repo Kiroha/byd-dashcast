@@ -40,6 +40,11 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private static final int COLOR_FG_ACTIVE  = 0x1A4CAF50;
     /** Foreground tint applied to a row whose app is running on the main display. */
     private static final int COLOR_FG_ON_MAIN = 0x141565C0;
+    /** Reusable ConstantState for foreground tints — avoids allocating a new ColorDrawable per bind. */
+    private static final android.graphics.drawable.Drawable.ConstantState CS_FG_ACTIVE =
+            new android.graphics.drawable.ColorDrawable(COLOR_FG_ACTIVE).getConstantState();
+    private static final android.graphics.drawable.Drawable.ConstantState CS_FG_ON_MAIN =
+            new android.graphics.drawable.ColorDrawable(COLOR_FG_ON_MAIN).getConstantState();
 
     private boolean mIsGridMode = false;
 
@@ -278,9 +283,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         // Subtle background tint on the active row — preserves the ripple via setForeground()
         if (isActive) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(COLOR_FG_ACTIVE));
+            holder.itemView.setForeground(CS_FG_ACTIVE.newDrawable());
         } else if (isOnMain) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(COLOR_FG_ON_MAIN));
+            holder.itemView.setForeground(CS_FG_ON_MAIN.newDrawable());
         } else {
             holder.itemView.setForeground(null);
         }
