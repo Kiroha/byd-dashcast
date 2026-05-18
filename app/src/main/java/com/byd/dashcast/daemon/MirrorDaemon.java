@@ -188,7 +188,11 @@ public class MirrorDaemon {
                 }
                 case TRANSACT_INJECT_MOTION: {
                     MotionEvent ev = data.readParcelable(MotionEvent.class.getClassLoader());
-                    injectMotion(ev);
+                    try {
+                        injectMotion(ev);
+                    } finally {
+                        if (ev != null) ev.recycle();
+                    }
                     return true;
                 }
                 case TRANSACT_INJECT_KEY: {
