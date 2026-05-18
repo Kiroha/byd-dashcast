@@ -1692,26 +1692,18 @@ public class DiagActivity extends AppCompatActivity {
 
 
     private void runAdas(int code) {
-        new Thread(() -> {
-            try {
-                AdbLocalClient.sendInfo(DiagActivity.this, 1000, code, "", new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String report) {
-                        safeRunOnUiThread(() -> {
-                            tvAdbLocalResult.setText("ADAS (" + code + ") OK: " + report + "\n" + tvAdbLocalResult.getText());
-                        });
-                    }
-                    @Override public void onError(String error) {
-                        safeRunOnUiThread(() -> {
-                            tvAdbLocalResult.setText("ADAS (" + code + ") ERREUR: " + error + "\n" + tvAdbLocalResult.getText());
-                        });
-                    }
-                });
-            } catch (Exception e) {
+        AdbLocalClient.sendInfo(DiagActivity.this, 1000, code, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
                 safeRunOnUiThread(() -> {
-                    tvAdbLocalResult.setText("Exception: " + e.getMessage() + "\n" + tvAdbLocalResult.getText());
+                    tvAdasResult.setText("ADAS (" + code + ") OK: " + report + "\n" + tvAdasResult.getText());
                 });
             }
-        }).start();
+            @Override public void onError(String error) {
+                safeRunOnUiThread(() -> {
+                    tvAdasResult.setText("ADAS (" + code + ") ERREUR: " + error + "\n" + tvAdasResult.getText());
+                });
+            }
+        });
     }
     private void cleanupFilesAction() {
         btnCleanupFiles.setEnabled(false);
