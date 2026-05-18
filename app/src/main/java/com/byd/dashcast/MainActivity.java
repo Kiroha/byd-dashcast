@@ -147,9 +147,13 @@ public class MainActivity extends AppCompatActivity
     private static final int DOT_COLOR_OFF     = 0xFF888888;
     private static final int DOT_COLOR_PENDING = 0xFFFFC107;
     private static final int DOT_COLOR_ACTIVE  = 0xFF4CAF50;
+    // Category filter button tints
+    private static final int FILTER_TINT_ACTIVE   = 0xFF1976D2;
+    private static final int FILTER_TINT_INACTIVE = 0xFF607D8B;
 
     // UI — barre statut
     private View     mStatusDot;
+    private android.graphics.drawable.GradientDrawable mStatusDotDrawable;
     private TextView tvDashboardStatus;
     private View     llAppListSection;  // wrapper for title header + search bar
     private Button   btnActivateCluster;
@@ -266,6 +270,9 @@ public class MainActivity extends AppCompatActivity
 
         mStatusDot          = (View)     findViewById(R.id.view_status_dot);
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
+        mStatusDotDrawable  = new android.graphics.drawable.GradientDrawable();
+        mStatusDotDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        if (mStatusDot != null) mStatusDot.setBackground(mStatusDotDrawable);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
         btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
@@ -1858,13 +1865,10 @@ public class MainActivity extends AppCompatActivity
         btnRestoreCluster.setEnabled(true);
     }
 
-    /** Sets the status dot to a given ARGB color using an oval GradientDrawable. */
+    /** Sets the status dot to a given ARGB color. Reuses the shared GradientDrawable to avoid allocations. */
     private void setStatusDot(int color) {
-        if (mStatusDot == null) return;
-        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
-        shape.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        shape.setColor(color);
-        mStatusDot.setBackground(shape);
+        if (mStatusDotDrawable == null) return;
+        mStatusDotDrawable.setColor(color);
     }
 
     /** Toggles list ↔ grid mode, updates the toggle button icon and adapter layout. */
@@ -2290,26 +2294,23 @@ public class MainActivity extends AppCompatActivity
                     String name = ri.loadLabel(pm).toString();
                     AppInfo appInfo = new AppInfo(pkg, name, ri.loadIcon(pm));
                     
-                    // Fetch shortcuts (API 25+)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
-                        try {
-                            android.content.pm.LauncherApps launcherApps = (android.content.pm.LauncherApps) getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
-                            if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
-                                android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
-                                query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
-                                query.setPackage(pkg);
-                                
-                                java.util.List<android.content.pm.ShortcutInfo> shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
-                                if (shortcuts != null) {
-                                    for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
-                                        android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
-                                        appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon));
-                                    }
+                    try {
+                        android.content.pm.LauncherApps launcherApps = (android.content.pm.LauncherApps) getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                        if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
+                            android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
+                            query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
+                            query.setPackage(pkg);
+                            
+                            java.util.List<android.content.pm.ShortcutInfo> shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
+                            if (shortcuts != null) {
+                                for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
+                                    android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
+                                    appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon));
                                 }
                             }
-                        } catch (Exception e) {
-                            // Ignored: app has no shortcuts or no permission
                         }
+                    } catch (Exception e) {
+                        // Ignored: app has no shortcuts or no permission
                     }
                     
                     apps.add(appInfo);
@@ -2370,11 +2371,9 @@ public class MainActivity extends AppCompatActivity
     // ── Category filter helpers ──────────────────────────────────────────────
 
     private void updateCategoryFilterButtons(int activeCategory) {
-        int activeTint   = android.graphics.Color.parseColor("#1976D2");
-        int inactiveTint = android.graphics.Color.parseColor("#607D8B");
-        btnFilterAll.getBackground().setTint(activeCategory == 0 ? activeTint : inactiveTint);
-        btnFilterNav.getBackground().setTint(activeCategory == AppInfo.CATEGORY_NAVIGATION ? activeTint : inactiveTint);
-        btnFilterMedia.getBackground().setTint(activeCategory == AppInfo.CATEGORY_MEDIA ? activeTint : inactiveTint);
+        btnFilterAll.getBackground().setTint(activeCategory == 0 ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
+        btnFilterNav.getBackground().setTint(activeCategory == AppInfo.CATEGORY_NAVIGATION ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
+        btnFilterMedia.getBackground().setTint(activeCategory == AppInfo.CATEGORY_MEDIA ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
     }
 
     // ── Quick-switch history ────────────────────────────────────────────────

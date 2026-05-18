@@ -274,7 +274,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
             pkgs[i]  = parts[0];
             names[i] = parts.length > 1 ? parts[1] : parts[0];
         }
-        new android.app.AlertDialog.Builder(this,
+        android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this,
                 android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(getString(R.string.quick_switch_title))
                 .setItems(names, (dialog, which) -> {
@@ -286,7 +286,11 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                     startActivity(intent);
                     AppLogger.d(TAG, "Quick-switch → " + pkgs[which]);
                 })
-                .show();
+                .create();
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        }
+        dlg.show();
     }
 
     // ── Foreground service ────────────────────────────────────────────────────

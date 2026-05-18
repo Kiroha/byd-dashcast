@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 
 public class BootReceiver extends BroadcastReceiver {
 
@@ -22,11 +21,7 @@ public class BootReceiver extends BroadcastReceiver {
                 // Démarrer automatiquement le service de projection (ClusterService)
                 try {
                     Intent serviceIntent = new Intent(context, ClusterService.class);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(serviceIntent);
-                    } else {
-                        context.startService(serviceIntent);
-                    }
+                    context.startForegroundService(serviceIntent);
                 } catch (Exception e) {
                     AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
                 }
