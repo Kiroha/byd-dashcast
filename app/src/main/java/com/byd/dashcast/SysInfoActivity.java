@@ -109,6 +109,9 @@ public class SysInfoActivity extends AppCompatActivity {
         if (mDestroyed) return;
         runOnUiThread(new Runnable() {
             @Override public void run() {
+                // Recheck on the main thread: between the worker-side check above
+                // and the Runnable being dispatched, onDestroy may have fired.
+                if (mDestroyed) return;
                 tvReport.setText(text);
                 scrollView.post(new Runnable() {
                     @Override public void run() { scrollView.fullScroll(ScrollView.FOCUS_DOWN); }
