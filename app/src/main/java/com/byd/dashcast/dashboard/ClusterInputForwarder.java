@@ -103,26 +103,6 @@ public class ClusterInputForwarder {
     }
 
     /**
-     * Forwards pre-mapped cluster coordinates directly, without any re-normalization.
-     * Use this when the caller has already computed exact cluster-space coordinates
-     * from the stored projection parameters (avoids double-normalization bugs).
-     *
-     * @param clusterX  Final X coordinate in cluster display space (0..clusterW-1)
-     * @param clusterY  Final Y coordinate in cluster display space (0..clusterH-1)
-     * @param action    MotionEvent.ACTION_DOWN / ACTION_MOVE / ACTION_UP
-     */
-    public void forwardTouchFinal(float clusterX, float clusterY, final int action) {
-        forwardTouchFinalMulti(
-                new int[] {0},
-                new float[] {clusterX},
-                new float[] {clusterY},
-                MotionEvent.ACTION_MASK & action,
-                0,
-                1
-        );
-    }
-
-    /**
      * Forwards already-mapped cluster coordinates for N pointers (multi-touch).
      * This enables pinch gestures (ACTION_POINTER_DOWN/MOVE/POINTER_UP).
      */

@@ -113,7 +113,6 @@ public class SysInfoActivity extends AppCompatActivity {
         btnGenerate.setEnabled(false);
         btnSave.setEnabled(false);
         tvReport.setText(getString(R.string.sysinfo_generating));
-        mReport = new StringBuilder();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(new Runnable() {

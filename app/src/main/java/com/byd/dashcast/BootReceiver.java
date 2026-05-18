@@ -35,11 +35,16 @@ public class BootReceiver extends BroadcastReceiver {
                 // Projection not auto-started: move any apps that were on the cluster
                 // (from the previous session) back to Display 0 so they don't get stuck
                 // on the (possibly still-alive) VirtualDisplay.
+                // goAsync() keeps the process alive until result.finish() is called,
+                // preventing the OS from killing the thread before cleanup completes.
+                final PendingResult result = goAsync();
                 new Thread(() -> {
                     try {
                         MainActivity.cleanupDisplayAffinityAtBoot(context);
                     } catch (Exception e) {
                         AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
+                    } finally {
+                        result.finish();
                     }
                 }, "boot-display-cleanup").start();
             }
