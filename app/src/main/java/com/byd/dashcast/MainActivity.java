@@ -2283,7 +2283,11 @@ public class MainActivity extends AppCompatActivity
      * ────────────────────────────────────────────────────────────────────────────
      */
     private void loadAppsAsync() {
-        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor();
+        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "load-apps");
+            t.setDaemon(true);
+            return t;
+        });
         loader.execute(new Runnable() {
             @Override public void run() {
                 PackageManager pm = getPackageManager();
