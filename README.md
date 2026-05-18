@@ -20,8 +20,9 @@ BYD APIs.
 > The authors are not responsible for any damage to your vehicle's infotainment system.
 
 > [!IMPORTANT]
-> **v0.2.0 breaking change — uninstall required**: If you have any version prior to v0.2.0 installed
-> (any alpha, including v0.1.44), you **must uninstall it first** before installing v0.2.0-beta.
+> **v0.2.0 breaking change — uninstall required (historical, still relevant for old installs)**:
+> If you have any version prior to v0.2.0 installed (any alpha, including v0.1.44),
+> you **must uninstall it first** before installing a modern DashCast build.
 > Two reasons:
 > 1. The package was renamed from `com.byd.myapp` → `com.byd.dashcast` — Android treats them as separate apps.
 > 2. Android blocks downgrades and cross-package upgrades without uninstall.
@@ -29,7 +30,7 @@ BYD APIs.
 > ```bash
 > adb uninstall com.byd.myapp     # remove old alpha
 > adb uninstall com.byd.dashcast  # remove any previous beta
-> adb install DashCast-v0.2.0-beta-debug.apk
+> adb install DashCast-vX.Y.Z-<channel>-debug.apk
 > ```
 
 ---
@@ -50,8 +51,13 @@ BYD APIs.
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
 | 12 | **Multilingual** | French / English / German / Italian / **Spanish** / Turkish / Russian / Ukrainian / **Arabic** / Uzbek / Kazakh / Belarusian (12 languages), selected on first launch |
-| 13 | **Floating overlay** | Two floating buttons: LOG (opens log) and 📺 Mirror (opens cluster mirror / returns to main screen) |
-| 14 | **OTA update** | Auto-check against GitHub Releases API, silent install via `PackageInstaller` (platform key), fallback to system dialog |
+| 13 | **Floating mirror overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
+| 14 | **Category filters** | Filter app list by All / Navigation / Media (toggle in Settings) |
+| 15 | **Launch profiles** | Driving/Parking profiles with per-profile app selection |
+| 16 | **Usage statistics** | Tracks per-app cluster usage time with reset option |
+| 17 | **Smart activation prompt** | If projection is off, launching an app shows a dialog to activate projection first |
+| 18 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
+| 19 | **OTA update** | Auto-check against GitHub Releases API, silent install via `PackageInstaller` (platform key), fallback to system dialog |
 
 ---
 
@@ -72,7 +78,7 @@ with DiLink 3.0.
 ## Code structure
 
 ```
-app/src/main/java/com/byd/myapp/
+app/src/main/java/com/byd/dashcast/
 ├── MainActivity.java           — Main 15.6" screen: app list, cluster mirror, split
 ├── WelcomeActivity.java        — Language selection (first launch)
 ├── DiagActivity.java           — Sections 1–7 (ADB, restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test)
@@ -82,8 +88,7 @@ app/src/main/java/com/byd/myapp/
 ├── AppListAdapter.java         — RecyclerView (→ Cluster / ← Main / → Cluster / ✕)
 ├── AppLogger.java              — Singleton logger (levels, 3000 entries, saveToFile, share)
 ├── LogActivity.java            — Real-time log (filters, auto-scroll, share)
-├── FloatingLogButton.java      — Floating overlay: tap=LogActivity, long press=clear log
-├── FloatingRemoteButton.java   — Floating overlay: tap=MainActivity, long press=close
+├── FloatingRemoteButton.java   — Floating overlay: tap=mirror view, long press=quick-switch popup
 ├── LocaleHelper.java           — Language persistence (SharedPreferences)
 ├── daemon/
 │   └── MirrorDaemon.java        — Core proxy class mirroring cluster display
@@ -202,8 +207,8 @@ See [Build requirements](#build-requirements) below.
 ## Installation
 
 1. Download the latest APK from [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases/latest):
-   - **Beta** (recommended): `DashCast-v0.2.0-beta-debug.apk`
-   - **Pre-release** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
+  - **Stable/Beta** (recommended): latest non-pre-release asset on the Releases page
+  - **Pre-release** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
 
 2. **Uninstall any previous version first** (see breaking change notice above):
 ```bash
@@ -214,7 +219,7 @@ adb uninstall com.byd.dashcast  # if coming from a previous beta
 3. Sideload onto the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install DashCast-v0.2.0-beta-debug.apk
+adb install DashCast-vX.Y.Z-<channel>-debug.apk
 ```
 
 4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
@@ -283,7 +288,7 @@ The `app/build.gradle` signing config applies this keystore for both debug and r
 ```bash
 cd MyBYDApp   # repo folder name
 ./gradlew assembleDebug
-# APK → app/build/outputs/apk/debug/DashCast-v0.2.0-beta-debug.apk
+# APK → app/build/outputs/apk/debug/DashCast-v<versionName>-debug.apk
 ```
 
 ---
@@ -355,7 +360,7 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 ### Retrieve logs without USB cable
 
 ```bash
-adb pull /sdcard/Android/data/com.byd.myapp/files/  # package ID unchanged
+adb pull /sdcard/Android/data/com.byd.dashcast/files/
 ```
 
 ---
