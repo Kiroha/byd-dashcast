@@ -239,13 +239,6 @@
     <string name="settings_show_category_filters">Mostra filtri per categoria (Tutto / Nav / Media)</string>
     <string name="quick_switch_title">App recenti</string>
     <string name="quick_switch_empty">Nessuna app recente</string>
-    <string name="profile_none">Nessun profilo</string>
-    <string name="profile_driving">🚗 Guida</string>
-    <string name="profile_parking">🅿️ Parcheggio</string>
-    <string name="settings_profiles_title">Profili di avvio automatico</string>
-    <string name="settings_profile_driving_app">App in modalità guida:</string>
-    <string name="settings_profile_parking_app">App in modalità parcheggio:</string>
-    <string name="settings_profile_none_selected">(nessuna app selezionata)</string>
     <string name="menu_usage_stats">📊 Statistiche di utilizzo</string>
     <string name="usage_title">Tempo di utilizzo sul cluster</string>
     <string name="usage_empty">Nessun dato di utilizzo</string>

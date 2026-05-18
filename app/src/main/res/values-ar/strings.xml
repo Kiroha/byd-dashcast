@@ -239,13 +239,6 @@
     <string name="settings_show_category_filters">إظهار فلاتر الفئات (الكل / ملاحة / وسائط)</string>
     <string name="quick_switch_title">التطبيقات الأخيرة</string>
     <string name="quick_switch_empty">لا توجد تطبيقات أخيرة</string>
-    <string name="profile_none">بدون ملف تعريف</string>
-    <string name="profile_driving">🚗 قيادة</string>
-    <string name="profile_parking">🅿️ ركن</string>
-    <string name="settings_profiles_title">ملفات التشغيل التلقائي</string>
-    <string name="settings_profile_driving_app">تطبيق وضع القيادة:</string>
-    <string name="settings_profile_parking_app">تطبيق وضع الركن:</string>
-    <string name="settings_profile_none_selected">(لم يتم اختيار تطبيق)</string>
     <string name="menu_usage_stats">📊 إحصائيات الاستخدام</string>
     <string name="usage_title">وقت الاستخدام على الكلستر</string>
     <string name="usage_empty">لا توجد بيانات استخدام</string>

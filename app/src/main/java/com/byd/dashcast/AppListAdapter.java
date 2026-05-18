@@ -36,6 +36,11 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private String mCurrentFilter = "";
     private int mCategoryFilter = 0; // 0=all, 1=nav, 2=media
 
+    /** Foreground tint applied to the active row (cluster) — semi-transparent green. */
+    private static final int COLOR_FG_ACTIVE  = 0x1A4CAF50;
+    /** Foreground tint applied to a row whose app is running on the main display. */
+    private static final int COLOR_FG_ON_MAIN = 0x141565C0;
+
     private boolean mIsGridMode = false;
 
     public AppListAdapter(OnSendToDashboardListener listener) {
@@ -273,9 +278,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         // Subtle background tint on the active row — preserves the ripple via setForeground()
         if (isActive) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x1A4CAF50)); // green 10%
+            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(COLOR_FG_ACTIVE));
         } else if (isOnMain) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x141565C0)); // blue 8%
+            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(COLOR_FG_ON_MAIN));
         } else {
             holder.itemView.setForeground(null);
         }

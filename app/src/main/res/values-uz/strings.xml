@@ -239,13 +239,6 @@
     <string name="settings_show_category_filters">Turkum filtrlarini koʻrsatish (Barchasi / Nav / Media)</string>
     <string name="quick_switch_title">Soʻnggi ilovalar</string>
     <string name="quick_switch_empty">Soʻnggi ilova yoʻq</string>
-    <string name="profile_none">Profilsiz</string>
-    <string name="profile_driving">🚗 Haydash</string>
-    <string name="profile_parking">🅿️ Toʻxtash</string>
-    <string name="settings_profiles_title">Avtomatik ishga tushirish profillari</string>
-    <string name="settings_profile_driving_app">Haydash rejimi ilovasi:</string>
-    <string name="settings_profile_parking_app">Toʻxtash rejimi ilovasi:</string>
-    <string name="settings_profile_none_selected">(ilova tanlanmagan)</string>
     <string name="menu_usage_stats">📊 Foydalanish statistikasi</string>
     <string name="usage_title">Klasterda foydalanish vaqti</string>
     <string name="usage_empty">Foydalanish maʻlumoti yoʻq</string>
