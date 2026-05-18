@@ -155,9 +155,9 @@ public class AdbLocalClient {
                     // Kill existing daemon if present.
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
-                    String psOut = safeOut(dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
-                    if (!psOut.trim().isEmpty()) {
+                    String psOut = dadb.shell(
+                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    if (!psOut.isEmpty()) {
                         dadb.shell(KILL_DAEMON_CMD);
                         AppLogger.i(TAG, "Old MirrorDaemon(s) killed.");
                         Thread.sleep(500);
@@ -183,10 +183,10 @@ public class AdbLocalClient {
 
                     // Verification: is the process alive after 3s?
                     Thread.sleep(3000);
-                    String psCheck = safeOut(dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
-                    if (!psCheck.trim().isEmpty()) {
-                        AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck.trim());
+                    String psCheck = dadb.shell(
+                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    if (!psCheck.isEmpty()) {
+                        AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck);
                     } else {
                         AppLogger.e(TAG, "MirrorDaemon NOT FOUND after 3s — reading log:");
                         String logContent = safeOut(dadb.shell("cat " + logPath + " 2>&1").getAllOutput());

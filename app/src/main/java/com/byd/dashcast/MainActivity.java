@@ -2377,7 +2377,7 @@ public class MainActivity extends AppCompatActivity
 
     // ── Quick-switch history ────────────────────────────────────────────────
 
-    private static final String PREF_RECENT_APPS = "recent_cluster_apps";
+    private static final String PREF_RECENT_APPS = SettingsActivity.PREF_RECENT_APPS;
     private static final int MAX_RECENT_APPS = 3;
 
     private void addToRecentApps(String pkgName, String appName) {

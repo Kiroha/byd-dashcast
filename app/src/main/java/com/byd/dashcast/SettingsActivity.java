@@ -46,6 +46,8 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_BOOT_AUTO_START       = "boot_auto_start_enabled";
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
+    // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
+    public static final String PREF_RECENT_APPS = "recent_cluster_apps";
     // ── Views ────────────────────────────────────────────────────────────────
     private RadioGroup  rgClusterType;
     private SeekBar     sbInsetH;
