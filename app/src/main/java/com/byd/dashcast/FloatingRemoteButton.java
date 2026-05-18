@@ -259,7 +259,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
 
     private void showQuickSwitchPopup() {
         android.content.SharedPreferences prefs =
-                getSharedPreferences("byd_app_prefs", MODE_PRIVATE);
+                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
         String raw = prefs.getString("recent_cluster_apps", "");
         if (raw.isEmpty()) {
             android.widget.Toast.makeText(this,

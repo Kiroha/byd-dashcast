@@ -239,13 +239,6 @@
     <string name="settings_show_category_filters">Паказаць фільтры па катэгорыях (Усе / Нав / Медыя)</string>
     <string name="quick_switch_title">Апошнія дадаткі</string>
     <string name="quick_switch_empty">Няма апошніх дадаткаў</string>
-    <string name="profile_none">Без профілю</string>
-    <string name="profile_driving">🚗 Вядзенне</string>
-    <string name="profile_parking">🅿️ Паркоўка</string>
-    <string name="settings_profiles_title">Профілі аўтазапуску</string>
-    <string name="settings_profile_driving_app">Дадатак у рэжыме вядзення:</string>
-    <string name="settings_profile_parking_app">Дадатак у рэжыме паркоўкі:</string>
-    <string name="settings_profile_none_selected">(дадатак не абраны)</string>
     <string name="menu_usage_stats">📊 Статыстыка выкарыстання</string>
     <string name="usage_title">Час выкарыстання на кластэры</string>
     <string name="usage_empty">Няма дадзеных выкарыстання</string>

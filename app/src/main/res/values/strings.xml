@@ -248,14 +248,6 @@
     <!-- Feature: Quick-switch -->
     <string name="quick_switch_title">Apps récentes</string>
     <string name="quick_switch_empty">Aucune app récente</string>
-    <!-- Feature: Auto-launch profiles -->
-    <string name="profile_none">Aucun profil</string>
-    <string name="profile_driving">🚗 Conduite</string>
-    <string name="profile_parking">🅿️ Stationnement</string>
-    <string name="settings_profiles_title">Profils de lancement automatique</string>
-    <string name="settings_profile_driving_app">App en mode Conduite :</string>
-    <string name="settings_profile_parking_app">App en mode Stationnement :</string>
-    <string name="settings_profile_none_selected">(aucune app sélectionnée)</string>
     <!-- Feature: Usage stats -->
     <string name="menu_usage_stats">📊 Statistiques d\'utilisation</string>
     <string name="usage_title">Temps d\'utilisation sur le cluster</string>

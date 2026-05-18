@@ -239,13 +239,6 @@
     <string name="settings_show_category_filters">Показать фильтры по категориям (Все / Нав / Медиа)</string>
     <string name="quick_switch_title">Недавние приложения</string>
     <string name="quick_switch_empty">Нет недавних приложений</string>
-    <string name="profile_none">Без профиля</string>
-    <string name="profile_driving">🚗 Вождение</string>
-    <string name="profile_parking">🅿️ Парковка</string>
-    <string name="settings_profiles_title">Профили автозапуска</string>
-    <string name="settings_profile_driving_app">Приложение в режиме вождения:</string>
-    <string name="settings_profile_parking_app">Приложение в режиме парковки:</string>
-    <string name="settings_profile_none_selected">(приложение не выбрано)</string>
     <string name="menu_usage_stats">📊 Статистика использования</string>
     <string name="usage_title">Время использования на кластере</string>
     <string name="usage_empty">Нет данных об использовании</string>

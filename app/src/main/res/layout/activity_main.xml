@@ -184,28 +184,6 @@
                 android:textColor="@color/text_primary"/>
         </LinearLayout>
 
-        <!-- Profile selector (spinner) -->
-        <LinearLayout
-            android:id="@+id/ll_profile_selector"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="4dp"
-            android:background="@color/bg_top_bar">
-
-            <android.widget.Spinner
-                android:id="@+id/spinner_profile"
-                android:layout_width="match_parent"
-                android:layout_height="32dp"
-                android:background="@color/bg_button_secondary"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"/>
-        </LinearLayout>
-
     </LinearLayout>
 
     <RelativeLayout

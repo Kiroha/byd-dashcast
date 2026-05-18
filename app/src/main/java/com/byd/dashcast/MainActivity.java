@@ -167,9 +167,6 @@ public class MainActivity extends AppCompatActivity
     private View llCategoryFilters;
     private Button btnFilterAll, btnFilterNav, btnFilterMedia;
 
-    // UI — profile spinner
-    private android.widget.Spinner spinnerProfile;
-
     // Usage tracking
     private long mClusterAppStartTime = 0;
 
@@ -330,10 +327,6 @@ public class MainActivity extends AppCompatActivity
         btnFilterAll.setOnClickListener(filterClick);
         btnFilterNav.setOnClickListener(filterClick);
         btnFilterMedia.setOnClickListener(filterClick);
-
-        // Profile spinner
-        spinnerProfile = (android.widget.Spinner) findViewById(R.id.spinner_profile);
-        setupProfileSpinner();
 
         // Button "Activate cluster" — always triggers activateCluster()
         btnActivateCluster.setOnClickListener(new View.OnClickListener() {
@@ -2395,35 +2388,6 @@ public class MainActivity extends AppCompatActivity
         btnFilterAll.getBackground().setTint(activeCategory == 0 ? activeTint : inactiveTint);
         btnFilterNav.getBackground().setTint(activeCategory == AppInfo.CATEGORY_NAVIGATION ? activeTint : inactiveTint);
         btnFilterMedia.getBackground().setTint(activeCategory == AppInfo.CATEGORY_MEDIA ? activeTint : inactiveTint);
-    }
-
-    // ── Profile spinner ─────────────────────────────────────────────────────
-
-    private void setupProfileSpinner() {
-        final String[] profileLabels = {
-            getString(R.string.profile_none),
-            getString(R.string.profile_driving),
-            getString(R.string.profile_parking)
-        };
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, profileLabels);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerProfile.setAdapter(adapter);
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int savedProfile = prefs.getInt("profile_mode", 0);
-        spinnerProfile.setSelection(savedProfile, false);
-
-        spinnerProfile.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .putInt("profile_mode", position).apply();
-                AppLogger.i(TAG, "Profile selected: " + profileLabels[position]);
-            }
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-        });
     }
 
     // ── Quick-switch history ────────────────────────────────────────────────
