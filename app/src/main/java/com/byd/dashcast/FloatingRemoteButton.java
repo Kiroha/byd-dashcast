@@ -19,7 +19,7 @@ import android.widget.TextView;
  * FloatingRemoteButton — persistent overlay button visible over all screens.
  *
  * Displays a draggable 📺 badge. Only visible when an app is active on the cluster.
- * • Tap  → broadcasts ACTION_SHOW_MIRROR so MainActivity opens the mirror panel.
+ * • Tap  → starts MainActivity with ACTION_SHOW_MIRROR via startActivity() (not a broadcast).
  * • Long press → closes this overlay service.
  *
  * Visibility is controlled externally via the static show() / hide() helpers

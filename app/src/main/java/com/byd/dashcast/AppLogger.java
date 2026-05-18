@@ -250,44 +250,6 @@ public class AppLogger {
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_report_title)));
     }
 
-    /**
-     * Saves arbitrary text to a timestamped .log file then opens the share
-     * chooser with the file as an attachment (content:// via FileProvider).
-     * The file name is prefixed with `prefix`.
-     * Falls back to plain text if the file write fails.
-     */
-    public static void shareTextAsFile(Context context, String prefix, String content,
-            String chooserTitle) {
-        if (content == null) content = "";
-        String stamp = sFileFmt.get().format(new Date());
-        String filename = prefix + "_" + stamp + ".log";
-        File outDir = context.getExternalFilesDir(null);
-        if (outDir == null) outDir = context.getFilesDir();
-        if (!outDir.exists()) outDir.mkdirs();
-        File outFile = new File(outDir, filename);
-        boolean fileOk = false;
-        try (FileWriter fw = new FileWriter(outFile)) {
-            fw.write(content);
-            fileOk = true;
-        } catch (IOException ex) {
-            Log.e("AppLogger", "shareTextAsFile write failed", ex);
-        }
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — " + prefix);
-        if (fileOk) {
-            Uri uri = FileProvider.getUriForFile(
-                    context, context.getPackageName() + ".fileprovider", outFile);
-            intent.putExtra(Intent.EXTRA_STREAM, uri);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } else {
-            intent.putExtra(Intent.EXTRA_TEXT,
-                    content.isEmpty() ? "(contenu vide)" : content);
-        }
-        context.startActivity(Intent.createChooser(intent,
-                chooserTitle != null ? chooserTitle : "Partager…"));
-    }
-
     // ── Storage cleanup ───────────────────────────────────────────────────────
 
     /**
