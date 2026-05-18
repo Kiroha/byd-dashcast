@@ -34,7 +34,6 @@ import java.util.Locale;
  */
 public class LogActivity extends AppCompatActivity {
 
-    private static final String TAG = "LogActivity";
     private static final long REFRESH_MS      = 500;   // delay when log changed
     private static final long REFRESH_IDLE_MS  = 2000;  // delay when nothing new
 

@@ -97,57 +97,6 @@ public class AdbLocalClient {
             "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
-    /**
-     * Scans active MirrorDaemon processes and returns a human-readable summary.
-     * Format: "PID  USER  NAME\n..." or "(no process found)"
-     */
-    public static void scanMirrorDaemon(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                String ps = dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
-                boolean found = !ps.isEmpty();
-                int count = found ? ps.split("\n").length : 0;
-                String msg = found
-                        ? count + " MirrorDaemon process(es) detected:\n" + ps
-                        : "(no active MirrorDaemon process)";
-                AppLogger.i(TAG, "scanMirrorDaemon: " + msg);
-                if (callback != null) callback.onSuccess(msg);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "scanMirrorDaemon failed", e);
-                if (callback != null) callback.onError("Scan error: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Kills all existing MirrorDaemon processes and confirms the result via callback.
-     */
-    public static void killMirrorDaemon(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                String before = dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
-                AppLogger.i(TAG, "killMirrorDaemon — before: " + (before.isEmpty() ? "(none)" : before));
-                dadb.shell(KILL_DAEMON_CMD);
-                Thread.sleep(800);
-                String after = dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
-                boolean ok = after.isEmpty();
-                String msg = ok
-                        ? "MirrorDaemon(s) killed ✓"
-                        : "Processes still running: " + after;
-                AppLogger.i(TAG, "killMirrorDaemon — after: " + msg);
-                if (ok) { if (callback != null) callback.onSuccess(msg); }
-                else    { if (callback != null) callback.onError(msg); }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                AppLogger.e(TAG, "killMirrorDaemon failed", e);
-                if (callback != null) callback.onError("Error: " + e.getMessage());
-            }
-        });
-    }
-
     public static void startMirrorDaemon(final Context context) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
