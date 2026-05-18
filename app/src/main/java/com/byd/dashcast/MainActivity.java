@@ -176,6 +176,8 @@ public class MainActivity extends AppCompatActivity
     // Persisted to SharedPreferences so it survives a process kill (car shutdown).
     private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
     private static final String PREF_SESSION_CLUSTER_PKGS = "session_cluster_pkgs";
+    private static final String PREF_GRID_MODE  = "grid_mode";
+    private static final String PREF_FAVORITES  = "favorites";
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
@@ -276,7 +278,7 @@ public class MainActivity extends AppCompatActivity
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean isGrid = prefs.getBoolean("grid_mode", false);
+        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, false);
         mAdapter.setGridMode(isGrid);
         updateViewToggleButton();
         
@@ -428,8 +430,8 @@ public class MainActivity extends AppCompatActivity
                 int w = sbResizeW.getProgress();
                 int h = sbResizeH.getProgress();
                 SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-                ed.putInt("inset_h_" + mCurrentDashboardPkg, w);
-                ed.putInt("inset_v_" + mCurrentDashboardPkg, h);
+                ed.putInt(SettingsActivity.PREF_INSET_H_PREFIX + mCurrentDashboardPkg, w);
+                ed.putInt(SettingsActivity.PREF_INSET_V_PREFIX + mCurrentDashboardPkg, h);
                 ed.apply();
                 
                 AppLogger.i(TAG, "Applied custom resize " + w + "/" + h + " for " + mCurrentDashboardPkg);
@@ -833,7 +835,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onToggleFavorite(AppInfo app) {
         SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> favs = new HashSet<>(p.getStringSet("favorites", new HashSet<>()));
+        Set<String> favs = new HashSet<>(p.getStringSet(PREF_FAVORITES, new HashSet<>()));
         if (favs.contains(app.packageName)) {
             favs.remove(app.packageName);
             app.isFavorite = false;
@@ -841,7 +843,7 @@ public class MainActivity extends AppCompatActivity
             favs.add(app.packageName);
             app.isFavorite = true;
         }
-        p.edit().putStringSet("favorites", favs).apply();
+        p.edit().putStringSet(PREF_FAVORITES, favs).apply();
         loadAppsAsync(); // Reload and re-sort
     }
 
@@ -1234,8 +1236,8 @@ public class MainActivity extends AppCompatActivity
             SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
             int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-            int curW = p.getInt("inset_h_" + mCurrentDashboardPkg, defH);
-            int curH = p.getInt("inset_v_" + mCurrentDashboardPkg, defV);
+            int curW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + mCurrentDashboardPkg, defH);
+            int curH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + mCurrentDashboardPkg, defV);
             if (sbResizeW != null) {
                 sbResizeW.setProgress(curW);
                 tvResizeW.setText(String.valueOf(curW));
@@ -1258,8 +1260,8 @@ public class MainActivity extends AppCompatActivity
         final SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         final int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
         final int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        final int savedW = p.getInt("inset_h_" + pkg, defH);
-        final int savedH = p.getInt("inset_v_" + pkg, defV);
+        final int savedW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
+        final int savedH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
         // Only apply if there are per-app custom insets (different from global defaults)
         if (savedW == defH && savedH == defV) return;
         AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " w=" + savedW + " h=" + savedH);
@@ -1869,7 +1871,7 @@ public class MainActivity extends AppCompatActivity
     private void toggleViewMode() {
         SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean nv = !mAdapter.isGridMode();
-        p2.edit().putBoolean("grid_mode", nv).apply();
+        p2.edit().putBoolean(PREF_GRID_MODE, nv).apply();
         mAdapter.setGridMode(nv);
         if (nv) {
             rvApps.setLayoutManager(new GridLayoutManager(this, 5));
@@ -2314,7 +2316,7 @@ public class MainActivity extends AppCompatActivity
                 }
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                Set<String> favs = prefs.getStringSet("favorites", new HashSet<>());
+                Set<String> favs = prefs.getStringSet(PREF_FAVORITES, new HashSet<>());
                 String autoPkg = prefs.getString(PREF_AUTO_LAUNCH_PKG, null);
 
                 for (AppInfo info : apps) {

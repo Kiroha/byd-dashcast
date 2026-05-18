@@ -64,7 +64,7 @@ public class AdbLocalClient {
                                               final Callback callback) {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
-                String output = safeOut(dadb.shell(command).getAllOutput()).trim();
+                String output = dadb.shell(command).getAllOutput().trim();
                 AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
                 if (callback != null) callback.onSuccess(output);
             } catch (Exception e) {
@@ -104,8 +104,8 @@ public class AdbLocalClient {
     public static void scanMirrorDaemon(final Context context, final Callback callback) {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
-                String ps = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
+                String ps = dadb.shell(
+                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
                 boolean found = !ps.isEmpty();
                 int count = found ? ps.split("\n").length : 0;
                 String msg = found
@@ -126,13 +126,13 @@ public class AdbLocalClient {
     public static void killMirrorDaemon(final Context context, final Callback callback) {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
-                String before = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
+                String before = dadb.shell(
+                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
                 AppLogger.i(TAG, "killMirrorDaemon — before: " + (before.isEmpty() ? "(none)" : before));
                 dadb.shell(KILL_DAEMON_CMD);
                 Thread.sleep(800);
-                String after = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
+                String after = dadb.shell(
+                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
                 boolean ok = after.isEmpty();
                 String msg = ok
                         ? "MirrorDaemon(s) killed ✓"

@@ -48,6 +48,9 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
     // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
     public static final String PREF_RECENT_APPS = "recent_cluster_apps";
+    // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
+    public static final String PREF_INSET_H_PREFIX = "inset_h_";
+    public static final String PREF_INSET_V_PREFIX = "inset_v_";
     // ── Views ────────────────────────────────────────────────────────────────
     private RadioGroup  rgClusterType;
     private SeekBar     sbInsetH;
