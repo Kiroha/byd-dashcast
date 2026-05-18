@@ -245,7 +245,16 @@ public class MainActivity extends AppCompatActivity
         // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
         SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (!bootPrefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false)) {
-            cleanupDisplayAffinityAtBoot(this);
+            // Defensive: cleanup uses IActivityTaskManager binder reflection per package.
+            // With a non-trivial persisted set, calling on the main thread during onCreate
+            // could approach the ANR threshold. Off-load to a named daemon thread; the work
+            // is purely a safety-net (BootReceiver already runs it asynchronously at boot).
+            final Context appCtx = getApplicationContext();
+            Thread cleanupThread = new Thread(new Runnable() {
+                @Override public void run() { cleanupDisplayAffinityAtBoot(appCtx); }
+            }, "boot-cleanup-fallback");
+            cleanupThread.setDaemon(true);
+            cleanupThread.start();
         } else {
             // Auto-start enabled: clear the persisted set (projection is active,
             // apps will be managed normally).
