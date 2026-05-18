@@ -176,7 +176,9 @@ public class MainActivity extends AppCompatActivity
     // Session-scoped set of all packages that were launched on the cluster (display != 0).
     // Used to move them all back to Display 0 when the user stops the projection,
     // so Android doesn't re-launch them on the (still-alive) VirtualDisplay later.
+    // Persisted to SharedPreferences so it survives a process kill (car shutdown).
     private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
+    private static final String PREF_SESSION_CLUSTER_PKGS = "session_cluster_pkgs";
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
@@ -246,6 +248,17 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
+
+        // Safety-net: if projection auto-start is disabled, move any leftover
+        // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
+        SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (!bootPrefs.getBoolean("boot_auto_start_enabled", false)) {
+            cleanupDisplayAffinityAtBoot(this);
+        } else {
+            // Auto-start enabled: clear the persisted set (projection is active,
+            // apps will be managed normally).
+            bootPrefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+        }
 
         // Unlock hidden Android APIs (SurfaceControl, etc.)
         // Must be called before any call to ClusterMirrorManager.startMirror(this, ).
@@ -597,6 +610,7 @@ public class MainActivity extends AppCompatActivity
                 if (launched) {
                     mCurrentDashboardPkg = pkgName;
                     mSessionClusterPackages.add(pkgName);
+                    persistSessionClusterPackages();
                     // Resolve app name
                     String name = pkgName;
                     try {
@@ -918,6 +932,7 @@ public class MainActivity extends AppCompatActivity
                         mSecondDashboardApp = appName;
                         mSecondDashboardPkg = pkgName;
                         mSessionClusterPackages.add(pkgName);
+                        persistSessionClusterPackages();
                         updateControlLabel();
                     } else {
                         Toast.makeText(MainActivity.this,
@@ -945,6 +960,7 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
                     mSessionClusterPackages.add(pkgName);
+                    persistSessionClusterPackages();
                     addToRecentApps(pkgName, appName);
                     trackUsageStart();
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
@@ -1036,6 +1052,7 @@ public class MainActivity extends AppCompatActivity
             mClusterService.moveTaskToDisplay(app.packageName, 0, null);
         }
         mSessionClusterPackages.remove(app.packageName);
+        persistSessionClusterPackages();
 
         // 3. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
@@ -1745,6 +1762,7 @@ public class MainActivity extends AppCompatActivity
         if (!mServiceBound || mClusterService == null) {
             AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, clearing set only");
             mSessionClusterPackages.clear();
+            persistSessionClusterPackages();
             return;
         }
         AppLogger.i(TAG, "moveSessionAppsToMainDisplay: " + mSessionClusterPackages.size()
@@ -1753,6 +1771,66 @@ public class MainActivity extends AppCompatActivity
             mClusterService.moveTaskToDisplay(pkg, 0, null);
         }
         mSessionClusterPackages.clear();
+        persistSessionClusterPackages();
+    }
+
+    /** Persists the session cluster packages set to SharedPreferences. */
+    private void persistSessionClusterPackages() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putStringSet(PREF_SESSION_CLUSTER_PKGS, new java.util.HashSet<>(mSessionClusterPackages))
+                .apply();
+    }
+
+    /**
+     * Boot/onCreate safety net: moves all previously-tracked cluster apps to Display 0
+     * using IActivityTaskManager reflection (no ClusterService needed).
+     * Only runs if boot_auto_start_enabled is false.
+     */
+    static void cleanupDisplayAffinityAtBoot(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(
+                SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        java.util.Set<String> pkgs = prefs.getStringSet(PREF_SESSION_CLUSTER_PKGS, null);
+        if (pkgs == null || pkgs.isEmpty()) {
+            AppLogger.d("DisplayCleanup", "No session cluster packages to clean up");
+            return;
+        }
+        AppLogger.i("DisplayCleanup", "Cleaning up " + pkgs.size() + " apps → Display 0: " + pkgs);
+        for (String pkg : pkgs) {
+            moveTaskToDisplayZero(pkg);
+        }
+        // Clear the persisted set
+        prefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+    }
+
+    /** Moves a single package's task to Display 0 via IActivityTaskManager reflection. */
+    private static void moveTaskToDisplayZero(String packageName) {
+        try {
+            // Find the task ID
+            Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
+            Object iatm = atmClass.getMethod("getService").invoke(null);
+            // getAppTasks() won't work from static context; use getRunningTasks with large count
+            Class<?> amClass = Class.forName("android.app.ActivityManager");
+            // Use IActivityTaskManager.getTasks(100) — hidden but available with platform signing
+            @SuppressWarnings("unchecked")
+            java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
+                    .getMethod("getTasks", int.class).invoke(iatm, 100);
+            if (tasks == null) return;
+            for (Object taskInfo : tasks) {
+                // RecentTaskInfo or RunningTaskInfo — both extend TaskInfo with baseActivity
+                android.content.ComponentName base = (android.content.ComponentName)
+                        taskInfo.getClass().getField("baseActivity").get(taskInfo);
+                if (base != null && packageName.equals(base.getPackageName())) {
+                    int taskId = taskInfo.getClass().getField("taskId").getInt(taskInfo);
+                    iatm.getClass().getMethod("moveTaskToDisplay", int.class, int.class)
+                            .invoke(iatm, taskId, 0);
+                    AppLogger.i("DisplayCleanup", "Moved " + packageName
+                            + " (taskId=" + taskId + ") → Display 0");
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            AppLogger.w("DisplayCleanup", "Could not move " + packageName + " to Display 0: " + e.getMessage());
+        }
     }
 
     private void updateDashboardStatus(String appName) {
