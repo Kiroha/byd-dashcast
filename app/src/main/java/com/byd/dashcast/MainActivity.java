@@ -680,6 +680,10 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
+        // Stop the screenshot loop first so an inflight ADB callback cannot re-post
+        // after we drain the handler (the callback reads mScreenshotRunnable which
+        // stopScreenshotLoop() nulls).
+        stopScreenshotLoop();
         // Cancel all pending runnables (anonymous lambdas posted via postDelayed that
         // individual removeCallbacks() calls may have missed).
         mScreenshotHandler.removeCallbacksAndMessages(null);
@@ -1359,16 +1363,18 @@ public class MainActivity extends AppCompatActivity
                                 }
                             }
                         });
-                        if (mScreenshotRunnable != null) {
-                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
-                                    SCREENSHOT_INTERVAL_MS);
+                        // Capture the volatile into a local to avoid a race where
+                        // stopScreenshotLoop() nulls it between the null check and postDelayed.
+                        Runnable r = mScreenshotRunnable;
+                        if (r != null) {
+                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS);
                         }
                     }
                     @Override public void onError(String error) {
                         AppLogger.w(TAG, "screenshotLoop erreur: " + error);
-                        if (mScreenshotRunnable != null) {
-                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
-                                    SCREENSHOT_INTERVAL_MS * 2L);
+                        Runnable r = mScreenshotRunnable;
+                        if (r != null) {
+                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS * 2L);
                         }
                     }
                 });
