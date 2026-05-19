@@ -1121,27 +1121,39 @@ public class DiagActivity extends AppCompatActivity {
      */
     private void sendInfoOsdOff() {
         tvFissionResult.setText("⏳ sendInfo(1000, 20) → OSD Off...");
-        AdbLocalClient.sendInfo(this, 1000, 20, "", (success, output) ->
-            safeRunOnUiThread(() -> {
-                String status = success ? "✅ OK" : "❌ Échec";
-                tvFissionResult.setText("sendInfo(1000, 20) [OSD Off] → " + status
-                    + "\n\n" + (output != null ? output : ""));
-                AppLogger.i("FissionOsdOff", "sendInfo(1000,20) success=" + success + " out=" + output);
-            })
-        );
+        AdbLocalClient.sendInfo(this, 1000, 20, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
+                safeRunOnUiThread(() -> {
+                    tvFissionResult.setText("sendInfo(1000, 20) [OSD Off] → ✅ OK\n\n" + report);
+                    AppLogger.i("FissionOsdOff", "ok: " + report);
+                });
+            }
+            @Override public void onError(String error) {
+                safeRunOnUiThread(() -> {
+                    tvFissionResult.setText("sendInfo(1000, 20) [OSD Off] → ❌ Échec\n\n" + error);
+                    AppLogger.e("FissionOsdOff", "err: " + error);
+                });
+            }
+        });
     }
 
     /** Envoie sendInfo(1000, 19) = "OSD on" — réactive les overlays HUD Qt natifs. */
     private void sendInfoOsdOn() {
         tvFissionResult.setText("⏳ sendInfo(1000, 19) → OSD On...");
-        AdbLocalClient.sendInfo(this, 1000, 19, "", (success, output) ->
-            safeRunOnUiThread(() -> {
-                String status = success ? "✅ OK" : "❌ Échec";
-                tvFissionResult.setText("sendInfo(1000, 19) [OSD On] → " + status
-                    + "\n\n" + (output != null ? output : ""));
-                AppLogger.i("FissionOsdOn", "sendInfo(1000,19) success=" + success + " out=" + output);
-            })
-        );
+        AdbLocalClient.sendInfo(this, 1000, 19, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
+                safeRunOnUiThread(() -> {
+                    tvFissionResult.setText("sendInfo(1000, 19) [OSD On] → ✅ OK\n\n" + report);
+                    AppLogger.i("FissionOsdOn", "ok: " + report);
+                });
+            }
+            @Override public void onError(String error) {
+                safeRunOnUiThread(() -> {
+                    tvFissionResult.setText("sendInfo(1000, 19) [OSD On] → ❌ Échec\n\n" + error);
+                    AppLogger.e("FissionOsdOn", "err: " + error);
+                });
+            }
+        });
     }
 
     /** Applique wm overscan 0,0,0,0 sur le display Fission pour supprimer toute marge artificielle. */
