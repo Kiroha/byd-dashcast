@@ -1044,6 +1044,18 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
 
+        // Eagerly clear tracked state BEFORE async move/kill so the display-state
+        // poll does not see a stale mCurrentDashboardPkg on display 0 during the
+        // brief window between moveTaskToDisplay and forceStopApp.
+        if (isOnCluster) {
+            mCurrentDashboardApp = null;
+            mCurrentDashboardPkg = null;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+            mAdapter.setCurrentPackage(null);
+            updateDashboardStatus(null);
+        }
+
         // 2. Move the app back to Display 0 before killing — safety net so that
         //    if force-stop fails silently, Android won't re-launch it on Display 1.
         if (mSessionClusterPackages.contains(app.packageName)
@@ -1060,17 +1072,7 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
-                        if (isOnCluster) {
-                            mCurrentDashboardApp = null;
-                            mCurrentDashboardPkg = null;
-                            // Clear persisted state so the killed app is not ghost-restored
-                            // if the Activity is destroyed and recreated later.
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
-                            mAdapter.setCurrentPackage(null);
-                            updateDashboardStatus(null);
-                            // The virtual display remains alive and black, waiting for another app.
-                        }
+                        // Cluster state already cleared eagerly above (before async ops).
                         if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
                             mSecondDashboardPkg = null;
                             clearSplitState();
@@ -1875,6 +1877,19 @@ public class MainActivity extends AppCompatActivity
         setStatusDot(DOT_COLOR_PENDING);
         trackUsageStop(mCurrentDashboardPkg);
 
+        // Capture the package name before clearing state — restoreBydOnCluster
+        // needs it to force-stop the app before sendInfo(18).
+        final String capturedClusterPkg = mCurrentDashboardPkg;
+
+        // Eagerly clear tracked cluster state BEFORE async move/restore so the
+        // display-state poll does not see a stale mCurrentDashboardPkg on display 0
+        // during the brief window between moveSessionApps and restoreBydOnCluster.
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+
         // Move ALL apps that were launched on the cluster during this session back to Display 0.
         // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
         // when the user opens the app from the BYD launcher after stopping the projection.
@@ -1887,7 +1902,7 @@ public class MainActivity extends AppCompatActivity
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
         }
 
-        AdbLocalClient.restoreBydOnCluster(this, mCurrentDashboardPkg, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreBydOnCluster(this, capturedClusterPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -1901,12 +1916,8 @@ public class MainActivity extends AppCompatActivity
                         if (mServiceBound && mClusterService != null) {
                             mClusterService.stopProjectionNoAdb();
                         }
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+                        // Cluster state already cleared eagerly above (before async ops).
                         clearSplitState();
-                        mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         btnActivateCluster.setEnabled(true);
                         showAppList();
@@ -2211,6 +2222,18 @@ public class MainActivity extends AppCompatActivity
     private void originCluster() {
         tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
         setStatusDot(DOT_COLOR_PENDING);
+        trackUsageStop(mCurrentDashboardPkg);
+
+        // Capture before clearing — restoreOriginCluster needs it for force-stop.
+        final String capturedClusterPkg = mCurrentDashboardPkg;
+
+        // Eagerly clear tracked cluster state (same rationale as restoreBydDashboard).
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+
         moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
         // Split mode: force-stop the second app before restoration
@@ -2218,7 +2241,7 @@ public class MainActivity extends AppCompatActivity
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
         }
 
-        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), mCurrentDashboardPkg, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), capturedClusterPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -2226,12 +2249,8 @@ public class MainActivity extends AppCompatActivity
                         if (mServiceBound && mClusterService != null) {
                             mClusterService.stopProjectionNoAdb();
                         }
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+                        // Cluster state already cleared eagerly above.
                         clearSplitState();
-                        mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         btnActivateCluster.setEnabled(true);
                         showAppList();
