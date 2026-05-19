@@ -1259,6 +1259,10 @@ public class MainActivity extends AppCompatActivity
      * are still running on the expected display.  Corrects stale bookkeeping
      * when an app has died or been moved externally.
      *
+     * ⚠️ LOG-ONLY MODE: getTasks() may not return VirtualDisplay tasks on
+     * DiLink — we log the results for analysis but do NOT mutate state,
+     * to avoid false-positive clears that kill the mirror.
+     *
      * Runs on the main thread (single fast binder IPC, ~2-5 ms).
      */
     private void reconcileDisplayState() {
@@ -1272,7 +1276,13 @@ public class MainActivity extends AppCompatActivity
             @SuppressWarnings("unchecked")
             java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
                     .getMethod("getTasks", int.class).invoke(iatm, 50);
-            if (tasks == null || tasks.isEmpty()) return;
+
+            if (tasks == null || tasks.isEmpty()) {
+                AppLogger.w(TAG, "state-poll: getTasks() returned "
+                        + (tasks == null ? "null" : "empty")
+                        + " — cluster=" + clusterPkg + " main=" + mainPkg);
+                return;
+            }
 
             // Resolve displayId field once (same class for every entry).
             java.lang.reflect.Field displayIdField = null;
@@ -1285,6 +1295,11 @@ public class MainActivity extends AppCompatActivity
                 } catch (Exception ignored) { }
             }
 
+            // ── Log ALL tasks for debugging ──
+            StringBuilder dbg = new StringBuilder("state-poll: ")
+                    .append(tasks.size()).append(" tasks — tracking cluster=")
+                    .append(clusterPkg).append(" main=").append(mainPkg).append("\n");
+
             boolean clusterFound = false;
             int     clusterDisplay = -1;
             boolean mainFound = false;
@@ -1296,77 +1311,48 @@ public class MainActivity extends AppCompatActivity
                     base = (android.content.ComponentName)
                             taskInfo.getClass().getField("baseActivity").get(taskInfo);
                 } catch (Exception ignored) { }
-                if (base == null) continue;
 
-                String pkg = base.getPackageName();
-                int dId = 0;
+                android.content.ComponentName top = null;
+                try {
+                    top = (android.content.ComponentName)
+                            taskInfo.getClass().getField("topActivity").get(taskInfo);
+                } catch (Exception ignored) { }
+
+                int dId = -1;
                 if (displayIdField != null) {
                     try { dId = displayIdField.getInt(taskInfo); } catch (Exception ignored) { }
                 }
 
-                if (clusterPkg != null && clusterPkg.equals(pkg)) {
+                String basePkg = (base != null) ? base.getPackageName() : null;
+                String topPkg  = (top  != null) ? top.getPackageName()  : null;
+                String matchPkg = (basePkg != null) ? basePkg : topPkg;
+
+                dbg.append("  task: base=").append(basePkg)
+                   .append(" top=").append(topPkg)
+                   .append(" display=").append(dId).append("\n");
+
+                if (matchPkg == null) continue;
+
+                if (clusterPkg != null && clusterPkg.equals(matchPkg)) {
                     clusterFound = true;
                     clusterDisplay = dId;
                 }
-                if (mainPkg != null && mainPkg.equals(pkg)) {
+                if (mainPkg != null && mainPkg.equals(matchPkg)) {
                     mainFound = true;
                     mainDisplay = dId;
                 }
-                if ((clusterPkg == null || clusterFound) && (mainPkg == null || mainFound)) break;
             }
 
-            // ── Reconcile cluster state ──
-            if (clusterPkg != null) {
-                if (!clusterFound) {
-                    // App is dead → clear cluster state.
-                    AppLogger.i(TAG, "state-poll: " + clusterPkg + " no longer running → clearing cluster");
-                    clearClusterState();
-                } else if (clusterDisplay == 0) {
-                    // App was moved to main display externally.
-                    AppLogger.i(TAG, "state-poll: " + clusterPkg + " moved to display 0 → reconciling");
-                    clearClusterState();
-                    // Mark it as on the main display.
-                    mMainDisplayPkg = clusterPkg;
-                    mAdapter.setMainPackage(clusterPkg);
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                            .putString(PREF_MAIN_PKG, clusterPkg).apply();
-                }
-            }
+            dbg.append("  → clusterFound=").append(clusterFound)
+               .append(" clusterDisplay=").append(clusterDisplay)
+               .append(" mainFound=").append(mainFound)
+               .append(" mainDisplay=").append(mainDisplay);
+            AppLogger.i(TAG, dbg.toString());
 
-            // ── Reconcile main-display state ──
-            if (mainPkg != null && !mainPkg.equals(mCurrentDashboardPkg)) {
-                if (!mainFound) {
-                    AppLogger.i(TAG, "state-poll: " + mainPkg + " no longer running → clearing main");
-                    mMainDisplayPkg = null;
-                    mAdapter.setMainPackage(null);
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                            .remove(PREF_MAIN_PKG).apply();
-                } else if (mainDisplay != 0) {
-                    // App was moved to cluster externally.
-                    AppLogger.i(TAG, "state-poll: " + mainPkg + " now on display " + mainDisplay
-                            + " → reconciling as cluster");
-                    mMainDisplayPkg = null;
-                    mAdapter.setMainPackage(null);
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                            .remove(PREF_MAIN_PKG).apply();
-                    if (mCurrentDashboardPkg == null) {
-                        mCurrentDashboardPkg = mainPkg;
-                        String name = mainPkg;
-                        try {
-                            android.content.pm.ApplicationInfo ai =
-                                    getPackageManager().getApplicationInfo(mainPkg, 0);
-                            CharSequence label = getPackageManager().getApplicationLabel(ai);
-                            if (label != null) name = label.toString();
-                        } catch (Exception ignored) { }
-                        mCurrentDashboardApp = name;
-                        mAdapter.setCurrentPackage(mainPkg);
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                .putString(PREF_CLUSTER_PKG, mainPkg)
-                                .putString(PREF_CLUSTER_NAME, name).apply();
-                        updateDashboardStatus(name);
-                    }
-                }
-            }
+            // ── LOG ONLY — no state mutations ──
+            // When we confirm that getTasks() correctly reports VirtualDisplay
+            // tasks on DiLink, we can re-enable reconciliation.
+
         } catch (Exception e) {
             AppLogger.w(TAG, "state-poll failed: " + e.getMessage());
         }
