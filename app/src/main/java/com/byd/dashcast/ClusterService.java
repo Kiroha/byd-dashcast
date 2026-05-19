@@ -228,6 +228,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
             java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks =
                     am.getRunningTasks(50);
+            if (tasks == null) return -1;
             for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
                 if (t.topActivity != null
                         && packageName.equals(t.topActivity.getPackageName())) {

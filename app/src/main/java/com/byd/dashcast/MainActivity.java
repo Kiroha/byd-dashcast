@@ -1218,16 +1218,14 @@ public class MainActivity extends AppCompatActivity
 
     // ---- Display state polling ----------------------------------------------
     //
-    // History: /proc-based watchdog (v0.1.43) and OnUidImportanceListener both
-    // produced false positives on this platform — /proc hidepid prevents seeing
-    // third-party PIDs, and Importance model treats VirtualDisplay apps as
-    // "background" immediately after launch.
+    // Detects when the cluster app process dies (crash, OOM-kill, external
+    // force-stop) so we can clear stale bookkeeping and stop the mirror.
     //
-    // Current approach: poll IActivityTaskManager.getTasks() every 5 s while
-    // the Activity is visible. The binder call is fast (<5 ms) and gives us
-    // the real displayId for each task, so we can detect:
-    //   - an app that was OOM-killed / crashed (task no longer in the list)
-    //   - an app that was moved to a different display externally
+    // History:
+    //   v0.1.43  /proc-based watchdog → false positives (hidepid=2 on DiLink)
+    //   v0.8.0   OnUidImportanceListener → false positives (VD = "background")
+    //   v0.8.1   getTasks() → doesn't report VirtualDisplay tasks on DiLink
+    //   v0.8.3   `pidof <pkg>` via ADB shell (uid 2000 can read /proc)  ✓
     //
     // Started in onStart(), stopped in onStop().
     // -------------------------------------------------------------------------
@@ -1243,8 +1241,8 @@ public class MainActivity extends AppCompatActivity
                 mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
             }
         };
-        // First poll after 2 s — let state settle after onStart.
-        mScreenshotHandler.postDelayed(mStatePollRunnable, 2_000);
+        // First poll after 5 s — let state settle after onStart.
+        mScreenshotHandler.postDelayed(mStatePollRunnable, STATE_POLL_INTERVAL_MS);
     }
 
     private void stopStatePoll() {
@@ -1255,107 +1253,46 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
-     * Queries IActivityTaskManager.getTasks() to verify that tracked apps
-     * are still running on the expected display.  Corrects stale bookkeeping
-     * when an app has died or been moved externally.
+     * Checks if the cluster app process is still alive using {@code pidof}
+     * via ADB shell.  The app process itself cannot read /proc for other UIDs
+     * (hidepid=2), but ADB shell (uid 2000) can.
      *
-     * ⚠️ LOG-ONLY MODE: getTasks() may not return VirtualDisplay tasks on
-     * DiLink — we log the results for analysis but do NOT mutate state,
-     * to avoid false-positive clears that kill the mirror.
-     *
-     * Runs on the main thread (single fast binder IPC, ~2-5 ms).
+     * If the process is gone, clears cluster bookkeeping and stops the mirror.
      */
     private void reconcileDisplayState() {
         final String clusterPkg = mCurrentDashboardPkg;
-        final String mainPkg    = mMainDisplayPkg;
-        if (clusterPkg == null && mainPkg == null) return;
+        if (clusterPkg == null) return;
 
-        try {
-            Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
-            Object iatm = atmClass.getMethod("getService").invoke(null);
-            @SuppressWarnings("unchecked")
-            java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
-                    .getMethod("getTasks", int.class).invoke(iatm, 50);
+        AdbLocalClient.executeShellWithResult(this, "pidof " + clusterPkg,
+                new AdbLocalClient.Callback() {
+                    @Override
+                    public void onSuccess(String output) {
+                        final boolean alive = output != null && !output.trim().isEmpty();
+                        if (alive) {
+                            AppLogger.d(TAG, "state-poll: " + clusterPkg
+                                    + " alive (pid " + output.trim() + ")");
+                            return;
+                        }
+                        // Process not found → app died externally
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                // Activity may have been destroyed while pidof was in flight.
+                                if (isFinishing() || isDestroyed()) return;
+                                // Re-check: still tracking the same package?
+                                if (!clusterPkg.equals(mCurrentDashboardPkg)) return;
+                                AppLogger.w(TAG, "state-poll: " + clusterPkg
+                                        + " process died → clearing cluster state");
+                                clearClusterState();
+                                stopClusterMirror();
+                            }
+                        });
+                    }
 
-            if (tasks == null || tasks.isEmpty()) {
-                AppLogger.w(TAG, "state-poll: getTasks() returned "
-                        + (tasks == null ? "null" : "empty")
-                        + " — cluster=" + clusterPkg + " main=" + mainPkg);
-                return;
-            }
-
-            // Resolve displayId field once (same class for every entry).
-            java.lang.reflect.Field displayIdField = null;
-            Object sample = tasks.get(0);
-            try {
-                displayIdField = sample.getClass().getField("displayId");
-            } catch (NoSuchFieldException e1) {
-                try {
-                    displayIdField = sample.getClass().getSuperclass().getField("displayId");
-                } catch (Exception ignored) { }
-            }
-
-            // ── Log ALL tasks for debugging ──
-            StringBuilder dbg = new StringBuilder("state-poll: ")
-                    .append(tasks.size()).append(" tasks — tracking cluster=")
-                    .append(clusterPkg).append(" main=").append(mainPkg).append("\n");
-
-            boolean clusterFound = false;
-            int     clusterDisplay = -1;
-            boolean mainFound = false;
-            int     mainDisplay = -1;
-
-            for (Object taskInfo : tasks) {
-                android.content.ComponentName base = null;
-                try {
-                    base = (android.content.ComponentName)
-                            taskInfo.getClass().getField("baseActivity").get(taskInfo);
-                } catch (Exception ignored) { }
-
-                android.content.ComponentName top = null;
-                try {
-                    top = (android.content.ComponentName)
-                            taskInfo.getClass().getField("topActivity").get(taskInfo);
-                } catch (Exception ignored) { }
-
-                int dId = -1;
-                if (displayIdField != null) {
-                    try { dId = displayIdField.getInt(taskInfo); } catch (Exception ignored) { }
-                }
-
-                String basePkg = (base != null) ? base.getPackageName() : null;
-                String topPkg  = (top  != null) ? top.getPackageName()  : null;
-                String matchPkg = (basePkg != null) ? basePkg : topPkg;
-
-                dbg.append("  task: base=").append(basePkg)
-                   .append(" top=").append(topPkg)
-                   .append(" display=").append(dId).append("\n");
-
-                if (matchPkg == null) continue;
-
-                if (clusterPkg != null && clusterPkg.equals(matchPkg)) {
-                    clusterFound = true;
-                    clusterDisplay = dId;
-                }
-                if (mainPkg != null && mainPkg.equals(matchPkg)) {
-                    mainFound = true;
-                    mainDisplay = dId;
-                }
-            }
-
-            dbg.append("  → clusterFound=").append(clusterFound)
-               .append(" clusterDisplay=").append(clusterDisplay)
-               .append(" mainFound=").append(mainFound)
-               .append(" mainDisplay=").append(mainDisplay);
-            AppLogger.i(TAG, dbg.toString());
-
-            // ── LOG ONLY — no state mutations ──
-            // When we confirm that getTasks() correctly reports VirtualDisplay
-            // tasks on DiLink, we can re-enable reconciliation.
-
-        } catch (Exception e) {
-            AppLogger.w(TAG, "state-poll failed: " + e.getMessage());
-        }
+                    @Override
+                    public void onError(String error) {
+                        AppLogger.w(TAG, "state-poll: pidof failed: " + error);
+                    }
+                });
     }
 
     /**
