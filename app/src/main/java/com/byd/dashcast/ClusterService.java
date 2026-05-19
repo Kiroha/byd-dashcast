@@ -63,6 +63,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
     private boolean                mProjectionActive = false;
+    /**
+     * Set to true in onDestroy().  Background threads ({@code move-task-thread})
+     * check this before posting results to {@link #mMainHandler} to avoid
+     * use-after-destroy NPEs on {@link #mLauncher} / {@link #mMirrorManager}.
+     */
+    private volatile boolean       mDestroyed = false;
     // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -115,6 +121,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         sIsRunning = false;
+        mDestroyed = true;
         mListener = null;
         // Cancel all pending Runnables on mMainHandler BEFORE release():
         // launchOnDashboard (postDelayed 2s) could post a callback
@@ -318,12 +325,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
                     mMainHandler.post(new Runnable() {
                         @Override public void run() {
+                            if (mDestroyed) return;
                             if (callback != null) callback.onResult(true);
                         }
                     });
 
                 } catch (Exception e) {
                     AppLogger.e(TAG, "moveTaskToDisplay error", e);
+                    if (mDestroyed) return;
                     fallbackLaunch(packageName, targetDisplayId, callback);
                 }
             }
@@ -334,6 +343,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                  final LaunchCallback callback) {
         mMainHandler.post(new Runnable() {
             @Override public void run() {
+                if (mDestroyed) return;
                 if (targetDisplayId > 0) {
                     launchOnDashboard(packageName, callback);
                 } else {
