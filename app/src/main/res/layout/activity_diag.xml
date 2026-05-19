@@ -451,6 +451,62 @@
                     android:textColor="@color/text_primary"
                     android:enabled="false"/>
             </LinearLayout>
+
+            <!-- ═══ Surface diagnostics : mesurer, OSD off, overscan 0 ═══ -->
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/bg_button_secondary" android:layout_marginVertical="10dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_surface_title"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_surface_desc"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_measure"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_measure"
+                    android:backgroundTint="#434C5E"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_osd_off"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_osd_off"
+                    android:backgroundTint="#B48EAD"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_osd_on"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_osd_on"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_overscan_zero"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_overscan_zero"
+                    android:backgroundTint="#88C0D0"
+                    android:textColor="@color/text_primary"/>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- 5. SNIFFER SYSTÈME (Reverse Engineering) -->
