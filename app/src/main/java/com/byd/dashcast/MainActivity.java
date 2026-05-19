@@ -669,12 +669,14 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.d(TAG, "Not starting ClusterService automatically. Waiting for user action.");
             }
         }
+        startStatePoll();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
+        stopStatePoll();
         // Remove the listener but keep the service active: projection continues.
         // Stop the mirror: the HandlerThread must not capture frames in the background.
         // The mirror restarts automatically via the savedItem mechanism in
@@ -1212,23 +1214,176 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // ---- External process-death detection -----------------------------------
+    // ---- Display state polling ----------------------------------------------
     //
-    // Removed in v0.1.43-alpha. The /proc-based watchdog and the OnUidImportanceListener
-    // before it both produced false positives on this platform:
-    //   - /proc is mounted with hidepid on Android 10, so a non-system app (uid=10xxx)
-    //     cannot see PIDs of third-party packages → findPid() always returned -1 → watchdog
-    //     incorrectly declared the app dead and cleared the cluster state.
-    //   - OnUidImportanceListener fired immediately after launch because apps on a secondary
-    //     VirtualDisplay (the cluster) are considered background by the importance model.
+    // History: /proc-based watchdog (v0.1.43) and OnUidImportanceListener both
+    // produced false positives on this platform — /proc hidepid prevents seeing
+    // third-party PIDs, and Importance model treats VirtualDisplay apps as
+    // "background" immediately after launch.
     //
-    // We now trust our own state (mCurrentDashboardPkg / mMainDisplayPkg). State is only
-    // cleared by explicit user actions (← Main, ✕ kill, restore, send-to-cluster of another
-    // app). If the app dies externally (OOM kill, etc.) the user can simply tap restore to
-    // reset everything — same UX as for the mirror, which is also preserved on transient
-    // failures.
-
+    // Current approach: poll IActivityTaskManager.getTasks() every 5 s while
+    // the Activity is visible. The binder call is fast (<5 ms) and gives us
+    // the real displayId for each task, so we can detect:
+    //   - an app that was OOM-killed / crashed (task no longer in the list)
+    //   - an app that was moved to a different display externally
+    //
+    // Started in onStart(), stopped in onStop().
     // -------------------------------------------------------------------------
+
+    private static final long STATE_POLL_INTERVAL_MS = 5_000;
+    private Runnable mStatePollRunnable;
+
+    private void startStatePoll() {
+        if (mStatePollRunnable != null) return;
+        mStatePollRunnable = new Runnable() {
+            @Override public void run() {
+                reconcileDisplayState();
+                mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
+            }
+        };
+        // First poll after 2 s — let state settle after onStart.
+        mScreenshotHandler.postDelayed(mStatePollRunnable, 2_000);
+    }
+
+    private void stopStatePoll() {
+        if (mStatePollRunnable != null) {
+            mScreenshotHandler.removeCallbacks(mStatePollRunnable);
+            mStatePollRunnable = null;
+        }
+    }
+
+    /**
+     * Queries IActivityTaskManager.getTasks() to verify that tracked apps
+     * are still running on the expected display.  Corrects stale bookkeeping
+     * when an app has died or been moved externally.
+     *
+     * Runs on the main thread (single fast binder IPC, ~2-5 ms).
+     */
+    private void reconcileDisplayState() {
+        final String clusterPkg = mCurrentDashboardPkg;
+        final String mainPkg    = mMainDisplayPkg;
+        if (clusterPkg == null && mainPkg == null) return;
+
+        try {
+            Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
+            Object iatm = atmClass.getMethod("getService").invoke(null);
+            @SuppressWarnings("unchecked")
+            java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
+                    .getMethod("getTasks", int.class).invoke(iatm, 50);
+            if (tasks == null || tasks.isEmpty()) return;
+
+            // Resolve displayId field once (same class for every entry).
+            java.lang.reflect.Field displayIdField = null;
+            Object sample = tasks.get(0);
+            try {
+                displayIdField = sample.getClass().getField("displayId");
+            } catch (NoSuchFieldException e1) {
+                try {
+                    displayIdField = sample.getClass().getSuperclass().getField("displayId");
+                } catch (Exception ignored) { }
+            }
+
+            boolean clusterFound = false;
+            int     clusterDisplay = -1;
+            boolean mainFound = false;
+            int     mainDisplay = -1;
+
+            for (Object taskInfo : tasks) {
+                android.content.ComponentName base = null;
+                try {
+                    base = (android.content.ComponentName)
+                            taskInfo.getClass().getField("baseActivity").get(taskInfo);
+                } catch (Exception ignored) { }
+                if (base == null) continue;
+
+                String pkg = base.getPackageName();
+                int dId = 0;
+                if (displayIdField != null) {
+                    try { dId = displayIdField.getInt(taskInfo); } catch (Exception ignored) { }
+                }
+
+                if (clusterPkg != null && clusterPkg.equals(pkg)) {
+                    clusterFound = true;
+                    clusterDisplay = dId;
+                }
+                if (mainPkg != null && mainPkg.equals(pkg)) {
+                    mainFound = true;
+                    mainDisplay = dId;
+                }
+                if ((clusterPkg == null || clusterFound) && (mainPkg == null || mainFound)) break;
+            }
+
+            // ── Reconcile cluster state ──
+            if (clusterPkg != null) {
+                if (!clusterFound) {
+                    // App is dead → clear cluster state.
+                    AppLogger.i(TAG, "state-poll: " + clusterPkg + " no longer running → clearing cluster");
+                    clearClusterState();
+                } else if (clusterDisplay == 0) {
+                    // App was moved to main display externally.
+                    AppLogger.i(TAG, "state-poll: " + clusterPkg + " moved to display 0 → reconciling");
+                    clearClusterState();
+                    // Mark it as on the main display.
+                    mMainDisplayPkg = clusterPkg;
+                    mAdapter.setMainPackage(clusterPkg);
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .putString(PREF_MAIN_PKG, clusterPkg).apply();
+                }
+            }
+
+            // ── Reconcile main-display state ──
+            if (mainPkg != null && !mainPkg.equals(mCurrentDashboardPkg)) {
+                if (!mainFound) {
+                    AppLogger.i(TAG, "state-poll: " + mainPkg + " no longer running → clearing main");
+                    mMainDisplayPkg = null;
+                    mAdapter.setMainPackage(null);
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .remove(PREF_MAIN_PKG).apply();
+                } else if (mainDisplay != 0) {
+                    // App was moved to cluster externally.
+                    AppLogger.i(TAG, "state-poll: " + mainPkg + " now on display " + mainDisplay
+                            + " → reconciling as cluster");
+                    mMainDisplayPkg = null;
+                    mAdapter.setMainPackage(null);
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .remove(PREF_MAIN_PKG).apply();
+                    if (mCurrentDashboardPkg == null) {
+                        mCurrentDashboardPkg = mainPkg;
+                        String name = mainPkg;
+                        try {
+                            android.content.pm.ApplicationInfo ai =
+                                    getPackageManager().getApplicationInfo(mainPkg, 0);
+                            CharSequence label = getPackageManager().getApplicationLabel(ai);
+                            if (label != null) name = label.toString();
+                        } catch (Exception ignored) { }
+                        mCurrentDashboardApp = name;
+                        mAdapter.setCurrentPackage(mainPkg);
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                                .putString(PREF_CLUSTER_PKG, mainPkg)
+                                .putString(PREF_CLUSTER_NAME, name).apply();
+                        updateDashboardStatus(name);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            AppLogger.w(TAG, "state-poll failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Clears all cluster-app bookkeeping and returns to the app list.
+     * Shared by reconcileDisplayState and other paths that need a clean reset.
+     */
+    private void clearClusterState() {
+        trackUsageStop(mCurrentDashboardPkg);
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+        updateDashboardStatus(null);
+        showAppList();
+    }
 
     // -------------------------------------------------------------------------
 
