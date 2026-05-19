@@ -71,6 +71,10 @@ public class DiagActivity extends AppCompatActivity {
     private Button        btnFissionViaBinder;
     private Button        btnFissionPipeline;
     private Button        btnFissionLaunch;
+    private Button        btnFissionMeasure;
+    private Button        btnFissionOsdOff;
+    private Button        btnFissionOsdOn;
+    private Button        btnFissionOverscanZero;
     private TextView      tvFissionResult;
     private int           mFissionDisplayId = -1;
 
@@ -167,7 +171,11 @@ public class DiagActivity extends AppCompatActivity {
         btnFissionViaBinder = (Button)   findViewById(R.id.btn_fission_via_binder);
         btnFissionPipeline  = (Button)   findViewById(R.id.btn_fission_pipeline);
         btnFissionLaunch    = (Button)   findViewById(R.id.btn_fission_launch);
-        tvFissionResult     = (TextView) findViewById(R.id.tv_fission_result);
+        tvFissionResult        = (TextView) findViewById(R.id.tv_fission_result);
+        btnFissionMeasure     = (Button)   findViewById(R.id.btn_fission_measure);
+        btnFissionOsdOff      = (Button)   findViewById(R.id.btn_fission_osd_off);
+        btnFissionOsdOn       = (Button)   findViewById(R.id.btn_fission_osd_on);
+        btnFissionOverscanZero= (Button)   findViewById(R.id.btn_fission_overscan_zero);
         tvFissionResult.setTag("Fission Pipeline");
         tvAutoDisplayResult.setTag("AutoDisplayService");
 
@@ -236,9 +244,13 @@ public class DiagActivity extends AppCompatActivity {
         btnAutoDisplayStart.setOnClickListener(v -> startAutoDisplayService());
         btnAutoDisplayStop .setOnClickListener(v -> stopAutoDisplayService());
 
-        btnFissionViaBinder.setOnClickListener(v -> runFissionViaBinder());
-        btnFissionPipeline.setOnClickListener(v -> runFissionPipeline());
-        btnFissionLaunch  .setOnClickListener(v -> launchOnFissionDisplay());
+        btnFissionViaBinder   .setOnClickListener(v -> runFissionViaBinder());
+        btnFissionPipeline   .setOnClickListener(v -> runFissionPipeline());
+        btnFissionLaunch     .setOnClickListener(v -> launchOnFissionDisplay());
+        btnFissionMeasure    .setOnClickListener(v -> measureFissionSurface());
+        btnFissionOsdOff     .setOnClickListener(v -> sendInfoOsdOff());
+        btnFissionOsdOn      .setOnClickListener(v -> sendInfoOsdOn());
+        btnFissionOverscanZero.setOnClickListener(v -> resetFissionOverscan());
 
         btnTest13.setOnClickListener(v -> runJniSurfaceProbe());
         btnJniStartProbe.setOnClickListener(v -> runStartAndProbe());
@@ -1045,6 +1057,111 @@ public class DiagActivity extends AppCompatActivity {
                 tvFissionResult.setText(res.toString());
                 btnFissionLaunch.setEnabled(true);
             });
+        }).start();
+    }
+
+    // =========================================================================
+    // SURFACE CLUSTER — Diagnostics dimensions / OSD / overscan
+    // =========================================================================
+
+    /** Mesure les dimensions réelles du VirtualDisplay Fission via DisplayManager + wm + dumpsys. */
+    private void measureFissionSurface() {
+        if (mFissionDisplayId == -1) {
+            tvFissionResult.setText(getString(R.string.diag_fission_measure_no_display));
+            return;
+        }
+        tvFissionResult.setText("🔍 Mesure en cours...");
+        final int displayId = mFissionDisplayId;
+
+        new Thread(() -> {
+            StringBuilder sb = new StringBuilder();
+
+            // 1) DisplayManager Java — dimensions logiques du display
+            android.hardware.display.DisplayManager dm =
+                    (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
+            android.view.Display d = dm.getDisplay(displayId);
+            if (d != null) {
+                android.graphics.Point sz = new android.graphics.Point();
+                d.getRealSize(sz);
+                android.view.Display.Mode mode = d.getMode();
+                sb.append("DisplayManager:\n");
+                sb.append("  id=").append(displayId)
+                  .append("  name=\"").append(d.getName()).append("\"\n");
+                sb.append("  getRealSize → ").append(sz.x).append("×").append(sz.y).append("\n");
+                sb.append("  mode → ").append(mode.getPhysicalWidth())
+                  .append("×").append(mode.getPhysicalHeight())
+                  .append(" @").append(mode.getRefreshRate()).append("Hz\n\n");
+            } else {
+                sb.append("⚠ DisplayManager.getDisplay(").append(displayId)
+                  .append(") → null\n\n");
+            }
+
+            // 2) wm size
+            sb.append("── wm size -d ").append(displayId).append(" ──\n");
+            sb.append(shellSync("wm size -d " + displayId)).append("\n\n");
+
+            // 3) wm overscan
+            sb.append("── wm overscan -d ").append(displayId).append(" ──\n");
+            sb.append(shellSync("wm overscan -d " + displayId)).append("\n\n");
+
+            // 4) dumpsys display (filtre sur l'id du display)
+            sb.append("── dumpsys display | grep mDisplayId=").append(displayId).append(" ──\n");
+            sb.append(shellSync(
+                "dumpsys display 2>&1 | grep -A 40 'mDisplayId=" + displayId + "' | head -50"))
+              .append("\n");
+
+            AppLogger.i("FissionMeasure", sb.toString());
+            safeRunOnUiThread(() -> tvFissionResult.setText(sb.toString()));
+        }).start();
+    }
+
+    /**
+     * Envoie sendInfo(1000, 20) = "OSD off" — candidat pour masquer les overlays HUD Qt
+     * (vitesse / batterie / gear) et récupérer la surface complète du cluster.
+     */
+    private void sendInfoOsdOff() {
+        tvFissionResult.setText("⏳ sendInfo(1000, 20) → OSD Off...");
+        AdbLocalClient.sendInfo(this, 1000, 20, "", (success, output) ->
+            safeRunOnUiThread(() -> {
+                String status = success ? "✅ OK" : "❌ Échec";
+                tvFissionResult.setText("sendInfo(1000, 20) [OSD Off] → " + status
+                    + "\n\n" + (output != null ? output : ""));
+                AppLogger.i("FissionOsdOff", "sendInfo(1000,20) success=" + success + " out=" + output);
+            })
+        );
+    }
+
+    /** Envoie sendInfo(1000, 19) = "OSD on" — réactive les overlays HUD Qt natifs. */
+    private void sendInfoOsdOn() {
+        tvFissionResult.setText("⏳ sendInfo(1000, 19) → OSD On...");
+        AdbLocalClient.sendInfo(this, 1000, 19, "", (success, output) ->
+            safeRunOnUiThread(() -> {
+                String status = success ? "✅ OK" : "❌ Échec";
+                tvFissionResult.setText("sendInfo(1000, 19) [OSD On] → " + status
+                    + "\n\n" + (output != null ? output : ""));
+                AppLogger.i("FissionOsdOn", "sendInfo(1000,19) success=" + success + " out=" + output);
+            })
+        );
+    }
+
+    /** Applique wm overscan 0,0,0,0 sur le display Fission pour supprimer toute marge artificielle. */
+    private void resetFissionOverscan() {
+        if (mFissionDisplayId == -1) {
+            tvFissionResult.setText(getString(R.string.diag_fission_measure_no_display));
+            return;
+        }
+        tvFissionResult.setText("⏳ overscan 0,0,0,0 -d " + mFissionDisplayId + "...");
+        final int displayId = mFissionDisplayId;
+
+        new Thread(() -> {
+            String r1 = shellSync("wm overscan 0,0,0,0 -d " + displayId);
+            String r2 = shellSync("wm size -d " + displayId);
+            String r3 = shellSync("wm overscan -d " + displayId);
+            String out = "wm overscan 0,0,0,0 → " + (r1.isEmpty() ? "(ok)" : r1)
+                + "\nwm size → " + r2
+                + "\nwm overscan → " + r3;
+            AppLogger.i("FissionOverscan", out);
+            safeRunOnUiThread(() -> tvFissionResult.setText(out));
         }).start();
     }
 
