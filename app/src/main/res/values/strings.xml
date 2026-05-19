@@ -115,10 +115,8 @@
     <string name="diag_btn_fission_create">🚀 Créer Fission Display</string>
     <string name="diag_btn_fission_launch">▶ Lancer Dashboard</string>
     <string name="diag_fission_surface_title">Surface cluster — Diagnostic</string>
-    <string name="diag_fission_surface_desc">Mesure les dimensions réelles du VirtualDisplay. OSD Off tente de masquer les overlays HUD Qt (vitesse/batterie). Overscan 0 supprime toute marge sur le display cluster.</string>
+    <string name="diag_fission_surface_desc">Mesure les dimensions réelles du VirtualDisplay (DisplayManager + dumpsys). Overscan 0 supprime toute marge sur le display cluster.</string>
     <string name="diag_btn_fission_measure">🔍 Mesurer surface</string>
-    <string name="diag_btn_fission_osd_off">OSD Off (cmd=20)</string>
-    <string name="diag_btn_fission_osd_on">OSD On (cmd=19)</string>
     <string name="diag_btn_fission_overscan_zero">Overscan 0,0,0,0</string>
     <string name="diag_fission_measure_no_display">❌ Aucun display Fission actif — lancer le pipeline d\'abord</string>
     <string name="diag_s5_title">5. Sniffer Système (Reverse Engineering)</string>

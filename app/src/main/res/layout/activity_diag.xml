@@ -452,7 +452,7 @@
                     android:enabled="false"/>
             </LinearLayout>
 
-            <!-- ═══ Surface diagnostics : mesurer, OSD off, overscan 0 ═══ -->
+            <!-- ═══ Surface diagnostics : mesurer, overscan 0 ═══ -->
             <View android:layout_width="match_parent" android:layout_height="1dp"
                 android:background="@color/bg_button_secondary" android:layout_marginVertical="10dp"/>
             <TextView
@@ -478,24 +478,6 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_fission_measure"
                     android:backgroundTint="#434C5E"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginRight="4dp"/>
-                <Button
-                    android:id="@+id/btn_fission_osd_off"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="@string/diag_btn_fission_osd_off"
-                    android:backgroundTint="#B48EAD"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginRight="4dp"/>
-                <Button
-                    android:id="@+id/btn_fission_osd_on"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="@string/diag_btn_fission_osd_on"
-                    android:backgroundTint="#A3BE8C"
                     android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
