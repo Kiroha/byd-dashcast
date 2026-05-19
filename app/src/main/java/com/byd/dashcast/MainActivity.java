@@ -704,6 +704,14 @@ public class MainActivity extends AppCompatActivity
             mServiceBound  = false;
             mBindRequested = false;
         }
+        // Release the preview Surface wrapping the TextureView SurfaceTexture so
+        // it is not retained until GC (the underlying SurfaceTexture is released
+        // by the framework when the TextureView is destroyed, but the Surface
+        // wrapper itself must be released explicitly).
+        if (mMirrorSurface != null) {
+            try { mMirrorSurface.release(); } catch (Exception ignored) {}
+            mMirrorSurface = null;
+        }
     }
 
     // ---- ClusterService.Listener ----

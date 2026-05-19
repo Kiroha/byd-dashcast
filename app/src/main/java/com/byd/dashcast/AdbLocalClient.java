@@ -585,7 +585,16 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    String safeStr = (infoStr != null ? infoStr : "").replace("\"", "\\\"");
+                    // Escape shell metacharacters inside the double-quoted argument:
+                    //   \  → must be first to avoid double-escaping
+                    //   "  → terminates the quoted string
+                    //   $  → triggers variable / arithmetic / command expansion
+                    //   `  → triggers command substitution
+                    String safeStr = (infoStr != null ? infoStr : "")
+                            .replace("\\", "\\\\")
+                            .replace("\"", "\\\"")
+                            .replace("$",  "\\$")
+                            .replace("`",  "\\`");
                     String cmd = "service call AutoContainer 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
