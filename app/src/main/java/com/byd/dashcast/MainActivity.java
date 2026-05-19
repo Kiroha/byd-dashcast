@@ -1448,7 +1448,9 @@ public class MainActivity extends AppCompatActivity
                 new java.lang.ref.WeakReference<>(this);
         mScreenshotRunnable = new Runnable() {
             @Override public void run() {
-                AdbLocalClient.captureClusterDisplay(MainActivity.this, displayId,
+                // Use applicationContext so an inflight ADB capture does not keep
+                // a strong reference to the Activity via sExecutor's task queue.
+                AdbLocalClient.captureClusterDisplay(getApplicationContext(), displayId,
                         new AdbLocalClient.BitmapCallback() {
                     @Override public void onBitmap(final Bitmap bm) {
                         runOnUiThread(new Runnable() {

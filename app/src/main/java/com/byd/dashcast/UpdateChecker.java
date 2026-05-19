@@ -200,6 +200,11 @@ public class UpdateChecker {
                 String location = conn.getHeaderField("Location");
                 conn.disconnect();
                 if (location == null) throw new Exception("Redirect " + code + " with no Location header");
+                // Reject HTTPS->HTTP downgrade. GitHub CDN always uses HTTPS; if a
+                // redirect points elsewhere it is either misconfigured or hostile.
+                if (!location.toLowerCase(java.util.Locale.ROOT).startsWith("https://")) {
+                    throw new Exception("Insecure redirect target: " + location);
+                }
                 conn = openConnection(location);
                 code = conn.getResponseCode();
                 redirectCount++;
