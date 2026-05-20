@@ -77,4 +77,8 @@
     <color name="md_success_container">#C8E6C9</color>
     <color name="md_warn">#E65100</color>
     <color name="md_warn_container">#FFD9B3</color>
+    <!-- v0.9.81 — Diag status pill colors -->
+    <color name="md_status_ok">#2E7D32</color>
+    <color name="md_status_warn">#E65100</color>
+    <color name="md_status_err">#BA1A1A</color>
 </resources>

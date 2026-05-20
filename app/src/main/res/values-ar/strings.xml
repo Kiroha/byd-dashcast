@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">العرض متوقف</string>
     <string name="main_btn_exit_fullscreen">الخروج من ملء الشاشة</string>
     <string name="main_favorites_empty">لا توجد مفضلة — اضغط مطولاً لإضافة تطبيق</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">كل الأنظمة سليمة</string>
+    <string name="diag_card_mirror_title">اختبار مرآة العنقود</string>
+    <string name="diag_card_mirror_desc">ينشئ VirtualDisplay ويتحقق من الاتصال</string>
+    <string name="diag_card_capture_title">لقطة العنقود</string>
+    <string name="diag_card_capture_desc">يلتقط لقطة شاشة للشاشة الثانوية</string>
+    <string name="diag_card_restart_title">إعادة تشغيل ClusterService</string>
+    <string name="diag_card_restart_desc">إيقاف وتشغيل نظيف لخدمة أندرويد</string>
+    <string name="diag_card_adb_title">التحقق من ADB المحلي</string>
+    <string name="diag_card_adb_desc">Handshake على 127.0.0.1:5555</string>
+    <string name="diag_card_perms_title">التحقق من الأذونات</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT وSYSTEM_ALERT_WINDOW وغيرها</string>
+    <string name="diag_btn_reset_cluster_config">إعادة تعيين تكوين العنقود</string>
+    <string name="diag_advanced_section_title">أدوات متقدمة</string>
+    <string name="diag_result_empty">اختر اختبارًا لعرض النتيجة</string>
+    <string name="diag_result_success">نجاح</string>
+    <string name="diag_result_running">قيد التشغيل</string>
+    <string name="diag_result_error">خطأ</string>
+    <string name="diag_result_warn">تنبيه</string>
+    <string name="diag_btn_copy">نسخ</string>
+    <string name="diag_btn_share_only">مشاركة</string>
+    <string name="diag_btn_rerun">إعادة التشغيل</string>
+    <string name="diag_running_msg">جارٍ تشغيل الاختبار…</string>
+    <string name="diag_toast_copied">تم نسخ النتيجة</string>
+    <string name="diag_reset_cluster_confirm_title">إعادة تعيين تكوين العنقود</string>
+    <string name="diag_reset_cluster_confirm_msg">سيؤدي هذا إلى إيقاف ClusterService وإغلاق الإسقاط (sendInfo 18 + 0) وإعادة إنشاء الخدمة. هل تريد المتابعة؟</string>
 </resources>

@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity
     private View     llAppListSection;  // wrapper for title header + search bar
     private Button   btnActivateCluster;
     private Button   btnRestoreCluster;
-    private Button   btnOverflow;
+    private android.widget.ImageView ivNavLogo; // v0.9.81: long-press = overflow menu
     private Button   btnShowMirror;
     private Button   btnSplitLayout;
     private Button   btnRelaunch;
@@ -312,7 +312,7 @@ public class MainActivity extends AppCompatActivity
         if (mStatusDot != null) mStatusDot.setBackground(mStatusDotDrawable);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
-        btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
+        ivNavLogo           = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
         btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
         llAppListSection    = (View)     findViewById(R.id.ll_app_list_section);
         rvApps             = (RecyclerView) findViewById(R.id.rv_apps);
@@ -402,13 +402,16 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) { toggleViewMode(); }
         });
 
-        // Button ⋮ overflow — dev tools + manual activation
-        btnOverflow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showOverflowMenu(v);
-            }
-        });
+        // v0.9.81 — Long-press the nav rail logo opens the overflow menu (Language,
+        // Updates, View toggle, Origin Cluster, Stats). The clock + ⋮ button are gone.
+        if (ivNavLogo != null) {
+            ivNavLogo.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override public boolean onLongClick(View v) {
+                    showOverflowMenu(v);
+                    return true;
+                }
+            });
+        }
 
         // Button 📺 Mirror — v0.9.74: open the pseudo-fullscreen tactile mirror.
         btnShowMirror.setOnClickListener(new View.OnClickListener() {

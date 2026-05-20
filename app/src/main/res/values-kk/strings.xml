@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Проекция өшірулі</string>
     <string name="main_btn_exit_fullscreen">Толық экраннан шығу</string>
     <string name="main_favorites_empty">Таңдаулылар жоқ — қосу үшін ұзақ басыңыз</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">Барлық жүйе OK</string>
+    <string name="diag_card_mirror_title">Кластер айнасын тексеру</string>
+    <string name="diag_card_mirror_desc">VirtualDisplay жасайды және байланысты тексереді</string>
+    <string name="diag_card_capture_title">Кластер скриншоты</string>
+    <string name="diag_card_capture_desc">Қосалқы экранның скриншотын жасайды</string>
+    <string name="diag_card_restart_title">ClusterService\'ті қайта іске қосу</string>
+    <string name="diag_card_restart_desc">Android қызметінің таза stop + start</string>
+    <string name="diag_card_adb_title">Жергілікті ADB тексеру</string>
+    <string name="diag_card_adb_desc">127.0.0.1:5555 қол алысу</string>
+    <string name="diag_card_perms_title">Рұқсаттарды тексеру</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW т.б.</string>
+    <string name="diag_btn_reset_cluster_config">Кластер баптауын қалпына келтіру</string>
+    <string name="diag_advanced_section_title">Қосымша құралдар</string>
+    <string name="diag_result_empty">Нәтижені көру үшін тестті таңдаңыз</string>
+    <string name="diag_result_success">Сәттілік</string>
+    <string name="diag_result_running">Орындалуда</string>
+    <string name="diag_result_error">Қате</string>
+    <string name="diag_result_warn">Ескерту</string>
+    <string name="diag_btn_copy">Көшіру</string>
+    <string name="diag_btn_share_only">Бөлісу</string>
+    <string name="diag_btn_rerun">Қайта</string>
+    <string name="diag_running_msg">Тест орындалуда…</string>
+    <string name="diag_toast_copied">Нәтиже көшірілді</string>
+    <string name="diag_reset_cluster_confirm_title">Кластер баптауын қалпына келтіру</string>
+    <string name="diag_reset_cluster_confirm_msg">Бұл ClusterService тоқтатады, проекцияны (sendInfo 18 + 0) жабады және қызметті қайта жасайды. Жалғастырылсын ба?</string>
 </resources>

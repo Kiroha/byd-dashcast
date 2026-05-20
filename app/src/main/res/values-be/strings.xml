@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Праекцыя выключана</string>
     <string name="main_btn_exit_fullscreen">Выйсці з поўнага экрана</string>
     <string name="main_favorites_empty">Няма ўлюбёных — націсніце доўга, каб дадаць</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">Усе сістэмы OK</string>
+    <string name="diag_card_mirror_title">Праверыць люстэрка кластара</string>
+    <string name="diag_card_mirror_desc">Стварае VirtualDisplay і правярае сувязь</string>
+    <string name="diag_card_capture_title">Здымак кластара</string>
+    <string name="diag_card_capture_desc">Робіць скрыншот другаснага экрана</string>
+    <string name="diag_card_restart_title">Перазапусціць ClusterService</string>
+    <string name="diag_card_restart_desc">Чысты stop + start службы Android</string>
+    <string name="diag_card_adb_title">Праверыць лакальны ADB</string>
+    <string name="diag_card_adb_desc">Handshake на 127.0.0.1:5555</string>
+    <string name="diag_card_perms_title">Праверыць дазволы</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW і інш.</string>
+    <string name="diag_btn_reset_cluster_config">Скід канфігурацыі кластара</string>
+    <string name="diag_advanced_section_title">Пашыраныя інструменты</string>
+    <string name="diag_result_empty">Абярыце тэст, каб убачыць вынік</string>
+    <string name="diag_result_success">Поспех</string>
+    <string name="diag_result_running">Выконваецца</string>
+    <string name="diag_result_error">Памылка</string>
+    <string name="diag_result_warn">Увага</string>
+    <string name="diag_btn_copy">Капіяваць</string>
+    <string name="diag_btn_share_only">Падзяліцца</string>
+    <string name="diag_btn_rerun">Паўтарыць</string>
+    <string name="diag_running_msg">Тэст выконваецца…</string>
+    <string name="diag_toast_copied">Вынік скапіяваны</string>
+    <string name="diag_reset_cluster_confirm_title">Скід канфігурацыі кластара</string>
+    <string name="diag_reset_cluster_confirm_msg">Гэта спыніць ClusterService, закрые праекцыю (sendInfo 18 + 0) і пераствае службу. Працягнуць?</string>
 </resources>

@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Проекция отключена</string>
     <string name="main_btn_exit_fullscreen">Выйти из полного экрана</string>
     <string name="main_favorites_empty">Нет избранных — долгое нажатие, чтобы добавить</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">Все системы OK</string>
+    <string name="diag_card_mirror_title">Проверить зеркало кластера</string>
+    <string name="diag_card_mirror_desc">Создаёт VirtualDisplay и проверяет связь</string>
+    <string name="diag_card_capture_title">Снимок кластера</string>
+    <string name="diag_card_capture_desc">Создаёт скриншот вторичного экрана</string>
+    <string name="diag_card_restart_title">Перезапустить ClusterService</string>
+    <string name="diag_card_restart_desc">Чистый stop + start службы Android</string>
+    <string name="diag_card_adb_title">Проверить локальный ADB</string>
+    <string name="diag_card_adb_desc">Handshake на 127.0.0.1:5555</string>
+    <string name="diag_card_perms_title">Проверить разрешения</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW и др.</string>
+    <string name="diag_btn_reset_cluster_config">Сбросить настройки кластера</string>
+    <string name="diag_advanced_section_title">Расширенные инструменты</string>
+    <string name="diag_result_empty">Выберите тест, чтобы увидеть результат</string>
+    <string name="diag_result_success">Успех</string>
+    <string name="diag_result_running">Выполняется</string>
+    <string name="diag_result_error">Ошибка</string>
+    <string name="diag_result_warn">Внимание</string>
+    <string name="diag_btn_copy">Копировать</string>
+    <string name="diag_btn_share_only">Поделиться</string>
+    <string name="diag_btn_rerun">Запустить снова</string>
+    <string name="diag_running_msg">Тест выполняется…</string>
+    <string name="diag_toast_copied">Результат скопирован</string>
+    <string name="diag_reset_cluster_confirm_title">Сбросить настройки кластера</string>
+    <string name="diag_reset_cluster_confirm_msg">Это остановит ClusterService, закроет проекцию (sendInfo 18 + 0) и пересоздаст службу. Продолжить?</string>
 </resources>

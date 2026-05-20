@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Proiezione disattivata</string>
     <string name="main_btn_exit_fullscreen">Esci da schermo intero</string>
     <string name="main_favorites_empty">Nessun preferito — tieni premuto un\'app per aggiungerla</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">Tutto OK</string>
+    <string name="diag_card_mirror_title">Testa mirror cluster</string>
+    <string name="diag_card_mirror_desc">Crea un VirtualDisplay e verifica la connessione</string>
+    <string name="diag_card_capture_title">Cattura cluster</string>
+    <string name="diag_card_capture_desc">Genera uno screenshot dello schermo secondario</string>
+    <string name="diag_card_restart_title">Riavvia ClusterService</string>
+    <string name="diag_card_restart_desc">Stop + start pulito del servizio Android</string>
+    <string name="diag_card_adb_title">Verifica ADB locale</string>
+    <string name="diag_card_adb_desc">Handshake su 127.0.0.1:5555</string>
+    <string name="diag_card_perms_title">Verifica permessi</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW, ecc.</string>
+    <string name="diag_btn_reset_cluster_config">Reimposta configurazione cluster</string>
+    <string name="diag_advanced_section_title">Strumenti avanzati</string>
+    <string name="diag_result_empty">Seleziona un test per vedere il risultato</string>
+    <string name="diag_result_success">Successo</string>
+    <string name="diag_result_running">In corso</string>
+    <string name="diag_result_error">Errore</string>
+    <string name="diag_result_warn">Attenzione</string>
+    <string name="diag_btn_copy">Copia</string>
+    <string name="diag_btn_share_only">Condividi</string>
+    <string name="diag_btn_rerun">Riavvia</string>
+    <string name="diag_running_msg">Test in corso…</string>
+    <string name="diag_toast_copied">Risultato copiato</string>
+    <string name="diag_reset_cluster_confirm_title">Reimposta configurazione cluster</string>
+    <string name="diag_reset_cluster_confirm_msg">Questo arresterà ClusterService, chiuderà la proiezione (sendInfo 18 + 0) e ricreerà il servizio. Continuare?</string>
 </resources>

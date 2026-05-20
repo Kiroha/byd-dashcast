@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Projection off</string>
     <string name="main_btn_exit_fullscreen">Exit fullscreen</string>
     <string name="main_favorites_empty">No favorites — long-press an app to add one</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">All systems OK</string>
+    <string name="diag_card_mirror_title">Test cluster mirror</string>
+    <string name="diag_card_mirror_desc">Creates a VirtualDisplay and checks the link</string>
+    <string name="diag_card_capture_title">Capture cluster</string>
+    <string name="diag_card_capture_desc">Takes a screenshot of the secondary screen</string>
+    <string name="diag_card_restart_title">Restart ClusterService</string>
+    <string name="diag_card_restart_desc">Clean stop + start of the Android service</string>
+    <string name="diag_card_adb_title">Check local ADB</string>
+    <string name="diag_card_adb_desc">Handshake on 127.0.0.1:5555</string>
+    <string name="diag_card_perms_title">Check permissions</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW, etc.</string>
+    <string name="diag_btn_reset_cluster_config">Reset cluster configuration</string>
+    <string name="diag_advanced_section_title">Advanced tools</string>
+    <string name="diag_result_empty">Select a test to see the result</string>
+    <string name="diag_result_success">Success</string>
+    <string name="diag_result_running">Running</string>
+    <string name="diag_result_error">Error</string>
+    <string name="diag_result_warn">Warning</string>
+    <string name="diag_btn_copy">Copy</string>
+    <string name="diag_btn_share_only">Share</string>
+    <string name="diag_btn_rerun">Re-run</string>
+    <string name="diag_running_msg">Test running…</string>
+    <string name="diag_toast_copied">Result copied</string>
+    <string name="diag_reset_cluster_confirm_title">Reset cluster configuration</string>
+    <string name="diag_reset_cluster_confirm_msg">This will stop ClusterService, close projection (sendInfo 18 + 0) and recreate the service. Continue?</string>
 </resources>

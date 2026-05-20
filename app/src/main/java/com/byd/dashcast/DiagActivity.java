@@ -104,6 +104,25 @@ public class DiagActivity extends AppCompatActivity {
     /** Set to true in onDestroy so background threads skip stale UI posts. */
     private volatile boolean mDestroyed = false;
 
+    // ─────────── v0.9.81 — M3 result panel + highlight cards ───────────
+    private android.view.View       cardDiagMirror, cardDiagCapture, cardDiagRestart, cardDiagAdb, cardDiagPerms;
+    private android.widget.ImageView ivCardMirrorIcon;
+    private TextView tvCardMirrorBadge, tvCardCaptureBadge, tvCardRestartBadge, tvCardAdbBadge, tvCardPermsBadge;
+    private android.view.View       llDiagResultEmpty, llDiagResultHeader, llDiagResultActions, svDiagResultOutput;
+    private TextView tvDiagResultTitle, tvDiagResultTime, tvDiagResultBadge, tvDiagResultOutput;
+    private android.view.View       llDiagResultBadge;
+    private android.widget.ImageView ivDiagResultBadgeIcon;
+    private android.view.View       llDiagAdvancedToggle, llDiagAdvancedSection;
+    private android.widget.ImageView ivDiagAdvancedChevron;
+    private boolean mAdvancedOpen = false;
+    /** Identifier of the last test run, for the "Re-run" button. */
+    private int mLastDiagTestId = 0;
+    private static final int DIAG_T_MIRROR  = 1;
+    private static final int DIAG_T_CAPTURE = 2;
+    private static final int DIAG_T_RESTART = 3;
+    private static final int DIAG_T_ADB     = 4;
+    private static final int DIAG_T_PERMS   = 5;
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -339,6 +358,9 @@ public class DiagActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) { runClusterDisplaySizeTest(); }
         });
+
+        // ════════════ v0.9.81 — M3 highlight cards + result panel ════════════
+        setupDiagM3Layout();
 
     }
 
@@ -1821,5 +1843,296 @@ public class DiagActivity extends AppCompatActivity {
                 AppLogger.i("Cleanup", finalDeleted + " file(s) deleted, remaining: " + sizeStr);
             });
         }, "cleanup-thread").start();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // v0.9.81 — DiagActivity M3 redesign: highlight cards + result panel
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** Wire all the new M3 layout elements: 5 highlight cards, result panel,
+     *  Outils avancés toggle, nav rail, Reset button. */
+    private void setupDiagM3Layout() {
+        // ── Highlight cards ──
+        cardDiagMirror   = findViewById(R.id.card_diag_mirror);
+        cardDiagCapture  = findViewById(R.id.card_diag_capture);
+        cardDiagRestart  = findViewById(R.id.card_diag_restart);
+        cardDiagAdb      = findViewById(R.id.card_diag_adb);
+        cardDiagPerms    = findViewById(R.id.card_diag_perms);
+        ivCardMirrorIcon   = findViewById(R.id.iv_card_mirror_icon);
+        tvCardMirrorBadge  = findViewById(R.id.tv_card_mirror_badge);
+        tvCardCaptureBadge = findViewById(R.id.tv_card_capture_badge);
+        tvCardRestartBadge = findViewById(R.id.tv_card_restart_badge);
+        tvCardAdbBadge     = findViewById(R.id.tv_card_adb_badge);
+        tvCardPermsBadge   = findViewById(R.id.tv_card_perms_badge);
+
+        cardDiagMirror.setOnClickListener(v -> runDiagCardMirror());
+        cardDiagCapture.setOnClickListener(v -> runDiagCardCapture());
+        cardDiagRestart.setOnClickListener(v -> runDiagCardRestart());
+        cardDiagAdb.setOnClickListener(v -> runDiagCardAdb());
+        cardDiagPerms.setOnClickListener(v -> runDiagCardPerms());
+
+        // ── Result panel ──
+        llDiagResultEmpty   = findViewById(R.id.ll_diag_result_empty);
+        llDiagResultHeader  = findViewById(R.id.ll_diag_result_header);
+        llDiagResultActions = findViewById(R.id.ll_diag_result_actions);
+        svDiagResultOutput  = findViewById(R.id.sv_diag_result_output);
+        tvDiagResultTitle   = findViewById(R.id.tv_diag_result_title);
+        tvDiagResultTime    = findViewById(R.id.tv_diag_result_time);
+        tvDiagResultBadge   = findViewById(R.id.tv_diag_result_badge);
+        tvDiagResultOutput  = findViewById(R.id.tv_diag_result_output);
+        llDiagResultBadge   = findViewById(R.id.ll_diag_result_badge);
+        ivDiagResultBadgeIcon = findViewById(R.id.iv_diag_result_badge_icon);
+
+        findViewById(R.id.btn_diag_result_copy).setOnClickListener(v -> diagCopyResult());
+        findViewById(R.id.btn_diag_result_share).setOnClickListener(v -> diagShareResult());
+        findViewById(R.id.btn_diag_result_rerun).setOnClickListener(v -> diagRerunResult());
+
+        // ── Reset cluster config ──
+        findViewById(R.id.btn_diag_reset_cluster_config).setOnClickListener(v -> {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.diag_reset_cluster_confirm_title)
+                    .setMessage(R.string.diag_reset_cluster_confirm_msg)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> doResetClusterConfig())
+                    .show();
+        });
+
+        // ── Outils avancés toggle ──
+        llDiagAdvancedToggle  = findViewById(R.id.ll_diag_advanced_toggle);
+        llDiagAdvancedSection = findViewById(R.id.ll_diag_advanced_section);
+        ivDiagAdvancedChevron = findViewById(R.id.iv_diag_advanced_chevron);
+        llDiagAdvancedToggle.setOnClickListener(v -> toggleDiagAdvancedSection());
+
+        // ── Nav rail ──
+        android.view.View navApps     = findViewById(R.id.nav_apps_diag);
+        android.view.View navSettings = findViewById(R.id.nav_settings_diag);
+        android.view.View navSysinfo  = findViewById(R.id.nav_sysinfo_diag);
+        android.view.View navLog      = findViewById(R.id.nav_log_diag);
+        android.view.View navLogo     = findViewById(R.id.iv_nav_logo_diag);
+        if (navApps != null)     navApps.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        if (navSettings != null) navSettings.setOnClickListener(v -> { startActivity(new Intent(this, SettingsActivity.class)); finish(); });
+        if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
+        if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new Intent(this, LogActivity.class)); finish(); });
+        if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+    }
+
+    private void toggleDiagAdvancedSection() {
+        mAdvancedOpen = !mAdvancedOpen;
+        llDiagAdvancedSection.setVisibility(mAdvancedOpen ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (ivDiagAdvancedChevron != null) {
+            ivDiagAdvancedChevron.animate().rotation(mAdvancedOpen ? 90f : 0f).setDuration(180).start();
+        }
+    }
+
+    /** Status passed to {@link #showDiagResult(int, String, String, long, String)}. */
+    private static final String DIAG_S_OK   = "ok";
+    private static final String DIAG_S_ERR  = "err";
+    private static final String DIAG_S_WARN = "warn";
+    private static final String DIAG_S_RUN  = "run";
+
+    /** Show a result in the central panel. Safe to call from any thread. */
+    private void showDiagResult(final int testId, final String status, final String title,
+                                final long elapsedMs, final String output) {
+        safeRunOnUiThread(() -> {
+            mLastDiagTestId = testId;
+            llDiagResultEmpty.setVisibility(android.view.View.GONE);
+            llDiagResultHeader.setVisibility(android.view.View.VISIBLE);
+            svDiagResultOutput.setVisibility(android.view.View.VISIBLE);
+            llDiagResultActions.setVisibility(android.view.View.VISIBLE);
+
+            // Badge text + color
+            int badgeColor;
+            String badgeText;
+            switch (status) {
+                case DIAG_S_OK:
+                    badgeColor = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok);
+                    badgeText  = getString(R.string.diag_result_success);
+                    break;
+                case DIAG_S_ERR:
+                    badgeColor = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err);
+                    badgeText  = getString(R.string.diag_result_error);
+                    break;
+                case DIAG_S_WARN:
+                    badgeColor = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_warn);
+                    badgeText  = getString(R.string.diag_result_warn);
+                    break;
+                default:
+                    badgeColor = androidx.core.content.ContextCompat.getColor(this, R.color.md_on_surface_variant);
+                    badgeText  = getString(R.string.diag_result_running);
+                    break;
+            }
+            tvDiagResultBadge.setText(badgeText);
+            tvDiagResultBadge.setTextColor(badgeColor);
+            ivDiagResultBadgeIcon.setColorFilter(badgeColor);
+
+            tvDiagResultTitle.setText(title);
+            String time = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                    .format(new java.util.Date());
+            String timeStr = (elapsedMs > 0) ? (time + "  ·  " + elapsedMs + " ms") : time;
+            tvDiagResultTime.setText(timeStr);
+            tvDiagResultOutput.setText(output);
+        });
+    }
+
+    private void diagCopyResult() {
+        CharSequence txt = tvDiagResultOutput.getText();
+        if (txt == null || txt.length() == 0) return;
+        android.content.ClipboardManager cm =
+                (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("diag", txt));
+        android.widget.Toast.makeText(this, R.string.diag_toast_copied, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void diagShareResult() {
+        CharSequence txt = tvDiagResultOutput.getText();
+        if (txt == null || txt.length() == 0) return;
+        Intent it = new Intent(Intent.ACTION_SEND);
+        it.setType("text/plain");
+        it.putExtra(Intent.EXTRA_TEXT, tvDiagResultTitle.getText() + "\n\n" + txt);
+        startActivity(Intent.createChooser(it, getString(R.string.diag_btn_share_only)));
+    }
+
+    private void diagRerunResult() {
+        switch (mLastDiagTestId) {
+            case DIAG_T_MIRROR:  runDiagCardMirror();  break;
+            case DIAG_T_CAPTURE: runDiagCardCapture(); break;
+            case DIAG_T_RESTART: runDiagCardRestart(); break;
+            case DIAG_T_ADB:     runDiagCardAdb();     break;
+            case DIAG_T_PERMS:   runDiagCardPerms();   break;
+            default: break;
+        }
+    }
+
+    // ─── 5 highlight cards ───
+
+    private void runDiagCardMirror() {
+        showDiagResult(DIAG_T_MIRROR, DIAG_S_RUN,
+                getString(R.string.diag_card_mirror_title), 0,
+                getString(R.string.diag_running_msg));
+        // Delegate to the existing Fission Binder logic; it already writes to tvFissionResult.
+        // We capture timing + outcome via the existing TextView content after the call.
+        long t0 = System.currentTimeMillis();
+        runFissionViaBinder();
+        // Display result snapshot shortly after to let the existing logic populate tvFissionResult.
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            String out = tvFissionResult != null ? String.valueOf(tvFissionResult.getText()) : "(no output)";
+            String s = (out.toLowerCase(java.util.Locale.ROOT).contains("error") ||
+                        out.toLowerCase(java.util.Locale.ROOT).contains("fail")) ? DIAG_S_ERR : DIAG_S_OK;
+            showDiagResult(DIAG_T_MIRROR, s, getString(R.string.diag_card_mirror_title),
+                    System.currentTimeMillis() - t0, out);
+        }, 600);
+    }
+
+    private void runDiagCardCapture() {
+        showDiagResult(DIAG_T_CAPTURE, DIAG_S_RUN,
+                getString(R.string.diag_card_capture_title), 0,
+                getString(R.string.diag_running_msg));
+        long t0 = System.currentTimeMillis();
+        dumpSurfaceFlinger();
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            String out = tvSfDumpResult != null ? String.valueOf(tvSfDumpResult.getText()) : "(no output)";
+            String s = out.toLowerCase(java.util.Locale.ROOT).contains("error") ? DIAG_S_ERR : DIAG_S_OK;
+            showDiagResult(DIAG_T_CAPTURE, s, getString(R.string.diag_card_capture_title),
+                    System.currentTimeMillis() - t0, out);
+        }, 800);
+    }
+
+    private void runDiagCardRestart() {
+        showDiagResult(DIAG_T_RESTART, DIAG_S_RUN,
+                getString(R.string.diag_card_restart_title), 0,
+                getString(R.string.diag_running_msg));
+        long t0 = System.currentTimeMillis();
+        new Thread(() -> {
+            StringBuilder log = new StringBuilder();
+            try {
+                Intent svc = new Intent(this, ClusterService.class);
+                boolean stopped = stopService(svc);
+                log.append("stopService → ").append(stopped).append('\n');
+                Thread.sleep(300);
+                android.content.ComponentName cn = startService(svc);
+                log.append("startService → ").append(cn != null ? cn.flattenToShortString() : "null").append('\n');
+                log.append("\nClusterService restarted.");
+                showDiagResult(DIAG_T_RESTART, DIAG_S_OK,
+                        getString(R.string.diag_card_restart_title),
+                        System.currentTimeMillis() - t0, log.toString());
+            } catch (Throwable t) {
+                log.append("Exception: ").append(t.getClass().getSimpleName()).append(": ").append(t.getMessage());
+                showDiagResult(DIAG_T_RESTART, DIAG_S_ERR,
+                        getString(R.string.diag_card_restart_title),
+                        System.currentTimeMillis() - t0, log.toString());
+            }
+        }, "diag-restart-cluster").start();
+    }
+
+    private void runDiagCardAdb() {
+        showDiagResult(DIAG_T_ADB, DIAG_S_RUN,
+                getString(R.string.diag_card_adb_title), 0,
+                getString(R.string.diag_running_msg));
+        long t0 = System.currentTimeMillis();
+        // Reuse the existing ADB local logic.
+        if (btnAdbLocal != null) btnAdbLocal.performClick();
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            String out = tvAdbLocalResult != null ? String.valueOf(tvAdbLocalResult.getText()) : "(no output)";
+            String s = out.toLowerCase(java.util.Locale.ROOT).contains("error") ||
+                       out.toLowerCase(java.util.Locale.ROOT).contains("fail") ? DIAG_S_ERR : DIAG_S_OK;
+            showDiagResult(DIAG_T_ADB, s, getString(R.string.diag_card_adb_title),
+                    System.currentTimeMillis() - t0, out);
+        }, 1500);
+    }
+
+    private void runDiagCardPerms() {
+        showDiagResult(DIAG_T_PERMS, DIAG_S_RUN,
+                getString(R.string.diag_card_perms_title), 0,
+                getString(R.string.diag_running_msg));
+        long t0 = System.currentTimeMillis();
+        new Thread(() -> {
+            String[] perms = new String[] {
+                "android.permission.CAPTURE_VIDEO_OUTPUT",
+                "android.permission.SYSTEM_ALERT_WINDOW",
+                "android.permission.INJECT_EVENTS",
+                "android.permission.BIND_ACCESSIBILITY_SERVICE",
+                "android.permission.MANAGE_ACTIVITY_STACKS",
+                "android.permission.INTERNAL_SYSTEM_WINDOW",
+                "android.permission.WRITE_SECURE_SETTINGS",
+                "android.permission.READ_LOGS",
+            };
+            StringBuilder sb = new StringBuilder();
+            int granted = 0;
+            for (String p : perms) {
+                int r = checkSelfPermission(p);
+                boolean ok = (r == android.content.pm.PackageManager.PERMISSION_GRANTED);
+                if (ok) granted++;
+                sb.append(ok ? "[OK]   " : "[NO]   ").append(p).append('\n');
+            }
+            sb.append("\n").append(granted).append(" / ").append(perms.length).append(" granted");
+            String s = (granted == perms.length) ? DIAG_S_OK :
+                       (granted == 0 ? DIAG_S_ERR : DIAG_S_WARN);
+            showDiagResult(DIAG_T_PERMS, s, getString(R.string.diag_card_perms_title),
+                    System.currentTimeMillis() - t0, sb.toString());
+        }, "diag-perms").start();
+    }
+
+    private void doResetClusterConfig() {
+        showDiagResult(0, DIAG_S_RUN, getString(R.string.diag_btn_reset_cluster_config), 0,
+                getString(R.string.diag_running_msg));
+        long t0 = System.currentTimeMillis();
+        new Thread(() -> {
+            StringBuilder log = new StringBuilder();
+            try {
+                Intent svc = new Intent(this, ClusterService.class);
+                stopService(svc);
+                log.append("ClusterService stopped\n");
+                Thread.sleep(300);
+                android.content.ComponentName cn = startService(svc);
+                log.append("ClusterService started → ").append(cn != null ? cn.flattenToShortString() : "null").append('\n');
+                log.append("\nProjection reset.");
+                showDiagResult(0, DIAG_S_OK, getString(R.string.diag_btn_reset_cluster_config),
+                        System.currentTimeMillis() - t0, log.toString());
+            } catch (Throwable t) {
+                log.append("Exception: ").append(t.getMessage());
+                showDiagResult(0, DIAG_S_ERR, getString(R.string.diag_btn_reset_cluster_config),
+                        System.currentTimeMillis() - t0, log.toString());
+            }
+        }, "diag-reset-cluster").start();
     }
 }

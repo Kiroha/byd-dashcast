@@ -287,4 +287,31 @@
     <string name="main_cluster_status_off">Proyeksiya oʻchirilgan</string>
     <string name="main_btn_exit_fullscreen">Toʻliq ekrandan chiqish</string>
     <string name="main_favorites_empty">Sevimlilar yo\'q — qo\'shish uchun ilovani uzoq bosing</string>
+
+    <!-- v0.9.81 — Diag M3 cards -->
+    <string name="diag_global_ok">Hammasi OK</string>
+    <string name="diag_card_mirror_title">Klaster aksini sinash</string>
+    <string name="diag_card_mirror_desc">VirtualDisplay yaratadi va bog\'lanishni tekshiradi</string>
+    <string name="diag_card_capture_title">Klasterni suratga olish</string>
+    <string name="diag_card_capture_desc">Ikkilamchi ekranning skrinshotini oladi</string>
+    <string name="diag_card_restart_title">ClusterService\'ni qayta ishga tushirish</string>
+    <string name="diag_card_restart_desc">Android xizmatini toza stop + start</string>
+    <string name="diag_card_adb_title">Mahalliy ADB\'ni tekshirish</string>
+    <string name="diag_card_adb_desc">127.0.0.1:5555 da handshake</string>
+    <string name="diag_card_perms_title">Ruxsatlarni tekshirish</string>
+    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW va h.k.</string>
+    <string name="diag_btn_reset_cluster_config">Klaster sozlamalarini tiklash</string>
+    <string name="diag_advanced_section_title">Kengaytirilgan vositalar</string>
+    <string name="diag_result_empty">Natijani ko\'rish uchun testni tanlang</string>
+    <string name="diag_result_success">Muvaffaqiyat</string>
+    <string name="diag_result_running">Bajarilmoqda</string>
+    <string name="diag_result_error">Xato</string>
+    <string name="diag_result_warn">Ogohlantirish</string>
+    <string name="diag_btn_copy">Nusxa olish</string>
+    <string name="diag_btn_share_only">Ulashish</string>
+    <string name="diag_btn_rerun">Qayta</string>
+    <string name="diag_running_msg">Test bajarilmoqda…</string>
+    <string name="diag_toast_copied">Natija nusxalandi</string>
+    <string name="diag_reset_cluster_confirm_title">Klaster sozlamalarini tiklash</string>
+    <string name="diag_reset_cluster_confirm_msg">Bu ClusterService\'ni to\'xtatadi, proyeksiyani (sendInfo 18 + 0) yopadi va xizmatni qayta yaratadi. Davom etilsinmi?</string>
 </resources>

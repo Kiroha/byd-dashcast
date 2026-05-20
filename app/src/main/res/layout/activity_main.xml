@@ -33,8 +33,9 @@
         android:paddingTop="20dp"
         android:paddingBottom="16dp">
 
-        <!-- Logo -->
+        <!-- Logo (long-press = overflow menu since v0.9.80) -->
         <ImageView
+            android:id="@+id/iv_nav_logo"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center_horizontal"
@@ -44,6 +45,8 @@
             android:tint="@color/md_on_primary_container"
             android:background="@drawable/bg_pulse_dot"
             android:src="@drawable/ic_cast"
+            android:clickable="true"
+            android:focusable="true"
             android:contentDescription="@string/app_name"/>
 
         <!-- Apps (active) -->
@@ -258,30 +261,8 @@
                 android:textSize="26sp"
                 android:textStyle="bold"/>
 
-            <!-- v0.9.80: status pills (thermostat / battery / signal) removed — placeholder
-                 data only, no real sources wired. Only the clock + overflow remain. -->
-
-            <TextClock
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:format12Hour="HH:mm"
-                android:format24Hour="HH:mm"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/md_on_surface"
-                android:layout_marginEnd="12dp"/>
-
-            <!-- Overflow ⋮ kept for language switcher / usage stats / origin cluster restore -->
-            <Button
-                android:id="@+id/btn_overflow"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:text="⋮"
-                android:textSize="20sp"
-                android:padding="0dp"
-                android:backgroundTint="@android:color/transparent"
-                android:textColor="@color/md_on_surface_variant"
-                android:contentDescription="@string/app_name"/>
+            <!-- v0.9.80: clock + overflow ⋮ removed too. Long-press the nav rail
+                 logo to open the overflow menu (Language / Updates / Stats / etc.). -->
 
         </LinearLayout>
 
