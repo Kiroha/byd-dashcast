@@ -326,6 +326,11 @@ public class SysInfoActivity extends AppCompatActivity {
             sb.append(tryInstantiateBydApi());
             publishUpdate(sb.toString());
 
+            // 8b. BYD live vehicle data (Bodywork + Speed + Energy snapshots)
+            section(sb, "8b. BYD VEHICLE DATA (live)");
+            sb.append(snapshotBydLiveData());
+            publishUpdate(sb.toString());
+
             // Recent events at the very end (mockup-faithful colored block).
             appendRecentEvents(sb, 5);
 
@@ -495,6 +500,57 @@ public class SysInfoActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Snapshots a few live values from the BYD API for the report:
+     *   Bodywork: VIN, modelName, doorState(driver,passenger), powerLevel, batteryVoltageLevel
+     *   Speed:    currentSpeed
+     *   Energy:   SOC (battery state of charge)
+     * All calls done via reflection so the app builds without the BYD SDK on the classpath.
+     */
+    private String snapshotBydLiveData() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(probeBydCall("Bodywork", "android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice",
+                new String[]{"getAutoVIN", "getAutoModelName", "getPowerLevel", "getBatteryVoltageLevel"}));
+        sb.append(probeBydCall("Speed",    "android.hardware.bydauto.speed.BYDAutoSpeedDevice",
+                new String[]{"getCurrentSpeed", "getAccelPedalDepth", "getBrakePedalDepth"}));
+        sb.append(probeBydCall("Energy",   "android.hardware.bydauto.energy.BYDAutoEnergyDevice",
+                new String[]{"getElecBatteryRemainingCapacity", "getMileage", "getEvRemainingMileage"}));
+        return sb.toString();
+    }
+
+    /** Calls a list of zero-arg getters on a BYD device and formats `key = value` lines. */
+    private String probeBydCall(String label, String className, String[] methods) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("  ── ").append(label).append("\n");
+        try {
+            Class<?> cls = Class.forName(className);
+            Method getInstance = cls.getMethod("getInstance", Context.class);
+            Object dev = getInstance.invoke(null, getApplicationContext());
+            if (dev == null) {
+                sb.append("    (getInstance returned null)\n");
+                return sb.toString();
+            }
+            for (String m : methods) {
+                try {
+                    Object v = cls.getMethod(m).invoke(dev);
+                    sb.append(String.format("    %-32s = %s\n", m, String.valueOf(v)));
+                } catch (NoSuchMethodException nsme) {
+                    sb.append(String.format("    %-32s = (no such method)\n", m));
+                } catch (Throwable t) {
+                    Throwable cause = t.getCause() != null ? t.getCause() : t;
+                    sb.append(String.format("    %-32s ✗ %s\n", m,
+                            cause.getClass().getSimpleName() + ": " + cause.getMessage()));
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            sb.append("    (class not in runtime SDK)\n");
+        } catch (Throwable t) {
+            sb.append("    ✗ ").append(t.getClass().getSimpleName())
+              .append(": ").append(t.getMessage()).append("\n");
+        }
+        return sb.toString();
+    }
+
     private String tryInstantiateBydApi() {
         StringBuilder sb = new StringBuilder();
         String[] devices = {
@@ -545,17 +601,30 @@ public class SysInfoActivity extends AppCompatActivity {
     }
 
     private void populateOverviewTiles() {
-        // Vehicle
-        TextView vVal = findViewById(R.id.tv_tile_vehicle_value);
-        TextView vSub = findViewById(R.id.tv_tile_vehicle_sub);
-        if (vVal != null) vVal.setText(Build.MANUFACTURER + " " + Build.MODEL);
-        if (vSub != null) vSub.setText(Build.BRAND + " · " + Build.PRODUCT);
+        // Vehicle — tries the BYD Bodywork API (getAutoVIN + getAutoModelName) on a
+        // worker thread; falls back to system properties (ro.byd.car.type / ro.byd.model)
+        // and finally to Build.MODEL. DiLink version comes from ro.byd.* sysprops.
+        final TextView vVal = findViewById(R.id.tv_tile_vehicle_value);
+        final TextView vSub = findViewById(R.id.tv_tile_vehicle_sub);
+        if (vVal != null) vVal.setText(prettyVehicleNameSync()); // immediate fallback
+        if (vSub != null) vSub.setText(prettyDilinkVersion());
+        new Thread(new Runnable() { @Override public void run() {
+            final String[] biz = fetchBydVehicleInfo();
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (mDestroyed) return;
+                if (biz[0] != null && !biz[0].isEmpty() && vVal != null) vVal.setText(biz[0]);
+                if (biz[1] != null && !biz[1].isEmpty() && vSub != null) vSub.setText(biz[1]);
+            }});
+        }}, "sysinfo-byd").start();
 
         // Android
         TextView aVal = findViewById(R.id.tv_tile_android_value);
         TextView aSub = findViewById(R.id.tv_tile_android_sub);
         if (aVal != null) aVal.setText(Build.VERSION.RELEASE + " · API " + Build.VERSION.SDK_INT);
-        if (aSub != null) aSub.setText(Build.HARDWARE + " · " + Build.SUPPORTED_ABIS[0]);
+        if (aSub != null) {
+            String disp = Build.DISPLAY != null && !Build.DISPLAY.isEmpty() ? Build.DISPLAY : Build.ID;
+            aSub.setText("Build " + disp + " · " + Build.SUPPORTED_ABIS[0]);
+        }
 
         // DashCast
         TextView dVal = findViewById(R.id.tv_tile_dashcast_value);
@@ -566,7 +635,10 @@ public class SysInfoActivity extends AppCompatActivity {
             int code;
             if (Build.VERSION.SDK_INT >= 28) code = (int) pi.getLongVersionCode();
             else code = pi.versionCode;
-            if (dSub != null) dSub.setText("build " + code);
+            String signTag = isPlatformSigned()
+                    ? getString(R.string.sysinfo_tile_dashcast_platform_signed)
+                    : getString(R.string.sysinfo_tile_dashcast_user_signed);
+            if (dSub != null) dSub.setText("build " + code + " · " + signTag);
         } catch (PackageManager.NameNotFoundException e) {
             if (dVal != null) dVal.setText("?");
             if (dSub != null) dSub.setText("");
@@ -580,6 +652,75 @@ public class SysInfoActivity extends AppCompatActivity {
         if (uVal != null) uVal.setText(formatUptime(uptimeMs));
         if (uSub != null) uSub.setText(getString(R.string.sysinfo_tile_uptime_since,
                 new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(sinceMs))));
+    }
+
+    /** Sync best-guess of vehicle name without touching the BYD service (used as instant fallback). */
+    private String prettyVehicleNameSync() {
+        String t = getSystemProp("ro.byd.car.type");
+        if (!t.startsWith("(") && !t.isEmpty()) return "BYD " + t;
+        String m = getSystemProp("ro.byd.model");
+        if (!m.startsWith("(") && !m.isEmpty()) return "BYD " + m;
+        return Build.MANUFACTURER + " " + Build.MODEL;
+    }
+
+    /** Returns a human DiLink version string — sysprop with several fallbacks. */
+    private String prettyDilinkVersion() {
+        String[] keys = {"ro.byd.dilink.version", "ro.byd.version", "ro.build.display.id"};
+        for (String k : keys) {
+            String v = getSystemProp(k);
+            if (!v.startsWith("(") && !v.isEmpty()) {
+                if (k.startsWith("ro.byd.dilink")) return "DiLink " + v;
+                if (k.equals("ro.byd.version"))    return "DiLink " + v;
+                return v; // ro.build.display.id (e.g., "QPR3 / 2024.08")
+            }
+        }
+        return Build.BRAND + " · " + Build.PRODUCT;
+    }
+
+    /**
+     * Calls BYDAutoBodyworkDevice.getAutoVIN() + getAutoModelName() via reflection.
+     * Returns [headline, subtitle] (either may be empty if the call fails).
+     */
+    private String[] fetchBydVehicleInfo() {
+        String headline = "", subtitle = "";
+        try {
+            Class<?> cls = Class.forName("android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
+            Method getInstance = cls.getMethod("getInstance", Context.class);
+            Object dev = getInstance.invoke(null, getApplicationContext());
+            if (dev != null) {
+                String vin = "";
+                try {
+                    Object v = cls.getMethod("getAutoVIN").invoke(dev);
+                    if (v instanceof String) vin = (String) v;
+                } catch (Throwable ignored) {}
+                int modelCode = -1;
+                try {
+                    Object m = cls.getMethod("getAutoModelName").invoke(dev);
+                    if (m instanceof Integer) modelCode = (Integer) m;
+                } catch (Throwable ignored) {}
+                String pretty = prettyVehicleNameSync();
+                headline = pretty;
+                StringBuilder sub = new StringBuilder();
+                sub.append(prettyDilinkVersion());
+                if (modelCode > 0) sub.append(" · model#").append(modelCode);
+                if (vin.length() >= 4) sub.append(" · VIN …").append(vin.substring(vin.length() - 4));
+                subtitle = sub.toString();
+            }
+        } catch (Throwable t) {
+            // BYD service not reachable (missing perm, ROM stripped) — keep fallbacks.
+        }
+        return new String[]{headline, subtitle};
+    }
+
+    /** True iff the package is signed by the same certificate as the system "android" package. */
+    private boolean isPlatformSigned() {
+        try {
+            PackageManager pm = getPackageManager();
+            int sigMatch = pm.checkSignatures("android", getPackageName());
+            return sigMatch == PackageManager.SIGNATURE_MATCH;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static String formatUptime(long ms) {

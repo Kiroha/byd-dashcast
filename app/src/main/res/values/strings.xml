@@ -354,4 +354,6 @@
     <string name="sysinfo_svc_stopped">Arrêté</string>
     <string name="sysinfo_svc_adb_unreachable">5555 inaccessible</string>
     <string name="sysinfo_svc_conn">CONN</string>
+    <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
+    <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
 </resources>

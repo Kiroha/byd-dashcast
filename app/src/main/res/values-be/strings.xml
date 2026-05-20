@@ -339,4 +339,6 @@
     <string name="sysinfo_svc_stopped">Спынены</string>
     <string name="sysinfo_svc_adb_unreachable">5555 недаступны</string>
     <string name="sysinfo_svc_conn">CONN</string>
+    <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
+    <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
 </resources>
