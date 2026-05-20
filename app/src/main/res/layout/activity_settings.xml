@@ -410,10 +410,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
@@ -436,10 +437,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
@@ -462,10 +464,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
@@ -510,10 +513,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
@@ -533,10 +537,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
@@ -566,10 +571,11 @@
                             android:clickable="true"
                             android:focusable="true">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
@@ -594,10 +600,11 @@
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
-                                style="@style/Widget.DashCast.ListItem.Leading"
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
