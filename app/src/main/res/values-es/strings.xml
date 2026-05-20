@@ -273,7 +273,7 @@
     <string name="main_btn_capture">Capturar</string>
     <string name="main_btn_reconnect">Iniciar proyección</string>
     <string name="main_btn_stop_mirror">Detener proyección</string>
-    <string name="main_section_favorites">Favoritos</string>
+    <string name="main_section_favorites">FAVORITOS</string>
     <string name="main_section_all_apps">Todas las apps</string>
     <string name="main_capture_coming_soon">Captura próximamente</string>
     <string name="sheet_auto_launch">Lanzamiento automático al inicio</string>
@@ -283,4 +283,6 @@
     <string name="sheet_to_cluster">Enviar al cuadro</string>
     <string name="sheet_force_stop">Forzar detención</string>
     <string name="main_cluster_status_off">Proyección desactivada</string>
+    <string name="main_btn_exit_fullscreen">Salir de pantalla completa</string>
+    <string name="main_favorites_empty">Sin favoritos — mantén pulsada una app para añadirla</string>
 </resources>

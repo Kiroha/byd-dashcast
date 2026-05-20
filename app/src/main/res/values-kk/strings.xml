@@ -275,7 +275,7 @@
     <string name="main_btn_capture">Түсіру</string>
     <string name="main_btn_reconnect">Проекцияны бастау</string>
     <string name="main_btn_stop_mirror">Проекцияны тоқтату</string>
-    <string name="main_section_favorites">Таңдаулылар</string>
+    <string name="main_section_favorites">ТАҢДАУЛЫЛАР</string>
     <string name="main_section_all_apps">Барлық қосымшалар</string>
     <string name="main_capture_coming_soon">Жақында</string>
     <string name="sheet_auto_launch">Іске қосылғанда автоматты ашу</string>
@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">Кластерге жіберу</string>
     <string name="sheet_force_stop">Күштеп тоқтату</string>
     <string name="main_cluster_status_off">Проекция өшірулі</string>
+    <string name="main_btn_exit_fullscreen">Толық экраннан шығу</string>
+    <string name="main_favorites_empty">Таңдаулылар жоқ — қосу үшін ұзақ басыңыз</string>
 </resources>

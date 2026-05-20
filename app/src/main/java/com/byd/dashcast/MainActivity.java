@@ -27,6 +27,7 @@ import android.graphics.SurfaceTexture;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -167,6 +168,20 @@ public class MainActivity extends AppCompatActivity
     private AppListAdapter mAdapter;
     private android.widget.EditText etSearch;
 
+    // v0.9.74 — Favorites horizontal strip
+    private LinearLayout llFavoritesSection;
+    private LinearLayout llFavoritesStrip;
+
+    // v0.9.74 — Pseudo-fullscreen mirror state
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnExitFullscreen;
+    private View vNavRail;
+    private View cardHeroStatus;
+    private View tvPreviewSection;
+    private View cardClusterPreview;
+    private View gridMainActions;
+    private boolean mIsFullscreenMirror = false;
+    private int mSavedPreviewHeightPx = -1;
+
     // UI — category filter buttons
     private View llCategoryFilters;
     private Button btnFilterAll, btnFilterNav, btnFilterMedia;
@@ -291,6 +306,21 @@ public class MainActivity extends AppCompatActivity
         etSearch           = (android.widget.EditText) findViewById(R.id.et_search_apps);
         btnViewToggle      = (Button)   findViewById(R.id.btn_view_toggle);
 
+        // v0.9.74 — Favorites strip + fullscreen overlay refs.
+        llFavoritesSection = (LinearLayout) findViewById(R.id.ll_favorites_section);
+        llFavoritesStrip   = (LinearLayout) findViewById(R.id.ll_favorites_strip);
+        btnExitFullscreen  = findViewById(R.id.btn_exit_fullscreen);
+        vNavRail           = findViewById(R.id.ll_nav_rail);
+        cardHeroStatus     = findViewById(R.id.card_hero_status);
+        tvPreviewSection   = findViewById(R.id.tv_preview_section);
+        cardClusterPreview = findViewById(R.id.card_cluster_preview);
+        gridMainActions    = findViewById(R.id.grid_main_actions);
+        if (btnExitFullscreen != null) {
+            btnExitFullscreen.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { exitFullscreenMirror(); }
+            });
+        }
+
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -363,13 +393,14 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        // Button 📺 Mirror — reopen the mirror+tactile panel for the app running on the cluster
+        // Button 📺 Mirror — v0.9.74: open the pseudo-fullscreen tactile mirror.
         btnShowMirror.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showMirrorView();
                 attemptStartMirrorWithCurrentHolder();
-                AppLogger.d(TAG, "btn_show_mirror → showMirrorView for " + mCurrentDashboardApp);
+                enterFullscreenMirror();
+                AppLogger.d(TAG, "btn_show_mirror → enterFullscreenMirror for " + mCurrentDashboardApp);
             }
         });
 
@@ -2174,6 +2205,119 @@ public class MainActivity extends AppCompatActivity
         FloatingRemoteButton.hide();
     }
 
+    // ============================================================
+    // v0.9.74 — Favorites horizontal strip
+    // ============================================================
+    /**
+     * Rebuilds the favorites strip from the current app list.
+     * Hides the whole section when there are no favorites.
+     */
+    private void refreshFavoritesStrip(java.util.List<AppInfo> apps) {
+        if (llFavoritesStrip == null || llFavoritesSection == null) return;
+        llFavoritesStrip.removeAllViews();
+        if (apps == null) {
+            llFavoritesSection.setVisibility(View.GONE);
+            return;
+        }
+        android.view.LayoutInflater inflater = android.view.LayoutInflater.from(this);
+        int added = 0;
+        for (final AppInfo a : apps) {
+            if (!a.isFavorite) continue;
+            View tile = inflater.inflate(R.layout.item_favorite_strip, llFavoritesStrip, false);
+            ImageView iv  = tile.findViewById(R.id.iv_fav_icon);
+            TextView tv   = tile.findViewById(R.id.tv_fav_name);
+            iv.setImageDrawable(a.icon);
+            tv.setText(a.appName);
+            tile.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { onSendToDashboard(a); }
+            });
+            tile.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override public boolean onLongClick(View v) { onShowActions(a); return true; }
+            });
+            llFavoritesStrip.addView(tile);
+            added++;
+        }
+        llFavoritesSection.setVisibility(added > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    // ============================================================
+    // v0.9.74 — Pseudo-fullscreen tactile mirror
+    // ============================================================
+    /**
+     * Expands the cluster preview card to fill the screen by hiding the nav rail,
+     * the left app list, the hero card, the preview section title and the 2x2 action
+     * grid. The existing TextureView keeps its surface → touch injection still works.
+     * The cluster control panel (with the "Ajuster" button) stays accessible.
+     */
+    private void enterFullscreenMirror() {
+        if (mIsFullscreenMirror) return;
+        if (cardClusterPreview == null) return;
+        mIsFullscreenMirror = true;
+
+        if (vNavRail != null)         vNavRail.setVisibility(View.GONE);
+        if (llAppListSection != null) llAppListSection.setVisibility(View.GONE);
+        if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.GONE);
+        if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.GONE);
+        if (gridMainActions != null)  gridMainActions.setVisibility(View.GONE);
+
+        ViewGroup.LayoutParams lp = cardClusterPreview.getLayoutParams();
+        mSavedPreviewHeightPx = lp.height;
+        // Use the activity content height minus the cluster control panel (kept visible).
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+        int panelH  = (panelClusterControl != null
+                && panelClusterControl.getVisibility() == View.VISIBLE)
+                ? panelClusterControl.getHeight() : 0;
+        int target = Math.max(400, screenH - panelH - 32);
+        lp.height = target;
+        cardClusterPreview.setLayoutParams(lp);
+
+        if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.VISIBLE);
+
+        // Immersive: hide system bars to maximise usable area.
+        try {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "immersive setSystemUiVisibility failed: " + t.getMessage());
+        }
+        AppLogger.i(TAG, "enterFullscreenMirror");
+    }
+
+    /** Reverses enterFullscreenMirror(): restores all hidden views and shrinks the card back. */
+    private void exitFullscreenMirror() {
+        if (!mIsFullscreenMirror) return;
+        mIsFullscreenMirror = false;
+
+        if (vNavRail != null)         vNavRail.setVisibility(View.VISIBLE);
+        if (llAppListSection != null) llAppListSection.setVisibility(View.VISIBLE);
+        if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.VISIBLE);
+        if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.VISIBLE);
+        if (gridMainActions != null)  gridMainActions.setVisibility(View.VISIBLE);
+
+        if (cardClusterPreview != null && mSavedPreviewHeightPx > 0) {
+            ViewGroup.LayoutParams lp = cardClusterPreview.getLayoutParams();
+            lp.height = mSavedPreviewHeightPx;
+            cardClusterPreview.setLayoutParams(lp);
+        }
+        if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.GONE);
+
+        try {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        } catch (Throwable t) { /* ignore */ }
+        AppLogger.i(TAG, "exitFullscreenMirror");
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mIsFullscreenMirror) { exitFullscreenMirror(); return; }
+        super.onBackPressed();
+    }
+
     /** Sets the status dot to a given ARGB color. Reuses the shared GradientDrawable to avoid allocations. */
     private void setStatusDot(int color) {
         if (mStatusDotDrawable == null) return;
@@ -2673,6 +2817,7 @@ public class MainActivity extends AppCompatActivity
                 final List<AppInfo> result = apps;
                 runOnUiThread(() -> {
                     mAdapter.setApps(result);
+                    refreshFavoritesStrip(result);
                     // One-shot tip: show once, on first ever launch
                     SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {

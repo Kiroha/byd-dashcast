@@ -290,7 +290,7 @@
     <string name="main_btn_capture">Capturer</string>
     <string name="main_btn_reconnect">Activer la projection</string>
     <string name="main_btn_stop_mirror">Arrêter la projection</string>
-    <string name="main_section_favorites">Favoris</string>
+    <string name="main_section_favorites">FAVORIS</string>
     <string name="main_section_all_apps">Toutes les applications</string>
     <string name="main_capture_coming_soon">Capture bientôt disponible</string>
     <string name="sheet_auto_launch">Lancement automatique au démarrage</string>
@@ -300,4 +300,6 @@
     <string name="sheet_to_cluster">Envoyer vers le cluster</string>
     <string name="sheet_force_stop">Forcer l\'arrêt</string>
     <string name="main_cluster_status_off">Projection inactive</string>
+    <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
+    <string name="main_favorites_empty">Aucun favori — appuyez longuement sur une app pour l\'ajouter</string>
 </resources>

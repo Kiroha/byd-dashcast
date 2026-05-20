@@ -275,7 +275,7 @@
     <string name="main_btn_capture">Capture</string>
     <string name="main_btn_reconnect">Start projection</string>
     <string name="main_btn_stop_mirror">Stop projection</string>
-    <string name="main_section_favorites">Favorites</string>
+    <string name="main_section_favorites">FAVORITES</string>
     <string name="main_section_all_apps">All applications</string>
     <string name="main_capture_coming_soon">Capture coming soon</string>
     <string name="sheet_auto_launch">Auto-launch at start</string>
@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">Send to cluster</string>
     <string name="sheet_force_stop">Force stop</string>
     <string name="main_cluster_status_off">Projection off</string>
+    <string name="main_btn_exit_fullscreen">Exit fullscreen</string>
+    <string name="main_favorites_empty">No favorites — long-press an app to add one</string>
 </resources>

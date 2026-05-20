@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">إرسال إلى العنقود</string>
     <string name="sheet_force_stop">إيقاف قسري</string>
     <string name="main_cluster_status_off">العرض متوقف</string>
+    <string name="main_btn_exit_fullscreen">الخروج من ملء الشاشة</string>
+    <string name="main_favorites_empty">لا توجد مفضلة — اضغط مطولاً لإضافة تطبيق</string>
 </resources>

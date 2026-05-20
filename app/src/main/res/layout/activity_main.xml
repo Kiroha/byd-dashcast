@@ -4,19 +4,27 @@
      LEFT pane: search + filter chips + apps RecyclerView.
      RIGHT pane: cluster hero card + live preview + 4 actions + control panel.
      IMPORTANT: every ImageView declares its layout attrs INLINE (style on ImageView
-     is not honored on the BYD device, see /memories/repo/byd-project.md). -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     is not honored on the BYD device, see /memories/repo/byd-project.md).
+     v0.9.74: root wrapped in FrameLayout to host the fullscreen mirror overlay
+     (close button) sitting on top of the regular content. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
     android:background="@color/md_background">
+
+<LinearLayout
+    android:id="@+id/root_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
 
     <!-- ════════════════════════════════════════════════ -->
     <!-- NAV RAIL                                         -->
     <!-- ════════════════════════════════════════════════ -->
     <LinearLayout
+        android:id="@+id/ll_nav_rail"
         android:layout_width="96dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -444,8 +452,42 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
+                <!-- v0.9.74 — Favorites horizontal strip (visible only when at least one favorite). -->
+                <LinearLayout
+                    android:id="@+id/ll_favorites_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/main_section_favorites"
+                        android:textAllCaps="true"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/md_tertiary"
+                        android:letterSpacing="0.1"/>
+
+                    <HorizontalScrollView
+                        android:id="@+id/hsv_favorites"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:id="@+id/ll_favorites_strip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"/>
+                    </HorizontalScrollView>
+                </LinearLayout>
+
                 <!-- Section: All applications -->
                 <TextView
+                    android:id="@+id/tv_all_apps_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -485,6 +527,7 @@
 
                     <!-- ────── Hero status card ────── -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_hero_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:cardCornerRadius="20dp"
@@ -545,6 +588,7 @@
 
                     <!-- ────── Section: live preview ────── -->
                     <TextView
+                        android:id="@+id/tv_preview_section"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
@@ -558,6 +602,7 @@
 
                     <!-- ────── Preview card (holds the cluster mirror frame) ────── -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_cluster_preview"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
                         app:cardCornerRadius="20dp"
@@ -615,6 +660,7 @@
 
                     <!-- ────── 4 action buttons (2x2 grid) ────── -->
                     <GridLayout
+                        android:id="@+id/grid_main_actions"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -919,4 +965,21 @@
 
         </LinearLayout> <!-- /content row -->
     </LinearLayout> <!-- /main area -->
-</LinearLayout>
+</LinearLayout> <!-- /root_content -->
+
+    <!-- v0.9.74 — Floating Exit button shown only in pseudo-fullscreen mirror mode. -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_exit_fullscreen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:src="@drawable/ic_close"
+        android:contentDescription="@string/main_btn_exit_fullscreen"
+        app:backgroundTint="@color/md_error_container"
+        app:tint="@color/md_on_error_container"
+        app:fabSize="mini"
+        android:visibility="gone"/>
+
+</FrameLayout>

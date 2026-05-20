@@ -275,7 +275,7 @@
     <string name="main_btn_capture">Olish</string>
     <string name="main_btn_reconnect">Proyeksiyani boshlash</string>
     <string name="main_btn_stop_mirror">Proyeksiyani toʻxtatish</string>
-    <string name="main_section_favorites">Sevimlilar</string>
+    <string name="main_section_favorites">SEVIMLILAR</string>
     <string name="main_section_all_apps">Barcha ilovalar</string>
     <string name="main_capture_coming_soon">Tez kunda</string>
     <string name="sheet_auto_launch">Ishga tushishda avtomatik ochish</string>
@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">Klasterga yuborish</string>
     <string name="sheet_force_stop">Majburiy toʻxtatish</string>
     <string name="main_cluster_status_off">Proyeksiya oʻchirilgan</string>
+    <string name="main_btn_exit_fullscreen">Toʻliq ekrandan chiqish</string>
+    <string name="main_favorites_empty">Sevimlilar yo\'q — qo\'shish uchun ilovani uzoq bosing</string>
 </resources>

@@ -275,7 +275,7 @@
     <string name="main_btn_capture">Cattura</string>
     <string name="main_btn_reconnect">Avvia proiezione</string>
     <string name="main_btn_stop_mirror">Ferma proiezione</string>
-    <string name="main_section_favorites">Preferiti</string>
+    <string name="main_section_favorites">PREFERITI</string>
     <string name="main_section_all_apps">Tutte le app</string>
     <string name="main_capture_coming_soon">Cattura in arrivo</string>
     <string name="sheet_auto_launch">Avvio automatico all\'avvio</string>
@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">Invia al cluster</string>
     <string name="sheet_force_stop">Forza arresto</string>
     <string name="main_cluster_status_off">Proiezione disattivata</string>
+    <string name="main_btn_exit_fullscreen">Esci da schermo intero</string>
+    <string name="main_favorites_empty">Nessun preferito — tieni premuto un\'app per aggiungerla</string>
 </resources>

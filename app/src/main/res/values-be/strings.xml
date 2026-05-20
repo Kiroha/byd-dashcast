@@ -275,7 +275,7 @@
     <string name="main_btn_capture">Зняць</string>
     <string name="main_btn_reconnect">Запусціць праекцыю</string>
     <string name="main_btn_stop_mirror">Спыніць праекцыю</string>
-    <string name="main_section_favorites">Абраныя</string>
+    <string name="main_section_favorites">УЛЮБЁНЫЯ</string>
     <string name="main_section_all_apps">Усе праграмы</string>
     <string name="main_capture_coming_soon">Хутка</string>
     <string name="sheet_auto_launch">Аўтазапуск пры старце</string>
@@ -285,4 +285,6 @@
     <string name="sheet_to_cluster">На кластар</string>
     <string name="sheet_force_stop">Прымусовы прыпынак</string>
     <string name="main_cluster_status_off">Праекцыя выключана</string>
+    <string name="main_btn_exit_fullscreen">Выйсці з поўнага экрана</string>
+    <string name="main_favorites_empty">Няма ўлюбёных — націсніце доўга, каб дадаць</string>
 </resources>
