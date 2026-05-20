@@ -39,6 +39,13 @@ public class FloatingRemoteButton extends Service {
     @android.annotation.SuppressLint("StaticFieldLeak")
     private static volatile FloatingRemoteButton sInstance;
 
+    /**
+     * Desired visibility state — survives even when sInstance or mFloatView is not yet
+     * ready (service starting, overlay permission being granted via ADB).
+     * When the overlay is finally created, it reads this flag to apply the correct state.
+     */
+    private static volatile boolean sShouldBeVisible = false;
+
     private android.os.Handler mDimHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable mDimRunnable = new Runnable() {
         @Override
@@ -56,11 +63,12 @@ public class FloatingRemoteButton extends Service {
     }
 
     public static void show() {
+        sShouldBeVisible = true;
         FloatingRemoteButton inst = sInstance;
         if (inst != null && inst.mFloatView != null) {
             inst.mFloatView.post(() -> {
                 FloatingRemoteButton i = sInstance;
-                if (i != null && i.mFloatView != null) {
+                if (i != null && i.mFloatView != null && sShouldBeVisible) {
                     i.mFloatView.setVisibility(View.VISIBLE);
                     i.triggerDimTimer();
                 }
@@ -69,6 +77,7 @@ public class FloatingRemoteButton extends Service {
     }
 
     public static void hide() {
+        sShouldBeVisible = false;
         FloatingRemoteButton inst = sInstance;
         if (inst == null || inst.mFloatView == null) return;
         inst.mFloatView.post(() -> {
@@ -243,7 +252,15 @@ badge.setOnTouchListener(new View.OnTouchListener() {
         mFloatView = badge;
         try {
             mWindowManager.addView(mFloatView, params);
-            mDimHandler.postDelayed(mDimRunnable, 3000);
+            // Apply the desired visibility that may have been requested before
+            // the overlay was ready (race: show() called before createOverlay completed).
+            if (sShouldBeVisible) {
+                mFloatView.setVisibility(View.VISIBLE);
+                triggerDimTimer();
+                AppLogger.d(TAG, "Overlay created — applying deferred show()");
+            } else {
+                mDimHandler.postDelayed(mDimRunnable, 3000);
+            }
         } catch (Exception e) {
             AppLogger.e(TAG, "addView overlay failed", e);
             mFloatView = null;

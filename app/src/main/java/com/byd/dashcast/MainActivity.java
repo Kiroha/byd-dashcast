@@ -656,6 +656,16 @@ public class MainActivity extends AppCompatActivity
                     && panelClusterControl.getVisibility() == View.VISIBLE) {
                 attemptStartMirrorWithCurrentHolder();
             }
+            // Ensure btn_show_mirror and floating button visibility are correct
+            // even when the Activity was merely stopped (not destroyed) — the
+            // setListener callback only restores from prefs if mCurrentDashboardPkg
+            // was null (Activity recreated).  This handles the "hide mirror then
+            // leave and come back" scenario where btnShowMirror is already VISIBLE
+            // in memory but FloatingRemoteButton may have lost state.
+            if (mCurrentDashboardApp != null) {
+                btnShowMirror.setVisibility(View.VISIBLE);
+                FloatingRemoteButton.show();
+            }
         } else if (!mBindRequested) {
             // Check if the service is already running (e.g. Activity re-opened)
             if (ClusterService.sIsRunning) {
