@@ -121,7 +121,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 // Recheck on the main thread: between the worker-side check above
                 // and the Runnable being dispatched, onDestroy may have fired.
                 if (mDestroyed) return;
-                tvReport.setText(text);
+                tvReport.setText(colorizeReport(text));
                 scrollView.post(new Runnable() {
                     @Override public void run() { scrollView.fullScroll(ScrollView.FOCUS_DOWN); }
                 });
@@ -143,7 +143,7 @@ public class SysInfoActivity extends AppCompatActivity {
                         if (mDestroyed) return;
                         AppLogger.log("SysInfo", "Report generated");
                         mReport = new StringBuilder(result);
-                        tvReport.setText(result);
+                        tvReport.setText(colorizeReport(result));
                         btnGenerate.setEnabled(true);
                         btnSave.setEnabled(true);
                         btnShare.setEnabled(true);
@@ -326,13 +326,10 @@ public class SysInfoActivity extends AppCompatActivity {
             sb.append(tryInstantiateBydApi());
             publishUpdate(sb.toString());
 
+            // Recent events at the very end (mockup-faithful colored block).
+            appendRecentEvents(sb, 5);
+
             sb.append("\n=== END OF REPORT ===\n");
-
-            // Logbook in appendix
-            section(sb, "9. LOGBOOK (AppLogger)");
-            String log = AppLogger.get();
-            sb.append(log.isEmpty() ? "  (empty log)\n" : log);
-
             return sb.toString();
     }
 
@@ -378,11 +375,66 @@ public class SysInfoActivity extends AppCompatActivity {
     // =========================================================================
 
     private void section(StringBuilder sb, String title) {
-        StringBuilder line = new StringBuilder();
-        for (int i = 0; i < 60; i++) line.append('─');
-        sb.append("\n").append(line).append("\n");
-        sb.append(title).append("\n");
-        sb.append(line).append("\n");
+        // Single-line ═══ TITLE ═══ header — colorized in colorizeReport().
+        sb.append("\n═══ ").append(title).append(" ═══\n");
+    }
+
+    /**
+     * Builds a Spannable from the plain mono report applying M3 syntax colors:
+     *   ═══ … ═══   → md_primary  (section headers)
+     *   GRANTED / OPEN / ✓ / RUN  → md_status_ok
+     *   DENIED / closed / ✗ / WARN/ [W] → md_status_warn
+     *   ERROR / [E]  → md_status_err
+     */
+    private CharSequence colorizeReport(String text) {
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(text);
+        int cPrim = androidx.core.content.ContextCompat.getColor(this, R.color.md_primary);
+        int cOk   = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok);
+        int cWarn = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_warn);
+        int cErr  = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err);
+        applyRegex(ssb, "═══ [^═]+ ═══",                       cPrim, true);
+        applyRegex(ssb, "\\b(GRANTED|OPEN|RUN|CONN|YES)\\b",   cOk,   true);
+        applyRegex(ssb, "✓",                                    cOk,   true);
+        applyRegex(ssb, "\\b(DENIED|closed|OFF|NO)\\b",        cWarn, true);
+        applyRegex(ssb, "✗",                                    cWarn, true);
+        applyRegex(ssb, "\\[I\\]",                              cOk,   true);
+        applyRegex(ssb, "\\[W\\]",                              cWarn, true);
+        applyRegex(ssb, "\\[E\\]",                              cErr,  true);
+        return ssb;
+    }
+
+    private static void applyRegex(android.text.SpannableStringBuilder ssb,
+                                   String regex, int color, boolean bold) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(regex).matcher(ssb);
+        while (m.find()) {
+            ssb.setSpan(new android.text.style.ForegroundColorSpan(color),
+                    m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (bold) {
+                ssb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                        m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+    }
+
+    /** Appends a "RECENT EVENTS (last N)" block from AppLogger. */
+    private static void appendRecentEvents(StringBuilder sb, int n) {
+        java.util.List<AppLogger.Entry> entries = AppLogger.getEntries();
+        sb.append("\n═══ RECENT EVENTS (last ").append(n).append(") ═══\n");
+        if (entries.isEmpty()) { sb.append("  (no events yet)\n"); return; }
+        SimpleDateFormat tf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+        int from = Math.max(0, entries.size() - n);
+        for (int i = from; i < entries.size(); i++) {
+            AppLogger.Entry e = entries.get(i);
+            String lvl;
+            switch (e.level) {
+                case ERROR: lvl = "[E]"; break;
+                case WARN:  lvl = "[W]"; break;
+                default:    lvl = "[I]"; break;
+            }
+            sb.append(tf.format(new Date(e.timestamp))).append(' ')
+              .append(lvl).append(' ').append(e.tag).append(" ")
+              .append(e.message).append('\n');
+        }
     }
 
     private String getSystemProp(String key) {
@@ -574,40 +626,90 @@ public class SysInfoActivity extends AppCompatActivity {
         container.removeAllViews();
         android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
 
-        // ClusterService
+        // ClusterService — runs in our app process, so own pid + app uptime.
         boolean clusterRunning = isServiceRunning(ClusterService.class);
-        addServiceRow(inf, container, "ClusterService",
-                clusterRunning ? getString(R.string.sysinfo_svc_cluster_sub) : getString(R.string.sysinfo_svc_stopped),
-                clusterRunning);
+        String clusterSub;
+        if (clusterRunning) {
+            int pid = android.os.Process.myPid();
+            clusterSub = "pid " + pid + " · " + formatUptime(android.os.SystemClock.elapsedRealtime());
+        } else {
+            clusterSub = getString(R.string.sysinfo_svc_stopped);
+        }
+        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false);
 
-        // MirrorDaemon (best-effort: enabled iff cluster is up)
-        addServiceRow(inf, container, "MirrorDaemon",
-                clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub) : getString(R.string.sysinfo_svc_stopped),
-                clusterRunning);
+        // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        final TextView mirrorSub = addServiceRow(inf, container, "MirrorDaemon",
+                clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub)
+                               : getString(R.string.sysinfo_svc_stopped),
+                clusterRunning, false);
+        if (clusterRunning && mirrorSub != null) {
+            // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
+            new Thread(new Runnable() { @Override public void run() {
+                final int pid = pidOf("MirrorDaemon");
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (mDestroyed) return;
+                    if (pid > 0) mirrorSub.setText("pid " + pid + " · poll 500 ms");
+                    else         mirrorSub.setText(getString(R.string.sysinfo_svc_mirror_sub));
+                }});
+            }}, "sysinfo-pidof").start();
+        }
 
-        // ADB local — try a quick port check on 127.0.0.1:5555
+        // ADB local — quick TCP probe on 127.0.0.1:5555 (CONN if connected).
         boolean adbOk = isPortOpen("127.0.0.1", 5555, 200);
         addServiceRow(inf, container, "AdbLocalClient",
                 adbOk ? "127.0.0.1:5555" : getString(R.string.sysinfo_svc_adb_unreachable),
-                adbOk);
+                adbOk, true /* useConnBadge */);
     }
 
-    private void addServiceRow(android.view.LayoutInflater inf,
-                               android.widget.LinearLayout container,
-                               String name, String sub, boolean running) {
+    /** Adds one service row; returns its support TextView so the caller can update it later. */
+    private TextView addServiceRow(android.view.LayoutInflater inf,
+                                   android.widget.LinearLayout container,
+                                   String name, String sub, boolean running, boolean useConnBadge) {
         View row = inf.inflate(R.layout.row_sysinfo, container, false);
-        ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
+        android.widget.ImageView icon = row.findViewById(R.id.row_icon);
+        View leading = row.findViewById(R.id.row_leading);
+        icon.setImageResource(R.drawable.ic_play_circle);
+        if (running) {
+            if (leading != null) leading.setBackgroundResource(R.drawable.bg_service_icon_running);
+            icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
+        } else {
+            icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_outline_variant));
+        }
         ((TextView) row.findViewById(R.id.row_headline)).setText(name);
-        ((TextView) row.findViewById(R.id.row_support)).setText(sub);
+        TextView supportTv = row.findViewById(R.id.row_support);
+        supportTv.setText(sub);
         TextView badge = row.findViewById(R.id.row_badge);
         if (running) {
-            badge.setText(getString(R.string.sysinfo_svc_run));
+            badge.setText(getString(useConnBadge ? R.string.sysinfo_svc_conn : R.string.sysinfo_svc_run));
             badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
         } else {
             badge.setText(getString(R.string.sysinfo_svc_off));
             badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err));
         }
         container.addView(row);
+        return supportTv;
+    }
+
+    /** Returns the first PID matching the given pattern via `pgrep -f`, or -1. */
+    private static int pidOf(String pattern) {
+        Process p = null;
+        try {
+            p = new ProcessBuilder("sh", "-c", "pgrep -f " + pattern + " | head -n 1")
+                    .redirectErrorStream(true).start();
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(p.getInputStream()));
+            String line = br.readLine();
+            br.close();
+            p.waitFor();
+            if (line != null && !line.trim().isEmpty()) {
+                return Integer.parseInt(line.trim());
+            }
+        } catch (Throwable t) {
+            // pgrep may not be available on all ROMs; ignore.
+        } finally {
+            if (p != null) try { p.destroy(); } catch (Throwable ignored) {}
+        }
+        return -1;
     }
 
     @SuppressWarnings("deprecation")

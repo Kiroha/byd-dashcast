@@ -338,4 +338,5 @@
     <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
     <string name="sysinfo_svc_stopped">To‘xtatilgan</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ishlamayapti</string>
+    <string name="sysinfo_svc_conn">CONN</string>
 </resources>

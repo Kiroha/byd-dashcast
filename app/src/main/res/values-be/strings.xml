@@ -338,4 +338,5 @@
     <string name="sysinfo_svc_mirror_sub">Назірае pidof · 500 мс</string>
     <string name="sysinfo_svc_stopped">Спынены</string>
     <string name="sysinfo_svc_adb_unreachable">5555 недаступны</string>
+    <string name="sysinfo_svc_conn">CONN</string>
 </resources>

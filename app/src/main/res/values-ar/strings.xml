@@ -338,4 +338,5 @@
     <string name="sysinfo_svc_mirror_sub">يراقب pidof · 500 مللي ثانية</string>
     <string name="sysinfo_svc_stopped">متوقف</string>
     <string name="sysinfo_svc_adb_unreachable">5555 غير متاح</string>
+    <string name="sysinfo_svc_conn">CONN</string>
 </resources>
