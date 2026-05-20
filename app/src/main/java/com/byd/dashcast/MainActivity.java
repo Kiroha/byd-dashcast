@@ -40,6 +40,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.Spannable;
+import com.byd.dashcast.model.AppShortcut;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.RelativeSizeSpan;
@@ -86,7 +87,6 @@ public class MainActivity extends AppCompatActivity
     private boolean                 mBindRequested   = false; // true as soon as a bindService is in progress
     private DashboardLauncher       mDashboardLauncher; // local reference updated after bind
 
-    // savedItem: package of the last app sent to the cluster (removed, see history)
     private static final String PREFS_NAME         = SettingsActivity.PREFS_NAME;
     /** Package of the app sent to the main display — persisted to survive Activity recreation */
     private static final String PREF_MAIN_PKG      = "main_display_pkg";
@@ -97,8 +97,8 @@ public class MainActivity extends AppCompatActivity
     private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
     
     private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
-    private static boolean sHasAutoLaunched = false;
     private String mPendingAutoLaunchPkg = null;
+    private AppInfo mPendingAppAfterActivation = null;
     private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
@@ -114,10 +114,8 @@ public class MainActivity extends AppCompatActivity
             mServiceBound   = false;
             mBindRequested  = false; // allow a new bindService if needed
             mClusterService = null;
-            // Invalidate the displayId so isDashboardAvailable() returns false.
-            // Without this, onSendToDashboard() would think the cluster is available and would call
-            // mClusterService.launchOnDashboard() → NullPointerException.
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
+            trackUsageStop(mCurrentDashboardPkg);
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
             btnActivateCluster.setEnabled(true);
@@ -149,9 +147,13 @@ public class MainActivity extends AppCompatActivity
     private static final int DOT_COLOR_OFF     = 0xFF888888;
     private static final int DOT_COLOR_PENDING = 0xFFFFC107;
     private static final int DOT_COLOR_ACTIVE  = 0xFF4CAF50;
+    // Category filter button tints
+    private static final int FILTER_TINT_ACTIVE   = 0xFF1976D2;
+    private static final int FILTER_TINT_INACTIVE = 0xFF607D8B;
 
     // UI — barre statut
     private View     mStatusDot;
+    private android.graphics.drawable.GradientDrawable mStatusDotDrawable;
     private TextView tvDashboardStatus;
     private View     llAppListSection;  // wrapper for title header + search bar
     private Button   btnActivateCluster;
@@ -164,6 +166,22 @@ public class MainActivity extends AppCompatActivity
     private RecyclerView rvApps;
     private AppListAdapter mAdapter;
     private android.widget.EditText etSearch;
+
+    // UI — category filter buttons
+    private View llCategoryFilters;
+    private Button btnFilterAll, btnFilterNav, btnFilterMedia;
+
+    // Usage tracking
+    private long mClusterAppStartTime = 0;
+
+    // Session-scoped set of all packages that were launched on the cluster (display != 0).
+    // Used to move them all back to Display 0 when the user stops the projection,
+    // so Android doesn't re-launch them on the (still-alive) VirtualDisplay later.
+    // Persisted to SharedPreferences so it survives a process kill (car shutdown).
+    private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
+    private static final String PREF_SESSION_CLUSTER_PKGS = "session_cluster_pkgs";
+    private static final String PREF_GRID_MODE  = "grid_mode";
+    private static final String PREF_FAVORITES  = "favorites";
 
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
@@ -182,17 +200,6 @@ public class MainActivity extends AppCompatActivity
 
     // Screenshot mirror loop (fallback when SurfaceControl.createDisplay() fails)
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
-
-    // Receiver for FloatingRemoteButton tap → open mirror panel from overlay
-    private final BroadcastReceiver mShowMirrorReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (mCurrentDashboardApp == null) return; // no app on cluster
-            showMirrorView();
-            attemptStartMirrorWithCurrentHolder();
-            AppLogger.d(TAG, "mShowMirrorReceiver → showMirrorView");
-        }
-    };
 
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private IBinder mDaemonBinder = null;
@@ -234,6 +241,26 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
 
+        // Safety-net: if projection auto-start is disabled, move any leftover
+        // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
+        SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (!bootPrefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false)) {
+            // Defensive: cleanup uses IActivityTaskManager binder reflection per package.
+            // With a non-trivial persisted set, calling on the main thread during onCreate
+            // could approach the ANR threshold. Off-load to a named daemon thread; the work
+            // is purely a safety-net (BootReceiver already runs it asynchronously at boot).
+            final Context appCtx = getApplicationContext();
+            Thread cleanupThread = new Thread(new Runnable() {
+                @Override public void run() { cleanupDisplayAffinityAtBoot(appCtx); }
+            }, "boot-cleanup-fallback");
+            cleanupThread.setDaemon(true);
+            cleanupThread.start();
+        } else {
+            // Auto-start enabled: clear the persisted set (projection is active,
+            // apps will be managed normally).
+            bootPrefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+        }
+
         // Unlock hidden Android APIs (SurfaceControl, etc.)
         // Must be called before any call to ClusterMirrorManager.startMirror(this, ).
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
@@ -252,6 +279,9 @@ public class MainActivity extends AppCompatActivity
 
         mStatusDot          = (View)     findViewById(R.id.view_status_dot);
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
+        mStatusDotDrawable  = new android.graphics.drawable.GradientDrawable();
+        mStatusDotDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        if (mStatusDot != null) mStatusDot.setBackground(mStatusDotDrawable);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
         btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
@@ -264,7 +294,7 @@ public class MainActivity extends AppCompatActivity
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean isGrid = prefs.getBoolean("grid_mode", false);
+        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, false);
         mAdapter.setGridMode(isGrid);
         updateViewToggleButton();
         
@@ -284,6 +314,26 @@ public class MainActivity extends AppCompatActivity
             }
             @Override public void afterTextChanged(Editable s) {}
         });
+
+        // Category filter buttons
+        llCategoryFilters = findViewById(R.id.ll_category_filters);
+        btnFilterAll   = (Button) findViewById(R.id.btn_filter_all);
+        btnFilterNav   = (Button) findViewById(R.id.btn_filter_nav);
+        btnFilterMedia = (Button) findViewById(R.id.btn_filter_media);
+        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+        llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
+        View.OnClickListener filterClick = new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int cat = 0;
+                if (v == btnFilterNav) cat = AppInfo.CATEGORY_NAVIGATION;
+                else if (v == btnFilterMedia) cat = AppInfo.CATEGORY_MEDIA;
+                mAdapter.filterByCategory(cat);
+                updateCategoryFilterButtons(cat);
+            }
+        };
+        btnFilterAll.setOnClickListener(filterClick);
+        btnFilterNav.setOnClickListener(filterClick);
+        btnFilterMedia.setOnClickListener(filterClick);
 
         // Button "Activate cluster" — always triggers activateCluster()
         btnActivateCluster.setOnClickListener(new View.OnClickListener() {
@@ -396,8 +446,8 @@ public class MainActivity extends AppCompatActivity
                 int w = sbResizeW.getProgress();
                 int h = sbResizeH.getProgress();
                 SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-                ed.putInt("inset_h_" + mCurrentDashboardPkg, w);
-                ed.putInt("inset_v_" + mCurrentDashboardPkg, h);
+                ed.putInt(SettingsActivity.PREF_INSET_H_PREFIX + mCurrentDashboardPkg, w);
+                ed.putInt(SettingsActivity.PREF_INSET_V_PREFIX + mCurrentDashboardPkg, h);
                 ed.apply();
                 
                 AppLogger.i(TAG, "Applied custom resize " + w + "/" + h + " for " + mCurrentDashboardPkg);
@@ -524,21 +574,72 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void handleShowMirrorIntent(Intent intent) {
-        if (intent != null
-                && FloatingRemoteButton.ACTION_SHOW_MIRROR.equals(intent.getAction())
+        if (intent == null) return;
+        if (FloatingRemoteButton.ACTION_SHOW_MIRROR.equals(intent.getAction())
                 && mCurrentDashboardApp != null) {
             showMirrorView();
             attemptStartMirrorWithCurrentHolder();
             AppLogger.d(TAG, "handleShowMirrorIntent → showMirrorView for " + mCurrentDashboardApp);
+        } else if (FloatingRemoteButton.ACTION_QUICK_SWITCH.equals(intent.getAction())) {
+            String pkg = intent.getStringExtra(FloatingRemoteButton.EXTRA_QUICK_SWITCH_PKG);
+            if (pkg != null) {
+                AppLogger.i(TAG, "Quick-switch intent → " + pkg);
+                // Simpler: use ClusterService directly to move/launch by package name
+                quickSwitchToApp(pkg);
+            }
         }
+    }
+
+    private void quickSwitchToApp(String pkgName) {
+        if (mClusterService == null) return;
+        if (pkgName.equals(mCurrentDashboardPkg)) {
+            startClusterMirror();
+            return;
+        }
+        trackUsageStop(mCurrentDashboardPkg);
+        int displayId = mClusterService.getDisplayId();
+        if (displayId < 0) displayId = 1;
+        mClusterService.moveTaskToDisplay(pkgName, displayId, new ClusterService.LaunchCallback() {
+            @Override public void onResult(boolean launched) {
+                if (launched) {
+                    mCurrentDashboardPkg = pkgName;
+                    mSessionClusterPackages.add(pkgName);
+                    persistSessionClusterPackages();
+                    // Resolve app name
+                    String name = pkgName;
+                    try {
+                        android.content.pm.ApplicationInfo ai = getPackageManager().getApplicationInfo(pkgName, 0);
+                        CharSequence label = getPackageManager().getApplicationLabel(ai);
+                        if (label != null) name = label.toString();
+                    } catch (Exception ignored) {}
+                    mCurrentDashboardApp = name;
+                    addToRecentApps(pkgName, name);
+                    trackUsageStart();
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                            .putString(PREF_CLUSTER_PKG, pkgName)
+                            .putString(PREF_CLUSTER_NAME, name)
+                            .putString(PREF_LAST_CLUSTER_PKG, pkgName)
+                            .putString(PREF_LAST_CLUSTER_NAME, name).apply();
+                    mAdapter.setCurrentPackage(pkgName);
+                    updateDashboardStatus(mCurrentDashboardApp);
+                    updateControlLabel();
+                    startClusterMirror();
+                    autoApplyInsetsIfNeeded(pkgName);
+                }
+            }
+        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
-        registerReceiver(mShowMirrorReceiver,
-                new IntentFilter(FloatingRemoteButton.ACTION_SHOW_MIRROR));
+        // Refresh category filter visibility (may have been toggled in Settings)
+        boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+        if (llCategoryFilters != null) {
+            llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
+        }
         // Retrieve the daemon Binder from ServiceManager if not yet available.
         // ACTION_REQUEST_BINDER no longer works: the daemon no longer has a registerReceiver
         // (forbidden since systemMain() — AMS rejects IApplicationThread).
@@ -555,6 +656,16 @@ public class MainActivity extends AppCompatActivity
                     && panelClusterControl.getVisibility() == View.VISIBLE) {
                 attemptStartMirrorWithCurrentHolder();
             }
+            // Ensure btn_show_mirror and floating button visibility are correct
+            // even when the Activity was merely stopped (not destroyed) — the
+            // setListener callback only restores from prefs if mCurrentDashboardPkg
+            // was null (Activity recreated).  This handles the "hide mirror then
+            // leave and come back" scenario where btnShowMirror is already VISIBLE
+            // in memory but FloatingRemoteButton may have lost state.
+            if (mCurrentDashboardApp != null) {
+                btnShowMirror.setVisibility(View.VISIBLE);
+                FloatingRemoteButton.show();
+            }
         } else if (!mBindRequested) {
             // Check if the service is already running (e.g. Activity re-opened)
             if (ClusterService.sIsRunning) {
@@ -568,13 +679,14 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.d(TAG, "Not starting ClusterService automatically. Waiting for user action.");
             }
         }
+        startStatePoll();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
-        try { unregisterReceiver(mShowMirrorReceiver); } catch (IllegalArgumentException ignored) {}
+        stopStatePoll();
         // Remove the listener but keep the service active: projection continues.
         // Stop the mirror: the HandlerThread must not capture frames in the background.
         // The mirror restarts automatically via the savedItem mechanism in
@@ -589,12 +701,26 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
+        // Stop the screenshot loop first so an inflight ADB callback cannot re-post
+        // after we drain the handler (the callback reads mScreenshotRunnable which
+        // stopScreenshotLoop() nulls).
+        stopScreenshotLoop();
+        // Cancel all pending runnables (anonymous lambdas posted via postDelayed that
+        // individual removeCallbacks() calls may have missed).
+        mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
-        try { unregisterReceiver(mShowMirrorReceiver); } catch (IllegalArgumentException ignored) {}
         if (mServiceBound) {
             unbindService(mServiceConn);
             mServiceBound  = false;
             mBindRequested = false;
+        }
+        // Release the preview Surface wrapping the TextureView SurfaceTexture so
+        // it is not retained until GC (the underlying SurfaceTexture is released
+        // by the framework when the TextureView is destroyed, but the Surface
+        // wrapper itself must be released explicitly).
+        if (mMirrorSurface != null) {
+            try { mMirrorSurface.release(); } catch (Exception ignored) {}
+            mMirrorSurface = null;
         }
     }
 
@@ -647,6 +773,14 @@ public class MainActivity extends AppCompatActivity
                     if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
                 }
                 
+                // Pending app from "activate cluster" dialog
+                if (mPendingAppAfterActivation != null) {
+                    final AppInfo pending = mPendingAppAfterActivation;
+                    mPendingAppAfterActivation = null;
+                    AppLogger.i(TAG, "Auto-sending pending app after activation: " + pending.packageName);
+                    onSendToDashboard(pending);
+                }
+
                 // Auto-Launch process
                 if (mPendingAutoLaunchPkg != null) {
                     String targetPkg = mPendingAutoLaunchPkg;
@@ -663,7 +797,10 @@ public class MainActivity extends AppCompatActivity
 
                 // Reconnect reminder: if cluster was manually re-activated and
                 // there was a last known app, offer to relaunch it.
-                if (wasManual && mCurrentDashboardPkg == null) {
+                // Guarded by user preference (can be disabled in Settings).
+                boolean reconnectEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .getBoolean(SettingsActivity.PREF_RECONNECT_POPUP, false);
+                if (reconnectEnabled && wasManual && mCurrentDashboardPkg == null) {
                     final SharedPreferences _pp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     final String lastPkg  = _pp.getString(PREF_LAST_CLUSTER_PKG, null);
                     final String lastName = _pp.getString(PREF_LAST_CLUSTER_NAME, null);
@@ -741,7 +878,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onToggleFavorite(AppInfo app) {
         SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> favs = new HashSet<>(p.getStringSet("favorites", new HashSet<>()));
+        Set<String> favs = new HashSet<>(p.getStringSet(PREF_FAVORITES, new HashSet<>()));
         if (favs.contains(app.packageName)) {
             favs.remove(app.packageName);
             app.isFavorite = false;
@@ -749,19 +886,20 @@ public class MainActivity extends AppCompatActivity
             favs.add(app.packageName);
             app.isFavorite = true;
         }
-        p.edit().putStringSet("favorites", favs).apply();
+        p.edit().putStringSet(PREF_FAVORITES, favs).apply();
         loadAppsAsync(); // Reload and re-sort
     }
 
     @Override
     public void onSendToDashboard(AppInfo app) {
+        incrementLaunchCount(app.packageName);
         // Java displayId may not be resolved even when the cluster is active
         // (internal state unreliable on DiLink 3.0). We no longer block here:
         // ClusterService.launchOnDashboard() tries direct Binder then ADB relay
         // with displayId=1 hardcoded (Seal EU) as fallback → always functional.
         if (mClusterService == null) {
-            AppLogger.e(TAG, "ClusterService null — send cancelled for " + app.packageName);
-            Toast.makeText(this, getString(R.string.toast_cluster_unavailable), Toast.LENGTH_SHORT).show();
+            AppLogger.e(TAG, "ClusterService null — prompt user to activate for " + app.packageName);
+            showActivateClusterDialog(app);
             return;
         }
 
@@ -813,6 +951,8 @@ public class MainActivity extends AppCompatActivity
                     if (launched) {
                         mSecondDashboardApp = appName;
                         mSecondDashboardPkg = pkgName;
+                        mSessionClusterPackages.add(pkgName);
+                        persistSessionClusterPackages();
                         updateControlLabel();
                     } else {
                         Toast.makeText(MainActivity.this,
@@ -835,8 +975,14 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.log(TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId
                         + " " + (launched ? "OK" : "FAILED"));
                 if (launched) {
+                    // Track usage: stop timer for previous app, start for new one
+                    trackUsageStop(mCurrentDashboardPkg);
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
+                    mSessionClusterPackages.add(pkgName);
+                    persistSessionClusterPackages();
+                    addToRecentApps(pkgName, appName);
+                    trackUsageStart();
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                             .putString(PREF_CLUSTER_PKG, pkgName)
                             .putString(PREF_CLUSTER_NAME, appName)
@@ -856,8 +1002,19 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
+    private void incrementLaunchCount(String pkgName) {
+        if (pkgName == null) return;
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String key = "launch_count_" + pkgName;
+        int count = prefs.getInt(key, 0);
+        prefs.edit().putInt(key, count + 1).apply();
+    }
+
     @Override
     public void onSendToMain(AppInfo app) {
+        incrementLaunchCount(app.packageName);
+        // Track usage: stop timer for the app leaving the cluster
+        trackUsageStop(mCurrentDashboardPkg);
         // Clean up cluster state before move
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
@@ -908,24 +1065,35 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName != null
                 && app.packageName.equals(mCurrentDashboardPkg);
 
-        // 2. am force-stop via ADB
+        // Eagerly clear tracked state BEFORE async move/kill so the display-state
+        // poll does not see a stale mCurrentDashboardPkg on display 0 during the
+        // brief window between moveTaskToDisplay and forceStopApp.
+        if (isOnCluster) {
+            mCurrentDashboardApp = null;
+            mCurrentDashboardPkg = null;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+            mAdapter.setCurrentPackage(null);
+            updateDashboardStatus(null);
+        }
+
+        // 2. Move the app back to Display 0 before killing — safety net so that
+        //    if force-stop fails silently, Android won't re-launch it on Display 1.
+        if (mSessionClusterPackages.contains(app.packageName)
+                && mServiceBound && mClusterService != null) {
+            mClusterService.moveTaskToDisplay(app.packageName, 0, null);
+        }
+        mSessionClusterPackages.remove(app.packageName);
+        persistSessionClusterPackages();
+
+        // 3. am force-stop via ADB
         AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
-                        if (isOnCluster) {
-                            mCurrentDashboardApp = null;
-                            mCurrentDashboardPkg = null;
-                            // Clear persisted state so the killed app is not ghost-restored
-                            // if the Activity is destroyed and recreated later.
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
-                            mAdapter.setCurrentPackage(null);
-                            updateDashboardStatus(null);
-                            // The virtual display remains alive and black, waiting for another app.
-                        }
+                        // Cluster state already cleared eagerly above (before async ops).
                         if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
                             mSecondDashboardPkg = null;
                             clearSplitState();
@@ -1051,7 +1219,7 @@ public class MainActivity extends AppCompatActivity
         }
         // Fallback: direct SurfaceControl uid=10100 (fails if ACCESS_SURFACE_FLINGER missing)
         if (!mirrorOk) {
-            mirrorOk = mClusterService.getMirrorManager().startMirror(this,
+            mirrorOk = mClusterService.getMirrorManager().startMirror(
                     clusterDisplay, mMirrorSurface, viewW, viewH);
         }
 
@@ -1069,23 +1237,99 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // ---- External process-death detection -----------------------------------
+    // ---- Display state polling ----------------------------------------------
     //
-    // Removed in v0.1.43-alpha. The /proc-based watchdog and the OnUidImportanceListener
-    // before it both produced false positives on this platform:
-    //   - /proc is mounted with hidepid on Android 10, so a non-system app (uid=10xxx)
-    //     cannot see PIDs of third-party packages → findPid() always returned -1 → watchdog
-    //     incorrectly declared the app dead and cleared the cluster state.
-    //   - OnUidImportanceListener fired immediately after launch because apps on a secondary
-    //     VirtualDisplay (the cluster) are considered background by the importance model.
+    // Detects when the cluster app process dies (crash, OOM-kill, external
+    // force-stop) so we can clear stale bookkeeping and stop the mirror.
     //
-    // We now trust our own state (mCurrentDashboardPkg / mMainDisplayPkg). State is only
-    // cleared by explicit user actions (← Main, ✕ kill, restore, send-to-cluster of another
-    // app). If the app dies externally (OOM kill, etc.) the user can simply tap restore to
-    // reset everything — same UX as for the mirror, which is also preserved on transient
-    // failures.
-
+    // History:
+    //   v0.1.43  /proc-based watchdog → false positives (hidepid=2 on DiLink)
+    //   v0.8.0   OnUidImportanceListener → false positives (VD = "background")
+    //   v0.8.1   getTasks() → doesn't report VirtualDisplay tasks on DiLink
+    //   v0.8.3   `pidof <pkg>` via ADB shell (uid 2000 can read /proc)  ✓
+    //
+    // Started in onStart(), stopped in onStop().
     // -------------------------------------------------------------------------
+
+    private static final long STATE_POLL_INTERVAL_MS = 5_000;
+    private Runnable mStatePollRunnable;
+
+    private void startStatePoll() {
+        if (mStatePollRunnable != null) return;
+        mStatePollRunnable = new Runnable() {
+            @Override public void run() {
+                reconcileDisplayState();
+                mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
+            }
+        };
+        // First poll after 5 s — let state settle after onStart.
+        mScreenshotHandler.postDelayed(mStatePollRunnable, STATE_POLL_INTERVAL_MS);
+    }
+
+    private void stopStatePoll() {
+        if (mStatePollRunnable != null) {
+            mScreenshotHandler.removeCallbacks(mStatePollRunnable);
+            mStatePollRunnable = null;
+        }
+    }
+
+    /**
+     * Checks if the cluster app process is still alive using {@code pidof}
+     * via ADB shell.  The app process itself cannot read /proc for other UIDs
+     * (hidepid=2), but ADB shell (uid 2000) can.
+     *
+     * If the process is gone, clears cluster bookkeeping and stops the mirror.
+     */
+    private void reconcileDisplayState() {
+        final String clusterPkg = mCurrentDashboardPkg;
+        if (clusterPkg == null) return;
+
+        AdbLocalClient.executeShellWithResult(this, "pidof " + clusterPkg,
+                new AdbLocalClient.Callback() {
+                    @Override
+                    public void onSuccess(String output) {
+                        final boolean alive = output != null && !output.trim().isEmpty();
+                        if (alive) {
+                            AppLogger.d(TAG, "state-poll: " + clusterPkg
+                                    + " alive (pid " + output.trim() + ")");
+                            return;
+                        }
+                        // Process not found → app died externally
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                // Activity may have been destroyed while pidof was in flight.
+                                if (isFinishing() || isDestroyed()) return;
+                                // Re-check: still tracking the same package?
+                                if (!clusterPkg.equals(mCurrentDashboardPkg)) return;
+                                AppLogger.w(TAG, "state-poll: " + clusterPkg
+                                        + " process died → clearing cluster state");
+                                clearClusterState();
+                                stopClusterMirror();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        AppLogger.w(TAG, "state-poll: pidof failed: " + error);
+                    }
+                });
+    }
+
+    /**
+     * Clears all cluster-app bookkeeping and returns to the app list.
+     * Shared by reconcileDisplayState and other paths that need a clean reset.
+     */
+    private void clearClusterState() {
+        trackUsageStop(mCurrentDashboardPkg);
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+        updateDashboardStatus(null);
+        showAppList();
+    }
 
     // -------------------------------------------------------------------------
 
@@ -1113,8 +1357,8 @@ public class MainActivity extends AppCompatActivity
             SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
             int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-            int curW = p.getInt("inset_h_" + mCurrentDashboardPkg, defH);
-            int curH = p.getInt("inset_v_" + mCurrentDashboardPkg, defV);
+            int curW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + mCurrentDashboardPkg, defH);
+            int curH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + mCurrentDashboardPkg, defV);
             if (sbResizeW != null) {
                 sbResizeW.setProgress(curW);
                 tvResizeW.setText(String.valueOf(curW));
@@ -1137,8 +1381,8 @@ public class MainActivity extends AppCompatActivity
         final SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         final int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
         final int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        final int savedW = p.getInt("inset_h_" + pkg, defH);
-        final int savedH = p.getInt("inset_v_" + pkg, defV);
+        final int savedW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
+        final int savedH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
         // Only apply if there are per-app custom insets (different from global defaults)
         if (savedW == defH && savedH == defV) return;
         AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " w=" + savedW + " h=" + savedH);
@@ -1217,7 +1461,9 @@ public class MainActivity extends AppCompatActivity
                 new java.lang.ref.WeakReference<>(this);
         mScreenshotRunnable = new Runnable() {
             @Override public void run() {
-                AdbLocalClient.captureClusterDisplay(MainActivity.this, displayId,
+                // Use applicationContext so an inflight ADB capture does not keep
+                // a strong reference to the Activity via sExecutor's task queue.
+                AdbLocalClient.captureClusterDisplay(getApplicationContext(), displayId,
                         new AdbLocalClient.BitmapCallback() {
                     @Override public void onBitmap(final Bitmap bm) {
                         runOnUiThread(new Runnable() {
@@ -1229,16 +1475,18 @@ public class MainActivity extends AppCompatActivity
                                 }
                             }
                         });
-                        if (mScreenshotRunnable != null) {
-                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
-                                    SCREENSHOT_INTERVAL_MS);
+                        // Capture the volatile into a local to avoid a race where
+                        // stopScreenshotLoop() nulls it between the null check and postDelayed.
+                        Runnable r = mScreenshotRunnable;
+                        if (r != null) {
+                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS);
                         }
                     }
                     @Override public void onError(String error) {
                         AppLogger.w(TAG, "screenshotLoop erreur: " + error);
-                        if (mScreenshotRunnable != null) {
-                            mScreenshotHandler.postDelayed(mScreenshotRunnable,
-                                    SCREENSHOT_INTERVAL_MS * 2L);
+                        Runnable r = mScreenshotRunnable;
+                        if (r != null) {
+                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS * 2L);
                         }
                     }
                 });
@@ -1286,23 +1534,59 @@ public class MainActivity extends AppCompatActivity
         int   clusterH = mirror.getClusterHeight();
         if (clusterW <= 0 || clusterH <= 0) return;
 
-        float clusterX = (event.getX() - offsetX) / scale;
-        float clusterY = (event.getY() - offsetY) / scale;
-        clusterX = Math.max(0, Math.min(clusterX, clusterW - 1));
-        clusterY = Math.max(0, Math.min(clusterY, clusterH - 1));
+        int pointerCount = event.getPointerCount();
+        if (pointerCount <= 0) return;
 
-        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-            AppLogger.d(TAG, "touch → view(" + (int)event.getX() + "," + (int)event.getY()
-                    + ") off=(" + (int)offsetX + "," + (int)offsetY + ")"
-                    + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
-                    + " cluster=(" + (int)clusterX + "," + (int)clusterY
-                    + ")/" + clusterW + "×" + clusterH);
+        int[] pointerIds = new int[pointerCount];
+        float[] clusterXs = new float[pointerCount];
+        float[] clusterYs = new float[pointerCount];
+        for (int i = 0; i < pointerCount; i++) {
+            pointerIds[i] = event.getPointerId(i);
+            float cx = (event.getX(i) - offsetX) / scale;
+            float cy = (event.getY(i) - offsetY) / scale;
+            clusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
+            clusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
         }
 
-        forwarder.forwardTouchFinal(clusterX, clusterY, event.getAction());
+        if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
+                || event.getActionMasked() == android.view.MotionEvent.ACTION_POINTER_DOWN) {
+            int ai = event.getActionIndex();
+            if (ai >= 0 && ai < pointerCount) {
+                AppLogger.d(TAG, "touch → ptrs=" + pointerCount
+                        + " action=" + event.getActionMasked()
+                        + " idx=" + ai
+                        + " view(" + (int)event.getX(ai) + "," + (int)event.getY(ai) + ")"
+                        + " off=(" + (int)offsetX + "," + (int)offsetY + ")"
+                        + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
+                        + " cluster=(" + (int)clusterXs[ai] + "," + (int)clusterYs[ai]
+                        + ")/" + clusterW + "×" + clusterH);
+            }
+        }
+
+        forwarder.forwardTouchFinalMulti(
+                pointerIds,
+                clusterXs,
+                clusterYs,
+                event.getActionMasked(),
+                event.getActionIndex(),
+                pointerCount
+        );
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----
+
+    private void showActivateClusterDialog(final AppInfo pendingApp) {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.toast_cluster_unavailable))
+                .setMessage(getString(R.string.dialog_cluster_not_active))
+                .setPositiveButton(getString(R.string.dialog_activate_now), (dialog, which) -> {
+                    activateCluster();
+                    // After activation, auto-send the app once connected
+                    mPendingAppAfterActivation = pendingApp;
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
 
     private void activateCluster() {
         btnActivateCluster.setEnabled(false);
@@ -1367,10 +1651,10 @@ public class MainActivity extends AppCompatActivity
                 layout.setPadding(pad, pad, pad, pad / 2);
 
                 TextView tvVersion = new TextView(MainActivity.this);
-                tvVersion.setText("DashCast " + version);
+                tvVersion.setText(getString(R.string.ota_version_label, version));
                 tvVersion.setTextSize(16);
                 tvVersion.setPadding(pad, 0, pad, pad / 2);
-                tvVersion.setTextColor(android.graphics.Color.parseColor("#1565C0"));
+                tvVersion.setTextColor(getColor(R.color.text_accent));
                 layout.addView(tvVersion);
 
                 ScrollView sv = new ScrollView(MainActivity.this);
@@ -1378,7 +1662,7 @@ public class MainActivity extends AppCompatActivity
                 tvChangelog.setText(renderMarkdown(changelog));
                 tvChangelog.setTextSize(13);
                 tvChangelog.setPadding(pad, 0, pad, pad);
-                tvChangelog.setTextColor(android.graphics.Color.parseColor("#333333"));
+                tvChangelog.setTextColor(getColor(R.color.text_primary));
                 sv.addView(tvChangelog);
                 
                 LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
@@ -1400,7 +1684,7 @@ public class MainActivity extends AppCompatActivity
                 pbHolder[0] = pb;
 
                 TextView tvPct = new TextView(MainActivity.this);
-                tvPct.setText("0 %");
+                tvPct.setText(getString(R.string.ota_progress_percent, 0));
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
@@ -1438,11 +1722,11 @@ public class MainActivity extends AppCompatActivity
                 if (percent < 0) {
                     // Content-Length unknown → indeterminate
                     pbHolder[0].setIndeterminate(true);
-                    if (pctHolder[0] != null) pctHolder[0].setText("…");
+                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_unknown));
                 } else {
                     pbHolder[0].setIndeterminate(false);
                     pbHolder[0].setProgress(percent);
-                    if (pctHolder[0] != null) pctHolder[0].setText(percent + " %");
+                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_percent, percent));
                 }
             }
 
@@ -1485,16 +1769,19 @@ public class MainActivity extends AppCompatActivity
         popup.getMenu().add(0, 6, 2, getString(R.string.menu_check_updates));
         popup.getMenu().add(0, 7, 3, mAdapter.isGridMode() ? getString(R.string.menu_view_list) : getString(R.string.menu_view_grid));
         popup.getMenu().add(0, 8, 4, getString(R.string.btn_origin_cluster));
+        popup.getMenu().add(0, 9, 5, getString(R.string.menu_usage_stats));
         // Group 1: dev tools (with divider)
-        popup.getMenu().add(1, 2, 5, getString(R.string.menu_diagnostic));
-        popup.getMenu().add(1, 3, 6, getString(R.string.menu_system_report));
-        popup.getMenu().add(1, 4, 7, getString(R.string.menu_log));
+        popup.getMenu().add(1, 2, 6, getString(R.string.menu_diagnostic));
+        popup.getMenu().add(1, 3, 7, getString(R.string.menu_system_report));
+        popup.getMenu().add(1, 4, 8, getString(R.string.menu_log));
         // Enable visual divider between groups (API 28+, safe on our API 29 target)
         try {
             popup.getMenu().getClass()
                     .getDeclaredMethod("setGroupDividerEnabled", boolean.class)
                     .invoke(popup.getMenu(), true);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            AppLogger.d(TAG, "setGroupDividerEnabled unavailable: " + ignored.getMessage());
+        }
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -1520,6 +1807,9 @@ public class MainActivity extends AppCompatActivity
                         UpdateChecker.checkUpdate(MainActivity.this,
                                 makeOtaProgressListener(true));
                         return true;
+                    case 9:
+                        showUsageStatsDialog();
+                        return true;
                 }
                 return false;
             }
@@ -1531,6 +1821,26 @@ public class MainActivity extends AppCompatActivity
         btnRestoreCluster.setEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_restoring_cluster));
         setStatusDot(DOT_COLOR_PENDING);
+        trackUsageStop(mCurrentDashboardPkg);
+
+        // Capture the package name before clearing state — restoreBydOnCluster
+        // needs it to force-stop the app before sendInfo(18).
+        final String capturedClusterPkg = mCurrentDashboardPkg;
+
+        // Eagerly clear tracked cluster state BEFORE async move/restore so the
+        // display-state poll does not see a stale mCurrentDashboardPkg on display 0
+        // during the brief window between moveSessionApps and restoreBydOnCluster.
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+
+        // Move ALL apps that were launched on the cluster during this session back to Display 0.
+        // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
+        // when the user opens the app from the BYD launcher after stopping the projection.
+        moveSessionAppsToMainDisplay();
+
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
         // Split mode: force-stop the second app before sendInfo(18)
         // (prevents it from relocating to the main display)
@@ -1538,7 +1848,7 @@ public class MainActivity extends AppCompatActivity
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
         }
 
-        AdbLocalClient.restoreBydOnCluster(this, mCurrentDashboardPkg, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreBydOnCluster(this, capturedClusterPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -1552,12 +1862,8 @@ public class MainActivity extends AppCompatActivity
                         if (mServiceBound && mClusterService != null) {
                             mClusterService.stopProjectionNoAdb();
                         }
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+                        // Cluster state already cleared eagerly above (before async ops).
                         clearSplitState();
-                        mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         btnActivateCluster.setEnabled(true);
                         showAppList();
@@ -1580,6 +1886,95 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
+    /**
+     * Moves every app that was launched on the cluster during this session back to Display 0.
+     * Uses moveTaskToDisplay(pkg, 0) via ClusterService so Android remembers Display 0
+     * as the last display for each app. Clears the session set afterwards.
+     */
+    private void moveSessionAppsToMainDisplay() {
+        if (mSessionClusterPackages.isEmpty()) return;
+        if (!mServiceBound || mClusterService == null) {
+            // Keep the persisted set intact so boot/onCreate cleanup can still recover.
+            AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, preserving set for later cleanup");
+            return;
+        }
+        AppLogger.i(TAG, "moveSessionAppsToMainDisplay: " + mSessionClusterPackages.size()
+                + " apps → " + mSessionClusterPackages);
+        for (String pkg : mSessionClusterPackages) {
+            mClusterService.moveTaskToDisplay(pkg, 0, null);
+        }
+        mSessionClusterPackages.clear();
+        persistSessionClusterPackages();
+    }
+
+    /** Persists the session cluster packages set to SharedPreferences. */
+    private void persistSessionClusterPackages() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putStringSet(PREF_SESSION_CLUSTER_PKGS, new java.util.HashSet<>(mSessionClusterPackages))
+                .apply();
+    }
+
+    /**
+     * Boot/onCreate safety net: moves all previously-tracked cluster apps to Display 0
+     * using IActivityTaskManager reflection (no ClusterService needed).
+     * Only runs if boot_auto_start_enabled is false.
+     */
+    static void cleanupDisplayAffinityAtBoot(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(
+                SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        java.util.Set<String> pkgs = prefs.getStringSet(PREF_SESSION_CLUSTER_PKGS, null);
+        if (pkgs == null || pkgs.isEmpty()) {
+            AppLogger.d("DisplayCleanup", "No session cluster packages to clean up");
+            return;
+        }
+        java.util.Set<String> remaining = new java.util.HashSet<>(pkgs);
+        AppLogger.i("DisplayCleanup", "Cleaning up " + pkgs.size() + " apps → Display 0: " + pkgs);
+        for (String pkg : pkgs) {
+            if (moveTaskToDisplayZero(pkg)) {
+                remaining.remove(pkg);
+            }
+        }
+        // Keep only failed packages for a later retry (next boot/app launch).
+        if (remaining.isEmpty()) {
+            prefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+        } else {
+            prefs.edit().putStringSet(PREF_SESSION_CLUSTER_PKGS, remaining).apply();
+            AppLogger.w("DisplayCleanup", "Cleanup partially failed, keeping pending set: " + remaining);
+        }
+    }
+
+    /** Moves a single package's task to Display 0 via IActivityTaskManager reflection. */
+    private static boolean moveTaskToDisplayZero(String packageName) {
+        try {
+            // Find the task ID
+            Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
+            Object iatm = atmClass.getMethod("getService").invoke(null);
+            // Use IActivityTaskManager.getTasks(100) — hidden but available with platform signing
+            @SuppressWarnings("unchecked")
+            java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
+                    .getMethod("getTasks", int.class).invoke(iatm, 100);
+            if (tasks == null) return false;
+            for (Object taskInfo : tasks) {
+                // RecentTaskInfo or RunningTaskInfo — both extend TaskInfo with baseActivity
+                android.content.ComponentName base = (android.content.ComponentName)
+                        taskInfo.getClass().getField("baseActivity").get(taskInfo);
+                if (base != null && packageName.equals(base.getPackageName())) {
+                    int taskId = taskInfo.getClass().getField("taskId").getInt(taskInfo);
+                    iatm.getClass().getMethod("moveTaskToDisplay", int.class, int.class)
+                            .invoke(iatm, taskId, 0);
+                    AppLogger.i("DisplayCleanup", "Moved " + packageName
+                            + " (taskId=" + taskId + ") → Display 0");
+                    return true;
+                }
+            }
+            AppLogger.d("DisplayCleanup", "No running task found for " + packageName + " — already gone, skipping");
+            return true; // not an error: task no longer exists, nothing to move
+        } catch (Exception e) {
+            AppLogger.w("DisplayCleanup", "Could not move " + packageName + " to Display 0: " + e.getMessage());
+            return false;
+        }
+    }
+
     private void updateDashboardStatus(String appName) {
         tvDashboardStatus.setTextColor(Color.WHITE);
         if (appName == null) {
@@ -1597,20 +1992,17 @@ public class MainActivity extends AppCompatActivity
         btnRestoreCluster.setEnabled(true);
     }
 
-    /** Sets the status dot to a given ARGB color using an oval GradientDrawable. */
+    /** Sets the status dot to a given ARGB color. Reuses the shared GradientDrawable to avoid allocations. */
     private void setStatusDot(int color) {
-        if (mStatusDot == null) return;
-        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
-        shape.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        shape.setColor(color);
-        mStatusDot.setBackground(shape);
+        if (mStatusDotDrawable == null) return;
+        mStatusDotDrawable.setColor(color);
     }
 
     /** Toggles list ↔ grid mode, updates the toggle button icon and adapter layout. */
     private void toggleViewMode() {
         SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean nv = !mAdapter.isGridMode();
-        p2.edit().putBoolean("grid_mode", nv).apply();
+        p2.edit().putBoolean(PREF_GRID_MODE, nv).apply();
         mAdapter.setGridMode(nv);
         if (nv) {
             rvApps.setLayoutManager(new GridLayoutManager(this, 5));
@@ -1633,11 +2025,11 @@ public class MainActivity extends AppCompatActivity
         if (mCurrentSplitSlot != 0) {
             btnSplitLayout.setText(getString(R.string.split_btn_exit));
             btnSplitLayout.setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#E65100")));
+                android.content.res.ColorStateList.valueOf(getColor(R.color.split_active)));
         } else {
             btnSplitLayout.setText(getString(R.string.btn_cluster_split));
             btnSplitLayout.setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#5C6BC0")));
+                android.content.res.ColorStateList.valueOf(getColor(R.color.split_inactive)));
         }
     }
 
@@ -1776,13 +2168,26 @@ public class MainActivity extends AppCompatActivity
     private void originCluster() {
         tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
         setStatusDot(DOT_COLOR_PENDING);
+        trackUsageStop(mCurrentDashboardPkg);
+
+        // Capture before clearing — restoreOriginCluster needs it for force-stop.
+        final String capturedClusterPkg = mCurrentDashboardPkg;
+
+        // Eagerly clear tracked cluster state (same rationale as restoreBydDashboard).
+        mCurrentDashboardApp = null;
+        mCurrentDashboardPkg = null;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        mAdapter.setCurrentPackage(null);
+
+        moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
         // Split mode: force-stop the second app before restoration
         if (mSecondDashboardPkg != null) {
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
         }
 
-        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), mCurrentDashboardPkg, new AdbLocalClient.Callback() {
+        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), capturedClusterPkg, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -1790,12 +2195,8 @@ public class MainActivity extends AppCompatActivity
                         if (mServiceBound && mClusterService != null) {
                             mClusterService.stopProjectionNoAdb();
                         }
-                        mCurrentDashboardApp = null;
-                        mCurrentDashboardPkg = null;
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+                        // Cluster state already cleared eagerly above.
                         clearSplitState();
-                        mAdapter.setCurrentPackage(null);
                         updateDashboardStatus(null);
                         btnActivateCluster.setEnabled(true);
                         showAppList();
@@ -2011,7 +2412,11 @@ public class MainActivity extends AppCompatActivity
      * ────────────────────────────────────────────────────────────────────────────
      */
     private void loadAppsAsync() {
-        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor();
+        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "load-apps");
+            t.setDaemon(true);
+            return t;
+        });
         loader.execute(new Runnable() {
             @Override public void run() {
                 PackageManager pm = getPackageManager();
@@ -2026,11 +2431,32 @@ public class MainActivity extends AppCompatActivity
                     String pkg = ri.activityInfo.packageName;
                     if (pkg.equals(ownPackage)) continue;
                     String name = ri.loadLabel(pm).toString();
-                    apps.add(new AppInfo(pkg, name, ri.loadIcon(pm)));
+                    AppInfo appInfo = new AppInfo(pkg, name, ri.loadIcon(pm));
+                    
+                    try {
+                        android.content.pm.LauncherApps launcherApps = (android.content.pm.LauncherApps) getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                        if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
+                            android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
+                            query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
+                            query.setPackage(pkg);
+                            
+                            java.util.List<android.content.pm.ShortcutInfo> shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
+                            if (shortcuts != null) {
+                                for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
+                                    android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
+                                    appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon));
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Ignored: app has no shortcuts or no permission
+                    }
+                    
+                    apps.add(appInfo);
                 }
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                Set<String> favs = prefs.getStringSet("favorites", new HashSet<>());
+                Set<String> favs = prefs.getStringSet(PREF_FAVORITES, new HashSet<>());
                 String autoPkg = prefs.getString(PREF_AUTO_LAUNCH_PKG, null);
 
                 for (AppInfo info : apps) {
@@ -2040,13 +2466,24 @@ public class MainActivity extends AppCompatActivity
                     if (autoPkg != null && autoPkg.equals(info.packageName)) {
                         info.isAutoLaunch = true;
                     }
+                    info.launchCount = prefs.getInt("launch_count_" + info.packageName, 0);
                 }
 
                 Collections.sort(apps, new Comparator<AppInfo>() {
                     @Override
                     public int compare(AppInfo a, AppInfo b) {
+                        // 1. Group automatically by Category (Navigation -> Media -> Others)
+                        if (a.category != b.category) {
+                            return Integer.compare(a.category, b.category);
+                        }
+                        // 2. Inside the category, push Favorites to the top
                         if (a.isFavorite && !b.isFavorite) return -1;
                         if (!a.isFavorite && b.isFavorite) return 1;
+                        // 3. Then sort by usage frequency
+                        if (a.launchCount != b.launchCount) {
+                            return Integer.compare(b.launchCount, a.launchCount); // descending
+                        }
+                        // 4. Alphabetical fallback
                         return a.appName.compareToIgnoreCase(b.appName);
                     }
                 });
@@ -2058,18 +2495,118 @@ public class MainActivity extends AppCompatActivity
                     SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {
                         _p.edit().putBoolean(PREF_FIRST_LAUNCH_TIP, true).apply();
-                        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                            @Override public void run() {
+                        mScreenshotHandler.postDelayed(() ->
                                 Toast.makeText(MainActivity.this,
                                         getString(R.string.tooltip_tap_send),
-                                        Toast.LENGTH_LONG).show();
-                            }
-                        }, 1200);
+                                        Toast.LENGTH_LONG).show(),
+                                1200);
                     }
                 });
             }
         });
         loader.shutdown(); // thread ends as soon as the above task finishes
+    }
+
+    // ── Category filter helpers ──────────────────────────────────────────────
+
+    private void updateCategoryFilterButtons(int activeCategory) {
+        btnFilterAll.getBackground().setTint(activeCategory == 0 ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
+        btnFilterNav.getBackground().setTint(activeCategory == AppInfo.CATEGORY_NAVIGATION ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
+        btnFilterMedia.getBackground().setTint(activeCategory == AppInfo.CATEGORY_MEDIA ? FILTER_TINT_ACTIVE : FILTER_TINT_INACTIVE);
+    }
+
+    // ── Quick-switch history ────────────────────────────────────────────────
+
+    private static final String PREF_RECENT_APPS = SettingsActivity.PREF_RECENT_APPS;
+    private static final int MAX_RECENT_APPS = 3;
+
+    private void addToRecentApps(String pkgName, String appName) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String raw = prefs.getString(PREF_RECENT_APPS, "");
+        // Format: "pkg|name;;pkg|name;;pkg|name"
+        java.util.LinkedList<String> entries = new java.util.LinkedList<>();
+        if (!raw.isEmpty()) {
+            for (String e : raw.split(";;")) entries.add(e);
+        }
+        String newEntry = pkgName + "|" + appName;
+        entries.remove(newEntry); // avoid duplicates
+        entries.addFirst(newEntry);
+        while (entries.size() > MAX_RECENT_APPS) entries.removeLast();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < entries.size(); i++) {
+            if (i > 0) sb.append(";;");
+            sb.append(entries.get(i));
+        }
+        prefs.edit().putString(PREF_RECENT_APPS, sb.toString()).apply();
+    }
+
+    // ── Usage stats ─────────────────────────────────────────────────────────
+
+    private void trackUsageStart() {
+        mClusterAppStartTime = System.currentTimeMillis();
+    }
+
+    private void trackUsageStop(String pkgName) {
+        if (mClusterAppStartTime <= 0 || pkgName == null) return;
+        long elapsed = System.currentTimeMillis() - mClusterAppStartTime;
+        mClusterAppStartTime = 0;
+        if (elapsed < 1000) return; // ignore sub-second
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        long prev = prefs.getLong("usage_ms_" + pkgName, 0);
+        prefs.edit().putLong("usage_ms_" + pkgName, prev + elapsed).apply();
+    }
+
+    private void showUsageStatsDialog() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        java.util.Map<String, ?> all = prefs.getAll();
+        java.util.List<String[]> stats = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, ?> entry : all.entrySet()) {
+            if (entry.getKey().startsWith("usage_ms_") && entry.getValue() instanceof Long) {
+                String pkg = entry.getKey().substring("usage_ms_".length());
+                long ms = (Long) entry.getValue();
+                // Resolve app name
+                String name = pkg;
+                try {
+                    android.content.pm.ApplicationInfo ai = getPackageManager().getApplicationInfo(pkg, 0);
+                    CharSequence label = getPackageManager().getApplicationLabel(ai);
+                    if (label != null) name = label.toString();
+                } catch (Exception ignored) {}
+                stats.add(new String[] { name, formatDuration(ms) });
+            }
+        }
+        if (stats.isEmpty()) {
+            Toast.makeText(this, getString(R.string.usage_empty), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // Sort by name
+        java.util.Collections.sort(stats, (a, b) -> a[0].compareToIgnoreCase(b[0]));
+        StringBuilder sb = new StringBuilder();
+        for (String[] s : stats) {
+            sb.append(s[0]).append(" — ").append(s[1]).append("\n");
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.usage_title))
+                .setMessage(sb.toString().trim())
+                .setPositiveButton(android.R.string.ok, null)
+                .setNeutralButton(getString(R.string.usage_reset), (d, w) -> {
+                    SharedPreferences.Editor editor = prefs.edit();
+                    // Re-read at click time: new usage entries may have been added since the dialog opened.
+                    for (String key : prefs.getAll().keySet()) {
+                        if (key.startsWith("usage_ms_")) editor.remove(key);
+                    }
+                    editor.apply();
+                    Toast.makeText(this, "✓", Toast.LENGTH_SHORT).show();
+                })
+                .show();
+    }
+
+    private static String formatDuration(long ms) {
+        long seconds = ms / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        if (hours > 0) return hours + "h " + (minutes % 60) + "m";
+        if (minutes > 0) return minutes + "m " + (seconds % 60) + "s";
+        return seconds + "s";
     }
 
 }

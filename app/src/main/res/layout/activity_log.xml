@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#111111">
+    android:background="@color/bg_card">
 
     <!-- Barre de titre + actions -->
     <LinearLayout
@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/log_title"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold"/>
 
@@ -58,7 +58,7 @@
             android:layout_height="36dp"
             android:layout_weight="1"
             android:hint="@string/log_filter_hint"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textColorHint="#666666"
             android:background="#2A2A2A"
             android:paddingStart="8dp"
@@ -72,7 +72,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/log_autoscroll"
-            android:textColor="#AAAAAA"
+            android:textColor="@color/text_secondary"
             android:textSize="11sp"
             android:layout_marginStart="8dp"/>
 

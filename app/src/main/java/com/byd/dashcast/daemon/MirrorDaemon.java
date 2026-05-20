@@ -188,7 +188,11 @@ public class MirrorDaemon {
                 }
                 case TRANSACT_INJECT_MOTION: {
                     MotionEvent ev = data.readParcelable(MotionEvent.class.getClassLoader());
-                    injectMotion(ev);
+                    try {
+                        injectMotion(ev);
+                    } finally {
+                        if (ev != null) ev.recycle();
+                    }
                     return true;
                 }
                 case TRANSACT_INJECT_KEY: {
@@ -301,7 +305,11 @@ public class MirrorDaemon {
 
         } catch (Exception e) {
             Log.e(TAG, "setupMirror failed", e);
-            sMirrorToken = null;
+            // If createDisplay succeeded but a later reflection step threw, the
+            // SurfaceFlinger display token must be released — otherwise it leaks
+            // for the lifetime of the daemon process. stopMirror() handles the
+            // null case and clears sMirrorToken atomically.
+            stopMirror();
             return false;
         }
     }

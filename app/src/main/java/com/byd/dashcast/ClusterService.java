@@ -27,7 +27,7 @@ import com.byd.dashcast.dashboard.DashboardLauncher;
  *   - Started by MainActivity.onCreate() via startForegroundService()
  *   - MainActivity binds/unbinds in onStart()/onStop() to access data
  *   - The service keeps running until stopSelf() is called
- *   - stopProjection() is called explicitly (Restore BYD button or app destruction)
+ *   - stopProjectionNoAdb() is called explicitly (Restore BYD button or app destruction)
  *
  * Communication with MainActivity:
  *   - LocalBinder.getService() returns the service instance
@@ -63,6 +63,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private ClusterInputForwarder  mInputForwarder;
     private Listener               mListener;
     private boolean                mProjectionActive = false;
+    /**
+     * Set to true in onDestroy().  Background threads ({@code move-task-thread})
+     * check this before posting results to {@link #mMainHandler} to avoid
+     * use-after-destroy NPEs on {@link #mLauncher} / {@link #mMirrorManager}.
+     */
+    private volatile boolean       mDestroyed = false;
     // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -115,6 +121,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         sIsRunning = false;
+        mDestroyed = true;
         mListener = null;
         // Cancel all pending Runnables on mMainHandler BEFORE release():
         // launchOnDashboard (postDelayed 2s) could post a callback
@@ -144,7 +151,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
         int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
         if (packageName == null || packageName.isEmpty()) return defaultVal;
-        return prefs.getInt("inset_h_" + packageName, defaultVal);
+        return prefs.getInt(SettingsActivity.PREF_INSET_H_PREFIX + packageName, defaultVal);
     }
 
     public int getInsetV(String packageName) {
@@ -152,7 +159,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
         int defaultVal = prefs.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
         if (packageName == null || packageName.isEmpty()) return defaultVal;
-        return prefs.getInt("inset_v_" + packageName, defaultVal);
+        return prefs.getInt(SettingsActivity.PREF_INSET_V_PREFIX + packageName, defaultVal);
     }
 
 
@@ -228,6 +235,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
             java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks =
                     am.getRunningTasks(50);
+            if (tasks == null) return -1;
             for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
                 if (t.topActivity != null
                         && packageName.equals(t.topActivity.getPackageName())) {
@@ -253,8 +261,21 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      *
      * Callback is always called on the main thread.
      */
+    // TeleNav nav app is auto-started by BYD at boot; its process is often a zombie
+    // that moveTaskToDisplay() moves as-is → black screen on cluster.  Force a fresh
+    // launch instead (launchOnDashboard uses FLAG_ACTIVITY_CLEAR_TASK).
+    private static final String PKG_FORCE_FRESH_LAUNCH = "com.telenav.app.arp";
+
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
+        // ── Ghost-nav workaround: always fresh-launch TeleNav instead of moving ──
+        if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
+            AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName
+                    + " (ghost-nav workaround)");
+            fallbackLaunch(packageName, targetDisplayId, callback);
+            return;
+        }
+
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
@@ -304,12 +325,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
                     mMainHandler.post(new Runnable() {
                         @Override public void run() {
+                            if (mDestroyed) return;
                             if (callback != null) callback.onResult(true);
                         }
                     });
 
                 } catch (Exception e) {
                     AppLogger.e(TAG, "moveTaskToDisplay error", e);
+                    if (mDestroyed) return;
                     fallbackLaunch(packageName, targetDisplayId, callback);
                 }
             }
@@ -320,6 +343,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                  final LaunchCallback callback) {
         mMainHandler.post(new Runnable() {
             @Override public void run() {
+                if (mDestroyed) return;
                 if (targetDisplayId > 0) {
                     launchOnDashboard(packageName, callback);
                 } else {
@@ -531,17 +555,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         if (mDisplayHelper != null) {
             mDisplayHelper.start();
         }
-    }
-
-    /** Cleanly stops the projection (sendInfo(0) + stopService AutoDisplayService). */
-    public void stopProjection() {
-        AppLogger.log(TAG, "stopProjection requested");
-        AdbLocalClient.executeShell(this, "wm overscan reset -d 1");
-        mProjectionActive = false;
-        mDisplayHelper.stop();
-        mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: stopped");
-        stopSelf();
     }
 
     /**

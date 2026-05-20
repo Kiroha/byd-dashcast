@@ -9,7 +9,7 @@ import java.io.File;
  */
 public class ContainerService {
     private static final String TAG = "JNI_BYPASS";
-    public static boolean isLoaded = false;
+    public static volatile boolean isLoaded = false;
 
     private static native QtDisplayInfo[] getQtProjectionDispInfoArrayNative();
     private static native QtDisplayInfo getQtProjectionDispInfoNative(int i);

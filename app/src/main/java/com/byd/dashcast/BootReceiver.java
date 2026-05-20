@@ -1,0 +1,48 @@
+package com.byd.dashcast;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+
+public class BootReceiver extends BroadcastReceiver {
+
+    private static final String PREFS_NAME = SettingsActivity.PREFS_NAME;
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
+            
+            if (autoStartEnabled) {
+                AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");
+                
+                // Démarrer automatiquement le service de projection (ClusterService)
+                try {
+                    Intent serviceIntent = new Intent(context, ClusterService.class);
+                    context.startForegroundService(serviceIntent);
+                } catch (Exception e) {
+                    AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
+                }
+            } else {
+                AppLogger.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.");
+                // Projection not auto-started: move any apps that were on the cluster
+                // (from the previous session) back to Display 0 so they don't get stuck
+                // on the (possibly still-alive) VirtualDisplay.
+                // goAsync() keeps the process alive until result.finish() is called,
+                // preventing the OS from killing the thread before cleanup completes.
+                final PendingResult result = goAsync();
+                new Thread(() -> {
+                    try {
+                        MainActivity.cleanupDisplayAffinityAtBoot(context);
+                    } catch (Exception e) {
+                        AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
+                    } finally {
+                        result.finish();
+                    }
+                }, "boot-display-cleanup").start();
+            }
+        }
+    }
+}

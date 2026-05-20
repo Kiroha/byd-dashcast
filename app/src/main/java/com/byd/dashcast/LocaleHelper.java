@@ -33,11 +33,20 @@ public class LocaleHelper {
     public static final String LANG_KK = "kk";
     public static final String LANG_BE = "be";
 
-    /** Applies the saved locale to the given context. */
+    /**
+     * Applies the saved locale to the given context without re-saving the preference.
+     * setLocale() already persists the language on user selection; calling saveLanguage()
+     * on every attachBaseContext() is unnecessary and causes a redundant prefs write.
+     */
     public static Context applyLocale(Context context) {
         String lang = getSavedLanguage(context);
         if (lang == null) return context;
-        return setLocale(context, lang);
+        Locale locale = new Locale(lang);
+        Locale.setDefault(locale);
+        Resources res = context.getResources();
+        Configuration config = new Configuration(res.getConfiguration());
+        config.setLocale(locale);
+        return context.createConfigurationContext(config);
     }
 
     /** Changes the locale and updates the resource configuration. */

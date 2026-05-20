@@ -34,8 +34,8 @@ import java.util.Locale;
  */
 public class LogActivity extends AppCompatActivity {
 
-    private static final String TAG = "LogActivity";
-    private static final long REFRESH_MS = 500;
+    private static final long REFRESH_MS      = 500;   // delay when log changed
+    private static final long REFRESH_IDLE_MS  = 2000;  // delay when nothing new
 
     // Couleurs par niveau
     private static final int COLOR_DEBUG    = Color.parseColor("#999999");
@@ -62,8 +62,8 @@ public class LogActivity extends AppCompatActivity {
         @Override
         public void run() {
             if (mRunning) {
-                refreshLog();
-                mHandler.postDelayed(this, REFRESH_MS);
+                boolean changed = refreshLog();
+                mHandler.postDelayed(this, changed ? REFRESH_MS : REFRESH_IDLE_MS);
             }
         }
     };
@@ -86,7 +86,7 @@ public class LogActivity extends AppCompatActivity {
         btnClear     = (Button)      findViewById(R.id.log_btn_clear);
 
         // Fond sombre pour le log
-        tvLog.setBackgroundColor(Color.parseColor("#1A1A1A"));
+        tvLog.setBackgroundColor(getColor(R.color.bg_log));
         tvLog.setTextColor(COLOR_INFO);
 
         cbAutoScroll.setChecked(true);
@@ -139,11 +139,11 @@ public class LogActivity extends AppCompatActivity {
     private final SimpleDateFormat mTimeFmt =
             new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
 
-    private void refreshLog() {
+    private boolean refreshLog() {
         // Skip buffer copy if neither the entry count nor the filter has changed.
         int currentCount = AppLogger.getEntriesCount();
-        String filter = mFilter.toLowerCase(Locale.getDefault());
-        if (currentCount == mLastEntryCount && filter.equals(mLastFilter)) return;
+        String filter = mFilter.toLowerCase(Locale.ROOT);
+        if (currentCount == mLastEntryCount && filter.equals(mLastFilter)) return false;
         // Buffer or filter changed: copy and rebuild.
         List<AppLogger.Entry> entries = AppLogger.getEntries();
         mLastEntryCount = entries.size();
@@ -159,6 +159,7 @@ public class LogActivity extends AppCompatActivity {
                 @Override public void run() { scrollView.fullScroll(View.FOCUS_DOWN); }
             });
         }
+        return true;
     }
 
     /** Static cache — avoids allocating a Level[] on every buildSpannable call. */
@@ -175,9 +176,9 @@ public class LogActivity extends AppCompatActivity {
         for (AppLogger.Entry e : entries) {
             // Filtre
             if (!filter.isEmpty()) {
-                boolean match = e.tag.toLowerCase(Locale.getDefault()).contains(filter)
-                        || e.message.toLowerCase(Locale.getDefault()).contains(filter)
-                        || e.level.name().toLowerCase(Locale.getDefault()).contains(filter);
+                boolean match = containsIgnoreCase(e.tag, filter)
+                        || containsIgnoreCase(e.message, filter)
+                        || containsIgnoreCase(e.level.name(), filter);
                 if (!match) continue;
             }
 
@@ -222,6 +223,18 @@ public class LogActivity extends AppCompatActivity {
         }
 
         return span;
+    }
+
+    /** Case-insensitive contains without allocating lowercase copies on every call. */
+    private static boolean containsIgnoreCase(String text, String needleLowercase) {
+        if (text == null) return false;
+        if (needleLowercase == null || needleLowercase.isEmpty()) return true;
+        int n = needleLowercase.length();
+        int limit = text.length() - n;
+        for (int i = 0; i <= limit; i++) {
+            if (text.regionMatches(true, i, needleLowercase, 0, n)) return true;
+        }
+        return false;
     }
 
     private int levelColor(AppLogger.Level level) {

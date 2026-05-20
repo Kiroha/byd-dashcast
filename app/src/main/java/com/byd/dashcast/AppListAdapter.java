@@ -1,7 +1,6 @@
 package com.byd.dashcast;
 
 import androidx.recyclerview.widget.RecyclerView;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
 
 import com.byd.dashcast.model.AppInfo;
 
@@ -34,6 +34,17 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private String mMainPackage = null;
     private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
     private String mCurrentFilter = "";
+    private int mCategoryFilter = 0; // 0=all, 1=nav, 2=media
+
+    /** Foreground tint applied to the active row (cluster) — semi-transparent green. */
+    private static final int COLOR_FG_ACTIVE  = 0x1A4CAF50;
+    /** Foreground tint applied to a row whose app is running on the main display. */
+    private static final int COLOR_FG_ON_MAIN = 0x141565C0;
+    /** Reusable ConstantState for foreground tints — avoids allocating a new ColorDrawable per bind. */
+    private static final android.graphics.drawable.Drawable.ConstantState CS_FG_ACTIVE =
+            new android.graphics.drawable.ColorDrawable(COLOR_FG_ACTIVE).getConstantState();
+    private static final android.graphics.drawable.Drawable.ConstantState CS_FG_ON_MAIN =
+            new android.graphics.drawable.ColorDrawable(COLOR_FG_ON_MAIN).getConstantState();
 
     private boolean mIsGridMode = false;
 
@@ -66,13 +77,34 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         applyFilter(mCurrentFilter);
     }
 
+    /**
+     * Filters the displayed list by category.
+     * @param category 0=all, AppInfo.CATEGORY_NAVIGATION, AppInfo.CATEGORY_MEDIA
+     */
+    public void filterByCategory(int category) {
+        mCategoryFilter = category;
+        applyFilter(mCurrentFilter);
+    }
+
+    public int getCategoryFilter() {
+        return mCategoryFilter;
+    }
+
     private void applyFilter(String query) {
+        List<AppInfo> base = mAllApps;
+        // Category filter
+        if (mCategoryFilter != 0) {
+            base = new ArrayList<>();
+            for (AppInfo a : mAllApps) {
+                if (a.category == mCategoryFilter) base.add(a);
+            }
+        }
         if (query == null || query.trim().isEmpty()) {
-            mApps = new ArrayList<>(mAllApps);
+            mApps = new ArrayList<>(base);
         } else {
             String lower = query.trim().toLowerCase(java.util.Locale.ROOT);
             List<AppInfo> filtered = new ArrayList<>();
-            for (AppInfo a : mAllApps) {
+            for (AppInfo a : base) {
                 if (a.appName.toLowerCase(java.util.Locale.ROOT).contains(lower)) {
                     filtered.add(a);
                 }
@@ -125,11 +157,112 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         
         // Indicate pinned state with a star prefix
         if (app.isFavorite) {
-            holder.tvName.setText("⭐ " + app.appName);
-            holder.tvName.setTextColor(Color.parseColor("#FFC107"));
+            holder.tvName.setText(holder.tvName.getContext().getString(R.string.favorite_prefix) + app.appName);
+            holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.favorite_gold));
         } else {
             holder.tvName.setText(app.appName);
-            holder.tvName.setTextColor(Color.parseColor("#333333")); // Default dark text
+            holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.text_primary));
+        }
+
+        if (holder.tvCategory != null) {
+            if (app.category == AppInfo.CATEGORY_NAVIGATION) {
+                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_navigation));
+                holder.tvCategory.setVisibility(View.VISIBLE);
+            } else if (app.category == AppInfo.CATEGORY_MEDIA) {
+                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_media));
+                holder.tvCategory.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvCategory.setVisibility(View.GONE);
+            }
+        }
+
+        // Render shortcuts if available
+        if (holder.llShortcutsContainer != null) {
+            holder.llShortcutsContainer.removeAllViews();
+            if (app.shortcuts != null && !app.shortcuts.isEmpty()) {
+                holder.llShortcutsContainer.setVisibility(View.VISIBLE);
+                for (final com.byd.dashcast.model.AppShortcut shortcut : app.shortcuts) {
+                    Button btn = new Button(holder.llShortcutsContainer.getContext());
+                    btn.setText(shortcut.label);
+                    btn.setTextSize(9);
+                    btn.setAllCaps(false);
+                    btn.setPadding(8, 0, 8, 0);
+                    
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        48
+                    );
+                    params.setMarginEnd(8);
+                    btn.setLayoutParams(params);
+                    
+                    btn.setBackgroundColor(btn.getContext().getColor(R.color.shortcut_btn_bg));
+                    btn.setTextColor(btn.getContext().getColor(R.color.shortcut_btn_text));
+                    
+                    btn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            if (mListener != null) {
+                                mListener.onSendToDashboard(app);
+                                try {
+                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
+                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    if (la != null) {
+                                        la.startShortcut(app.packageName, shortcut.id, null, null, android.os.Process.myUserHandle());
+                                    }
+                                } catch (Exception ignored) {
+                                    // Shortcut may have been removed or app uninstalled
+                                }
+                            }
+                        }
+                    });
+                    
+                    holder.llShortcutsContainer.addView(btn);
+                }
+            } else {
+                holder.llShortcutsContainer.setVisibility(View.GONE);
+            }
+        }
+        
+        // Handle shortcuts for Grid Mode via PopupMenu
+        if (holder.tvBtnShortcuts != null) {
+            if (app.shortcuts != null && !app.shortcuts.isEmpty()) {
+                holder.tvBtnShortcuts.setVisibility(View.VISIBLE);
+                holder.tvBtnShortcuts.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        android.widget.PopupMenu popup = new android.widget.PopupMenu(v.getContext(), v);
+                        for (int i = 0; i < app.shortcuts.size(); i++) {
+                            popup.getMenu().add(0, i, 0, app.shortcuts.get(i).label);
+                        }
+                        popup.setOnMenuItemClickListener(new android.widget.PopupMenu.OnMenuItemClickListener() {
+                            @Override
+                            public boolean onMenuItemClick(android.view.MenuItem item) {
+                                com.byd.dashcast.model.AppShortcut chosenShortcut = app.shortcuts.get(item.getItemId());
+                                if (holder.btnToCluster != null && holder.btnToCluster.getVisibility() == View.VISIBLE) {
+                                    holder.btnToCluster.performClick();
+                                } else {
+                                    if (mListener != null) {
+                                        mListener.onSendToDashboard(app);
+                                    }
+                                }
+                                try {
+                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
+                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    if (la != null) {
+                                        la.startShortcut(app.packageName, chosenShortcut.id, null, null, android.os.Process.myUserHandle());
+                                    }
+                                } catch (Exception ignored) {
+                                    // Shortcut may have been removed or app uninstalled
+                                }
+                                return true;
+                            }
+                        });
+                        popup.show();
+                    }
+                });
+            } else {
+                holder.tvBtnShortcuts.setVisibility(View.GONE);
+            }
         }
 
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
@@ -150,9 +283,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         // Subtle background tint on the active row — preserves the ripple via setForeground()
         if (isActive) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x1A4CAF50)); // green 10%
+            holder.itemView.setForeground(CS_FG_ACTIVE.newDrawable());
         } else if (isOnMain) {
-            holder.itemView.setForeground(new android.graphics.drawable.ColorDrawable(0x141565C0)); // blue 8%
+            holder.itemView.setForeground(CS_FG_ON_MAIN.newDrawable());
         } else {
             holder.itemView.setForeground(null);
         }
@@ -190,6 +323,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     static class ViewHolder extends RecyclerView.ViewHolder {
         final ImageView ivIcon;
         final TextView  tvName;
+        final TextView  tvCategory;
+        final LinearLayout llShortcutsContainer;
+        final TextView  tvBtnShortcuts; // Shortcut popup trigger for grid mode
         final View      viewActiveIndicator;
         final Button    btnToMain;
         final Button    btnToCluster;
@@ -200,6 +336,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             super(itemView);
             ivIcon              = (ImageView) itemView.findViewById(R.id.iv_app_icon);
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
+            tvCategory          = (TextView)  itemView.findViewById(R.id.tv_app_category);
+            llShortcutsContainer = itemView.findViewById(R.id.ll_shortcuts_container);
+            tvBtnShortcuts      = itemView.findViewById(R.id.tv_btn_shortcuts);
             viewActiveIndicator = itemView.findViewById(R.id.view_active_indicator);
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);

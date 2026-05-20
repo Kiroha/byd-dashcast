@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- DiLink3/API29 project intentionally relies on hidden APIs + platform permissions. -->
+    <issue id="ProtectedPermissions" severity="ignore" />
+    <issue id="PrivateApi" severity="ignore" />
+    <issue id="DiscouragedPrivateApi" severity="ignore" />
+    <issue id="BlockedPrivateApi" severity="ignore" />
+    <issue id="SoonBlockedPrivateApi" severity="ignore" />
+
+    <!-- App bundle locale split warning not relevant for this sideloaded automotive flow. -->
+    <issue id="AppBundleLocaleChanges" severity="ignore" />
+
+    <!-- Dependency upgrade noise is tracked manually for platform compatibility. -->
+    <issue id="GradleDependency" severity="ignore" />
+
+    <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
+    <issue id="ExpiredTargetSdkVersion" severity="ignore" />
+</lint>

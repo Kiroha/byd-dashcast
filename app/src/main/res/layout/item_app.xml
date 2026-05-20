@@ -20,14 +20,43 @@
         android:layout_marginEnd="14dp"
         android:scaleType="fitCenter"/>
 
-    <TextView
-        android:id="@+id/tv_app_name"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp"
-        android:ellipsize="end"
-        android:singleLine="true"/>
+        android:orientation="vertical"
+        android:layout_marginEnd="4dp">
+
+        <TextView
+            android:id="@+id/tv_app_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/text_primary"/>
+
+        <TextView
+            android:id="@+id/tv_app_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:textColor="@color/text_secondary"
+            android:background="#22888888"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:layout_marginTop="2dp"
+            android:visibility="gone"/>
+
+        <!-- Container for Shortcuts -->
+        <LinearLayout
+            android:id="@+id/ll_shortcuts_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <CheckBox
         android:id="@+id/cb_auto_launch"
@@ -35,7 +64,7 @@
         android:layout_height="wrap_content"
         android:text="@string/app_state_auto"
         android:textSize="10sp"
-        android:textColor="#AAAAAA"
+        android:textColor="@color/text_secondary"
         android:layout_marginEnd="4dp"
         android:buttonTint="#FFC107"
         android:visibility="gone"/>
