@@ -10,6 +10,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_overlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/md_background">
@@ -877,7 +878,8 @@
                                     android:insetTop="0dp"
                                     android:insetBottom="0dp"
                                     android:backgroundTint="@color/md_surface_container_high"
-                                    android:textColor="@color/md_on_surface"/>
+                                    android:textColor="@color/md_on_surface"
+                                    android:visibility="gone"/>
                             </LinearLayout>
 
                             <!-- Resize panel -->

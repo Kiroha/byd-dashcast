@@ -187,6 +187,12 @@ public class MainActivity extends AppCompatActivity
     private float mSavedPreviewWeight = 0f;
     private int mSavedInnerLLHeight  = ViewGroup.LayoutParams.WRAP_CONTENT;
 
+    // v0.9.79 — reparented control panel during fullscreen (so Ajuster doesn't shrink card)
+    private android.widget.FrameLayout vRootOverlay;
+    private ViewGroup mPanelOriginalParent = null;
+    private int mPanelOriginalIndex = -1;
+    private ViewGroup.LayoutParams mPanelOriginalLp = null;
+
     // UI — category filter buttons
     private View llCategoryFilters;
     private Button btnFilterAll, btnFilterNav, btnFilterMedia;
@@ -323,6 +329,7 @@ public class MainActivity extends AppCompatActivity
         gridMainActions    = findViewById(R.id.grid_main_actions);
         svRightPane        = findViewById(R.id.sv_right_pane);
         llRightPaneContent = findViewById(R.id.ll_right_pane_content);
+        vRootOverlay       = findViewById(R.id.root_overlay);
         if (btnExitFullscreen != null) {
             btnExitFullscreen.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { exitFullscreenMirror(); }
@@ -632,6 +639,12 @@ public class MainActivity extends AppCompatActivity
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                // v0.9.79 — prevent NestedScrollView (or any ancestor) from stealing the
+                // gesture once the finger moves past touchSlop, otherwise vertical drags
+                // and pinch gestures get cancelled mid-flight.
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
                 forwardTouchFromMirror(v, event);
                 return true;
             }
@@ -640,6 +653,9 @@ public class MainActivity extends AppCompatActivity
         clusterMirrorScreenshot.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
                 forwardTouchFromMirror(v, event);
                 return true;
             }
@@ -2294,6 +2310,23 @@ public class MainActivity extends AppCompatActivity
 
         if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.VISIBLE);
 
+        // v0.9.79 — reparent panelClusterControl from the inner LinearLayout to the root
+        // FrameLayout (aligned bottom) so that expanding the "Ajuster" sub-panel doesn't
+        // shrink the card (and therefore the orange inset overlay) underneath it.
+        if (panelClusterControl != null && vRootOverlay != null
+                && panelClusterControl.getParent() instanceof ViewGroup
+                && panelClusterControl.getParent() != vRootOverlay) {
+            mPanelOriginalParent = (ViewGroup) panelClusterControl.getParent();
+            mPanelOriginalIndex  = mPanelOriginalParent.indexOfChild(panelClusterControl);
+            mPanelOriginalLp     = panelClusterControl.getLayoutParams();
+            mPanelOriginalParent.removeView(panelClusterControl);
+            android.widget.FrameLayout.LayoutParams flp = new android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT);
+            flp.gravity = android.view.Gravity.BOTTOM;
+            vRootOverlay.addView(panelClusterControl, flp);
+        }
+
         // Immersive: hide system bars to maximise usable area.
         try {
             getWindow().getDecorView().setSystemUiVisibility(
@@ -2364,6 +2397,23 @@ public class MainActivity extends AppCompatActivity
             cardClusterPreview.setLayoutParams(clp);
         }
         if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.GONE);
+
+        // v0.9.79 — restore panelClusterControl to its original parent (inner right-pane LL).
+        if (panelClusterControl != null && mPanelOriginalParent != null
+                && panelClusterControl.getParent() == vRootOverlay) {
+            vRootOverlay.removeView(panelClusterControl);
+            int idx = (mPanelOriginalIndex >= 0
+                    && mPanelOriginalIndex <= mPanelOriginalParent.getChildCount())
+                    ? mPanelOriginalIndex : mPanelOriginalParent.getChildCount();
+            if (mPanelOriginalLp != null) {
+                mPanelOriginalParent.addView(panelClusterControl, idx, mPanelOriginalLp);
+            } else {
+                mPanelOriginalParent.addView(panelClusterControl, idx);
+            }
+            mPanelOriginalParent = null;
+            mPanelOriginalIndex  = -1;
+            mPanelOriginalLp     = null;
+        }
 
         try {
             getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
