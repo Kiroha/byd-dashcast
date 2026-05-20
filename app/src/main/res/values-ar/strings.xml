@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">النظام</string>
     <string name="main_nav_log">السجل</string>
     <string name="main_nav_help">مساعدة</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">حالة العنقود</string>
     <string name="main_cluster_status_idle">غير نشط</string>
     <string name="main_cluster_status_subtitle">فعّل العرض للبدء</string>
     <string name="main_preview_section">معاينة مباشرة</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">إرسال إلى الشاشة الرئيسية</string>
     <string name="sheet_to_cluster">إرسال إلى العنقود</string>
     <string name="sheet_force_stop">إيقاف قسري</string>
+    <string name="main_cluster_status_off">العرض متوقف</string>
 </resources>

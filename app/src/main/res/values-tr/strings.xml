@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">Sistem</string>
     <string name="main_nav_log">Günlük</string>
     <string name="main_nav_help">Yardım</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">CLUSTER DURUMU</string>
     <string name="main_cluster_status_idle">Boşta</string>
     <string name="main_cluster_status_subtitle">Başlatmak için projeksiyonu etkinleştirin</string>
     <string name="main_preview_section">Canlı önizleme</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">Ana ekrana gönder</string>
     <string name="sheet_to_cluster">Cluster\'a gönder</string>
     <string name="sheet_force_stop">Durmaya zorla</string>
+    <string name="main_cluster_status_off">Yansıtma kapalı</string>
 </resources>

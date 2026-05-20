@@ -893,8 +893,8 @@ public class MainActivity extends AppCompatActivity
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
                 mAdapter.setMainPackage(null);
-                tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                setStatusDot(DOT_COLOR_OFF);
+                // v0.9.73 — unified OFF state ("Projection inactive") with grey dot.
+                setDashboardOffState();
                 showAppList();
             }
         });
@@ -1010,6 +1010,14 @@ public class MainActivity extends AppCompatActivity
         });
 
         dialog.show();
+        // v0.9.73 — open fully expanded (skip the half-collapsed peek that hides actions).
+        try {
+            com.google.android.material.bottomsheet.BottomSheetBehavior<?> b = dialog.getBehavior();
+            b.setSkipCollapsed(true);
+            b.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
+        }
     }
 
     @Override
@@ -2023,7 +2031,8 @@ public class MainActivity extends AppCompatActivity
                         }
                         // Cluster state already cleared eagerly above (before async ops).
                         clearSplitState();
-                        updateDashboardStatus(null);
+                        // v0.9.73 — projection just stopped → OFF state, not READY/idle.
+                        setDashboardOffState();
                         btnActivateCluster.setEnabled(true);
                         showAppList();
                         btnRestoreCluster.setEnabled(true);
@@ -2149,6 +2158,20 @@ public class MainActivity extends AppCompatActivity
         }
         setStatusDot(DOT_COLOR_ACTIVE);
         btnRestoreCluster.setEnabled(true);
+    }
+
+    /**
+     * v0.9.73 — explicit OFF state used after the user stops the projection or before
+     * the cluster has been activated at all. Differs from updateDashboardStatus(null)
+     * which represents the ACTIVE+IDLE case (projection on, no app yet).
+     */
+    private void setDashboardOffState() {
+        if (tvDashboardStatus == null) return;
+        tvDashboardStatus.setTextColor(Color.WHITE);
+        tvDashboardStatus.setText(getString(R.string.main_cluster_status_off));
+        setStatusDot(DOT_COLOR_OFF);
+        if (btnShowMirror != null) btnShowMirror.setVisibility(View.GONE);
+        FloatingRemoteButton.hide();
     }
 
     /** Sets the status dot to a given ARGB color. Reuses the shared GradientDrawable to avoid allocations. */

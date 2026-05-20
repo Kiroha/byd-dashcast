@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">Sistema</string>
     <string name="main_nav_log">Log</string>
     <string name="main_nav_help">Aiuto</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">STATO CLUSTER</string>
     <string name="main_cluster_status_idle">Inattivo</string>
     <string name="main_cluster_status_subtitle">Attiva la proiezione per iniziare</string>
     <string name="main_preview_section">Anteprima dal vivo</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">Invia allo schermo principale</string>
     <string name="sheet_to_cluster">Invia al cluster</string>
     <string name="sheet_force_stop">Forza arresto</string>
+    <string name="main_cluster_status_off">Proiezione disattivata</string>
 </resources>

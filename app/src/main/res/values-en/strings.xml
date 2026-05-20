@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">System</string>
     <string name="main_nav_log">Log</string>
     <string name="main_nav_help">Help</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">CLUSTER STATE</string>
     <string name="main_cluster_status_idle">Idle</string>
     <string name="main_cluster_status_subtitle">Activate projection to start</string>
     <string name="main_preview_section">Live preview</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">Send to main screen</string>
     <string name="sheet_to_cluster">Send to cluster</string>
     <string name="sheet_force_stop">Force stop</string>
+    <string name="main_cluster_status_off">Projection off</string>
 </resources>

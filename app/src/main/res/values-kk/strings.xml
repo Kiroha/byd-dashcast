@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">Жүйе</string>
     <string name="main_nav_log">Журнал</string>
     <string name="main_nav_help">Анықтама</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">КЛАСТЕР КҮЙІ</string>
     <string name="main_cluster_status_idle">Белсенді емес</string>
     <string name="main_cluster_status_subtitle">Бастау үшін проекцияны қосыңыз</string>
     <string name="main_preview_section">Тікелей көрініс</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">Негізгі экранға жіберу</string>
     <string name="sheet_to_cluster">Кластерге жіберу</string>
     <string name="sheet_force_stop">Күштеп тоқтату</string>
+    <string name="main_cluster_status_off">Проекция өшірулі</string>
 </resources>

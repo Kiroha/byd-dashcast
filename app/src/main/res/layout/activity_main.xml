@@ -525,7 +525,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
-                                android:text="@string/status_disconnected"
+                                android:text="@string/main_cluster_status_off"
                                 android:textSize="22sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/md_on_secondary_container"

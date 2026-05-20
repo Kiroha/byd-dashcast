@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">Tizim</string>
     <string name="main_nav_log">Jurnal</string>
     <string name="main_nav_help">Yordam</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">KLASTER HOLATI</string>
     <string name="main_cluster_status_idle">Faolsiz</string>
     <string name="main_cluster_status_subtitle">Boshlash uchun proyeksiyani yoqing</string>
     <string name="main_preview_section">Jonli ko\'rish</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">Asosiy ekranga yuborish</string>
     <string name="sheet_to_cluster">Klasterga yuborish</string>
     <string name="sheet_force_stop">Majburiy toʻxtatish</string>
+    <string name="main_cluster_status_off">Proyeksiya oʻchirilgan</string>
 </resources>

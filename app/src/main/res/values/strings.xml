@@ -282,7 +282,7 @@
     <string name="main_nav_sysinfo">Système</string>
     <string name="main_nav_log">Journal</string>
     <string name="main_nav_help">Aide</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">ÉTAT CLUSTER</string>
     <string name="main_cluster_status_idle">Inactif</string>
     <string name="main_cluster_status_subtitle">Activez la projection pour démarrer</string>
     <string name="main_preview_section">Aperçu temps réel</string>
@@ -299,4 +299,5 @@
     <string name="sheet_to_main">Envoyer vers l\'écran principal</string>
     <string name="sheet_to_cluster">Envoyer vers le cluster</string>
     <string name="sheet_force_stop">Forcer l\'arrêt</string>
+    <string name="main_cluster_status_off">Projection inactive</string>
 </resources>

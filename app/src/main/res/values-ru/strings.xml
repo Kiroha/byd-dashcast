@@ -267,7 +267,7 @@
     <string name="main_nav_sysinfo">Систем.</string>
     <string name="main_nav_log">Журнал</string>
     <string name="main_nav_help">Помощь</string>
-    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_label">СОСТОЯНИЕ КЛАСТЕРА</string>
     <string name="main_cluster_status_idle">Неактивен</string>
     <string name="main_cluster_status_subtitle">Активируйте проекцию для запуска</string>
     <string name="main_preview_section">Превью</string>
@@ -284,4 +284,5 @@
     <string name="sheet_to_main">На главный экран</string>
     <string name="sheet_to_cluster">На кластер</string>
     <string name="sheet_force_stop">Принудительная остановка</string>
+    <string name="main_cluster_status_off">Проекция отключена</string>
 </resources>
