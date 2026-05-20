@@ -58,7 +58,7 @@
                         android:layout_height="48dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_cast"
-                        android:tint="?attr/colorOnPrimaryContainer"
+                        android:tint="@color/md_on_primary_container"
                         android:contentDescription="@string/app_name"/>
                 </com.google.android.material.card.MaterialCardView>
 

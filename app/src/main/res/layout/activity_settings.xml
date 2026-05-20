@@ -411,7 +411,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -434,7 +434,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -457,7 +457,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -502,7 +502,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -522,7 +522,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -552,7 +552,7 @@
                             android:focusable="true">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -569,7 +569,7 @@
                                 android:layout_height="24dp"
                                 android:layout_gravity="center_vertical"
                                 android:src="@drawable/ic_open_in_new"
-                                android:tint="?attr/colorOnSurfaceVariant"/>
+                                android:tint="@color/md_on_surface_variant"/>
                         </LinearLayout>
 
                         <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
@@ -577,7 +577,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
-                                android:tint="?attr/colorOnSurfaceVariant"
+                                android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
