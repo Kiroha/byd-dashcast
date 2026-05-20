@@ -411,6 +411,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
@@ -434,6 +437,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
@@ -457,6 +463,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
@@ -502,6 +511,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
@@ -522,6 +534,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
@@ -552,6 +567,9 @@
                             android:focusable="true">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
@@ -577,6 +595,9 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
                                 android:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
