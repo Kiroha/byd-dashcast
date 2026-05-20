@@ -2262,6 +2262,12 @@ public class MainActivity extends AppCompatActivity
         if (cardClusterPreview == null) return;
         mIsFullscreenMirror = true;
 
+        // v0.9.76 — tear down the mirror BEFORE resizing the TextureView. Otherwise
+        // attemptStartMirrorWithCurrentHolder() short-circuits on isMirrorActive() and
+        // the VirtualDisplay keeps writing to the stale Surface that was released by
+        // onSurfaceTextureSizeChanged → black card with no app content.
+        stopClusterMirror();
+
         if (vNavRail != null)         vNavRail.setVisibility(View.GONE);
         if (vTopBar != null)          vTopBar.setVisibility(View.GONE);
         if (llAppListSection != null) llAppListSection.setVisibility(View.GONE);
@@ -2301,17 +2307,20 @@ public class MainActivity extends AppCompatActivity
             AppLogger.w(TAG, "immersive setSystemUiVisibility failed: " + t.getMessage());
         }
 
-        // v0.9.75 — after the layout settles, force the SurfaceTexture default buffer
-        // size to the new TextureView dimensions and restart the mirror so SF paints
-        // at fullscreen resolution instead of the previous 200dp preview size.
+        // v0.9.76 — onSurfaceTextureSizeChanged will fire after the layout pass and
+        // recreate the mirror at the new size (since stopClusterMirror() was called).
+        // Safety net: re-attempt after layout in case the size didn't actually change.
         cardClusterPreview.post(new Runnable() {
             @Override public void run() {
                 try {
-                    SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
-                    if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
-                        st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                    if (mClusterService != null
+                            && !mClusterService.getMirrorManager().isMirrorActive()) {
+                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                        if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
+                            st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                        }
+                        attemptStartMirrorWithCurrentHolder();
                     }
-                    attemptStartMirrorWithCurrentHolder();
                 } catch (Throwable t) {
                     AppLogger.w(TAG, "fullscreen mirror restart failed: " + t.getMessage());
                 }
@@ -2324,6 +2333,10 @@ public class MainActivity extends AppCompatActivity
     private void exitFullscreenMirror() {
         if (!mIsFullscreenMirror) return;
         mIsFullscreenMirror = false;
+
+        // v0.9.76 — same as enter: tear down before resize so the mirror is recreated
+        // at the original 200dp preview size by onSurfaceTextureSizeChanged.
+        stopClusterMirror();
 
         if (vNavRail != null)         vNavRail.setVisibility(View.VISIBLE);
         if (vTopBar != null)          vTopBar.setVisibility(View.VISIBLE);
@@ -2350,16 +2363,19 @@ public class MainActivity extends AppCompatActivity
             getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
         } catch (Throwable t) { /* ignore */ }
 
-        // Restart mirror at the small preview size after layout settles.
+        // Safety net restart in case onSurfaceTextureSizeChanged didn't fire.
         if (cardClusterPreview != null) {
             cardClusterPreview.post(new Runnable() {
                 @Override public void run() {
                     try {
-                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
-                        if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
-                            st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                        if (mClusterService != null
+                                && !mClusterService.getMirrorManager().isMirrorActive()) {
+                            SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                            if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
+                                st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                            }
+                            attemptStartMirrorWithCurrentHolder();
                         }
-                        attemptStartMirrorWithCurrentHolder();
                     } catch (Throwable t) { /* ignore */ }
                 }
             });
