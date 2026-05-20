@@ -181,4 +181,80 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <!-- ============================================================ -->
+    <!-- Settings list pattern (headline + supporting + leading icon)  -->
+    <!-- ============================================================ -->
+
+    <!-- Section header TextView used inline as section divider -->
+    <style name="Widget.DashCast.SectionHead" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.DashCast.SectionHeader</item>
+        <item name="android:layout_marginStart">12dp</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+    </style>
+
+    <!-- Row container for a settings list-item -->
+    <style name="Widget.DashCast.ListItem" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+
+    <!-- Leading icon (24dp tinted) -->
+    <style name="Widget.DashCast.ListItem.Leading">
+        <item name="android:layout_width">28dp</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:layout_gravity">center_vertical</item>
+    </style>
+
+    <!-- Title + supporting text column -->
+    <style name="Widget.DashCast.ListItem.Content">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_gravity">center_vertical</item>
+    </style>
+
+    <!-- Headline text inside a list-item -->
+    <style name="Widget.DashCast.ListItem.Headline">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.TitleMedium</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- Supporting text under headline -->
+    <style name="Widget.DashCast.ListItem.Support">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.BodySmall</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <!-- Pill-shaped value badge (used for overscan values) -->
+    <style name="Widget.DashCast.ValueBadge" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.LabelMedium</item>
+        <item name="android:textColor">?attr/colorOnPrimaryContainer</item>
+        <item name="android:background">@drawable/bg_value_badge</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:minWidth">56dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
 </resources>
+

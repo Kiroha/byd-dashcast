@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -61,11 +61,14 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnApply;
     private Button      btnReset;
     private TextView    tvResult;
-    private CheckBox    cbPrerelease;
-    private CheckBox    cbVisualMode;
-    private CheckBox    cbBootAutoStart;
-    private CheckBox    cbShowCategoryFilters;
-    private CheckBox    cbReconnectPopup;
+    // Note: fields below are typed as CompoundButton so the layout can use either
+    // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
+    // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
+    private CompoundButton cbPrerelease;
+    private CompoundButton cbVisualMode;
+    private CompoundButton cbBootAutoStart;
+    private CompoundButton cbShowCategoryFilters;
+    private CompoundButton cbReconnectPopup;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -86,6 +89,20 @@ public class SettingsActivity extends AppCompatActivity {
         bindViews();
         loadPreferences();
         wireListeners();
+
+        // Mockup top-bar Apply button: mirrors the in-card Apply action.
+        View btnApplyTop = findViewById(R.id.btn_apply_top);
+        if (btnApplyTop != null) {
+            btnApplyTop.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { btnApply.performClick(); }
+            });
+        }
+
+        // Populate dynamic version text ("0.9.2 · build 121").
+        TextView tvVersion = (TextView) findViewById(R.id.tv_version_value);
+        if (tvVersion != null) {
+            tvVersion.setText(BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE);
+        }
     }
 
     @Override
