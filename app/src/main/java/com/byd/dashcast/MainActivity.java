@@ -797,7 +797,10 @@ public class MainActivity extends AppCompatActivity
 
                 // Reconnect reminder: if cluster was manually re-activated and
                 // there was a last known app, offer to relaunch it.
-                if (wasManual && mCurrentDashboardPkg == null) {
+                // Guarded by user preference (can be disabled in Settings).
+                boolean reconnectEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .getBoolean(SettingsActivity.PREF_RECONNECT_POPUP, true);
+                if (reconnectEnabled && wasManual && mCurrentDashboardPkg == null) {
                     final SharedPreferences _pp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     final String lastPkg  = _pp.getString(PREF_LAST_CLUSTER_PKG, null);
                     final String lastName = _pp.getString(PREF_LAST_CLUSTER_NAME, null);
