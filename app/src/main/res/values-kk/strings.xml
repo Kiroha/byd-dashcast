@@ -31,7 +31,7 @@
     <string name="status_activating_cluster">Кластер белсендірілуде…</string>
     <string name="status_restoring_cluster">Кластер қалпына келтірілуде…</string>
     <string name="status_restoring_origin">Бастапқы кластер қалпына келтірілуде…</string>
-    <string name="status_dashboard_byd">Аспаптар панелі: BYD дисплейі</string>
+    <string name="status_dashboard_byd">Проекция дайын — қолданба таңдаңыз</string>
     <string name="status_dashboard_app">Аспаптар панелі: %1$s</string>
     <string name="toast_app_incompatible">%1$s: орнатылмаған немесе бірнеше дисплеймен үйлесімсіз</string>
     <string name="toast_cluster_unavailable">Кластер қызметі қолжетімсіз</string>
@@ -271,11 +271,17 @@
     <string name="main_cluster_status_idle">Белсенді емес</string>
     <string name="main_cluster_status_subtitle">Бастау үшін проекцияны қосыңыз</string>
     <string name="main_preview_section">Тікелей көрініс</string>
-    <string name="main_btn_full_preview">Толық көрініс</string>
+    <string name="main_btn_full_preview">Толық экранды айна</string>
     <string name="main_btn_capture">Түсіру</string>
     <string name="main_btn_reconnect">Проекцияны бастау</string>
     <string name="main_btn_stop_mirror">Проекцияны тоқтату</string>
     <string name="main_section_favorites">Таңдаулылар</string>
     <string name="main_section_all_apps">Барлық қосымшалар</string>
     <string name="main_capture_coming_soon">Жақында</string>
+    <string name="sheet_auto_launch">Іске қосылғанда автоматты ашу</string>
+    <string name="sheet_add_favorite">Таңдаулыларға қосу</string>
+    <string name="sheet_remove_favorite">Таңдаулылардан алып тастау</string>
+    <string name="sheet_to_main">Негізгі экранға жіберу</string>
+    <string name="sheet_to_cluster">Кластерге жіберу</string>
+    <string name="sheet_force_stop">Күштеп тоқтату</string>
 </resources>

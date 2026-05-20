@@ -33,7 +33,7 @@
     <string name="status_activating_cluster">Cluster wird aktiviert…</string>
     <string name="status_restoring_cluster">Cluster wird wiederhergestellt…</string>
     <string name="status_restoring_origin">Original-Cluster wird wiederhergestellt…</string>
-    <string name="status_dashboard_byd">Dashboard: BYD-Anzeige</string>
+    <string name="status_dashboard_byd">Projektion bereit — App wählen</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
     <string name="toast_app_incompatible">%1$s: nicht installiert oder inkompatibel mit Multi-Display</string>
     <string name="toast_cluster_unavailable">Cluster-Dienst nicht verfügbar</string>
@@ -271,11 +271,17 @@
     <string name="main_cluster_status_idle">Inaktiv</string>
     <string name="main_cluster_status_subtitle">Aktiviere die Projektion zum Starten</string>
     <string name="main_preview_section">Live-Vorschau</string>
-    <string name="main_btn_full_preview">Vollbildvorschau</string>
+    <string name="main_btn_full_preview">Vollbild-Spiegelung</string>
     <string name="main_btn_capture">Aufnahme</string>
     <string name="main_btn_reconnect">Projektion starten</string>
     <string name="main_btn_stop_mirror">Projektion stoppen</string>
     <string name="main_section_favorites">Favoriten</string>
     <string name="main_section_all_apps">Alle Apps</string>
     <string name="main_capture_coming_soon">Aufnahme kommt bald</string>
+    <string name="sheet_auto_launch">Beim Start automatisch öffnen</string>
+    <string name="sheet_add_favorite">Zu Favoriten hinzufügen</string>
+    <string name="sheet_remove_favorite">Aus Favoriten entfernen</string>
+    <string name="sheet_to_main">An Hauptbildschirm senden</string>
+    <string name="sheet_to_cluster">An Cluster senden</string>
+    <string name="sheet_force_stop">Beenden erzwingen</string>
 </resources>

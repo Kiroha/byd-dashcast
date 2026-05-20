@@ -30,7 +30,7 @@
     <string name="status_activating_cluster">Activando clúster…</string>
     <string name="status_restoring_cluster">Restaurando clúster…</string>
     <string name="status_restoring_origin">Restaurando clúster original…</string>
-    <string name="status_dashboard_byd">Panel: pantalla BYD</string>
+    <string name="status_dashboard_byd">Proyección lista — elige una app</string>
     <string name="status_dashboard_app">Panel: %1$s</string>
     <string name="toast_app_incompatible">%1$s: no instalado o incompatible con multi-pantalla</string>
     <string name="toast_cluster_unavailable">Servicio de clúster no disponible</string>    <string name="dialog_cluster_not_active">La proyección del clúster no está activa. ¿Desea activarla ahora?</string>
@@ -269,11 +269,17 @@
     <string name="main_cluster_status_idle">Inactivo</string>
     <string name="main_cluster_status_subtitle">Activa la proyección para iniciar</string>
     <string name="main_preview_section">Vista previa en vivo</string>
-    <string name="main_btn_full_preview">Vista completa</string>
+    <string name="main_btn_full_preview">Espejo a pantalla completa</string>
     <string name="main_btn_capture">Capturar</string>
     <string name="main_btn_reconnect">Iniciar proyección</string>
     <string name="main_btn_stop_mirror">Detener proyección</string>
     <string name="main_section_favorites">Favoritos</string>
     <string name="main_section_all_apps">Todas las apps</string>
     <string name="main_capture_coming_soon">Captura próximamente</string>
+    <string name="sheet_auto_launch">Lanzamiento automático al inicio</string>
+    <string name="sheet_add_favorite">Añadir a favoritos</string>
+    <string name="sheet_remove_favorite">Quitar de favoritos</string>
+    <string name="sheet_to_main">Enviar a la pantalla principal</string>
+    <string name="sheet_to_cluster">Enviar al cuadro</string>
+    <string name="sheet_force_stop">Forzar detención</string>
 </resources>

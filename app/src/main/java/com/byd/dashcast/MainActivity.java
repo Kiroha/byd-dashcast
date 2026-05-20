@@ -939,6 +939,79 @@ public class MainActivity extends AppCompatActivity
         loadAppsAsync(); // Reload and re-sort
     }
 
+    // v0.9.72 — long-press opens a bottom sheet with the per-app actions that
+    // used to live as cramped chips inside each grid cell.
+    @Override
+    public void onShowActions(final AppInfo app) {
+        if (app == null || isFinishing() || isDestroyed()) return;
+        final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View v = getLayoutInflater().inflate(R.layout.dialog_app_actions, null);
+        dialog.setContentView(v);
+
+        ImageView icon  = v.findViewById(R.id.sheet_icon);
+        TextView  name  = v.findViewById(R.id.sheet_name);
+        TextView  pkg   = v.findViewById(R.id.sheet_pkg);
+        com.google.android.material.materialswitch.MaterialSwitch swAuto =
+                v.findViewById(R.id.sheet_sw_auto);
+        View      rowFav     = v.findViewById(R.id.sheet_action_favorite);
+        TextView  lblFav     = v.findViewById(R.id.sheet_lbl_favorite);
+        View      rowToMain  = v.findViewById(R.id.sheet_action_to_main);
+        View      rowToClus  = v.findViewById(R.id.sheet_action_to_cluster);
+        View      rowKill    = v.findViewById(R.id.sheet_action_kill);
+
+        icon.setImageDrawable(app.icon);
+        name.setText(app.appName);
+        pkg.setText(app.packageName);
+        lblFav.setText(app.isFavorite
+                ? R.string.sheet_remove_favorite
+                : R.string.sheet_add_favorite);
+
+        swAuto.setChecked(app.isAutoLaunch);
+        swAuto.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                onSetAutoLaunch(app, checked);
+            }
+        });
+
+        rowFav.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onToggleFavorite(app);
+                dialog.dismiss();
+            }
+        });
+
+        // Visibility for screen-move actions mirrors the previous inline-chip logic.
+        final boolean isActive = app.packageName != null
+                && app.packageName.equals(mAdapter.getCurrentPackage());
+        final boolean isOnMain = app.packageName != null
+                && app.packageName.equals(mAdapter.getMainPackage());
+        rowToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
+        rowToClus.setVisibility(isOnMain || (!isActive && !isOnMain) ? View.VISIBLE : View.GONE);
+        rowKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+
+        rowToMain.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onSendToMain(app);
+                dialog.dismiss();
+            }
+        });
+        rowToClus.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onSendToDashboard(app);
+                dialog.dismiss();
+            }
+        });
+        rowKill.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onKillApp(app);
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
     @Override
     public void onSendToDashboard(AppInfo app) {
         incrementLaunchCount(app.packageName);
@@ -1308,6 +1381,7 @@ public class MainActivity extends AppCompatActivity
         mStatePollRunnable = new Runnable() {
             @Override public void run() {
                 reconcileDisplayState();
+                reconcileMainDisplayState(); // v0.9.72 — also drop stale "on main" markers
                 mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
             }
         };
@@ -1361,6 +1435,45 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onError(String error) {
                         AppLogger.w(TAG, "state-poll: pidof failed: " + error);
+                    }
+                });
+    }
+
+    /**
+     * v0.9.72 — sibling of {@link #reconcileDisplayState()} for the MAIN display marker.
+     * If the user kills the app sent to the main screen (via recents / system), the
+     * adapter still tags it as "on main" until the next reload. This pidof check
+     * clears the marker so the grid tile state stays in sync within ~5 s.
+     */
+    private void reconcileMainDisplayState() {
+        final String mainPkg = mMainDisplayPkg;
+        if (mainPkg == null) return;
+
+        AdbLocalClient.executeShellWithResult(this, "pidof " + mainPkg,
+                new AdbLocalClient.Callback() {
+                    @Override
+                    public void onSuccess(String output) {
+                        final boolean alive = output != null && !output.trim().isEmpty();
+                        if (alive) return;
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (isFinishing() || isDestroyed()) return;
+                                if (!mainPkg.equals(mMainDisplayPkg)) return;
+                                AppLogger.w(TAG, "state-poll: main-display app " + mainPkg
+                                        + " process died → clearing main marker");
+                                mMainDisplayPkg = null;
+                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                        .edit().remove(PREF_MAIN_PKG).apply();
+                                if (mAdapter != null) {
+                                    mAdapter.setMainPackage(null);
+                                }
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        AppLogger.w(TAG, "state-poll: main pidof failed: " + error);
                     }
                 });
     }

@@ -33,7 +33,7 @@
     <string name="status_activating_cluster">Küme etkinleştiriliyor…</string>
     <string name="status_restoring_cluster">Küme geri yükleniyor…</string>
     <string name="status_restoring_origin">Orijinal küme geri yükleniyor…</string>
-    <string name="status_dashboard_byd">Gösterge paneli: BYD ekranı</string>
+    <string name="status_dashboard_byd">Projeksiyon hazır — bir uygulama seçin</string>
     <string name="status_dashboard_app">Gösterge paneli: %1$s</string>
     <string name="toast_app_incompatible">%1$s: yüklü değil veya çoklu ekranla uyumsuz</string>
     <string name="toast_cluster_unavailable">Küme servisi kullanılamıyor</string>
@@ -271,11 +271,17 @@
     <string name="main_cluster_status_idle">Boşta</string>
     <string name="main_cluster_status_subtitle">Başlatmak için projeksiyonu etkinleştirin</string>
     <string name="main_preview_section">Canlı önizleme</string>
-    <string name="main_btn_full_preview">Tam önizleme</string>
+    <string name="main_btn_full_preview">Tam ekran yansıtma</string>
     <string name="main_btn_capture">Yakala</string>
     <string name="main_btn_reconnect">Yansıtmayı başlat</string>
     <string name="main_btn_stop_mirror">Yansıtmayı durdur</string>
     <string name="main_section_favorites">Sık kullanılanlar</string>
     <string name="main_section_all_apps">Tüm uygulamalar</string>
     <string name="main_capture_coming_soon">Yakalama yakında</string>
+    <string name="sheet_auto_launch">Başlangıçta otomatik aç</string>
+    <string name="sheet_add_favorite">Favorilere ekle</string>
+    <string name="sheet_remove_favorite">Favorilerden çıkar</string>
+    <string name="sheet_to_main">Ana ekrana gönder</string>
+    <string name="sheet_to_cluster">Cluster\'a gönder</string>
+    <string name="sheet_force_stop">Durmaya zorla</string>
 </resources>

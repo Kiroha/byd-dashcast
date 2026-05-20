@@ -30,7 +30,7 @@
     <string name="status_activating_cluster">تفعيل العنقود…</string>
     <string name="status_restoring_cluster">استعادة العنقود…</string>
     <string name="status_restoring_origin">استعادة العنقود الأصلي…</string>
-    <string name="status_dashboard_byd">اللوحة: شاشة BYD</string>
+    <string name="status_dashboard_byd">العرض جاهز — اختر تطبيقًا</string>
     <string name="status_dashboard_app">اللوحة: %1$s</string>
     <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
     <string name="toast_cluster_unavailable">خدمة العنقود غير متاحة</string>
@@ -271,11 +271,17 @@
     <string name="main_cluster_status_idle">غير نشط</string>
     <string name="main_cluster_status_subtitle">فعّل العرض للبدء</string>
     <string name="main_preview_section">معاينة مباشرة</string>
-    <string name="main_btn_full_preview">معاينة كاملة</string>
+    <string name="main_btn_full_preview">العرض المرآة بملء الشاشة</string>
     <string name="main_btn_capture">التقاط</string>
     <string name="main_btn_reconnect">بدء العرض</string>
     <string name="main_btn_stop_mirror">إيقاف العرض</string>
     <string name="main_section_favorites">المفضلة</string>
     <string name="main_section_all_apps">كل التطبيقات</string>
     <string name="main_capture_coming_soon">قريباً</string>
+    <string name="sheet_auto_launch">تشغيل تلقائي عند البدء</string>
+    <string name="sheet_add_favorite">إضافة إلى المفضلة</string>
+    <string name="sheet_remove_favorite">إزالة من المفضلة</string>
+    <string name="sheet_to_main">إرسال إلى الشاشة الرئيسية</string>
+    <string name="sheet_to_cluster">إرسال إلى العنقود</string>
+    <string name="sheet_force_stop">إيقاف قسري</string>
 </resources>

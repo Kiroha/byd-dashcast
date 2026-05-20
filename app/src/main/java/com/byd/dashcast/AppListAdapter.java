@@ -25,6 +25,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         void onKillApp(AppInfo app);
         void onToggleFavorite(AppInfo app);
         void onSetAutoLaunch(AppInfo app, boolean enable);
+        /** v0.9.72 — long-press now opens an action bottom sheet (favorite/move/kill/auto). */
+        void onShowActions(AppInfo app);
     }
 
     private List<AppInfo> mAllApps = new ArrayList<>();   // full unfiltered list
@@ -32,6 +34,10 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private final OnSendToDashboardListener mListener;
     private String mCurrentPackage = null;
     private String mMainPackage = null;
+
+    /** v0.9.72 — exposed for the long-press bottom sheet. */
+    public String getCurrentPackage() { return mCurrentPackage; }
+    public String getMainPackage()    { return mMainPackage; }
     private final HashMap<String, Integer> mPackageIndexMap = new HashMap<>();
     private String mCurrentFilter = "";
     private int mCategoryFilter = 0; // 0=all, 1=nav, 2=media
@@ -271,14 +277,24 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         if (holder.viewActiveIndicator != null) {
             holder.viewActiveIndicator.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
         }
-        if (holder.btnToMain != null) {
-            holder.btnToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        }
-        if (holder.btnToCluster != null) {
-            holder.btnToCluster.setVisibility(isOnMain ? View.VISIBLE : View.GONE);
-        }
-        if (holder.btnKill != null) {
-            holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+        // v0.9.72 \u2014 in grid mode keep tiles minimal: icon + name + favorite badge + active dot.
+        // All actions (auto-launch, move-to-main/cluster, kill) live in the long-press bottom sheet.
+        if (mIsGridMode) {
+            if (holder.btnToMain != null) holder.btnToMain.setVisibility(View.GONE);
+            if (holder.btnToCluster != null) holder.btnToCluster.setVisibility(View.GONE);
+            if (holder.btnKill != null) holder.btnKill.setVisibility(View.GONE);
+            if (holder.cbAutoLaunch != null) holder.cbAutoLaunch.setVisibility(View.GONE);
+            if (holder.tvCategory != null) holder.tvCategory.setVisibility(View.GONE);
+        } else {
+            if (holder.btnToMain != null) {
+                holder.btnToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
+            }
+            if (holder.btnToCluster != null) {
+                holder.btnToCluster.setVisibility(isOnMain ? View.VISIBLE : View.GONE);
+            }
+            if (holder.btnKill != null) {
+                holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+            }
         }
 
         // Subtle background tint on the active row — preserves the ripple via setForeground()
@@ -291,7 +307,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         }
 
         if (holder.cbAutoLaunch != null) {
-            holder.cbAutoLaunch.setVisibility(View.VISIBLE);
+            // v0.9.72 \u2014 only show the inline auto-launch checkbox in list mode.
+            holder.cbAutoLaunch.setVisibility(mIsGridMode ? View.GONE : View.VISIBLE);
             holder.cbAutoLaunch.setOnCheckedChangeListener(null); // prevent false triggers
             holder.cbAutoLaunch.setChecked(app.isAutoLaunch);
             holder.cbAutoLaunch.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
@@ -353,13 +370,13 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                 }
             });
 
-            // Long click to trigger favorite toggle
+            // Long click — v0.9.72 opens the action bottom sheet (was: toggle favorite).
             itemView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
                     AppInfo app = adapter.getAppAt(getAdapterPosition());
                     if (app != null && listener != null) {
-                        listener.onToggleFavorite(app);
+                        listener.onShowActions(app);
                         return true;
                     }
                     return false;

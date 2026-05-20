@@ -31,7 +31,7 @@
     <string name="status_activating_cluster">Актывацыя кластара…</string>
     <string name="status_restoring_cluster">Аднаўленне кластара…</string>
     <string name="status_restoring_origin">Аднаўленне штатнага кластара…</string>
-    <string name="status_dashboard_byd">Панэль прыбораў: дысплей BYD</string>
+    <string name="status_dashboard_byd">Праекцыя гатовая — абярыце дадатак</string>
     <string name="status_dashboard_app">Панэль прыбораў: %1$s</string>
     <string name="toast_app_incompatible">%1$s: не ўсталявана або несумяшчальна з некалькімі дысплеямі</string>
     <string name="toast_cluster_unavailable">Служба кластара недаступная</string>
@@ -271,11 +271,17 @@
     <string name="main_cluster_status_idle">Неактыўны</string>
     <string name="main_cluster_status_subtitle">Уключыце праекцыю, каб пачаць</string>
     <string name="main_preview_section">Папярэдні прагляд</string>
-    <string name="main_btn_full_preview">Поўны прагляд</string>
+    <string name="main_btn_full_preview">Поўнаэкраннае люстра</string>
     <string name="main_btn_capture">Зняць</string>
     <string name="main_btn_reconnect">Запусціць праекцыю</string>
     <string name="main_btn_stop_mirror">Спыніць праекцыю</string>
     <string name="main_section_favorites">Абраныя</string>
     <string name="main_section_all_apps">Усе праграмы</string>
     <string name="main_capture_coming_soon">Хутка</string>
+    <string name="sheet_auto_launch">Аўтазапуск пры старце</string>
+    <string name="sheet_add_favorite">У выбранае</string>
+    <string name="sheet_remove_favorite">З выбранага</string>
+    <string name="sheet_to_main">На галоўны экран</string>
+    <string name="sheet_to_cluster">На кластар</string>
+    <string name="sheet_force_stop">Прымусовы прыпынак</string>
 </resources>

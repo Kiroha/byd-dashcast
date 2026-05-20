@@ -33,7 +33,7 @@
     <string name="status_activating_cluster">Activation cluster…</string>
     <string name="status_restoring_cluster">Restauration cluster…</string>
     <string name="status_restoring_origin">Restauration cluster d\'origine…</string>
-    <string name="status_dashboard_byd">Dashboard : affichage BYD</string>
+    <string name="status_dashboard_byd">Projection prête — choisissez une application</string>
     <string name="status_dashboard_app">Dashboard : %1$s</string>
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
     <string name="toast_cluster_unavailable">Service cluster indisponible</string>
@@ -286,11 +286,17 @@
     <string name="main_cluster_status_idle">Inactif</string>
     <string name="main_cluster_status_subtitle">Activez la projection pour démarrer</string>
     <string name="main_preview_section">Aperçu temps réel</string>
-    <string name="main_btn_full_preview">Aperçu plein écran</string>
+    <string name="main_btn_full_preview">Miroir plein écran</string>
     <string name="main_btn_capture">Capturer</string>
     <string name="main_btn_reconnect">Activer la projection</string>
     <string name="main_btn_stop_mirror">Arrêter la projection</string>
     <string name="main_section_favorites">Favoris</string>
     <string name="main_section_all_apps">Toutes les applications</string>
     <string name="main_capture_coming_soon">Capture bientôt disponible</string>
+    <string name="sheet_auto_launch">Lancement automatique au démarrage</string>
+    <string name="sheet_add_favorite">Ajouter aux favoris</string>
+    <string name="sheet_remove_favorite">Retirer des favoris</string>
+    <string name="sheet_to_main">Envoyer vers l\'écran principal</string>
+    <string name="sheet_to_cluster">Envoyer vers le cluster</string>
+    <string name="sheet_force_stop">Forcer l\'arrêt</string>
 </resources>
