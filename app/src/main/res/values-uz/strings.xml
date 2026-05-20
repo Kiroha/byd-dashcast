@@ -260,4 +260,22 @@
     <string name="settings_check_update_support">Yangi versiya mavjudligini tekshiradi</string>
     <string name="settings_check_update_button">Tekshirish</string>
     <string name="settings_source_code_title">Manba kodi</string>
+    <string name="main_title_dashboard">Boshqaruv paneli</string>
+    <string name="main_nav_apps">Ilovalar</string>
+    <string name="main_nav_settings">Sozla.</string>
+    <string name="main_nav_diag">Diag.</string>
+    <string name="main_nav_sysinfo">Tizim</string>
+    <string name="main_nav_log">Jurnal</string>
+    <string name="main_nav_help">Yordam</string>
+    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_status_idle">Faolsiz</string>
+    <string name="main_cluster_status_subtitle">Boshlash uchun proyeksiyani yoqing</string>
+    <string name="main_preview_section">Jonli ko\'rish</string>
+    <string name="main_btn_full_preview">To\'liq ko\'rish</string>
+    <string name="main_btn_capture">Olish</string>
+    <string name="main_btn_reconnect">Qayta ulanish</string>
+    <string name="main_btn_stop_mirror">Mirrorni to\'xtatish</string>
+    <string name="main_section_favorites">Sevimlilar</string>
+    <string name="main_section_all_apps">Barcha ilovalar</string>
+    <string name="main_capture_coming_soon">Tez kunda</string>
 </resources>

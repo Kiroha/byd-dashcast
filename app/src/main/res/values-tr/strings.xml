@@ -260,4 +260,22 @@
     <string name="settings_check_update_support">Yeni bir sürümün mevcut olup olmadığını kontrol eder</string>
     <string name="settings_check_update_button">Kontrol et</string>
     <string name="settings_source_code_title">Kaynak kodu</string>
+    <string name="main_title_dashboard">Gösterge paneli</string>
+    <string name="main_nav_apps">Uygulamalar</string>
+    <string name="main_nav_settings">Ayarlar</string>
+    <string name="main_nav_diag">Tanılama</string>
+    <string name="main_nav_sysinfo">Sistem</string>
+    <string name="main_nav_log">Günlük</string>
+    <string name="main_nav_help">Yardım</string>
+    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_status_idle">Boşta</string>
+    <string name="main_cluster_status_subtitle">Başlatmak için projeksiyonu etkinleştirin</string>
+    <string name="main_preview_section">Canlı önizleme</string>
+    <string name="main_btn_full_preview">Tam önizleme</string>
+    <string name="main_btn_capture">Yakala</string>
+    <string name="main_btn_reconnect">Yeniden bağlan</string>
+    <string name="main_btn_stop_mirror">Yansıtmayı durdur</string>
+    <string name="main_section_favorites">Sık kullanılanlar</string>
+    <string name="main_section_all_apps">Tüm uygulamalar</string>
+    <string name="main_capture_coming_soon">Yakalama yakında</string>
 </resources>

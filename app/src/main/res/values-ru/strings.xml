@@ -260,4 +260,22 @@
     <string name="settings_check_update_support">Проверяет наличие новой версии</string>
     <string name="settings_check_update_button">Проверить</string>
     <string name="settings_source_code_title">Исходный код</string>
+    <string name="main_title_dashboard">Панель</string>
+    <string name="main_nav_apps">Прил.</string>
+    <string name="main_nav_settings">Настр.</string>
+    <string name="main_nav_diag">Диаг.</string>
+    <string name="main_nav_sysinfo">Систем.</string>
+    <string name="main_nav_log">Журнал</string>
+    <string name="main_nav_help">Помощь</string>
+    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_status_idle">Неактивен</string>
+    <string name="main_cluster_status_subtitle">Активируйте проекцию для запуска</string>
+    <string name="main_preview_section">Превью</string>
+    <string name="main_btn_full_preview">Полный обзор</string>
+    <string name="main_btn_capture">Снимок</string>
+    <string name="main_btn_reconnect">Подключить</string>
+    <string name="main_btn_stop_mirror">Остановить</string>
+    <string name="main_section_favorites">Избранное</string>
+    <string name="main_section_all_apps">Все приложения</string>
+    <string name="main_capture_coming_soon">Скоро</string>
 </resources>

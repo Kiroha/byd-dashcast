@@ -371,6 +371,53 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+        // ── v0.9.7 — Nav rail clicks (left M3 navigation rail) ─────────────────
+        View navSettings = findViewById(R.id.nav_settings);
+        if (navSettings != null) navSettings.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+            }
+        });
+        View navDiag = findViewById(R.id.nav_diag);
+        if (navDiag != null) navDiag.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, DiagActivity.class));
+            }
+        });
+        View navSysinfo = findViewById(R.id.nav_sysinfo);
+        if (navSysinfo != null) navSysinfo.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, SysInfoActivity.class));
+            }
+        });
+        View navLog = findViewById(R.id.nav_log);
+        if (navLog != null) navLog.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, LogActivity.class));
+            }
+        });
+        View navHelp = findViewById(R.id.nav_help);
+        if (navHelp != null) navHelp.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                try {
+                    Intent it = new Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/Kiroha/byd-dashcast"));
+                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(it);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, R.string.main_nav_help, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        // ── v0.9.7 — Capture button (placeholder, real impl in a later release) ─
+        View btnCapture = findViewById(R.id.btn_capture);
+        if (btnCapture != null) btnCapture.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Toast.makeText(MainActivity.this, R.string.main_capture_coming_soon, Toast.LENGTH_SHORT).show();
+            }
+        });
+
         // Start ClusterService now (startForegroundService in onStart)
         mDashboardLauncher = new DashboardLauncher(this); // temporary until bind
 
@@ -1338,8 +1385,8 @@ public class MainActivity extends AppCompatActivity
      * Called from startClusterMirror().
      */
     private void showMirrorView() {
-        llAppListSection.setVisibility(View.GONE);
-        rvApps.setVisibility(View.GONE);
+        // v0.9.7 — apps pane stays visible at all times (M3 split layout). The old
+        // visibility toggles on llAppListSection/rvApps are intentionally no-ops now.
         frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
         // Always restore the controls panel when mirror is shown
@@ -1410,15 +1457,11 @@ public class MainActivity extends AppCompatActivity
      * Called from showAppList().
      */
     private void showAppList() {
+        // v0.9.7 — apps pane is always visible (M3 split layout). We only collapse the
+        // cluster preview/control widgets here. Mirror frame stays VISIBLE so its empty
+        // preview card serves as the idle state.
         stopClusterMirror();
-        frameMirror.setVisibility(View.GONE);
         panelClusterControl.setVisibility(View.GONE);
-        llAppListSection.setAlpha(0f);
-        llAppListSection.setVisibility(View.VISIBLE);
-        llAppListSection.animate().alpha(1f).setDuration(150).start();
-        rvApps.setAlpha(0f);
-        rvApps.setVisibility(View.VISIBLE);
-        rvApps.animate().alpha(1f).setDuration(150).start();
     }
 
     /**

@@ -260,4 +260,22 @@
     <string name="settings_check_update_support">Prüft, ob eine neue Version verfügbar ist</string>
     <string name="settings_check_update_button">Prüfen</string>
     <string name="settings_source_code_title">Quellcode</string>
+    <string name="main_title_dashboard">Übersicht</string>
+    <string name="main_nav_apps">Apps</string>
+    <string name="main_nav_settings">Einstell.</string>
+    <string name="main_nav_diag">Diag</string>
+    <string name="main_nav_sysinfo">System</string>
+    <string name="main_nav_log">Log</string>
+    <string name="main_nav_help">Hilfe</string>
+    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_status_idle">Inaktiv</string>
+    <string name="main_cluster_status_subtitle">Aktiviere die Projektion zum Starten</string>
+    <string name="main_preview_section">Live-Vorschau</string>
+    <string name="main_btn_full_preview">Vollbildvorschau</string>
+    <string name="main_btn_capture">Aufnahme</string>
+    <string name="main_btn_reconnect">Verbinden</string>
+    <string name="main_btn_stop_mirror">Stop</string>
+    <string name="main_section_favorites">Favoriten</string>
+    <string name="main_section_all_apps">Alle Apps</string>
+    <string name="main_capture_coming_soon">Aufnahme kommt bald</string>
 </resources>

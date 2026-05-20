@@ -260,4 +260,22 @@
     <string name="settings_check_update_support">يتحقق مما إذا كان هناك إصدار جديد متاح</string>
     <string name="settings_check_update_button">تحقق</string>
     <string name="settings_source_code_title">الكود المصدري</string>
+    <string name="main_title_dashboard">لوحة القيادة</string>
+    <string name="main_nav_apps">تطبيقات</string>
+    <string name="main_nav_settings">إعدادات</string>
+    <string name="main_nav_diag">تشخيص</string>
+    <string name="main_nav_sysinfo">النظام</string>
+    <string name="main_nav_log">السجل</string>
+    <string name="main_nav_help">مساعدة</string>
+    <string name="main_cluster_label">CLUSTER MIRROR</string>
+    <string name="main_cluster_status_idle">غير نشط</string>
+    <string name="main_cluster_status_subtitle">فعّل العرض للبدء</string>
+    <string name="main_preview_section">معاينة مباشرة</string>
+    <string name="main_btn_full_preview">معاينة كاملة</string>
+    <string name="main_btn_capture">التقاط</string>
+    <string name="main_btn_reconnect">إعادة الاتصال</string>
+    <string name="main_btn_stop_mirror">إيقاف المرآة</string>
+    <string name="main_section_favorites">المفضلة</string>
+    <string name="main_section_all_apps">كل التطبيقات</string>
+    <string name="main_capture_coming_soon">قريباً</string>
 </resources>
