@@ -42,4 +42,15 @@
         android:textColor="@color/md_on_surface"
         android:maxLines="1"
         android:ellipsize="end"/>
+
+    <!-- v0.9.80: "app launched" indicator (green bar) shown when this favorite
+         is currently the running cluster app or the main display app. -->
+    <View
+        android:id="@+id/view_fav_active_indicator"
+        android:layout_width="24dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#4CAF50"
+        android:visibility="gone"/>
 </LinearLayout>

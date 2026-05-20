@@ -123,7 +123,9 @@ public class MainActivity extends AppCompatActivity
             mMainDisplayPkg      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
+            updateFavoritesIndicators();
             if (mAdapter != null) mAdapter.setMainPackage(null);
+            updateFavoritesIndicators();
             AppLogger.log(TAG, "ClusterService disconnected");
         }
     };
@@ -573,6 +575,7 @@ public class MainActivity extends AppCompatActivity
                 .getString(PREF_MAIN_PKG, null);
         if (mMainDisplayPkg != null) {
             mAdapter.setMainPackage(mMainDisplayPkg);
+            updateFavoritesIndicators();
         }
 
         // TextureView optimizations
@@ -725,6 +728,7 @@ public class MainActivity extends AppCompatActivity
                             .putString(PREF_LAST_CLUSTER_PKG, pkgName)
                             .putString(PREF_LAST_CLUSTER_NAME, name).apply();
                     mAdapter.setCurrentPackage(pkgName);
+                    updateFavoritesIndicators();
                     updateDashboardStatus(mCurrentDashboardApp);
                     updateControlLabel();
                     startClusterMirror();
@@ -858,6 +862,7 @@ public class MainActivity extends AppCompatActivity
                         mCurrentDashboardPkg = _pkg;
                         mCurrentDashboardApp = _name;
                         mAdapter.setCurrentPackage(_pkg);
+                        updateFavoritesIndicators();
                         updateDashboardStatus(_name);
                         updateControlLabel();
                         showMirrorView(); // makes panelClusterControl visible
@@ -875,6 +880,7 @@ public class MainActivity extends AppCompatActivity
                     mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .getString(PREF_MAIN_PKG, null);
                     if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
+                    updateFavoritesIndicators();
                 }
                 
                 // Pending app from "activate cluster" dialog
@@ -947,7 +953,9 @@ public class MainActivity extends AppCompatActivity
                         .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
+                updateFavoritesIndicators();
                 mAdapter.setMainPackage(null);
+                updateFavoritesIndicators();
                 // v0.9.73 — unified OFF state ("Projection inactive") with grey dot.
                 setDashboardOffState();
                 showAppList();
@@ -1106,6 +1114,7 @@ public class MainActivity extends AppCompatActivity
         if (pkgName != null && pkgName.equals(mMainDisplayPkg)) {
             mMainDisplayPkg = null;
             mAdapter.setMainPackage(null);
+            updateFavoritesIndicators();
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
         }
 
@@ -1174,6 +1183,7 @@ public class MainActivity extends AppCompatActivity
                             .putString(PREF_LAST_CLUSTER_PKG, pkgName)
                             .putString(PREF_LAST_CLUSTER_NAME, appName).apply();
                     mAdapter.setCurrentPackage(pkgName);
+                    updateFavoritesIndicators();
                     updateDashboardStatus(appName);
                     updateControlLabel();
                     startClusterMirror();
@@ -1213,7 +1223,9 @@ public class MainActivity extends AppCompatActivity
         // Record that the app is on the main display → shows button "→ Cluster" in the list
         mMainDisplayPkg = app.packageName;
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
         mAdapter.setMainPackage(app.packageName);
+        updateFavoritesIndicators();
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
         updateDashboardStatus(null);
@@ -1259,6 +1271,7 @@ public class MainActivity extends AppCompatActivity
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
             mAdapter.setCurrentPackage(null);
+            updateFavoritesIndicators();
             updateDashboardStatus(null);
         }
 
@@ -1529,6 +1542,7 @@ public class MainActivity extends AppCompatActivity
                                         .edit().remove(PREF_MAIN_PKG).apply();
                                 if (mAdapter != null) {
                                     mAdapter.setMainPackage(null);
+                                    updateFavoritesIndicators();
                                 }
                             }
                         });
@@ -1552,6 +1566,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
         updateDashboardStatus(null);
         showAppList();
     }
@@ -2057,6 +2072,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
 
         // Move ALL apps that were launched on the cluster during this session back to Display 0.
         // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
@@ -2252,6 +2268,7 @@ public class MainActivity extends AppCompatActivity
             TextView tv   = tile.findViewById(R.id.tv_fav_name);
             iv.setImageDrawable(a.icon);
             tv.setText(a.appName);
+            tile.setTag(a.packageName);
             tile.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { onSendToDashboard(a); }
             });
@@ -2262,6 +2279,27 @@ public class MainActivity extends AppCompatActivity
             added++;
         }
         llFavoritesSection.setVisibility(added > 0 ? View.VISIBLE : View.GONE);
+        updateFavoritesIndicators();
+    }
+
+    /**
+     * v0.9.80 — Sync the "app launched" green bar on each favorite tile with the
+     * adapter's current/main package state. Call this whenever those change.
+     */
+    private void updateFavoritesIndicators() {
+        if (llFavoritesStrip == null || mAdapter == null) return;
+        String curPkg  = mAdapter.getCurrentPackage();
+        String mainPkg = mAdapter.getMainPackage();
+        for (int i = 0; i < llFavoritesStrip.getChildCount(); i++) {
+            View tile = llFavoritesStrip.getChildAt(i);
+            Object tag = tile.getTag();
+            if (!(tag instanceof String)) continue;
+            String pkg = (String) tag;
+            View ind = tile.findViewById(R.id.view_fav_active_indicator);
+            if (ind == null) continue;
+            boolean active = pkg.equals(curPkg) || pkg.equals(mainPkg);
+            ind.setVisibility(active ? View.VISIBLE : View.GONE);
+        }
     }
 
     // ============================================================
@@ -2632,6 +2670,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
 
         moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());

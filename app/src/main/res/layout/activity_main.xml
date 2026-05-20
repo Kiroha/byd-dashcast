@@ -258,52 +258,8 @@
                 android:textSize="26sp"
                 android:textStyle="bold"/>
 
-            <!-- Status pills (placeholder values until real data sources wired) -->
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="4dp"
-                android:layout_gravity="center_vertical"
-                android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
-                android:src="@drawable/ic_thermostat"
-                android:contentDescription="@null"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="21°C"
-                android:textSize="14sp"
-                android:textColor="@color/md_on_surface_variant"
-                tools:ignore="HardcodedText"/>
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="4dp"
-                android:layout_gravity="center_vertical"
-                android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
-                android:src="@drawable/ic_bolt"
-                android:contentDescription="@null"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:text="78%"
-                android:textSize="14sp"
-                android:textColor="@color/md_on_surface_variant"
-                tools:ignore="HardcodedText"/>
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="16dp"
-                android:layout_gravity="center_vertical"
-                android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
-                android:src="@drawable/ic_signal_cellular"
-                android:contentDescription="@null"/>
+            <!-- v0.9.80: status pills (thermostat / battery / signal) removed — placeholder
+                 data only, no real sources wired. Only the clock + overflow remain. -->
 
             <TextClock
                 android:layout_width="wrap_content"
