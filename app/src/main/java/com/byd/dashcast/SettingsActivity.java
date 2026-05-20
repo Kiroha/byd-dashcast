@@ -164,8 +164,8 @@ public class SettingsActivity extends AppCompatActivity {
         boolean showCatFilters = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false);
         cbShowCategoryFilters.setChecked(showCatFilters);
 
-        // Reconnect popup toggle (default: enabled for backward compat)
-        boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, true);
+        // Reconnect popup toggle (default: disabled — users find it intrusive)
+        boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, false);
         cbReconnectPopup.setChecked(reconnectPopup);
     }
 

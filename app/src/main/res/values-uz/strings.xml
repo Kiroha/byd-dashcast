@@ -237,6 +237,7 @@
     <string name="filter_nav">🗺 Nav</string>
     <string name="filter_media">🎵 Media</string>
     <string name="settings_show_category_filters">Turkum filtrlarini koʻrsatish (Barchasi / Nav / Media)</string>
+    <string name="settings_reconnect_popup">Klaster qayta ulanganda oxirgi ilovani qayta ishga tushirishni taklif qilish</string>
     <string name="quick_switch_title">Soʻnggi ilovalar</string>
     <string name="quick_switch_empty">Soʻnggi ilova yoʻq</string>
     <string name="menu_usage_stats">📊 Foydalanish statistikasi</string>

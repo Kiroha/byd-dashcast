@@ -237,6 +237,7 @@
     <string name="filter_nav">🗺 ملاحة</string>
     <string name="filter_media">🎵 وسائط</string>
     <string name="settings_show_category_filters">إظهار فلاتر الفئات (الكل / ملاحة / وسائط)</string>
+    <string name="settings_reconnect_popup">اقتراح إعادة تشغيل آخر تطبيق عند إعادة الاتصال بالكلاستر</string>
     <string name="quick_switch_title">التطبيقات الأخيرة</string>
     <string name="quick_switch_empty">لا توجد تطبيقات أخيرة</string>
     <string name="menu_usage_stats">📊 إحصائيات الاستخدام</string>

@@ -235,6 +235,7 @@
     <string name="filter_nav">🗺 Nav</string>
     <string name="filter_media">🎵 Media</string>
     <string name="settings_show_category_filters">Mostrar filtros por categoría (Todo / Nav / Media)</string>
+    <string name="settings_reconnect_popup">Ofrecer relanzar la última app al reconectar el cluster</string>
     <string name="quick_switch_title">Apps recientes</string>
     <string name="quick_switch_empty">Sin apps recientes</string>
     <string name="menu_usage_stats">📊 Estadísticas de uso</string>

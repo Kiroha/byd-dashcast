@@ -799,7 +799,7 @@ public class MainActivity extends AppCompatActivity
                 // there was a last known app, offer to relaunch it.
                 // Guarded by user preference (can be disabled in Settings).
                 boolean reconnectEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                        .getBoolean(SettingsActivity.PREF_RECONNECT_POPUP, true);
+                        .getBoolean(SettingsActivity.PREF_RECONNECT_POPUP, false);
                 if (reconnectEnabled && wasManual && mCurrentDashboardPkg == null) {
                     final SharedPreferences _pp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     final String lastPkg  = _pp.getString(PREF_LAST_CLUSTER_PKG, null);

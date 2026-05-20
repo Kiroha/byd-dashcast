@@ -237,6 +237,7 @@
     <string name="filter_nav">🗺 Нав</string>
     <string name="filter_media">🎵 Медиа</string>
     <string name="settings_show_category_filters">Показать фильтры по категориям (Все / Нав / Медиа)</string>
+    <string name="settings_reconnect_popup">Предлагать перезапуск последнего приложения при переподключении кластера</string>
     <string name="quick_switch_title">Недавние приложения</string>
     <string name="quick_switch_empty">Нет недавних приложений</string>
     <string name="menu_usage_stats">📊 Статистика использования</string>

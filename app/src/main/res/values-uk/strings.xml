@@ -237,6 +237,7 @@
     <string name="filter_nav">🗺 Нав</string>
     <string name="filter_media">🎵 Медіа</string>
     <string name="settings_show_category_filters">Показати фільтри за категоріями (Всі / Нав / Медіа)</string>
+    <string name="settings_reconnect_popup">Пропонувати перезапуск останнього додатку при перепідключенні кластера</string>
     <string name="quick_switch_title">Останні додатки</string>
     <string name="quick_switch_empty">Немає останніх додатків</string>
     <string name="menu_usage_stats">📊 Статистика використання</string>

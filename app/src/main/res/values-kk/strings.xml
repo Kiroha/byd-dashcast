@@ -237,6 +237,7 @@
     <string name="filter_nav">🗺 Нав</string>
     <string name="filter_media">🎵 Медиа</string>
     <string name="settings_show_category_filters">Санат сүзгілерін көрсету (Барлығы / Нав / Медиа)</string>
+    <string name="settings_reconnect_popup">Кластер қайта қосылғанда соңғы қолданбаны қайта іске қосуды ұсыну</string>
     <string name="quick_switch_title">Соңғы қолданбалар</string>
     <string name="quick_switch_empty">Соңғы қолданба жоқ</string>
     <string name="menu_usage_stats">📊 Пайдалану статистикасы</string>
