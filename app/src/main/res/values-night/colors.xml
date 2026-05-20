@@ -32,4 +32,42 @@
     <color name="bg_diag_success">#1A2A1A</color>
     <color name="bg_diag_error">#2A1A1A</color>
     <color name="bg_diag_info">#1A1A2A</color>
+
+    <!-- ============================================ -->
+    <!-- Material 3 tokens (DARK scheme) — from mockup_m3.html -->
+    <!-- Source color #1565C0 (BYD blue) -->
+    <!-- ============================================ -->
+    <color name="md_primary">#A8C7FA</color>
+    <color name="md_on_primary">#002F65</color>
+    <color name="md_primary_container">#08458F</color>
+    <color name="md_on_primary_container">#D5E3FF</color>
+    <color name="md_secondary">#BCC7DC</color>
+    <color name="md_on_secondary">#263141</color>
+    <color name="md_secondary_container">#3D4759</color>
+    <color name="md_on_secondary_container">#D8E2F8</color>
+    <color name="md_tertiary">#DEBCDF</color>
+    <color name="md_on_tertiary">#402843</color>
+    <color name="md_tertiary_container">#583E5B</color>
+    <color name="md_on_tertiary_container">#FBD8FC</color>
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+    <color name="md_background">#11131A</color>
+    <color name="md_on_background">#E3E2E6</color>
+    <color name="md_surface">#11131A</color>
+    <color name="md_on_surface">#E3E2E6</color>
+    <color name="md_surface_variant">#43474E</color>
+    <color name="md_on_surface_variant">#C3C6CF</color>
+    <color name="md_outline">#8C9199</color>
+    <color name="md_outline_variant">#43474E</color>
+    <color name="md_surface_container_lowest">#0B0E14</color>
+    <color name="md_surface_container_low">#191C22</color>
+    <color name="md_surface_container">#1D2026</color>
+    <color name="md_surface_container_high">#272A30</color>
+    <color name="md_surface_container_highest">#32353B</color>
+    <color name="md_success">#7DDB94</color>
+    <color name="md_success_container">#1F4D2C</color>
+    <color name="md_warn">#FFB870</color>
+    <color name="md_warn_container">#5C3A00</color>
 </resources>

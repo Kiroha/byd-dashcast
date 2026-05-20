@@ -40,4 +40,41 @@
 
     <!-- Static pure colors -->
     <color name="pure_white">#FFFFFF</color>
+
+    <!-- ============================================ -->
+    <!-- Material 3 tokens (LIGHT scheme) — source #1565C0 -->
+    <!-- ============================================ -->
+    <color name="md_primary">#2A5EA8</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#D5E3FF</color>
+    <color name="md_on_primary_container">#001B3F</color>
+    <color name="md_secondary">#555F71</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#D9E3F8</color>
+    <color name="md_on_secondary_container">#121C2B</color>
+    <color name="md_tertiary">#6F5575</color>
+    <color name="md_on_tertiary">#FFFFFF</color>
+    <color name="md_tertiary_container">#F8D8FD</color>
+    <color name="md_on_tertiary_container">#28132E</color>
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+    <color name="md_error_container">#FFDAD6</color>
+    <color name="md_on_error_container">#410002</color>
+    <color name="md_background">#FDFBFF</color>
+    <color name="md_on_background">#1A1B1F</color>
+    <color name="md_surface">#FDFBFF</color>
+    <color name="md_on_surface">#1A1B1F</color>
+    <color name="md_surface_variant">#E0E2EC</color>
+    <color name="md_on_surface_variant">#43474E</color>
+    <color name="md_outline">#74777F</color>
+    <color name="md_outline_variant">#C3C6CF</color>
+    <color name="md_surface_container_lowest">#FFFFFF</color>
+    <color name="md_surface_container_low">#F4F3F8</color>
+    <color name="md_surface_container">#EEEDF2</color>
+    <color name="md_surface_container_high">#E8E7EC</color>
+    <color name="md_surface_container_highest">#E2E1E6</color>
+    <color name="md_success">#2E7D32</color>
+    <color name="md_success_container">#C8E6C9</color>
+    <color name="md_warn">#E65100</color>
+    <color name="md_warn_container">#FFD9B3</color>
 </resources>
