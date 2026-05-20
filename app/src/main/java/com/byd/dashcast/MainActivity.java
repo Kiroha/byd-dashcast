@@ -2307,25 +2307,31 @@ public class MainActivity extends AppCompatActivity
             AppLogger.w(TAG, "immersive setSystemUiVisibility failed: " + t.getMessage());
         }
 
-        // v0.9.76 — onSurfaceTextureSizeChanged will fire after the layout pass and
-        // recreate the mirror at the new size (since stopClusterMirror() was called).
-        // Safety net: re-attempt after layout in case the size didn't actually change.
-        cardClusterPreview.post(new Runnable() {
+        // v0.9.77 — robust restart at the new TextureView size.
+        // Layout settles via postDelayed (200ms) so getWidth/getHeight reflect fullscreen.
+        // We then explicitly recreate mMirrorSurface from the (possibly resized)
+        // SurfaceTexture buffer and call attemptStart — because onSurfaceTextureSizeChanged
+        // may not fire when only the View bounds change without buffer change.
+        cardClusterPreview.postDelayed(new Runnable() {
             @Override public void run() {
                 try {
-                    if (mClusterService != null
-                            && !mClusterService.getMirrorManager().isMirrorActive()) {
-                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
-                        if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
-                            st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
-                        }
-                        attemptStartMirrorWithCurrentHolder();
+                    SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                    int w = clusterMirror != null ? clusterMirror.getWidth() : 0;
+                    int h = clusterMirror != null ? clusterMirror.getHeight() : 0;
+                    if (st == null || w <= 0 || h <= 0) {
+                        AppLogger.w(TAG, "fullscreen restart: surface or size missing (w=" + w + " h=" + h + ")");
+                        return;
                     }
+                    st.setDefaultBufferSize(w, h);
+                    if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
+                    mMirrorSurface = new Surface(st);
+                    AppLogger.i(TAG, "fullscreen restart: new surface " + w + "×" + h);
+                    attemptStartMirrorWithCurrentHolder();
                 } catch (Throwable t) {
                     AppLogger.w(TAG, "fullscreen mirror restart failed: " + t.getMessage());
                 }
             }
-        });
+        }, 250);
         AppLogger.i(TAG, "enterFullscreenMirror");
     }
 
@@ -2363,22 +2369,22 @@ public class MainActivity extends AppCompatActivity
             getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
         } catch (Throwable t) { /* ignore */ }
 
-        // Safety net restart in case onSurfaceTextureSizeChanged didn't fire.
+        // Same robust delayed restart as enterFullscreenMirror, but at the preview size.
         if (cardClusterPreview != null) {
-            cardClusterPreview.post(new Runnable() {
+            cardClusterPreview.postDelayed(new Runnable() {
                 @Override public void run() {
                     try {
-                        if (mClusterService != null
-                                && !mClusterService.getMirrorManager().isMirrorActive()) {
-                            SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
-                            if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
-                                st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
-                            }
-                            attemptStartMirrorWithCurrentHolder();
-                        }
+                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                        int w = clusterMirror != null ? clusterMirror.getWidth() : 0;
+                        int h = clusterMirror != null ? clusterMirror.getHeight() : 0;
+                        if (st == null || w <= 0 || h <= 0) return;
+                        st.setDefaultBufferSize(w, h);
+                        if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
+                        mMirrorSurface = new Surface(st);
+                        attemptStartMirrorWithCurrentHolder();
                     } catch (Throwable t) { /* ignore */ }
                 }
-            });
+            }, 250);
         }
         AppLogger.i(TAG, "exitFullscreenMirror");
     }
