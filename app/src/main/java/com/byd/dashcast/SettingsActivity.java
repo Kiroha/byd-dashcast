@@ -45,6 +45,7 @@ public class SettingsActivity extends AppCompatActivity {
     // ── Boot / UI toggles ───────────────────────────────────────────────────────────────
     public static final String PREF_BOOT_AUTO_START       = "boot_auto_start_enabled";
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
+    public static final String PREF_RECONNECT_POPUP       = "reconnect_popup_enabled";
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
     // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
     public static final String PREF_RECENT_APPS = "recent_cluster_apps";
@@ -64,6 +65,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox    cbVisualMode;
     private CheckBox    cbBootAutoStart;
     private CheckBox    cbShowCategoryFilters;
+    private CheckBox    cbReconnectPopup;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -123,6 +125,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnVPlus      = findViewById(R.id.btn_v_plus);
         flSafeZone    = findViewById(R.id.fl_safe_zone);
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
+        cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
     }
 
     private void loadPreferences() {
@@ -160,6 +163,10 @@ public class SettingsActivity extends AppCompatActivity {
         // Category filters toggle
         boolean showCatFilters = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false);
         cbShowCategoryFilters.setChecked(showCatFilters);
+
+        // Reconnect popup toggle (default: enabled for backward compat)
+        boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, true);
+        cbReconnectPopup.setChecked(reconnectPopup);
     }
 
     private void wireListeners() {
@@ -263,6 +270,12 @@ public class SettingsActivity extends AppCompatActivity {
         cbShowCategoryFilters.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_SHOW_CATEGORY_FILTERS, isChecked).apply();
+        });
+
+        // Reconnect popup checkbox
+        cbReconnectPopup.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
         });
     }
 
