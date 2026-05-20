@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#f2f2f2">
+    android:background="@color/bg_main">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:text="@string/diag_header"
             android:textSize="26sp"
-            android:textColor="#2E3440"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s1_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
@@ -47,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s1_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
                 
             <TextView
@@ -57,7 +57,7 @@
                 android:text="@string/diag_s1_initial"
                 android:textSize="13sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -83,7 +83,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -94,7 +94,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s2_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s2_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
                 
             <TextView
@@ -112,7 +112,7 @@
                 android:text="--"
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <Button
@@ -121,7 +121,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_create_vd"
                 android:backgroundTint="#A3BE8C"
-                android:textColor="#ffffff"
+                android:textColor="@color/pure_white"
                 android:layout_marginBottom="12dp"/>
 
         </LinearLayout>
@@ -131,7 +131,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -142,7 +142,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s3_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp"/>
 
@@ -153,7 +153,7 @@
                 android:text="@string/diag_s3_initial"
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             
@@ -181,7 +181,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"
                 android:text=""/>
 
@@ -191,7 +191,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s3_display1_initial"
                 android:textSize="12sp"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -205,7 +205,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -216,7 +216,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_sadas_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp"/>
 
@@ -225,7 +225,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_sadas_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <TextView
@@ -235,7 +235,7 @@
                 android:text="@string/diag_adas_initial"
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
 
@@ -250,7 +250,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_adas_show"
                     android:backgroundTint="#A3BE8C"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
                     android:id="@+id/btn_adas_hide"
@@ -259,7 +259,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_adas_hide"
                     android:backgroundTint="#BF616A"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -268,7 +268,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -279,7 +279,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s4_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp"/>
 
@@ -292,7 +292,7 @@
                 android:textSize="10sp"
                 android:fontFamily="monospace"
                 android:scrollbars="vertical"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <Button
@@ -310,7 +310,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_jni_initial"
                 android:textSize="12sp"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
@@ -338,7 +338,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_sf_initial"
                 android:textSize="12sp"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <Button
@@ -356,14 +356,14 @@
                 android:text="@string/diag_auto_display_title"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="4dp"/>
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/diag_auto_display_desc"
                 android:textSize="11sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
             <TextView
                 android:id="@+id/tv_auto_display_result"
@@ -372,7 +372,7 @@
                 android:text="--"
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -395,21 +395,21 @@
 
             <!-- ═══ PIPELINE FISSION (création VirtualDisplay cluster) ═══ -->
             <View android:layout_width="match_parent" android:layout_height="1dp"
-                android:background="#D8DEE9" android:layout_marginVertical="12dp"/>
+                android:background="@color/bg_button_secondary" android:layout_marginVertical="12dp"/>
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/diag_fission_title"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="4dp"/>
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/diag_fission_desc"
                 android:textSize="11sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
             <TextView
                 android:id="@+id/tv_fission_result"
@@ -418,7 +418,7 @@
                 android:text="--"
                 android:textSize="11sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -428,7 +428,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_sendinf_java"
                     android:backgroundTint="#BF616A"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginBottom="4dp"/>
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
@@ -439,7 +439,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_fission_create"
                     android:backgroundTint="#5E81AC"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginRight="4dp"/>
                 <Button
                     android:id="@+id/btn_fission_launch"
@@ -448,8 +448,46 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_btn_fission_launch"
                     android:backgroundTint="#A3BE8C"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:enabled="false"/>
+            </LinearLayout>
+
+            <!-- ═══ Surface diagnostics : mesurer, overscan 0 ═══ -->
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/bg_button_secondary" android:layout_marginVertical="10dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_surface_title"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_fission_surface_desc"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="8dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_fission_measure"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_measure"
+                    android:backgroundTint="#434C5E"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_fission_overscan_zero"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_fission_overscan_zero"
+                    android:backgroundTint="#88C0D0"
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -458,7 +496,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="32dp"
@@ -469,7 +507,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s5_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
@@ -477,7 +515,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s5_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
 
             <!-- Status -->
@@ -488,7 +526,7 @@
                 android:text="@string/diag_sniffer_inactive"
                 android:textSize="13sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
 
@@ -536,7 +574,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -547,7 +585,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s7_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
@@ -555,7 +593,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s7_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
 
             <TextView
@@ -565,7 +603,7 @@
                 android:text="--"
                 android:textSize="11sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:layout_marginBottom="8dp"/>
 
@@ -576,7 +614,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_dilink5_seq"
                 android:backgroundTint="#5E81AC"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
             <!-- Bouton 2 : resizeTask seul avec FORCED=3 (sans changement windowing) -->
@@ -586,7 +624,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_forced_only"
                 android:backgroundTint="#88C0D0"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
             <!-- Bouton 3 : inspecter la task actuelle (windowing mode, stack id, bounds) -->
@@ -596,7 +634,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_btn_resize_inspect_task"
                 android:backgroundTint="#434C5E"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="6dp"/>
 
         </LinearLayout>
@@ -606,7 +644,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -617,7 +655,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s6_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
@@ -625,7 +663,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/diag_s6_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
 
             <Button
@@ -641,18 +679,18 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:text=""/>
 
         </LinearLayout>
 
 
-        <!-- 7. ADAS DEBUG -->
+        <!-- 8.8" SCREEN — DIRECT PROJECTION (no sendInfo 30) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -661,17 +699,80 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ADAS DEBUG [sendInfo]"
+                android:text="@string/diag_s88_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s88_desc"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tv_screen88_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_s88_initial"
+                android:textSize="12sp"
+                android:fontFamily="monospace"
+                android:background="@color/bg_button_secondary"
+                android:padding="8dp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btn_screen88_activate"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_88_activate"
+                    android:backgroundTint="#A3BE8C"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginRight="4dp"/>
+                <Button
+                    android:id="@+id/btn_screen88_stop"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_btn_88_stop"
+                    android:backgroundTint="#BF616A"
+                    android:textColor="@color/text_primary"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 7. ADAS DEBUG -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/bg_card"
+            android:elevation="3dp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_adas47_title"
+                android:textSize="18sp"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Activer ou désactiver le mode de diagnostic ADAS sur le Cluster"
+                android:text="@string/diag_adas47_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="12dp"/>
 
             <LinearLayout
@@ -684,7 +785,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="ADAS ON (47)"
+                    android:text="@string/diag_adas47_on"
                     android:backgroundTint="#A3BE8C"
                     android:layout_marginEnd="4dp"/>
 
@@ -693,7 +794,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="ADAS OFF (48)"
+                    android:text="@string/diag_adas47_off"
                     android:backgroundTint="#BF616A"/>
             </LinearLayout>
 

@@ -11,6 +11,7 @@ import android.view.SurfaceControl;
 import com.byd.dashcast.AppLogger;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Cluster mirror — SurfaceControl.createDisplay + setDisplayLayerStack.
@@ -27,6 +28,9 @@ import java.lang.reflect.Method;
 public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
+
+    /** Guard to prevent repeated costly reflection calls if unlockHiddenApis is called more than once. */
+    private static final AtomicBoolean sHiddenApisUnlocked = new AtomicBoolean(false);
 
     // ── SurfaceControl mirror token ───────────────────────────────────────────────
     private IBinder mMirrorDisplayToken = null;
@@ -57,8 +61,13 @@ public class ClusterMirrorManager {
 
     /**
      * Unlocks hidden APIs (SurfaceControl, Display.getLayerStack, etc.).
+     * Guarded by an AtomicBoolean so repeated calls (e.g. Activity re-create) are no-ops.
      */
     public static void unlockHiddenApis() {
+        if (!sHiddenApisUnlocked.compareAndSet(false, true)) {
+            AppLogger.d(TAG, "unlockHiddenApis: already unlocked, skipping");
+            return;
+        }
         try {
             Method getDeclaredMethod = Class.class.getDeclaredMethod(
                     "getDeclaredMethod", String.class, Class[].class);
@@ -91,7 +100,7 @@ public class ClusterMirrorManager {
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
-    public boolean startMirror(Context context, Display clusterDisplay, Surface targetSurface,
+    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         if (mMirrorActive) {
             AppLogger.d(TAG, "Mirror already active");
@@ -268,14 +277,15 @@ public class ClusterMirrorManager {
      */
     public void stopMirrorViaDaemon(IBinder daemonBinder) {
         if (daemonBinder == null) return;
+        Parcel data = Parcel.obtain();
         try {
-            Parcel data = Parcel.obtain();
             data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
             daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
                     data, null, android.os.IBinder.FLAG_ONEWAY);
-            data.recycle();
         } catch (Exception e) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: " + e.getMessage());
+        } finally {
+            data.recycle();
         }
         mMirrorActive  = false;
         mMirrorSurface = null;

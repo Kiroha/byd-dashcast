@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#f2f2f2">
+    android:background="@color/bg_main">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:text="@string/settings_header"
             android:textSize="26sp"
-            android:textColor="#2E3440"
+            android:textColor="@color/text_primary"
             android:textStyle="bold"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_cluster_type_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="10dp"/>
 
@@ -81,7 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -92,7 +92,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_overscan_section_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="6dp"/>
 
@@ -101,16 +101,55 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_overscan_desc"
                 android:textSize="12sp"
-                android:textColor="#4C566A"
-                android:layout_marginBottom="16dp"/>
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="12dp"/>
 
-            <!-- Gauche / Droite -->
-            <LinearLayout
+            <CheckBox
+                android:id="@+id/cb_visual_mode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
+                android:text="@string/visual_overscan_use_visual_mode"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
+            <CheckBox
+                android:id="@+id/cb_boot_auto_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_boot_auto_start"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
+            <CheckBox
+                android:id="@+id/cb_show_category_filters"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_show_category_filters"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
+            <CheckBox
+                android:id="@+id/cb_reconnect_popup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_reconnect_popup"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Bloc Sliders Classique -->
+            <LinearLayout
+                android:id="@+id/ll_sliders_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                
+                <!-- Gauche / Droite -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
 
                 <TextView
                     android:layout_width="0dp"
@@ -118,7 +157,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_inset_h_label"
                     android:textSize="14sp"
-                    android:textColor="#3B4252"/>
+                    android:textColor="@color/text_primary"/>
 
                 <TextView
                     android:id="@+id/tv_inset_h_value"
@@ -126,7 +165,7 @@
                     android:layout_height="wrap_content"
                     android:text="80 px"
                     android:textSize="14sp"
-                    android:textColor="#5E81AC"
+                    android:textColor="@color/text_accent"
                     android:textStyle="bold"
                     android:gravity="end"/>
             </LinearLayout>
@@ -153,7 +192,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_inset_v_label"
                     android:textSize="14sp"
-                    android:textColor="#3B4252"/>
+                    android:textColor="@color/text_primary"/>
 
                 <TextView
                     android:id="@+id/tv_inset_v_value"
@@ -161,7 +200,7 @@
                     android:layout_height="wrap_content"
                     android:text="50 px"
                     android:textSize="14sp"
-                    android:textColor="#5E81AC"
+                    android:textColor="@color/text_accent"
                     android:textStyle="bold"
                     android:gravity="end"/>
             </LinearLayout>
@@ -173,6 +212,10 @@
                 android:max="200"
                 android:progress="50"
                 android:layout_marginBottom="20dp"/>
+            </LinearLayout>
+
+            <!-- Mode Visuel -->
+            <include layout="@layout/layout_visual_overscan" />
 
             <!-- Boutons -->
             <LinearLayout
@@ -188,7 +231,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_btn_apply_overscan"
                     android:backgroundTint="#1565C0"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:layout_marginEnd="6dp"/>
 
                 <Button
@@ -198,7 +241,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings_btn_reset_overscan"
                     android:backgroundTint="#607D8B"
-                    android:textColor="#FFFFFF"/>
+                    android:textColor="@color/text_primary"/>
             </LinearLayout>
 
             <TextView
@@ -208,7 +251,7 @@
                 android:text=""
                 android:textSize="12sp"
                 android:fontFamily="monospace"
-                android:background="#E5E9F0"
+                android:background="@color/bg_button_secondary"
                 android:padding="8dp"
                 android:visibility="gone"/>
 
@@ -219,7 +262,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#ffffff"
+            android:background="@color/bg_card"
             android:elevation="3dp"
             android:padding="16dp"
             android:layout_marginBottom="16dp"
@@ -230,7 +273,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_updates_title"
                 android:textSize="18sp"
-                android:textColor="#3B4252"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
                 android:layout_marginBottom="10dp"/>
 
@@ -247,7 +290,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/settings_prerelease_hint"
                 android:textSize="12sp"
-                android:textColor="#888888"
+                android:textColor="@color/text_secondary"
                 android:layout_marginTop="2dp"
                 android:layout_marginStart="36dp"/>
 

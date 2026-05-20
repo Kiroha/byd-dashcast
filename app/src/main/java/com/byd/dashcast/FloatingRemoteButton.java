@@ -19,7 +19,7 @@ import android.widget.TextView;
  * FloatingRemoteButton — persistent overlay button visible over all screens.
  *
  * Displays a draggable 📺 badge. Only visible when an app is active on the cluster.
- * • Tap  → broadcasts ACTION_SHOW_MIRROR so MainActivity opens the mirror panel.
+ * • Tap  → starts MainActivity with ACTION_SHOW_MIRROR via startActivity() (not a broadcast).
  * • Long press → closes this overlay service.
  *
  * Visibility is controlled externally via the static show() / hide() helpers
@@ -37,7 +37,14 @@ public class FloatingRemoteButton extends Service {
 
     // ── Static helpers so MainActivity can show/hide without a Service reference ──
     @android.annotation.SuppressLint("StaticFieldLeak")
-    private static FloatingRemoteButton sInstance;
+    private static volatile FloatingRemoteButton sInstance;
+
+    /**
+     * Desired visibility state — survives even when sInstance or mFloatView is not yet
+     * ready (service starting, overlay permission being granted via ADB).
+     * When the overlay is finally created, it reads this flag to apply the correct state.
+     */
+    private static volatile boolean sShouldBeVisible = false;
 
     private android.os.Handler mDimHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable mDimRunnable = new Runnable() {
@@ -56,29 +63,27 @@ public class FloatingRemoteButton extends Service {
     }
 
     public static void show() {
+        sShouldBeVisible = true;
         FloatingRemoteButton inst = sInstance;
         if (inst != null && inst.mFloatView != null) {
-            inst.mFloatView.post(new Runnable() {
-                @Override public void run() {
-                    FloatingRemoteButton i = sInstance;
-                    if (i != null && i.mFloatView != null) {
-                        i.mFloatView.setVisibility(View.VISIBLE);
-                        i.triggerDimTimer();
-                    }
+            inst.mFloatView.post(() -> {
+                FloatingRemoteButton i = sInstance;
+                if (i != null && i.mFloatView != null && sShouldBeVisible) {
+                    i.mFloatView.setVisibility(View.VISIBLE);
+                    i.triggerDimTimer();
                 }
             });
         }
     }
 
     public static void hide() {
+        sShouldBeVisible = false;
         FloatingRemoteButton inst = sInstance;
         if (inst == null || inst.mFloatView == null) return;
-        inst.mFloatView.post(new Runnable() {
-            @Override public void run() {
-                FloatingRemoteButton i = sInstance;
-                if (i != null && i.mFloatView != null) {
-                    i.mFloatView.setVisibility(View.GONE);
-                }
+        inst.mFloatView.post(() -> {
+            FloatingRemoteButton i = sInstance;
+            if (i != null && i.mFloatView != null) {
+                i.mFloatView.setVisibility(View.GONE);
             }
         });
     }
@@ -104,9 +109,12 @@ public class FloatingRemoteButton extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
         if (mFloatView != null) {
-            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {}
+            try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {
+                AppLogger.d(TAG, "removeView skipped (view already detached): " + ignored.getMessage());
+            }
             mFloatView = null;
         }
     }
@@ -121,13 +129,11 @@ public class FloatingRemoteButton extends Service {
             }
             mGrantAttempted = true;
             AppLogger.w(TAG, "SYSTEM_ALERT_WINDOW not granted — attempting auto-grant via ADB…");
-            final android.os.Handler mainHandler =
-                    new android.os.Handler(getMainLooper());
             AdbLocalClient.grantOverlayPermission(this, new AdbLocalClient.Callback() {
                 @Override
                 public void onSuccess(String report) {
                     AppLogger.i(TAG, "SYSTEM_ALERT_WINDOW granted via ADB ✓");
-                    mainHandler.post(new Runnable() {
+                    mDimHandler.post(new Runnable() {
                         @Override public void run() { createOverlay(); }
                     });
                 }
@@ -200,9 +206,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                         long held = System.currentTimeMillis() - downTime;
                         if (movX < 12 && movY < 12) {
                             if (held > 600) {
-                                // Long press → close overlay
-                                AppLogger.i(TAG, "Long-press → stop FloatingRemoteButton");
-                                stopSelf();
+                                // Long press → show recent apps popup for quick switching
+                                AppLogger.i(TAG, "Long-press → show quick-switch popup");
+                                showQuickSwitchPopup();
                             } else {
                                 // Tap → bring MainActivity to front + open mirror panel
                                 Intent bringFront = new Intent(
@@ -230,7 +236,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                                     params.x = (Integer) animation.getAnimatedValue();
                                     try {
                                         if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params);
-                                    } catch (Exception ignored) {}
+                                    } catch (Exception ignored) {
+                                        AppLogger.d(TAG, "updateViewLayout skipped: " + ignored.getMessage());
+                                    }
                                 }
                             });
                             anim.start();
@@ -244,11 +252,60 @@ badge.setOnTouchListener(new View.OnTouchListener() {
         mFloatView = badge;
         try {
             mWindowManager.addView(mFloatView, params);
-            mDimHandler.postDelayed(mDimRunnable, 3000);
+            // Apply the desired visibility that may have been requested before
+            // the overlay was ready (race: show() called before createOverlay completed).
+            if (sShouldBeVisible) {
+                mFloatView.setVisibility(View.VISIBLE);
+                triggerDimTimer();
+                AppLogger.d(TAG, "Overlay created — applying deferred show()");
+            } else {
+                mDimHandler.postDelayed(mDimRunnable, 3000);
+            }
         } catch (Exception e) {
             AppLogger.e(TAG, "addView overlay failed", e);
             mFloatView = null;
         }
+    }
+
+    /** Broadcast action sent to MainActivity to quick-switch to a specific app. */
+    public static final String ACTION_QUICK_SWITCH =
+            "com.byd.dashcast.action.QUICK_SWITCH";
+    public static final String EXTRA_QUICK_SWITCH_PKG = "quick_switch_pkg";
+
+    private void showQuickSwitchPopup() {
+        android.content.SharedPreferences prefs =
+                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+        String raw = prefs.getString(SettingsActivity.PREF_RECENT_APPS, "");
+        if (raw.isEmpty()) {
+            android.widget.Toast.makeText(this,
+                    getString(R.string.quick_switch_empty), android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] entries = raw.split(";;");
+        final String[] names = new String[entries.length];
+        final String[] pkgs  = new String[entries.length];
+        for (int i = 0; i < entries.length; i++) {
+            String[] parts = entries[i].split("\\|", 2);
+            pkgs[i]  = parts[0];
+            names[i] = parts.length > 1 ? parts[1] : parts[0];
+        }
+        android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(getString(R.string.quick_switch_title))
+                .setItems(names, (dialog, which) -> {
+                    Intent intent = new Intent(FloatingRemoteButton.this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    intent.setAction(ACTION_QUICK_SWITCH);
+                    intent.putExtra(EXTRA_QUICK_SWITCH_PKG, pkgs[which]);
+                    startActivity(intent);
+                    AppLogger.d(TAG, "Quick-switch → " + pkgs[which]);
+                })
+                .create();
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        }
+        dlg.show();
     }
 
     // ── Foreground service ────────────────────────────────────────────────────

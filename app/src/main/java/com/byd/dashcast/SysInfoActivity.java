@@ -55,6 +55,8 @@ public class SysInfoActivity extends AppCompatActivity {
     private Button btnShare;
     private StringBuilder mReport;
 
+    private volatile boolean mDestroyed = false;
+
     @Override
     protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(LocaleHelper.applyLocale(base));
@@ -93,14 +95,23 @@ public class SysInfoActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mDestroyed = true;
+    }
+
     // =========================================================================
     // Report generation (ExecutorService — network off main thread)
     // =========================================================================
-
     /** Publishes an incremental update to the TextView from a worker thread. */
     private void publishUpdate(final String text) {
+        if (mDestroyed) return;
         runOnUiThread(new Runnable() {
             @Override public void run() {
+                // Recheck on the main thread: between the worker-side check above
+                // and the Runnable being dispatched, onDestroy may have fired.
+                if (mDestroyed) return;
                 tvReport.setText(text);
                 scrollView.post(new Runnable() {
                     @Override public void run() { scrollView.fullScroll(ScrollView.FOCUS_DOWN); }
@@ -113,7 +124,6 @@ public class SysInfoActivity extends AppCompatActivity {
         btnGenerate.setEnabled(false);
         btnSave.setEnabled(false);
         tvReport.setText(getString(R.string.sysinfo_generating));
-        mReport = new StringBuilder();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(new Runnable() {
@@ -121,6 +131,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 final String result = generateReport();
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         AppLogger.log("SysInfo", "Report generated");
                         mReport = new StringBuilder(result);
                         tvReport.setText(result);

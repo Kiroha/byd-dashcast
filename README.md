@@ -298,7 +298,7 @@ cd MyBYDApp   # repo folder name
 | Permission | Type | Usage |
 |---|---|---|
 | `INJECT_EVENTS` | signature | Touch/key injection to the cluster |
-| `SYSTEM_ALERT_WINDOW` | dangerous | Floating overlay (FloatingLogButton) |
+| `SYSTEM_ALERT_WINDOW` | dangerous | Floating overlay (FloatingRemoteButton) |
 | `FOREGROUND_SERVICE` | normal | ClusterService |
 | `INTERNET` | normal | Network access (reserved for future use) |
 | `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs (declared, not yet used) |

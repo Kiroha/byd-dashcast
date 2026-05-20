@@ -29,11 +29,21 @@ import java.io.File;
  */
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AdbLocalClient {
     // Capped at 4 threads to avoid OutOfMemoryError or socket exhaustion
     // if the user hammers the UI triggering slow ADB commands.
-    private static final ExecutorService sExecutor = Executors.newFixedThreadPool(4);
+    // Named daemon threads → easier debugging and won't keep the process alive.
+    private static final ExecutorService sExecutor = Executors.newFixedThreadPool(4, new ThreadFactory() {
+        private final AtomicInteger seq = new AtomicInteger(1);
+        @Override public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "adb-local-" + seq.getAndIncrement());
+            t.setDaemon(true);
+            return t;
+        }
+    });
 
     private static final String TAG = "AdbLocalClient";
 
@@ -64,7 +74,7 @@ public class AdbLocalClient {
                                               final Callback callback) {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
-                String output = safeOut(dadb.shell(command).getAllOutput()).trim();
+                String output = dadb.shell(command).getAllOutput().trim();
                 AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
                 if (callback != null) callback.onSuccess(output);
             } catch (Exception e) {
@@ -97,57 +107,6 @@ public class AdbLocalClient {
             "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
-    /**
-     * Scans active MirrorDaemon processes and returns a human-readable summary.
-     * Format: "PID  USER  NAME\n..." or "(no process found)"
-     */
-    public static void scanMirrorDaemon(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                String ps = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
-                boolean found = !ps.isEmpty();
-                int count = found ? ps.split("\n").length : 0;
-                String msg = found
-                        ? count + " MirrorDaemon process(es) detected:\n" + ps
-                        : "(no active MirrorDaemon process)";
-                AppLogger.i(TAG, "scanMirrorDaemon: " + msg);
-                if (callback != null) callback.onSuccess(msg);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "scanMirrorDaemon failed", e);
-                if (callback != null) callback.onError("Scan error: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Kills all existing MirrorDaemon processes and confirms the result via callback.
-     */
-    public static void killMirrorDaemon(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                String before = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
-                AppLogger.i(TAG, "killMirrorDaemon — before: " + (before.isEmpty() ? "(none)" : before));
-                dadb.shell(KILL_DAEMON_CMD);
-                Thread.sleep(800);
-                String after = safeOut(dadb.shell(
-                        "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput()).trim();
-                boolean ok = after.isEmpty();
-                String msg = ok
-                        ? "MirrorDaemon(s) killed ✓"
-                        : "Processes still running: " + after;
-                AppLogger.i(TAG, "killMirrorDaemon — after: " + msg);
-                if (ok) { if (callback != null) callback.onSuccess(msg); }
-                else    { if (callback != null) callback.onError(msg); }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                AppLogger.e(TAG, "killMirrorDaemon failed", e);
-                if (callback != null) callback.onError("Error: " + e.getMessage());
-            }
-        });
-    }
-
     public static void startMirrorDaemon(final Context context) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
@@ -155,9 +114,9 @@ public class AdbLocalClient {
                     // Kill existing daemon if present.
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
-                    String psOut = safeOut(dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
-                    if (!psOut.trim().isEmpty()) {
+                    String psOut = dadb.shell(
+                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    if (!psOut.isEmpty()) {
                         dadb.shell(KILL_DAEMON_CMD);
                         AppLogger.i(TAG, "Old MirrorDaemon(s) killed.");
                         Thread.sleep(500);
@@ -183,10 +142,10 @@ public class AdbLocalClient {
 
                     // Verification: is the process alive after 3s?
                     Thread.sleep(3000);
-                    String psCheck = safeOut(dadb.shell(
-                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput());
-                    if (!psCheck.trim().isEmpty()) {
-                        AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck.trim());
+                    String psCheck = dadb.shell(
+                            "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                    if (!psCheck.isEmpty()) {
+                        AppLogger.i(TAG, "MirrorDaemon ACTIVE ✓  " + psCheck);
                     } else {
                         AppLogger.e(TAG, "MirrorDaemon NOT FOUND after 3s — reading log:");
                         String logContent = safeOut(dadb.shell("cat " + logPath + " 2>&1").getAllOutput());
@@ -199,75 +158,6 @@ public class AdbLocalClient {
             }
         });
     }
-
-    // Sniffer kill command: removes the tag file and terminates all background processes.
-    public static final String SNIFFER_KILL_CMD =
-            "rm -f /data/local/tmp/.sniffer_run; "
-            + "for p in $(ps -A | awk '/[s]leep 15/ {print $2}; /[s]leep 5/ {print $2}; /[l]ogcat -v threadtime/ {print $2}; /[l]ogcat -b events/ {print $2}'); do kill -9 $p 2>/dev/null; done; "
-            + "echo killed";
-
-    /**
-     * Scans active Sniffer processes (logcat + snapshot loop).
-     */
-    public static void scanSniffer(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                String logcatPs = safeOut(dadb.shell(
-                        "ps -A | grep -E '[l]ogcat -v threadtime|[l]ogcat -b events' 2>&1").getAllOutput()).trim();
-                String sleepPs = safeOut(dadb.shell(
-                        "ps -A | grep -E '[s]leep 15|[s]leep 5' 2>&1").getAllOutput()).trim();
-                boolean hasLogcat = !logcatPs.isEmpty();
-                boolean hasLoop   = !sleepPs.isEmpty();
-                String msg;
-                if (!hasLogcat && !hasLoop) {
-                    msg = "(no active Sniffer process)";
-                } else {
-                    StringBuilder sb = new StringBuilder();
-                    int count = 0;
-                    if (hasLogcat) {
-                        sb.append("logcat (capture):\n").append(logcatPs).append("\n");
-                        count++;
-                    }
-                    if (hasLoop) {
-                        sb.append("sleep/snapshot loop:\n").append(sleepPs);
-                        count++;
-                    }
-                    msg = count + " Sniffer process(es) detected:\n" + sb.toString().trim();
-                }
-                AppLogger.i(TAG, "scanSniffer: " + msg);
-                if (callback != null) callback.onSuccess(msg);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "scanSniffer failed", e);
-                if (callback != null) callback.onError("Scan error: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Kills all Sniffer processes (logcat + snapshot loop).
-     */
-    public static void killSniffer(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
-                dadb.shell(SNIFFER_KILL_CMD);
-                Thread.sleep(600);
-                String logcatAfter = safeOut(dadb.shell(
-                        "ps -A | grep -E '[l]ogcat -v threadtime|[l]ogcat -b events' 2>&1").getAllOutput()).trim();
-                String sleepAfter = safeOut(dadb.shell(
-                        "ps -A | grep -E '[s]leep 15|[s]leep 5' 2>&1").getAllOutput()).trim();
-                boolean ok = logcatAfter.isEmpty() && sleepAfter.isEmpty();
-                String msg = ok ? "Sniffer stopped ✓" : "Processes still active: " + logcatAfter + " " + sleepAfter;
-                AppLogger.i(TAG, "killSniffer: " + msg);
-                if (ok) { if (callback != null) callback.onSuccess(msg); }
-                else    { if (callback != null) callback.onError(msg); }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                AppLogger.e(TAG, "killSniffer failed", e);
-                if (callback != null) callback.onError("Error: " + e.getMessage());
-            }
-        });
-    }
-
 
     // -------------------------------------------------------------------------
 
@@ -695,7 +585,16 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
-                    String safeStr = (infoStr != null ? infoStr : "").replace("\"", "\\\"");
+                    // Escape shell metacharacters inside the double-quoted argument:
+                    //   \  → must be first to avoid double-escaping
+                    //   "  → terminates the quoted string
+                    //   $  → triggers variable / arithmetic / command expansion
+                    //   `  → triggers command substitution
+                    String safeStr = (infoStr != null ? infoStr : "")
+                            .replace("\\", "\\\\")
+                            .replace("\"", "\\\"")
+                            .replace("$",  "\\$")
+                            .replace("`",  "\\`");
                     String cmd = "service call AutoContainer 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
@@ -1080,74 +979,6 @@ public class AdbLocalClient {
                 }
             }
         }); // screenshot-mirror-thread
-    }
-
-    /**
-     * Checks whether the WM actually honoured the FREEFORM bounds requested at launch.
-     *
-     * Runs 'dumpsys activity tasks' (uid=2000) and looks for the task stack that contains
-     * {@code packageName}. Extracts the actual task bounds and compares them against
-     * {@code expectedBounds} (format: "left,top,right,bottom"). Logs the result and
-     * fires the callback on success or error.
-     *
-     * Expected bounds string format: "80,50,1840,1030"
-     *
-     * Callback.onSuccess(msg): called whether bounds match or not — msg contains the verdict.
-     * Callback.onError(msg):   called only if the ADB command itself fails.
-     */
-    public static void checkTaskBoundsOnDisplay(
-            final Context context,
-            final String packageName,
-            final String expectedBounds,
-            final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    // Dump only the lines around our package to avoid giant output
-                    String cmd = "dumpsys activity tasks 2>/dev/null"
-                            + " | grep -A 10 '" + packageName + "'"
-                            + " | grep -E 'bounds|realActivity|effectiveBounds' | head -5";
-                    String out = dadb.shell(cmd).getAllOutput().trim();
-                    AppLogger.i(TAG, "checkTaskBounds [" + packageName + "] raw: " + out);
-
-                    // Parse: bounds=[left,top][right,bottom] or bounds=Rect(l, t - r, b)
-                    // DiLink 3.0 format: bounds=[80,50][1840,1030]
-                    String actual = "(not found)";
-                    for (String line : out.split("\n")) {
-                        line = line.trim();
-                        if (line.startsWith("bounds")) { actual = line; break; }
-                    }
-
-                    boolean matched = !actual.equals("(not found)")
-                            && actual.contains(expectedBounds);
-                    // Broader check: look for each component of expectedBounds in the line
-                    if (!matched && !actual.equals("(not found)")) {
-                        String[] parts = expectedBounds.split(",");
-                        matched = true;
-                        for (String p : parts) { if (!actual.contains(p.trim())) { matched = false; break; } }
-                    }
-
-                    String verdict;
-                    if (actual.equals("(not found)")) {
-                        verdict = "⚠ setLaunchBounds: task not found in dumpsys (app may not have started yet)";
-                        AppLogger.w(TAG, verdict);
-                    } else if (matched) {
-                        verdict = "✅ setLaunchBounds OK — actual: " + actual;
-                        AppLogger.i(TAG, verdict);
-                    } else {
-                        verdict = "❌ setLaunchBounds IGNORED by WM — expected: " + expectedBounds
-                                + " actual: " + actual
-                                + " → consider wm overscan 80,50,80,50 -d 1 as fallback";
-                        AppLogger.w(TAG, verdict);
-                    }
-                    if (callback != null) callback.onSuccess(verdict);
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "checkTaskBoundsOnDisplay error", e);
-                    if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-check-bounds-thread
     }
 
     private static String safeOut(String s) {

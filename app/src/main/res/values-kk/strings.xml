@@ -34,6 +34,8 @@
     <string name="status_dashboard_app">Аспаптар панелі: %1$s</string>
     <string name="toast_app_incompatible">%1$s: орнатылмаған немесе бірнеше дисплеймен үйлесімсіз</string>
     <string name="toast_cluster_unavailable">Кластер қызметі қолжетімсіз</string>
+    <string name="dialog_cluster_not_active">Кластер проекциясы белсенді емес. Қазір белсендіру керек пе?</string>
+    <string name="dialog_activate_now">Белсендіру</string>
     <string name="toast_app_already_cluster">Қолданба кластерде бар</string>
     <string name="toast_restore_failed">Қалпына келтіру сәтсіз: %1$s</string>
     <string name="toast_origin_failed">Бастапқы кластерді қалпына келтіру сәтсіз: %1$s</string>
@@ -161,8 +163,6 @@
     <string name="ota_btn_update_now">Қазір жаңарту</string>
     <string name="ota_btn_later">Кейінірек</string>
     <string name="ota_downloading">Жүктелуде…</string>
-    <string name="notif_log_channel_name">Белсенділік журналы</string>
-    <string name="notif_log_content">Журнал белсенді — ашу үшін басыңыз</string>
     <string name="notif_remote_channel_name">Кластер айнасының батырмасы</string>
     <string name="notif_remote_content">📺 Кластер айнасы белсенді</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
@@ -179,4 +179,69 @@
     <string name="dialog_reconnect_title">Қолданбаны қайта іске қосу?</string>
     <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
     <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
+    <string name="diag_s88_title">8.8" экран — Тікелей проекция</string>
+    <string name="diag_s88_desc">8.8" кластерлерінде sendInfo(30) бұзылуға әкеледі. Бұл бөлім тек sendInfo(16) және sendInfo(35) жіберу арқылы проекцияны іске қосады.</string>
+    <string name="diag_s88_initial">8.8" проекция: --</string>
+    <string name="diag_btn_88_activate">Проекцияны іске қосу</string>
+    <string name="diag_btn_88_stop">Проекцияны тоқтату</string>
+    <string name="diag_88_activating">Іске қосылуда…</string>
+    <string name="diag_88_stopping">Тоқтатылуда…</string>
+    <string name="diag_88_activated">Проекция іске қосылды ✅</string>
+    <string name="diag_88_stopped">Проекция тоқтатылды ✅</string>
+    <string name="diag_adas_initial">ADAS : --</string>
+    <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
+    <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
+    <string name="diag_auto_starting">Démarrage AutoDisplayService…</string>
+    <string name="diag_auto_stopped">Arrêté : %s</string>
+    <string name="diag_auto_stopping">Arrêt AutoDisplayService…</string>
+    <string name="diag_btn_adas_hide">ADAS OFF (cmd=13)</string>
+    <string name="diag_btn_adas_show">ADAS ON (cmd=12)</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Reset overscan écran principal</string>
+    <string name="diag_btn_resize_dilink5_seq">Séquence DiLink5 (WM:4→5 + resize)</string>
+    <string name="diag_btn_resize_forced_only">resizeTask seul (FORCED=3)</string>
+    <string name="diag_btn_resize_inspect_task">Inspecter la task cluster</string>
+    <string name="diag_btn_restore_display">Restaurer display 1</string>
+    <string name="diag_btn_size_full">Plein écran</string>
+    <string name="diag_btn_size_restore">Restaurer</string>
+    <string name="diag_error_prefix">ERROR: </string>
+    <string name="diag_fission_binder_starting">Démarrage via IBinder direct…</string>
+    <string name="diag_fission_launching">Lancement dashboard (display %d)…</string>
+    <string name="diag_fission_no_display">❌ Aucun display cluster trouvé</string>
+    <string name="diag_fission_running">Fission en cours…</string>
+    <string name="diag_jni_display_released">sendInfo(16) OK — JNI probe en cours…</string>
+    <string name="diag_jni_fatal">FATAL : %s</string>
+    <string name="diag_jni_send16_failed">Échec sendInfo(16) : %s</string>
+    <string name="diag_launching_display1">Lancement display 1…</string>
+    <string name="diag_reset_main_overscan_done">Reset overscan écran principal OK</string>
+    <string name="diag_running">En cours…</string>
+    <string name="diag_s3_display1_initial">Display 1 : --</string>
+    <string name="diag_s3_initial">Résultat : --</string>
+    <string name="diag_s3_title">3. Taille d\'affichage (cmd 29/30/31)</string>
+    <string name="diag_s7_desc">Séquence DiLink5 : WM:4→5 + resizeTask(RESIZE_MODE_FORCED=3)</string>
+    <string name="diag_s7_title">7. Test resize DiLink5</string>
+    <string name="diag_sadas_desc">Commandes ADAS — sans effet sur le cluster 2D Seal EU</string>
+    <string name="diag_sadas_title">ADAS (cmd 12/13)</string>
+    <string name="diag_share_result2_btn">Partager le résultat</string>
+    <string name="diag_share_result3_btn">Partager le résultat</string>
+    <string name="diag_size_full_running">Test taille complète en cours…</string>
+    <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
+    <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
+    <string name="favorite_prefix">⭐ </string>
+    <string name="visual_overscan_use_visual_mode">Көрсеткілермен реттеу (жүгірткілер орнына)</string>
+    <string name="visual_overscan_height">↕ Биіктігі</string>
+    <string name="visual_overscan_width">↔ Ені</string>
+    <string name="setting_boot_auto_start">Іске қосылғанда проекцияны автоматты түрде бастау (Auto-Boot)</string>
+    <string name="category_navigation">🗺 Навигация</string>
+    <string name="category_media">🎵 Медиа</string>
+    <string name="filter_all">Барлығы</string>
+    <string name="filter_nav">🗺 Нав</string>
+    <string name="filter_media">🎵 Медиа</string>
+    <string name="settings_show_category_filters">Санат сүзгілерін көрсету (Барлығы / Нав / Медиа)</string>
+    <string name="settings_reconnect_popup">Кластер қайта қосылғанда соңғы қолданбаны қайта іске қосуды ұсыну</string>
+    <string name="quick_switch_title">Соңғы қолданбалар</string>
+    <string name="quick_switch_empty">Соңғы қолданба жоқ</string>
+    <string name="menu_usage_stats">📊 Пайдалану статистикасы</string>
+    <string name="usage_title">Кластерде пайдалану уақыты</string>
+    <string name="usage_empty">Пайдалану деректері жоқ</string>
+    <string name="usage_reset">Тазалау</string>
 </resources>

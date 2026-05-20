@@ -22,6 +22,11 @@ import androidx.appcompat.app.AppCompatActivity;
  */
 public class SettingsActivity extends AppCompatActivity {
 
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(LocaleHelper.applyLocale(base));
+    }
+
     // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
     static final String PREFS_NAME      = "byd_app_prefs";
 
@@ -37,6 +42,16 @@ public class SettingsActivity extends AppCompatActivity {
     // ── OTA pre-release ───────────────────────────────────────────────────────────────
     public static final String PREF_OTA_PRERELEASE = "ota_include_prerelease";
     public static final boolean DEFAULT_OTA_PRERELEASE = false;
+    // ── Boot / UI toggles ───────────────────────────────────────────────────────────────
+    public static final String PREF_BOOT_AUTO_START       = "boot_auto_start_enabled";
+    public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
+    public static final String PREF_RECONNECT_POPUP       = "reconnect_popup_enabled";
+    public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
+    // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
+    public static final String PREF_RECENT_APPS = "recent_cluster_apps";
+    // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
+    public static final String PREF_INSET_H_PREFIX = "inset_h_";
+    public static final String PREF_INSET_V_PREFIX = "inset_v_";
     // ── Views ────────────────────────────────────────────────────────────────
     private RadioGroup  rgClusterType;
     private SeekBar     sbInsetH;
@@ -47,6 +62,17 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnReset;
     private TextView    tvResult;
     private CheckBox    cbPrerelease;
+    private CheckBox    cbVisualMode;
+    private CheckBox    cbBootAutoStart;
+    private CheckBox    cbShowCategoryFilters;
+    private CheckBox    cbReconnectPopup;
+    private View        llSlidersMode;
+    private View        llVisualMode;
+    private View        flSafeZone;
+    private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
+
+    private volatile boolean mDestroyed = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,6 +86,12 @@ public class SettingsActivity extends AppCompatActivity {
         bindViews();
         loadPreferences();
         wireListeners();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mDestroyed = true;
     }
 
     @Override
@@ -83,6 +115,17 @@ public class SettingsActivity extends AppCompatActivity {
         btnReset      = findViewById(R.id.btn_reset_overscan);
         tvResult      = findViewById(R.id.tv_overscan_result);
         cbPrerelease  = findViewById(R.id.cb_prerelease);
+        cbVisualMode  = findViewById(R.id.cb_visual_mode);
+        cbBootAutoStart = findViewById(R.id.cb_boot_auto_start);
+        llSlidersMode = findViewById(R.id.ll_sliders_mode);
+        llVisualMode  = findViewById(R.id.ll_visual_overscan);
+        btnHMinus     = findViewById(R.id.btn_h_minus);
+        btnHPlus      = findViewById(R.id.btn_h_plus);
+        btnVMinus     = findViewById(R.id.btn_v_minus);
+        btnVPlus      = findViewById(R.id.btn_v_plus);
+        flSafeZone    = findViewById(R.id.fl_safe_zone);
+        cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
+        cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
     }
 
     private void loadPreferences() {
@@ -106,6 +149,24 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Pre-release toggle
         cbPrerelease.setChecked(prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE));
+        
+        // Visual Mode toggle state
+        boolean visualMode = prefs.getBoolean(PREF_VISUAL_OVERSCAN_MODE, false);
+        cbVisualMode.setChecked(visualMode);
+        updateVisualModeState(visualMode);
+        updateVisualMockup();
+        
+        // Auto Boot Projection toggle state
+        boolean bootAutoStart = prefs.getBoolean(PREF_BOOT_AUTO_START, false);
+        cbBootAutoStart.setChecked(bootAutoStart);
+        
+        // Category filters toggle
+        boolean showCatFilters = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false);
+        cbShowCategoryFilters.setChecked(showCatFilters);
+
+        // Reconnect popup toggle (default: disabled — users find it intrusive)
+        boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, false);
+        cbReconnectPopup.setChecked(reconnectPopup);
     }
 
     private void wireListeners() {
@@ -168,6 +229,73 @@ public class SettingsActivity extends AppCompatActivity {
                     .putBoolean(PREF_OTA_PRERELEASE, isChecked).apply();
             AppLogger.i("SettingsActivity", "ota_include_prerelease=" + isChecked);
         });
+
+        // Visual Mode checkbox
+        cbVisualMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_VISUAL_OVERSCAN_MODE, isChecked).apply();
+            updateVisualModeState(isChecked);
+        });
+
+        // Auto Start Projection checkbox
+        cbBootAutoStart.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_BOOT_AUTO_START, isChecked).apply();
+        });
+
+        View.OnClickListener dpadListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int h = sbInsetH.getProgress();
+                int val_v = sbInsetV.getProgress();
+                if (v == btnHMinus) h = Math.max(0, h - 10);
+                if (v == btnHPlus)  h = Math.min(200, h + 10);
+                if (v == btnVMinus) val_v = Math.max(0, val_v - 10);
+                if (v == btnVPlus)  val_v = Math.min(200, val_v + 10);
+                
+                sbInsetH.setProgress(h);
+                sbInsetV.setProgress(val_v);
+                updateVisualMockup();
+                // To keep it real-time as requested:
+                applyOverscan(); 
+            }
+        };
+
+        btnHMinus.setOnClickListener(dpadListener);
+        btnHPlus.setOnClickListener(dpadListener);
+        btnVMinus.setOnClickListener(dpadListener);
+        btnVPlus.setOnClickListener(dpadListener);
+
+        // Category filters checkbox
+        cbShowCategoryFilters.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_SHOW_CATEGORY_FILTERS, isChecked).apply();
+        });
+
+        // Reconnect popup checkbox
+        cbReconnectPopup.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
+        });
+    }
+
+    private void updateVisualModeState(boolean visual) {
+        llSlidersMode.setVisibility(visual ? View.GONE : View.VISIBLE);
+        llVisualMode.setVisibility(visual ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateVisualMockup() {
+        int h = sbInsetH.getProgress();
+        int v = sbInsetV.getProgress();
+        if (flSafeZone != null) {
+            android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) flSafeZone.getLayoutParams();
+            // Scale logic: Mockup is 320x120. Real cluster is 1920x720. Scale is 1/6.
+            params.leftMargin = (int) (h / 6f);
+            params.rightMargin = (int) (h / 6f);
+            params.topMargin = (int) (v / 6f);
+            params.bottomMargin = (int) (v / 6f);
+            flSafeZone.setLayoutParams(params);
+        }
     }
 
     // ── Logic ─────────────────────────────────────────────────────────────────
@@ -195,6 +323,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
                         tvResult.setText(getString(R.string.settings_overscan_applied, h, v));
                         AppLogger.i("SettingsActivity", "overscan applied OK h=" + h + " v=" + v);
@@ -204,6 +333,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override public void onError(String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
                         tvResult.setText("❌ " + error.trim());
                         AppLogger.e("SettingsActivity", "overscan error: " + error);

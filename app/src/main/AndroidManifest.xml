@@ -4,6 +4,9 @@
 
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
+    <!-- Auto-Boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
@@ -88,6 +91,7 @@
     <uses-permission android:name="android.permission.READ_FRAME_BUFFER"/>
 
     <application
+        android:name=".DashCastApp"
         android:extractNativeLibs="false"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
@@ -139,25 +143,9 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
-        <!-- Trampoline display 1 — NEUTRALIZED (v0.1.41+): finishes immediately, launches nothing.
-             exported=false: no external component needs to launch it. -->
-        <activity
-            android:name=".dashboard.ClusterTrampolineActivity"
-            android:exported="false"
-            android:launchMode="standard"
-            android:taskAffinity="com.byd.dashcast.cluster"
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
-
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
-
-        <!-- Service overlay bouton journal flottant -->
-        <service
-            android:name=".FloatingLogButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
@@ -183,6 +171,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Auto-Boot Overscan restoration -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

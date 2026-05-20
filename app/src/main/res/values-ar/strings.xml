@@ -33,6 +33,8 @@
     <string name="status_dashboard_app">اللوحة: %1$s</string>
     <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
     <string name="toast_cluster_unavailable">خدمة العنقود غير متاحة</string>
+    <string name="dialog_cluster_not_active">إسقاط لوحة العدادات غير مفعّل. هل تريد تفعيله الآن؟</string>
+    <string name="dialog_activate_now">تفعيل</string>
     <string name="toast_app_already_cluster">التطبيق موجود بالفعل على العنقود</string>
     <string name="toast_restore_failed">فشل الاستعادة: %1$s</string>
     <string name="toast_origin_failed">فشل استعادة العنقود الأصلي: %1$s</string>
@@ -161,8 +163,6 @@
     <string name="ota_btn_update_now">تحديث الآن</string>
     <string name="ota_btn_later">لاحقاً</string>
     <string name="ota_downloading">جارٍ التنزيل…</string>
-    <string name="notif_log_channel_name">سجل النشاط</string>
-    <string name="notif_log_content">السجل نشط — اضغط للفتح</string>
     <string name="notif_remote_channel_name">زر مرآة العنقود</string>
     <string name="notif_remote_content">📺 مرآة العنقود نشطة</string>
     <string name="sysinfo_file_saved">\n\nالملف: %1$s\nأمر ADB: adb pull \"%1$s\"</string>
@@ -179,4 +179,69 @@
     <string name="dialog_reconnect_title">إعادة تشغيل التطبيق؟</string>
     <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
     <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
+    <string name="diag_s88_title">شاشة 8.8" — عرض مباشر</string>
+    <string name="diag_s88_desc">في شاشات العنقود 8.8"، تتسبب sendInfo(30) في عطل. يُفعّل هذا القسم العرض بإرسال sendInfo(16) ثم sendInfo(35) فقط.</string>
+    <string name="diag_s88_initial">عرض 8.8": --</string>
+    <string name="diag_btn_88_activate">تفعيل العرض</string>
+    <string name="diag_btn_88_stop">إيقاف العرض</string>
+    <string name="diag_88_activating">جارل التفعيل…</string>
+    <string name="diag_88_stopping">جارل الإيقاف…</string>
+    <string name="diag_88_activated">تم تفعيل العرض ✅</string>
+    <string name="diag_88_stopped">تم إيقاف العرض ✅</string>
+    <string name="diag_adas_initial">ADAS : --</string>
+    <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
+    <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
+    <string name="diag_auto_starting">Démarrage AutoDisplayService…</string>
+    <string name="diag_auto_stopped">Arrêté : %s</string>
+    <string name="diag_auto_stopping">Arrêt AutoDisplayService…</string>
+    <string name="diag_btn_adas_hide">ADAS OFF (cmd=13)</string>
+    <string name="diag_btn_adas_show">ADAS ON (cmd=12)</string>
+    <string name="diag_btn_reset_main_overscan">⚠️ Reset overscan écran principal</string>
+    <string name="diag_btn_resize_dilink5_seq">Séquence DiLink5 (WM:4→5 + resize)</string>
+    <string name="diag_btn_resize_forced_only">resizeTask seul (FORCED=3)</string>
+    <string name="diag_btn_resize_inspect_task">Inspecter la task cluster</string>
+    <string name="diag_btn_restore_display">Restaurer display 1</string>
+    <string name="diag_btn_size_full">Plein écran</string>
+    <string name="diag_btn_size_restore">Restaurer</string>
+    <string name="diag_error_prefix">ERROR: </string>
+    <string name="diag_fission_binder_starting">Démarrage via IBinder direct…</string>
+    <string name="diag_fission_launching">Lancement dashboard (display %d)…</string>
+    <string name="diag_fission_no_display">❌ Aucun display cluster trouvé</string>
+    <string name="diag_fission_running">Fission en cours…</string>
+    <string name="diag_jni_display_released">sendInfo(16) OK — JNI probe en cours…</string>
+    <string name="diag_jni_fatal">FATAL : %s</string>
+    <string name="diag_jni_send16_failed">Échec sendInfo(16) : %s</string>
+    <string name="diag_launching_display1">Lancement display 1…</string>
+    <string name="diag_reset_main_overscan_done">Reset overscan écran principal OK</string>
+    <string name="diag_running">En cours…</string>
+    <string name="diag_s3_display1_initial">Display 1 : --</string>
+    <string name="diag_s3_initial">Résultat : --</string>
+    <string name="diag_s3_title">3. Taille d\'affichage (cmd 29/30/31)</string>
+    <string name="diag_s7_desc">Séquence DiLink5 : WM:4→5 + resizeTask(RESIZE_MODE_FORCED=3)</string>
+    <string name="diag_s7_title">7. Test resize DiLink5</string>
+    <string name="diag_sadas_desc">Commandes ADAS — sans effet sur le cluster 2D Seal EU</string>
+    <string name="diag_sadas_title">ADAS (cmd 12/13)</string>
+    <string name="diag_share_result2_btn">Partager le résultat</string>
+    <string name="diag_share_result3_btn">Partager le résultat</string>
+    <string name="diag_size_full_running">Test taille complète en cours…</string>
+    <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
+    <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
+    <string name="favorite_prefix">⭐ </string>
+    <string name="visual_overscan_use_visual_mode">ضبط بالأسهم (بدلاً من أشرطة التمرير)</string>
+    <string name="visual_overscan_height">↕ الارتفاع</string>
+    <string name="visual_overscan_width">↔ العرض</string>
+    <string name="setting_boot_auto_start">بدء العرض التلقائي عند بدء التشغيل (Auto-Boot)</string>
+    <string name="category_navigation">🗺 الملاحة</string>
+    <string name="category_media">🎵 وسائط</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_nav">🗺 ملاحة</string>
+    <string name="filter_media">🎵 وسائط</string>
+    <string name="settings_show_category_filters">إظهار فلاتر الفئات (الكل / ملاحة / وسائط)</string>
+    <string name="settings_reconnect_popup">اقتراح إعادة تشغيل آخر تطبيق عند إعادة الاتصال بالكلاستر</string>
+    <string name="quick_switch_title">التطبيقات الأخيرة</string>
+    <string name="quick_switch_empty">لا توجد تطبيقات أخيرة</string>
+    <string name="menu_usage_stats">📊 إحصائيات الاستخدام</string>
+    <string name="usage_title">وقت الاستخدام على الكلستر</string>
+    <string name="usage_empty">لا توجد بيانات استخدام</string>
+    <string name="usage_reset">إعادة تعيين</string>
 </resources>
