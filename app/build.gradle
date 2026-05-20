@@ -12,7 +12,9 @@ android {
     }
 
     // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
-    compileSdkVersion 29
+    // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
+    // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
+    compileSdkVersion 33
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
     defaultConfig {
@@ -70,6 +72,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+
+    // Material Components (Material 3) — fournit Theme.Material3.*
+    // 1.9.0 = dernière version compatible compileSdk 33.
+    implementation 'com.google.android.material:material:1.9.0'
 
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:1.2.7'
