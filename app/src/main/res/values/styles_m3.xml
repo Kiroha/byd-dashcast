@@ -213,6 +213,11 @@
         <item name="android:layout_height">28dp</item>
         <item name="android:layout_marginEnd">16dp</item>
         <item name="android:layout_gravity">center_vertical</item>
+        <!-- Tint at the ImageView level so the runtime theme attribute is
+             reliably resolved by AppCompat (theme refs inside vector drawables
+             are not honored on all Android versions). -->
+        <item name="android:tint">?attr/colorOnSurfaceVariant</item>
+        <item name="android:scaleType">fitCenter</item>
     </style>
 
     <!-- Title + supporting text column -->

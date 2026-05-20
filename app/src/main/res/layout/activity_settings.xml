@@ -522,12 +522,69 @@
                             </LinearLayout>
                         </LinearLayout>
 
-                        <!-- Pre-release channel -->
+                        <!-- Rechercher une mise à jour -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
                                 android:src="@drawable/ic_system_update"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="Rechercher une mise à jour"
+                                    tools:ignore="HardcodedText"/>
+                                <TextView
+                                    android:id="@+id/tv_update_status"
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="Ouvre la page des releases sur GitHub"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_check_update"
+                                style="@style/Widget.DashCast.Button.Text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:text="Vérifier"
+                                tools:ignore="HardcodedText"/>
+                        </LinearLayout>
+
+                        <!-- Code source -->
+                        <LinearLayout
+                            android:id="@+id/row_source_code"
+                            style="@style/Widget.DashCast.ListItem"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <ImageView
+                                style="@style/Widget.DashCast.ListItem.Leading"
+                                android:src="@drawable/ic_code"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="Code source"
+                                    tools:ignore="HardcodedText"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="github.com/Kiroha/byd-dashcast"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:src="@drawable/ic_open_in_new"
+                                android:tint="?attr/colorOnSurfaceVariant"/>
+                        </LinearLayout>
+
+                        <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                style="@style/Widget.DashCast.ListItem.Leading"
+                                android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView

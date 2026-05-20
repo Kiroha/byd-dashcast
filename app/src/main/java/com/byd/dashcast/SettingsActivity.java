@@ -1,6 +1,8 @@
 package com.byd.dashcast;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -102,6 +104,35 @@ public class SettingsActivity extends AppCompatActivity {
         TextView tvVersion = (TextView) findViewById(R.id.tv_version_value);
         if (tvVersion != null) {
             tvVersion.setText(BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE);
+        }
+
+        // "Rechercher une mise à jour" — opens the GitHub Releases page in a browser.
+        View btnCheckUpdate = findViewById(R.id.btn_check_update);
+        if (btnCheckUpdate != null) {
+            btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { openUrl("https://github.com/Kiroha/byd-dashcast/releases"); }
+            });
+        }
+
+        // "Code source" row — opens the GitHub repository.
+        View rowSourceCode = findViewById(R.id.row_source_code);
+        if (rowSourceCode != null) {
+            rowSourceCode.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { openUrl("https://github.com/Kiroha/byd-dashcast"); }
+            });
+        }
+    }
+
+    /** Open the given URL in an external browser. Null-safe and intent-resolve-safe. */
+    private void openUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            android.widget.Toast.makeText(this,
+                    "Aucun navigateur disponible pour ouvrir " + url,
+                    android.widget.Toast.LENGTH_LONG).show();
         }
     }
 
