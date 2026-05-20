@@ -175,12 +175,17 @@ public class MainActivity extends AppCompatActivity
     // v0.9.74 — Pseudo-fullscreen mirror state
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnExitFullscreen;
     private View vNavRail;
+    private View vTopBar;
     private View cardHeroStatus;
     private View tvPreviewSection;
     private View cardClusterPreview;
     private View gridMainActions;
+    private View svRightPane;
+    private View llRightPaneContent;
     private boolean mIsFullscreenMirror = false;
     private int mSavedPreviewHeightPx = -1;
+    private float mSavedPreviewWeight = 0f;
+    private int mSavedInnerLLHeight  = ViewGroup.LayoutParams.WRAP_CONTENT;
 
     // UI — category filter buttons
     private View llCategoryFilters;
@@ -311,10 +316,13 @@ public class MainActivity extends AppCompatActivity
         llFavoritesStrip   = (LinearLayout) findViewById(R.id.ll_favorites_strip);
         btnExitFullscreen  = findViewById(R.id.btn_exit_fullscreen);
         vNavRail           = findViewById(R.id.ll_nav_rail);
+        vTopBar            = findViewById(R.id.ll_top_bar);
         cardHeroStatus     = findViewById(R.id.card_hero_status);
         tvPreviewSection   = findViewById(R.id.tv_preview_section);
         cardClusterPreview = findViewById(R.id.card_cluster_preview);
         gridMainActions    = findViewById(R.id.grid_main_actions);
+        svRightPane        = findViewById(R.id.sv_right_pane);
+        llRightPaneContent = findViewById(R.id.ll_right_pane_content);
         if (btnExitFullscreen != null) {
             btnExitFullscreen.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { exitFullscreenMirror(); }
@@ -2255,21 +2263,28 @@ public class MainActivity extends AppCompatActivity
         mIsFullscreenMirror = true;
 
         if (vNavRail != null)         vNavRail.setVisibility(View.GONE);
+        if (vTopBar != null)          vTopBar.setVisibility(View.GONE);
         if (llAppListSection != null) llAppListSection.setVisibility(View.GONE);
         if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.GONE);
         if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.GONE);
         if (gridMainActions != null)  gridMainActions.setVisibility(View.GONE);
 
-        ViewGroup.LayoutParams lp = cardClusterPreview.getLayoutParams();
-        mSavedPreviewHeightPx = lp.height;
-        // Use the activity content height minus the cluster control panel (kept visible).
-        int screenH = getResources().getDisplayMetrics().heightPixels;
-        int panelH  = (panelClusterControl != null
-                && panelClusterControl.getVisibility() == View.VISIBLE)
-                ? panelClusterControl.getHeight() : 0;
-        int target = Math.max(400, screenH - panelH - 32);
-        lp.height = target;
-        cardClusterPreview.setLayoutParams(lp);
+        // Switch to weight-based layout so the card grows and the cluster control panel
+        // (with the "Ajuster" button) keeps its natural wrap_content height at the bottom.
+        if (llRightPaneContent != null && svRightPane != null) {
+            ViewGroup.LayoutParams llLp = llRightPaneContent.getLayoutParams();
+            mSavedInnerLLHeight = llLp.height;
+            int h = svRightPane.getHeight();
+            if (h <= 0) h = getResources().getDisplayMetrics().heightPixels;
+            llLp.height = h;
+            llRightPaneContent.setLayoutParams(llLp);
+        }
+        LinearLayout.LayoutParams clp = (LinearLayout.LayoutParams) cardClusterPreview.getLayoutParams();
+        mSavedPreviewHeightPx = clp.height;
+        mSavedPreviewWeight   = clp.weight;
+        clp.height = 0;
+        clp.weight = 1f;
+        cardClusterPreview.setLayoutParams(clp);
 
         if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.VISIBLE);
 
@@ -2285,6 +2300,23 @@ public class MainActivity extends AppCompatActivity
         } catch (Throwable t) {
             AppLogger.w(TAG, "immersive setSystemUiVisibility failed: " + t.getMessage());
         }
+
+        // v0.9.75 — after the layout settles, force the SurfaceTexture default buffer
+        // size to the new TextureView dimensions and restart the mirror so SF paints
+        // at fullscreen resolution instead of the previous 200dp preview size.
+        cardClusterPreview.post(new Runnable() {
+            @Override public void run() {
+                try {
+                    SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                    if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
+                        st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                    }
+                    attemptStartMirrorWithCurrentHolder();
+                } catch (Throwable t) {
+                    AppLogger.w(TAG, "fullscreen mirror restart failed: " + t.getMessage());
+                }
+            }
+        });
         AppLogger.i(TAG, "enterFullscreenMirror");
     }
 
@@ -2294,21 +2326,44 @@ public class MainActivity extends AppCompatActivity
         mIsFullscreenMirror = false;
 
         if (vNavRail != null)         vNavRail.setVisibility(View.VISIBLE);
+        if (vTopBar != null)          vTopBar.setVisibility(View.VISIBLE);
         if (llAppListSection != null) llAppListSection.setVisibility(View.VISIBLE);
         if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.VISIBLE);
         if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.VISIBLE);
         if (gridMainActions != null)  gridMainActions.setVisibility(View.VISIBLE);
 
-        if (cardClusterPreview != null && mSavedPreviewHeightPx > 0) {
-            ViewGroup.LayoutParams lp = cardClusterPreview.getLayoutParams();
-            lp.height = mSavedPreviewHeightPx;
-            cardClusterPreview.setLayoutParams(lp);
+        if (llRightPaneContent != null) {
+            ViewGroup.LayoutParams llLp = llRightPaneContent.getLayoutParams();
+            llLp.height = mSavedInnerLLHeight;
+            llRightPaneContent.setLayoutParams(llLp);
+        }
+        if (cardClusterPreview != null) {
+            LinearLayout.LayoutParams clp = (LinearLayout.LayoutParams) cardClusterPreview.getLayoutParams();
+            clp.height = (mSavedPreviewHeightPx > 0) ? mSavedPreviewHeightPx
+                    : (int) (200 * getResources().getDisplayMetrics().density);
+            clp.weight = mSavedPreviewWeight;
+            cardClusterPreview.setLayoutParams(clp);
         }
         if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.GONE);
 
         try {
             getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
         } catch (Throwable t) { /* ignore */ }
+
+        // Restart mirror at the small preview size after layout settles.
+        if (cardClusterPreview != null) {
+            cardClusterPreview.post(new Runnable() {
+                @Override public void run() {
+                    try {
+                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                        if (st != null && clusterMirror.getWidth() > 0 && clusterMirror.getHeight() > 0) {
+                            st.setDefaultBufferSize(clusterMirror.getWidth(), clusterMirror.getHeight());
+                        }
+                        attemptStartMirrorWithCurrentHolder();
+                    } catch (Throwable t) { /* ignore */ }
+                }
+            });
+        }
         AppLogger.i(TAG, "exitFullscreenMirror");
     }
 
@@ -2815,8 +2870,14 @@ public class MainActivity extends AppCompatActivity
                 });
 
                 final List<AppInfo> result = apps;
+                // v0.9.75 — favorites are shown in the dedicated strip above the list,
+                // hide them from the main grid to avoid duplication.
+                final List<AppInfo> nonFavs = new java.util.ArrayList<>(apps.size());
+                for (AppInfo a : result) {
+                    if (!a.isFavorite) nonFavs.add(a);
+                }
                 runOnUiThread(() -> {
-                    mAdapter.setApps(result);
+                    mAdapter.setApps(nonFavs);
                     refreshFavoritesStrip(result);
                     // One-shot tip: show once, on first ever launch
                     SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
