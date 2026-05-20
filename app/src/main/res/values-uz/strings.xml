@@ -4,6 +4,7 @@
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Asboblar paneli boshqaruvchisi</string>
     <string name="welcome_select_lang">Tilni tanlang\nPlease select your language</string>
+    <string name="welcome_continue_without_change">Oʻzgartirmasdan davom etish</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
     <string name="btn_lang_de">🇩🇪  Deutsch</string>
@@ -244,4 +245,19 @@
     <string name="usage_title">Klasterda foydalanish vaqti</string>
     <string name="usage_empty">Foydalanish maʻlumoti yoʻq</string>
     <string name="usage_reset">Tiklash</string>
+
+    <!-- Settings page (M3 redesign) -->
+    <string name="settings_cluster_88_desc">Standart sozlama — tavsiya etiladi</string>
+    <string name="settings_cluster_123_desc">Seal EU — yuqori darajadagi</string>
+    <string name="settings_cluster_1025_desc">Eksperimental</string>
+    <string name="settings_section_behavior">Xatti-harakat</string>
+    <string name="settings_boot_auto_start_support">Avtomobil ishga tushganda mirror\'ni yoqish</string>
+    <string name="settings_reconnect_popup_support">Kutilmagan uzilganda tiklash</string>
+    <string name="settings_category_filters_support">Ilovalar menyusida chiplarni koʻrsatish</string>
+    <string name="settings_section_about">Haqida</string>
+    <string name="settings_about_version_label">Versiya</string>
+    <string name="settings_check_update_title">Yangilanishlarni tekshirish</string>
+    <string name="settings_check_update_support">Yangi versiya mavjudligini tekshiradi</string>
+    <string name="settings_check_update_button">Tekshirish</string>
+    <string name="settings_source_code_title">Manba kodi</string>
 </resources>

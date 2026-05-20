@@ -21,19 +21,22 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="40dp">
+        android:paddingLeft="60dp"
+        android:paddingRight="60dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp">
 
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="800dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             app:cardBackgroundColor="@color/md_surface_container"
             app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
-            app:contentPaddingTop="56dp"
-            app:contentPaddingBottom="56dp"
-            app:contentPaddingLeft="80dp"
-            app:contentPaddingRight="80dp">
+            app:contentPaddingTop="32dp"
+            app:contentPaddingBottom="32dp"
+            app:contentPaddingLeft="56dp"
+            app:contentPaddingRight="56dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -43,18 +46,19 @@
 
                 <!-- Hero logo: 96dp tonal square with cast_connected icon -->
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="96dp"
-                    android:layout_height="96dp"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
                     app:cardBackgroundColor="?attr/colorPrimaryContainer"
-                    app:cardCornerRadius="24dp"
+                    app:cardCornerRadius="20dp"
                     app:cardElevation="0dp"
-                    android:layout_marginBottom="24dp">
+                    android:layout_marginBottom="14dp">
 
                     <ImageView
-                        android:layout_width="56dp"
-                        android:layout_height="56dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_cast"
+                        android:tint="?attr/colorOnPrimaryContainer"
                         android:contentDescription="@string/app_name"/>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -63,10 +67,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/app_name"
-                    android:textSize="44sp"
+                    android:textSize="36sp"
                     android:textColor="?attr/colorOnSurface"
                     android:letterSpacing="0"
-                    android:layout_marginBottom="10dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <!-- Version subtitle: BYD CLUSTER MIRROR · vX.Y.Z -->
                 <TextView
@@ -74,20 +78,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/welcome_subtitle"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textColor="?attr/colorPrimary"
                     android:letterSpacing="0.18"
-                    android:layout_marginBottom="36dp"/>
+                    android:layout_marginBottom="18dp"/>
 
                 <!-- Prompt -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/welcome_select_lang"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:gravity="center"
-                    android:layout_marginBottom="28dp"/>
+                    android:layout_marginBottom="16dp"/>
 
                 <!-- 4×3 language grid (12 buttons), outlined style -->
 
@@ -229,6 +233,18 @@
                         android:text="@string/btn_lang_be"/>
 
                 </LinearLayout>
+
+                <!-- "Continue without changing" — keeps current locale, marks setup done -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_continue_without_change"
+                    style="@style/Widget.DashCast.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/welcome_continue_without_change"
+                    app:icon="@drawable/ic_arrow_forward"
+                    app:iconGravity="textEnd"
+                    app:iconPadding="8dp"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -118,10 +118,9 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Configuration par défaut — recommandé"
+                                    android:text="@string/settings_cluster_88_desc"
                                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    tools:ignore="HardcodedText"/>
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
                             </LinearLayout>
                         </LinearLayout>
 
@@ -153,10 +152,9 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Seal EU — haut de gamme"
+                                    android:text="@string/settings_cluster_123_desc"
                                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    tools:ignore="HardcodedText"/>
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
                             </LinearLayout>
                         </LinearLayout>
 
@@ -188,10 +186,9 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Expérimental"
+                                    android:text="@string/settings_cluster_1025_desc"
                                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="?attr/colorOnSurfaceVariant"
-                                    tools:ignore="HardcodedText"/>
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
                             </LinearLayout>
                         </LinearLayout>
 
@@ -392,8 +389,7 @@
                 <!-- Section: COMPORTEMENT -->
                 <TextView
                     style="@style/Widget.DashCast.SectionHead"
-                    android:text="Comportement"
-                    tools:ignore="HardcodedText"/>
+                    android:text="@string/settings_section_behavior"/>
 
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Widget.DashCast.Card.Filled"
@@ -415,6 +411,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -423,8 +420,7 @@
                                     android:text="@string/setting_boot_auto_start"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="Active le mirror au démarrage véhicule"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_boot_auto_start_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_boot_auto_start"
@@ -438,6 +434,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -446,8 +443,7 @@
                                     android:text="@string/settings_reconnect_popup"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="Restaure si déconnecté inopinément"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_reconnect_popup_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_reconnect_popup"
@@ -461,6 +457,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -469,8 +466,7 @@
                                     android:text="@string/settings_show_category_filters"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="Affiche les chips dans le menu apps"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_category_filters_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_show_category_filters"
@@ -485,8 +481,7 @@
                 <!-- Section: À PROPOS -->
                 <TextView
                     style="@style/Widget.DashCast.SectionHead"
-                    android:text="À propos"
-                    tools:ignore="HardcodedText"/>
+                    android:text="@string/settings_section_about"/>
 
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Widget.DashCast.Card.Filled"
@@ -507,13 +502,13 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="Version"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_about_version_label"/>
                                 <TextView
                                     android:id="@+id/tv_version_value"
                                     style="@style/Widget.DashCast.ListItem.Support"
@@ -527,18 +522,17 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="Rechercher une mise à jour"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_check_update_title"/>
                                 <TextView
                                     android:id="@+id/tv_update_status"
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="Ouvre la page des releases sur GitHub"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_check_update_support"/>
                             </LinearLayout>
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_check_update"
@@ -546,8 +540,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"
-                                android:text="Vérifier"
-                                tools:ignore="HardcodedText"/>
+                                android:text="@string/settings_check_update_button"/>
                         </LinearLayout>
 
                         <!-- Code source -->
@@ -559,13 +552,13 @@
                             android:focusable="true">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="Code source"
-                                    tools:ignore="HardcodedText"/>
+                                    android:text="@string/settings_source_code_title"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
                                     android:text="github.com/Kiroha/byd-dashcast"
@@ -584,6 +577,7 @@
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
                                 style="@style/Widget.DashCast.ListItem.Leading"
+                                android:tint="?attr/colorOnSurfaceVariant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">

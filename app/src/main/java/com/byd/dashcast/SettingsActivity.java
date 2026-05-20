@@ -106,11 +106,14 @@ public class SettingsActivity extends AppCompatActivity {
             tvVersion.setText(BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE);
         }
 
-        // "Rechercher une mise à jour" — opens the GitHub Releases page in a browser.
+        // "Rechercher une mise à jour" — runs the same OTA check as the 3-dot menu in MainActivity.
         View btnCheckUpdate = findViewById(R.id.btn_check_update);
         if (btnCheckUpdate != null) {
             btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { openUrl("https://github.com/Kiroha/byd-dashcast/releases"); }
+                @Override public void onClick(View v) {
+                    UpdateChecker.checkUpdate(SettingsActivity.this,
+                            MainActivity.makeOtaProgressListener(SettingsActivity.this, true));
+                }
             });
         }
 

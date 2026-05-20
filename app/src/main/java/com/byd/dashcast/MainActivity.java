@@ -562,7 +562,7 @@ public class MainActivity extends AppCompatActivity
 
         // OTA update check — only on fresh launch, not on rotation
         if (savedInstanceState == null) {
-            UpdateChecker.checkUpdate(this, makeOtaProgressListener(false));
+            UpdateChecker.checkUpdate(this, makeOtaProgressListener(this, false));
         }
     }
 
@@ -1632,10 +1632,11 @@ public class MainActivity extends AppCompatActivity
      * Returns a ProgressListener that shows a centered AlertDialog with a ProgressBar
      * during download, then switches to indeterminate while installing.
      *
+     * @param activity         the Activity hosting the dialog (used for context, theme, lifecycle).
      * @param notifyIfUpToDate if true, shows a toast when no update is found
      *                         (use true for manual checks, false for auto-check at launch)
      */
-    private UpdateChecker.ProgressListener makeOtaProgressListener(boolean notifyIfUpToDate) {
+    public static UpdateChecker.ProgressListener makeOtaProgressListener(final android.app.Activity activity, final boolean notifyIfUpToDate) {
         final AlertDialog[] dlgHolder  = {null};
         final ProgressBar[] pbHolder   = {null};
         final TextView[]    pctHolder  = {null};
@@ -1643,48 +1644,48 @@ public class MainActivity extends AppCompatActivity
         return new UpdateChecker.ProgressListener() {
             @Override
             public void onUpdateFound(final String version, final String changelog, final String downloadUrl) {
-                if (isFinishing() || isDestroyed()) return;
+                if (activity.isFinishing() || activity.isDestroyed()) return;
 
-                LinearLayout layout = new LinearLayout(MainActivity.this);
+                LinearLayout layout = new LinearLayout(activity);
                 layout.setOrientation(LinearLayout.VERTICAL);
-                int pad = (int) (getResources().getDisplayMetrics().density * 20);
+                int pad = (int) (activity.getResources().getDisplayMetrics().density * 20);
                 layout.setPadding(pad, pad, pad, pad / 2);
 
-                TextView tvVersion = new TextView(MainActivity.this);
-                tvVersion.setText(getString(R.string.ota_version_label, version));
+                TextView tvVersion = new TextView(activity);
+                tvVersion.setText(activity.getString(R.string.ota_version_label, version));
                 tvVersion.setTextSize(16);
                 tvVersion.setPadding(pad, 0, pad, pad / 2);
-                tvVersion.setTextColor(getColor(R.color.text_accent));
+                tvVersion.setTextColor(activity.getColor(R.color.text_accent));
                 layout.addView(tvVersion);
 
-                ScrollView sv = new ScrollView(MainActivity.this);
-                TextView tvChangelog = new TextView(MainActivity.this);
+                ScrollView sv = new ScrollView(activity);
+                TextView tvChangelog = new TextView(activity);
                 tvChangelog.setText(renderMarkdown(changelog));
                 tvChangelog.setTextSize(13);
                 tvChangelog.setPadding(pad, 0, pad, pad);
-                tvChangelog.setTextColor(getColor(R.color.text_primary));
+                tvChangelog.setTextColor(activity.getColor(R.color.text_primary));
                 sv.addView(tvChangelog);
                 
                 LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        (int) (getResources().getDisplayMetrics().density * 250) // max height
+                        (int) (activity.getResources().getDisplayMetrics().density * 250) // max height
                 );
                 layout.addView(sv, svParams);
 
                 // Progress bar container (initially hidden)
-                final LinearLayout progressLayout = new LinearLayout(MainActivity.this);
+                final LinearLayout progressLayout = new LinearLayout(activity);
                 progressLayout.setOrientation(LinearLayout.VERTICAL);
                 progressLayout.setPadding(pad, pad, pad, 0);
                 progressLayout.setVisibility(View.GONE);
 
-                ProgressBar pb = new ProgressBar(MainActivity.this, null, android.R.attr.progressBarStyleHorizontal);
+                ProgressBar pb = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
                 pb.setMax(100);
                 pb.setProgress(0);
                 progressLayout.addView(pb);
                 pbHolder[0] = pb;
 
-                TextView tvPct = new TextView(MainActivity.this);
-                tvPct.setText(getString(R.string.ota_progress_percent, 0));
+                TextView tvPct = new TextView(activity);
+                tvPct.setText(activity.getString(R.string.ota_progress_percent, 0));
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
@@ -1693,12 +1694,12 @@ public class MainActivity extends AppCompatActivity
 
                 layout.addView(progressLayout);
 
-                dlgHolder[0] = new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.ota_dialog_title))
+                dlgHolder[0] = new AlertDialog.Builder(activity)
+                        .setTitle(activity.getString(R.string.ota_dialog_title))
                         .setView(layout)
                         .setCancelable(false)
-                        .setPositiveButton(getString(R.string.ota_btn_update_now), null)
-                        .setNegativeButton(getString(R.string.ota_btn_later), (dialog, which) -> dialog.dismiss())
+                        .setPositiveButton(activity.getString(R.string.ota_btn_update_now), null)
+                        .setNegativeButton(activity.getString(R.string.ota_btn_later), (dialog, which) -> dialog.dismiss())
                         .create();
                 
                 dlgHolder[0].setOnShowListener(dialog -> {
@@ -1707,10 +1708,10 @@ public class MainActivity extends AppCompatActivity
                         posButton.setEnabled(false);
                         dlgHolder[0].getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
                         sv.setVisibility(View.GONE);
-                        tvVersion.setText(getString(R.string.ota_downloading));
+                        tvVersion.setText(activity.getString(R.string.ota_downloading));
                         progressLayout.setVisibility(View.VISIBLE);
                         // Trigger download
-                        UpdateChecker.startDownload(MainActivity.this, downloadUrl, this);
+                        UpdateChecker.startDownload(activity, downloadUrl, this);
                     });
                 });
                 dlgHolder[0].show();
@@ -1722,11 +1723,11 @@ public class MainActivity extends AppCompatActivity
                 if (percent < 0) {
                     // Content-Length unknown → indeterminate
                     pbHolder[0].setIndeterminate(true);
-                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_unknown));
+                    if (pctHolder[0] != null) pctHolder[0].setText(activity.getString(R.string.ota_progress_unknown));
                 } else {
                     pbHolder[0].setIndeterminate(false);
                     pbHolder[0].setProgress(percent);
-                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_percent, percent));
+                    if (pctHolder[0] != null) pctHolder[0].setText(activity.getString(R.string.ota_progress_percent, percent));
                 }
             }
 
@@ -1743,8 +1744,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onUpToDate() {
                 if (notifyIfUpToDate) {
-                    Toast.makeText(MainActivity.this,
-                            getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity,
+                            activity.getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -1805,7 +1806,7 @@ public class MainActivity extends AppCompatActivity
                         return true;
                     case 6:
                         UpdateChecker.checkUpdate(MainActivity.this,
-                                makeOtaProgressListener(true));
+                                makeOtaProgressListener(MainActivity.this, true));
                         return true;
                     case 9:
                         showUsageStatsDialog();

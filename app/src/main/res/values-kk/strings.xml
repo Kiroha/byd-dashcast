@@ -4,6 +4,7 @@
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Аспаптар панелі контроллері</string>
     <string name="welcome_select_lang">Тілді таңдаңыз\nPlease select your language</string>
+    <string name="welcome_continue_without_change">Өзгертусіз жалғастыру</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
     <string name="btn_lang_de">🇩🇪  Deutsch</string>
@@ -244,4 +245,19 @@
     <string name="usage_title">Кластерде пайдалану уақыты</string>
     <string name="usage_empty">Пайдалану деректері жоқ</string>
     <string name="usage_reset">Тазалау</string>
+
+    <!-- Settings page (M3 redesign) -->
+    <string name="settings_cluster_88_desc">Әдепкі конфигурация — ұсынылады</string>
+    <string name="settings_cluster_123_desc">Seal EU — премиум</string>
+    <string name="settings_cluster_1025_desc">Эксперименталды</string>
+    <string name="settings_section_behavior">Әрекет</string>
+    <string name="settings_boot_auto_start_support">Көлік іске қосылғанда айнаны қосу</string>
+    <string name="settings_reconnect_popup_support">Күтпеген ажырау кезінде қалпына келтіру</string>
+    <string name="settings_category_filters_support">Қолданбалар мәзірінде чиптерді көрсету</string>
+    <string name="settings_section_about">Туралы</string>
+    <string name="settings_about_version_label">Нұсқа</string>
+    <string name="settings_check_update_title">Жаңартуларды тексеру</string>
+    <string name="settings_check_update_support">Жаңа нұсқаның бар-жоғын тексереді</string>
+    <string name="settings_check_update_button">Тексеру</string>
+    <string name="settings_source_code_title">Бастапқы код</string>
 </resources>
