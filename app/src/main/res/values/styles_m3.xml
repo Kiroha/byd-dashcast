@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Reusable Material 3 widget styles for DashCast.
+
+    These styles are defined here only — they are NOT applied as defaults via the
+    theme so that existing layouts keep rendering exactly as before. Subsequent
+    migration phases will apply them per-widget via `style="@style/…"`.
+
+    Naming convention: Widget.DashCast.<Component>[.<Variant>]
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================================ -->
+    <!-- Buttons                                                       -->
+    <!-- ============================================================ -->
+
+    <!-- Filled (M3 primary action). Pill-shaped, 56dp tall (automotive). -->
+    <style name="Widget.DashCast.Button.Filled" parent="Widget.Material3.Button">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">32dp</item>
+        <item name="android:paddingEnd">32dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:letterSpacing">0.005</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
+    <!-- Tonal (secondary action) -->
+    <style name="Widget.DashCast.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">32dp</item>
+        <item name="android:paddingEnd">32dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
+    <!-- Outlined -->
+    <style name="Widget.DashCast.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">32dp</item>
+        <item name="android:paddingEnd">32dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
+    <!-- Text (low-emphasis) -->
+    <style name="Widget.DashCast.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Destructive (error container) -->
+    <style name="Widget.DashCast.Button.Error" parent="Widget.Material3.Button">
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">32dp</item>
+        <item name="android:paddingEnd">32dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="backgroundTint">?attr/colorErrorContainer</item>
+        <item name="android:textColor">?attr/colorError</item>
+    </style>
+
+    <!-- Compact button (used in list items where space is tight) -->
+    <style name="Widget.DashCast.Button.Small" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:minHeight">40dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- Icon buttons (circular, transparent)                         -->
+    <!-- ============================================================ -->
+
+    <style name="Widget.DashCast.IconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="iconSize">24dp</item>
+        <item name="iconTint">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="Widget.DashCast.IconButton.Filled" parent="Widget.Material3.Button.IconButton.Filled">
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="iconSize">24dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- FloatingActionButton                                          -->
+    <!-- ============================================================ -->
+
+    <style name="Widget.DashCast.Fab" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Large</item>
+    </style>
+
+    <style name="Widget.DashCast.Fab.Extended" parent="Widget.Material3.ExtendedFloatingActionButton.Primary">
+        <item name="android:minHeight">72dp</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- Cards                                                         -->
+    <!-- ============================================================ -->
+
+    <!-- Filled card (uses surfaceContainer background, no border) -->
+    <style name="Widget.DashCast.Card.Filled" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="contentPadding">20dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceVariant</item>
+    </style>
+
+    <!-- Outlined card -->
+    <style name="Widget.DashCast.Card.Outlined" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="contentPadding">20dp</item>
+    </style>
+
+    <!-- Elevated card -->
+    <style name="Widget.DashCast.Card.Elevated" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="contentPadding">20dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- Compound buttons                                              -->
+    <!-- ============================================================ -->
+
+    <style name="Widget.DashCast.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch" />
+
+    <style name="Widget.DashCast.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox" />
+
+    <style name="Widget.DashCast.RadioButton" parent="Widget.Material3.CompoundButton.RadioButton" />
+
+    <!-- ============================================================ -->
+    <!-- Chips                                                         -->
+    <!-- ============================================================ -->
+
+    <style name="Widget.DashCast.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Widget.DashCast.Chip.Assist" parent="Widget.Material3.Chip.Assist">
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- Text appearances                                              -->
+    <!-- ============================================================ -->
+
+    <style name="TextAppearance.DashCast.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.DashCast.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.DashCast.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.DashCast.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.DashCast.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Uppercase section header (e.g. "PROJECTION", "DISPLAY", …) -->
+    <style name="TextAppearance.DashCast.SectionHeader" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textColor">?attr/colorPrimary</item>
+        <item name="android:letterSpacing">0.15</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+</resources>
