@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     WelcomeActivity — first launch language picker.
-    Material 3 migration (phase 3): centered card with title/subtitle/prompt
-    and a 4×3 grid of language buttons. All button IDs are preserved so
-    WelcomeActivity.java keeps working without changes.
+    Material 3 design, faithful to mockups/mockup_m3.html screen #1:
+      • Centered welcome-card on colorSurface background
+      • Hero logo (96dp, primary-container tonal square, cast_connected glyph)
+      • DashCast title (HeadlineLarge), primary-tinted version subtitle with letter-spacing
+      • Welcome prompt, then 4×3 grid of outlined language buttons.
+    All 12 button IDs are preserved (btn_lang_fr/en/de/it/tr/es/ru/uk/ar/uz/kk/be)
+    so WelcomeActivity.java keeps working without changes.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -17,80 +21,104 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp">
+        android:padding="40dp">
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.DashCast.Card.Filled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardBackgroundColor="@color/md_surface_container"
             app:cardCornerRadius="28dp"
-            app:contentPadding="40dp">
+            app:cardElevation="0dp"
+            app:contentPaddingTop="56dp"
+            app:contentPaddingBottom="56dp"
+            app:contentPaddingLeft="80dp"
+            app:contentPaddingRight="80dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:gravity="center_horizontal">
 
+                <!-- Hero logo: 96dp tonal square with cast_connected icon -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    android:layout_marginBottom="24dp">
+
+                    <ImageView
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_cast"
+                        android:contentDescription="@string/app_name"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Title: DashCast -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/welcome_title"
-                    android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
+                    android:text="@string/app_name"
+                    android:textSize="44sp"
                     android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp"/>
+                    android:letterSpacing="0"
+                    android:layout_marginBottom="10dp"/>
 
+                <!-- Version subtitle: BYD CLUSTER MIRROR · vX.Y.Z -->
                 <TextView
+                    android:id="@+id/tv_welcome_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/welcome_subtitle"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:textSize="14sp"
                     android:textColor="?attr/colorPrimary"
-                    android:letterSpacing="0.2"
-                    android:layout_marginBottom="32dp"/>
+                    android:letterSpacing="0.18"
+                    android:layout_marginBottom="36dp"/>
 
+                <!-- Prompt -->
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/welcome_select_lang"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textSize="16sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:gravity="center"
-                    android:lineSpacingMultiplier="1.4"
-                    android:layout_marginBottom="32dp"/>
+                    android:layout_marginBottom="28dp"/>
 
-                <!-- Row 1: FR/EN/DE -->
+                <!-- 4×3 language grid (12 buttons), outlined style -->
+
+                <!-- Row 1: FR / EN / DE -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="14dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_fr"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_fr"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_en"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_en"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_de"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -98,35 +126,34 @@
 
                 </LinearLayout>
 
-                <!-- Row 2: IT/TR/ES -->
+                <!-- Row 2: IT / TR / ES -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="14dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_it"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_it"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_tr"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_tr"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_es"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -134,35 +161,34 @@
 
                 </LinearLayout>
 
-                <!-- Row 3: RU/UK/AR -->
+                <!-- Row 3: RU / UK / AR -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="14dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_ru"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_ru"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_uk"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_uk"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_ar"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -170,34 +196,33 @@
 
                 </LinearLayout>
 
-                <!-- Row 4: UZ/KK/BE -->
+                <!-- Row 4: UZ / KK / BE -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center">
+                    android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_uz"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_uz"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_kk"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/btn_lang_kk"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginEnd="14dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_be"
-                        style="@style/Widget.DashCast.Button.Tonal"
+                        style="@style/Widget.DashCast.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"

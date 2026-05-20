@@ -5,6 +5,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 /**
  * WelcomeActivity — shown only on the first launch.
@@ -35,6 +36,12 @@ public class WelcomeActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_welcome);
+
+        // Dynamic version subtitle: "BYD CLUSTER MIRROR · v<versionName>"
+        TextView subtitle = (TextView) findViewById(R.id.tv_welcome_subtitle);
+        if (subtitle != null) {
+            subtitle.setText("BYD CLUSTER MIRROR · v" + BuildConfig.VERSION_NAME);
+        }
 
         setLanguageButton(R.id.btn_lang_fr, LocaleHelper.LANG_FR);
         setLanguageButton(R.id.btn_lang_en, LocaleHelper.LANG_EN);
