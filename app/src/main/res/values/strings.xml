@@ -288,8 +288,8 @@
     <string name="main_preview_section">Aperçu temps réel</string>
     <string name="main_btn_full_preview">Aperçu plein écran</string>
     <string name="main_btn_capture">Capturer</string>
-    <string name="main_btn_reconnect">Reconnecter</string>
-    <string name="main_btn_stop_mirror">Arrêter mirror</string>
+    <string name="main_btn_reconnect">Activer la projection</string>
+    <string name="main_btn_stop_mirror">Arrêter la projection</string>
     <string name="main_section_favorites">Favoris</string>
     <string name="main_section_all_apps">Toutes les applications</string>
     <string name="main_capture_coming_soon">Capture bientôt disponible</string>

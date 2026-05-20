@@ -273,8 +273,8 @@
     <string name="main_preview_section">Live-Vorschau</string>
     <string name="main_btn_full_preview">Vollbildvorschau</string>
     <string name="main_btn_capture">Aufnahme</string>
-    <string name="main_btn_reconnect">Verbinden</string>
-    <string name="main_btn_stop_mirror">Stop</string>
+    <string name="main_btn_reconnect">Projektion starten</string>
+    <string name="main_btn_stop_mirror">Projektion stoppen</string>
     <string name="main_section_favorites">Favoriten</string>
     <string name="main_section_all_apps">Alle Apps</string>
     <string name="main_capture_coming_soon">Aufnahme kommt bald</string>

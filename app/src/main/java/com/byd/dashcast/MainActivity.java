@@ -294,7 +294,8 @@ public class MainActivity extends AppCompatActivity
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, false);
+        // v0.9.71 — grid is now the default view mode (mockup fidelity).
+        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, true);
         mAdapter.setGridMode(isGrid);
         updateViewToggleButton();
         
@@ -320,7 +321,8 @@ public class MainActivity extends AppCompatActivity
         btnFilterAll   = (Button) findViewById(R.id.btn_filter_all);
         btnFilterNav   = (Button) findViewById(R.id.btn_filter_nav);
         btnFilterMedia = (Button) findViewById(R.id.btn_filter_media);
-        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+        // v0.9.71 — category chips visible by default (mockup fidelity).
+        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true);
         llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         View.OnClickListener filterClick = new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -683,7 +685,7 @@ public class MainActivity extends AppCompatActivity
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true);
         if (llCategoryFilters != null) {
             llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         }

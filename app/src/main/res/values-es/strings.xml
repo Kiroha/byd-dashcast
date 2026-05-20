@@ -271,8 +271,8 @@
     <string name="main_preview_section">Vista previa en vivo</string>
     <string name="main_btn_full_preview">Vista completa</string>
     <string name="main_btn_capture">Capturar</string>
-    <string name="main_btn_reconnect">Reconectar</string>
-    <string name="main_btn_stop_mirror">Detener mirror</string>
+    <string name="main_btn_reconnect">Iniciar proyección</string>
+    <string name="main_btn_stop_mirror">Detener proyección</string>
     <string name="main_section_favorites">Favoritos</string>
     <string name="main_section_all_apps">Todas las apps</string>
     <string name="main_capture_coming_soon">Captura próximamente</string>

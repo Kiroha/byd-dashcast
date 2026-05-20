@@ -273,8 +273,8 @@
     <string name="main_preview_section">Jonli ko\'rish</string>
     <string name="main_btn_full_preview">To\'liq ko\'rish</string>
     <string name="main_btn_capture">Olish</string>
-    <string name="main_btn_reconnect">Qayta ulanish</string>
-    <string name="main_btn_stop_mirror">Mirrorni to\'xtatish</string>
+    <string name="main_btn_reconnect">Proyeksiyani boshlash</string>
+    <string name="main_btn_stop_mirror">Proyeksiyani toʻxtatish</string>
     <string name="main_section_favorites">Sevimlilar</string>
     <string name="main_section_all_apps">Barcha ilovalar</string>
     <string name="main_capture_coming_soon">Tez kunda</string>

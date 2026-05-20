@@ -273,8 +273,8 @@
     <string name="main_preview_section">Папярэдні прагляд</string>
     <string name="main_btn_full_preview">Поўны прагляд</string>
     <string name="main_btn_capture">Зняць</string>
-    <string name="main_btn_reconnect">Перападлучыць</string>
-    <string name="main_btn_stop_mirror">Спыніць</string>
+    <string name="main_btn_reconnect">Запусціць праекцыю</string>
+    <string name="main_btn_stop_mirror">Спыніць праекцыю</string>
     <string name="main_section_favorites">Абраныя</string>
     <string name="main_section_all_apps">Усе праграмы</string>
     <string name="main_capture_coming_soon">Хутка</string>

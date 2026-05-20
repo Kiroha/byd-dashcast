@@ -273,8 +273,8 @@
     <string name="main_preview_section">Тікелей көрініс</string>
     <string name="main_btn_full_preview">Толық көрініс</string>
     <string name="main_btn_capture">Түсіру</string>
-    <string name="main_btn_reconnect">Қайта қосылу</string>
-    <string name="main_btn_stop_mirror">Тоқтату</string>
+    <string name="main_btn_reconnect">Проекцияны бастау</string>
+    <string name="main_btn_stop_mirror">Проекцияны тоқтату</string>
     <string name="main_section_favorites">Таңдаулылар</string>
     <string name="main_section_all_apps">Барлық қосымшалар</string>
     <string name="main_capture_coming_soon">Жақында</string>

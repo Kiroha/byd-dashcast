@@ -273,8 +273,8 @@
     <string name="main_preview_section">Превью</string>
     <string name="main_btn_full_preview">Полный обзор</string>
     <string name="main_btn_capture">Снимок</string>
-    <string name="main_btn_reconnect">Подключить</string>
-    <string name="main_btn_stop_mirror">Остановить</string>
+    <string name="main_btn_reconnect">Запустить проекцию</string>
+    <string name="main_btn_stop_mirror">Остановить проекцию</string>
     <string name="main_section_favorites">Избранное</string>
     <string name="main_section_all_apps">Все приложения</string>
     <string name="main_capture_coming_soon">Скоро</string>

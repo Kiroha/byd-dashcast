@@ -273,8 +273,8 @@
     <string name="main_preview_section">Live preview</string>
     <string name="main_btn_full_preview">Full preview</string>
     <string name="main_btn_capture">Capture</string>
-    <string name="main_btn_reconnect">Reconnect</string>
-    <string name="main_btn_stop_mirror">Stop mirror</string>
+    <string name="main_btn_reconnect">Start projection</string>
+    <string name="main_btn_stop_mirror">Stop projection</string>
     <string name="main_section_favorites">Favorites</string>
     <string name="main_section_all_apps">All applications</string>
     <string name="main_capture_coming_soon">Capture coming soon</string>

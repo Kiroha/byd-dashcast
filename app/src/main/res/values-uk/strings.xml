@@ -273,8 +273,8 @@
     <string name="main_preview_section">Перегляд</string>
     <string name="main_btn_full_preview">Повний перегляд</string>
     <string name="main_btn_capture">Знімок</string>
-    <string name="main_btn_reconnect">Підключити</string>
-    <string name="main_btn_stop_mirror">Зупинити</string>
+    <string name="main_btn_reconnect">Запустити проекцію</string>
+    <string name="main_btn_stop_mirror">Зупинити проекцію</string>
     <string name="main_section_favorites">Обране</string>
     <string name="main_section_all_apps">Усі додатки</string>
     <string name="main_capture_coming_soon">Незабаром</string>

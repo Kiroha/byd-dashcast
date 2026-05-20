@@ -273,8 +273,8 @@
     <string name="main_preview_section">معاينة مباشرة</string>
     <string name="main_btn_full_preview">معاينة كاملة</string>
     <string name="main_btn_capture">التقاط</string>
-    <string name="main_btn_reconnect">إعادة الاتصال</string>
-    <string name="main_btn_stop_mirror">إيقاف المرآة</string>
+    <string name="main_btn_reconnect">بدء العرض</string>
+    <string name="main_btn_stop_mirror">إيقاف العرض</string>
     <string name="main_section_favorites">المفضلة</string>
     <string name="main_section_all_apps">كل التطبيقات</string>
     <string name="main_capture_coming_soon">قريباً</string>
