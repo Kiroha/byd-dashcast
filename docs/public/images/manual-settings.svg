@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#f2f2f2"/>
+
+  <text x="640" y="72" fill="#2e3440" font-family="sans-serif" font-size="46" font-weight="700" text-anchor="middle">Parametres</text>
+
+  <rect x="96" y="98" width="1088" height="196" rx="10" fill="#ffffff" stroke="#d7dbe2"/>
+  <text x="126" y="138" fill="#3b4252" font-family="sans-serif" font-size="30" font-weight="700">Type de cluster</text>
+
+  <circle cx="134" cy="178" r="10" fill="#ffffff" stroke="#9aa5b1" stroke-width="2"/>
+  <text x="160" y="186" fill="#1f2937" font-family="sans-serif" font-size="23">8,8 pouces (cmd=29)</text>
+
+  <circle cx="134" cy="222" r="10" fill="#ffffff" stroke="#1565c0" stroke-width="3"/>
+  <circle cx="134" cy="222" r="5" fill="#1565c0"/>
+  <text x="160" y="230" fill="#1f2937" font-family="sans-serif" font-size="23">12,3 pouces (cmd=30) - Seal EU</text>
+
+  <circle cx="134" cy="266" r="10" fill="#ffffff" stroke="#9aa5b1" stroke-width="2"/>
+  <text x="160" y="274" fill="#1f2937" font-family="sans-serif" font-size="23">10,25 pouces (cmd=31)</text>
+
+  <rect x="96" y="310" width="1088" height="264" rx="10" fill="#ffffff" stroke="#d7dbe2"/>
+  <text x="126" y="350" fill="#3b4252" font-family="sans-serif" font-size="30" font-weight="700">Marges d affichage (overscan)</text>
+  <text x="126" y="381" fill="#4c566a" font-family="sans-serif" font-size="17">Ajustez les marges pour cadrer le contenu sur l ecran du tableau de bord.</text>
+
+  <text x="126" y="424" fill="#3b4252" font-family="sans-serif" font-size="22">Gauche / Droite :</text>
+  <text x="1070" y="424" fill="#5e81ac" font-family="sans-serif" font-size="22" font-weight="700" text-anchor="end">80 px</text>
+  <rect x="126" y="438" width="1028" height="10" rx="5" fill="#d2d7df"/>
+  <rect x="126" y="438" width="411" height="10" rx="5" fill="#1565c0"/>
+  <circle cx="537" cy="443" r="13" fill="#1565c0"/>
+
+  <text x="126" y="486" fill="#3b4252" font-family="sans-serif" font-size="22">Haut / Bas :</text>
+  <text x="1070" y="486" fill="#5e81ac" font-family="sans-serif" font-size="22" font-weight="700" text-anchor="end">50 px</text>
+  <rect x="126" y="500" width="1028" height="10" rx="5" fill="#d2d7df"/>
+  <rect x="126" y="500" width="257" height="10" rx="5" fill="#1565c0"/>
+  <circle cx="383" cy="505" r="13" fill="#1565c0"/>
+
+  <rect x="126" y="530" width="500" height="34" rx="8" fill="#1565c0"/>
+  <text x="376" y="553" fill="#ffffff" font-family="sans-serif" font-size="18" text-anchor="middle">Appliquer maintenant</text>
+  <rect x="642" y="530" width="512" height="34" rx="8" fill="#607d8b"/>
+  <text x="898" y="553" fill="#ffffff" font-family="sans-serif" font-size="18" text-anchor="middle">Reinitialiser (80 / 50)</text>
+
+  <rect x="96" y="590" width="1088" height="102" rx="10" fill="#ffffff" stroke="#d7dbe2"/>
+  <text x="126" y="627" fill="#3b4252" font-family="sans-serif" font-size="30" font-weight="700">Mises a jour</text>
+  <rect x="128" y="642" width="20" height="20" rx="3" fill="#ffffff" stroke="#8c97a6" stroke-width="2"/>
+  <text x="160" y="658" fill="#2f3a48" font-family="sans-serif" font-size="17">Inclure les versions pre-release (alpha/beta)</text>
+
+  <text x="640" y="710" fill="#607d8b" font-family="sans-serif" font-size="20" text-anchor="middle">Ecran Parametres 0.6.8 - cluster, overscan et updates</text>
+</svg>
