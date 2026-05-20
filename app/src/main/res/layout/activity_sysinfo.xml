@@ -1,89 +1,358 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  v0.9.82 — SysInfoActivity M3 redesign (mockup-faithful).
+  Layout: nav rail (Système active) + top bar (Sauver / Partager / Régénérer)
+  + two-column body (overview tiles & lists on the left, full mono report on the right).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#000000">
+    android:background="@color/md_background">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#1A1A2E"
-        android:padding="12dp">
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sysinfo_title"
-            android:textColor="#90CAF9"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sysinfo_desc"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:layout_marginBottom="10dp"/>
-
+        <!-- ════ NAV RAIL ════ -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:id="@+id/ll_nav_rail_sys"
+            android:layout_width="96dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/md_surface_container_low"
+            android:paddingTop="20dp"
+            android:paddingBottom="16dp">
 
-            <Button
-                android:id="@+id/btn_generate"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:id="@+id/iv_nav_logo_sys"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="24dp"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_primary_container"
+                android:background="@drawable/bg_pulse_dot"
+                android:src="@drawable/ic_cast"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/app_name"/>
+
+            <LinearLayout
+                android:id="@+id/nav_apps_sys"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="6dp" android:paddingBottom="6dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
+                    android:src="@drawable/ic_apps" android:contentDescription="@string/main_nav_apps"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_apps"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/nav_settings_sys"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="10dp" android:paddingBottom="6dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
+                    android:src="@drawable/ic_tune" android:contentDescription="@string/main_nav_settings"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_settings"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/nav_diag_sys"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="10dp" android:paddingBottom="6dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
+                    android:src="@drawable/ic_stethoscope" android:contentDescription="@string/main_nav_diag"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_diag"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
+            </LinearLayout>
+
+            <!-- Système (active) -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="10dp" android:paddingBottom="6dp">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_secondary_container"
+                    android:background="@drawable/bg_nav_pill_active"
+                    android:src="@drawable/ic_info" android:contentDescription="@string/main_nav_sysinfo"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_sysinfo"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/nav_log_sys"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="10dp" android:paddingBottom="6dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
+                    android:src="@drawable/ic_notes" android:contentDescription="@string/main_nav_log"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_log"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
+            </LinearLayout>
+
+            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+        </LinearLayout>
+
+        <!-- ════ MAIN AREA ════ -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="12dp">
+
+            <!-- ── TOP BAR ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sysinfo_title"
+                    android:textColor="@color/md_on_surface"
+                    android:textSize="26sp"
+                    android:textStyle="bold"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_save"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/sysinfo_btn_save"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_save"
+                    android:enabled="false"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_share"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/sysinfo_btn_share"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_share"
+                    android:enabled="false"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_generate"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="14dp"
+                    android:text="@string/sysinfo_btn_regen"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_restart_alt"/>
+
+                <TextClock
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="HH:mm"
+                    android:format24Hour="HH:mm"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_on_surface"/>
+            </LinearLayout>
+
+            <!-- ── BODY: two columns ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:text="@string/btn_generate_report"
-                android:textSize="13sp"
-                android:layout_marginEnd="8dp"/>
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
 
-            <Button
-                android:id="@+id/btn_save"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_save_report"
-                android:textSize="13sp"
-                android:layout_marginEnd="8dp"
-                android:enabled="false"/>
+                <!-- ▶ LEFT COLUMN — overview tiles + lists -->
+                <androidx.core.widget.NestedScrollView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:fillViewport="true"
+                    android:paddingEnd="10dp">
 
-            <Button
-                android:id="@+id/btn_share"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_share_report"
-                android:textSize="13sp"
-                android:enabled="false"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
+                        <!-- Section: Vue d'ensemble -->
+                        <TextView
+                            style="@style/SysInfoSectionHead"
+                            android:text="@string/sysinfo_section_overview"/>
+
+                        <!-- 2×2 grid of overview tiles -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="10dp">
+                            <!-- Tile 1: Véhicule -->
+                            <LinearLayout style="@style/SysInfoOverviewTile" android:layout_marginEnd="6dp">
+                                <TextView style="@style/SysInfoTileLabel"
+                                    android:text="@string/sysinfo_tile_vehicle"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_vehicle_value"
+                                    style="@style/SysInfoTileValue"
+                                    tools:text="BYD Seal EU"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_vehicle_sub"
+                                    style="@style/SysInfoTileSub"
+                                    tools:text="DiLink 3.0"/>
+                            </LinearLayout>
+                            <!-- Tile 2: Android -->
+                            <LinearLayout style="@style/SysInfoOverviewTile" android:layout_marginStart="6dp">
+                                <TextView style="@style/SysInfoTileLabel"
+                                    android:text="@string/sysinfo_tile_android"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_android_value"
+                                    style="@style/SysInfoTileValue"
+                                    tools:text="10 · API 29"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_android_sub"
+                                    style="@style/SysInfoTileSub"
+                                    tools:text="armeabi-v7a"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="14dp">
+                            <!-- Tile 3: DashCast -->
+                            <LinearLayout style="@style/SysInfoOverviewTile" android:layout_marginEnd="6dp">
+                                <TextView style="@style/SysInfoTileLabel"
+                                    android:text="@string/sysinfo_tile_dashcast"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_dashcast_value"
+                                    style="@style/SysInfoTileValue"
+                                    android:textColor="@color/md_primary"
+                                    tools:text="v0.9.82"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_dashcast_sub"
+                                    style="@style/SysInfoTileSub"
+                                    tools:text="build 141"/>
+                            </LinearLayout>
+                            <!-- Tile 4: Uptime -->
+                            <LinearLayout style="@style/SysInfoOverviewTile" android:layout_marginStart="6dp">
+                                <TextView style="@style/SysInfoTileLabel"
+                                    android:text="@string/sysinfo_tile_uptime"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_uptime_value"
+                                    style="@style/SysInfoTileValue"
+                                    android:textColor="@color/md_status_ok"
+                                    tools:text="2h 14min"/>
+                                <TextView
+                                    android:id="@+id/tv_tile_uptime_sub"
+                                    style="@style/SysInfoTileSub"
+                                    tools:text="Depuis 12:19"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Section: Affichages détectés -->
+                        <TextView
+                            style="@style/SysInfoSectionHead"
+                            android:text="@string/sysinfo_section_displays"/>
+                        <com.google.android.material.card.MaterialCardView
+                            style="@style/SysInfoListCard">
+                            <LinearLayout
+                                android:id="@+id/ll_displays_list"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"/>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Section: Services -->
+                        <TextView
+                            style="@style/SysInfoSectionHead"
+                            android:text="@string/sysinfo_section_services"/>
+                        <com.google.android.material.card.MaterialCardView
+                            style="@style/SysInfoListCard"
+                            android:layout_marginBottom="14dp">
+                            <LinearLayout
+                                android:id="@+id/ll_services_list"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"/>
+                        </com.google.android.material.card.MaterialCardView>
+
+                    </LinearLayout>
+                </androidx.core.widget.NestedScrollView>
+
+                <!-- ▶ RIGHT COLUMN — full mono report -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_weight="1.15"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            style="@style/SysInfoSectionHead"
+                            android:layout_marginTop="0dp"
+                            android:text="@string/sysinfo_section_full_report"/>
+
+                        <ScrollView
+                            android:id="@+id/scroll_report"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_diag_output_box"
+                            android:padding="14dp">
+                            <TextView
+                                android:id="@+id/tv_report"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="monospace"
+                                android:textIsSelectable="true"
+                                android:textSize="11sp"
+                                android:textColor="@color/md_on_surface"
+                                android:text="@string/sysinfo_hint"/>
+                        </ScrollView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
-
-    <!-- Rapport scrollable -->
-    <ScrollView
-        android:id="@+id/scroll_report"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <TextView
-            android:id="@+id/tv_report"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sysinfo_hint"
-            android:textColor="#00FF88"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:padding="12dp"
-            android:lineSpacingMultiplier="1.3"/>
-
-    </ScrollView>
-
-</LinearLayout>
+</FrameLayout>

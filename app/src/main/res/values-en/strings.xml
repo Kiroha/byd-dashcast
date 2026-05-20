@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">Result copied</string>
     <string name="diag_reset_cluster_confirm_title">Reset cluster configuration</string>
     <string name="diag_reset_cluster_confirm_msg">This will stop ClusterService, close projection (sendInfo 18 + 0) and recreate the service. Continue?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Save</string>
+    <string name="sysinfo_btn_share">Share</string>
+    <string name="sysinfo_btn_regen">Regenerate</string>
+    <string name="sysinfo_section_overview">Overview</string>
+    <string name="sysinfo_section_displays">Detected displays</string>
+    <string name="sysinfo_section_services">Services</string>
+    <string name="sysinfo_section_full_report">Full report</string>
+    <string name="sysinfo_tile_vehicle">Vehicle</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Uptime</string>
+    <string name="sysinfo_tile_uptime_since">Since %1$s</string>
+    <string name="sysinfo_disp_main">Main</string>
+    <string name="sysinfo_disp_cluster">Cluster</string>
+    <string name="sysinfo_disp_virtual">Virtual (mirror)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay active</string>
+    <string name="sysinfo_svc_mirror_sub">Watching pidof · 500 ms</string>
+    <string name="sysinfo_svc_stopped">Stopped</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 unreachable</string>
 </resources>

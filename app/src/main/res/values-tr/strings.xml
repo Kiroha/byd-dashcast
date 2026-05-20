@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">Sonuç kopyalandı</string>
     <string name="diag_reset_cluster_confirm_title">Cluster yapılandırmasını sıfırla</string>
     <string name="diag_reset_cluster_confirm_msg">Bu, ClusterService\'i durduracak, projeksiyonu (sendInfo 18 + 0) kapatacak ve hizmeti yeniden oluşturacak. Devam edilsin mi?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Kaydet</string>
+    <string name="sysinfo_btn_share">Paylaş</string>
+    <string name="sysinfo_btn_regen">Yenile</string>
+    <string name="sysinfo_section_overview">Genel bakış</string>
+    <string name="sysinfo_section_displays">Algılanan ekranlar</string>
+    <string name="sysinfo_section_services">Hizmetler</string>
+    <string name="sysinfo_section_full_report">Tam rapor</string>
+    <string name="sysinfo_tile_vehicle">Araç</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Çalışma süresi</string>
+    <string name="sysinfo_tile_uptime_since">%1$s\'den beri</string>
+    <string name="sysinfo_disp_main">Ana</string>
+    <string name="sysinfo_disp_cluster">Cluster</string>
+    <string name="sysinfo_disp_virtual">Sanal (ayna)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay etkin</string>
+    <string name="sysinfo_svc_mirror_sub">pidof izleniyor · 500 ms</string>
+    <string name="sysinfo_svc_stopped">Durduruldu</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 ulaşılamıyor</string>
 </resources>

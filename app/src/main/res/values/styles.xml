@@ -114,4 +114,63 @@
         <item name="android:src">@drawable/ic_play_arrow</item>
         <item name="android:contentDescription">@null</item>
     </style>
+
+    <!-- ===== v0.9.82 — SysInfo M3 redesign ===== -->
+    <style name="SysInfoSectionHead">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.10</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+
+    <style name="SysInfoOverviewTile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:background">@drawable/bg_diag_highlight_card</item>
+    </style>
+
+    <style name="SysInfoTileLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+
+    <style name="SysInfoTileValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+    </style>
+
+    <style name="SysInfoTileSub">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+
+    <style name="SysInfoListCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="cardBackgroundColor">@color/md_surface_container</item>
+        <item name="cardCornerRadius">14dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="contentPadding">6dp</item>
+    </style>
 </resources>

@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">تم نسخ النتيجة</string>
     <string name="diag_reset_cluster_confirm_title">إعادة تعيين تكوين العنقود</string>
     <string name="diag_reset_cluster_confirm_msg">سيؤدي هذا إلى إيقاف ClusterService وإغلاق الإسقاط (sendInfo 18 + 0) وإعادة إنشاء الخدمة. هل تريد المتابعة؟</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">حفظ</string>
+    <string name="sysinfo_btn_share">مشاركة</string>
+    <string name="sysinfo_btn_regen">إعادة التوليد</string>
+    <string name="sysinfo_section_overview">نظرة عامة</string>
+    <string name="sysinfo_section_displays">الشاشات المكتشفة</string>
+    <string name="sysinfo_section_services">الخدمات</string>
+    <string name="sysinfo_section_full_report">التقرير الكامل</string>
+    <string name="sysinfo_tile_vehicle">المركبة</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">وقت التشغيل</string>
+    <string name="sysinfo_tile_uptime_since">منذ %1$s</string>
+    <string name="sysinfo_disp_main">الرئيسية</string>
+    <string name="sysinfo_disp_cluster">العنقود</string>
+    <string name="sysinfo_disp_virtual">افتراضية (مرآة)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay نشط</string>
+    <string name="sysinfo_svc_mirror_sub">يراقب pidof · 500 مللي ثانية</string>
+    <string name="sysinfo_svc_stopped">متوقف</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 غير متاح</string>
 </resources>

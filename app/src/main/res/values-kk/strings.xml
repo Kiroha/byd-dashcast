@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">Нәтиже көшірілді</string>
     <string name="diag_reset_cluster_confirm_title">Кластер баптауын қалпына келтіру</string>
     <string name="diag_reset_cluster_confirm_msg">Бұл ClusterService тоқтатады, проекцияны (sendInfo 18 + 0) жабады және қызметті қайта жасайды. Жалғастырылсын ба?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Сақтау</string>
+    <string name="sysinfo_btn_share">Бөлісу</string>
+    <string name="sysinfo_btn_regen">Қайта жасау</string>
+    <string name="sysinfo_section_overview">Шолу</string>
+    <string name="sysinfo_section_displays">Анықталған экрандар</string>
+    <string name="sysinfo_section_services">Қызметтер</string>
+    <string name="sysinfo_section_full_report">Толық есеп</string>
+    <string name="sysinfo_tile_vehicle">Көлік</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Жұмыс уақыты</string>
+    <string name="sysinfo_tile_uptime_since">%1$s бастап</string>
+    <string name="sysinfo_disp_main">Негізгі</string>
+    <string name="sysinfo_disp_cluster">Кластер</string>
+    <string name="sysinfo_disp_virtual">Виртуалды (айна)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay белсенді</string>
+    <string name="sysinfo_svc_mirror_sub">pidof бақылауда · 500 мс</string>
+    <string name="sysinfo_svc_stopped">Тоқтатылды</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 қолжетімсіз</string>
 </resources>

@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">Natija nusxalandi</string>
     <string name="diag_reset_cluster_confirm_title">Klaster sozlamalarini tiklash</string>
     <string name="diag_reset_cluster_confirm_msg">Bu ClusterService\'ni to\'xtatadi, proyeksiyani (sendInfo 18 + 0) yopadi va xizmatni qayta yaratadi. Davom etilsinmi?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Saqlash</string>
+    <string name="sysinfo_btn_share">Ulashish</string>
+    <string name="sysinfo_btn_regen">Qayta yaratish</string>
+    <string name="sysinfo_section_overview">Umumiy ko‘rinish</string>
+    <string name="sysinfo_section_displays">Aniqlangan ekranlar</string>
+    <string name="sysinfo_section_services">Xizmatlar</string>
+    <string name="sysinfo_section_full_report">To‘liq hisobot</string>
+    <string name="sysinfo_tile_vehicle">Transport</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Ish vaqti</string>
+    <string name="sysinfo_tile_uptime_since">%1$s dan beri</string>
+    <string name="sysinfo_disp_main">Asosiy</string>
+    <string name="sysinfo_disp_cluster">Klaster</string>
+    <string name="sysinfo_disp_virtual">Virtual (oyna)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay faol</string>
+    <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
+    <string name="sysinfo_svc_stopped">To‘xtatilgan</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 ishlamayapti</string>
 </resources>

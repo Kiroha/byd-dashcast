@@ -312,4 +312,28 @@
     <string name="diag_toast_copied">Resultado copiado</string>
     <string name="diag_reset_cluster_confirm_title">Restablecer configuración cluster</string>
     <string name="diag_reset_cluster_confirm_msg">Esto detendrá ClusterService, cerrará la proyección (sendInfo 18 + 0) y recreará el servicio. ¿Continuar?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Guardar</string>
+    <string name="sysinfo_btn_share">Compartir</string>
+    <string name="sysinfo_btn_regen">Regenerar</string>
+    <string name="sysinfo_section_overview">Visión general</string>
+    <string name="sysinfo_section_displays">Pantallas detectadas</string>
+    <string name="sysinfo_section_services">Servicios</string>
+    <string name="sysinfo_section_full_report">Informe completo</string>
+    <string name="sysinfo_tile_vehicle">Vehículo</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Tiempo activo</string>
+    <string name="sysinfo_tile_uptime_since">Desde %1$s</string>
+    <string name="sysinfo_disp_main">Principal</string>
+    <string name="sysinfo_disp_cluster">Cluster</string>
+    <string name="sysinfo_disp_virtual">Virtual (espejo)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay activo</string>
+    <string name="sysinfo_svc_mirror_sub">Observa pidof · 500 ms</string>
+    <string name="sysinfo_svc_stopped">Detenido</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 inaccesible</string>
 </resources>

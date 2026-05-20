@@ -314,4 +314,28 @@
     <string name="diag_toast_copied">Ergebnis kopiert</string>
     <string name="diag_reset_cluster_confirm_title">Cluster-Konfiguration zurücksetzen</string>
     <string name="diag_reset_cluster_confirm_msg">Dies stoppt ClusterService, schließt die Projektion (sendInfo 18 + 0) und erstellt den Dienst neu. Fortfahren?</string>
+
+    <!-- v0.9.82 — SysInfo M3 redesign -->
+    <string name="sysinfo_btn_save">Speichern</string>
+    <string name="sysinfo_btn_share">Teilen</string>
+    <string name="sysinfo_btn_regen">Neu generieren</string>
+    <string name="sysinfo_section_overview">Übersicht</string>
+    <string name="sysinfo_section_displays">Erkannte Bildschirme</string>
+    <string name="sysinfo_section_services">Dienste</string>
+    <string name="sysinfo_section_full_report">Vollständiger Bericht</string>
+    <string name="sysinfo_tile_vehicle">Fahrzeug</string>
+    <string name="sysinfo_tile_android">Android</string>
+    <string name="sysinfo_tile_dashcast">DashCast</string>
+    <string name="sysinfo_tile_uptime">Laufzeit</string>
+    <string name="sysinfo_tile_uptime_since">Seit %1$s</string>
+    <string name="sysinfo_disp_main">Hauptbildschirm</string>
+    <string name="sysinfo_disp_cluster">Cluster</string>
+    <string name="sysinfo_disp_virtual">Virtuell (Spiegel)</string>
+    <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_svc_run">RUN</string>
+    <string name="sysinfo_svc_off">OFF</string>
+    <string name="sysinfo_svc_cluster_sub">VirtualDisplay aktiv</string>
+    <string name="sysinfo_svc_mirror_sub">Beobachtet pidof · 500 ms</string>
+    <string name="sysinfo_svc_stopped">Gestoppt</string>
+    <string name="sysinfo_svc_adb_unreachable">5555 nicht erreichbar</string>
 </resources>

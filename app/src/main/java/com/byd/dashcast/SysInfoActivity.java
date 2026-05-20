@@ -93,6 +93,15 @@ public class SysInfoActivity extends AppCompatActivity {
                 }
             }
         });
+
+        // ─── v0.9.82 — M3 redesign wiring ───
+        wireSysInfoNavRail();
+        populateOverviewTiles();
+        populateDisplaysList();
+        populateServicesList();
+        // Auto-generate the full mono report on first open so the right column
+        // is filled immediately (Régénérer button is then for refreshing).
+        startGenerate();
     }
 
     @Override
@@ -464,5 +473,156 @@ public class SysInfoActivity extends AppCompatActivity {
             }
         }
         return sb.toString();
+    }
+
+    // =========================================================================
+    // v0.9.82 — M3 redesign: nav rail + overview tiles + lists
+    // =========================================================================
+
+    private void wireSysInfoNavRail() {
+        View navApps     = findViewById(R.id.nav_apps_sys);
+        View navSettings = findViewById(R.id.nav_settings_sys);
+        View navDiag     = findViewById(R.id.nav_diag_sys);
+        View navLog      = findViewById(R.id.nav_log_sys);
+        View navLogo     = findViewById(R.id.iv_nav_logo_sys);
+        if (navApps != null)     navApps.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        if (navSettings != null) navSettings.setOnClickListener(v -> { startActivity(new android.content.Intent(this, SettingsActivity.class)); finish(); });
+        if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
+        if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
+        if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+    }
+
+    private void populateOverviewTiles() {
+        // Vehicle
+        TextView vVal = findViewById(R.id.tv_tile_vehicle_value);
+        TextView vSub = findViewById(R.id.tv_tile_vehicle_sub);
+        if (vVal != null) vVal.setText(Build.MANUFACTURER + " " + Build.MODEL);
+        if (vSub != null) vSub.setText(Build.BRAND + " · " + Build.PRODUCT);
+
+        // Android
+        TextView aVal = findViewById(R.id.tv_tile_android_value);
+        TextView aSub = findViewById(R.id.tv_tile_android_sub);
+        if (aVal != null) aVal.setText(Build.VERSION.RELEASE + " · API " + Build.VERSION.SDK_INT);
+        if (aSub != null) aSub.setText(Build.HARDWARE + " · " + Build.SUPPORTED_ABIS[0]);
+
+        // DashCast
+        TextView dVal = findViewById(R.id.tv_tile_dashcast_value);
+        TextView dSub = findViewById(R.id.tv_tile_dashcast_sub);
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (dVal != null) dVal.setText("v" + pi.versionName);
+            int code;
+            if (Build.VERSION.SDK_INT >= 28) code = (int) pi.getLongVersionCode();
+            else code = pi.versionCode;
+            if (dSub != null) dSub.setText("build " + code);
+        } catch (PackageManager.NameNotFoundException e) {
+            if (dVal != null) dVal.setText("?");
+            if (dSub != null) dSub.setText("");
+        }
+
+        // Uptime
+        long uptimeMs = android.os.SystemClock.elapsedRealtime();
+        long sinceMs  = System.currentTimeMillis() - uptimeMs;
+        TextView uVal = findViewById(R.id.tv_tile_uptime_value);
+        TextView uSub = findViewById(R.id.tv_tile_uptime_sub);
+        if (uVal != null) uVal.setText(formatUptime(uptimeMs));
+        if (uSub != null) uSub.setText(getString(R.string.sysinfo_tile_uptime_since,
+                new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(sinceMs))));
+    }
+
+    private static String formatUptime(long ms) {
+        long s = ms / 1000;
+        long h = s / 3600;
+        long m = (s % 3600) / 60;
+        if (h > 0) return h + "h " + m + "min";
+        return m + "min";
+    }
+
+    private void populateDisplaysList() {
+        android.widget.LinearLayout container = findViewById(R.id.ll_displays_list);
+        if (container == null) return;
+        container.removeAllViews();
+        DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        Display[] displays = dm.getDisplays();
+        android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
+        for (Display d : displays) {
+            View row = inf.inflate(R.layout.row_sysinfo, container, false);
+            android.widget.ImageView icon  = row.findViewById(R.id.row_icon);
+            TextView headline              = row.findViewById(R.id.row_headline);
+            TextView support               = row.findViewById(R.id.row_support);
+            TextView badge                 = row.findViewById(R.id.row_badge);
+            int id = d.getDisplayId();
+            String name = d.getName() != null ? d.getName() : "?";
+            String label;
+            int iconRes;
+            if (id == 0) { label = getString(R.string.sysinfo_disp_main);     iconRes = R.drawable.ic_tv; }
+            else if (name.toLowerCase(Locale.ROOT).contains("virtual") ||
+                     name.toLowerCase(Locale.ROOT).contains("mirror"))
+                  { label = getString(R.string.sysinfo_disp_virtual); iconRes = R.drawable.ic_screen_share; }
+            else  { label = getString(R.string.sysinfo_disp_cluster); iconRes = R.drawable.ic_dashboard; }
+            headline.setText(getString(R.string.sysinfo_disp_row_headline, id, label));
+            support.setText(getDisplaySize(d) + " · " + name);
+            icon.setImageResource(iconRes);
+            badge.setText("●");
+            container.addView(row);
+        }
+    }
+
+    private void populateServicesList() {
+        android.widget.LinearLayout container = findViewById(R.id.ll_services_list);
+        if (container == null) return;
+        container.removeAllViews();
+        android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
+
+        // ClusterService
+        boolean clusterRunning = isServiceRunning(ClusterService.class);
+        addServiceRow(inf, container, "ClusterService",
+                clusterRunning ? getString(R.string.sysinfo_svc_cluster_sub) : getString(R.string.sysinfo_svc_stopped),
+                clusterRunning);
+
+        // MirrorDaemon (best-effort: enabled iff cluster is up)
+        addServiceRow(inf, container, "MirrorDaemon",
+                clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub) : getString(R.string.sysinfo_svc_stopped),
+                clusterRunning);
+
+        // ADB local — try a quick port check on 127.0.0.1:5555
+        boolean adbOk = isPortOpen("127.0.0.1", 5555, 200);
+        addServiceRow(inf, container, "AdbLocalClient",
+                adbOk ? "127.0.0.1:5555" : getString(R.string.sysinfo_svc_adb_unreachable),
+                adbOk);
+    }
+
+    private void addServiceRow(android.view.LayoutInflater inf,
+                               android.widget.LinearLayout container,
+                               String name, String sub, boolean running) {
+        View row = inf.inflate(R.layout.row_sysinfo, container, false);
+        ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
+        ((TextView) row.findViewById(R.id.row_headline)).setText(name);
+        ((TextView) row.findViewById(R.id.row_support)).setText(sub);
+        TextView badge = row.findViewById(R.id.row_badge);
+        if (running) {
+            badge.setText(getString(R.string.sysinfo_svc_run));
+            badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
+        } else {
+            badge.setText(getString(R.string.sysinfo_svc_off));
+            badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err));
+        }
+        container.addView(row);
+    }
+
+    @SuppressWarnings("deprecation")
+    private boolean isServiceRunning(Class<?> svcClass) {
+        android.app.ActivityManager am =
+                (android.app.ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (am == null) return false;
+        try {
+            for (android.app.ActivityManager.RunningServiceInfo si :
+                    am.getRunningServices(Integer.MAX_VALUE)) {
+                if (svcClass.getName().equals(si.service.getClassName())) return true;
+            }
+        } catch (Throwable t) {
+            // ActivityManager.getRunningServices() returns only own-process services since API 26.
+        }
+        return false;
     }
 }
