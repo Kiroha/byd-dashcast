@@ -1,300 +1,323 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    SettingsActivity — Material 3 migration (phase 3).
+    All widget IDs preserved (rg_cluster_type, rb_88/123/1025, sb_inset_h/v,
+    tv_inset_h/v_value, cb_*, btn_apply_overscan/reset_overscan, tv_overscan_result,
+    ll_sliders_mode) so SettingsActivity.java keeps working without changes.
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/bg_main">
+    android:background="?attr/colorSurface">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="16dp"
         android:clipToPadding="false">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/settings_header"
-            android:textSize="26sp"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="20dp"
             android:gravity="center_horizontal"/>
 
         <!-- ══ SECTION 1 : TYPE DE CLUSTER ══ -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DashCast.Card.Filled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
             android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_cluster_type_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
-
-            <RadioGroup
-                android:id="@+id/rg_cluster_type"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <RadioButton
-                    android:id="@+id/rb_88"
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_88"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
+                    android:text="@string/settings_cluster_type_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="10dp"/>
 
-                <RadioButton
-                    android:id="@+id/rb_123"
+                <RadioGroup
+                    android:id="@+id/rg_cluster_type"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_123"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
+                    android:orientation="vertical">
 
-                <RadioButton
-                    android:id="@+id/rb_1025"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_1025"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_88"
+                        style="@style/Widget.DashCast.RadioButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/cluster_label_88"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:padding="8dp"/>
 
-            </RadioGroup>
-        </LinearLayout>
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_123"
+                        style="@style/Widget.DashCast.RadioButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/cluster_label_123"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:padding="8dp"/>
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_1025"
+                        style="@style/Widget.DashCast.RadioButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/cluster_label_1025"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:padding="8dp"/>
+
+                </RadioGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- ══ SECTION 2 : MARGES OVERSCAN ══ -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DashCast.Card.Filled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
             android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_overscan_section_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="6dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_overscan_desc"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_visual_mode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/visual_overscan_use_visual_mode"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_boot_auto_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/setting_boot_auto_start"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_show_category_filters"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_show_category_filters"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_reconnect_popup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_reconnect_popup"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <!-- Bloc Sliders Classique -->
             <LinearLayout
-                android:id="@+id/ll_sliders_mode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-                
-                <!-- Gauche / Droite -->
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_overscan_section_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_overscan_desc"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:layout_marginBottom="12dp"/>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_visual_mode"
+                    style="@style/Widget.DashCast.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/visual_overscan_use_visual_mode"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_boot_auto_start"
+                    style="@style/Widget.DashCast.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/setting_boot_auto_start"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_show_category_filters"
+                    style="@style/Widget.DashCast.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_show_category_filters"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_reconnect_popup"
+                    style="@style/Widget.DashCast.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_reconnect_popup"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Bloc Sliders Classique -->
+                <LinearLayout
+                    android:id="@+id/ll_sliders_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Gauche / Droite -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_inset_h_label"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurface"/>
+
+                        <TextView
+                            android:id="@+id/tv_inset_h_value"
+                            android:layout_width="60dp"
+                            android:layout_height="wrap_content"
+                            android:text="80 px"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorPrimary"
+                            android:gravity="end"/>
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/sb_inset_h"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="200"
+                        android:progress="80"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Haut / Bas -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_inset_v_label"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurface"/>
+
+                        <TextView
+                            android:id="@+id/tv_inset_v_value"
+                            android:layout_width="60dp"
+                            android:layout_height="wrap_content"
+                            android:text="50 px"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorPrimary"
+                            android:gravity="end"/>
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/sb_inset_v"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="200"
+                        android:progress="50"
+                        android:layout_marginBottom="20dp"/>
+                </LinearLayout>
+
+                <!-- Mode Visuel -->
+                <include layout="@layout/layout_visual_overscan" />
+
+                <!-- Boutons -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="4dp">
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_apply_overscan"
+                        style="@style/Widget.DashCast.Button.Filled"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_btn_apply_overscan"
+                        android:layout_marginEnd="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_reset_overscan"
+                        style="@style/Widget.DashCast.Button.Tonal"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_btn_reset_overscan"/>
+                </LinearLayout>
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:id="@+id/tv_overscan_result"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_inset_h_label"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_primary"/>
+                    android:text=""
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:fontFamily="monospace"
+                    android:background="@color/md_surface_container_highest"
+                    android:padding="12dp"
+                    android:visibility="gone"/>
 
-                <TextView
-                    android:id="@+id/tv_inset_h_value"
-                    android:layout_width="60dp"
-                    android:layout_height="wrap_content"
-                    android:text="80 px"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_accent"
-                    android:textStyle="bold"
-                    android:gravity="end"/>
             </LinearLayout>
-
-            <SeekBar
-                android:id="@+id/sb_inset_h"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="200"
-                android:progress="80"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Haut / Bas -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_inset_v_label"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_primary"/>
-
-                <TextView
-                    android:id="@+id/tv_inset_v_value"
-                    android:layout_width="60dp"
-                    android:layout_height="wrap_content"
-                    android:text="50 px"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_accent"
-                    android:textStyle="bold"
-                    android:gravity="end"/>
-            </LinearLayout>
-
-            <SeekBar
-                android:id="@+id/sb_inset_v"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="200"
-                android:progress="50"
-                android:layout_marginBottom="20dp"/>
-            </LinearLayout>
-
-            <!-- Mode Visuel -->
-            <include layout="@layout/layout_visual_overscan" />
-
-            <!-- Boutons -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
-
-                <Button
-                    android:id="@+id/btn_apply_overscan"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_btn_apply_overscan"
-                    android:backgroundTint="#1565C0"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="6dp"/>
-
-                <Button
-                    android:id="@+id/btn_reset_overscan"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_btn_reset_overscan"
-                    android:backgroundTint="#607D8B"
-                    android:textColor="@color/text_primary"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_overscan_result"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                android:background="@color/bg_button_secondary"
-                android:padding="8dp"
-                android:visibility="gone"/>
-
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- ══ SECTION 3 : MISES À JOUR ══ -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DashCast.Card.Filled"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
             android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_updates_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
+                android:orientation="vertical">
 
-            <CheckBox
-                android:id="@+id/cb_prerelease"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_prerelease_label"
-                android:textSize="14sp"
-                android:padding="6dp"/>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_updates_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="10dp"/>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_prerelease_hint"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="2dp"
-                android:layout_marginStart="36dp"/>
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_prerelease"
+                    style="@style/Widget.DashCast.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_prerelease_label"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnSurface"
+                    android:padding="8dp"/>
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_prerelease_hint"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="44dp"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>
