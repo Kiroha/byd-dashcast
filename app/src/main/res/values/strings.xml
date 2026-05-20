@@ -4,6 +4,7 @@
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
+    <string name="welcome_continue_without_change">Continuer sans changer</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
     <string name="btn_lang_de">🇩🇪  Deutsch</string>
@@ -259,4 +260,19 @@
     <string name="usage_title">Temps d\'utilisation sur le cluster</string>
     <string name="usage_empty">Aucune donnée d\'utilisation</string>
     <string name="usage_reset">Réinitialiser</string>
+
+    <!-- Settings page (M3 redesign) -->
+    <string name="settings_cluster_88_desc">Configuration par défaut — recommandé</string>
+    <string name="settings_cluster_123_desc">Seal EU — haut de gamme</string>
+    <string name="settings_cluster_1025_desc">Expérimental</string>
+    <string name="settings_section_behavior">Comportement</string>
+    <string name="settings_boot_auto_start_support">Active le mirror au démarrage véhicule</string>
+    <string name="settings_reconnect_popup_support">Restaure si déconnecté inopinément</string>
+    <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
+    <string name="settings_section_about">À propos</string>
+    <string name="settings_about_version_label">Version</string>
+    <string name="settings_check_update_title">Rechercher une mise à jour</string>
+    <string name="settings_check_update_support">Vérifie si une nouvelle version est disponible</string>
+    <string name="settings_check_update_button">Vérifier</string>
+    <string name="settings_source_code_title">Code source</string>
 </resources>

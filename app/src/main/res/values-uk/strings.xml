@@ -4,6 +4,7 @@
     <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Контролер панелі приладів</string>
     <string name="welcome_select_lang">Виберіть мову\nPlease select your language</string>
+    <string name="welcome_continue_without_change">Продовжити без змін</string>
     <string name="btn_lang_fr">🇫🇷  Français</string>
     <string name="btn_lang_en">🇬🇧  English</string>
     <string name="btn_lang_de">🇩🇪  Deutsch</string>
@@ -244,4 +245,19 @@
     <string name="usage_title">Час використання на кластері</string>
     <string name="usage_empty">Немає даних використання</string>
     <string name="usage_reset">Скинути</string>
+
+    <!-- Settings page (M3 redesign) -->
+    <string name="settings_cluster_88_desc">Конфігурація за замовчуванням — рекомендована</string>
+    <string name="settings_cluster_123_desc">Seal EU — преміум</string>
+    <string name="settings_cluster_1025_desc">Експериментально</string>
+    <string name="settings_section_behavior">Поведінка</string>
+    <string name="settings_boot_auto_start_support">Вмикати дзеркало при запуску автомобіля</string>
+    <string name="settings_reconnect_popup_support">Відновлювати у разі несподіваного відключення</string>
+    <string name="settings_category_filters_support">Показувати чипи в меню додатків</string>
+    <string name="settings_section_about">Про застосунок</string>
+    <string name="settings_about_version_label">Версія</string>
+    <string name="settings_check_update_title">Перевірити оновлення</string>
+    <string name="settings_check_update_support">Перевіряє наявність нової версії</string>
+    <string name="settings_check_update_button">Перевірити</string>
+    <string name="settings_source_code_title">Сирцевий код</string>
 </resources>

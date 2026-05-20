@@ -207,16 +207,14 @@
         <item name="android:paddingEnd">8dp</item>
     </style>
 
-    <!-- Leading icon (24dp tinted) -->
+    <!-- Leading icon (24dp tinted) — tint MUST be applied inline on each
+         ImageView because theme attribute references via style do not always
+         resolve reliably on the BYD device. -->
     <style name="Widget.DashCast.ListItem.Leading">
         <item name="android:layout_width">28dp</item>
         <item name="android:layout_height">28dp</item>
         <item name="android:layout_marginEnd">16dp</item>
         <item name="android:layout_gravity">center_vertical</item>
-        <!-- Tint at the ImageView level so the runtime theme attribute is
-             reliably resolved by AppCompat (theme refs inside vector drawables
-             are not honored on all Android versions). -->
-        <item name="android:tint">?attr/colorOnSurfaceVariant</item>
         <item name="android:scaleType">fitCenter</item>
     </style>
 

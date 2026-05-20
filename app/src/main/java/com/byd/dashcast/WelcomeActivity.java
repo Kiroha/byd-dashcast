@@ -55,6 +55,18 @@ public class WelcomeActivity extends AppCompatActivity {
         setLanguageButton(R.id.btn_lang_uz, LocaleHelper.LANG_UZ);
         setLanguageButton(R.id.btn_lang_kk, LocaleHelper.LANG_KK);
         setLanguageButton(R.id.btn_lang_be, LocaleHelper.LANG_BE);
+
+        // "Continue without changing" — keep the current locale (no setLocale call),
+        // mark setup as done so we don't show the welcome screen again, go to MainActivity.
+        View btnContinue = findViewById(R.id.btn_continue_without_change);
+        if (btnContinue != null) {
+            btnContinue.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    LocaleHelper.markSetupDone(WelcomeActivity.this);
+                    startMainActivity();
+                }
+            });
+        }
     }
 
     private void setLanguageButton(int buttonId, final String lang) {
