@@ -520,6 +520,7 @@
                 android:layout_weight="1"
                 android:layout_height="match_parent"
                 android:scrollbars="none"
+                android:fillViewport="true"
                 android:clipToPadding="false">
 
                 <LinearLayout
