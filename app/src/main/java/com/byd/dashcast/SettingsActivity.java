@@ -250,6 +250,17 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
+        // Row click delegation — RadioButtons are non-clickable (clickable=false in XML),
+        // and they live INSIDE LinearLayout rows (not direct RadioGroup children), so neither
+        // the RadioButton nor the RadioGroup auto-check mechanism fires on tap. We forward
+        // the row click to RadioGroup.check(rb_id), which itself triggers the listener above.
+        View row88   = findViewById(R.id.row_cluster_88);
+        View row123  = findViewById(R.id.row_cluster_123);
+        View row1025 = findViewById(R.id.row_cluster_1025);
+        if (row88   != null) row88.setOnClickListener(v   -> rgClusterType.check(R.id.rb_88));
+        if (row123  != null) row123.setOnClickListener(v  -> rgClusterType.check(R.id.rb_123));
+        if (row1025 != null) row1025.setOnClickListener(v -> rgClusterType.check(R.id.rb_1025));
+
         // H slider
         sbInsetH.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int value, boolean fromUser) {
