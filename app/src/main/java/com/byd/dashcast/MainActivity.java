@@ -1,5 +1,6 @@
 package com.byd.dashcast;
 
+import com.byd.dashcast.beta.ShellGateway;
 import android.content.ComponentName;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -567,7 +568,7 @@ public class MainActivity extends AppCompatActivity
                     // findRunningTaskId() calls getRunningTasks() — must run off the main thread.
                     final String pkg = mCurrentDashboardPkg;
                     final ClusterService svc = mClusterService;
-                    AdbLocalClient.executeShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
+                    ShellGateway.execShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
                     new Thread(new Runnable() {
                         @Override public void run() {
                             int taskId = svc.findRunningTaskId(pkg);
@@ -1499,7 +1500,7 @@ public class MainActivity extends AppCompatActivity
         final String clusterPkg = mCurrentDashboardPkg;
         if (clusterPkg == null) return;
 
-        AdbLocalClient.executeShellWithResult(this, "pidof " + clusterPkg,
+        ShellGateway.execShellWithResult(this, "pidof " + clusterPkg,
                 new AdbLocalClient.Callback() {
                     @Override
                     public void onSuccess(String output) {
@@ -1541,7 +1542,7 @@ public class MainActivity extends AppCompatActivity
         final String mainPkg = mMainDisplayPkg;
         if (mainPkg == null) return;
 
-        AdbLocalClient.executeShellWithResult(this, "pidof " + mainPkg,
+        ShellGateway.execShellWithResult(this, "pidof " + mainPkg,
                 new AdbLocalClient.Callback() {
                     @Override
                     public void onSuccess(String output) {
@@ -1646,7 +1647,7 @@ public class MainActivity extends AppCompatActivity
         mScreenshotHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 if (!pkg.equals(mCurrentDashboardPkg)) return; // app changed in the meantime
-                AdbLocalClient.executeShell(MainActivity.this,
+                ShellGateway.execShell(MainActivity.this,
                         "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH + " -d 1");
                 if (mServiceBound && mClusterService != null) {
                     final ClusterService svc = mClusterService;
