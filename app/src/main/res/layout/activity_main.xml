@@ -310,6 +310,7 @@
                         android:layout_weight="1"
                         android:layout_height="match_parent"
                         android:hint="@string/hint_search_apps"
+                        android:importantForAutofill="no"
                         android:background="@android:color/transparent"
                         android:inputType="text"
                         android:imeOptions="actionSearch"
@@ -701,6 +702,7 @@
                             android:layout_height="32dp"
                             android:orientation="horizontal"
                             android:gravity="end|center_vertical"
+                            android:paddingStart="0dp"
                             android:paddingEnd="6dp">
                             <Button
                                 android:id="@+id/btn_panel_toggle"

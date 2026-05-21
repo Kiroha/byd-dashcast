@@ -194,6 +194,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:hint="@string/log_filter_hint"
+                    android:importantForAutofill="no"
                     android:textSize="13sp"
                     android:textColor="@color/md_on_surface"
                     android:textColorHint="@color/md_on_surface_variant"

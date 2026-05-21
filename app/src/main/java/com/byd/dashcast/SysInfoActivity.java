@@ -50,6 +50,17 @@ import java.util.concurrent.Executors;
 @android.annotation.SuppressLint("SetTextI18n")
 public class SysInfoActivity extends AppCompatActivity {
 
+    // Thread-local SimpleDateFormat instances (SDF is not thread-safe; report is built on
+    // a worker thread, uptime tile on the UI thread, so each thread gets its own copy).
+    private static final ThreadLocal<SimpleDateFormat> SDF_REPORT_HEADER =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_FILE_STAMP =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_TIME_HMS =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_TIME_HM =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm", Locale.getDefault()));
+
     private TextView tvReport;
     private ScrollView scrollView;
     private Button btnGenerate;
@@ -164,8 +175,7 @@ public class SysInfoActivity extends AppCompatActivity {
 
             section(sb, "BYD SEAL DIAGNOSTIC REPORT");
             sb.append("Date : ").append(
-                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                            .format(new Date())).append("\n");
+                    SDF_REPORT_HEADER.get().format(new Date())).append("\n");
             sb.append("App  : ").append(getPackageName()).append("\n");
             publishUpdate(sb.toString());
 
@@ -348,7 +358,7 @@ public class SysInfoActivity extends AppCompatActivity {
         if (mReport == null) return;
 
         String filename = "byd_report_"
-                + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date())
+                + SDF_FILE_STAMP.get().format(new Date())
                 + ".txt";
 
         // getExternalFilesDir() = /sdcard/Android/data/com.byd.dashcast/files/
@@ -428,7 +438,7 @@ public class SysInfoActivity extends AppCompatActivity {
         java.util.List<AppLogger.Entry> entries = AppLogger.getEntries();
         sb.append("\n═══ RECENT EVENTS (last ").append(n).append(") ═══\n");
         if (entries.isEmpty()) { sb.append("  (no events yet)\n"); return; }
-        SimpleDateFormat tf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+        SimpleDateFormat tf = SDF_TIME_HMS.get();
         int from = Math.max(0, entries.size() - n);
         for (int i = from; i < entries.size(); i++) {
             AppLogger.Entry e = entries.get(i);
@@ -652,7 +662,7 @@ public class SysInfoActivity extends AppCompatActivity {
         TextView uSub = findViewById(R.id.tv_tile_uptime_sub);
         if (uVal != null) uVal.setText(formatUptime(uptimeMs));
         if (uSub != null) uSub.setText(getString(R.string.sysinfo_tile_uptime_since,
-                new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(sinceMs))));
+                SDF_TIME_HM.get().format(new Date(sinceMs))));
     }
 
     /** Sync best-guess of vehicle name without touching the BYD service (used as instant fallback). */

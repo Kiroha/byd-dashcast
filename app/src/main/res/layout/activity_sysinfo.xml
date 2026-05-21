@@ -196,6 +196,7 @@
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:fillViewport="true"
+                    android:paddingStart="0dp"
                     android:paddingEnd="10dp">
 
                     <LinearLayout
