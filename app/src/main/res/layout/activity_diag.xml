@@ -26,8 +26,6 @@
             android:id="@+id/iv_nav_logo_diag"
             android:layout_width="48dp" android:layout_height="48dp"
             android:src="@mipmap/ic_launcher"
-            android:padding="10dp"
-            android:background="@drawable/bg_pulse_dot"
             android:contentDescription="@string/app_name"
             android:clickable="true" android:focusable="true"/>
 
