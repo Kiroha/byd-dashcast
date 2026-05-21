@@ -2,9 +2,6 @@
 <resources>
     <!-- App Backgrounds (NIGHT MODE) -->
     <color name="bg_main">#090C10</color>
-    <color name="bg_top_bar">#161B22</color>
-    <color name="bg_card">#111111</color>
-    <color name="bg_dialog">#1C2128</color>
     <color name="bg_button_secondary">#333333</color>
 
     <!-- Text (NIGHT MODE) -->
@@ -27,12 +24,6 @@
     <color name="auto_launch_text">#AAAAAA</color>
 
     <!-- Log / Diag backgrounds -->
-    <color name="bg_log">#1A1A1A</color>
-    <color name="bg_diag_neutral">#111A1A</color>
-    <color name="bg_diag_success">#1A2A1A</color>
-    <color name="bg_diag_error">#2A1A1A</color>
-    <color name="bg_diag_info">#1A1A2A</color>
-
     <!-- ============================================ -->
     <!-- Material 3 tokens (DARK scheme) — from mockup_m3.html -->
     <!-- Source color #1565C0 (BYD blue) -->
@@ -66,10 +57,6 @@
     <color name="md_surface_container">#1D2026</color>
     <color name="md_surface_container_high">#272A30</color>
     <color name="md_surface_container_highest">#32353B</color>
-    <color name="md_success">#7DDB94</color>
-    <color name="md_success_container">#1F4D2C</color>
-    <color name="md_warn">#FFB870</color>
-    <color name="md_warn_container">#5C3A00</color>
     <!-- v0.9.81 — Diag status pill colors -->
     <color name="md_status_ok">#7DDB94</color>
     <color name="md_status_warn">#FFB870</color>

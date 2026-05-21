@@ -1,72 +1,32 @@
 <script setup>
 import { computed, nextTick, watch } from 'vue';
-import { languages } from '../locales';
 
 const props = defineProps({
-  t: {
-    type: Object,
-    required: true,
-  },
-  section: {
-    type: String,
-    default: '',
-  },
+  t: { type: Object, required: true },
+  section: { type: String, default: '' },
 });
 
-const appStyles = ['#E3F2FD', '#FCE4EC', '#E8F5E9', '#FFF3E0'];
-const appIcons = ['🗺', '▶️', '🎵', '🧭'];
-const logClasses = ['log-i', 'log-i', 'log-d', 'log-w', 'log-i'];
+const mockupBase = computed(() => `mockup_m3.html`);
 
-const welcomeHintLines = computed(() => props.t.firstLaunch.welcomeHint.split('\n'));
-const stripAnnotation = (s) => (s || '').replace(/^[①-⑩]\s*/, '').trim();
-const stripEmoji = (s) => (s || '').replace(/^[^\p{L}\d]+/u, '').trim();
-
-const mainStatusText = computed(() => stripAnnotation(props.t.main.status));
-const mainListTitle = computed(() => stripAnnotation(props.t.main.listTitle));
-const mainActivateButton = computed(() => stripAnnotation(props.t.main.buttons[0]));
-const mainStopButton = computed(() => stripAnnotation(props.t.main.buttons[1]));
-const mainCloseButton = computed(() => '✕');
-const projectionButtons = computed(() => props.t.projection.buttons.slice(0, 3));
-const projectionMainButton = computed(() => props.t.projection.buttons[5] || '');
-const projectionCloseButton = computed(() => props.t.projection.buttons[6] || '✕');
-const projectionClusterButton = computed(() => props.t.projection.buttons[7] || '');
-const splitButton = computed(() => props.t.projection.buttons.at(-2) || '');
-const hideButton = computed(() => props.t.projection.buttons.at(-1) || '');
-const resizeButton = computed(() => {
-  const btn = props.t.projection.buttons.at(-3);
-  return (btn === '✕' || !btn) ? 'Ajuster' : stripEmoji(btn);
-});
-const resetRowIndex = computed(() => Math.max(0, props.t.stopping.table.rows.length - 1));
-
-function sectionHref(index) {
-  return `#/${props.t.code}/s${index + 1}`;
+function sectionHref(idx) {
+  return `#/${props.t.code}/s${idx + 1}`;
 }
 
-function markerClass(annotation) {
-  return ['ann-num', annotation.tone].filter(Boolean);
-}
-
-function scrollToSectionId(sectionId) {
-  const target = document.getElementById(sectionId);
+function scrollToId(id) {
+  const target = document.getElementById(id);
   if (!target) return;
-
-  const headerOffset = document.querySelector('.language-bar')?.getBoundingClientRect().height || 0;
-  const top = target.getBoundingClientRect().top + window.scrollY - headerOffset - 12;
+  const offset = document.querySelector('.language-bar')?.getBoundingClientRect().height || 0;
+  const top = target.getBoundingClientRect().top + window.scrollY - offset - 12;
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
-function scrollToSection(index) {
-  scrollToSectionId(`s${index + 1}`);
-}
-
-function navigateToSection(index) {
-  const nextHash = `/${props.t.code}/s${index + 1}`;
-  if (window.location.hash === `#${nextHash}`) {
-    scrollToSection(index);
+function navigateToSection(idx) {
+  const next = `/${props.t.code}/s${idx + 1}`;
+  if (window.location.hash === `#${next}`) {
+    scrollToId(`s${idx + 1}`);
     return;
   }
-
-  window.location.hash = nextHash;
+  window.location.hash = next;
 }
 
 watch(
@@ -74,7 +34,7 @@ watch(
   async ([, section]) => {
     if (!section) return;
     await nextTick();
-    scrollToSectionId(section);
+    scrollToId(section);
   },
   { immediate: true },
 );
@@ -91,331 +51,87 @@ watch(
     <div class="toc">
       <h2>{{ t.tocTitle }}</h2>
       <ol>
-        <li v-for="(title, index) in t.sections" :key="title">
-          <a class="toc-link" :href="sectionHref(index)" @click.prevent="navigateToSection(index)">
-            {{ title.replace(/^\d+\.\s*/, '') }}
+        <li>
+          <a class="toc-link" href="#intro" @click.prevent="scrollToId('intro')">
+            {{ t.intro.title.replace(/^\d+\.\s*/, '') }}
+          </a>
+        </li>
+        <li v-for="(s, idx) in t.sections" :key="s.id">
+          <a class="toc-link" :href="sectionHref(idx)" @click.prevent="navigateToSection(idx)">
+            {{ s.title.replace(/^\d+\.\s*/, '') }}
+          </a>
+        </li>
+        <li>
+          <a class="toc-link" href="#faq" @click.prevent="scrollToId('faq')">
+            {{ t.faq.title.replace(/^\d+\.\s*/, '') }}
           </a>
         </li>
       </ol>
     </div>
 
-    <h2 id="s1" class="section-heading">
-      <span>{{ t.overview.title }}</span>
-      <a class="section-anchor" :href="sectionHref(0)" :aria-label="`Link to ${t.overview.title}`" @click.prevent="navigateToSection(0)">#</a>
+    <h2 id="intro" class="section-heading">
+      <span>{{ t.intro.title }}</span>
+      <a class="section-anchor" href="#intro" @click.prevent="scrollToId('intro')">#</a>
     </h2>
-    <p>{{ t.overview.text }}</p>
+    <p>{{ t.intro.lead }}</p>
     <ul>
-      <li v-for="item in t.overview.bullets" :key="item">{{ item }}</li>
+      <li v-for="b in t.intro.bullets" :key="b">{{ b }}</li>
     </ul>
-    <div class="note">{{ t.overview.note }}</div>
+    <div class="note" v-if="t.intro.note">{{ t.intro.note }}</div>
 
-    <h2 id="s2" class="section-heading">
-      <span>{{ t.firstLaunch.title }}</span>
-      <a class="section-anchor" :href="sectionHref(1)" :aria-label="`Link to ${t.firstLaunch.title}`" @click.prevent="navigateToSection(1)">#</a>
-    </h2>
-    <p>{{ t.firstLaunch.text }}</p>
-    <div class="device-wrap">
-      <div class="device">
-        <div class="screen">
-          <div class="welcome-screen">
-            <div class="wc-title">DashCast</div>
-            <div class="wc-sub">{{ t.firstLaunch.welcomeSubtitle }}</div>
-            <div class="wc-hint">
-              <template v-for="(line, index) in welcomeHintLines" :key="line">
-                <br v-if="index > 0">
-                {{ line }}
-              </template>
-            </div>
-            <div class="lang-grid">
-              <button
-                v-for="language in languages"
-                :key="language.code"
-                :class="['lang-btn', { selected: language.code === t.code }]"
-                type="button"
-              >
-                {{ language.flag }}&nbsp;{{ language.name }}
-              </button>
-            </div>
+    <template v-for="(s, idx) in t.sections" :key="s.id">
+      <h2 :id="`s${idx + 1}`" class="section-heading">
+        <span>{{ s.title }}</span>
+        <a class="section-anchor" :href="sectionHref(idx)" @click.prevent="navigateToSection(idx)">#</a>
+      </h2>
+      <p class="lead">{{ s.lead }}</p>
+
+      <div class="mockup-frame">
+        <iframe
+          :src="`${mockupBase}#${s.screen}`"
+          :title="s.title"
+          loading="lazy"
+        ></iframe>
+        <a class="mockup-link" :href="`${mockupBase}#${s.screen}`" target="_blank" rel="noopener">
+          {{ s.mockupLabel }} ↗
+        </a>
+      </div>
+
+      <template v-if="s.features && s.features.length">
+        <h3>{{ s.featuresTitle }}</h3>
+        <div class="feature-grid">
+          <div v-for="f in s.features" :key="f.title" class="feature-card">
+            <div class="feature-title">{{ f.title }}</div>
+            <div class="feature-text">{{ f.text }}</div>
           </div>
         </div>
-      </div>
-    </div>
-    <p class="caption">{{ t.firstLaunch.caption }}</p>
+      </template>
 
-    <h2 id="s3" class="section-heading">
-      <span>{{ t.main.title }}</span>
-      <a class="section-anchor" :href="sectionHref(2)" :aria-label="`Link to ${t.main.title}`" @click.prevent="navigateToSection(2)">#</a>
-    </h2>
-    <p>{{ t.main.text }}</p>
-    <div class="device-wrap">
-      <div class="device">
-        <div class="screen">
-          <div class="sb">
-            <span class="status-dot"></span>
-            <span class="sb-text">{{ mainStatusText }}</span>
-            <button class="btn-ui btn-blue" type="button">{{ mainActivateButton }}</button>
-            <button class="btn-ui btn-red" type="button">{{ mainStopButton }}</button>
-            <button class="btn-ui btn-gray" type="button">⋮</button>
-          </div>
-          <div class="list-header">
-            <span class="list-header-text">{{ mainListTitle }}</span>
-            <button class="btn-ui btn-toggle" type="button">⊞</button>
-          </div>
-          <div class="list-search">🔍</div>
-          <div v-for="(app, index) in t.main.apps" :key="app" class="app-item">
-            <div class="app-icon" :style="{ background: appStyles[index % appStyles.length] }">
-              {{ appIcons[index % appIcons.length] }}
-            </div>
-            <div class="app-name">{{ app }}</div>
-            <span class="auto-badge">Auto</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <p class="caption">{{ t.main.caption }}</p>
-    <div class="annotation-grid">
-      <div v-for="annotation in t.main.annotations" :key="annotation.marker + annotation.label" class="ann">
-        <div :class="markerClass(annotation)">{{ annotation.marker }}</div>
-        <div><strong>{{ annotation.label }}</strong> - {{ annotation.text }}</div>
-      </div>
-    </div>
+      <template v-if="s.howTo && s.howTo.steps && s.howTo.steps.length">
+        <h3>{{ s.howTo.title }}</h3>
+        <ol class="howto">
+          <li v-for="step in s.howTo.steps" :key="step">{{ step }}</li>
+        </ol>
+      </template>
 
-    <h2 id="s4" class="section-heading">
-      <span>{{ t.projection.title }}</span>
-      <a class="section-anchor" :href="sectionHref(3)" :aria-label="`Link to ${t.projection.title}`" @click.prevent="navigateToSection(3)">#</a>
-    </h2>
-    <div v-for="(step, index) in t.projection.steps" :key="step" class="step">
-      <div class="step-num">{{ index + 1 }}</div>
-      <div class="step-content">{{ step }}</div>
-    </div>
-    <div class="device-wrap">
-      <div class="device">
-        <div class="screen">
-          <div class="sb">
-            <span class="status-dot active"></span>
-            <span class="sb-text active">{{ t.projection.activeStatus }}</span>
-            <button class="btn-ui btn-blue" type="button">{{ projectionButtons[0] }}</button>
-            <button class="btn-ui btn-teal" type="button">{{ projectionButtons[1] }}</button>
-            <button class="btn-ui btn-red" type="button">{{ projectionButtons[2] }}</button>
-            <button class="btn-ui btn-gray" type="button">⋮</button>
-          </div>
-          <div class="list-header">
-            <span class="list-header-text">{{ t.projection.listTitle }}</span>
-            <button class="btn-ui btn-toggle" type="button">⊞</button>
-          </div>
-          <div class="list-search">🔍</div>
-          <div v-for="(app, index) in t.projection.apps" :key="app" class="app-item">
-            <div class="app-icon" :style="{ background: appStyles[index % appStyles.length] }">
-              {{ appIcons[index % appIcons.length] }}
-            </div>
-            <div class="app-name">{{ app }}</div>
-            <template v-if="index === 0">
-              <div class="active-dot"></div>
-              <button class="btn-ui btn-dark btn-small" type="button">{{ projectionMainButton }}</button>
-              <button class="btn-ui btn-red btn-small" type="button">{{ projectionCloseButton }}</button>
-            </template>
-            <span v-else class="auto-badge">Auto</span>
-          </div>
-          <div class="control-panel">
-            <div class="cp-collapse-strip">
-              <button class="btn-ui btn-dark btn-tiny" type="button">▼</button>
-            </div>
-            <div class="cp-header">
-              <span class="cp-label">{{ t.projection.controlLabel }}</span>
-              <span class="cp-app">{{ t.projection.controlApp }}</span>
-              <button class="btn-ui btn-cyan btn-small" type="button">{{ resizeButton }}</button>
-              <button class="btn-ui btn-orange btn-small" type="button">↺</button>
-              <button class="btn-ui btn-indigo btn-small" type="button">{{ splitButton }}</button>
-              <button class="btn-ui btn-dark btn-small" type="button">{{ hideButton }}</button>
-            </div>
-            <div class="cp-resize-panel">
-              <div class="slider-row">
-                <div class="slider-label">{{ t.settings.horizontalMarginLabel }}</div>
-                <div class="slider-bar"><div class="slider-fill slider-fill-horizontal"></div><div class="slider-thumb slider-thumb-horizontal"></div></div>
-                <div class="slider-val">80 px</div>
-              </div>
-              <div class="slider-row">
-                <div class="slider-label">{{ t.settings.verticalMarginLabel }}</div>
-                <div class="slider-bar"><div class="slider-fill slider-fill-vertical"></div><div class="slider-thumb slider-thumb-vertical"></div></div>
-                <div class="slider-val">50 px</div>
-              </div>
-            </div>
-            <div class="mirror-area">
-              <span class="mirror-text">{{ t.projection.mirrorText }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <p class="caption">{{ t.projection.caption }}</p>
-    <div v-if="t.projection.annotations.length" class="annotation-grid">
-      <div v-for="annotation in t.projection.annotations" :key="annotation.marker + annotation.label" class="ann">
-        <div :class="markerClass(annotation)">{{ annotation.marker }}</div>
-        <div><strong>{{ annotation.label }}</strong> - {{ annotation.text }}</div>
-      </div>
-      <div class="ann">
-        <div class="ann-num orange">↺</div>
-        <div><strong>{{ t.control.relaunch.title }}</strong> — {{ t.control.relaunch.text }}</div>
-      </div>
-    </div>
+      <template v-if="s.tips && s.tips.length">
+        <h3>{{ s.tipsTitle }}</h3>
+        <ul class="tips">
+          <li v-for="tip in s.tips" :key="tip">{{ tip }}</li>
+        </ul>
+      </template>
 
-    <h2 id="s5" class="section-heading">
-      <span>{{ t.control.title }}</span>
-      <a class="section-anchor" :href="sectionHref(4)" :aria-label="`Link to ${t.control.title}`" @click.prevent="navigateToSection(4)">#</a>
-    </h2>
-    <p>{{ t.control.intro }}</p>
-    <h3>{{ t.control.mirror.title }}</h3>
-    <p>{{ t.control.mirror.text }}</p>
-    <div class="note">{{ t.control.mirror.note }}</div>
-    <h3>{{ t.control.resize.title }}</h3>
-    <p>{{ t.control.resize.text }}</p>
-    <div class="note" v-if="t.control.resize.note">{{ t.control.resize.note }}</div>
-    <h3>{{ t.control.relaunch.title }}</h3>
-    <p>{{ t.control.relaunch.text }}</p>
-    <h3>{{ t.control.split.title }}</h3>
-    <p>{{ t.control.split.text }}</p>
-    <ul>
-      <li v-for="item in t.control.split.items" :key="item">{{ item }}</li>
-    </ul>
-    <p v-if="t.control.split.extra">{{ t.control.split.extra }}</p>
-    <h3>{{ t.control.hide.title }}</h3>
-    <p>{{ t.control.hide.text }}</p>
-
-    <h2 id="s6" class="section-heading">
-      <span>{{ t.stopping.title }}</span>
-      <a class="section-anchor" :href="sectionHref(5)" :aria-label="`Link to ${t.stopping.title}`" @click.prevent="navigateToSection(5)">#</a>
-    </h2>
-    <p v-if="t.stopping.intro">{{ t.stopping.intro }}</p>
-    <table class="doc-table">
-      <thead>
-        <tr>
-          <th v-for="header in t.stopping.table.headers" :key="header">{{ header }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(row, rowIndex) in t.stopping.table.rows" :key="row.join('|')">
-          <td v-for="(cell, cellIndex) in row" :key="cell">
-            <strong v-if="cellIndex === 0" :class="rowIndex === resetRowIndex ? 'text-green' : 'text-red'">
-              {{ cell }}
-            </strong>
-            <template v-else>{{ cell }}</template>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="warn">{{ t.stopping.warning }}</div>
-
-    <h2 id="s7" class="section-heading">
-      <span>{{ t.settings.title }}</span>
-      <a class="section-anchor" :href="sectionHref(6)" :aria-label="`Link to ${t.settings.title}`" @click.prevent="navigateToSection(6)">#</a>
-    </h2>
-    <p>{{ t.settings.intro }}</p>
-    <div class="device-wrap">
-      <div class="device">
-        <div class="screen">
-          <div class="settings-screen">
-            <div class="settings-title">{{ t.settings.titleLabel }}</div>
-            <div class="card">
-              <div class="card-title">{{ t.settings.clusterTypeLabel }}</div>
-              <div v-for="(option, index) in t.settings.clusterOptions" :key="option" class="radio-item">
-                <div :class="['radio-circle', { checked: index === 1 }]"></div>
-                {{ option }}
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-title">{{ t.settings.marginsLabel }}</div>
-              <div class="slider-row">
-                <div class="slider-label">{{ t.settings.horizontalMarginLabel }}</div>
-                <div class="slider-bar"><div class="slider-fill slider-fill-horizontal"></div><div class="slider-thumb slider-thumb-horizontal"></div></div>
-                <div class="slider-val">80 px</div>
-              </div>
-              <div class="slider-row">
-                <div class="slider-label">{{ t.settings.verticalMarginLabel }}</div>
-                <div class="slider-bar"><div class="slider-fill slider-fill-vertical"></div><div class="slider-thumb slider-thumb-vertical"></div></div>
-                <div class="slider-val">50 px</div>
-              </div>
-              <div class="settings-actions">
-                <button class="btn-ui btn-blue" type="button">{{ t.settings.applyButton }}</button>
-                <button class="btn-ui btn-secondary" type="button">{{ t.settings.resetButton }}</button>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-title">{{ t.settings.updatesLabel }}</div>
-              <div class="checkbox-item">
-                <div class="checkbox-box"></div>
-                <span class="checkbox-text">{{ t.settings.prereleaseLabel }}</span>
-              </div>
-              <div class="checkbox-hint">{{ t.settings.prereleaseHint }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <p class="caption">{{ t.settings.caption }}</p>
-    <h3>{{ t.settings.type.title }}</h3>
-    <p>{{ t.settings.type.text }}</p>
-    <h3>{{ t.settings.margins.title }}</h3>
-    <p>{{ t.settings.margins.text }}</p>
-    <ul>
-      <li v-for="item in t.settings.margins.items" :key="item">{{ item }}</li>
-    </ul>
-    <p>{{ t.settings.margins.applyText }}</p>
-    <div class="note">{{ t.settings.margins.note }}</div>
-    <h3>{{ t.settings.updates.title }}</h3>
-    <p>{{ t.settings.updates.text }}</p>
-
-    <h2 id="s8" class="section-heading">
-      <span>{{ t.tools.title }}</span>
-      <a class="section-anchor" :href="sectionHref(7)" :aria-label="`Link to ${t.tools.title}`" @click.prevent="navigateToSection(7)">#</a>
-    </h2>
-    <p v-if="t.tools.intro">{{ t.tools.intro }}</p>
-    <table class="doc-table">
-      <thead>
-        <tr>
-          <th v-for="header in t.tools.table.headers" :key="header">{{ header }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in t.tools.table.rows" :key="row.join('|')">
-          <td v-for="cell in row" :key="cell">{{ cell }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <template v-if="t.tools.logs">
-      <h3>{{ t.tools.logs.title }}</h3>
-      <div class="device-wrap">
-        <div class="device">
-          <div class="screen">
-            <div class="log-screen">
-              <div class="log-header">
-                <span class="log-title-text">{{ t.tools.logs.header }}</span>
-                <button class="btn-ui btn-dark btn-small" type="button">{{ t.tools.logs.clearButton }}</button>
-                <button class="btn-ui btn-blue btn-small" type="button">{{ t.tools.logs.shareButton }}</button>
-              </div>
-              <input class="log-filter" :placeholder="t.tools.logs.filterPlaceholder" readonly>
-              <div
-                v-for="(line, index) in t.tools.logs.lines"
-                :key="line"
-                :class="['log-entry', logClasses[index % logClasses.length]]"
-              >
-                {{ line }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="caption">{{ t.tools.logs.caption }}</p>
+      <div class="note" v-if="s.note">{{ s.note }}</div>
     </template>
 
-    <h2 id="s9" class="section-heading">
+    <h2 id="faq" class="section-heading">
       <span>{{ t.faq.title }}</span>
-      <a class="section-anchor" :href="sectionHref(8)" :aria-label="`Link to ${t.faq.title}`" @click.prevent="navigateToSection(8)">#</a>
+      <a class="section-anchor" href="#faq" @click.prevent="scrollToId('faq')">#</a>
     </h2>
     <template v-for="item in t.faq.items" :key="item.question">
       <h3>{{ item.question }}</h3>
       <p v-if="item.answer">{{ item.answer }}</p>
-      <ul v-else>
+      <ul v-else-if="item.items">
         <li v-for="entry in item.items" :key="entry">{{ entry }}</li>
       </ul>
     </template>
@@ -424,3 +140,57 @@ watch(
     <p class="footer-note">{{ t.footer }}</p>
   </article>
 </template>
+
+<style scoped>
+.lead { font-size: 1.05rem; line-height: 1.5; margin: 0 0 18px; }
+.mockup-frame {
+  position: relative;
+  margin: 18px 0 24px;
+  border: 1px solid #d4dbe6;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0e1b2c;
+}
+.mockup-frame iframe {
+  width: 100%;
+  height: 540px;
+  border: 0;
+  display: block;
+  background: #0e1b2c;
+}
+.mockup-link {
+  display: inline-block;
+  margin: 8px 14px 12px;
+  font-size: 0.85rem;
+  color: #1565c0;
+  text-decoration: none;
+}
+.mockup-link:hover { text-decoration: underline; }
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 14px 0 22px;
+}
+.feature-card {
+  background: #f5f8fc;
+  border: 1px solid #d4dbe6;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.feature-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #1565c0;
+}
+.feature-text {
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.howto, .tips {
+  margin: 10px 0 22px 22px;
+  line-height: 1.55;
+}
+.howto li { margin-bottom: 6px; }
+.tips li { margin-bottom: 4px; }
+</style>

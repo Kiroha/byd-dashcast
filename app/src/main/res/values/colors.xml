@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Primary branding -->
-    <color name="colorPrimary">#1A237E</color>
     <color name="colorPrimaryDark">#0D47A1</color>
     <color name="colorAccent">#00BCD4</color>
 
     <!-- App Backgrounds (DAY MODE) -->
     <color name="bg_main">#F5F5F7</color>
-    <color name="bg_top_bar">#E0E0E0</color>
-    <color name="bg_card">#FFFFFF</color>
-    <color name="bg_dialog">#FFFFFF</color>
     <color name="bg_button_secondary">#DDDDDD</color>
 
     <!-- Text (DAY MODE) -->
@@ -32,12 +28,6 @@
     <color name="auto_launch_text">#888888</color>
 
     <!-- Log / Diag backgrounds -->
-    <color name="bg_log">#F0F0F0</color>
-    <color name="bg_diag_neutral">#EAEEF0</color>
-    <color name="bg_diag_success">#E0F0E0</color>
-    <color name="bg_diag_error">#F0E0E0</color>
-    <color name="bg_diag_info">#E0E0F0</color>
-
     <!-- Static pure colors -->
     <color name="pure_white">#FFFFFF</color>
 
@@ -73,10 +63,6 @@
     <color name="md_surface_container">#EEEDF2</color>
     <color name="md_surface_container_high">#E8E7EC</color>
     <color name="md_surface_container_highest">#E2E1E6</color>
-    <color name="md_success">#2E7D32</color>
-    <color name="md_success_container">#C8E6C9</color>
-    <color name="md_warn">#E65100</color>
-    <color name="md_warn_container">#FFD9B3</color>
     <!-- v0.9.81 — Diag status pill colors -->
     <color name="md_status_ok">#2E7D32</color>
     <color name="md_status_warn">#E65100</color>

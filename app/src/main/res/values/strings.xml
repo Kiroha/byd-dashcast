@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">DashCast</string>
-    <string name="welcome_title">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
     <string name="welcome_continue_without_change">Continuer sans changer</string>
@@ -18,13 +17,9 @@
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">Dashboard : non connecté</string>
-    <string name="btn_activate_cluster">Activer Projection</string>
-    <string name="btn_show_mirror">📺 Miroir</string>
-    <string name="btn_restore_cluster">Arrêter Projection</string>
     <string name="btn_origin_cluster">Restaurer Dashboard d\'origine</string>
     <string name="stop_sheet_subtitle">Maintenez appuyé pour des actions supplémentaires.</string>
     <string name="stop_sheet_origin_desc">Utilise la taille d\'écran choisie dans les paramètres (8.8" / 12.3" / 10.25").</string>
-    <string name="title_app_list">Applications installées</string>
     <string name="mirror_placeholder">Affichage actif sur le cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
     <string name="cluster_control_title">Contrôle cluster</string>
@@ -53,7 +48,6 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Langue</string>
     <string name="menu_check_updates">🔄 Rechercher des mises à jour</string>
-    <string name="settings_updates_title">Mises à jour</string>
     <string name="settings_prerelease_label">Inclure les versions pré-release (alpha/beta)</string>
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
     <string name="cluster_label_88">8,8 pouces  (cmd=29)</string>
@@ -63,14 +57,7 @@
     <string name="split_left">⬜⬛ Gauche (50 %)</string>
     <string name="split_right">⬛⬜ Droite (50 %)</string>
     <string name="log_title">Journal</string>
-    <string name="log_btn_clear">Effacer</string>
-    <string name="log_btn_share">Partager</string>
     <string name="log_filter_hint">Filtrer le journal (tag, message, regex)…</string>
-    <string name="log_autoscroll">Auto↓</string>
-    <string name="log_level_debug">DEBUG </string>
-    <string name="log_level_info">INFO </string>
-    <string name="log_level_warn">WARN </string>
-    <string name="log_level_error">ERROR</string>
     <string name="log_empty">(aucune entrée)</string>
     <string name="log_chip_all">Tous (%1$d)</string>
     <string name="log_chip_info">Info (%1$d)</string>
@@ -88,86 +75,15 @@
     <string name="log_save_failed">Échec de la sauvegarde du journal</string>
     <string name="log_saved_toast">Journal sauvegardé : %1$s</string>
     <string name="sysinfo_title">Rapport système BYD</string>
-    <string name="sysinfo_desc">Génère un rapport complet : displays, APIs, packages BYD, permissions, ADB. Sauvegardez-le puis envoyez-le pour déboguer.</string>
-    <string name="btn_generate_report">▶ Générer le rapport</string>
-    <string name="btn_save_report">💾 Sauvegarder</string>
-    <string name="btn_share_report">📤 Partager</string>
     <string name="sysinfo_hint">Appuyez sur \'Générer le rapport\' pour démarrer.</string>
     <string name="sysinfo_generating">Génération…\n</string>
     <string name="toast_write_error">Erreur écriture : %1$s</string>
     <string name="toast_report_saved">Rapport sauvegardé :\n%1$s</string>
-    <string name="diag_share_result1_btn">Partager le résultat TEST 1</string>
-    <string name="diag_adb_connecting">Connexion à localhost:5555…\n⏳ Le popup va apparaître sur cet écran — appuyez AUTORISER.</string>
-    <string name="diag_adb_connected">✅ Connexion établie\n\n</string>
-    <string name="diag_adb_failed">❌ Échec : %1$s\n\n→ Vérifiez que le débogage ADB TCP est activé\n  dans Paramètres → Développeur → Débogage USB\n  (ou Débogage sans fil sur cette ROM)</string>
-    <string name="diag_sf_dumping">dumpsys SurfaceFlinger en cours…</string>
-    <string name="diag_sf_no_result">(aucun résultat — mirror non enregistré dans SF)</string>
-    <string name="diag_sf_error">Erreur : %1$s</string>
-    <string name="toast_sniffer_started">Sniffer démarré → %1$s</string>
     <string name="share_log_title">Partager le log…</string>
     <string name="share_report_title">Partager le rapport…</string>
-    <string name="diag_header">Tableau de bord Diagnostic</string>
-    <string name="diag_s1_title">1. ADB Local (Prérequis Vitals)</string>
-    <string name="diag_s1_desc">Requis pour injecter des daemons et créer le VirtualDisplay système de la même manière que Dilink5.</string>
-    <string name="diag_s1_initial">Non connecté</string>
-    <string name="diag_btn_adb_connect">Connecter ADB</string>
-    <string name="diag_btn_share_result">Partager</string>
-    <string name="diag_s2_title">2. Injection Daemon &amp; Rendu</string>
-    <string name="diag_s2_desc">Lance DashCastDaemon.java dans app_process via ADB shell : Hérite de CAPTURE_VIDEO_OUTPUT.</string>
-    <string name="diag_btn_create_vd">Créer VirtualDisplay (Inject Daemon)</string>
-    <string name="diag_s4_title">4. Analyses Système (SurfaceFlinger)</string>
-    <string name="diag_dumpsys_initial">Dumpsys window displays: --</string>
-    <string name="diag_btn_run_dumpsys">Exécuter dumpsys window displays</string>
-    <string name="diag_jni_initial">JNI Probe result: --</string>
-    <string name="diag_btn_jni_probe">JNI Probe</string>
-    <string name="diag_btn_jni_start_probe">Start + JNI Probe</string>
-    <string name="diag_sf_initial">SF Dump: --</string>
-    <string name="diag_btn_dump_mirror">Dump Mirror Service</string>
-    <string name="diag_auto_display_title">AutoDisplayService (com.xdja.containerservice)</string>
-    <string name="diag_auto_display_desc">Démarre le service Qt→VirtualDisplay directement. C\'est le mécanisme interne de Dilink5 : il récupère la Surface native Qt du cluster et la passe à createVirtualDisplay.</string>
-    <string name="diag_btn_start_auto_display">START AutoDisplayService</string>
-    <string name="diag_btn_stop">STOP</string>
-    <string name="diag_fission_title">Pipeline Fission (création VirtualDisplay cluster)</string>
-    <string name="diag_fission_desc">Séquence complète : sendInfo(30)+sendInfo(16) → Qt enregistre sa Surface → am startservice AutoDisplayService → updateDisplay() → createVirtualDisplay(fission_testVirtualSurface). Puis lance DashBoard sur ce display.</string>
-    <string name="diag_btn_sendinf_java">☕ sendInfo Java Direct (v0.1.21)</string>
-    <string name="diag_btn_fission_create">🚀 Créer Fission Display</string>
-    <string name="diag_btn_fission_launch">▶ Lancer Dashboard</string>
-    <string name="diag_fission_surface_title">Surface cluster — Diagnostic</string>
-    <string name="diag_fission_surface_desc">Mesure les dimensions réelles du VirtualDisplay (DisplayManager + dumpsys). Overscan 0 supprime toute marge sur le display cluster.</string>
-    <string name="diag_btn_fission_measure">🔍 Mesurer surface</string>
-    <string name="diag_btn_fission_overscan_zero">Overscan 0,0,0,0</string>
-    <string name="diag_fission_measure_no_display">❌ Aucun display Fission actif — lancer le pipeline d\'abord</string>
-    <string name="diag_s5_title">5. Sniffer Système (Reverse Engineering)</string>
-    <string name="diag_s5_desc">Capture logcat (tous tags pertinents) + snapshots dumpsys périodiques dans un fichier exportable. Conçu pour le reverse engineering : intercepte display, SF, AM, WM, BYD, autoContainer, Qt, broadcasts.</string>
-    <string name="diag_sniffer_inactive">Inactif</string>
-    <string name="diag_btn_start">START</string>
-    <string name="diag_btn_snapshot">Snapshot maintenant</string>
-    <string name="diag_btn_export_sniffer">Exporter</string>
-    <string name="diag_dumpsys_running">Exécution via adb local…</string>
-    <string name="diag_dumpsys_error">ERREUR :\n%1$s</string>
-    <string name="diag_daemon_launching">Lancement du daemon via adb local…</string>
-    <string name="diag_daemon_timeout">TIMEOUT : ADB n\'a pas répondu dans %1$ds.</string>
-    <string name="diag_daemon_output">DAEMON OUTPUT: %1$s</string>
-    <string name="diag_daemon_error">ERREUR: %1$s</string>
-    <string name="diag_apk_path_error">Erreur APK path: %1$s</string>
-    <string name="diag_sniffer_initializing">Initialisation…</string>
-    <string name="diag_sniffer_active">ACTIF → %1$s</string>
-    <string name="diag_sniffer_init_failed">❌ Échec init: %1$s</string>
-    <string name="diag_sniffer_stopped">Arrêté — fichier : %1$s</string>
-    <string name="toast_sniffer_stopped">Sniffer arrêté.</string>
-    <string name="toast_sniffer_start_first">Démarrer le sniffer d\'abord.</string>
-    <string name="toast_snapshot_done">Snapshot injecté dans le fichier.</string>
-    <string name="toast_sniffer_no_file">Aucun fichier sniffer à exporter.</string>
-    <string name="toast_no_result_to_share">Pas de résultat à partager.</string>
-    <string name="diag_s6_title">6. Nettoyage du stockage</string>
-    <string name="diag_s6_desc">Supprime les fichiers de logs et rapports générés par DashCast : byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png. Vide également le buffer mémoire des logs. Les clés ADB (adb.key / adb.pub) ne sont PAS supprimées.</string>
-    <string name="diag_btn_cleanup">🗑️ Supprimer les fichiers de traces</string>
-    <string name="diag_cleanup_running">Nettoyage en cours…</string>
-    <string name="diag_cleanup_done">%1$d fichier(s) supprimé(s) — stockage restant : %2$s</string>
     <string name="settings_header">Paramètres</string>
     <string name="settings_cluster_type_title">Type de cluster</string>
     <string name="settings_overscan_section_title">Marges d\'affichage (overscan)</string>
-    <string name="settings_overscan_desc">Ajustez les marges pour cadrer le contenu sur l\'écran du tableau de bord. Les valeurs s\'appliquent immédiatement au prochain lancement.</string>
     <string name="settings_inset_h_label">Gauche / Droite :</string>
     <string name="settings_inset_v_label">Haut / Bas :</string>
     <string name="settings_btn_apply_overscan">Appliquer maintenant</string>
@@ -205,58 +121,7 @@
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
     <string name="dialog_reconnect_yes">↺ Relancer</string>
-    <string name="diag_s3_title">3. Taille d\'affichage (cmd 29/30/31)</string>
-    <string name="diag_s3_initial">Résultat : --</string>
-    <string name="diag_btn_size_restore">Restaurer</string>
-    <string name="diag_btn_size_full">Plein écran</string>
-    <string name="diag_btn_reset_main_overscan">⚠️ Reset overscan écran principal</string>
-    <string name="diag_s3_display1_initial">Display 1 : --</string>
-    <string name="diag_btn_restore_display">Restaurer display 1</string>
-    <string name="diag_sadas_title">ADAS (cmd 12/13)</string>
-    <string name="diag_sadas_desc">Commandes ADAS — sans effet sur le cluster 2D Seal EU</string>
-    <string name="diag_adas_initial">ADAS : --</string>
-    <string name="diag_btn_adas_show">ADAS ON (cmd=12)</string>
-    <string name="diag_btn_adas_hide">ADAS OFF (cmd=13)</string>
-    <string name="diag_s7_title">7. Test resize DiLink5</string>
-    <string name="diag_s7_desc">Séquence DiLink5 : WM:4→5 + resizeTask(RESIZE_MODE_FORCED=3)</string>
-    <string name="diag_btn_resize_dilink5_seq">Séquence DiLink5 (WM:4→5 + resize)</string>
-    <string name="diag_btn_resize_forced_only">resizeTask seul (FORCED=3)</string>
-    <string name="diag_btn_resize_inspect_task">Inspecter la task cluster</string>
-    <string name="diag_running">En cours…</string>
-    <string name="diag_adb_test1_hint">→ Vérifiez que ADB est connecté (Test 1)</string>
-    <string name="diag_adas_sending">Envoi sendInfo(1000, %d)…</string>
-    <string name="diag_auto_starting">Démarrage AutoDisplayService…</string>
-    <string name="diag_auto_stopping">Arrêt AutoDisplayService…</string>
-    <string name="diag_auto_stopped">Arrêté : %s</string>
-    <string name="diag_fission_binder_starting">Démarrage via IBinder direct…</string>
-    <string name="diag_fission_running">Fission en cours…</string>
-    <string name="diag_fission_launching">Lancement dashboard (display %d)…</string>
-    <string name="diag_fission_no_display">❌ Aucun display cluster trouvé</string>
-    <string name="diag_jni_display_released">sendInfo(16) OK — JNI probe en cours…</string>
-    <string name="diag_jni_fatal">FATAL : %s</string>
-    <string name="diag_jni_send16_failed">Échec sendInfo(16) : %s</string>
-    <string name="diag_launching_display1">Lancement display 1…</string>
-    <string name="diag_reset_main_overscan_done">Reset overscan écran principal OK</string>
-    <string name="diag_size_sending">Envoi cmd=%1$d (%2$s)…</string>
-    <string name="diag_size_restoring">Restauration taille d\'affichage…</string>
-    <string name="diag_size_full_running">Test taille complète en cours…</string>
-    <string name="diag_share_result2_btn">Partager le résultat</string>
-    <string name="diag_share_result3_btn">Partager le résultat</string>
-    <string name="diag_error_prefix">ERROR: </string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="diag_s88_title">Écran 8.8\" — Projection directe</string>
-    <string name="diag_s88_desc">Sur les clusters 8.8\", sendInfo(30) provoque un plantage. Cette section active la projection en envoyant uniquement sendInfo(16) puis sendInfo(35).</string>
-    <string name="diag_s88_initial">Projection 8.8\" : --</string>
-    <string name="diag_btn_88_activate">Activer Projection</string>
-    <string name="diag_btn_88_stop">Arrêter Projection</string>
-    <string name="diag_88_activating">Activation en cours…</string>
-    <string name="diag_88_stopping">Arrêt en cours…</string>
-    <string name="diag_88_activated">Projection activée ✅</string>
-    <string name="diag_88_stopped">Projection arrêtée ✅</string>
-    <string name="diag_adas47_title" translatable="false">ADAS DEBUG (cmd 47/48)</string>
-    <string name="diag_adas47_desc" translatable="false">Advanced ADAS diagnostic toggles for cluster testing.</string>
-    <string name="diag_adas47_on" translatable="false">ADAS ON (47)</string>
-    <string name="diag_adas47_off" translatable="false">ADAS OFF (48)</string>
     <string name="visual_overscan_use_visual_mode">Ajuster avec des flèches (au lieu des curseurs)</string>
     <string name="visual_overscan_height">↕ Hauteur</string>
     <string name="visual_overscan_width">↔ Largeur</string>
@@ -300,7 +165,6 @@
     <string name="main_nav_log">Journal</string>
     <string name="main_nav_help">Aide</string>
     <string name="main_cluster_label">ÉTAT CLUSTER</string>
-    <string name="main_cluster_status_idle">Inactif</string>
     <string name="main_cluster_status_subtitle">Activez la projection pour démarrer</string>
     <string name="main_preview_section">Aperçu temps réel</string>
     <string name="main_btn_full_preview">Miroir plein écran</string>
@@ -318,35 +182,7 @@
     <string name="sheet_force_stop">Forcer l\'arrêt</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
-    <string name="main_favorites_empty">Aucun favori — appuyez longuement sur une app pour l\'ajouter</string>
-
     <!-- v0.9.81 — Diag M3 cards -->
-    <string name="diag_global_ok">Tous systèmes OK</string>
-    <string name="diag_card_mirror_title">Tester le mirror cluster</string>
-    <string name="diag_card_mirror_desc">Crée un VirtualDisplay et vérifie la connexion</string>
-    <string name="diag_card_capture_title">Capturer le cluster</string>
-    <string name="diag_card_capture_desc">Génère une screenshot de l\'écran secondaire</string>
-    <string name="diag_card_restart_title">Redémarrer ClusterService</string>
-    <string name="diag_card_restart_desc">Stop + start propre du service Android</string>
-    <string name="diag_card_adb_title">Vérifier ADB local</string>
-    <string name="diag_card_adb_desc">Handshake sur 127.0.0.1:5555</string>
-    <string name="diag_card_perms_title">Vérifier les permissions</string>
-    <string name="diag_card_perms_desc">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW, etc.</string>
-    <string name="diag_btn_reset_cluster_config">Reset configuration cluster</string>
-    <string name="diag_advanced_section_title">Outils avancés</string>
-    <string name="diag_result_empty">Sélectionnez un test pour voir le résultat</string>
-    <string name="diag_result_success">Succès</string>
-    <string name="diag_result_running">En cours</string>
-    <string name="diag_result_error">Erreur</string>
-    <string name="diag_result_warn">Attention</string>
-    <string name="diag_btn_copy">Copier</string>
-    <string name="diag_btn_share_only">Partager</string>
-    <string name="diag_btn_rerun">Relancer</string>
-    <string name="diag_running_msg">Test en cours…</string>
-    <string name="diag_toast_copied">Résultat copié</string>
-    <string name="diag_reset_cluster_confirm_title">Reset configuration cluster</string>
-    <string name="diag_reset_cluster_confirm_msg">Cela va arrêter ClusterService, fermer la projection (sendInfo 18 + 0) et recréer le service. Continuer ?</string>
-
     <!-- v0.9.82 — SysInfo M3 redesign -->
     <string name="sysinfo_btn_save">Sauver</string>
     <string name="sysinfo_btn_share">Partager</string>
@@ -366,7 +202,6 @@
     <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
-    <string name="sysinfo_svc_cluster_sub">VirtualDisplay actif</string>
     <string name="sysinfo_svc_mirror_sub">Surveille pidof · 500 ms</string>
     <string name="sysinfo_svc_stopped">Arrêté</string>
     <string name="sysinfo_svc_adb_unreachable">5555 inaccessible</string>
