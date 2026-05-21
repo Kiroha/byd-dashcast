@@ -93,7 +93,14 @@ public final class BetaProxyClient {
     private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
     private static final int  BOOTSTRAP_TIMEOUT_MS = 8000;
-    private static final int  BROADCAST_WAIT_MS    = 8000;
+    /**
+     * The daemon's {@code ActivityThread.systemMain()} call takes 5–8 s cold on
+     * a DiLink 3.0 SoC (it brings up the framework runtime inside app_process),
+     * then the broadcast still has to traverse AMS. v1.1.6's 8 s window was
+     * racing the broadcast by ~1 ms in production. 15 s gives headroom without
+     * making failure cases painfully slow.
+     */
+    private static final int  BROADCAST_WAIT_MS    = 15000;
 
     private static final Object LOCK = new Object();
 
@@ -128,7 +135,14 @@ public final class BetaProxyClient {
      */
     public static boolean connect(Context ctx) {
         synchronized (LOCK) {
-            if (isConnected()) return true;
+            // Fast path: an already-live binder is reused without touching the daemon
+            // process — critical to avoid the cascade of kill-and-respawn cycles that
+            // froze the head unit in v1.1.6 (each respawn triggers a full
+            // ActivityThread.systemMain() in app_process which is very heavy).
+            if (isConnected()) {
+                if (sDaemonUid < 0) handshake();
+                return true;
+            }
 
             ensureReceiverRegistered(ctx);
 
@@ -141,18 +155,19 @@ public final class BetaProxyClient {
 
             CountDownLatch latch = sBinderLatch;
             try {
-                if (!latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS)) {
-                    AppLogger.w(TAG, "no PROXY_CONNECTED broadcast within "
-                            + BROADCAST_WAIT_MS + "ms");
-                    return false;
-                }
+                latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 return false;
             }
 
-            if (sBinder == null) {
-                AppLogger.w(TAG, "broadcast received but binder was null");
+            // The receiver may have fired just after the latch timed out — re-check
+            // sBinder rather than treating the timeout as a hard failure (a 1 ms race
+            // was misclassifying A1 as ✗ in v1.1.6).
+            if (sBinder == null || !sBinder.pingBinder()) {
+                AppLogger.w(TAG, "no live binder after " + BROADCAST_WAIT_MS
+                        + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
+                sBinder = null;
                 return false;
             }
 
@@ -289,9 +304,30 @@ public final class BetaProxyClient {
                     AppLogger.w(TAG, "PROXY_CONNECTED received without binder extra");
                     return;
                 }
+                // Discard stale broadcasts whose binder is already dead — they happen
+                // when a previous bootstrap killed an in-flight daemon and AMS only
+                // dispatched its broadcast after the kill. Storing the dead ref would
+                // mask the LIVE binder we either already have or are still waiting for
+                // (root cause of A5/A6 ✗ in v1.1.6).
+                if (!bp.binder.pingBinder()) {
+                    AppLogger.d(TAG, "ignoring stale PROXY_CONNECTED (binder already dead)");
+                    return;
+                }
                 synchronized (LOCK) {
+                    // If we already hold a live binder, prefer it (avoid spurious
+                    // handshake/state churn from late duplicate broadcasts).
+                    if (sBinder != null && sBinder.pingBinder() && sBinder != bp.binder) {
+                        AppLogger.d(TAG, "ignoring duplicate PROXY_CONNECTED (already have a live binder)");
+                        CountDownLatch latch = sBinderLatch;
+                        if (latch != null) latch.countDown();
+                        return;
+                    }
                     sBinder = bp.binder;
-                    AppLogger.i(TAG, "binder received from daemon (alive=" + sBinder.pingBinder() + ")");
+                    // Invalidate WHOAMI cache — handshake() will refresh it.
+                    sDaemonUid = -1;
+                    sDaemonPid = -1;
+                    sDaemonVer = null;
+                    AppLogger.i(TAG, "live binder received from daemon");
                     CountDownLatch latch = sBinderLatch;
                     if (latch != null) latch.countDown();
                 }
