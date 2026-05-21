@@ -204,4 +204,34 @@
     <string name="log_saved_toast">Günlük kaydedildi: %1$s</string>
     <string name="diag_placeholder_title">Diag sayfası yeniden oluşturuluyor</string>
     <string name="diag_placeholder_subtitle">Önceki testler kaldırıldı. Yakında yeni tanılama araçları eklenecek.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Deneysel motor (beta)</string>
+    <string name="settings_beta_warning">Deneysel özellikler. Bir sorun olursa uygulama otomatik olarak kararlı motora geri döner. Değişiklikten sonra yeniden başlatma gerekir.</string>
+    <string name="settings_beta_proxy_daemon">Ayrıcalıklı proxy daemon</string>
+    <string name="settings_beta_proxy_daemon_support">Sistem komutlarını çalıştırmak için yerel ADB (UID 2000) üzerinden kalıcı bir daemon başlatır. OpenBYD\'den esinlenilmiştir.</string>
+    <string name="settings_beta_system_context">Sistem context (yansıma)</string>
+    <string name="settings_beta_system_context_support">BYD SDK\'nın izin denetimini atlamak için ActivityThread.systemMain() ile sistem Context\'i alır.</string>
+    <string name="beta_restart_title">Yeniden başlatma gerekli</string>
+    <string name="beta_restart_message">Bu seçenek DashCast\'in bir sonraki başlatılmasında etkili olur. Bu sırada uygulamayı normal şekilde kullanmaya devam edebilirsiniz.</string>
+    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_adb_local">Yerel ADB</string>
+    <string name="diag_tab_system">Sistem</string>
+    <string name="diag_tab_stress">Stres testi</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Yakında</string>
+    <string name="diag_coming_soon_subtitle">Bu bölüm bir sonraki sürümde uygulanacaktır. Mevcut testler için «Beta Engine» sekmesine bakın.</string>
+    <string name="diag_beta_header_title">Deneysel motor</string>
+    <string name="diag_beta_header_subtitle">Component A (daemon) ve Component B (sistem context) testleri. Aşama 1.</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Daemon: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Başlatmak için «Tümünü çalıştır»a basın</string>
+    <string name="diag_beta_counters_running">Çalışıyor…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Tümünü çalıştır</string>
+    <string name="diag_beta_copy_report">Gönder (.log)</string>
+    <string name="diag_beta_report_copied">Rapor panoya kopyalandı</string>
 </resources>

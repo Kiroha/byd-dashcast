@@ -194,17 +194,28 @@ public class AppLogger {
      * @return the created File, or null on error
      */
     public static File saveToFile(Context context) {
-        String filename = "byd_log_"
-                + sFileFmt.get().format(new Date())
-                + ".log";
+        return writeFile(context, "byd_log_", get());
+    }
+
+    /**
+     * Generic helper — writes {@code content} to a timestamped
+     * {@code <prefix><yyyyMMdd_HHmmss>.log} file in getExternalFilesDir()
+     * (falling back to internal storage). Used by {@link #share(Context)} and
+     * {@link #shareWithReport(Context, String)} to guarantee every "send log"
+     * action emits a real .log file attachment instead of plain text.
+     *
+     * @return the created File, or null on I/O error.
+     */
+    public static File writeFile(Context context, String prefix, String content) {
+        String filename = prefix + sFileFmt.get().format(new Date()) + ".log";
         File outDir = context.getExternalFilesDir(null);
         if (outDir == null) outDir = context.getFilesDir();
         if (!outDir.exists()) outDir.mkdirs();
         File outFile = new File(outDir, filename);
         try (FileWriter fw = new FileWriter(outFile)) {
-            fw.write(get());
+            fw.write(content != null ? content : "");
         } catch (IOException ex) {
-            Log.e("AppLogger", "saveToFile failed", ex);
+            Log.e("AppLogger", "writeFile failed: " + filename, ex);
             return null;
         }
         return outFile;
@@ -213,41 +224,76 @@ public class AppLogger {
     // ── Share ─────────────────────────────────────────────────────────────────
 
     /**
-     * Saves the log to a .log file then opens the share chooser with the file
-     * as an attachment (content:// via FileProvider).
-     * Falls back to plain text if the file write fails.
+     * Saves the log buffer to a .log file and opens the share chooser with the
+     * file attached as a {@code content://} URI (via FileProvider). If the file
+     * can't be written, falls back to plain text so the user is never blocked.
      */
     public static void share(Context context) {
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — Log");
         File logFile = saveToFile(context);
         if (logFile != null) {
-            Uri uri = FileProvider.getUriForFile(
-                    context, context.getPackageName() + ".fileprovider", logFile);
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_STREAM, uri);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } else {
-            // Fallback: share as plain text
-            String content = get();
-            if (content.isEmpty()) content = "(empty log)";
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT, content);
+            shareFile(context, logFile,
+                    "DashCast — Log",
+                    context.getString(R.string.share_log_title));
+            return;
         }
+        // Fallback: file write failed (rare — typically no external storage).
+        Log.w("AppLogger", "share: file write failed, falling back to text");
+        String content = get();
+        if (content.isEmpty()) content = "(empty log)";
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — Log (text fallback)");
+        intent.putExtra(Intent.EXTRA_TEXT, content);
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_log_title)));
     }
 
+    /**
+     * Combines an arbitrary report with the current log buffer, writes them to
+     * a single timestamped .log file and shares it as an attachment. Used by
+     * SysInfoActivity and DiagActivity to send a self-contained file to the
+     * developer instead of pasting walls of text.
+     */
     public static void shareWithReport(Context context, String reportText) {
-        String combined = reportText
+        String combined = (reportText != null ? reportText : "")
                 + "\n\n════════════════════════════════════\n"
                 + "LOG\n"
                 + "════════════════════════════════════\n"
                 + get();
+        File f = writeFile(context, "byd_report_", combined);
+        if (f != null) {
+            shareFile(context, f,
+                    "DashCast — Report + Log",
+                    context.getString(R.string.share_report_title));
+            return;
+        }
+        // Fallback if write failed (no external storage etc.).
+        Log.w("AppLogger", "shareWithReport: file write failed, falling back to text");
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — Report + Log");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — Report + Log (text fallback)");
         intent.putExtra(Intent.EXTRA_TEXT, combined);
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_report_title)));
+    }
+
+    /**
+     * Generic file-attachment share. Use this from any activity that wants to
+     * send a .log/.txt file to the developer (DiagActivity "Beta Engine"
+     * report, custom diagnostics, …). The MIME type is forced to text/plain so
+     * any chooser entry (email, messaging, drive) accepts the file.
+     */
+    public static void shareFile(Context context, File file, String subject, String chooserTitle) {
+        if (file == null || !file.exists()) {
+            Log.w("AppLogger", "shareFile: missing file");
+            return;
+        }
+        Uri uri = FileProvider.getUriForFile(
+                context, context.getPackageName() + ".fileprovider", file);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        context.startActivity(Intent.createChooser(intent, chooserTitle));
     }
 
     // ── Storage cleanup ───────────────────────────────────────────────────────

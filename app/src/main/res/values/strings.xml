@@ -210,4 +210,41 @@
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
     <string name="diag_placeholder_title">Page Diag en cours de refonte</string>
     <string name="diag_placeholder_subtitle">Les tests précédents ont été supprimés. De nouveaux outils diagnostiques arriveront ici prochainement.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <!-- Settings -->
+    <string name="settings_section_beta_engine">Moteur expérimental (beta)</string>
+    <string name="settings_beta_warning">Fonctionnalités expérimentales. En cas de souci, l\'application bascule automatiquement sur le moteur stable. Redémarrage requis après modification.</string>
+    <string name="settings_beta_proxy_daemon">Daemon de proxy privilégié</string>
+    <string name="settings_beta_proxy_daemon_support">Lance un démon persistant via ADB local (UID 2000) pour exécuter les commandes système. Inspiré d\'OpenBYD.</string>
+    <string name="settings_beta_system_context">Contexte système (réflexion)</string>
+    <string name="settings_beta_system_context_support">Récupère un Context système via ActivityThread.systemMain() pour contourner les permissions du SDK BYD.</string>
+    <string name="beta_restart_title">Redémarrage requis</string>
+    <string name="beta_restart_message">Cette option prendra effet au prochain lancement de DashCast. Vous pouvez continuer à utiliser l\'application normalement entre temps.</string>
+
+    <!-- Diag tabs -->
+    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_adb_local">ADB local</string>
+    <string name="diag_tab_system">Système</string>
+    <string name="diag_tab_stress">Stress test</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+
+    <!-- Diag — Coming soon panel -->
+    <string name="diag_coming_soon_title">Bientôt disponible</string>
+    <string name="diag_coming_soon_subtitle">Cette section sera implémentée dans une prochaine version. Voir l\'onglet « Beta Engine » pour les tests actuels.</string>
+
+    <!-- Diag — Beta Engine panel -->
+    <string name="diag_beta_header_title">Moteur expérimental</string>
+    <string name="diag_beta_header_subtitle">Tests de Component A (daemon) et Component B (system context). Phase 1.</string>
+    <string name="diag_beta_pill_a_off">A · Daemon : OFF</string>
+    <string name="diag_beta_pill_a_on">A · Daemon : ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx : OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx : ON</string>
+    <string name="diag_beta_counters_idle">Cliquer sur « Lancer tous » pour démarrer</string>
+    <string name="diag_beta_counters_running">Exécution en cours…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Lancer tous</string>
+    <string name="diag_beta_copy_report">Envoyer (.log)</string>
+    <string name="diag_beta_report_copied">Rapport copié dans le presse-papier</string>
 </resources>

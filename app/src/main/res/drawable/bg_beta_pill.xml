@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generic pill background for Beta Engine status/test rows. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+       android:shape="rectangle">
+    <solid android:color="@color/md_surface_container_high"/>
+    <corners android:radius="999dp"/>
+</shape>
