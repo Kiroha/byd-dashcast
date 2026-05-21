@@ -111,7 +111,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingStart="20dp" android:paddingEnd="20dp"
-        android:paddingTop="20dp" android:paddingBottom="20dp">
+        android:paddingTop="20dp" android:paddingBottom="0dp">
 
         <!-- Top bar -->
         <LinearLayout
@@ -138,57 +138,52 @@
                 android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
 
-        <!-- Placeholder hero -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- Tabs -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabs_diag"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/md_outline_variant"
-            app:cardBackgroundColor="@color/md_surface_container_low">
+            android:layout_marginTop="8dp"
+            app:tabMode="scrollable"
+            app:tabGravity="start"
+            app:tabIndicatorColor="@color/md_primary"
+            app:tabSelectedTextColor="@color/md_primary"
+            app:tabTextColor="@color/md_on_surface_variant"
+            app:tabRippleColor="@color/md_surface_container_high"
+            app:tabBackground="@android:color/transparent">
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_cluster"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_display"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_adb_local"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_system"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_stress"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_beta_engine"/>
+        </com.google.android.material.tabs.TabLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:paddingStart="32dp" android:paddingEnd="32dp"
-                android:paddingTop="48dp" android:paddingBottom="48dp">
+        <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
+        <FrameLayout
+            android:id="@+id/fl_diag_content"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="12dp"
+            android:paddingBottom="20dp">
 
-                <ImageView
-                    android:layout_width="96dp"
-                    android:layout_height="96dp"
-                    android:src="@drawable/ic_stethoscope"
-                    android:padding="22dp"
-                    android:background="@drawable/bg_diag_card_icon"
-                    app:tint="@color/md_primary"
-                    android:contentDescription="@string/main_nav_diag"/>
+            <!-- Beta Engine panel (default visible) -->
+            <include
+                android:id="@+id/panel_beta_engine"
+                layout="@layout/include_diag_beta_engine"/>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="@string/diag_placeholder_title"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:gravity="center"/>
+            <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
+            <include
+                android:id="@+id/panel_coming_soon"
+                layout="@layout/include_diag_coming_soon"/>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginStart="32dp"
-                    android:layout_marginEnd="32dp"
-                    android:text="@string/diag_placeholder_subtitle"
-                    android:textSize="14sp"
-                    android:textColor="@color/md_on_surface_variant"
-                    android:gravity="center"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+        </FrameLayout>
     </LinearLayout>
 </LinearLayout>

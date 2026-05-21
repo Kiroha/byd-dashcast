@@ -204,4 +204,34 @@
     <string name="log_saved_toast">Protokoll gespeichert: %1$s</string>
     <string name="diag_placeholder_title">Diag-Seite wird neu aufgebaut</string>
     <string name="diag_placeholder_subtitle">Die bisherigen Tests wurden entfernt. Neue Diagnose-Tools folgen in Kürze.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Experimentelle Engine (Beta)</string>
+    <string name="settings_beta_warning">Experimentelle Funktionen. Bei Problemen wechselt die App automatisch zur stabilen Engine. Nach Änderung Neustart erforderlich.</string>
+    <string name="settings_beta_proxy_daemon">Privilegierter Proxy-Daemon</string>
+    <string name="settings_beta_proxy_daemon_support">Startet einen persistenten Daemon über lokales ADB (UID 2000), um Systembefehle auszuführen. Inspiriert von OpenBYD.</string>
+    <string name="settings_beta_system_context">System-Kontext (Reflection)</string>
+    <string name="settings_beta_system_context_support">Ruft einen System-Context über ActivityThread.systemMain() ab, um die Berechtigungsprüfung des BYD-SDK zu umgehen.</string>
+    <string name="beta_restart_title">Neustart erforderlich</string>
+    <string name="beta_restart_message">Diese Option wird beim nächsten Start von DashCast aktiv. Sie können die App in der Zwischenzeit normal weiter nutzen.</string>
+    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_adb_local">Lokales ADB</string>
+    <string name="diag_tab_system">System</string>
+    <string name="diag_tab_stress">Stresstest</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Demnächst verfügbar</string>
+    <string name="diag_coming_soon_subtitle">Dieser Bereich wird in einer zukünftigen Version implementiert. Aktuelle Tests im Tab „Beta Engine“.</string>
+    <string name="diag_beta_header_title">Experimentelle Engine</string>
+    <string name="diag_beta_header_subtitle">Tests für Component A (Daemon) und Component B (System-Kontext). Phase 1.</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Daemon: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Auf „Alle ausführen“ klicken, um zu starten</string>
+    <string name="diag_beta_counters_running">Läuft…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Alle ausführen</string>
+    <string name="diag_beta_copy_report">Senden (.log)</string>
+    <string name="diag_beta_report_copied">Bericht in die Zwischenablage kopiert</string>
 </resources>

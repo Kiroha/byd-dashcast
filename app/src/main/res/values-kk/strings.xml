@@ -204,4 +204,34 @@
     <string name="log_saved_toast">Журнал сақталды: %1$s</string>
     <string name="diag_placeholder_title">Diag беті қайта құрылуда</string>
     <string name="diag_placeholder_subtitle">Алдыңғы тесттер жойылды. Жаңа диагностика құралдары жақын арада қосылады.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Эксперименттік қозғалтқыш (бета)</string>
+    <string name="settings_beta_warning">Эксперименттік мүмкіндіктер. Қателік болса, қолданба автоматты түрде тұрақты қозғалтқышқа ауысады. Өзгертуден кейін қайта іске қосу қажет.</string>
+    <string name="settings_beta_proxy_daemon">Артықшылықты прокси-демон</string>
+    <string name="settings_beta_proxy_daemon_support">Жүйелік пәрмендерді орындау үшін жергілікті ADB (UID 2000) арқылы тұрақты демонды іске қосады. OpenBYD идеясы.</string>
+    <string name="settings_beta_system_context">Жүйелік контекст (рефлексия)</string>
+    <string name="settings_beta_system_context_support">BYD SDK рұқсаттарын айналып өту үшін ActivityThread.systemMain() арқылы жүйелік Context алады.</string>
+    <string name="beta_restart_title">Қайта іске қосу қажет</string>
+    <string name="beta_restart_message">Бұл параметр DashCast-тың келесі іске қосылуында күшіне енеді. Сол кезге дейін қолданбаны қалыпты пайдалана аласыз.</string>
+    <string name="diag_tab_cluster">Кластер</string>
+    <string name="diag_tab_display">Дисплей</string>
+    <string name="diag_tab_adb_local">Жергілікті ADB</string>
+    <string name="diag_tab_system">Жүйе</string>
+    <string name="diag_tab_stress">Стресс-тест</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Жақында</string>
+    <string name="diag_coming_soon_subtitle">Бұл бөлім келесі нұсқада іске асырылады. Ағымдағы тестілер үшін «Beta Engine» қойындысын қараңыз.</string>
+    <string name="diag_beta_header_title">Эксперименттік қозғалтқыш</string>
+    <string name="diag_beta_header_subtitle">Component A (демон) және Component B (жүйелік контекст) тестілері. 1-кезең.</string>
+    <string name="diag_beta_pill_a_off">A · Демон: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Демон: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Бастау үшін «Барлығын іске қосу» түймесін басыңыз</string>
+    <string name="diag_beta_counters_running">Орындалуда…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Барлығын іске қосу</string>
+    <string name="diag_beta_copy_report">Жіберу (.log)</string>
+    <string name="diag_beta_report_copied">Есеп алмасу буферіне көшірілді</string>
 </resources>

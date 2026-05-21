@@ -204,4 +204,34 @@
     <string name="log_saved_toast">Журнал захаваны: %1$s</string>
     <string name="diag_placeholder_title">Старонка Diag перабудоўваецца</string>
     <string name="diag_placeholder_subtitle">Папярэднія тэсты выдалены. Новыя дыягнастычныя інструменты з\'явяцца неўзабаве.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Эксперыментальны рухавік (бета)</string>
+    <string name="settings_beta_warning">Эксперыментальныя функцыі. У выпадку праблемы дадатак аўтаматычна вяртаецца да стабільнага рухавіка. Пасля змены патрабуецца перазапуск.</string>
+    <string name="settings_beta_proxy_daemon">Прывілеяваны проксі-дэман</string>
+    <string name="settings_beta_proxy_daemon_support">Запускае пастаянны дэман праз лакальны ADB (UID 2000) для выканання сістэмных каманд. Натхнёна OpenBYD.</string>
+    <string name="settings_beta_system_context">Сістэмны кантэкст (рэфлексія)</string>
+    <string name="settings_beta_system_context_support">Атрымлівае Context сістэмы праз ActivityThread.systemMain(), каб абысці праверкі дазволаў SDK BYD.</string>
+    <string name="beta_restart_title">Патрэбен перазапуск</string>
+    <string name="beta_restart_message">Гэтая опцыя пачне дзейнічаць пры наступным запуску DashCast. Тым часам вы можаце працягваць карыстацца дадаткам як звычайна.</string>
+    <string name="diag_tab_cluster">Кластар</string>
+    <string name="diag_tab_display">Дысплей</string>
+    <string name="diag_tab_adb_local">Лакальны ADB</string>
+    <string name="diag_tab_system">Сістэма</string>
+    <string name="diag_tab_stress">Стрэс-тэст</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Хутка з\'явіцца</string>
+    <string name="diag_coming_soon_subtitle">Гэты раздзел будзе рэалізаваны ў будучай версіі. Глядзіце ўкладку «Beta Engine» для бягучых тэстаў.</string>
+    <string name="diag_beta_header_title">Эксперыментальны рухавік</string>
+    <string name="diag_beta_header_subtitle">Тэсты Component A (дэман) і Component B (сістэмны кантэкст). Этап 1.</string>
+    <string name="diag_beta_pill_a_off">A · Дэман: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Дэман: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Націсніце «Запусціць усе», каб пачаць</string>
+    <string name="diag_beta_counters_running">Выкананне…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Запусціць усе</string>
+    <string name="diag_beta_copy_report">Адправіць (.log)</string>
+    <string name="diag_beta_report_copied">Справаздача скапіявана ў буфер абмену</string>
 </resources>

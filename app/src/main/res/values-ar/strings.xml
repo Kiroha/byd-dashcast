@@ -204,4 +204,34 @@
     <string name="log_saved_toast">تم حفظ السجل: %1$s</string>
     <string name="diag_placeholder_title">يتم إعادة بناء صفحة التشخيص</string>
     <string name="diag_placeholder_subtitle">تمت إزالة الاختبارات السابقة. ستضاف أدوات تشخيص جديدة هنا قريبًا.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">محرك تجريبي (بيتا)</string>
+    <string name="settings_beta_warning">ميزات تجريبية. في حالة وجود مشكلة، يعود التطبيق تلقائيًا إلى المحرك المستقر. يلزم إعادة التشغيل بعد التغيير.</string>
+    <string name="settings_beta_proxy_daemon">خفي وكيل مميز</string>
+    <string name="settings_beta_proxy_daemon_support">يشغّل خفيًا دائمًا عبر ADB محلي (UID 2000) لتنفيذ أوامر النظام. مستوحى من OpenBYD.</string>
+    <string name="settings_beta_system_context">سياق النظام (انعكاس)</string>
+    <string name="settings_beta_system_context_support">يحصل على Context للنظام عبر ActivityThread.systemMain() لتجاوز فحوصات أذونات SDK من BYD.</string>
+    <string name="beta_restart_title">يلزم إعادة التشغيل</string>
+    <string name="beta_restart_message">سيُطبَّق هذا الخيار عند تشغيل DashCast التالي. يمكنك متابعة استخدام التطبيق بشكل طبيعي حتى ذلك الحين.</string>
+    <string name="diag_tab_cluster">العداد</string>
+    <string name="diag_tab_display">العرض</string>
+    <string name="diag_tab_adb_local">ADB محلي</string>
+    <string name="diag_tab_system">النظام</string>
+    <string name="diag_tab_stress">اختبار ضغط</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">قريبًا</string>
+    <string name="diag_coming_soon_subtitle">سيُضاف هذا القسم في إصدار قادم. راجع علامة التبويب «Beta Engine» للاختبارات الحالية.</string>
+    <string name="diag_beta_header_title">محرك تجريبي</string>
+    <string name="diag_beta_header_subtitle">اختبارات Component A (الخفي) وComponent B (سياق النظام). المرحلة 1.</string>
+    <string name="diag_beta_pill_a_off">A · الخفي: OFF</string>
+    <string name="diag_beta_pill_a_on">A · الخفي: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">اضغط «تشغيل الكل» للبدء</string>
+    <string name="diag_beta_counters_running">قيد التنفيذ…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">تشغيل الكل</string>
+    <string name="diag_beta_copy_report">إرسال (.log)</string>
+    <string name="diag_beta_report_copied">تم نسخ التقرير إلى الحافظة</string>
 </resources>

@@ -13,6 +13,9 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
+
+import com.byd.dashcast.beta.BetaConfig;
 
 /**
  * User-facing settings screen.
@@ -72,6 +75,8 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbBootAutoStart;
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
+    private CompoundButton cbBetaProxyDaemon;
+    private CompoundButton cbBetaSystemContext;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -192,6 +197,8 @@ public class SettingsActivity extends AppCompatActivity {
         flSafeZone    = findViewById(R.id.fl_safe_zone);
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
+        cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
+        cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
     }
 
     private void loadPreferences() {
@@ -233,6 +240,10 @@ public class SettingsActivity extends AppCompatActivity {
         // Reconnect popup toggle (default: disabled — users find it intrusive)
         boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, false);
         cbReconnectPopup.setChecked(reconnectPopup);
+
+        // Beta Engine toggles (default OFF — restart required after change)
+        cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
+        cbBetaSystemContext.setChecked(BetaConfig.isSystemContextEnabled(this));
     }
 
     private void wireListeners() {
@@ -354,6 +365,31 @@ public class SettingsActivity extends AppCompatActivity {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
         });
+
+        // Beta Engine — both toggles require app restart to take effect
+        cbBetaProxyDaemon.setOnCheckedChangeListener((b, isChecked) -> {
+            BetaConfig.setProxyDaemonEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "beta_proxy_daemon=" + isChecked);
+            showRestartRequiredDialog();
+        });
+        cbBetaSystemContext.setOnCheckedChangeListener((b, isChecked) -> {
+            BetaConfig.setSystemContextEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "beta_system_context=" + isChecked);
+            showRestartRequiredDialog();
+        });
+    }
+
+    /**
+     * Beta Engine toggles take effect on next launch — show a non-blocking
+     * dialog so the user knows their change isn't live yet.
+     */
+    private void showRestartRequiredDialog() {
+        if (mDestroyed || isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.beta_restart_title)
+                .setMessage(R.string.beta_restart_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private void updateVisualModeState(boolean visual) {

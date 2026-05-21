@@ -204,4 +204,34 @@
     <string name="log_saved_toast">Jurnal saqlandi: %1$s</string>
     <string name="diag_placeholder_title">Diag sahifasi qayta tuzilmoqda</string>
     <string name="diag_placeholder_subtitle">Avvalgi testlar olib tashlandi. Yangi tashxis vositalari tez orada qoʻshiladi.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Eksperimental dvigatel (beta)</string>
+    <string name="settings_beta_warning">Eksperimental funksiyalar. Muammo yuz bersa, ilova avtomatik tarzda barqaror dvigatelga qaytadi. O\'zgartirishdan keyin qayta ishga tushirish kerak.</string>
+    <string name="settings_beta_proxy_daemon">Imtiyozli proksi-demon</string>
+    <string name="settings_beta_proxy_daemon_support">Tizim buyruqlarini bajarish uchun lokal ADB (UID 2000) orqali doimiy demonni ishga tushiradi. OpenBYD\'dan ilhomlangan.</string>
+    <string name="settings_beta_system_context">Tizim konteksti (refleksiya)</string>
+    <string name="settings_beta_system_context_support">BYD SDK\'sining ruxsat tekshiruvini chetlab o\'tish uchun ActivityThread.systemMain() orqali tizim Context\'ini oladi.</string>
+    <string name="beta_restart_title">Qayta ishga tushirish kerak</string>
+    <string name="beta_restart_message">Ushbu sozlama DashCast\'ning keyingi ishga tushishida kuchga kiradi. Shu vaqtgacha ilovadan odatdagidek foydalanishingiz mumkin.</string>
+    <string name="diag_tab_cluster">Klaster</string>
+    <string name="diag_tab_display">Displey</string>
+    <string name="diag_tab_adb_local">Lokal ADB</string>
+    <string name="diag_tab_system">Tizim</string>
+    <string name="diag_tab_stress">Stress-test</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Tez orada</string>
+    <string name="diag_coming_soon_subtitle">Ushbu bo\'lim keyingi versiyada amalga oshiriladi. Joriy testlar uchun «Beta Engine» yorlig\'iga qarang.</string>
+    <string name="diag_beta_header_title">Eksperimental dvigatel</string>
+    <string name="diag_beta_header_subtitle">Component A (demon) va Component B (tizim konteksti) testlari. 1-bosqich.</string>
+    <string name="diag_beta_pill_a_off">A · Demon: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Demon: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Boshlash uchun «Hammasini ishga tushirish»ni bosing</string>
+    <string name="diag_beta_counters_running">Bajarilmoqda…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Hammasini ishga tushirish</string>
+    <string name="diag_beta_copy_report">Yuborish (.log)</string>
+    <string name="diag_beta_report_copied">Hisobot vaqtinchalik xotiraga nusxalandi</string>
 </resources>

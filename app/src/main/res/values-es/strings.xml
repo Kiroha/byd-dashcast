@@ -202,4 +202,34 @@
     <string name="log_saved_toast">Registro guardado: %1$s</string>
     <string name="diag_placeholder_title">La página Diag se está reconstruyendo</string>
     <string name="diag_placeholder_subtitle">Las pruebas anteriores se eliminaron. Próximamente nuevas herramientas de diagnóstico.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Motor experimental (beta)</string>
+    <string name="settings_beta_warning">Funciones experimentales. Si algo falla, la app vuelve automáticamente al motor estable. Reinicio necesario tras cambios.</string>
+    <string name="settings_beta_proxy_daemon">Daemon proxy privilegiado</string>
+    <string name="settings_beta_proxy_daemon_support">Lanza un daemon persistente vía ADB local (UID 2000) para ejecutar comandos del sistema. Inspirado en OpenBYD.</string>
+    <string name="settings_beta_system_context">Contexto del sistema (reflexión)</string>
+    <string name="settings_beta_system_context_support">Obtiene un Context del sistema vía ActivityThread.systemMain() para saltar la comprobación de permisos del SDK de BYD.</string>
+    <string name="beta_restart_title">Reinicio necesario</string>
+    <string name="beta_restart_message">Esta opción surtirá efecto en el próximo arranque de DashCast. Puedes seguir usando la app con normalidad mientras tanto.</string>
+    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_adb_local">ADB local</string>
+    <string name="diag_tab_system">Sistema</string>
+    <string name="diag_tab_stress">Prueba de estrés</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Próximamente</string>
+    <string name="diag_coming_soon_subtitle">Esta sección se implementará en una próxima versión. Consulta la pestaña «Beta Engine» para las pruebas actuales.</string>
+    <string name="diag_beta_header_title">Motor experimental</string>
+    <string name="diag_beta_header_subtitle">Pruebas de Component A (daemon) y Component B (system context). Fase 1.</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Daemon: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Pulsa «Ejecutar todas» para iniciar</string>
+    <string name="diag_beta_counters_running">Ejecutando…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Ejecutar todas</string>
+    <string name="diag_beta_copy_report">Enviar (.log)</string>
+    <string name="diag_beta_report_copied">Informe copiado al portapapeles</string>
 </resources>
