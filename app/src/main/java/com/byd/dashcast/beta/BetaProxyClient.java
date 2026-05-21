@@ -65,10 +65,19 @@ public final class BetaProxyClient {
             "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
             + "LOG=" + DAEMON_LOG + "; "
+            // Kill any stale daemon still holding the abstract socket. Without this
+            // step a daemon spawned in a previous session (it survives app shutdown
+            // because of `setsid`) keeps owning @dashcast_proxy and every new
+            // bootstrap dies with "Address already in use" (observed in 1.1.4).
+            // The [d] trick avoids matching the grep process itself; `awk` extracts
+            // the PID; `xargs -r` is a no-op when no PID is found.
+            + "STALE=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}'); "
+            + "if [ -n \"$STALE\" ]; then kill -9 $STALE 2>/dev/null; sleep 0.3; fi; "
             // Wipe + instrument: makes future failures self-diagnostic.
             + "{ echo \"[boot] $(date) apk=$APK\"; "
             +   "echo \"[boot] id=$(id)\"; "
             +   "echo \"[boot] getenforce=$(getenforce 2>/dev/null)\"; "
+            +   "echo \"[boot] stale_killed=${STALE:-none}\"; "
             +   "ls -la \"$APK\" 2>&1; "
             +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
             // Critical: double quotes around `sh -c \"...\"` so the OUTER shell expands
