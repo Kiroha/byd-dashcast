@@ -6,8 +6,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![API 29](https://img.shields.io/badge/API-29%20(Android%2010)-green.svg)](https://developer.android.com/about/versions/10)
-[![Latest Release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?label=beta&color=blue)](https://github.com/Kiroha/byd-dashcast/releases/latest)
-[![Pre-release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?include_prereleases&label=pre-release&color=orange)](https://github.com/Kiroha/byd-dashcast/releases)
+[![Latest Release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?label=stable&color=brightgreen)](https://github.com/Kiroha/byd-dashcast/releases/latest)
+[![Pre-release](https://img.shields.io/github/v/release/Kiroha/byd-dashcast?include_prereleases&label=beta&color=blue)](https://github.com/Kiroha/byd-dashcast/releases)
+[![Docs](https://img.shields.io/badge/docs-kiroha.github.io-blue)](https://kiroha.github.io/byd-dashcast/)
+[![Telegram](https://img.shields.io/badge/Telegram-community-2CA5E0?logo=telegram)](https://t.me/+QPk_dmTVaNkxMjFk)
 
 Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
 onto the instrument cluster display, control it via a real-time touch mirror, and diagnose
@@ -15,9 +17,14 @@ BYD APIs.
 
 > **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F) — Android 10 (API 29)
 
+**v1.0.0 — Official Stable Release.** DashCast has graduated from alpha/beta. The interface has been fully redesigned in **Material 3**, the projection start/stop flow has been hardened to prevent edge-case bugs, and the documentation has been rewritten from scratch.
+
+- **Documentation**: https://kiroha.github.io/byd-dashcast/
+- **Community (Telegram)**: https://t.me/+QPk_dmTVaNkxMjFk
+- **Releases**: https://github.com/Kiroha/byd-dashcast/releases
+
 > [!WARNING]
-> **Beta software** — This project is in beta. Core features work but some areas (split screen, edge cases) are still being refined. Use at your own risk.
-> The authors are not responsible for any damage to your vehicle's infotainment system.
+> The authors are not responsible for any damage to your vehicle's infotainment system. Use at your own risk.
 
 > [!IMPORTANT]
 > **v0.2.0 breaking change — uninstall required (historical, still relevant for old installs)**:
@@ -30,7 +37,7 @@ BYD APIs.
 > ```bash
 > adb uninstall com.byd.myapp     # remove old alpha
 > adb uninstall com.byd.dashcast  # remove any previous beta
-> adb install DashCast-vX.Y.Z-<channel>-debug.apk
+> adb install DashCast-vX.Y.Z-release.apk
 > ```
 
 ---
@@ -207,8 +214,8 @@ See [Build requirements](#build-requirements) below.
 ## Installation
 
 1. Download the latest APK from [GitHub Releases](https://github.com/Kiroha/byd-dashcast/releases/latest):
-  - **Stable/Beta** (recommended): latest non-pre-release asset on the Releases page
-  - **Pre-release** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
+  - **Stable** (recommended): latest non-pre-release asset on the Releases page
+  - **Beta** (bleeding edge): [all releases](https://github.com/Kiroha/byd-dashcast/releases)
 
 2. **Uninstall any previous version first** (see breaking change notice above):
 ```bash
@@ -219,7 +226,7 @@ adb uninstall com.byd.dashcast  # if coming from a previous beta
 3. Sideload onto the infotainment unit:
 ```bash
 adb connect <car-ip>:5555
-adb install DashCast-vX.Y.Z-<channel>-debug.apk
+adb install DashCast-vX.Y.Z-release.apk
 ```
 
 4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
@@ -229,22 +236,20 @@ adb install DashCast-vX.Y.Z-<channel>-debug.apk
 
 > If you don't have the car's IP, the app can also be installed via USB when ADB USB debugging is enabled (developer options).
 
-### OTA updates (v0.2.0+)
+### OTA updates
 
-Once v0.2.0-beta is installed, future updates are automatic:
+Once DashCast is installed, future updates are automatic:
 - On every launch, DashCast checks GitHub Releases for a newer version
 - A download progress dialog appears, then the system install prompt
-- Enable **Settings → Pre-release** to also receive alpha builds between beta releases
+- Enable **Settings → Beta channel** to also receive pre-release builds between stable releases
 
 ---
 
-## Known issues (beta)
+## Known issues
 
-- **Reliability**: The cluster activation sequence may fail on the first attempt — retry
-- **Mirror touch (first launch)**: Touch input on the mirror does not work on the very first run. Force-stop the app and relaunch it — touch will work correctly from the second start onwards
-- **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface)
-- **Split 50/50**: Experimental — may fail depending on target app window mode
-- **Language**: The UI has been translated to English, but some messages (toasts, logs) may still appear in French
+- **First-launch mirror touch**: On the very first run after install, touch input on the mirror may be inactive. Force-stop the app and relaunch — touch is reliable from the second start onwards.
+- **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface).
+- **Split 50/50**: Experimental — may fail depending on the target app's window mode.
 
 ---
 
@@ -287,6 +292,10 @@ The `app/build.gradle` signing config applies this keystore for both debug and r
 
 ```bash
 cd MyBYDApp   # repo folder name
+./gradlew assembleRelease
+# APK → app/build/outputs/apk/release/DashCast-v<versionName>-release.apk
+
+# Debug build (same platform-signed APK, useful for development):
 ./gradlew assembleDebug
 # APK → app/build/outputs/apk/debug/DashCast-v<versionName>-debug.apk
 ```
