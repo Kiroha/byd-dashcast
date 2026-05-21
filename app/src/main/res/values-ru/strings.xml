@@ -20,6 +20,8 @@
     <string name="btn_show_mirror">📺 Зеркало</string>
     <string name="btn_restore_cluster">Остановить проекцию</string>
     <string name="btn_origin_cluster">Восстановить штатную панель</string>
+    <string name="stop_sheet_subtitle">Удерживайте для дополнительных действий.</string>
+    <string name="stop_sheet_origin_desc">Использует размер экрана, выбранный в настройках (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Установленные приложения</string>
     <string name="mirror_placeholder">Активное изображение на кластере ✓</string>
     <string name="btn_lang_es">🇪🇸  Español</string>

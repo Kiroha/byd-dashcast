@@ -19,6 +19,8 @@
     <string name="btn_show_mirror">📺 Espejo</string>
     <string name="btn_restore_cluster">Detener proyección</string>
     <string name="btn_origin_cluster">Restaurar panel original</string>
+    <string name="stop_sheet_subtitle">Mantén pulsado para más acciones.</string>
+    <string name="stop_sheet_origin_desc">Usa el tamaño de pantalla elegido en Ajustes (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Aplicaciones instaladas</string>
     <string name="mirror_placeholder">Pantalla activa en el clúster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Dividir</string>

@@ -22,6 +22,8 @@
     <string name="btn_show_mirror">📺 Specchio</string>
     <string name="btn_restore_cluster">Ferma Proiezione</string>
     <string name="btn_origin_cluster">Ripristina Dashboard originale</string>
+    <string name="stop_sheet_subtitle">Tieni premuto per altre azioni.</string>
+    <string name="stop_sheet_origin_desc">Usa la dimensione schermo scelta nelle Impostazioni (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">App installate</string>
     <string name="mirror_placeholder">Display attivo su cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Dividi</string>

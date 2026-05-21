@@ -22,6 +22,8 @@
     <string name="btn_show_mirror">📺 Yansıt</string>
     <string name="btn_restore_cluster">Projeksiyonu durdur</string>
     <string name="btn_origin_cluster">Orijinal Dashboard\'u geri yükle</string>
+    <string name="stop_sheet_subtitle">Daha fazla işlem için basılı tutun.</string>
+    <string name="stop_sheet_origin_desc">Ayarlarda seçilen ekran boyutunu kullanır (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Yüklü uygulamalar</string>
     <string name="mirror_placeholder">Kümede aktif ekran ✓</string>
     <string name="btn_cluster_split">⬛⬛ Böl</string>

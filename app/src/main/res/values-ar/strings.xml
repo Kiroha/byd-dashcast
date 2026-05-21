@@ -19,6 +19,8 @@
     <string name="btn_show_mirror">📺 المرآة</string>
     <string name="btn_restore_cluster">إيقاف العرض</string>
     <string name="btn_origin_cluster">استعادة اللوحة الأصلية</string>
+    <string name="stop_sheet_subtitle">اضغط مطولاً للحصول على إجراءات إضافية.</string>
+    <string name="stop_sheet_origin_desc">يستخدم حجم الشاشة المختار في الإعدادات (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">التطبيقات المثبتة</string>
     <string name="mirror_placeholder">الشاشة النشطة على لوحة العدادات ✓</string>
     <string name="btn_cluster_split">⬛⬛ تقسيم</string>

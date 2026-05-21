@@ -22,6 +22,8 @@
     <string name="btn_show_mirror">📺 Mirror</string>
     <string name="btn_restore_cluster">Stop Projection</string>
     <string name="btn_origin_cluster">Restore Original Dashboard</string>
+    <string name="stop_sheet_subtitle">Long-press for additional actions.</string>
+    <string name="stop_sheet_origin_desc">Uses the screen size chosen in Settings (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Installed applications</string>
     <string name="mirror_placeholder">Active display on cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>

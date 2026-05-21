@@ -20,6 +20,8 @@
     <string name="btn_show_mirror">📺 Koʻzgu</string>
     <string name="btn_restore_cluster">Proyeksiyani toʻxtatish</string>
     <string name="btn_origin_cluster">Asl panelni tiklash</string>
+    <string name="stop_sheet_subtitle">Qo\'shimcha amallar uchun bosib turing.</string>
+    <string name="stop_sheet_origin_desc">Sozlamalarda tanlangan ekran o\'lchamidan foydalanadi (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Oʻrnatilgan ilovalar</string>
     <string name="mirror_placeholder">Klasterda faol tasvir ✓</string>
     <string name="btn_cluster_split">⬛⬛ Ajratish</string>

@@ -20,6 +20,8 @@
     <string name="btn_show_mirror">📺 Дзеркало</string>
     <string name="btn_restore_cluster">Зупинити проекцію</string>
     <string name="btn_origin_cluster">Відновити штатну панель</string>
+    <string name="stop_sheet_subtitle">Утримуйте для додаткових дій.</string>
+    <string name="stop_sheet_origin_desc">Використовує розмір екрана, обраний у Налаштуваннях (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Встановлені програми</string>
     <string name="mirror_placeholder">Активне зображення на кластері ✓</string>
     <string name="btn_lang_es">🇪🇸  Español</string>

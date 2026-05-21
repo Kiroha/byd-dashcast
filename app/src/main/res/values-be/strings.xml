@@ -20,6 +20,8 @@
     <string name="btn_show_mirror">📺 Люстэрка</string>
     <string name="btn_restore_cluster">Спыніць праекцыю</string>
     <string name="btn_origin_cluster">Аднавіць штатную панэль</string>
+    <string name="stop_sheet_subtitle">Утрымлівайце для дадатковых дзеянняў.</string>
+    <string name="stop_sheet_origin_desc">Выкарыстоўвае памер экрана, абраны ў Наладах (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Усталяваныя праграмы</string>
     <string name="mirror_placeholder">Актыўны відарыс на кластары ✓</string>
     <string name="btn_cluster_split">⬛⬛ Падзяліць</string>

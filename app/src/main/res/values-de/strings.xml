@@ -22,6 +22,8 @@
     <string name="btn_show_mirror">📺 Spiegeln</string>
     <string name="btn_restore_cluster">Projektion stoppen</string>
     <string name="btn_origin_cluster">Original-Dashboard wiederherstellen</string>
+    <string name="stop_sheet_subtitle">Halten Sie für weitere Aktionen gedrückt.</string>
+    <string name="stop_sheet_origin_desc">Verwendet die in den Einstellungen gewählte Bildschirmgröße (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Installierte Apps</string>
     <string name="mirror_placeholder">Aktive Anzeige auf Cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>

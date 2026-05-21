@@ -20,6 +20,8 @@
     <string name="btn_show_mirror">📺 Айна</string>
     <string name="btn_restore_cluster">Проекцияны тоқтату</string>
     <string name="btn_origin_cluster">Бастапқы панельді қалпына келтіру</string>
+    <string name="stop_sheet_subtitle">Қосымша әрекеттер үшін басып тұрыңыз.</string>
+    <string name="stop_sheet_origin_desc">Параметрлерде таңдалған экран өлшемін пайдаланады (8.8" / 12.3" / 10.25").</string>
     <string name="title_app_list">Орнатылған қолданбалар</string>
     <string name="mirror_placeholder">Кластердегі белсенді бейне ✓</string>
     <string name="btn_cluster_split">⬛⬛ Бөлу</string>
