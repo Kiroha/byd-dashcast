@@ -254,11 +254,11 @@ public final class BetaTestRunner {
     }
 
     private static void testB4(Context ctx, TestResult r) throws Exception {
-        tryGetInstance(ctx, r, "com.byd.bydautosdk.BYDAutoBodyworkDevice");
+        tryGetInstance(ctx, r, "android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
     }
 
     private static void testB5(Context ctx, TestResult r) throws Exception {
-        tryGetInstance(ctx, r, "com.byd.bydautosdk.BYDAutoRadarDevice");
+        tryGetInstance(ctx, r, "android.hardware.bydauto.radar.BYDAutoRadarDevice");
     }
 
     private static void tryGetInstance(Context ctx, TestResult r, String className) throws Exception {
@@ -281,7 +281,7 @@ public final class BetaTestRunner {
     private static void testB6(Context ctx, TestResult r) throws Exception {
         Class<?> cls;
         try {
-            cls = Class.forName("com.byd.bydautosdk.BYDAutoBodyworkDevice");
+            cls = Class.forName("android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
         } catch (ClassNotFoundException cnfe) {
             r.status = Status.SKIPPED;
             r.message = "SDK not on classpath";

@@ -480,6 +480,42 @@ public class AdbLocalClient {
             @Override public void run() {
                 AppLogger.log(TAG, "Restoring BYD cluster"
                         + (targetPackage != null ? " (target=" + targetPackage + ")" : ""));
+                // Phase 4d: try the typed daemon path for the whole sequence
+                // (force-stop + sendInfo×2). On any failure we fall through to
+                // the legacy shell sequence below so semantics are preserved.
+                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        if (targetPackage != null && !targetPackage.isEmpty()) {
+                            BetaProxyClient.forceStopPackage(targetPackage, -1);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed)\n");
+                            Thread.sleep(500);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        sb.append("sendInfo(18) : OK (typed)\n");
+                        Thread.sleep(1000);
+                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        sb.append("sendInfo(0)  : OK (typed)\n");
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta restoreBydOnCluster typed ok (" + dt + "ms)");
+                        callback.onSuccess("BYD restored \u2713 (typed)\n" + sb);
+                        return;
+                    } catch (Throwable t) {
+                        if (t instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            callback.onError("interrupted");
+                            return;
+                        }
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta restoreBydOnCluster typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
@@ -532,6 +568,44 @@ public class AdbLocalClient {
             @Override public void run() {
                 AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
                         + (targetPackage != null ? " target=" + targetPackage : ""));
+                // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
+                // Falls back to the legacy shell flow on any failure.
+                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        if (targetPackage != null && !targetPackage.isEmpty()) {
+                            BetaProxyClient.forceStopPackage(targetPackage, -1);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed)\n");
+                            Thread.sleep(500);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        sb.append("sendInfo(18) : OK (typed)\n");
+                        Thread.sleep(6000);
+                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        sb.append("sendInfo(0)  : OK (typed)\n");
+                        Thread.sleep(6000);
+                        BetaProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
+                        sb.append("sendInfo(").append(screenSizeCmd).append(") : OK (typed)\n");
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta restoreOriginCluster typed ok (" + dt + "ms)");
+                        callback.onSuccess("Origin cluster restored \u2713 (typed)\n" + sb);
+                        return;
+                    } catch (Throwable t) {
+                        if (t instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            callback.onError("interrupted");
+                            return;
+                        }
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta restoreOriginCluster typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 

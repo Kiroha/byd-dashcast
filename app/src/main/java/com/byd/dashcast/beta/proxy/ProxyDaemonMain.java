@@ -79,6 +79,11 @@ public final class ProxyDaemonMain {
      *  Phase 4c typed verb replacing {@code service call AutoContainer 2 i32 … i32 … s16 "…"}
      *  used by {@code AdbLocalClient.sendInfo}. */
     public static final int TXN_AUTOCONTAINER_SEND_INFO = android.os.IBinder.FIRST_CALL_TRANSACTION + 6; // 7
+    /** Transaction: {@code String packageName, int userId} → nothing (or thrown exception).
+     *  Phase 4d typed verb replacing {@code am force-stop <pkg>} used by
+     *  {@code AdbLocalClient.restoreBydOnCluster} / {@code restoreOriginCluster}
+     *  (end-of-session teardown hot path). */
+    public static final int TXN_FORCE_STOP_PACKAGE = android.os.IBinder.FIRST_CALL_TRANSACTION + 7; // 8
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -263,6 +268,29 @@ public final class ProxyDaemonMain {
                     String str = data.readString();
                     try {
                         Phase4Verbs.autoContainerSendInfo(type, info, str);
+                        if (reply != null) {
+                            reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_FORCE_STOP_PACKAGE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    int userId = data.readInt();
+                    try {
+                        Phase4Verbs.forceStopPackage(pkg, userId);
                         if (reply != null) {
                             reply.writeNoException();
                         }
