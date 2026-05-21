@@ -134,43 +134,48 @@ public final class BetaProxyClient {
      * @return {@code true} on success.
      */
     public static boolean connect(Context ctx) {
+        // Fast path: an already-live binder is reused without touching the daemon
+        // process — critical to avoid the cascade of kill-and-respawn cycles that
+        // froze the head unit in v1.1.6 (each respawn triggers a full
+        // ActivityThread.systemMain() in app_process which is very heavy).
         synchronized (LOCK) {
-            // Fast path: an already-live binder is reused without touching the daemon
-            // process — critical to avoid the cascade of kill-and-respawn cycles that
-            // froze the head unit in v1.1.6 (each respawn triggers a full
-            // ActivityThread.systemMain() in app_process which is very heavy).
             if (isConnected()) {
                 if (sDaemonUid < 0) handshake();
                 return true;
             }
-
             ensureReceiverRegistered(ctx);
-
             // arm the latch BEFORE bootstrapping so a fast broadcast isn't missed
             sBinderLatch = new CountDownLatch(1);
+        }
 
-            AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
-            String bootMsg = bootstrap(ctx);
-            AppLogger.d(TAG, "bootstrap result: " + bootMsg);
+        AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
+        String bootMsg = bootstrap(ctx);
+        AppLogger.d(TAG, "bootstrap result: " + bootMsg);
 
-            CountDownLatch latch = sBinderLatch;
-            try {
-                latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
+        // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
+        // arrives on the main thread, onReceive() tries to take LOCK to set
+        // sBinder, and would block until our await() times out. v1.1.7 hit
+        // exactly this deadlock: the broadcast was always 0 ms late because the
+        // receiver was blocked on us. CountDownLatch.await() does not release
+        // monitors the way Object.wait() does, so we have to drop LOCK manually.
+        CountDownLatch latch;
+        synchronized (LOCK) { latch = sBinderLatch; }
+        try {
+            latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
 
-            // The receiver may have fired just after the latch timed out — re-check
-            // sBinder rather than treating the timeout as a hard failure (a 1 ms race
-            // was misclassifying A1 as ✗ in v1.1.6).
+        synchronized (LOCK) {
+            // Late-arrival recovery: the receiver may have signalled just after
+            // the latch timed out — re-check rather than failing hard.
             if (sBinder == null || !sBinder.pingBinder()) {
                 AppLogger.w(TAG, "no live binder after " + BROADCAST_WAIT_MS
                         + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
                 sBinder = null;
                 return false;
             }
-
             handshake();
             boolean ok = isConnected();
             if (ok) {
