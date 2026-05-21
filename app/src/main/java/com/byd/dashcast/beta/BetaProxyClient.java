@@ -64,11 +64,21 @@ public final class BetaProxyClient {
     private static final String BOOTSTRAP_CMD =
             "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
-            + "setsid sh -c 'CLASSPATH=\"$APK\" /system/bin/app_process64"
+            + "LOG=" + DAEMON_LOG + "; "
+            // Wipe + instrument: makes future failures self-diagnostic.
+            + "{ echo \"[boot] $(date) apk=$APK\"; "
+            +   "echo \"[boot] id=$(id)\"; "
+            +   "echo \"[boot] getenforce=$(getenforce 2>/dev/null)\"; "
+            +   "ls -la \"$APK\" 2>&1; "
+            +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
+            // Critical: double quotes around `sh -c \"...\"` so the OUTER shell expands
+            // $APK before handing it to setsid. With single quotes (the bug in 1.1.3),
+            // the inner shell saw CLASSPATH=$APK literally → app_process64 SIGABRT.
+            + "setsid sh -c \"CLASSPATH='$APK' exec /system/bin/app_process64"
             +     " -Xnoimage-dex2oat /system/bin"
             +     " --nice-name=dashcast_proxy"
             +     " " + DAEMON_MAIN
-            +     " </dev/null >" + DAEMON_LOG + " 2>&1' & "
+            +     " </dev/null >>'$LOG' 2>&1\" & "
             + "echo OK $APK";
 
     /** Fetched after a connect() failure to surface the daemon's first error line(s) in test messages. */
