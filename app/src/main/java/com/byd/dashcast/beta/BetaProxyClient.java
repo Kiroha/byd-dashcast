@@ -365,6 +365,43 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Phase 4b typed verb — pure-Java {@code /proc/&lt;pid&gt;/cmdline} scan
+     * inside the daemon, replacing the {@code sh -c "pidof <pkg>"} fork used
+     * by {@code MainActivity.reconcileDisplayState} / {@code reconcileMainDisplayState}.
+     *
+     * <p>Returns a space-separated list of PIDs whose argv[0] equals
+     * {@code packageName} or starts with {@code "packageName:"} (Android
+     * sub-processes). Empty string when no match — i.e. {@code output.trim().isEmpty()}
+     * is the same "process is dead" signal the legacy callers expected.
+     *
+     * <p>Probe P8 (build 173) measured the scan at &lt; 1 ms on the BYD Seal EU
+     * with 241 live processes; build-174 device logs show the legacy fork at
+     * 48–181 ms.
+     */
+    public static String getPidsByPackage(String packageName) throws BetaProxyException {
+        if (packageName == null) packageName = "";
+        synchronized (LOCK) {
+            if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeString(packageName);
+                sBinder.transact(ProxyDaemonMain.TXN_GET_PIDS, data, reply, 0);
+                reply.readException();
+                String pids = reply.readString();
+                return pids == null ? "" : pids;
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
