@@ -234,4 +234,21 @@
     <string name="diag_beta_run_all">Запустить все</string>
     <string name="diag_beta_copy_report">Отправить (.log)</string>
     <string name="diag_beta_report_copied">Отчёт скопирован в буфер обмена</string>
+
+    <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
+    <string name="diag_tab_dilink5">DiLink 5</string>
+    <string name="diag_dl5_header_title">Платформа DiLink 5</string>
+    <string name="diag_dl5_header_subtitle">Тесты, выделенные для DiLink 5.0 / Android 12.</string>
+    <string name="diag_dl5_header_subtitle_fmt">Продукт: %1$s · API %2$d</string>
+    <string name="diag_dl5_pill_mode_auto_on">Режим: AUTO = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_auto_off">Режим: AUTO = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_forced_on">Режим: ПРИНУДИТЕЛЬНО = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_forced_off">Режим: ПРИНУДИТЕЛЬНО = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_unknown">Режим: —</string>
+    <string name="diag_dl5_d8_target_label">Целевое приложение (тест D8 — кластер)</string>
+    <string name="diag_dl5_d8_running_toast">Тест D8 на %1$s — приложение будет перезапущено и возвращено на главный экран.</string>
+    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+    <string name="settings_dilink5_mode">Режим DiLink 5 (экспериментальный)</string>
+    <string name="settings_dilink5_mode_support">Адаптирует DashCast к протоколу DiLink 5.0 / Android 12.</string>
+    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Требуется перезапуск.</string>
 </resources>

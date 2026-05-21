@@ -163,6 +163,8 @@
                 android:text="@string/diag_tab_stress"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_beta_engine"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_dilink5"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -178,6 +180,11 @@
             <include
                 android:id="@+id/panel_beta_engine"
                 layout="@layout/include_diag_beta_engine"/>
+
+            <!-- DiLink 5 dedicated diagnostic panel -->
+            <include
+                android:id="@+id/panel_dilink5"
+                layout="@layout/include_diag_dilink5"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include

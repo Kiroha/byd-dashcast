@@ -77,6 +77,8 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbReconnectPopup;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
+    private CompoundButton swDilink5Mode;
+    private TextView tvBetaDilink5Support;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -199,6 +201,8 @@ public class SettingsActivity extends AppCompatActivity {
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
+        swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
+        tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
     }
 
     private void loadPreferences() {
@@ -244,6 +248,19 @@ public class SettingsActivity extends AppCompatActivity {
         // Beta Engine toggles (default OFF — restart required after change)
         cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
         cbBetaSystemContext.setChecked(BetaConfig.isSystemContextEnabled(this));
+
+        // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
+        // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
+        // the initial position mirrors the auto-detect result.
+        com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
+        swDilink5Mode.setChecked(p.isDiLink5(this));
+        if (tvBetaDilink5Support != null) {
+            String prod = p.rawProductName();
+            if (prod == null || prod.isEmpty()) prod = "?";
+            tvBetaDilink5Support.setText(getString(
+                    R.string.settings_dilink5_mode_support_fmt,
+                    prod, p.androidApi(), p.describeMode(this)));
+        }
     }
 
     private void wireListeners() {
@@ -375,6 +392,19 @@ public class SettingsActivity extends AppCompatActivity {
         cbBetaSystemContext.setOnCheckedChangeListener((b, isChecked) -> {
             BetaConfig.setSystemContextEnabled(this, isChecked);
             AppLogger.i("SettingsActivity", "beta_system_context=" + isChecked);
+            showRestartRequiredDialog();
+        });
+        swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {
+            com.byd.dashcast.platform.Platform.setForcedBoolean(this, isChecked);
+            AppLogger.i("SettingsActivity", "dilink5_mode override=" + isChecked);
+            if (tvBetaDilink5Support != null) {
+                com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
+                String prod = p.rawProductName();
+                if (prod == null || prod.isEmpty()) prod = "?";
+                tvBetaDilink5Support.setText(getString(
+                        R.string.settings_dilink5_mode_support_fmt,
+                        prod, p.androidApi(), p.describeMode(this)));
+            }
             showRestartRequiredDialog();
         });
     }
