@@ -191,8 +191,12 @@
 
                         <!-- 8.8" -->
                         <LinearLayout
+                            android:id="@+id/row_cluster_88"
                             style="@style/Widget.DashCast.ListItem"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground">
                             <com.google.android.material.radiobutton.MaterialRadioButton
                                 android:id="@+id/rb_88"
                                 style="@style/Widget.DashCast.RadioButton"
@@ -225,8 +229,12 @@
 
                         <!-- 12.3" -->
                         <LinearLayout
+                            android:id="@+id/row_cluster_123"
                             style="@style/Widget.DashCast.ListItem"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground">
                             <com.google.android.material.radiobutton.MaterialRadioButton
                                 android:id="@+id/rb_123"
                                 style="@style/Widget.DashCast.RadioButton"
@@ -259,8 +267,12 @@
 
                         <!-- 10.25" -->
                         <LinearLayout
+                            android:id="@+id/row_cluster_1025"
                             style="@style/Widget.DashCast.ListItem"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground">
                             <com.google.android.material.radiobutton.MaterialRadioButton
                                 android:id="@+id/rb_1025"
                                 style="@style/Widget.DashCast.RadioButton"

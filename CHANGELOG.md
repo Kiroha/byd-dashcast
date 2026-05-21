@@ -5,6 +5,13 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ---
 
+## Stable releases
+
+| Version | versionCode | Summary |
+|---------|-------------|---------|
+| **1.0.1** | 155 | **Bug fix — cluster screen-size selector in Settings was not clickable.** In the Settings screen, the three cluster-type options (`8.8"`, `12.3"`, `10.25"`) lived inside a `RadioGroup` (`rg_cluster_type`), but the `MaterialRadioButton` widgets had `android:clickable="false"` and `android:focusable="false"`, and the surrounding `LinearLayout` rows had **no id, no click handler, and no selectable background**. Because the radio buttons are nested inside another `LinearLayout` (not direct children of the `RadioGroup`), `RadioGroup`'s built-in auto-check mechanism never received any tap event either — so the entire selection was inert: the user could not change the saved size. Fix: each of the three rows now has its own id (`row_cluster_88`, `row_cluster_123`, `row_cluster_1025`), `android:clickable="true"`, `android:focusable="true"` and `android:background="?attr/selectableItemBackground"` (Material ripple). In `SettingsActivity.wireListeners()`, each row delegates its click to `rgClusterType.check(R.id.rb_XX)`, which in turn triggers the existing `OnCheckedChangeListener` that persists the corresponding sendInfo command (29 = 8.8" / 30 = 12.3" Seal EU / 31 = 10.25") into `cluster_screen_size_cmd` in SharedPreferences. The downstream wiring is preserved end-to-end: long-pressing the **Stop projection** button in `MainActivity` calls `originCluster()`, which reads `getClusterTypeCmd()` and forwards it to `AdbLocalClient.restoreOriginCluster(ctx, screenSizeCmd, pkg, cb)`, so the user-selected cluster size is correctly applied when restoring the native BYD instrument cluster. No business logic was modified — only XML attributes on the three rows and three click handlers in `SettingsActivity`. |
+| **1.0.0** | 154 | **Official stable release** — exit from the alpha/beta channel after extensive in-car validation on BYD Seal EU (DiLink 3.0). Consolidates the entire 0.9.x M3 redesign, Settings/Welcome i18n pass, OTA flow, long-press "Restore Origin Cluster" bottom-sheet, audit lint/javac cleanup (lint 169→71, javac warnings 49→0) and the 12-locale documentation rebuild. |
+
 ## Pre-releases
 
 | Version | versionCode | Summary |
