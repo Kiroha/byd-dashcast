@@ -12,13 +12,111 @@
     New IDs (cosmetic):
       btn_apply_top, tv_version_value, tv_h_value_badge, tv_v_value_badge
 -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="horizontal"
     android:background="?attr/colorSurface">
+
+    <!-- ============= Nav rail ============= -->
+    <LinearLayout
+        android:id="@+id/ll_nav_rail_set"
+        android:layout_width="96dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:background="@color/md_surface_container_low"
+        android:paddingTop="14dp" android:paddingBottom="14dp">
+
+        <ImageView
+            android:id="@+id/iv_nav_logo_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:src="@drawable/ic_cast"
+            android:padding="10dp"
+            android:background="@drawable/bg_pulse_dot"
+            android:contentDescription="@string/app_name"
+            android:clickable="true" android:focusable="true"/>
+
+        <ImageView
+            android:id="@+id/nav_apps_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="22dp"
+            android:src="@drawable/ic_apps"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_apps"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_apps"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_tune"
+            android:padding="10dp"
+            android:background="@drawable/bg_nav_pill_active"
+            android:contentDescription="@string/main_nav_settings"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_settings"
+            android:textSize="10sp" android:textColor="@color/md_primary"
+            android:textStyle="bold"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_diag_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_stethoscope"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_diag"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_diag"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_sysinfo_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_info"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_sysinfo"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_sysinfo"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_log_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_notes"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_log"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_log"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -629,4 +727,5 @@
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>

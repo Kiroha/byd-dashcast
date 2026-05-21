@@ -91,6 +91,7 @@ public class SettingsActivity extends AppCompatActivity {
         bindViews();
         loadPreferences();
         wireListeners();
+        wireSettingsNavRail();
 
         // Mockup top-bar Apply button: mirrors the in-card Apply action.
         View btnApplyTop = findViewById(R.id.btn_apply_top);
@@ -155,6 +156,19 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
+
+    private void wireSettingsNavRail() {
+        View navApps    = findViewById(R.id.nav_apps_set);
+        View navDiag    = findViewById(R.id.nav_diag_set);
+        View navSysinfo = findViewById(R.id.nav_sysinfo_set);
+        View navLog     = findViewById(R.id.nav_log_set);
+        View navLogo    = findViewById(R.id.iv_nav_logo_set);
+        if (navApps != null)    navApps.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        if (navDiag != null)    navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
+        if (navSysinfo != null) navSysinfo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, SysInfoActivity.class)); finish(); });
+        if (navLog != null)     navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
+        if (navLogo != null)    navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+    }
 
     private void bindViews() {
         rgClusterType = findViewById(R.id.rg_cluster_type);
