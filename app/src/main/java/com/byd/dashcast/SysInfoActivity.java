@@ -779,46 +779,73 @@ public class SysInfoActivity extends AppCompatActivity {
         addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false);
 
         // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
-        final TextView mirrorSub = addServiceRow(inf, container, "MirrorDaemon",
+        final View mirrorRow = addServiceRow(inf, container, "MirrorDaemon",
                 clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub)
                                : getString(R.string.sysinfo_svc_stopped),
                 clusterRunning, false);
-        if (clusterRunning && mirrorSub != null) {
+        if (clusterRunning && mirrorRow != null) {
             // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
             new Thread(new Runnable() { @Override public void run() {
                 final int pid = pidOf("MirrorDaemon");
                 runOnUiThread(new Runnable() { @Override public void run() {
                     if (mDestroyed) return;
-                    if (pid > 0) mirrorSub.setText("pid " + pid + " · poll 500 ms");
-                    else         mirrorSub.setText(getString(R.string.sysinfo_svc_mirror_sub));
+                    String sub = pid > 0 ? ("pid " + pid + " · poll 500 ms")
+                                         : getString(R.string.sysinfo_svc_mirror_sub);
+                    setServiceRowState(mirrorRow, true, false, sub);
                 }});
             }}, "sysinfo-pidof").start();
         }
 
-        // ADB local — quick TCP probe on 127.0.0.1:5555 (CONN if connected).
-        boolean adbOk = isPortOpen("127.0.0.1", 5555, 200);
-        addServiceRow(inf, container, "AdbLocalClient",
-                adbOk ? "127.0.0.1:5555" : getString(R.string.sysinfo_svc_adb_unreachable),
-                adbOk, true /* useConnBadge */);
+        // ADB local — real probe via Dadb (executeShellWithResult). Port 5555 may be
+        // open but the ADB handshake/auth still failing → only an actual shell call
+        // proves AdbLocalClient is truly connected.
+        final View adbRow = addServiceRow(inf, container, "AdbLocalClient",
+                getString(R.string.sysinfo_svc_adb_unreachable),
+                false, true /* useConnBadge */);
+        AdbLocalClient.executeShellWithResult(this, "echo ok",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || adbRow == null) return;
+                            setServiceRowState(adbRow, true, true, "127.0.0.1:5555");
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || adbRow == null) return;
+                            setServiceRowState(adbRow, false, true,
+                                    getString(R.string.sysinfo_svc_adb_unreachable));
+                        }});
+                    }
+                });
     }
 
-    /** Adds one service row; returns its support TextView so the caller can update it later. */
-    private TextView addServiceRow(android.view.LayoutInflater inf,
-                                   android.widget.LinearLayout container,
-                                   String name, String sub, boolean running, boolean useConnBadge) {
+    /** Adds one service row; returns the row view so the caller can later toggle state. */
+    private View addServiceRow(android.view.LayoutInflater inf,
+                               android.widget.LinearLayout container,
+                               String name, String sub, boolean running, boolean useConnBadge) {
         View row = inf.inflate(R.layout.row_sysinfo, container, false);
+        ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
+        ((TextView) row.findViewById(R.id.row_headline)).setText(name);
+        // Tag the row so setServiceRowState() knows which badge variant to use.
+        row.setTag(R.id.row_badge, useConnBadge ? Boolean.TRUE : Boolean.FALSE);
+        setServiceRowState(row, running, useConnBadge, sub);
+        container.addView(row);
+        return row;
+    }
+
+    /** Applies the running/off visual state on a row already inflated. */
+    private void setServiceRowState(View row, boolean running, boolean useConnBadge, String sub) {
         android.widget.ImageView icon = row.findViewById(R.id.row_icon);
         View leading = row.findViewById(R.id.row_leading);
-        icon.setImageResource(R.drawable.ic_play_circle);
         if (running) {
             if (leading != null) leading.setBackgroundResource(R.drawable.bg_service_icon_running);
             icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
         } else {
+            if (leading != null) leading.setBackgroundResource(R.drawable.bg_diag_card_icon);
             icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_outline_variant));
         }
-        ((TextView) row.findViewById(R.id.row_headline)).setText(name);
-        TextView supportTv = row.findViewById(R.id.row_support);
-        supportTv.setText(sub);
+        ((TextView) row.findViewById(R.id.row_support)).setText(sub);
         TextView badge = row.findViewById(R.id.row_badge);
         if (running) {
             badge.setText(getString(useConnBadge ? R.string.sysinfo_svc_conn : R.string.sysinfo_svc_run));
@@ -827,8 +854,6 @@ public class SysInfoActivity extends AppCompatActivity {
             badge.setText(getString(R.string.sysinfo_svc_off));
             badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err));
         }
-        container.addView(row);
-        return supportTv;
     }
 
     /** Returns the first PID matching the given pattern via `pgrep -f`, or -1. */
