@@ -209,14 +209,25 @@ public final class BetaProxyClient {
         return (s == null || s.isEmpty()) ? "<empty>" : s;
     }
 
-    /** Forget the cached binder. The daemon keeps running. */
+    /**
+     * No-op. Kept for API compatibility and for tests that want to assert
+     * persistence semantics.
+     *
+     * <p>The cached binder is process-scoped (static), not Activity-scoped, and
+     * the daemon is a separate {@code app_process64} process under uid 2000.
+     * Clearing the binder reference here would lie about the daemon's actual
+     * lifetime: it would force the next {@link #connect(Context)} into a full
+     * bootstrap (which kills the live daemon via the {@code [d]ashcast_proxy}
+     * heuristic and respawns it — changing the PID) even though nothing in the
+     * daemon process changed.
+     *
+     * <p>If the daemon actually dies (e.g. {@code kill -9}, OOM), the kernel
+     * notifies us via the {@code DeathRecipient} hooked in
+     * {@link #onBinderReceived(IBinder)} and {@code sBinder} is cleared
+     * automatically.
+     */
     public static void disconnect() {
-        synchronized (LOCK) {
-            sBinder = null;
-            sDaemonUid = -1;
-            sDaemonPid = -1;
-            sDaemonVer = null;
-        }
+        AppLogger.d(TAG, "disconnect() called — no-op (binder is process-scoped, daemon outlives Activity)");
     }
 
     /** Round-trip latency in ms, or {@code -1} on error / not connected. */
