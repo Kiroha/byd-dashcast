@@ -14,7 +14,9 @@ import android.content.SharedPreferences;
  *   <li>{@link #PREF_USE_PROXY_DAEMON} — Component A: run privileged commands
  *       through a Binder daemon hosted in a dedicated {@code app_process}
  *       spawned via local ADB (UID 2000), instead of one-shot {@code dadb}
- *       shell calls. Inspired by OpenBYD's {@code openbyd_proxy} architecture.</li>
+ *       shell calls. Inspired by OpenBYD's daemon architecture; the
+ *       DashCast implementation exposes its own {@code @dashcast_proxy}
+ *       abstract socket.</li>
  *   <li>{@link #PREF_USE_SYSTEM_CONTEXT} — Component B: obtain a system-uid
  *       {@code Context} via reflection on
  *       {@code ActivityThread.systemMain().getSystemContext()} and use it as
