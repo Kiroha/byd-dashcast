@@ -1,5 +1,6 @@
 package com.byd.dashcast;
 
+import com.byd.dashcast.beta.ShellGateway;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -522,7 +523,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Since we run only one app at a time on the cluster, we apply the app-specific 
         // bounds directly as a display overscan at launch.
         if (displayId > 0) {
-            AdbLocalClient.executeShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
+            ShellGateway.execShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
             AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
         }
     }
@@ -565,7 +566,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      */
     public void stopProjectionNoAdb() {
         AppLogger.log(TAG, "stopProjectionNoAdb requested (ADB already sent)");
-        AdbLocalClient.executeShell(this, "wm overscan reset -d 1");
+        ShellGateway.execShell(this, "wm overscan reset -d 1");
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
@@ -592,7 +593,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         if (displayId > 0) {
             final int insetH = getInsetH(null);
             final int insetV = getInsetV(null);
-            AdbLocalClient.executeShell(this,
+            ShellGateway.execShell(this,
                     "wm overscan " + insetH + "," + insetV
                     + "," + insetH + "," + insetV
                     + " -d " + displayId);
