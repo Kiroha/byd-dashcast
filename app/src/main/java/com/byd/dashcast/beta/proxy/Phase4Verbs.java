@@ -2,6 +2,8 @@ package com.byd.dashcast.beta.proxy;
 
 import android.os.IBinder;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.lang.reflect.Method;
 
 /**
@@ -77,5 +79,69 @@ public final class Phase4Verbs {
         Object wm = windowManager();
         Method m = setOverscanMethod();
         m.invoke(wm, displayId, left, top, right, bottom);
+    }
+
+    /**
+     * Equivalent of {@code pidof <packageName>} — pure-Java scan of
+     * {@code /proc/<pid>/cmdline} for processes whose argv[0] matches
+     * {@code packageName} (exact match or {@code packageName:subprocess}).
+     *
+     * <p>Probe P8 (build 173) proved this scan returns in &lt; 1 ms on the
+     * BYD Seal EU with 241 live processes. Replaces the {@code sh -c "pidof …"}
+     * fork measured at 48–181 ms in build-174 device logs
+     * ({@code MainActivity.reconcileDisplayState} /
+     * {@code reconcileMainDisplayState}, runs every ~5 s while a cluster app
+     * is alive).
+     *
+     * <p>Returns a space-separated list of PIDs (same shape as {@code pidof}'s
+     * stdout) or an empty string if no process matches. Caller-side check
+     * stays {@code output.trim().isEmpty()}.
+     *
+     * <p>This is a uid-2000-safe operation: the daemon's {@code shell} domain
+     * can read every {@code /proc/<pid>/cmdline} thanks to Android's
+     * {@code hidepid=0} default for the {@code shell} group (which is why
+     * legacy {@code pidof} also worked).
+     */
+    public static String getPidsByPackage(String packageName) {
+        if (packageName == null || packageName.isEmpty()) return "";
+        File[] dirs = new File("/proc").listFiles();
+        if (dirs == null) return "";
+        StringBuilder pids = null;
+        for (File d : dirs) {
+            String name = d.getName();
+            if (!d.isDirectory()) continue;
+            // Skip non-numeric /proc entries cheaply (no try/parse).
+            boolean numeric = true;
+            for (int i = 0, n = name.length(); i < n; i++) {
+                char c = name.charAt(i);
+                if (c < '0' || c > '9') { numeric = false; break; }
+            }
+            if (!numeric) continue;
+            File cmd = new File(d, "cmdline");
+            // canRead() is cheaper than catching the IOException — skip up front.
+            if (!cmd.canRead()) continue;
+            byte[] buf = new byte[256];
+            int read;
+            try (FileInputStream fis = new FileInputStream(cmd)) {
+                read = fis.read(buf);
+            } catch (Throwable ignore) { continue; }
+            if (read <= 0) continue;
+            // cmdline is NUL-separated; argv[0] runs up to the first 0x00.
+            int end = 0;
+            while (end < read && buf[end] != 0) end++;
+            if (end == 0) continue;
+            String argv0 = new String(buf, 0, end);
+            // Match pidof semantics: argv[0] equals packageName, or starts with
+            // 'packageName:' (Android sub-processes declared in the manifest).
+            if (argv0.equals(packageName)
+                    || (argv0.length() > packageName.length()
+                        && argv0.startsWith(packageName)
+                        && argv0.charAt(packageName.length()) == ':')) {
+                if (pids == null) pids = new StringBuilder(name.length());
+                else pids.append(' ');
+                pids.append(name);
+            }
+        }
+        return pids == null ? "" : pids.toString();
     }
 }

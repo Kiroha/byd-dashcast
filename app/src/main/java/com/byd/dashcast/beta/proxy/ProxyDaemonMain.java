@@ -72,6 +72,9 @@ public final class ProxyDaemonMain {
     /** Transaction: {@code int displayId, int l, int t, int r, int b} → nothing (or thrown exception).
      *  Phase 4a typed verb replacing {@code wm overscan L,T,R,B -d displayId}. */
     public static final int TXN_SET_OVERSCAN = android.os.IBinder.FIRST_CALL_TRANSACTION + 4; // 5
+    /** Transaction: {@code String packageName} → {@code String spaceSeparatedPids}.
+     *  Phase 4b typed verb replacing {@code pidof <pkg>} (state-poll hot path). */
+    public static final int TXN_GET_PIDS = android.os.IBinder.FIRST_CALL_TRANSACTION + 5; // 6
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -223,6 +226,29 @@ public final class ProxyDaemonMain {
                                     : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
                             reply.writeException(wrap);
                         }
+                    }
+                    return true;
+                }
+                case TXN_GET_PIDS: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    String pids;
+                    try {
+                        pids = Phase4Verbs.getPidsByPackage(pkg);
+                    } catch (Throwable t) {
+                        // Pure-Java /proc scan should never throw, but guard anyway:
+                        // surface as a normal exception so the client falls back to shell.
+                        if (reply != null) {
+                            Exception wrap = (t instanceof Exception)
+                                    ? (Exception) t
+                                    : new RuntimeException(t.getClass().getSimpleName() + ": " + t.getMessage());
+                            reply.writeException(wrap);
+                        }
+                        return true;
+                    }
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeString(pids);
                     }
                     return true;
                 }

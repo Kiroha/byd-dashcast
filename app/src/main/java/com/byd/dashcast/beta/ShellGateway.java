@@ -70,6 +70,15 @@ public final class ShellGateway {
     private static final Pattern WM_OVERSCAN_RESET = Pattern.compile(
             "^\\s*wm\\s+overscan\\s+reset\\s+-d\\s+(\\d+)\\s*$");
 
+    /**
+     * Matches {@code pidof <packageName>} — capture group 1 = package. Anchored
+     * so multi-word invocations (e.g. {@code pidof a b c}) fall through to shell.
+     * The package character class matches Android package names and binary names
+     * (letters, digits, dot, underscore, colon, dash).
+     */
+    private static final Pattern PIDOF = Pattern.compile(
+            "^\\s*pidof\\s+([A-Za-z0-9._:\\-]+)\\s*$");
+
     /** Fire-and-forget shell. Mirrors {@link AdbLocalClient#executeShell}. */
     public static void execShell(final Context ctx, final String cmd) {
         execShellWithResult(ctx, cmd, null);
@@ -96,11 +105,12 @@ public final class ShellGateway {
                 if (!BetaProxyClient.isConnected()) {
                     BetaProxyClient.connect(ctx);
                 }
-                // Phase 4a: try typed verb first. If it matches AND succeeds,
+                // Phase 4a/4b: try typed verb first. If it matches AND succeeds,
                 // we skip the shell entirely. If the parse fails OR the typed
                 // call throws, we fall through to runShell (then legacy).
-                if (tryTypedVerb(cmd, t0)) {
-                    if (cb != null) cb.onSuccess("");
+                String typed = tryTypedVerb(cmd, t0);
+                if (typed != null) {
+                    if (cb != null) cb.onSuccess(typed);
                     return;
                 }
                 String out = BetaProxyClient.runShell(cmd);
@@ -118,18 +128,20 @@ public final class ShellGateway {
     }
 
     /**
-     * Inspect {@code cmd} and, if it matches a Phase 4a verb pattern, route it
-     * through the typed binder call instead of the shell. Returns {@code true}
-     * iff the typed path was taken AND succeeded — callers fall through to the
-     * generic {@code runShell} path on {@code false}.
+     * Inspect {@code cmd} and, if it matches a Phase 4 verb pattern, route it
+     * through the typed binder call instead of the shell. Returns the stdout
+     * payload to hand to the caller's callback on success, or {@code null} when
+     * the command didn't match any pattern OR the typed call failed — callers
+     * fall through to the generic {@code runShell} path on {@code null}.
      *
      * <p>Currently handles:
      * <ul>
-     *   <li>{@code wm overscan L,T,R,B -d N} → {@link BetaProxyClient#setOverscan}</li>
-     *   <li>{@code wm overscan reset -d N}   → {@link BetaProxyClient#setOverscan}(N,0,0,0,0)</li>
+     *   <li>{@code wm overscan L,T,R,B -d N} → {@link BetaProxyClient#setOverscan} (payload: {@code ""})</li>
+     *   <li>{@code wm overscan reset -d N}   → {@link BetaProxyClient#setOverscan}(N,0,0,0,0) (payload: {@code ""})</li>
+     *   <li>{@code pidof <pkg>}              → {@link BetaProxyClient#getPidsByPackage} (payload: space-separated PIDs)</li>
      * </ul>
      */
-    private static boolean tryTypedVerb(String cmd, long t0) {
+    private static String tryTypedVerb(String cmd, long t0) {
         Matcher m = WM_OVERSCAN.matcher(cmd);
         if (m.matches()) {
             try {
@@ -142,12 +154,12 @@ public final class ShellGateway {
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta setOverscan typed ok (" + dt + "ms): d=" + d
                         + " " + l + "," + t + "," + r + "," + b);
-                return true;
+                return "";
             } catch (Throwable th) {
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.w(TAG, "beta setOverscan typed failed after " + dt
                         + "ms, falling through to runShell: " + th.getMessage());
-                return false;
+                return null;
             }
         }
         Matcher mr = WM_OVERSCAN_RESET.matcher(cmd);
@@ -158,14 +170,30 @@ public final class ShellGateway {
                 BetaProxyClient.setOverscan(d, 0, 0, 0, 0);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta setOverscan(reset) typed ok (" + dt + "ms): d=" + d);
-                return true;
+                return "";
             } catch (Throwable th) {
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.w(TAG, "beta setOverscan(reset) typed failed after " + dt
                         + "ms, falling through to runShell: " + th.getMessage());
-                return false;
+                return null;
             }
         }
-        return false;
+        Matcher mp = PIDOF.matcher(cmd);
+        if (mp.matches()) {
+            try {
+                String pkg = mp.group(1);
+                String pids = BetaProxyClient.getPidsByPackage(pkg);
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.d(TAG, "beta pidof typed ok (" + dt + "ms): " + pkg
+                        + " → \"" + pids + "\"");
+                return pids;
+            } catch (Throwable th) {
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.w(TAG, "beta pidof typed failed after " + dt
+                        + "ms, falling through to runShell: " + th.getMessage());
+                return null;
+            }
+        }
+        return null;
     }
 }
