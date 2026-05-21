@@ -49,15 +49,6 @@ public final class ProxyDaemonMain {
     /** Broadcast action delivered to the app once the daemon is ready. */
     public static final String ACTION_PROXY_CONNECTED = "com.byd.dashcast.beta.PROXY_CONNECTED";
 
-    /**
-     * Broadcast action the app sends to ask the daemon to re-emit its
-     * {@link #ACTION_PROXY_CONNECTED} broadcast. Lets the app recover the
-     * binder reference after a cold start or a {@code BetaProxyClient.disconnect()}
-     * without having to kill-and-respawn the daemon (which would change its PID
-     * and trigger another expensive {@code ActivityThread.systemMain()} cycle).
-     */
-    public static final String ACTION_REQUEST_BINDER = "com.byd.dashcast.beta.REQUEST_BINDER";
-
     /** Parcelable extra key carrying the daemon's {@link BinderParcelable}. */
     public static final String EXTRA_BINDER = "proxy_binder";
 
@@ -105,25 +96,6 @@ public final class ProxyDaemonMain {
                     .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
             systemContext.sendBroadcast(intent);
             log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
-
-            // Register a receiver so the app can re-acquire our binder later
-            // (e.g. after Activity destroy or a deliberate disconnect()) without
-            // having to kill-and-respawn us. This is what makes A5 pass.
-            final Context ctx = systemContext;
-            final Binder finalBinder = binder;
-            ctx.registerReceiver(new android.content.BroadcastReceiver() {
-                @Override
-                public void onReceive(Context c, Intent i) {
-                    if (i == null || !ACTION_REQUEST_BINDER.equals(i.getAction())) return;
-                    Intent reply = new Intent(ACTION_PROXY_CONNECTED)
-                            .setPackage(TARGET_PKG)
-                            .putExtra(EXTRA_BINDER, new BinderParcelable(finalBinder))
-                            .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-                    ctx.sendBroadcast(reply);
-                    log("re-broadcast triggered by REQUEST_BINDER");
-                }
-            }, new android.content.IntentFilter(ACTION_REQUEST_BINDER));
-            log("REQUEST_BINDER listener armed");
 
             Looper.loop();
         } catch (Throwable t) {

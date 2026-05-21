@@ -101,12 +101,6 @@ public final class BetaProxyClient {
      * making failure cases painfully slow.
      */
     private static final int  BROADCAST_WAIT_MS    = 15000;
-    /**
-     * Wait window for an existing daemon to answer a {@code REQUEST_BINDER}
-     * broadcast. Kept short because a live daemon responds within ms; if it
-     * doesn't, we fall through to the (much slower) bootstrap path.
-     */
-    private static final int  REQUEST_BINDER_WAIT_MS = 1500;
 
     private static final Object LOCK = new Object();
 
@@ -150,29 +144,7 @@ public final class BetaProxyClient {
                 return true;
             }
             ensureReceiverRegistered(ctx);
-        }
-
-        // Recovery path: a daemon may already be running from a previous app
-        // session — ask it to re-broadcast its binder rather than killing it and
-        // spending another 5-8 s on app_process / ActivityThread.systemMain().
-        // Required for A5 (Persistence across Activity destroy) to pass: the
-        // daemon process is unaffected by our Activity lifecycle, only our
-        // cached IBinder is, and a one-shot ACTION_PROXY_CONNECTED is not
-        // replayable on demand.
-        Context appCtx = ctx.getApplicationContext();
-        if (tryRequestExistingBinder(appCtx)) {
-            synchronized (LOCK) {
-                if (isConnected()) {
-                    if (sDaemonUid < 0) handshake();
-                    AppLogger.i(TAG, "daemon reacquired via REQUEST_BINDER (uid=" + sDaemonUid
-                            + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
-                    return true;
-                }
-            }
-        }
-
-        // Cold start: no daemon listening for REQUEST_BINDER → bootstrap one.
-        synchronized (LOCK) {
+            // arm the latch BEFORE bootstrapping so a fast broadcast isn't missed
             sBinderLatch = new CountDownLatch(1);
         }
 
@@ -211,39 +183,6 @@ public final class BetaProxyClient {
                         + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
             }
             return ok;
-        }
-    }
-
-    /**
-     * Ask any already-running daemon to re-broadcast its binder. Returns
-     * {@code true} if a live binder was received within {@link #REQUEST_BINDER_WAIT_MS}.
-     */
-    private static boolean tryRequestExistingBinder(Context appCtx) {
-        CountDownLatch latch;
-        synchronized (LOCK) {
-            sBinderLatch = new CountDownLatch(1);
-            latch = sBinderLatch;
-        }
-        Intent req = new Intent(ProxyDaemonMain.ACTION_REQUEST_BINDER)
-                .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-        try {
-            appCtx.sendBroadcast(req);
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "sendBroadcast(REQUEST_BINDER) failed: " + t.getMessage());
-            return false;
-        }
-        try {
-            if (!latch.await(REQUEST_BINDER_WAIT_MS, TimeUnit.MILLISECONDS)) {
-                AppLogger.d(TAG, "no existing daemon answered REQUEST_BINDER within "
-                        + REQUEST_BINDER_WAIT_MS + "ms — will bootstrap");
-                return false;
-            }
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-        synchronized (LOCK) {
-            return sBinder != null && sBinder.pingBinder();
         }
     }
 
