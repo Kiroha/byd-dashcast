@@ -1,11 +1,13 @@
 package com.byd.dashcast;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -20,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
  *  2. Display overscan margins (left/right and top/bottom in pixels)
  *     Applied via: wm overscan LEFT,TOP,RIGHT,BOTTOM -d <cluster_display_id>
  */
+@android.annotation.SuppressLint("SetTextI18n")
 public class SettingsActivity extends AppCompatActivity {
 
     @Override
@@ -61,11 +64,14 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnApply;
     private Button      btnReset;
     private TextView    tvResult;
-    private CheckBox    cbPrerelease;
-    private CheckBox    cbVisualMode;
-    private CheckBox    cbBootAutoStart;
-    private CheckBox    cbShowCategoryFilters;
-    private CheckBox    cbReconnectPopup;
+    // Note: fields below are typed as CompoundButton so the layout can use either
+    // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
+    // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
+    private CompoundButton cbPrerelease;
+    private CompoundButton cbVisualMode;
+    private CompoundButton cbBootAutoStart;
+    private CompoundButton cbShowCategoryFilters;
+    private CompoundButton cbReconnectPopup;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -86,6 +92,53 @@ public class SettingsActivity extends AppCompatActivity {
         bindViews();
         loadPreferences();
         wireListeners();
+        wireSettingsNavRail();
+
+        // Mockup top-bar Apply button: mirrors the in-card Apply action.
+        View btnApplyTop = findViewById(R.id.btn_apply_top);
+        if (btnApplyTop != null) {
+            btnApplyTop.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { btnApply.performClick(); }
+            });
+        }
+
+        // Populate dynamic version text ("0.9.2 · build 121").
+        TextView tvVersion = (TextView) findViewById(R.id.tv_version_value);
+        if (tvVersion != null) {
+            tvVersion.setText(BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE);
+        }
+
+        // "Rechercher une mise à jour" — runs the same OTA check as the 3-dot menu in MainActivity.
+        View btnCheckUpdate = findViewById(R.id.btn_check_update);
+        if (btnCheckUpdate != null) {
+            btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    UpdateChecker.checkUpdate(SettingsActivity.this,
+                            MainActivity.makeOtaProgressListener(SettingsActivity.this, true));
+                }
+            });
+        }
+
+        // "Code source" row — opens the GitHub repository.
+        View rowSourceCode = findViewById(R.id.row_source_code);
+        if (rowSourceCode != null) {
+            rowSourceCode.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { openUrl("https://github.com/Kiroha/byd-dashcast"); }
+            });
+        }
+    }
+
+    /** Open the given URL in an external browser. Null-safe and intent-resolve-safe. */
+    private void openUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            android.widget.Toast.makeText(this,
+                    "Aucun navigateur disponible pour ouvrir " + url,
+                    android.widget.Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override
@@ -104,6 +157,19 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
+
+    private void wireSettingsNavRail() {
+        View navApps    = findViewById(R.id.nav_apps_set);
+        View navDiag    = findViewById(R.id.nav_diag_set);
+        View navSysinfo = findViewById(R.id.nav_sysinfo_set);
+        View navLog     = findViewById(R.id.nav_log_set);
+        View navLogo    = findViewById(R.id.iv_nav_logo_set);
+        if (navApps != null)    navApps.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        if (navDiag != null)    navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
+        if (navSysinfo != null) navSysinfo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, SysInfoActivity.class)); finish(); });
+        if (navLog != null)     navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
+        if (navLogo != null)    navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+    }
 
     private void bindViews() {
         rgClusterType = findViewById(R.id.rg_cluster_type);

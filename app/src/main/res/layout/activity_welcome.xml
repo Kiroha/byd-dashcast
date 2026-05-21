@@ -1,225 +1,255 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    WelcomeActivity — first launch language picker.
+    Material 3 design, faithful to mockups/mockup_m3.html screen #1:
+      • Centered welcome-card on colorSurface background
+      • Hero logo (96dp, primary-container tonal square, cast_connected glyph)
+      • DashCast title (HeadlineLarge), primary-tinted version subtitle with letter-spacing
+      • Welcome prompt, then 4×3 grid of outlined language buttons.
+    All 12 button IDs are preserved (btn_lang_fr/en/de/it/tr/es/ru/uk/ar/uz/kk/be)
+    so WelcomeActivity.java keeps working without changes.
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0D0D0D"
-    android:fillViewport="true">
+    android:background="?attr/colorSurface"
+    android:fillViewport="true"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="Overdraw">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp">
+        android:paddingLeft="60dp"
+        android:paddingRight="60dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/welcome_title"
-            android:textColor="@color/text_primary"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/welcome_subtitle"
-            android:textColor="@color/text_accent"
-            android:textSize="14sp"
-            android:letterSpacing="0.2"
-            android:layout_marginBottom="40dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/welcome_select_lang"
-            android:textColor="#888888"
-            android:textSize="15sp"
-            android:gravity="center"
-            android:lineSpacingMultiplier="1.5"
-            android:layout_marginBottom="32dp"/>
-
-        <!-- Row 1: FR/EN/DE -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="12dp">
+            android:layout_gravity="center"
+            app:cardBackgroundColor="@color/md_surface_container"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:contentPaddingTop="32dp"
+            app:contentPaddingBottom="32dp"
+            app:contentPaddingLeft="56dp"
+            app:contentPaddingRight="56dp">
 
-            <Button
-                android:id="@+id/btn_lang_fr"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_fr"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
-            <Button
-                android:id="@+id/btn_lang_en"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_en"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                <!-- Hero logo: 96dp tonal square with cast_connected icon -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    android:layout_marginBottom="14dp">
 
-            <Button
-                android:id="@+id/btn_lang_de"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_de"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"/>
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_cast"
+                        android:tint="@color/md_on_primary_container"
+                        android:contentDescription="@string/app_name"/>
+                </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+                <!-- Title: DashCast -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textSize="36sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:letterSpacing="0"
+                    android:layout_marginBottom="6dp"/>
 
-        <!-- Row 2: IT/TR/ES -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="12dp">
+                <!-- Version subtitle: BYD CLUSTER MIRROR · vX.Y.Z -->
+                <TextView
+                    android:id="@+id/tv_welcome_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/welcome_subtitle"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorPrimary"
+                    android:letterSpacing="0.18"
+                    android:layout_marginBottom="18dp"/>
 
-            <Button
-                android:id="@+id/btn_lang_it"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_it"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                <!-- Prompt -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/welcome_select_lang"
+                    android:textSize="15sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp"/>
 
-            <Button
-                android:id="@+id/btn_lang_tr"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_tr"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                <!-- 4×3 language grid (12 buttons), outlined style -->
 
-            <Button
-                android:id="@+id/btn_lang_es"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_es"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"/>
+                <!-- Row 1: FR / EN / DE -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="14dp">
 
-        </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_fr"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_fr"
+                        android:layout_marginEnd="14dp"/>
 
-        <!-- Row 3: RU/UK/AR -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="12dp">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_en"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_en"
+                        android:layout_marginEnd="14dp"/>
 
-            <Button
-                android:id="@+id/btn_lang_ru"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_ru"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_de"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_de"/>
 
-            <Button
-                android:id="@+id/btn_lang_uk"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_uk"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                </LinearLayout>
 
-            <Button
-                android:id="@+id/btn_lang_ar"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_ar"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"/>
+                <!-- Row 2: IT / TR / ES -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="14dp">
 
-        </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_it"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_it"
+                        android:layout_marginEnd="14dp"/>
 
-        <!-- Row 4: UZ/KK/BE -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_tr"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_tr"
+                        android:layout_marginEnd="14dp"/>
 
-            <Button
-                android:id="@+id/btn_lang_uz"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_uz"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_es"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_es"/>
 
-            <Button
-                android:id="@+id/btn_lang_kk"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_kk"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"
-                android:layout_marginEnd="8dp"/>
+                </LinearLayout>
 
-            <Button
-                android:id="@+id/btn_lang_be"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/btn_lang_be"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:background="#1A237E"
-                android:textColor="@color/text_primary"/>
+                <!-- Row 3: RU / UK / AR -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="14dp">
 
-        </LinearLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_ru"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_ru"
+                        android:layout_marginEnd="14dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_uk"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_uk"
+                        android:layout_marginEnd="14dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_ar"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_ar"/>
+
+                </LinearLayout>
+
+                <!-- Row 4: UZ / KK / BE -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_uz"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_uz"
+                        android:layout_marginEnd="14dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_kk"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_kk"
+                        android:layout_marginEnd="14dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_be"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_be"/>
+
+                </LinearLayout>
+
+                <!-- "Continue without changing" — keeps current locale, marks setup done -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_continue_without_change"
+                    style="@style/Widget.DashCast.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/welcome_continue_without_change"
+                    app:icon="@drawable/ic_arrow_forward"
+                    app:iconGravity="textEnd"
+                    app:iconPadding="8dp"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
-
 </ScrollView>

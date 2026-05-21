@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
  *
  * Main method: launchOnMainDisplay(packageName) — moves an app back to the main display (display 0).
  */
+@SuppressWarnings("deprecation")
 public class DashboardLauncher {
 
     private static final String TAG = "DashboardLauncher";

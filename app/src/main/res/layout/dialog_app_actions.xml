@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/md_surface_container_high"
+    android:paddingTop="12dp"
+    android:paddingBottom="20dp"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="Overdraw">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="@color/md_on_surface_variant"
+        android:alpha="0.4"/>
+
+    <!-- Header: icon + name -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="20dp">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:id="@+id/sheet_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:scaleType="fitCenter"
+            android:layout_marginEnd="16dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/sheet_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/md_on_surface"
+                android:ellipsize="end"
+                android:maxLines="1"/>
+
+            <TextView
+                android:id="@+id/sheet_pkg"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/md_on_surface_variant"
+                android:ellipsize="middle"
+                android:maxLines="1"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Auto-launch switch -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/sheet_auto_launch"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/sheet_sw_auto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="@color/md_surface_container_low"/>
+
+    <!-- Action: Favorite -->
+    <LinearLayout
+        android:id="@+id/sheet_action_favorite"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:id="@+id/sheet_ic_favorite"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_check"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_on_surface"/>
+
+        <TextView
+            android:id="@+id/sheet_lbl_favorite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_add_favorite"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+    </LinearLayout>
+
+    <!-- Action: Send to main -->
+    <LinearLayout
+        android:id="@+id/sheet_action_to_main"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_refresh"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_on_surface"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_to_main"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+    </LinearLayout>
+
+    <!-- Action: Send to cluster -->
+    <LinearLayout
+        android:id="@+id/sheet_action_to_cluster"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_speed"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_on_surface"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_to_cluster"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+    </LinearLayout>
+
+    <!-- Action: Force stop -->
+    <LinearLayout
+        android:id="@+id/sheet_action_kill"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_stop"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_error"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_force_stop"
+            android:textSize="15sp"
+            android:textColor="@color/md_error"/>
+    </LinearLayout>
+
+</LinearLayout>

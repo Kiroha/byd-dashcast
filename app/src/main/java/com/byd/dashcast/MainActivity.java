@@ -27,6 +27,7 @@ import android.graphics.SurfaceTexture;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -65,6 +66,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
  * clicks "→ Dashboard" to send it to the small screen behind the steering wheel.
  * The "Restore BYD" button brings back the speed/battery/gear widget.
  */
+@android.annotation.SuppressLint({"ClickableViewAccessibility","SetTextI18n"}) // cluster touches forwarded to display 1; debug labels intentional
+@SuppressWarnings("deprecation")
 public class MainActivity extends AppCompatActivity
         implements ClusterService.Listener,
                    AppListAdapter.OnSendToDashboardListener {
@@ -122,7 +125,9 @@ public class MainActivity extends AppCompatActivity
             mMainDisplayPkg      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
+            updateFavoritesIndicators();
             if (mAdapter != null) mAdapter.setMainPackage(null);
+            updateFavoritesIndicators();
             AppLogger.log(TAG, "ClusterService disconnected");
         }
     };
@@ -158,7 +163,7 @@ public class MainActivity extends AppCompatActivity
     private View     llAppListSection;  // wrapper for title header + search bar
     private Button   btnActivateCluster;
     private Button   btnRestoreCluster;
-    private Button   btnOverflow;
+    private android.widget.ImageView ivNavLogo; // v0.9.81: long-press = overflow menu
     private Button   btnShowMirror;
     private Button   btnSplitLayout;
     private Button   btnRelaunch;
@@ -166,6 +171,31 @@ public class MainActivity extends AppCompatActivity
     private RecyclerView rvApps;
     private AppListAdapter mAdapter;
     private android.widget.EditText etSearch;
+
+    // v0.9.74 — Favorites horizontal strip
+    private LinearLayout llFavoritesSection;
+    private LinearLayout llFavoritesStrip;
+
+    // v0.9.74 — Pseudo-fullscreen mirror state
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnExitFullscreen;
+    private View vNavRail;
+    private View vTopBar;
+    private View cardHeroStatus;
+    private View tvPreviewSection;
+    private View cardClusterPreview;
+    private View gridMainActions;
+    private View svRightPane;
+    private View llRightPaneContent;
+    private boolean mIsFullscreenMirror = false;
+    private int mSavedPreviewHeightPx = -1;
+    private float mSavedPreviewWeight = 0f;
+    private int mSavedInnerLLHeight  = ViewGroup.LayoutParams.WRAP_CONTENT;
+
+    // v0.9.79 — reparented control panel during fullscreen (so Ajuster doesn't shrink card)
+    private android.widget.FrameLayout vRootOverlay;
+    private ViewGroup mPanelOriginalParent = null;
+    private int mPanelOriginalIndex = -1;
+    private ViewGroup.LayoutParams mPanelOriginalLp = null;
 
     // UI — category filter buttons
     private View llCategoryFilters;
@@ -277,24 +307,44 @@ public class MainActivity extends AppCompatActivity
         // (Activity exists in back stack → onNewIntent fires instead of onCreate)
         handleShowMirrorIntent(getIntent());
 
-        mStatusDot          = (View)     findViewById(R.id.view_status_dot);
+        mStatusDot          =            findViewById(R.id.view_status_dot);
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
         mStatusDotDrawable  = new android.graphics.drawable.GradientDrawable();
         mStatusDotDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         if (mStatusDot != null) mStatusDot.setBackground(mStatusDotDrawable);
         btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
-        btnOverflow         = (Button)   findViewById(R.id.btn_overflow);
+        ivNavLogo           = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
         btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
-        llAppListSection    = (View)     findViewById(R.id.ll_app_list_section);
+        llAppListSection    =            findViewById(R.id.ll_app_list_section);
         rvApps             = (RecyclerView) findViewById(R.id.rv_apps);
         etSearch           = (android.widget.EditText) findViewById(R.id.et_search_apps);
         btnViewToggle      = (Button)   findViewById(R.id.btn_view_toggle);
 
+        // v0.9.74 — Favorites strip + fullscreen overlay refs.
+        llFavoritesSection = (LinearLayout) findViewById(R.id.ll_favorites_section);
+        llFavoritesStrip   = (LinearLayout) findViewById(R.id.ll_favorites_strip);
+        btnExitFullscreen  = findViewById(R.id.btn_exit_fullscreen);
+        vNavRail           = findViewById(R.id.ll_nav_rail);
+        vTopBar            = findViewById(R.id.ll_top_bar);
+        cardHeroStatus     = findViewById(R.id.card_hero_status);
+        tvPreviewSection   = findViewById(R.id.tv_preview_section);
+        cardClusterPreview = findViewById(R.id.card_cluster_preview);
+        gridMainActions    = findViewById(R.id.grid_main_actions);
+        svRightPane        = findViewById(R.id.sv_right_pane);
+        llRightPaneContent = findViewById(R.id.ll_right_pane_content);
+        vRootOverlay       = findViewById(R.id.root_overlay);
+        if (btnExitFullscreen != null) {
+            btnExitFullscreen.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { exitFullscreenMirror(); }
+            });
+        }
+
         // App list
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, false);
+        // v0.9.71 — grid is now the default view mode (mockup fidelity).
+        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, true);
         mAdapter.setGridMode(isGrid);
         updateViewToggleButton();
         
@@ -320,7 +370,8 @@ public class MainActivity extends AppCompatActivity
         btnFilterAll   = (Button) findViewById(R.id.btn_filter_all);
         btnFilterNav   = (Button) findViewById(R.id.btn_filter_nav);
         btnFilterMedia = (Button) findViewById(R.id.btn_filter_media);
-        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+        // v0.9.71 — category chips visible by default (mockup fidelity).
+        boolean showFilters = prefs.getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true);
         llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         View.OnClickListener filterClick = new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -346,6 +397,15 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View v) { restoreBydDashboard(); }
         });
+        // v0.9.89 — long-press exposes an expanded popup (like long-press on an app)
+        // with the "Restore origin cluster" action wired to originCluster()
+        // (uses the screen size selected in Settings: sendInfo cmd 29/30/31).
+        btnRestoreCluster.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override public boolean onLongClick(View v) {
+                showStopProjectionSheet();
+                return true;
+            }
+        });
 
         // Button &#9654; View toggle (list ↔ grid) in the title header
         btnViewToggle.setOnClickListener(new View.OnClickListener() {
@@ -353,21 +413,72 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) { toggleViewMode(); }
         });
 
-        // Button ⋮ overflow — dev tools + manual activation
-        btnOverflow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showOverflowMenu(v);
-            }
-        });
+        // v0.9.81 — Long-press the nav rail logo opens the overflow menu (Language,
+        // Updates, View toggle, Origin Cluster, Stats). The clock + ⋮ button are gone.
+        if (ivNavLogo != null) {
+            ivNavLogo.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override public boolean onLongClick(View v) {
+                    showOverflowMenu(v);
+                    return true;
+                }
+            });
+        }
 
-        // Button 📺 Mirror — reopen the mirror+tactile panel for the app running on the cluster
+        // Button 📺 Mirror — v0.9.74: open the pseudo-fullscreen tactile mirror.
         btnShowMirror.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showMirrorView();
                 attemptStartMirrorWithCurrentHolder();
-                AppLogger.d(TAG, "btn_show_mirror → showMirrorView for " + mCurrentDashboardApp);
+                enterFullscreenMirror();
+                AppLogger.d(TAG, "btn_show_mirror → enterFullscreenMirror for " + mCurrentDashboardApp);
+            }
+        });
+
+        // ── v0.9.7 — Nav rail clicks (left M3 navigation rail) ─────────────────
+        View navSettings = findViewById(R.id.nav_settings);
+        if (navSettings != null) navSettings.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+            }
+        });
+        View navDiag = findViewById(R.id.nav_diag);
+        if (navDiag != null) navDiag.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, DiagActivity.class));
+            }
+        });
+        View navSysinfo = findViewById(R.id.nav_sysinfo);
+        if (navSysinfo != null) navSysinfo.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, SysInfoActivity.class));
+            }
+        });
+        View navLog = findViewById(R.id.nav_log);
+        if (navLog != null) navLog.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, LogActivity.class));
+            }
+        });
+        View navHelp = findViewById(R.id.nav_help);
+        if (navHelp != null) navHelp.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                try {
+                    Intent it = new Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/Kiroha/byd-dashcast"));
+                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(it);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, R.string.main_nav_help, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        // ── v0.9.7 — Capture button (placeholder, real impl in a later release) ─
+        View btnCapture = findViewById(R.id.btn_capture);
+        if (btnCapture != null) btnCapture.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Toast.makeText(MainActivity.this, R.string.main_capture_coming_soon, Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -478,6 +589,7 @@ public class MainActivity extends AppCompatActivity
                 .getString(PREF_MAIN_PKG, null);
         if (mMainDisplayPkg != null) {
             mAdapter.setMainPackage(mMainDisplayPkg);
+            updateFavoritesIndicators();
         }
 
         // TextureView optimizations
@@ -544,6 +656,12 @@ public class MainActivity extends AppCompatActivity
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                // v0.9.79 — prevent NestedScrollView (or any ancestor) from stealing the
+                // gesture once the finger moves past touchSlop, otherwise vertical drags
+                // and pinch gestures get cancelled mid-flight.
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
                 forwardTouchFromMirror(v, event);
                 return true;
             }
@@ -552,6 +670,9 @@ public class MainActivity extends AppCompatActivity
         clusterMirrorScreenshot.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
                 forwardTouchFromMirror(v, event);
                 return true;
             }
@@ -562,7 +683,7 @@ public class MainActivity extends AppCompatActivity
 
         // OTA update check — only on fresh launch, not on rotation
         if (savedInstanceState == null) {
-            UpdateChecker.checkUpdate(this, makeOtaProgressListener(false));
+            UpdateChecker.checkUpdate(this, makeOtaProgressListener(this, false));
         }
     }
 
@@ -621,6 +742,7 @@ public class MainActivity extends AppCompatActivity
                             .putString(PREF_LAST_CLUSTER_PKG, pkgName)
                             .putString(PREF_LAST_CLUSTER_NAME, name).apply();
                     mAdapter.setCurrentPackage(pkgName);
+                    updateFavoritesIndicators();
                     updateDashboardStatus(mCurrentDashboardApp);
                     updateControlLabel();
                     startClusterMirror();
@@ -636,7 +758,7 @@ public class MainActivity extends AppCompatActivity
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
+                .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true);
         if (llCategoryFilters != null) {
             llCategoryFilters.setVisibility(showFilters ? View.VISIBLE : View.GONE);
         }
@@ -754,6 +876,7 @@ public class MainActivity extends AppCompatActivity
                         mCurrentDashboardPkg = _pkg;
                         mCurrentDashboardApp = _name;
                         mAdapter.setCurrentPackage(_pkg);
+                        updateFavoritesIndicators();
                         updateDashboardStatus(_name);
                         updateControlLabel();
                         showMirrorView(); // makes panelClusterControl visible
@@ -771,6 +894,7 @@ public class MainActivity extends AppCompatActivity
                     mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                             .getString(PREF_MAIN_PKG, null);
                     if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
+                    updateFavoritesIndicators();
                 }
                 
                 // Pending app from "activate cluster" dialog
@@ -843,9 +967,11 @@ public class MainActivity extends AppCompatActivity
                         .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
+                updateFavoritesIndicators();
                 mAdapter.setMainPackage(null);
-                tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                setStatusDot(DOT_COLOR_OFF);
+                updateFavoritesIndicators();
+                // v0.9.73 — unified OFF state ("Projection inactive") with grey dot.
+                setDashboardOffState();
                 showAppList();
             }
         });
@@ -868,6 +994,7 @@ public class MainActivity extends AppCompatActivity
         }
         // Use post to avoid IllegalStateException (cannot call notify during bind)
         rvApps.post(new Runnable() {
+            @android.annotation.SuppressLint("NotifyDataSetChanged") // full refresh after auto-launch toggle
             @Override
             public void run() {
                 mAdapter.notifyDataSetChanged();
@@ -888,6 +1015,88 @@ public class MainActivity extends AppCompatActivity
         }
         p.edit().putStringSet(PREF_FAVORITES, favs).apply();
         loadAppsAsync(); // Reload and re-sort
+    }
+
+    // v0.9.72 — long-press opens a bottom sheet with the per-app actions that
+    // used to live as cramped chips inside each grid cell.
+    @Override
+    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
+    public void onShowActions(final AppInfo app) {
+        if (app == null || isFinishing() || isDestroyed()) return;
+        final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View v = getLayoutInflater().inflate(R.layout.dialog_app_actions, null);
+        dialog.setContentView(v);
+
+        ImageView icon  = v.findViewById(R.id.sheet_icon);
+        TextView  name  = v.findViewById(R.id.sheet_name);
+        TextView  pkg   = v.findViewById(R.id.sheet_pkg);
+        com.google.android.material.materialswitch.MaterialSwitch swAuto =
+                v.findViewById(R.id.sheet_sw_auto);
+        View      rowFav     = v.findViewById(R.id.sheet_action_favorite);
+        TextView  lblFav     = v.findViewById(R.id.sheet_lbl_favorite);
+        View      rowToMain  = v.findViewById(R.id.sheet_action_to_main);
+        View      rowToClus  = v.findViewById(R.id.sheet_action_to_cluster);
+        View      rowKill    = v.findViewById(R.id.sheet_action_kill);
+
+        icon.setImageDrawable(app.icon);
+        name.setText(app.appName);
+        pkg.setText(app.packageName);
+        lblFav.setText(app.isFavorite
+                ? R.string.sheet_remove_favorite
+                : R.string.sheet_add_favorite);
+
+        swAuto.setChecked(app.isAutoLaunch);
+        swAuto.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                onSetAutoLaunch(app, checked);
+            }
+        });
+
+        rowFav.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onToggleFavorite(app);
+                dialog.dismiss();
+            }
+        });
+
+        // Visibility for screen-move actions mirrors the previous inline-chip logic.
+        final boolean isActive = app.packageName != null
+                && app.packageName.equals(mAdapter.getCurrentPackage());
+        final boolean isOnMain = app.packageName != null
+                && app.packageName.equals(mAdapter.getMainPackage());
+        rowToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
+        rowToClus.setVisibility(isOnMain || (!isActive && !isOnMain) ? View.VISIBLE : View.GONE);
+        rowKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+
+        rowToMain.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onSendToMain(app);
+                dialog.dismiss();
+            }
+        });
+        rowToClus.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onSendToDashboard(app);
+                dialog.dismiss();
+            }
+        });
+        rowKill.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                onKillApp(app);
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
+        // v0.9.73 — open fully expanded (skip the half-collapsed peek that hides actions).
+        try {
+            com.google.android.material.bottomsheet.BottomSheetBehavior<?> b = dialog.getBehavior();
+            b.setSkipCollapsed(true);
+            b.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
+        }
     }
 
     @Override
@@ -921,6 +1130,7 @@ public class MainActivity extends AppCompatActivity
         if (pkgName != null && pkgName.equals(mMainDisplayPkg)) {
             mMainDisplayPkg = null;
             mAdapter.setMainPackage(null);
+            updateFavoritesIndicators();
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
         }
 
@@ -989,6 +1199,7 @@ public class MainActivity extends AppCompatActivity
                             .putString(PREF_LAST_CLUSTER_PKG, pkgName)
                             .putString(PREF_LAST_CLUSTER_NAME, appName).apply();
                     mAdapter.setCurrentPackage(pkgName);
+                    updateFavoritesIndicators();
                     updateDashboardStatus(appName);
                     updateControlLabel();
                     startClusterMirror();
@@ -1028,7 +1239,9 @@ public class MainActivity extends AppCompatActivity
         // Record that the app is on the main display → shows button "→ Cluster" in the list
         mMainDisplayPkg = app.packageName;
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
         mAdapter.setMainPackage(app.packageName);
+        updateFavoritesIndicators();
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
         updateDashboardStatus(null);
@@ -1074,6 +1287,7 @@ public class MainActivity extends AppCompatActivity
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
             mAdapter.setCurrentPackage(null);
+            updateFavoritesIndicators();
             updateDashboardStatus(null);
         }
 
@@ -1259,6 +1473,7 @@ public class MainActivity extends AppCompatActivity
         mStatePollRunnable = new Runnable() {
             @Override public void run() {
                 reconcileDisplayState();
+                reconcileMainDisplayState(); // v0.9.72 — also drop stale "on main" markers
                 mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
             }
         };
@@ -1317,6 +1532,46 @@ public class MainActivity extends AppCompatActivity
     }
 
     /**
+     * v0.9.72 — sibling of {@link #reconcileDisplayState()} for the MAIN display marker.
+     * If the user kills the app sent to the main screen (via recents / system), the
+     * adapter still tags it as "on main" until the next reload. This pidof check
+     * clears the marker so the grid tile state stays in sync within ~5 s.
+     */
+    private void reconcileMainDisplayState() {
+        final String mainPkg = mMainDisplayPkg;
+        if (mainPkg == null) return;
+
+        AdbLocalClient.executeShellWithResult(this, "pidof " + mainPkg,
+                new AdbLocalClient.Callback() {
+                    @Override
+                    public void onSuccess(String output) {
+                        final boolean alive = output != null && !output.trim().isEmpty();
+                        if (alive) return;
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (isFinishing() || isDestroyed()) return;
+                                if (!mainPkg.equals(mMainDisplayPkg)) return;
+                                AppLogger.w(TAG, "state-poll: main-display app " + mainPkg
+                                        + " process died → clearing main marker");
+                                mMainDisplayPkg = null;
+                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                        .edit().remove(PREF_MAIN_PKG).apply();
+                                if (mAdapter != null) {
+                                    mAdapter.setMainPackage(null);
+                                    updateFavoritesIndicators();
+                                }
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        AppLogger.w(TAG, "state-poll: main pidof failed: " + error);
+                    }
+                });
+    }
+
+    /**
      * Clears all cluster-app bookkeeping and returns to the app list.
      * Shared by reconcileDisplayState and other paths that need a clean reset.
      */
@@ -1327,6 +1582,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
         updateDashboardStatus(null);
         showAppList();
     }
@@ -1338,8 +1594,8 @@ public class MainActivity extends AppCompatActivity
      * Called from startClusterMirror().
      */
     private void showMirrorView() {
-        llAppListSection.setVisibility(View.GONE);
-        rvApps.setVisibility(View.GONE);
+        // v0.9.7 — apps pane stays visible at all times (M3 split layout). The old
+        // visibility toggles on llAppListSection/rvApps are intentionally no-ops now.
         frameMirror.setVisibility(View.VISIBLE);
         panelClusterControl.setVisibility(View.VISIBLE);
         // Always restore the controls panel when mirror is shown
@@ -1410,15 +1666,11 @@ public class MainActivity extends AppCompatActivity
      * Called from showAppList().
      */
     private void showAppList() {
+        // v0.9.7 — apps pane is always visible (M3 split layout). We only collapse the
+        // cluster preview/control widgets here. Mirror frame stays VISIBLE so its empty
+        // preview card serves as the idle state.
         stopClusterMirror();
-        frameMirror.setVisibility(View.GONE);
         panelClusterControl.setVisibility(View.GONE);
-        llAppListSection.setAlpha(0f);
-        llAppListSection.setVisibility(View.VISIBLE);
-        llAppListSection.animate().alpha(1f).setDuration(150).start();
-        rvApps.setAlpha(0f);
-        rvApps.setVisibility(View.VISIBLE);
-        rvApps.animate().alpha(1f).setDuration(150).start();
     }
 
     /**
@@ -1632,10 +1884,11 @@ public class MainActivity extends AppCompatActivity
      * Returns a ProgressListener that shows a centered AlertDialog with a ProgressBar
      * during download, then switches to indeterminate while installing.
      *
+     * @param activity         the Activity hosting the dialog (used for context, theme, lifecycle).
      * @param notifyIfUpToDate if true, shows a toast when no update is found
      *                         (use true for manual checks, false for auto-check at launch)
      */
-    private UpdateChecker.ProgressListener makeOtaProgressListener(boolean notifyIfUpToDate) {
+    public static UpdateChecker.ProgressListener makeOtaProgressListener(final android.app.Activity activity, final boolean notifyIfUpToDate) {
         final AlertDialog[] dlgHolder  = {null};
         final ProgressBar[] pbHolder   = {null};
         final TextView[]    pctHolder  = {null};
@@ -1643,48 +1896,48 @@ public class MainActivity extends AppCompatActivity
         return new UpdateChecker.ProgressListener() {
             @Override
             public void onUpdateFound(final String version, final String changelog, final String downloadUrl) {
-                if (isFinishing() || isDestroyed()) return;
+                if (activity.isFinishing() || activity.isDestroyed()) return;
 
-                LinearLayout layout = new LinearLayout(MainActivity.this);
+                LinearLayout layout = new LinearLayout(activity);
                 layout.setOrientation(LinearLayout.VERTICAL);
-                int pad = (int) (getResources().getDisplayMetrics().density * 20);
+                int pad = (int) (activity.getResources().getDisplayMetrics().density * 20);
                 layout.setPadding(pad, pad, pad, pad / 2);
 
-                TextView tvVersion = new TextView(MainActivity.this);
-                tvVersion.setText(getString(R.string.ota_version_label, version));
+                TextView tvVersion = new TextView(activity);
+                tvVersion.setText(activity.getString(R.string.ota_version_label, version));
                 tvVersion.setTextSize(16);
                 tvVersion.setPadding(pad, 0, pad, pad / 2);
-                tvVersion.setTextColor(getColor(R.color.text_accent));
+                tvVersion.setTextColor(activity.getColor(R.color.text_accent));
                 layout.addView(tvVersion);
 
-                ScrollView sv = new ScrollView(MainActivity.this);
-                TextView tvChangelog = new TextView(MainActivity.this);
+                ScrollView sv = new ScrollView(activity);
+                TextView tvChangelog = new TextView(activity);
                 tvChangelog.setText(renderMarkdown(changelog));
                 tvChangelog.setTextSize(13);
                 tvChangelog.setPadding(pad, 0, pad, pad);
-                tvChangelog.setTextColor(getColor(R.color.text_primary));
+                tvChangelog.setTextColor(activity.getColor(R.color.text_primary));
                 sv.addView(tvChangelog);
                 
                 LinearLayout.LayoutParams svParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        (int) (getResources().getDisplayMetrics().density * 250) // max height
+                        (int) (activity.getResources().getDisplayMetrics().density * 250) // max height
                 );
                 layout.addView(sv, svParams);
 
                 // Progress bar container (initially hidden)
-                final LinearLayout progressLayout = new LinearLayout(MainActivity.this);
+                final LinearLayout progressLayout = new LinearLayout(activity);
                 progressLayout.setOrientation(LinearLayout.VERTICAL);
                 progressLayout.setPadding(pad, pad, pad, 0);
                 progressLayout.setVisibility(View.GONE);
 
-                ProgressBar pb = new ProgressBar(MainActivity.this, null, android.R.attr.progressBarStyleHorizontal);
+                ProgressBar pb = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
                 pb.setMax(100);
                 pb.setProgress(0);
                 progressLayout.addView(pb);
                 pbHolder[0] = pb;
 
-                TextView tvPct = new TextView(MainActivity.this);
-                tvPct.setText(getString(R.string.ota_progress_percent, 0));
+                TextView tvPct = new TextView(activity);
+                tvPct.setText(activity.getString(R.string.ota_progress_percent, 0));
                 tvPct.setGravity(android.view.Gravity.CENTER);
                 tvPct.setTextSize(12);
                 tvPct.setTextColor(0xFF888888);
@@ -1693,12 +1946,12 @@ public class MainActivity extends AppCompatActivity
 
                 layout.addView(progressLayout);
 
-                dlgHolder[0] = new AlertDialog.Builder(MainActivity.this)
-                        .setTitle(getString(R.string.ota_dialog_title))
+                dlgHolder[0] = new AlertDialog.Builder(activity)
+                        .setTitle(activity.getString(R.string.ota_dialog_title))
                         .setView(layout)
                         .setCancelable(false)
-                        .setPositiveButton(getString(R.string.ota_btn_update_now), null)
-                        .setNegativeButton(getString(R.string.ota_btn_later), (dialog, which) -> dialog.dismiss())
+                        .setPositiveButton(activity.getString(R.string.ota_btn_update_now), null)
+                        .setNegativeButton(activity.getString(R.string.ota_btn_later), (dialog, which) -> dialog.dismiss())
                         .create();
                 
                 dlgHolder[0].setOnShowListener(dialog -> {
@@ -1707,10 +1960,10 @@ public class MainActivity extends AppCompatActivity
                         posButton.setEnabled(false);
                         dlgHolder[0].getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
                         sv.setVisibility(View.GONE);
-                        tvVersion.setText(getString(R.string.ota_downloading));
+                        tvVersion.setText(activity.getString(R.string.ota_downloading));
                         progressLayout.setVisibility(View.VISIBLE);
                         // Trigger download
-                        UpdateChecker.startDownload(MainActivity.this, downloadUrl, this);
+                        UpdateChecker.startDownload(activity, downloadUrl, this);
                     });
                 });
                 dlgHolder[0].show();
@@ -1722,11 +1975,11 @@ public class MainActivity extends AppCompatActivity
                 if (percent < 0) {
                     // Content-Length unknown → indeterminate
                     pbHolder[0].setIndeterminate(true);
-                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_unknown));
+                    if (pctHolder[0] != null) pctHolder[0].setText(activity.getString(R.string.ota_progress_unknown));
                 } else {
                     pbHolder[0].setIndeterminate(false);
                     pbHolder[0].setProgress(percent);
-                    if (pctHolder[0] != null) pctHolder[0].setText(getString(R.string.ota_progress_percent, percent));
+                    if (pctHolder[0] != null) pctHolder[0].setText(activity.getString(R.string.ota_progress_percent, percent));
                 }
             }
 
@@ -1743,8 +1996,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onUpToDate() {
                 if (notifyIfUpToDate) {
-                    Toast.makeText(MainActivity.this,
-                            getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity,
+                            activity.getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -1805,7 +2058,7 @@ public class MainActivity extends AppCompatActivity
                         return true;
                     case 6:
                         UpdateChecker.checkUpdate(MainActivity.this,
-                                makeOtaProgressListener(true));
+                                makeOtaProgressListener(MainActivity.this, true));
                         return true;
                     case 9:
                         showUsageStatsDialog();
@@ -1835,6 +2088,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
 
         // Move ALL apps that were launched on the cluster during this session back to Display 0.
         // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
@@ -1864,7 +2118,8 @@ public class MainActivity extends AppCompatActivity
                         }
                         // Cluster state already cleared eagerly above (before async ops).
                         clearSplitState();
-                        updateDashboardStatus(null);
+                        // v0.9.73 — projection just stopped → OFF state, not READY/idle.
+                        setDashboardOffState();
                         btnActivateCluster.setEnabled(true);
                         showAppList();
                         btnRestoreCluster.setEnabled(true);
@@ -1990,6 +2245,258 @@ public class MainActivity extends AppCompatActivity
         }
         setStatusDot(DOT_COLOR_ACTIVE);
         btnRestoreCluster.setEnabled(true);
+    }
+
+    /**
+     * v0.9.73 — explicit OFF state used after the user stops the projection or before
+     * the cluster has been activated at all. Differs from updateDashboardStatus(null)
+     * which represents the ACTIVE+IDLE case (projection on, no app yet).
+     */
+    private void setDashboardOffState() {
+        if (tvDashboardStatus == null) return;
+        tvDashboardStatus.setTextColor(Color.WHITE);
+        tvDashboardStatus.setText(getString(R.string.main_cluster_status_off));
+        setStatusDot(DOT_COLOR_OFF);
+        if (btnShowMirror != null) btnShowMirror.setVisibility(View.GONE);
+        FloatingRemoteButton.hide();
+    }
+
+    // ============================================================
+    // v0.9.74 — Favorites horizontal strip
+    // ============================================================
+    /**
+     * Rebuilds the favorites strip from the current app list.
+     * Hides the whole section when there are no favorites.
+     */
+    private void refreshFavoritesStrip(java.util.List<AppInfo> apps) {
+        if (llFavoritesStrip == null || llFavoritesSection == null) return;
+        llFavoritesStrip.removeAllViews();
+        if (apps == null) {
+            llFavoritesSection.setVisibility(View.GONE);
+            return;
+        }
+        android.view.LayoutInflater inflater = android.view.LayoutInflater.from(this);
+        int added = 0;
+        for (final AppInfo a : apps) {
+            if (!a.isFavorite) continue;
+            View tile = inflater.inflate(R.layout.item_favorite_strip, llFavoritesStrip, false);
+            ImageView iv  = tile.findViewById(R.id.iv_fav_icon);
+            TextView tv   = tile.findViewById(R.id.tv_fav_name);
+            iv.setImageDrawable(a.icon);
+            tv.setText(a.appName);
+            tile.setTag(a.packageName);
+            tile.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { onSendToDashboard(a); }
+            });
+            tile.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override public boolean onLongClick(View v) { onShowActions(a); return true; }
+            });
+            llFavoritesStrip.addView(tile);
+            added++;
+        }
+        llFavoritesSection.setVisibility(added > 0 ? View.VISIBLE : View.GONE);
+        updateFavoritesIndicators();
+    }
+
+    /**
+     * v0.9.80 — Sync the "app launched" green bar on each favorite tile with the
+     * adapter's current/main package state. Call this whenever those change.
+     */
+    private void updateFavoritesIndicators() {
+        if (llFavoritesStrip == null || mAdapter == null) return;
+        String curPkg  = mAdapter.getCurrentPackage();
+        String mainPkg = mAdapter.getMainPackage();
+        for (int i = 0; i < llFavoritesStrip.getChildCount(); i++) {
+            View tile = llFavoritesStrip.getChildAt(i);
+            Object tag = tile.getTag();
+            if (!(tag instanceof String)) continue;
+            String pkg = (String) tag;
+            View ind = tile.findViewById(R.id.view_fav_active_indicator);
+            if (ind == null) continue;
+            boolean active = pkg.equals(curPkg) || pkg.equals(mainPkg);
+            ind.setVisibility(active ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    // ============================================================
+    // v0.9.74 — Pseudo-fullscreen tactile mirror
+    // ============================================================
+    /**
+     * Expands the cluster preview card to fill the screen by hiding the nav rail,
+     * the left app list, the hero card, the preview section title and the 2x2 action
+     * grid. The existing TextureView keeps its surface → touch injection still works.
+     * The cluster control panel (with the "Ajuster" button) stays accessible.
+     */
+    private void enterFullscreenMirror() {
+        if (mIsFullscreenMirror) return;
+        if (cardClusterPreview == null) return;
+        mIsFullscreenMirror = true;
+
+        // v0.9.76 — tear down the mirror BEFORE resizing the TextureView. Otherwise
+        // attemptStartMirrorWithCurrentHolder() short-circuits on isMirrorActive() and
+        // the VirtualDisplay keeps writing to the stale Surface that was released by
+        // onSurfaceTextureSizeChanged → black card with no app content.
+        stopClusterMirror();
+
+        if (vNavRail != null)         vNavRail.setVisibility(View.GONE);
+        if (vTopBar != null)          vTopBar.setVisibility(View.GONE);
+        if (llAppListSection != null) llAppListSection.setVisibility(View.GONE);
+        if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.GONE);
+        if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.GONE);
+        if (gridMainActions != null)  gridMainActions.setVisibility(View.GONE);
+
+        // Switch to weight-based layout so the card grows and the cluster control panel
+        // (with the "Ajuster" button) keeps its natural wrap_content height at the bottom.
+        if (llRightPaneContent != null && svRightPane != null) {
+            ViewGroup.LayoutParams llLp = llRightPaneContent.getLayoutParams();
+            mSavedInnerLLHeight = llLp.height;
+            int h = svRightPane.getHeight();
+            if (h <= 0) h = getResources().getDisplayMetrics().heightPixels;
+            llLp.height = h;
+            llRightPaneContent.setLayoutParams(llLp);
+        }
+        LinearLayout.LayoutParams clp = (LinearLayout.LayoutParams) cardClusterPreview.getLayoutParams();
+        mSavedPreviewHeightPx = clp.height;
+        mSavedPreviewWeight   = clp.weight;
+        clp.height = 0;
+        clp.weight = 1f;
+        cardClusterPreview.setLayoutParams(clp);
+
+        if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.VISIBLE);
+
+        // v0.9.79 — reparent panelClusterControl from the inner LinearLayout to the root
+        // FrameLayout (aligned bottom) so that expanding the "Ajuster" sub-panel doesn't
+        // shrink the card (and therefore the orange inset overlay) underneath it.
+        if (panelClusterControl != null && vRootOverlay != null
+                && panelClusterControl.getParent() instanceof ViewGroup
+                && panelClusterControl.getParent() != vRootOverlay) {
+            mPanelOriginalParent = (ViewGroup) panelClusterControl.getParent();
+            mPanelOriginalIndex  = mPanelOriginalParent.indexOfChild(panelClusterControl);
+            mPanelOriginalLp     = panelClusterControl.getLayoutParams();
+            mPanelOriginalParent.removeView(panelClusterControl);
+            android.widget.FrameLayout.LayoutParams flp = new android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT);
+            flp.gravity = android.view.Gravity.BOTTOM;
+            vRootOverlay.addView(panelClusterControl, flp);
+        }
+
+        // Immersive: hide system bars to maximise usable area.
+        try {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "immersive setSystemUiVisibility failed: " + t.getMessage());
+        }
+
+        // v0.9.77 — robust restart at the new TextureView size.
+        // Layout settles via postDelayed (200ms) so getWidth/getHeight reflect fullscreen.
+        // We then explicitly recreate mMirrorSurface from the (possibly resized)
+        // SurfaceTexture buffer and call attemptStart — because onSurfaceTextureSizeChanged
+        // may not fire when only the View bounds change without buffer change.
+        cardClusterPreview.postDelayed(new Runnable() {
+            @Override public void run() {
+                try {
+                    SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                    int w = clusterMirror != null ? clusterMirror.getWidth() : 0;
+                    int h = clusterMirror != null ? clusterMirror.getHeight() : 0;
+                    if (st == null || w <= 0 || h <= 0) {
+                        AppLogger.w(TAG, "fullscreen restart: surface or size missing (w=" + w + " h=" + h + ")");
+                        return;
+                    }
+                    st.setDefaultBufferSize(w, h);
+                    if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
+                    mMirrorSurface = new Surface(st);
+                    AppLogger.i(TAG, "fullscreen restart: new surface " + w + "×" + h);
+                    attemptStartMirrorWithCurrentHolder();
+                } catch (Throwable t) {
+                    AppLogger.w(TAG, "fullscreen mirror restart failed: " + t.getMessage());
+                }
+            }
+        }, 250);
+        AppLogger.i(TAG, "enterFullscreenMirror");
+    }
+
+    /** Reverses enterFullscreenMirror(): restores all hidden views and shrinks the card back. */
+    private void exitFullscreenMirror() {
+        if (!mIsFullscreenMirror) return;
+        mIsFullscreenMirror = false;
+
+        // v0.9.76 — same as enter: tear down before resize so the mirror is recreated
+        // at the original 200dp preview size by onSurfaceTextureSizeChanged.
+        stopClusterMirror();
+
+        if (vNavRail != null)         vNavRail.setVisibility(View.VISIBLE);
+        if (vTopBar != null)          vTopBar.setVisibility(View.VISIBLE);
+        if (llAppListSection != null) llAppListSection.setVisibility(View.VISIBLE);
+        if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.VISIBLE);
+        if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.VISIBLE);
+        if (gridMainActions != null)  gridMainActions.setVisibility(View.VISIBLE);
+
+        if (llRightPaneContent != null) {
+            ViewGroup.LayoutParams llLp = llRightPaneContent.getLayoutParams();
+            llLp.height = mSavedInnerLLHeight;
+            llRightPaneContent.setLayoutParams(llLp);
+        }
+        if (cardClusterPreview != null) {
+            LinearLayout.LayoutParams clp = (LinearLayout.LayoutParams) cardClusterPreview.getLayoutParams();
+            clp.height = (mSavedPreviewHeightPx > 0) ? mSavedPreviewHeightPx
+                    : (int) (200 * getResources().getDisplayMetrics().density);
+            clp.weight = mSavedPreviewWeight;
+            cardClusterPreview.setLayoutParams(clp);
+        }
+        if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.GONE);
+
+        // v0.9.79 — restore panelClusterControl to its original parent (inner right-pane LL).
+        if (panelClusterControl != null && mPanelOriginalParent != null
+                && panelClusterControl.getParent() == vRootOverlay) {
+            vRootOverlay.removeView(panelClusterControl);
+            int idx = (mPanelOriginalIndex >= 0
+                    && mPanelOriginalIndex <= mPanelOriginalParent.getChildCount())
+                    ? mPanelOriginalIndex : mPanelOriginalParent.getChildCount();
+            if (mPanelOriginalLp != null) {
+                mPanelOriginalParent.addView(panelClusterControl, idx, mPanelOriginalLp);
+            } else {
+                mPanelOriginalParent.addView(panelClusterControl, idx);
+            }
+            mPanelOriginalParent = null;
+            mPanelOriginalIndex  = -1;
+            mPanelOriginalLp     = null;
+        }
+
+        try {
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        } catch (Throwable t) { /* ignore */ }
+
+        // Same robust delayed restart as enterFullscreenMirror, but at the preview size.
+        if (cardClusterPreview != null) {
+            cardClusterPreview.postDelayed(new Runnable() {
+                @Override public void run() {
+                    try {
+                        SurfaceTexture st = clusterMirror != null ? clusterMirror.getSurfaceTexture() : null;
+                        int w = clusterMirror != null ? clusterMirror.getWidth() : 0;
+                        int h = clusterMirror != null ? clusterMirror.getHeight() : 0;
+                        if (st == null || w <= 0 || h <= 0) return;
+                        st.setDefaultBufferSize(w, h);
+                        if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
+                        mMirrorSurface = new Surface(st);
+                        attemptStartMirrorWithCurrentHolder();
+                    } catch (Throwable t) { /* ignore */ }
+                }
+            }, 250);
+        }
+        AppLogger.i(TAG, "exitFullscreenMirror");
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mIsFullscreenMirror) { exitFullscreenMirror(); return; }
+        super.onBackPressed();
     }
 
     /** Sets the status dot to a given ARGB color. Reuses the shared GradientDrawable to avoid allocations. */
@@ -2164,6 +2671,38 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    /**
+     * v0.9.89 — Long-press popup on the "Stop projection" button.
+     * Opens an expanded BottomSheetDialog (like long-press on an app icon) exposing
+     * the "Restore origin cluster" action. The action delegates to {@link #originCluster()}
+     * which uses the screen size chosen in Settings (sendInfo cmd 29/30/31).
+     */
+    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
+    private void showStopProjectionSheet() {
+        if (isFinishing() || isDestroyed()) return;
+        final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View v = getLayoutInflater().inflate(R.layout.dialog_stop_projection, null);
+        dialog.setContentView(v);
+
+        View rowOrigin = v.findViewById(R.id.sheet_action_origin_cluster);
+        rowOrigin.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                dialog.dismiss();
+                originCluster();
+            }
+        });
+
+        dialog.show();
+        try {
+            com.google.android.material.bottomsheet.BottomSheetBehavior<?> b = dialog.getBehavior();
+            b.setSkipCollapsed(true);
+            b.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
+        }
+    }
+
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private void originCluster() {
         tvDashboardStatus.setText(getString(R.string.status_restoring_origin));
@@ -2179,6 +2718,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
+        updateFavoritesIndicators();
 
         moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
@@ -2368,48 +2908,6 @@ public class MainActivity extends AppCompatActivity
     /**
      * Loads the list of installed apps in a background thread, then publishes
      * the result on the main thread via Handler.
-     *
-     * HISTORY: before v2.07 this code used AsyncTask (API deprecated in API 30).
-     * The hardware target being Android 10 (API 29 — BYD DiLink 3.0), AsyncTask
-     * still worked, but its usage generates a warning and creates a strong implicit reference
-     * on MainActivity (risk of leak if the list takes time to load).
-     *
-     * ── ROLLBACK to AsyncTask (if needed) ────────────────────────────────────────
-     * 1. Replace this call in onCreate():
-     *        loadAppsAsync();
-     *    par :
-     *        new LoadAppsTask().execute();
-     *
-     * 2. Delete this method (loadAppsAsync) and replace it with the inner class:
-     *
-     *    private class LoadAppsTask extends android.os.AsyncTask<Void, Void, List<AppInfo>> {
-     *        @Override
-     *        protected List<AppInfo> doInBackground(Void... voids) {
-     *            PackageManager pm = getPackageManager();
-     *            Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
-     *            launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-     *            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
-     *            List<AppInfo> apps = new ArrayList<>();
-     *            for (ResolveInfo ri : resolveInfos) {
-     *                String pkg = ri.activityInfo.packageName;
-     *                if (pkg.equals(getPackageName())) continue;
-     *                apps.add(new AppInfo(pkg, ri.loadLabel(pm).toString(), ri.loadIcon(pm)));
-     *            }
-     *            Collections.sort(apps, new Comparator<AppInfo>() {
-     *                @Override public int compare(AppInfo a, AppInfo b) {
-     *                    return a.appName.compareToIgnoreCase(b.appName);
-     *                }
-     *            });
-     *            return apps;
-     *        }
-     *        @Override
-     *        protected void onPostExecute(List<AppInfo> apps) {
-     *            mAdapter.setApps(apps);
-     *        }
-     *    }
-     *
-     * 3. Re-add the import:  import android.os.AsyncTask;
-     * ────────────────────────────────────────────────────────────────────────────
      */
     private void loadAppsAsync() {
         java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
@@ -2489,8 +2987,15 @@ public class MainActivity extends AppCompatActivity
                 });
 
                 final List<AppInfo> result = apps;
+                // v0.9.75 — favorites are shown in the dedicated strip above the list,
+                // hide them from the main grid to avoid duplication.
+                final List<AppInfo> nonFavs = new java.util.ArrayList<>(apps.size());
+                for (AppInfo a : result) {
+                    if (!a.isFavorite) nonFavs.add(a);
+                }
                 runOnUiThread(() -> {
-                    mAdapter.setApps(result);
+                    mAdapter.setApps(nonFavs);
+                    refreshFavoritesStrip(result);
                     // One-shot tip: show once, on first ever launch
                     SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                     if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {

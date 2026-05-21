@@ -1,340 +1,389 @@
 export default {
-  "code": "en",
-  "flag": "🇬🇧",
-  "name": "English",
-  "title": "DashCast — User Manual",
-  "meta": "v0.7.2 · BYD Seal EU · DiLink 3.0 · Android 10",
-  "manualName": "User Manual",
-  "tocTitle": "📋 Table of Contents",
-  "sections": [
-    "1. Overview",
-    "2. First Launch — Language Selection",
-    "3. Main Screen",
-    "4. Projecting an App to the Dashboard",
-    "5. During Projection — Control Panel",
-    "6. Stopping the Projection",
-    "7. Settings",
-    "8. ⋮ Menu — Additional Tools",
-    "9. FAQ & Troubleshooting"
-  ],
-  "overview": {
-    "title": "1. Overview",
-    "text": "DashCast is an Android app that lets you project any app from the infotainment screen onto the digital instrument cluster of your BYD. Navigation, music, videos — anything running on the central screen can be redirected to the cluster.",
-    "bullets": [
-      "✅ Compatible with BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F)",
-      "✅ No system modification required",
-      "✅ Local ADB (TCP, localhost) — no computer needed once configured",
-      "✅ Automatic app disconnection detection",
-      "✅ Built-in OTA (Over-The-Air) updates",
-      "✅ Overscan saved independently per application",
-      "✅ Grid or List display mode",
-      "✅ Emergency force-stop (Red Cross) per application"
+  code: 'en',
+  flag: '🇬🇧',
+  name: 'English',
+  title: 'DashCast — User Manual',
+  manualName: 'User Manual',
+  meta: 'v0.9.92-alpha · BYD Seal EU · DiLink 3.0 · Android 10',
+  tocTitle: '📋 Contents',
+
+  intro: {
+    title: '0. Introduction',
+    lead:
+      "DashCast lets you display any Android app from the central BYD screen on the digital instrument cluster. You can have Maps, Waze, Spotify or YouTube directly behind the steering wheel while still keeping the native BYD readouts (speed, gauges, range) accessible at any time.",
+    bullets: [
+      "✅ Compatible with BYD Seal EU (DiLink 3.0, Di3.0 / 6125F firmware).",
+      "✅ No system modification: DashCast installs as a regular app.",
+      "✅ Local TCP ADB — no computer needed after the first authorisation.",
+      "✅ 12 interface languages, picked on first launch.",
+      "✅ Built-in OTA updates (optional alpha channel).",
+      "✅ Per-app overscan margins (each app keeps its own adjustment).",
+      "✅ Touchable full-screen mirror to drive the cluster from the central display.",
+      "✅ Split mode (two apps side by side on the cluster).",
     ],
-    "note": "💡 Prerequisite: Enable TCP ADB debugging in Settings → Developer → Wireless debugging. This is a one-time step. On first launch, an 'Allow debugging?' popup will appear — tap Always allow from this device."
+    note:
+      "💡 One-time prerequisite: enable wireless ADB debugging in BYD Settings → Developer. On first launch a dialog asks « Allow debugging? » — tick « Always allow » and confirm. You never need to repeat this step.",
   },
-  "firstLaunch": {
-    "title": "2. First Launch — Language Selection",
-    "text": "On first launch, the welcome screen appears with a 4×3 grid (3 columns × 4 rows) showing the 12 available languages. Tap your language button to select. This choice is remembered — the screen won't reappear unless you change language via the ⋮ → 🌐 Language menu.",
-    "welcomeSubtitle": "Dashboard Controller",
-    "welcomeHint": "Choisissez votre langue\nPlease select your language",
-    "caption": "Language selection screen — shown only on first launch"
-  },
-  "main": {
-    "title": "3. Main Screen",
-    "text": "The main screen has two areas: a status bar at the top (dark blue background) and a list of installed apps below. You can switch between list and grid (icons) view via the ⋮ menu.",
-    "status": "① Dashboard: not connected",
-    "buttons": [
-      "② Activate Projection",
-      "③ Stop Projection",
-      "④ Restore Original Dashboard",
-      "⑤ ⋮",
-      "✕",
-      "✕",
-      "✕",
-      "✕"
-    ],
-    "listTitle": "⑥ Installed apps",
-    "apps": [
-      "Maps",
-      "YouTube",
-      "Spotify",
-      "Waze"
-    ],
-    "caption": "Main screen — no app projected (initial state)",
-    "annotations": [
-      {
-        "tone": "",
-        "marker": "①",
-        "label": "Status",
-        "text": "Shows the connection state to the dashboard. Changes to 'Dashboard: [AppName]' when an app is active."
-      },
-      {
-        "tone": "",
-        "marker": "②",
-        "label": "Activate Projection",
-        "text": "Establishes the connection to the cluster and prepares app casting. Tap this first."
-      },
-      {
-        "tone": "red",
-        "marker": "③",
-        "label": "Stop Projection",
-        "text": "Stops the ongoing projection without restoring the original BYD dashboard."
-      },
-      {
-        "tone": "gray",
-        "marker": "④",
-        "label": "Restore Original Dashboard (⋮ menu)",
-        "text": "Accessible via the ⋮ menu. Stops the projection AND restores the native BYD dashboard (speed, gauges, range…). Preferred over 'Stop Projection' at end of use."
-      },
-      {
-        "tone": "gray",
-        "marker": "⑤",
-        "label": "⋮ Menu",
-        "text": "Access to Settings, Diagnostics, System Report, Logs, language change and Grid/List toggle."
-      },
-      {
-        "tone": "gray",
-        "marker": "⑥",
-        "label": "App list",
-        "text": "Tap an app to project it to the cluster. Long-press → pin the app (⭐, moves to top of list). The 'Auto' checkbox marks an app for automatic launch: it is sent to the cluster as soon as projection starts. The ✕ button and ← / → arrows only appear on the currently active app (on cluster or on main display)."
-      }
-    ]
-  },
-  "projection": {
-    "title": "4. Projecting an App to the Dashboard",
-    "steps": [
-      "Tap 'Activate Projection' (blue button at the top). The status changes to 'Starting cluster…'. The local ADB connection is established and the cluster enters projection mode.",
-      "Tap the desired app in the list. DashCast moves the app to the dashboard display. The status changes to 'Dashboard: [App name]'.",
-      "The control panel appears at the bottom of the screen. Overscan values saved for this app are applied automatically."
-    ],
-    "activeStatus": "Dashboard: Maps ✓",
-    "buttons": [
-      "Activate Projection",
-      "📺 Mirror",
-      "Stop Projection",
-      "Restore Original Dashboard",
-      "⋮",
-      "← Main",
-      "✕",
-      "→ Cluster",
-      "✕",
-      "→ Cluster",
-      "✕",
-      "📐 Adjust",
-      "⬛⬛ Split",
-      "Hide ▼"
-    ],
-    "listTitle": "Installed apps",
-    "apps": [
-      "Maps",
-      "YouTube",
-      "Spotify"
-    ],
-    "controlLabel": "Cluster control",
-    "controlApp": "Maps",
-    "mirrorText": "Display active on cluster ✓",
-    "caption": "Main screen — Maps is projected on the instrument cluster",
-    "annotations": [
-      {
-        "tone": "green",
-        "marker": "●",
-        "label": "Green bar",
-        "text": "Visual indicator on each item: the app is currently on the cluster."
-      },
-      {
-        "tone": "",
-        "marker": "→",
-        "label": "→ Cluster",
-        "text": "Sends another app to the cluster (replaces the current one)."
-      },
-      {
-        "tone": "gray",
-        "marker": "←",
-        "label": "← Main",
-        "text": "Returns the app to the central screen (removes it from the cluster)."
-      },
-      {
-        "tone": "teal",
-        "marker": "📺",
-        "label": "Mirror",
-        "text": "Shows a live preview of the dashboard content inside DashCast."
-      },
-      {
-        "tone": "red",
-        "marker": "❌",
-        "label": "Red Cross (Force Stop)",
-        "text": "Force-stops a frozen app's process entirely and removes it from Recents."
-      },
-      {
-        "tone": "gray",
-        "marker": "🔲",
-        "label": "Grid / List View",
-        "text": "Toggle between classic list and icon grid view via the ⋮ menu."
-      }
-    ]
-  },
-  "control": {
-    "title": "5. During Projection — Control Panel",
-    "intro": "When an app is active on the cluster, a dark panel appears at the bottom of the main screen with four controls:",
-    "mirror": {
-      "title": "5.1 Mirror (📺 Mirror)",
-      "text": "Tap 📺 Mirror in the status bar to display a live copy of the cluster inside DashCast. You can interact with this copy by touch — events are forwarded to the cluster display.",
-      "note": "The mirror uses SurfaceControl to capture the display. If unavailable, an automatic screenshot every 2 seconds is used as fallback."
-    },
-    "resize": {
-      "title": "5.2 Adjust (📐 Per-app Overscan)",
-      "text": "The 📐 Adjust button reveals two sliders: Width Margin and Height Margin. These crop the edges of the projected image on the cluster. Values are saved per application and automatically re-applied on each launch via wm overscan.",
-      "note": "💡 Recommended values for Seal EU: Width 80 px, Height 50 px."
-    },
-    "relaunch": {
-      "title": "5.5 Relaunch (↺)",
-      "text": "The ↺ (orange) button force-stops the app currently projected on the cluster, then immediately relaunches it from the start. Useful if the app is frozen or the display is stuck on the cluster."
-    },
-    "split": {
-      "title": "5.3 Split Mode (⬛⬛ Split)",
-      "text": "Tap ⬛⬛ Split to share the cluster between two apps:",
-      "items": [
-        "Full screen — One app occupies the entire cluster",
-        "⬜⬛ Left (50%) — Main app on the left, second app on the right",
-        "⬛⬜ Right (50%) — Main app on the right"
+
+  sections: [
+    {
+      id: 'welcome',
+      screen: 'screen-1',
+      title: '1. Welcome screen — language picker',
+      lead:
+        "On the very first launch, DashCast shows a grid with the 12 available languages. Tap the one you want; your choice is saved and the welcome screen will not show up again. You can change the language any time from Settings → Language.",
+      mockupLabel: 'Open screen 1 (Welcome)',
+      featuresTitle: 'Details',
+      features: [
+        {
+          title: '12 supported languages',
+          text:
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. The selected language is applied immediately, no restart.",
+        },
+        {
+          title: 'Automatic reading direction',
+          text:
+            "Arabic switches automatically to right-to-left layout (RTL): the navigation rail moves to the right side, lists invert, icons stay readable.",
+        },
+        {
+          title: 'Changeable any time',
+          text:
+            "To change the language later: long-press the DashCast logo at the top of the side rail → 🌐 Language. The new language is applied on the fly.",
+        },
       ],
-      "extra": "In Split mode, a second app can be selected from the list. It will occupy the other half of the cluster."
-    },
-    "hide": {
-      "title": "5.4 Hide the panel",
-      "text": "Tap Hide ▼ to collapse the control panel and return to the full app list."
-    }
-  },
-  "stopping": {
-    "title": "6. Stopping the Projection",
-    "intro": "Two buttons allow stopping the projection:",
-    "table": {
-      "headers": [
-        "Button",
-        "Behavior",
-        "When to use"
-      ],
-      "rows": [
-        [
-          "Stop Projection",
-          "Ends the projection. The dashboard stays blank (black).",
-          "If you just want to temporarily stop the display."
+      howTo: {
+        title: 'How to do it',
+        steps: [
+          "Launch DashCast (blue icon in the BYD app drawer).",
+          "The welcome screen shows the 4×3 language grid.",
+          "Tap your language. The interface switches immediately.",
+          "The main screen opens — you are ready to use DashCast.",
         ],
-        [
-          "Restore Original Dashboard",
-          "Ends the projection AND restores the native BYD display (speed, range, gauges…).",
-          "At the end of use — to get the normal BYD dashboard back."
-        ]
-      ]
+      },
+      note:
+        "ℹ️ If you change language while a projection is running, the projection keeps going uninterrupted; only the DashCast UI is translated.",
     },
-    "warning": "⚠️ If you exit DashCast without tapping one of these buttons, the projection stays active on the cluster until the next service restart."
-  },
-  "settings": {
-    "title": "7. Settings",
-    "intro": "Access Settings via ⋮ → ⚙️ Settings. The screen has three sections:",
-    "titleLabel": "Settings",
-    "clusterTypeLabel": "Cluster type",
-    "clusterOptions": [
-      "8.8 inch (cmd=29)",
-      "12.3 inch (cmd=30) — Seal EU",
-      "10.25 inch (cmd=31)"
+
+    {
+      id: 'main',
+      screen: 'screen-2',
+      title: '2. Main screen — Apps & Cluster',
+      lead:
+        "The central DashCast screen. On the left, the list of every installed app with search, category filters and favourites. On the right, the live cluster preview with the main actions: full-screen preview, screenshot, reconnect, stop the projection.",
+      mockupLabel: 'Open screen 2 (Main)',
+      featuresTitle: 'Everything you can do',
+      features: [
+        {
+          title: '🔍 Search bar',
+          text:
+            "Type a few letters to filter the list on the fly (matches both app name and package). The ▦ button on the right toggles between list and grid view.",
+        },
+        {
+          title: '🏷️ Category filters',
+          text:
+            "The coloured chips (All / Navigation / Media / Communication / System) automatically group your apps. The number in parentheses tells you how many apps are visible.",
+        },
+        {
+          title: '⭐ Pinned favourites',
+          text:
+            "The « Favourites » section keeps your most-used apps at the top. To add or remove a favourite: long-press the app → ⭐ Add/Remove from favourites.",
+        },
+        {
+          title: '👆 Short tap — project',
+          text:
+            "Tap an app to send it to the cluster immediately. If the projection wasn't already running, it starts automatically (cluster warm-up, ~2 s).",
+        },
+        {
+          title: '👆⏱️ Long press — actions menu',
+          text:
+            "Hold any app to open a full-screen menu: ⭐ Favourite, Auto-launch (start with the projection), Move to cluster / main display, ✕ Force stop.",
+        },
+        {
+          title: '🚦 Live cluster preview',
+          text:
+            "The right pane mirrors what is shown on the cluster (speed, gear, battery, range). The latency value (12 ms) confirms the link is healthy.",
+        },
+        {
+          title: '👁️ Full-screen preview',
+          text:
+            "Tap « Full-screen preview » to expand the live preview to the whole central display. Handy to type an address in Maps with the full keyboard: every input is mirrored to the cluster.",
+        },
+        {
+          title: '📸 Screenshot',
+          text:
+            "The « Screenshot » button saves the current cluster view as a PNG into /sdcard/Pictures/DashCast/. Useful to share a route or troubleshoot a glitch.",
+        },
+        {
+          title: '↻ Reconnect',
+          text:
+            "If the projected app froze or stopped responding, « Reconnect » re-establishes the video stream without touching the original cluster.",
+        },
+        {
+          title: '⏹ Stop mirror',
+          text:
+            "Cleanly ends the projection. Short tap = soft stop (cluster goes back to native BYD via ADB). Long press = enriched menu with « Restore origin cluster » which forces the restore sequence using the cluster size from Settings.",
+        },
+      ],
+      howTo: {
+        title: 'How to project an app onto the cluster',
+        steps: [
+          "On the main screen, find the app you want (e.g. Maps).",
+          "Tap its icon → projection starts, the cluster switches to the app in ~2 s.",
+          "The right pane shows live what is on the cluster.",
+          "To type text (search an address), tap « Full-screen preview » → the app expands to the whole central display → type your address → everything mirrors to the cluster.",
+          "To stop: tap « Stop mirror » (the cluster returns to native BYD).",
+        ],
+      },
+      tipsTitle: 'Tips',
+      tips: [
+        "💡 Auto-launch: enable this switch on an app to project it automatically every time DashCast starts.",
+        "💡 Split mode: from the long-press menu of a second app, choose « Send as split » to display 2 apps side by side on the cluster.",
+        "💡 Margins: if the app spills off the cluster, open Settings → Margins and adjust the sliders. The setting is per-app.",
+        "💡 Touch full-screen: in full-screen preview mode, your fingers on the central display actually drive the app — keyboard, scroll, gestures, everything works.",
+      ],
+    },
+
+    {
+      id: 'settings',
+      screen: 'screen-3',
+      title: '3. Settings',
+      lead:
+        "The Settings screen gathers global options and projection image tuning. The left rail stays available — you can switch between Apps, Settings, Diag, System and Journal without losing your place.",
+      mockupLabel: 'Open screen 3 (Settings)',
+      featuresTitle: 'Available sections',
+      features: [
+        {
+          title: '📺 Cluster type',
+          text:
+            "Pick the physical size of your instrument cluster: 8.8″ (sendInfo cmd 29), 12.3″ Seal EU (cmd 30, default), or 10.25″ (cmd 31). This value is used in particular by « Restore origin cluster » to fire the correct mode.",
+        },
+        {
+          title: '🌐 Language',
+          text:
+            "12 languages available. Switch is instant — no DashCast restart needed.",
+        },
+        {
+          title: '↔️ Horizontal margin (overscan)',
+          text:
+            "Slider 0–200 px. Adds black bars on the left/right to compensate for clipped edges on your cluster. The value is stored per app — Maps may use 80 px while Spotify stays at 0.",
+        },
+        {
+          title: '↕️ Vertical margin (overscan)',
+          text:
+            "Slider 0–200 px. Same for top/bottom. Combined margins are applied at the VirtualDisplay level so the projected app never « sees » the clipped zones.",
+        },
+        {
+          title: '✅ Apply / 🔄 Reset',
+          text:
+            "« Apply » pushes the new margins to the running projection immediately. « Reset » brings the current app back to 0/0.",
+        },
+        {
+          title: '📦 OTA updates',
+          text:
+            "DashCast checks GitHub Releases for new versions automatically. Tick « Include pre-releases » to get the alpha channel (more frequent but experimental updates).",
+        },
+        {
+          title: '🚗 Auto-start with vehicle',
+          text:
+            "When enabled, DashCast starts together with the car and restores the last projected app. Otherwise, you launch it manually from the BYD app drawer.",
+        },
+      ],
+      howTo: {
+        title: "How to fine-tune an app's margins",
+        steps: [
+          "Project the app you want to tune (e.g. Waze).",
+          "Open Settings → Margins.",
+          "Move the horizontal slider until the left/right edges look right.",
+          "Same with the vertical slider.",
+          "Tap « Apply » → the projection is updated live, no app restart.",
+          "The setting is saved for that app only (each app keeps its own margins).",
+        ],
+      },
+      note:
+        "⚠️ If you change the cluster type, restart DashCast so the reference values are recomputed.",
+    },
+
+    {
+      id: 'diagnostics',
+      screen: 'screen-4',
+      title: '4. Diagnostics',
+      lead:
+        "The Diagnostics tab is an internal dashboard reserved for cases where projection misbehaves. Most users will never need it — it is exposed for support and debugging.",
+      mockupLabel: 'Open screen 4 (Diagnostics)',
+      featuresTitle: 'Available tools',
+      features: [
+        {
+          title: 'ClusterService state',
+          text:
+            "Checks that the Android service driving the projection is running. If « not bound », a button restarts it.",
+        },
+        {
+          title: 'VirtualDisplay state',
+          text:
+            "Shows the ID of the virtual display created for the cluster, its resolution, and whether a Qt Surface is attached.",
+        },
+        {
+          title: 'Local ADB connection',
+          text:
+            "Quick test of the ADB tunnel to localhost:5555. If the test fails, wireless debugging has usually been disabled in BYD settings.",
+        },
+        {
+          title: 'Targeted logcat',
+          text:
+            "Captures the last 200 logcat lines filtered on DashCast / AutoContainer / xdja. The « Share » button sends the report.",
+        },
+      ],
+      howTo: {
+        title: 'When to use this tab',
+        steps: [
+          "The cluster stays black after tapping an app → check ClusterService and VirtualDisplay state.",
+          "The app says « ADB unavailable » → Diag tab → « Test ADB » button.",
+          "Support asks for a report → Diag → « Share logcat ».",
+          "An update was just installed and you want to confirm the running version.",
+        ],
+      },
+      note:
+        "ℹ️ This tab does not change anything by itself: the buttons run read-only checks unless explicitly stated.",
+    },
+
+    {
+      id: 'sysinfo',
+      screen: 'screen-5',
+      title: '5. System Information',
+      lead:
+        "Read-only dashboard about your hardware/software environment. This is where you find the DashCast version, BYD firmware, Android version and your cluster identifier.",
+      mockupLabel: 'Open screen 5 (System)',
+      featuresTitle: 'Information shown',
+      features: [
+        {
+          title: '🚗 Vehicle',
+          text:
+            "Detected BYD model, VIN (if available), firmware build (e.g. Di3.0 / 6125F), firmware build date.",
+        },
+        {
+          title: '📱 Android',
+          text:
+            "Android version (10), API level (29), security patch, DiLink build ID.",
+        },
+        {
+          title: '🔌 DashCast',
+          text:
+            "Installed version, versionCode, update channel (stable / alpha), date of last OTA check, link to release notes.",
+        },
+        {
+          title: '🖥️ Cluster',
+          text:
+            "Detected type (8.8″ / 12.3″ / 10.25″), real resolution, current VirtualDisplay ID, active Qt package (com.xdja.containerservice).",
+        },
+        {
+          title: '📦 Tracked apps',
+          text:
+            "Number of apps detected by DashCast, number of pinned favourites, number of apps with auto-launch enabled.",
+        },
+      ],
+      tipsTitle: 'Tips',
+      tips: [
+        "💡 Long-press a row to copy the value to the clipboard (handy for a bug report).",
+        "💡 The « Export » button at the bottom dumps everything to a text file (/sdcard/DashCast/sysinfo.txt).",
+      ],
+    },
+
+    {
+      id: 'journal',
+      screen: 'screen-6',
+      title: '6. Journal',
+      lead:
+        "DashCast's internal log: traces every important action (projections, restorations, ADB errors, updates). Useful to understand unexpected behaviour or send a report to support.",
+      mockupLabel: 'Open screen 6 (Journal)',
+      featuresTitle: 'Features',
+      features: [
+        {
+          title: '🔍 Filter',
+          text:
+            "Type a keyword to keep only relevant lines (e.g. « ADB », « Maps », « error »). The filter is case-insensitive.",
+        },
+        {
+          title: '🎨 Colour code',
+          text:
+            "🟢 INFO (green) — normal operation. 🟠 WARN (orange) — attention. 🔴 ERROR (red) — something failed. ⚪ DEBUG (grey) — technical detail.",
+        },
+        {
+          title: '🗑 Clear',
+          text:
+            "Empties the journal. The system logcat trace is not affected — only the in-memory DashCast history is cleared.",
+        },
+        {
+          title: '📤 Share',
+          text:
+            "Exports the current journal as .txt and opens the Android share sheet (e-mail, Telegram, file). Automatically includes the DashCast version and BYD model.",
+        },
+        {
+          title: '⏰ Timestamps',
+          text:
+            "Each line is prefixed with the local time (HH:mm:ss.mmm). Long-running operations (Maps launch, cluster restore) are measured and shown.",
+        },
+      ],
+      howTo: {
+        title: 'How to send a bug report',
+        steps: [
+          "Reproduce the issue (e.g. the app stays black after launch).",
+          "Open Journal.",
+          "Tap « Share ».",
+          "Pick your channel (Telegram, e-mail, GitHub Issues).",
+          "The attached .txt holds the full trace plus context (version, model, firmware).",
+        ],
+      },
+      note:
+        "🔒 No personal data (contacts, GPS location, app content) is logged — only DashCast actions and technical return codes.",
+    },
+  ],
+
+  faq: {
+    title: '7. FAQ — frequent questions',
+    items: [
+      {
+        question: '❓ The cluster stays black when I tap an app',
+        answer:
+          "Three possible causes: (1) wireless ADB disabled — check BYD Settings → Developer. (2) ClusterService not running — Diag tab, « Restart » button. (3) The app just crashed — tap « Reconnect » in the right pane.",
+      },
+      {
+        question: '❓ The image overflows / is clipped on the cluster',
+        answer:
+          "Open Settings → Margins and adjust the horizontal/vertical sliders until the edges look right. The setting is stored for that app only — you only do it once.",
+      },
+      {
+        question: '❓ How do I get back to the original BYD dashboard?',
+        answer:
+          "A short tap on « Stop mirror » is enough 95 % of the time. If the cluster is stuck, long-press the same button → menu → « Restore origin cluster »: DashCast forces the sendInfo sequence matching your cluster type.",
+      },
+      {
+        question: '❓ Will DashCast drain the 12 V battery?',
+        answer:
+          "No — DashCast stops automatically when the car powers off (Android.intent.action.SCREEN_OFF + BMS disconnect broadcasts). No background service stays alive after the engine is off.",
+      },
+      {
+        question: '❓ I want to contribute or report a bug',
+        answer:
+          "GitHub: https://github.com/Kiroha/byd-dashcast — Issues for bugs, Discussions for questions. Always attach a Journal export (Journal tab → Share) to speed up the diagnosis.",
+      },
+      {
+        question: '❓ Which apps work on the cluster?',
+        items: [
+          "✅ Navigation: Google Maps, Waze, Yandex Navi, OsmAnd, Magic Earth.",
+          "✅ Media: Spotify, YouTube, YouTube Music, Netflix (prefer landscape).",
+          "✅ Communication: Telegram (read-only mode), WhatsApp (notifications).",
+          "✅ System: camera, weather, calendar.",
+          "⚠️ Apps using Widevine L1 DRM (Disney+, Prime Video) may refuse to render on a VirtualDisplay — this is an Android limitation, not DashCast.",
+        ],
+      },
+      {
+        question: '❓ Updates: stable or alpha?',
+        answer:
+          "The stable channel (default) is tested on a vehicle for at least 1 week before publishing. The alpha channel (enable in Settings → Updates) gets new builds as soon as they are compiled — handy to test ahead, but may introduce temporary regressions.",
+      },
     ],
-    "marginsLabel": "Display margins (global overscan)",
-    "horizontalMarginLabel": "Left / Right:",
-    "verticalMarginLabel": "Top / Bottom:",
-    "applyButton": "Apply now",
-    "resetButton": "Reset (80 / 50)",
-    "updatesLabel": "Updates",
-    "prereleaseLabel": "Include pre-release versions (alpha/beta)",
-    "prereleaseHint": "Receive test versions before official release.",
-    "caption": "Settings page",
-    "type": {
-      "title": "7.1 Cluster type",
-      "text": "Select the screen size of your dashboard. For BYD Seal EU, select 12.3 inch (cmd=30). This setting determines the command sent to the cluster on activation."
-    },
-    "margins": {
-      "title": "7.2 Global display margins (overscan)",
-      "text": "Adjust the margins to perfectly frame the content within the visible screen area. These margins apply globally. For per-app settings, use the 📐 Adjust button in the control panel.",
-      "items": [
-        "Left / Right — Horizontal margin (0–200 px on each side)",
-        "Top / Bottom — Vertical margin (0–200 px top and bottom)"
-      ],
-      "applyText": "Click Apply now to see the result immediately if an app is being projected. Values are saved between sessions.",
-      "note": "💡 Recommended defaults for Seal EU: Left/Right = 80 px, Top/Bottom = 50 px."
-    },
-    "updates": {
-      "title": "7.3 Updates",
-      "text": "Enable 'Include pre-release versions (alpha/beta)' to receive test builds before the official release. To check manually, use ⋮ → 🔄 Check for updates. Updates are downloaded directly from GitHub Releases — no Play Store required."
-    }
   },
-  "tools": {
-    "title": "8. ⋮ Menu — Additional Tools",
-    "intro": "The ⋮ button in the top right opens a menu with the following entries:",
-    "table": {
-      "headers": [
-        "Option",
-        "Description"
-      ],
-      "rows": [
-        ["⚙️ Settings", "Opens settings: Cluster type, Global overscan margins, Updates (pre-release)."],
-        ["🌐 Language", "Returns to the language selection screen to change the interface language."],
-        ["🔄 Check for updates", "Checks if a new version of DashCast is available on GitHub. If pre-release enabled in Settings, also offers alpha/beta versions."],
-        ["⊞ Grid mode / 📋 List mode", "Toggles the app list between list mode (1 column) and grid mode (5 columns). Also accessible via the ⊞ button in the list header."],
-        ["Restore Original Dashboard", "Stops projection AND restores the native BYD dashboard. Only active during a projection."],
-        ["🔧 Diagnostics", "Advanced developer tools — ADB connection, VirtualDisplay creation, SurfaceFlinger analysis, logcat sniffer for reverse engineering."],
-        ["📋 System Report", "Generates a full report (displays, BYD APIs, permissions, packages) — useful for support or filing a bug report."],
-        ["📜 Logs", "Real-time log viewer — filter by tag/level, share via email or file."]
-      ]
-    },
-    "logs": {
-      "title": "Log Viewer (📜 Logs)",
-      "header": "📋 Log Viewer",
-      "clearButton": "Clear",
-      "shareButton": "Share",
-      "filterPlaceholder": "Filter (tag / message / level)…",
-      "lines": [
-        "[INFO ] ClusterService → Cluster display connected: id=1",
-        "[INFO ] launchOnDashboard OK → com.google.android.apps.maps",
-        "[DEBUG] watchdog started for com.google.android.apps.maps pid=4821",
-        "[WARN ] setTaskWindowingMode: SecurityException (expected)",
-        "[INFO ] wm overscan applied on display 1 inset=80,50"
-      ],
-      "caption": "Log viewer — real-time filter, export available"
-    }
-  },
-  "faq": {
-    "title": "9. FAQ & Troubleshooting",
-    "items": [
-      {
-        "question": "❓ The 'Allow ADB debugging?' popup does not appear",
-        "answer": "Make sure TCP ADB debugging is enabled in the infotainment developer settings. If the option is missing, enable developer mode first (tap the build number 7 times in About).",
-        "items": []
-      },
-      {
-        "question": "❓ The app does not appear on the cluster after selection",
-        "answer": "",
-        "items": [
-          "Make sure you tapped Activate Projection before selecting the app.",
-          "Some apps refuse to launch on a secondary display (internal restrictions). Check the Logs for the error message.",
-          "Try closing and reopening DashCast, then repeat the sequence."
-        ]
-      },
-      {
-        "question": "❓ The content is cropped or offset on the cluster",
-        "answer": "Use the 📐 Adjust button in the control panel to fine-tune the margins per app. Global margins in Settings apply as a fallback.",
-        "items": []
-      },
-      {
-        "question": "❓ An app is frozen / stuck on the cluster",
-        "answer": "Tap the ❌ Red Cross next to the app in the list. This force-stops the process entirely and cleans up Recents. The app is then ready to relaunch.",
-        "items": []
-      },
-      {
-        "question": "❓ The ← Main and ✕ buttons remain visible after closing the app",
-        "answer": "DashCast automatically detects app closure (via /proc monitoring). If the UI stays stuck, tap Stop Projection to force a reset.",
-        "items": []
-      }
-    ]
-  },
-  "footer": "DashCast v0.7.2 — BYD Seal EU · DiLink 3.0 · Android 10 · github.com/Kiroha/byd-dashcast"
+
+  footer:
+    'DashCast is an open-source project distributed under the GPL-3.0 licence. Not affiliated with BYD Auto Co., Ltd.',
 };

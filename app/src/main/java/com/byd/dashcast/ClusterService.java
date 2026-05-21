@@ -33,6 +33,7 @@ import com.byd.dashcast.dashboard.DashboardLauncher;
  *   - LocalBinder.getService() returns the service instance
  *   - MainActivity implements ClusterService.Listener for display callbacks
  */
+@SuppressWarnings("deprecation")
 public class ClusterService extends Service implements DashboardDisplayHelper.Listener {
 
     private static final String TAG = "ClusterService";

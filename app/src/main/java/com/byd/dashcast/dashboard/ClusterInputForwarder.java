@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
  * windows on that display if the InputDispatcher supports multi-display.
  * KeyEvents always work because they target the globally focused window.
  */
+@SuppressWarnings("deprecation")
 public class ClusterInputForwarder {
 
     private static final String TAG = "ClusterInputForwarder";

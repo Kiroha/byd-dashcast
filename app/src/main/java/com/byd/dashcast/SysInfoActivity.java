@@ -46,7 +46,20 @@ import java.util.concurrent.Executors;
  *   /sdcard/Android/data/com.byd.dashcast/files/byd_report_<date>.txt
  * Retrievable via: adb pull /sdcard/Android/data/com.byd.dashcast/files/
  */
+@SuppressWarnings("deprecation")
+@android.annotation.SuppressLint("SetTextI18n")
 public class SysInfoActivity extends AppCompatActivity {
+
+    // Thread-local SimpleDateFormat instances (SDF is not thread-safe; report is built on
+    // a worker thread, uptime tile on the UI thread, so each thread gets its own copy).
+    private static final ThreadLocal<SimpleDateFormat> SDF_REPORT_HEADER =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_FILE_STAMP =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_TIME_HMS =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss", Locale.getDefault()));
+    private static final ThreadLocal<SimpleDateFormat> SDF_TIME_HM =
+            ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm", Locale.getDefault()));
 
     private TextView tvReport;
     private ScrollView scrollView;
@@ -93,6 +106,15 @@ public class SysInfoActivity extends AppCompatActivity {
                 }
             }
         });
+
+        // ─── v0.9.82 — M3 redesign wiring ───
+        wireSysInfoNavRail();
+        populateOverviewTiles();
+        populateDisplaysList();
+        populateServicesList();
+        // Auto-generate the full mono report on first open so the right column
+        // is filled immediately (Régénérer button is then for refreshing).
+        startGenerate();
     }
 
     @Override
@@ -112,7 +134,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 // Recheck on the main thread: between the worker-side check above
                 // and the Runnable being dispatched, onDestroy may have fired.
                 if (mDestroyed) return;
-                tvReport.setText(text);
+                tvReport.setText(colorizeReport(text));
                 scrollView.post(new Runnable() {
                     @Override public void run() { scrollView.fullScroll(ScrollView.FOCUS_DOWN); }
                 });
@@ -134,7 +156,7 @@ public class SysInfoActivity extends AppCompatActivity {
                         if (mDestroyed) return;
                         AppLogger.log("SysInfo", "Report generated");
                         mReport = new StringBuilder(result);
-                        tvReport.setText(result);
+                        tvReport.setText(colorizeReport(result));
                         btnGenerate.setEnabled(true);
                         btnSave.setEnabled(true);
                         btnShare.setEnabled(true);
@@ -153,8 +175,7 @@ public class SysInfoActivity extends AppCompatActivity {
 
             section(sb, "BYD SEAL DIAGNOSTIC REPORT");
             sb.append("Date : ").append(
-                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                            .format(new Date())).append("\n");
+                    SDF_REPORT_HEADER.get().format(new Date())).append("\n");
             sb.append("App  : ").append(getPackageName()).append("\n");
             publishUpdate(sb.toString());
 
@@ -317,13 +338,15 @@ public class SysInfoActivity extends AppCompatActivity {
             sb.append(tryInstantiateBydApi());
             publishUpdate(sb.toString());
 
+            // 8b. BYD live vehicle data (Bodywork + Speed + Energy snapshots)
+            section(sb, "8b. BYD VEHICLE DATA (live)");
+            sb.append(snapshotBydLiveData());
+            publishUpdate(sb.toString());
+
+            // Recent events at the very end (mockup-faithful colored block).
+            appendRecentEvents(sb, 5);
+
             sb.append("\n=== END OF REPORT ===\n");
-
-            // Logbook in appendix
-            section(sb, "9. LOGBOOK (AppLogger)");
-            String log = AppLogger.get();
-            sb.append(log.isEmpty() ? "  (empty log)\n" : log);
-
             return sb.toString();
     }
 
@@ -335,7 +358,7 @@ public class SysInfoActivity extends AppCompatActivity {
         if (mReport == null) return;
 
         String filename = "byd_report_"
-                + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date())
+                + SDF_FILE_STAMP.get().format(new Date())
                 + ".txt";
 
         // getExternalFilesDir() = /sdcard/Android/data/com.byd.dashcast/files/
@@ -369,11 +392,66 @@ public class SysInfoActivity extends AppCompatActivity {
     // =========================================================================
 
     private void section(StringBuilder sb, String title) {
-        StringBuilder line = new StringBuilder();
-        for (int i = 0; i < 60; i++) line.append('─');
-        sb.append("\n").append(line).append("\n");
-        sb.append(title).append("\n");
-        sb.append(line).append("\n");
+        // Single-line ═══ TITLE ═══ header — colorized in colorizeReport().
+        sb.append("\n═══ ").append(title).append(" ═══\n");
+    }
+
+    /**
+     * Builds a Spannable from the plain mono report applying M3 syntax colors:
+     *   ═══ … ═══   → md_primary  (section headers)
+     *   GRANTED / OPEN / ✓ / RUN  → md_status_ok
+     *   DENIED / closed / ✗ / WARN/ [W] → md_status_warn
+     *   ERROR / [E]  → md_status_err
+     */
+    private CharSequence colorizeReport(String text) {
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(text);
+        int cPrim = androidx.core.content.ContextCompat.getColor(this, R.color.md_primary);
+        int cOk   = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok);
+        int cWarn = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_warn);
+        int cErr  = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err);
+        applyRegex(ssb, "═══ [^═]+ ═══",                       cPrim, true);
+        applyRegex(ssb, "\\b(GRANTED|OPEN|RUN|CONN|YES)\\b",   cOk,   true);
+        applyRegex(ssb, "✓",                                    cOk,   true);
+        applyRegex(ssb, "\\b(DENIED|closed|OFF|NO)\\b",        cWarn, true);
+        applyRegex(ssb, "✗",                                    cWarn, true);
+        applyRegex(ssb, "\\[I\\]",                              cOk,   true);
+        applyRegex(ssb, "\\[W\\]",                              cWarn, true);
+        applyRegex(ssb, "\\[E\\]",                              cErr,  true);
+        return ssb;
+    }
+
+    private static void applyRegex(android.text.SpannableStringBuilder ssb,
+                                   String regex, int color, boolean bold) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(regex).matcher(ssb);
+        while (m.find()) {
+            ssb.setSpan(new android.text.style.ForegroundColorSpan(color),
+                    m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (bold) {
+                ssb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                        m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+    }
+
+    /** Appends a "RECENT EVENTS (last N)" block from AppLogger. */
+    private static void appendRecentEvents(StringBuilder sb, int n) {
+        java.util.List<AppLogger.Entry> entries = AppLogger.getEntries();
+        sb.append("\n═══ RECENT EVENTS (last ").append(n).append(") ═══\n");
+        if (entries.isEmpty()) { sb.append("  (no events yet)\n"); return; }
+        SimpleDateFormat tf = SDF_TIME_HMS.get();
+        int from = Math.max(0, entries.size() - n);
+        for (int i = from; i < entries.size(); i++) {
+            AppLogger.Entry e = entries.get(i);
+            String lvl;
+            switch (e.level) {
+                case ERROR: lvl = "[E]"; break;
+                case WARN:  lvl = "[W]"; break;
+                default:    lvl = "[I]"; break;
+            }
+            sb.append(tf.format(new Date(e.timestamp))).append(' ')
+              .append(lvl).append(' ').append(e.tag).append(" ")
+              .append(e.message).append('\n');
+        }
     }
 
     private String getSystemProp(String key) {
@@ -434,6 +512,57 @@ public class SysInfoActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Snapshots a few live values from the BYD API for the report:
+     *   Bodywork: VIN, modelName, doorState(driver,passenger), powerLevel, batteryVoltageLevel
+     *   Speed:    currentSpeed
+     *   Energy:   SOC (battery state of charge)
+     * All calls done via reflection so the app builds without the BYD SDK on the classpath.
+     */
+    private String snapshotBydLiveData() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(probeBydCall("Bodywork", "android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice",
+                new String[]{"getAutoVIN", "getAutoModelName", "getPowerLevel", "getBatteryVoltageLevel"}));
+        sb.append(probeBydCall("Speed",    "android.hardware.bydauto.speed.BYDAutoSpeedDevice",
+                new String[]{"getCurrentSpeed", "getAccelPedalDepth", "getBrakePedalDepth"}));
+        sb.append(probeBydCall("Energy",   "android.hardware.bydauto.energy.BYDAutoEnergyDevice",
+                new String[]{"getElecBatteryRemainingCapacity", "getMileage", "getEvRemainingMileage"}));
+        return sb.toString();
+    }
+
+    /** Calls a list of zero-arg getters on a BYD device and formats `key = value` lines. */
+    private String probeBydCall(String label, String className, String[] methods) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("  ── ").append(label).append("\n");
+        try {
+            Class<?> cls = Class.forName(className);
+            Method getInstance = cls.getMethod("getInstance", Context.class);
+            Object dev = getInstance.invoke(null, getApplicationContext());
+            if (dev == null) {
+                sb.append("    (getInstance returned null)\n");
+                return sb.toString();
+            }
+            for (String m : methods) {
+                try {
+                    Object v = cls.getMethod(m).invoke(dev);
+                    sb.append(String.format("    %-32s = %s\n", m, String.valueOf(v)));
+                } catch (NoSuchMethodException nsme) {
+                    sb.append(String.format("    %-32s = (no such method)\n", m));
+                } catch (Throwable t) {
+                    Throwable cause = t.getCause() != null ? t.getCause() : t;
+                    sb.append(String.format("    %-32s ✗ %s\n", m,
+                            cause.getClass().getSimpleName() + ": " + cause.getMessage()));
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            sb.append("    (class not in runtime SDK)\n");
+        } catch (Throwable t) {
+            sb.append("    ✗ ").append(t.getClass().getSimpleName())
+              .append(": ").append(t.getMessage()).append("\n");
+        }
+        return sb.toString();
+    }
+
     private String tryInstantiateBydApi() {
         StringBuilder sb = new StringBuilder();
         String[] devices = {
@@ -464,5 +593,315 @@ public class SysInfoActivity extends AppCompatActivity {
             }
         }
         return sb.toString();
+    }
+
+    // =========================================================================
+    // v0.9.82 — M3 redesign: nav rail + overview tiles + lists
+    // =========================================================================
+
+    private void wireSysInfoNavRail() {
+        View navApps     = findViewById(R.id.nav_apps_sys);
+        View navSettings = findViewById(R.id.nav_settings_sys);
+        View navDiag     = findViewById(R.id.nav_diag_sys);
+        View navLog      = findViewById(R.id.nav_log_sys);
+        View navLogo     = findViewById(R.id.iv_nav_logo_sys);
+        if (navApps != null)     navApps.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        if (navSettings != null) navSettings.setOnClickListener(v -> { startActivity(new android.content.Intent(this, SettingsActivity.class)); finish(); });
+        if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
+        if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
+        if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+    }
+
+    private void populateOverviewTiles() {
+        // Vehicle — tries the BYD Bodywork API (getAutoVIN + getAutoModelName) on a
+        // worker thread; falls back to system properties (ro.byd.car.type / ro.byd.model)
+        // and finally to Build.MODEL. DiLink version comes from ro.byd.* sysprops.
+        final TextView vVal = findViewById(R.id.tv_tile_vehicle_value);
+        final TextView vSub = findViewById(R.id.tv_tile_vehicle_sub);
+        if (vVal != null) vVal.setText(prettyVehicleNameSync()); // immediate fallback
+        if (vSub != null) vSub.setText(prettyDilinkVersion());
+        new Thread(new Runnable() { @Override public void run() {
+            final String[] biz = fetchBydVehicleInfo();
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (mDestroyed) return;
+                if (biz[0] != null && !biz[0].isEmpty() && vVal != null) vVal.setText(biz[0]);
+                if (biz[1] != null && !biz[1].isEmpty() && vSub != null) vSub.setText(biz[1]);
+            }});
+        }}, "sysinfo-byd").start();
+
+        // Android
+        TextView aVal = findViewById(R.id.tv_tile_android_value);
+        TextView aSub = findViewById(R.id.tv_tile_android_sub);
+        if (aVal != null) aVal.setText(Build.VERSION.RELEASE + " · API " + Build.VERSION.SDK_INT);
+        if (aSub != null) {
+            String disp = Build.DISPLAY != null && !Build.DISPLAY.isEmpty() ? Build.DISPLAY : Build.ID;
+            aSub.setText("Build " + disp + " · " + Build.SUPPORTED_ABIS[0]);
+        }
+
+        // DashCast
+        TextView dVal = findViewById(R.id.tv_tile_dashcast_value);
+        TextView dSub = findViewById(R.id.tv_tile_dashcast_sub);
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (dVal != null) dVal.setText("v" + pi.versionName);
+            // minSdk=29 -> getLongVersionCode() always available
+            int code = (int) pi.getLongVersionCode();
+            String signTag = isPlatformSigned()
+                    ? getString(R.string.sysinfo_tile_dashcast_platform_signed)
+                    : getString(R.string.sysinfo_tile_dashcast_user_signed);
+            if (dSub != null) dSub.setText("build " + code + " · " + signTag);
+        } catch (PackageManager.NameNotFoundException e) {
+            if (dVal != null) dVal.setText("?");
+            if (dSub != null) dSub.setText("");
+        }
+
+        // Uptime
+        long uptimeMs = android.os.SystemClock.elapsedRealtime();
+        long sinceMs  = System.currentTimeMillis() - uptimeMs;
+        TextView uVal = findViewById(R.id.tv_tile_uptime_value);
+        TextView uSub = findViewById(R.id.tv_tile_uptime_sub);
+        if (uVal != null) uVal.setText(formatUptime(uptimeMs));
+        if (uSub != null) uSub.setText(getString(R.string.sysinfo_tile_uptime_since,
+                SDF_TIME_HM.get().format(new Date(sinceMs))));
+    }
+
+    /** Sync best-guess of vehicle name without touching the BYD service (used as instant fallback). */
+    private String prettyVehicleNameSync() {
+        String t = getSystemProp("ro.byd.car.type");
+        if (!t.startsWith("(") && !t.isEmpty()) return "BYD " + t;
+        String m = getSystemProp("ro.byd.model");
+        if (!m.startsWith("(") && !m.isEmpty()) return "BYD " + m;
+        return Build.MANUFACTURER + " " + Build.MODEL;
+    }
+
+    /** Returns a human DiLink version string — sysprop with several fallbacks. */
+    private String prettyDilinkVersion() {
+        String[] keys = {"ro.byd.dilink.version", "ro.byd.version", "ro.build.display.id"};
+        for (String k : keys) {
+            String v = getSystemProp(k);
+            if (!v.startsWith("(") && !v.isEmpty()) {
+                if (k.startsWith("ro.byd.dilink")) return "DiLink " + v;
+                if (k.equals("ro.byd.version"))    return "DiLink " + v;
+                return v; // ro.build.display.id (e.g., "QPR3 / 2024.08")
+            }
+        }
+        return Build.BRAND + " · " + Build.PRODUCT;
+    }
+
+    /**
+     * Calls BYDAutoBodyworkDevice.getAutoVIN() + getAutoModelName() via reflection.
+     * Returns [headline, subtitle] (either may be empty if the call fails).
+     */
+    private String[] fetchBydVehicleInfo() {
+        String headline = "", subtitle = "";
+        try {
+            Class<?> cls = Class.forName("android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
+            Method getInstance = cls.getMethod("getInstance", Context.class);
+            Object dev = getInstance.invoke(null, getApplicationContext());
+            if (dev != null) {
+                String vin = "";
+                try {
+                    Object v = cls.getMethod("getAutoVIN").invoke(dev);
+                    if (v instanceof String) vin = (String) v;
+                } catch (Throwable ignored) {}
+                int modelCode = -1;
+                try {
+                    Object m = cls.getMethod("getAutoModelName").invoke(dev);
+                    if (m instanceof Integer) modelCode = (Integer) m;
+                } catch (Throwable ignored) {}
+                String pretty = prettyVehicleNameSync();
+                headline = pretty;
+                StringBuilder sub = new StringBuilder();
+                sub.append(prettyDilinkVersion());
+                if (modelCode > 0) sub.append(" · model#").append(modelCode);
+                if (vin.length() >= 4) sub.append(" · VIN …").append(vin.substring(vin.length() - 4));
+                subtitle = sub.toString();
+            }
+        } catch (Throwable t) {
+            // BYD service not reachable (missing perm, ROM stripped) — keep fallbacks.
+        }
+        return new String[]{headline, subtitle};
+    }
+
+    /** True iff the package is signed by the same certificate as the system "android" package. */
+    private boolean isPlatformSigned() {
+        try {
+            PackageManager pm = getPackageManager();
+            int sigMatch = pm.checkSignatures("android", getPackageName());
+            return sigMatch == PackageManager.SIGNATURE_MATCH;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static String formatUptime(long ms) {
+        long s = ms / 1000;
+        long h = s / 3600;
+        long m = (s % 3600) / 60;
+        if (h > 0) return h + "h " + m + "min";
+        return m + "min";
+    }
+
+    private void populateDisplaysList() {
+        android.widget.LinearLayout container = findViewById(R.id.ll_displays_list);
+        if (container == null) return;
+        container.removeAllViews();
+        DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        Display[] displays = dm.getDisplays();
+        android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
+        for (Display d : displays) {
+            View row = inf.inflate(R.layout.row_sysinfo, container, false);
+            android.widget.ImageView icon  = row.findViewById(R.id.row_icon);
+            TextView headline              = row.findViewById(R.id.row_headline);
+            TextView support               = row.findViewById(R.id.row_support);
+            TextView badge                 = row.findViewById(R.id.row_badge);
+            int id = d.getDisplayId();
+            String name = d.getName() != null ? d.getName() : "?";
+            String label;
+            int iconRes;
+            if (id == 0) { label = getString(R.string.sysinfo_disp_main);     iconRes = R.drawable.ic_tv; }
+            else if (name.toLowerCase(Locale.ROOT).contains("virtual") ||
+                     name.toLowerCase(Locale.ROOT).contains("mirror"))
+                  { label = getString(R.string.sysinfo_disp_virtual); iconRes = R.drawable.ic_screen_share; }
+            else  { label = getString(R.string.sysinfo_disp_cluster); iconRes = R.drawable.ic_dashboard; }
+            headline.setText(getString(R.string.sysinfo_disp_row_headline, id, label));
+            support.setText(getDisplaySize(d) + " · " + name);
+            icon.setImageResource(iconRes);
+            badge.setText("●");
+            container.addView(row);
+        }
+    }
+
+    private void populateServicesList() {
+        android.widget.LinearLayout container = findViewById(R.id.ll_services_list);
+        if (container == null) return;
+        container.removeAllViews();
+        android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
+
+        // ClusterService — runs in our app process, so own pid + app uptime.
+        boolean clusterRunning = isServiceRunning(ClusterService.class);
+        String clusterSub;
+        if (clusterRunning) {
+            int pid = android.os.Process.myPid();
+            clusterSub = "pid " + pid + " · " + formatUptime(android.os.SystemClock.elapsedRealtime());
+        } else {
+            clusterSub = getString(R.string.sysinfo_svc_stopped);
+        }
+        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false);
+
+        // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
+        final View mirrorRow = addServiceRow(inf, container, "MirrorDaemon",
+                clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub)
+                               : getString(R.string.sysinfo_svc_stopped),
+                clusterRunning, false);
+        if (clusterRunning && mirrorRow != null) {
+            // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
+            new Thread(new Runnable() { @Override public void run() {
+                final int pid = pidOf("MirrorDaemon");
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (mDestroyed) return;
+                    String sub = pid > 0 ? ("pid " + pid + " · poll 500 ms")
+                                         : getString(R.string.sysinfo_svc_mirror_sub);
+                    setServiceRowState(mirrorRow, true, false, sub);
+                }});
+            }}, "sysinfo-pidof").start();
+        }
+
+        // ADB local — real probe via Dadb (executeShellWithResult). Port 5555 may be
+        // open but the ADB handshake/auth still failing → only an actual shell call
+        // proves AdbLocalClient is truly connected.
+        final View adbRow = addServiceRow(inf, container, "AdbLocalClient",
+                getString(R.string.sysinfo_svc_adb_unreachable),
+                false, true /* useConnBadge */);
+        AdbLocalClient.executeShellWithResult(this, "echo ok",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || adbRow == null) return;
+                            setServiceRowState(adbRow, true, true, "127.0.0.1:5555");
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || adbRow == null) return;
+                            setServiceRowState(adbRow, false, true,
+                                    getString(R.string.sysinfo_svc_adb_unreachable));
+                        }});
+                    }
+                });
+    }
+
+    /** Adds one service row; returns the row view so the caller can later toggle state. */
+    private View addServiceRow(android.view.LayoutInflater inf,
+                               android.widget.LinearLayout container,
+                               String name, String sub, boolean running, boolean useConnBadge) {
+        View row = inf.inflate(R.layout.row_sysinfo, container, false);
+        ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
+        ((TextView) row.findViewById(R.id.row_headline)).setText(name);
+        // Tag the row so setServiceRowState() knows which badge variant to use.
+        row.setTag(R.id.row_badge, useConnBadge ? Boolean.TRUE : Boolean.FALSE);
+        setServiceRowState(row, running, useConnBadge, sub);
+        container.addView(row);
+        return row;
+    }
+
+    /** Applies the running/off visual state on a row already inflated. */
+    private void setServiceRowState(View row, boolean running, boolean useConnBadge, String sub) {
+        android.widget.ImageView icon = row.findViewById(R.id.row_icon);
+        View leading = row.findViewById(R.id.row_leading);
+        if (running) {
+            if (leading != null) leading.setBackgroundResource(R.drawable.bg_service_icon_running);
+            icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
+        } else {
+            if (leading != null) leading.setBackgroundResource(R.drawable.bg_diag_card_icon);
+            icon.setColorFilter(androidx.core.content.ContextCompat.getColor(this, R.color.md_outline_variant));
+        }
+        ((TextView) row.findViewById(R.id.row_support)).setText(sub);
+        TextView badge = row.findViewById(R.id.row_badge);
+        if (running) {
+            badge.setText(getString(useConnBadge ? R.string.sysinfo_svc_conn : R.string.sysinfo_svc_run));
+            badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok));
+        } else {
+            badge.setText(getString(R.string.sysinfo_svc_off));
+            badge.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err));
+        }
+    }
+
+    /** Returns the first PID matching the given pattern via `pgrep -f`, or -1. */
+    private static int pidOf(String pattern) {
+        Process p = null;
+        try {
+            p = new ProcessBuilder("sh", "-c", "pgrep -f " + pattern + " | head -n 1")
+                    .redirectErrorStream(true).start();
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(p.getInputStream()));
+            String line = br.readLine();
+            br.close();
+            p.waitFor();
+            if (line != null && !line.trim().isEmpty()) {
+                return Integer.parseInt(line.trim());
+            }
+        } catch (Throwable t) {
+            // pgrep may not be available on all ROMs; ignore.
+        } finally {
+            if (p != null) try { p.destroy(); } catch (Throwable ignored) {}
+        }
+        return -1;
+    }
+
+    @SuppressWarnings("deprecation")
+    private boolean isServiceRunning(Class<?> svcClass) {
+        android.app.ActivityManager am =
+                (android.app.ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (am == null) return false;
+        try {
+            for (android.app.ActivityManager.RunningServiceInfo si :
+                    am.getRunningServices(Integer.MAX_VALUE)) {
+                if (svcClass.getName().equals(si.service.getClassName())) return true;
+            }
+        } catch (Throwable t) {
+            // ActivityManager.getRunningServices() returns only own-process services since API 26.
+        }
+        return false;
     }
 }

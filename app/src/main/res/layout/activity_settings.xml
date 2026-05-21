@@ -1,300 +1,732 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    SettingsActivity — Material 3 design (faithful to mockups/mockup_m3.html screen #3).
+    Two-column layout: left = cluster type + overscan margins,
+    right = behavior toggles + about. All widget IDs preserved so
+    SettingsActivity.java keeps working without code changes:
+      rg_cluster_type, rb_88/123/1025
+      sb_inset_h, sb_inset_v, tv_inset_h_value, tv_inset_v_value
+      cb_visual_mode, cb_boot_auto_start, cb_show_category_filters,
+      cb_reconnect_popup, cb_prerelease
+      ll_sliders_mode, btn_apply_overscan, btn_reset_overscan, tv_overscan_result
+    New IDs (cosmetic):
+      btn_apply_top, tv_version_value, tv_h_value_badge, tv_v_value_badge
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/bg_main">
+    android:orientation="horizontal"
+    android:baselineAligned="false"
+    android:background="?attr/colorSurface"
+    tools:ignore="ContentDescription,Overdraw">
+
+    <!-- ============= Nav rail ============= -->
+    <LinearLayout
+        android:id="@+id/ll_nav_rail_set"
+        android:layout_width="96dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:background="@color/md_surface_container_low"
+        android:paddingTop="14dp" android:paddingBottom="14dp">
+
+        <ImageView
+            android:id="@+id/iv_nav_logo_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@string/app_name"
+            android:clickable="true" android:focusable="true"/>
+
+        <ImageView
+            android:id="@+id/nav_apps_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="22dp"
+            android:src="@drawable/ic_apps"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_apps"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_apps"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_tune"
+            android:padding="10dp"
+            android:background="@drawable/bg_nav_pill_active"
+            android:contentDescription="@string/main_nav_settings"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_settings"
+            android:textSize="10sp" android:textColor="@color/md_primary"
+            android:textStyle="bold"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_diag_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_stethoscope"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_diag"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_diag"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_sysinfo_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_info"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_sysinfo"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_sysinfo"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_log_set"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_notes"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_log"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_log"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
-        android:clipToPadding="false">
+        android:padding="20dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_header"
-            android:textSize="26sp"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"
-            android:gravity="center_horizontal"/>
-
-        <!-- ══ SECTION 1 : TYPE DE CLUSTER ══ -->
+        <!-- ════════ TOP BAR (title + Apply) ════════ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_cluster_type_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
+                android:layout_weight="1"
+                android:text="@string/settings_header"
+                android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                android:textColor="?attr/colorOnSurface"/>
 
-            <RadioGroup
-                android:id="@+id/rg_cluster_type"
-                android:layout_width="match_parent"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_apply_top"
+                style="@style/Widget.DashCast.Button.Tonal"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <RadioButton
-                    android:id="@+id/rb_88"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_88"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
-
-                <RadioButton
-                    android:id="@+id/rb_123"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_123"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
-
-                <RadioButton
-                    android:id="@+id/rb_1025"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cluster_label_1025"
-                    android:textSize="14sp"
-                    android:padding="6dp"/>
-
-            </RadioGroup>
+                android:text="@string/settings_btn_apply_overscan"
+                app:icon="@drawable/ic_save"
+                app:iconGravity="textStart"/>
         </LinearLayout>
 
-        <!-- ══ SECTION 2 : MARGES OVERSCAN ══ -->
+        <!-- ════════ 2-COLUMN GRID ════════ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:weightSum="2">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_overscan_section_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="6dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_overscan_desc"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_visual_mode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/visual_overscan_use_visual_mode"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_boot_auto_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/setting_boot_auto_start"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_show_category_filters"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_show_category_filters"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_reconnect_popup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_reconnect_popup"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"/>
-
-            <!-- Bloc Sliders Classique -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- COLUMN 1 — Cluster type + Overscan                           -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
             <LinearLayout
-                android:id="@+id/ll_sliders_mode"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-                
-                <!-- Gauche / Droite -->
-                <LinearLayout
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="10dp">
+
+                <!-- Section: TYPE DE CLUSTER -->
+                <TextView
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:text="@string/settings_cluster_type_title"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="4dp">
+                    android:layout_marginBottom="20dp"
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="8dp">
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_inset_h_label"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_primary"/>
+                    <RadioGroup
+                        android:id="@+id/rg_cluster_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
+                        <!-- 8.8" -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem"
+                            android:orientation="horizontal">
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_88"
+                                style="@style/Widget.DashCast.RadioButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:clickable="false"
+                                android:focusable="false"/>
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_gravity="center_vertical"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cluster_label_88"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                    android:textColor="?attr/colorOnSurface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/settings_cluster_88_desc"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- 12.3" -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem"
+                            android:orientation="horizontal">
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_123"
+                                style="@style/Widget.DashCast.RadioButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:clickable="false"
+                                android:focusable="false"/>
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_gravity="center_vertical"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cluster_label_123"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                    android:textColor="?attr/colorOnSurface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/settings_cluster_123_desc"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- 10.25" -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem"
+                            android:orientation="horizontal">
+                            <com.google.android.material.radiobutton.MaterialRadioButton
+                                android:id="@+id/rb_1025"
+                                style="@style/Widget.DashCast.RadioButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:clickable="false"
+                                android:focusable="false"/>
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_gravity="center_vertical"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cluster_label_1025"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                    android:textColor="?attr/colorOnSurface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/settings_cluster_1025_desc"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                    android:textColor="?attr/colorOnSurfaceVariant"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                    </RadioGroup>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Section: MARGES OVERSCAN -->
                 <TextView
-                    android:id="@+id/tv_inset_h_value"
-                    android:layout_width="60dp"
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:text="@string/settings_overscan_section_title"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="80 px"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_accent"
-                    android:textStyle="bold"
-                    android:gravity="end"/>
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Visual mode toggle (compact list-item) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/visual_overscan_use_visual_mode"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                android:textColor="?attr/colorOnSurface"/>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_visual_mode"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"/>
+                        </LinearLayout>
+
+                        <!-- Sliders mode (default) -->
+                        <LinearLayout
+                            android:id="@+id/ll_sliders_mode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Vertical slider (top/bottom) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="6dp">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/settings_inset_v_label"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                    android:textColor="?attr/colorOnSurface"/>
+                                <TextView
+                                    android:id="@+id/tv_inset_v_value"
+                                    style="@style/Widget.DashCast.ValueBadge"
+                                    android:text="50 px"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_remove"
+                                    android:contentDescription="@null"/>
+                                <SeekBar
+                                    android:id="@+id/sb_inset_v"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:max="200"
+                                    android:progress="50"/>
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_add"
+                                    android:contentDescription="@null"/>
+                            </LinearLayout>
+
+                            <!-- Horizontal slider (left/right) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="16dp"
+                                android:layout_marginBottom="6dp">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/settings_inset_h_label"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                                    android:textColor="?attr/colorOnSurface"/>
+                                <TextView
+                                    android:id="@+id/tv_inset_h_value"
+                                    style="@style/Widget.DashCast.ValueBadge"
+                                    android:text="80 px"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_remove"
+                                    android:contentDescription="@null"/>
+                                <SeekBar
+                                    android:id="@+id/sb_inset_h"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:max="200"
+                                    android:progress="80"/>
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_add"
+                                    android:contentDescription="@null"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Visual D-pad mode -->
+                        <include layout="@layout/layout_visual_overscan" />
+
+                        <!-- Apply / Reset buttons -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp">
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_apply_overscan"
+                                style="@style/Widget.DashCast.Button.Filled"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/settings_btn_apply_overscan"
+                                android:layout_marginEnd="8dp"/>
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_reset_overscan"
+                                style="@style/Widget.DashCast.Button.Outlined"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/settings_btn_reset_overscan"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_overscan_result"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:fontFamily="monospace"
+                            android:background="@color/md_surface_container_highest"
+                            android:padding="12dp"
+                            android:layout_marginTop="12dp"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <SeekBar
-                android:id="@+id/sb_inset_h"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="200"
-                android:progress="80"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Haut / Bas -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- COLUMN 2 — Behavior + About                                  -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
 
+                <!-- Section: COMPORTEMENT -->
                 <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_inset_v_label"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_primary"/>
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:text="@string/settings_section_behavior"/>
 
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Démarrer au boot -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_restart_alt"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/setting_boot_auto_start"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_boot_auto_start_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_boot_auto_start"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Reconnexion automatique -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_autorenew"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_reconnect_popup"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_reconnect_popup_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_reconnect_popup"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Filtres par catégorie -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_filter_list"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_show_category_filters"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_category_filters_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_show_category_filters"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Section: À PROPOS -->
                 <TextView
-                    android:id="@+id/tv_inset_v_value"
-                    android:layout_width="60dp"
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:text="@string/settings_section_about"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="50 px"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_accent"
-                    android:textStyle="bold"
-                    android:gravity="end"/>
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Version -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_info_outline"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_about_version_label"/>
+                                <TextView
+                                    android:id="@+id/tv_version_value"
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="—"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Rechercher une mise à jour -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_system_update"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_check_update_title"/>
+                                <TextView
+                                    android:id="@+id/tv_update_status"
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_check_update_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_check_update"
+                                style="@style/Widget.DashCast.Button.Text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:text="@string/settings_check_update_button"/>
+                        </LinearLayout>
+
+                        <!-- Code source -->
+                        <LinearLayout
+                            android:id="@+id/row_source_code"
+                            style="@style/Widget.DashCast.ListItem"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_code"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_source_code_title"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="github.com/Kiroha/byd-dashcast"
+                                    tools:ignore="HardcodedText"/>
+                            </LinearLayout>
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:src="@drawable/ic_open_in_new"
+                                android:tint="@color/md_on_surface_variant"/>
+                        </LinearLayout>
+
+                        <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_science"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_prerelease_label"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_prerelease_hint"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_prerelease"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
-
-            <SeekBar
-                android:id="@+id/sb_inset_v"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="200"
-                android:progress="50"
-                android:layout_marginBottom="20dp"/>
-            </LinearLayout>
-
-            <!-- Mode Visuel -->
-            <include layout="@layout/layout_visual_overscan" />
-
-            <!-- Boutons -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
-
-                <Button
-                    android:id="@+id/btn_apply_overscan"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_btn_apply_overscan"
-                    android:backgroundTint="#1565C0"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="6dp"/>
-
-                <Button
-                    android:id="@+id/btn_reset_overscan"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/settings_btn_reset_overscan"
-                    android:backgroundTint="#607D8B"
-                    android:textColor="@color/text_primary"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_overscan_result"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:textSize="12sp"
-                android:fontFamily="monospace"
-                android:background="@color/bg_button_secondary"
-                android:padding="8dp"
-                android:visibility="gone"/>
-
         </LinearLayout>
-
-        <!-- ══ SECTION 3 : MISES À JOUR ══ -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/bg_card"
-            android:elevation="3dp"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp"
-            android:layout_marginHorizontal="4dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_updates_title"
-                android:textSize="18sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
-
-            <CheckBox
-                android:id="@+id/cb_prerelease"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_prerelease_label"
-                android:textSize="14sp"
-                android:padding="6dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_prerelease_hint"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="2dp"
-                android:layout_marginStart="36dp"/>
-
-        </LinearLayout>
-
     </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>

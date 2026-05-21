@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>DashCast — Material 3 Mockup (15.6" 1920×1080)</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════
+   MATERIAL 3 — BYD AUTOMOTIVE PALETTE (dark)
+   Source color: #1565C0 (BYD blue)
+   ════════════════════════════════════════════════ */
+:root {
+  --md-primary:               #A8C7FA;
+  --md-on-primary:            #002F65;
+  --md-primary-container:     #08458F;
+  --md-on-primary-container:  #D5E3FF;
+  --md-secondary:             #BCC7DC;
+  --md-on-secondary:          #263141;
+  --md-secondary-container:   #3D4759;
+  --md-on-secondary-container:#D8E2F8;
+  --md-tertiary:              #DEBCDF;
+  --md-tertiary-container:    #583E5B;
+  --md-error:                 #FFB4AB;
+  --md-error-container:       #93000A;
+  --md-bg:                    #11131A;
+  --md-surface:               #11131A;
+  --md-surface-container-lowest: #0B0E14;
+  --md-surface-container-low: #191C22;
+  --md-surface-container:     #1D2026;
+  --md-surface-container-high:#272A30;
+  --md-surface-container-highest:#32353B;
+  --md-on-surface:            #E3E2E6;
+  --md-on-surface-variant:    #C3C6CF;
+  --md-outline:               #8C9199;
+  --md-outline-variant:       #43474E;
+  --md-success:               #7DDB94;
+  --md-success-container:     #1F4D2C;
+  --md-warn:                  #FFB870;
+  --md-warn-container:        #5C3A00;
+
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 28px;
+  --shape-full: 999px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Roboto', system-ui, sans-serif;
+  background: #07090E;
+  color: var(--md-on-surface);
+  padding: 32px 20px;
+  min-height: 100vh;
+}
+.page-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--md-primary);
+  margin-bottom: 6px;
+}
+.page-sub {
+  text-align: center;
+  color: var(--md-on-surface-variant);
+  font-size: 14px;
+  margin-bottom: 40px;
+}
+
+/* ════════════════════════════════════════════════
+   SCREEN FRAME — 15.6" 1920×1080 (scaled 0.50 = 960×540)
+   ════════════════════════════════════════════════ */
+.screens {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  align-items: center;
+}
+.screen-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+.screen-label {
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding-left: 12px;
+}
+.screen-label .ratio {
+  color: var(--md-primary);
+  font-family: 'Roboto Mono', monospace;
+  margin-left: 12px;
+  letter-spacing: 0.5px;
+}
+
+/* The bezel mimics the BYD center screen */
+.car-screen {
+  width: 1280px;       /* 1920 × 0.667 — scaled to fit page */
+  height: 720px;       /* 1080 × 0.667 */
+  background: var(--md-surface);
+  border-radius: 18px;
+  border: 14px solid #0a0a0a;
+  box-shadow:
+    0 0 0 2px #2a2a2a,
+    0 30px 80px rgba(0,0,0,0.7),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+
+/* ════════════════════════════════════════════════
+   PERSISTENT NAVIGATION RAIL (left side — M3 nav rail)
+   ════════════════════════════════════════════════ */
+.nav-rail {
+  width: 96px;
+  background: var(--md-surface-container);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.nav-rail .rail-logo {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.nav-rail .rail-logo .material-symbols-rounded { font-size: 32px; }
+.nav-rail .rail-logo .rail-logo-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  display: block;
+}
+.nav-item-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 8px;
+  margin: 0 8px;
+  border-radius: var(--shape-lg);
+  color: var(--md-on-surface-variant);
+}
+.nav-item-rail .icon-pill {
+  width: 56px;
+  height: 32px;
+  border-radius: var(--shape-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.nav-item-rail .icon-pill .material-symbols-rounded { font-size: 24px; }
+.nav-item-rail .lbl {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+}
+.nav-item-rail.active {
+  color: var(--md-on-surface);
+}
+.nav-item-rail.active .icon-pill {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+.nav-rail .spacer { flex: 1; }
+
+/* ════════════════════════════════════════════════
+   MAIN CONTENT AREA (right of rail)
+   ════════════════════════════════════════════════ */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+/* Top App Bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  height: 72px;
+  padding: 0 24px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.top-bar .title {
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--md-on-surface);
+  flex: 1;
+  letter-spacing: 0;
+}
+.top-bar .car-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--md-on-surface-variant);
+  font-size: 14px;
+  font-weight: 500;
+}
+.top-bar .car-status .material-symbols-rounded { font-size: 22px; margin-right: 4px; vertical-align: middle; }
+.top-bar .clock {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollable content */
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: 0 24px 24px;
+  min-height: 0;
+}
+
+/* ════════════════════════════════════════════════
+   COMPONENTS
+   ════════════════════════════════════════════════ */
+/* Buttons — bigger for automotive (min 48px touch target) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 32px;
+  border-radius: var(--shape-full);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  border: none;
+  cursor: default;
+  white-space: nowrap;
+}
+.btn .material-symbols-rounded { font-size: 22px; }
+.btn-filled       { background: var(--md-primary); color: var(--md-on-primary); }
+.btn-filled-tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.btn-outlined     { background: transparent; color: var(--md-primary); border: 1px solid var(--md-outline); }
+.btn-text         { background: transparent; color: var(--md-primary); padding: 0 16px; }
+.btn-error        { background: var(--md-error-container); color: var(--md-error); }
+.btn-block        { display: flex; width: 100%; }
+.btn-sm           { height: 44px; padding: 0 20px; font-size: 14px; }
+
+.icon-btn {
+  width: 56px; height: 56px;
+  border-radius: var(--shape-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-on-surface-variant);
+  cursor: default;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: rgba(227,226,230,0.08); }
+.icon-btn .material-symbols-rounded { font-size: 28px; }
+.icon-btn.toggled {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+/* FAB Extended */
+.fab {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  height: 72px;
+  padding: 0 28px 0 24px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-radius: var(--shape-lg);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  z-index: 5;
+}
+.fab .material-symbols-rounded { font-size: 28px; }
+
+/* Cards */
+.card {
+  background: var(--md-surface-container);
+  border-radius: var(--shape-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card.outlined {
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+}
+.card-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  margin-bottom: 8px;
+}
+.card-desc {
+  font-size: 14px;
+  color: var(--md-on-surface-variant);
+  line-height: 1.5;
+}
+
+.section-head {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-primary);
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  padding: 16px 4px 12px;
+}
+
+/* Chips */
+.chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--shape-sm);
+  border: 1px solid var(--md-outline);
+  font-size: 15px;
+  color: var(--md-on-surface-variant);
+  background: transparent;
+  font-weight: 500;
+}
+.chip .material-symbols-rounded { font-size: 20px; }
+.chip.selected {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: transparent;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--shape-sm);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+}
+.badge .material-symbols-rounded { font-size: 16px; }
+.badge-success  { background: var(--md-success-container); color: var(--md-success); }
+.badge-warn     { background: var(--md-warn-container); color: var(--md-warn); }
+.badge-error    { background: var(--md-error-container); color: var(--md-error); }
+.badge-info     { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  background: var(--md-surface-container-high);
+  border-radius: var(--shape-full);
+  padding: 0 16px 0 24px;
+  margin-bottom: 16px;
+}
+.search-bar .material-symbols-rounded { color: var(--md-on-surface-variant); font-size: 26px; }
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--md-on-surface);
+  font-size: 17px;
+  font-family: inherit;
+  outline: none;
+}
+.search-bar input::placeholder { color: var(--md-on-surface-variant); }
+
+/* List item */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 12px;
+  border-radius: var(--shape-md);
+  margin-bottom: 4px;
+  min-height: 64px;
+}
+.list-item:hover { background: var(--md-surface-container-low); }
+.list-item .leading {
+  width: 48px; height: 48px;
+  border-radius: var(--shape-full);
+  background: var(--md-surface-container-high);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-on-surface-variant);
+  flex-shrink: 0;
+}
+.list-item .leading .material-symbols-rounded { font-size: 26px; }
+.list-item .content { flex: 1; min-width: 0; }
+.list-item .headline {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-on-surface);
+}
+.list-item .support {
+  font-size: 13px;
+  color: var(--md-on-surface-variant);
+  margin-top: 2px;
+}
+.list-item .trailing {
+  color: var(--md-on-surface-variant);
+  flex-shrink: 0;
+}
+
+/* Switch — bigger for car */
+.switch {
+  width: 64px; height: 36px;
+  background: var(--md-surface-container-highest);
+  border: 2px solid var(--md-outline);
+  border-radius: var(--shape-full);
+  position: relative;
+  flex-shrink: 0;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 5px;
+  transform: translateY(-50%);
+  width: 18px; height: 18px;
+  border-radius: var(--shape-full);
+  background: var(--md-outline);
+}
+.switch.on { background: var(--md-primary); border-color: var(--md-primary); }
+.switch.on::after { background: var(--md-on-primary); width: 26px; height: 26px; left: 30px; }
+
+/* Radio */
+.radio {
+  width: 24px; height: 24px;
+  border: 2px solid var(--md-on-surface-variant);
+  border-radius: var(--shape-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.radio.checked { border-color: var(--md-primary); }
+.radio.checked::after {
+  content: '';
+  width: 12px; height: 12px;
+  border-radius: var(--shape-full);
+  background: var(--md-primary);
+}
+
+/* App grid — larger cells for car */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+.app-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border-radius: var(--shape-md);
+}
+.app-cell:hover { background: var(--md-surface-container-low); }
+.app-cell .icon {
+  width: 72px; height: 72px;
+  border-radius: var(--shape-lg);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-cell .icon.alt1 { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.app-cell .icon.alt2 { background: var(--md-tertiary-container); color: var(--md-tertiary); }
+.app-cell .icon.alt3 { background: var(--md-error-container); color: var(--md-error); }
+.app-cell .icon.alt4 { background: var(--md-success-container); color: var(--md-success); }
+.app-cell .icon .material-symbols-rounded { font-size: 36px; }
+.app-cell .label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--md-on-surface);
+  text-align: center;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Monospace box */
+.mono-box {
+  background: var(--md-surface-container-lowest);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-md);
+  padding: 16px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12.5px;
+  color: var(--md-on-surface-variant);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.mono-box .key { color: var(--md-primary); }
+.mono-box .val { color: var(--md-on-surface); }
+.mono-box .ok  { color: var(--md-success); }
+.mono-box .err { color: var(--md-error); }
+.mono-box .wrn { color: var(--md-warn); }
+
+/* Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 12px;
+}
+.slider {
+  flex: 1;
+  height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.slider .track {
+  flex: 1;
+  height: 6px;
+  background: var(--md-surface-container-highest);
+  border-radius: var(--shape-full);
+  position: relative;
+}
+.slider .track .fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--md-primary);
+  border-radius: var(--shape-full);
+}
+.slider .thumb {
+  position: absolute;
+  width: 24px; height: 24px;
+  background: var(--md-primary);
+  border-radius: var(--shape-full);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Hero status card */
+.hero-status {
+  background: linear-gradient(135deg, var(--md-primary-container) 0%, var(--md-surface-container-high) 100%);
+  border-radius: var(--shape-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.hero-status .row { display: flex; align-items: center; gap: 20px; }
+.hero-status .col { flex: 1; }
+.hero-status .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--md-on-primary-container);
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+.hero-status .value {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--md-on-primary-container);
+}
+.hero-status .sub {
+  font-size: 14px;
+  color: var(--md-on-primary-container);
+  opacity: 0.75;
+  margin-top: 4px;
+}
+.hero-status .pulse {
+  width: 14px; height: 14px;
+  background: var(--md-success);
+  border-radius: var(--shape-full);
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
+  box-shadow: 0 0 0 6px rgba(125,219,148,0.25);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(125,219,148,0.25); }
+  50% { box-shadow: 0 0 0 12px rgba(125,219,148,0); }
+}
+
+/* Two-pane layout for Diag (test list + result) */
+.split { display: flex; gap: 16px; height: 100%; }
+.split .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Tabs */
+.tabbed {
+  display: flex;
+  border-bottom: 1px solid var(--md-outline-variant);
+  margin-bottom: 16px;
+  gap: 8px;
+}
+.tab {
+  padding: 16px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.tab.active {
+  color: var(--md-primary);
+  border-bottom-color: var(--md-primary);
+}
+
+/* Cluster preview (mini cluster rendering) */
+.cluster-preview {
+  background: #000;
+  border-radius: var(--shape-md);
+  aspect-ratio: 1920/720;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: relative;
+  overflow: hidden;
+}
+.cluster-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(168,199,250,0.08) 0%, transparent 70%);
+}
+.cluster-preview .speed { font-size: 52px; font-weight: 300; color: #fff; letter-spacing: -2px; position: relative; z-index: 1; }
+.cluster-preview .speed-unit { font-size: 14px; color: var(--md-on-surface-variant); margin-left: 4px; }
+.cluster-preview .gear {
+  font-size: 32px; font-weight: 700; color: var(--md-primary);
+  background: rgba(168,199,250,0.12); padding: 4px 14px; border-radius: 12px;
+  position: relative; z-index: 1;
+}
+.cluster-preview .right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; position: relative; z-index: 1; }
+.cluster-preview .battery { font-size: 22px; font-weight: 500; color: var(--md-success); }
+.cluster-preview .range { font-size: 12px; color: var(--md-on-surface-variant); }
+
+/* Log line */
+.log-line {
+  display: grid;
+  grid-template-columns: 70px 90px 140px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--shape-sm);
+  align-items: center;
+  border-left: 3px solid transparent;
+  background: var(--md-surface-container-low);
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.log-line .lvl { font-weight: 500; letter-spacing: 0.5px; }
+.log-line.info  { border-left-color: var(--md-success); }
+.log-line.warn  { border-left-color: var(--md-warn); background: rgba(255,184,112,0.05); }
+.log-line.error { border-left-color: var(--md-error); background: rgba(255,180,171,0.06); }
+.log-line .info-lbl { color: var(--md-success); }
+.log-line .warn-lbl { color: var(--md-warn); }
+.log-line .error-lbl { color: var(--md-error); }
+.log-line .ts { color: var(--md-on-surface-variant); font-family: 'Roboto Mono', monospace; font-size: 12px; }
+.log-line .tag { color: var(--md-primary); font-weight: 500; font-family: 'Roboto Mono', monospace; font-size: 12px; }
+.log-line .msg { color: var(--md-on-surface); font-family: 'Roboto Mono', monospace; font-size: 12px; }
+
+/* Welcome layout */
+.welcome-hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 60px;
+}
+.welcome-card {
+  background: var(--md-surface-container);
+  border-radius: var(--shape-xl);
+  padding: 56px 80px;
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+.welcome-logo {
+  width: 96px; height: 96px;
+  border-radius: 24px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.welcome-logo .material-symbols-rounded { font-size: 56px; }
+.welcome-title {
+  font-size: 44px;
+  font-weight: 400;
+  color: var(--md-on-surface);
+  margin-bottom: 10px;
+}
+.welcome-sub {
+  font-size: 16px;
+  color: var(--md-primary);
+  margin-bottom: 36px;
+  letter-spacing: 2px;
+}
+.welcome-prompt {
+  font-size: 16px;
+  color: var(--md-on-surface-variant);
+  margin-bottom: 28px;
+}
+.welcome-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+/* Notes panel */
+.notes {
+  max-width: 1280px;
+  margin: 60px auto 0;
+  padding: 28px;
+  background: var(--md-surface-container);
+  border-radius: var(--shape-lg);
+}
+.notes h2 {
+  color: var(--md-primary);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.notes h3 {
+  color: var(--md-on-surface);
+  font-size: 14px;
+  font-weight: 500;
+  margin: 18px 0 10px;
+}
+.notes p, .notes li {
+  color: var(--md-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.notes ul { padding-left: 22px; }
+.notes code {
+  background: var(--md-surface-container-lowest);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: var(--md-primary);
+}
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.swatch {
+  border-radius: var(--shape-sm);
+  padding: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.swatch .hex { font-family: 'Roboto Mono', monospace; opacity: 0.85; }
+
+.ergonomics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.ergo-tile {
+  background: var(--md-surface-container-low);
+  padding: 14px;
+  border-radius: var(--shape-md);
+  border-left: 3px solid var(--md-primary);
+}
+.ergo-tile .title { font-size: 13px; font-weight: 500; color: var(--md-primary); margin-bottom: 4px; }
+.ergo-tile .val { font-size: 12px; color: var(--md-on-surface); font-family: 'Roboto Mono', monospace; }
+.ergo-tile .desc { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">DashCast — Material 3 Mockup</h1>
+<p class="page-sub">BYD Seal — écran central 15.6" · 1920×1080 paysage · Material 3 dark automotive</p>
+
+<div class="screens">
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 1 — WELCOME / LANGUAGE PICKER
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-1">
+    <div class="screen-label">1. Welcome <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo">
+          <img src="ic_launcher.png" alt="DashCast" class="rail-logo-img">
+        </div>
+        <div class="spacer"></div>
+      </div>
+      <div class="main-area">
+        <div class="welcome-hero">
+          <div class="welcome-card">
+            <div class="welcome-logo">
+              <span class="material-symbols-rounded">cast_connected</span>
+            </div>
+            <div class="welcome-title">DashCast</div>
+            <div class="welcome-sub">BYD CLUSTER MIRROR · v0.8.6</div>
+            <div class="welcome-prompt">Bienvenue. Sélectionnez votre langue pour commencer.</div>
+
+            <div class="welcome-lang-grid">
+              <button class="btn btn-filled btn-block">Français</button>
+              <button class="btn btn-outlined btn-block">English</button>
+              <button class="btn btn-outlined btn-block">Deutsch</button>
+              <button class="btn btn-outlined btn-block">Italiano</button>
+              <button class="btn btn-outlined btn-block">Español</button>
+              <button class="btn btn-outlined btn-block">Português</button>
+            </div>
+
+            <button class="btn btn-text" style="margin-top: 12px;">
+              <span class="material-symbols-rounded">arrow_forward</span>
+              Continuer sans changer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 2 — MAIN (Apps + Cluster live preview)
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-2">
+    <div class="screen-label">2. Main · Apps & Cluster <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <!-- Nav rail -->
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail active">
+          <div class="icon-pill"><span class="material-symbols-rounded">apps</span></div>
+          <div class="lbl">Apps</div>
+        </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">tune</span></div>
+          <div class="lbl">Réglages</div>
+        </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div>
+          <div class="lbl">Diag</div>
+        </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">info</span></div>
+          <div class="lbl">Système</div>
+        </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">notes</span></div>
+          <div class="lbl">Journal</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">help</span></div>
+          <div class="lbl">Aide</div>
+        </div>
+      </div>
+
+      <!-- Main area -->
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Tableau de bord</span>
+          <div class="car-status">
+            <span><span class="material-symbols-rounded">thermostat</span>21°C</span>
+            <span><span class="material-symbols-rounded">bolt</span>78%</span>
+            <span><span class="material-symbols-rounded">signal_cellular_alt</span></span>
+            <span class="clock">14:32</span>
+          </div>
+        </div>
+
+        <div class="content" style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; padding-right: 24px;">
+          <!-- LEFT pane: apps -->
+          <div style="display: flex; flex-direction: column; min-height: 0;">
+            <div class="search-bar">
+              <span class="material-symbols-rounded">search</span>
+              <input type="text" placeholder="Rechercher une application…">
+              <button class="icon-btn"><span class="material-symbols-rounded">view_module</span></button>
+            </div>
+
+            <div class="chip-row">
+              <span class="chip selected"><span class="material-symbols-rounded">check</span>Toutes (28)</span>
+              <span class="chip">Navigation</span>
+              <span class="chip">Média</span>
+              <span class="chip">Communication</span>
+              <span class="chip">Système</span>
+            </div>
+
+            <div class="section-head">Favoris</div>
+            <div class="app-grid">
+              <div class="app-cell"><div class="icon"><span class="material-symbols-rounded">navigation</span></div><div class="label">Maps</div></div>
+              <div class="app-cell"><div class="icon alt1"><span class="material-symbols-rounded">music_note</span></div><div class="label">Spotify</div></div>
+              <div class="app-cell"><div class="icon alt2"><span class="material-symbols-rounded">smart_display</span></div><div class="label">YouTube</div></div>
+              <div class="app-cell"><div class="icon alt3"><span class="material-symbols-rounded">play_circle</span></div><div class="label">Netflix</div></div>
+              <div class="app-cell"><div class="icon alt4"><span class="material-symbols-rounded">radio</span></div><div class="label">Radio</div></div>
+              <div class="app-cell"><div class="icon"><span class="material-symbols-rounded">phone</span></div><div class="label">Téléphone</div></div>
+            </div>
+
+            <div class="section-head">Toutes les applications</div>
+            <div class="app-grid">
+              <div class="app-cell"><div class="icon alt1"><span class="material-symbols-rounded">map</span></div><div class="label">Waze</div></div>
+              <div class="app-cell"><div class="icon alt2"><span class="material-symbols-rounded">camera</span></div><div class="label">Caméra</div></div>
+              <div class="app-cell"><div class="icon"><span class="material-symbols-rounded">settings</span></div><div class="label">Système</div></div>
+              <div class="app-cell"><div class="icon alt3"><span class="material-symbols-rounded">videocam</span></div><div class="label">Tesla</div></div>
+              <div class="app-cell"><div class="icon alt4"><span class="material-symbols-rounded">cloud</span></div><div class="label">Météo</div></div>
+              <div class="app-cell"><div class="icon alt1"><span class="material-symbols-rounded">calendar_today</span></div><div class="label">Agenda</div></div>
+            </div>
+          </div>
+
+          <!-- RIGHT pane: cluster status -->
+          <div style="display: flex; flex-direction: column;">
+            <div class="hero-status">
+              <div class="label"><span class="pulse"></span>Cluster Mirror</div>
+              <div class="value">Actif · 1920×720</div>
+              <div class="sub">Streaming vers cluster 8.8" — latence 12 ms</div>
+            </div>
+
+            <div class="section-head" style="padding-top: 0;">Aperçu temps réel</div>
+            <div class="card" style="padding: 12px;">
+              <div class="cluster-preview">
+                <div>
+                  <span class="speed">82</span><span class="speed-unit">km/h</span>
+                </div>
+                <div class="gear">D</div>
+                <div class="right">
+                  <div class="battery">⚡ 78%</div>
+                  <div class="range">312 km</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+              <button class="btn btn-filled-tonal">
+                <span class="material-symbols-rounded">visibility</span>Aperçu plein écran
+              </button>
+              <button class="btn btn-filled-tonal">
+                <span class="material-symbols-rounded">screenshot</span>Capturer
+              </button>
+              <button class="btn btn-outlined">
+                <span class="material-symbols-rounded">refresh</span>Reconnecter
+              </button>
+              <button class="btn btn-error">
+                <span class="material-symbols-rounded">stop</span>Arrêter mirror
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 3 — SETTINGS
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-3">
+    <div class="screen-label">3. Settings <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">apps</span></div><div class="lbl">Apps</div></div>
+        <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">tune</span></div><div class="lbl">Réglages</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+      </div>
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Paramètres</span>
+          <button class="btn btn-filled-tonal btn-sm">
+            <span class="material-symbols-rounded">save</span>Appliquer
+          </button>
+          <span class="clock" style="margin-left: 12px;">14:33</span>
+        </div>
+
+        <div class="content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-right: 24px;">
+
+          <!-- Column 1 -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Type de cluster</div>
+            <div class="card">
+              <div class="list-item">
+                <span class="radio checked"></span>
+                <div class="content">
+                  <div class="headline">Cluster 8.8" (1920×720)</div>
+                  <div class="support">Configuration par défaut — recommandé</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <span class="radio"></span>
+                <div class="content">
+                  <div class="headline">Cluster 12.3" (1920×720)</div>
+                  <div class="support">Modèles haut de gamme</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <span class="radio"></span>
+                <div class="content">
+                  <div class="headline">Cluster 10.25" (1920×720)</div>
+                  <div class="support">Expérimental</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-head">Marges overscan</div>
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 16px; font-weight: 500;">Haut</span>
+                <span class="badge badge-info">24 px</span>
+              </div>
+              <div class="slider-row">
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">remove</span>
+                <div class="slider"><div class="track"><div class="fill" style="width: 30%"></div></div><div class="thumb" style="left: calc(30% - 12px)"></div></div>
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">add</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 6px;">
+                <span style="font-size: 16px; font-weight: 500;">Bas</span>
+                <span class="badge badge-info">16 px</span>
+              </div>
+              <div class="slider-row">
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">remove</span>
+                <div class="slider"><div class="track"><div class="fill" style="width: 20%"></div></div><div class="thumb" style="left: calc(20% - 12px)"></div></div>
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">add</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 6px;">
+                <span style="font-size: 16px; font-weight: 500;">Gauche / Droite</span>
+                <span class="badge badge-info">8 px</span>
+              </div>
+              <div class="slider-row">
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">remove</span>
+                <div class="slider"><div class="track"><div class="fill" style="width: 12%"></div></div><div class="thumb" style="left: calc(12% - 12px)"></div></div>
+                <span class="material-symbols-rounded" style="color: var(--md-on-surface-variant);">add</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2 -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Comportement</div>
+            <div class="card" style="padding: 8px 12px;">
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">restart_alt</span></div>
+                <div class="content">
+                  <div class="headline">Démarrer au boot</div>
+                  <div class="support">Active le mirror au démarrage véhicule</div>
+                </div>
+                <div class="switch on"></div>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">autorenew</span></div>
+                <div class="content">
+                  <div class="headline">Reconnexion automatique</div>
+                  <div class="support">Restaure si déconnecté inopinément</div>
+                </div>
+                <div class="switch on"></div>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">filter_list</span></div>
+                <div class="content">
+                  <div class="headline">Filtres par catégorie</div>
+                  <div class="support">Affiche les chips dans le menu apps</div>
+                </div>
+                <div class="switch"></div>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">gesture</span></div>
+                <div class="content">
+                  <div class="headline">Bouton flottant</div>
+                  <div class="support">Overlay raccourci permanent à l'écran</div>
+                </div>
+                <div class="switch"></div>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">dark_mode</span></div>
+                <div class="content">
+                  <div class="headline">Suivre le mode véhicule</div>
+                  <div class="support">Synchronise jour/nuit avec le tableau de bord</div>
+                </div>
+                <div class="switch on"></div>
+              </div>
+            </div>
+
+            <div class="section-head">À propos</div>
+            <div class="card" style="padding: 8px 12px;">
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">info</span></div>
+                <div class="content">
+                  <div class="headline">Version</div>
+                  <div class="support">0.8.6 · alpha/0.7 · build 117</div>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">system_update</span></div>
+                <div class="content">
+                  <div class="headline">Rechercher une mise à jour</div>
+                  <div class="support">Dernière vérification il y a 2 jours</div>
+                </div>
+                <button class="btn btn-text">Vérifier</button>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">code</span></div>
+                <div class="content">
+                  <div class="headline">Code source</div>
+                  <div class="support">github.com/Kiroha/byd-dashcast</div>
+                </div>
+                <span class="material-symbols-rounded trailing">open_in_new</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 4 — DIAGNOSTICS (split: tests list + result)
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-4">
+    <div class="screen-label">4. Diagnostics <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">apps</span></div><div class="lbl">Apps</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">tune</span></div><div class="lbl">Réglages</div></div>
+        <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+      </div>
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Diagnostics</span>
+          <span class="badge badge-success" style="margin-right: 12px;"><span class="material-symbols-rounded">check_circle</span>Tous systèmes OK</span>
+          <span class="clock">14:33</span>
+        </div>
+
+        <div class="content" style="padding-right: 24px;">
+          <div class="tabbed">
+            <div class="tab active">Cluster</div>
+            <div class="tab">Display</div>
+            <div class="tab">ADB local</div>
+            <div class="tab">Système</div>
+            <div class="tab">Stress test</div>
+          </div>
+
+          <div class="split" style="height: calc(100% - 70px);">
+            <!-- Left pane: tests list -->
+            <div class="pane" style="flex: 1;">
+              <div class="section-head" style="padding-top: 0;">Tests disponibles</div>
+              <div class="list-item" style="background: var(--md-surface-container-low);">
+                <div class="leading" style="background: var(--md-success-container); color: var(--md-success);">
+                  <span class="material-symbols-rounded">check_circle</span>
+                </div>
+                <div class="content">
+                  <div class="headline">Tester le mirror cluster</div>
+                  <div class="support">Crée un VirtualDisplay et vérifie la connexion</div>
+                </div>
+                <span class="badge badge-success">OK · 320 ms</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">screenshot</span></div>
+                <div class="content">
+                  <div class="headline">Capturer le cluster</div>
+                  <div class="support">Génère une screenshot de l'écran secondaire</div>
+                </div>
+                <span class="material-symbols-rounded trailing">play_arrow</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">refresh</span></div>
+                <div class="content">
+                  <div class="headline">Redémarrer ClusterService</div>
+                  <div class="support">Stop + start propre du service Android</div>
+                </div>
+                <span class="material-symbols-rounded trailing">play_arrow</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">network_check</span></div>
+                <div class="content">
+                  <div class="headline">Vérifier ADB local</div>
+                  <div class="support">Handshake sur 127.0.0.1:5555</div>
+                </div>
+                <span class="material-symbols-rounded trailing">play_arrow</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">memory</span></div>
+                <div class="content">
+                  <div class="headline">Vérifier les permissions</div>
+                  <div class="support">CAPTURE_VIDEO_OUTPUT, SYSTEM_ALERT_WINDOW, etc.</div>
+                </div>
+                <span class="material-symbols-rounded trailing">play_arrow</span>
+              </div>
+
+              <button class="btn btn-error btn-block" style="margin-top: 24px;">
+                <span class="material-symbols-rounded">warning</span>
+                Reset configuration cluster
+              </button>
+            </div>
+
+            <!-- Right pane: result -->
+            <div class="pane" style="flex: 1;">
+              <div class="section-head" style="padding-top: 0;">Dernier résultat</div>
+              <div class="card outlined" style="height: calc(100% - 50px); display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                  <span class="badge badge-success"><span class="material-symbols-rounded">check_circle</span>SUCCESS</span>
+                  <span style="font-size: 16px; font-weight: 500;">Tester le mirror cluster</span>
+                  <span style="margin-left: auto; font-size: 13px; color: var(--md-on-surface-variant);">14:32:58</span>
+                </div>
+                <div class="mono-box" style="flex: 1;">
+<span class="key">VirtualDisplay</span>: <span class="ok">created</span>
+<span class="key">  size</span>:    <span class="val">1920 × 720 @ 60Hz</span>
+<span class="key">  surface</span>: <span class="ok">attached</span>
+<span class="key">  flags</span>:   <span class="val">VIRTUAL_DISPLAY_FLAG_PUBLIC | OWN_CONTENT_ONLY</span>
+
+<span class="key">ClusterService</span>:
+<span class="key">  state</span>:   <span class="ok">RUNNING</span>
+<span class="key">  pid</span>:     <span class="val">4318</span>
+<span class="key">  uptime</span>:  <span class="val">2h 14min</span>
+
+<span class="key">ADB local</span>:
+<span class="key">  socket</span>:  <span class="ok">connected (127.0.0.1:5555)</span>
+<span class="key">  auth</span>:    <span class="ok">OK</span>
+<span class="key">  latency</span>: <span class="val">12 ms</span>
+
+<span class="key">Permissions</span>:
+<span class="key">  CAPTURE_VIDEO_OUTPUT</span>:     <span class="ok">granted (platform-signed)</span>
+<span class="key">  SYSTEM_ALERT_WINDOW</span>:      <span class="ok">granted</span>
+<span class="key">  BIND_ACCESSIBILITY_SVC</span>:   <span class="wrn">not granted (optional)</span>
+
+→ <span class="ok">Test completed in 320 ms</span>
+</div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                  <button class="btn btn-filled-tonal btn-sm" style="flex:1;">
+                    <span class="material-symbols-rounded">content_copy</span>Copier
+                  </button>
+                  <button class="btn btn-filled-tonal btn-sm" style="flex:1;">
+                    <span class="material-symbols-rounded">share</span>Partager
+                  </button>
+                  <button class="btn btn-filled btn-sm" style="flex:1;">
+                    <span class="material-symbols-rounded">play_arrow</span>Relancer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 5 — SYSINFO + LOGS COMBINED
+       (un seul écran pour montrer les 2 patterns)
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-5">
+    <div class="screen-label">5. System Info <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">apps</span></div><div class="lbl">Apps</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">tune</span></div><div class="lbl">Réglages</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
+        <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+      </div>
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Informations système</span>
+          <button class="btn btn-filled-tonal btn-sm"><span class="material-symbols-rounded">save</span>Sauver</button>
+          <button class="btn btn-filled-tonal btn-sm"><span class="material-symbols-rounded">share</span>Partager</button>
+          <button class="btn btn-filled btn-sm"><span class="material-symbols-rounded">refresh</span>Régénérer</button>
+          <span class="clock" style="margin-left: 12px;">14:33</span>
+        </div>
+
+        <div class="content" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; padding-right: 24px;">
+          <!-- Left: dashboard tiles -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Vue d'ensemble</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+              <div class="card" style="margin: 0; padding: 16px;">
+                <div style="font-size: 12px; color: var(--md-on-surface-variant); text-transform: uppercase; letter-spacing: 1.5px;">Véhicule</div>
+                <div style="font-size: 20px; font-weight: 500; margin-top: 6px;">BYD Seal EU</div>
+                <div style="font-size: 13px; color: var(--md-on-surface-variant); margin-top: 4px;">DiLink 3.0 · 2024.08</div>
+              </div>
+              <div class="card" style="margin: 0; padding: 16px;">
+                <div style="font-size: 12px; color: var(--md-on-surface-variant); text-transform: uppercase; letter-spacing: 1.5px;">Android</div>
+                <div style="font-size: 20px; font-weight: 500; margin-top: 6px;">10 · API 29</div>
+                <div style="font-size: 13px; color: var(--md-on-surface-variant); margin-top: 4px;">Build QPR3 · armeabi-v7a</div>
+              </div>
+              <div class="card" style="margin: 0; padding: 16px;">
+                <div style="font-size: 12px; color: var(--md-on-surface-variant); text-transform: uppercase; letter-spacing: 1.5px;">DashCast</div>
+                <div style="font-size: 20px; font-weight: 500; margin-top: 6px; color: var(--md-primary);">v0.8.6</div>
+                <div style="font-size: 13px; color: var(--md-on-surface-variant); margin-top: 4px;">build 117 · platform-signed</div>
+              </div>
+              <div class="card" style="margin: 0; padding: 16px;">
+                <div style="font-size: 12px; color: var(--md-on-surface-variant); text-transform: uppercase; letter-spacing: 1.5px;">Uptime</div>
+                <div style="font-size: 20px; font-weight: 500; margin-top: 6px; color: var(--md-success);">2h 14min</div>
+                <div style="font-size: 13px; color: var(--md-on-surface-variant); margin-top: 4px;">Depuis 12:19</div>
+              </div>
+            </div>
+
+            <div class="section-head">Affichages détectés</div>
+            <div class="card" style="padding: 8px 12px;">
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">tv</span></div>
+                <div class="content">
+                  <div class="headline">Display 0 — Main</div>
+                  <div class="support">1920 × 1080 · 60 Hz · DENSITY_HIGH</div>
+                </div>
+                <span class="badge badge-success">●</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">dashboard</span></div>
+                <div class="content">
+                  <div class="headline">Display 1 — Cluster</div>
+                  <div class="support">1920 × 720 · 60 Hz · TYPE_BUILT_IN</div>
+                </div>
+                <span class="badge badge-success">●</span>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">screen_share</span></div>
+                <div class="content">
+                  <div class="headline">Display 2 — Virtual (mirror)</div>
+                  <div class="support">1920 × 720 · attaché à Cluster</div>
+                </div>
+                <span class="badge badge-success">●</span>
+              </div>
+            </div>
+
+            <div class="section-head">Services</div>
+            <div class="card" style="padding: 8px 12px;">
+              <div class="list-item">
+                <div class="leading" style="background: var(--md-success-container); color: var(--md-success);"><span class="material-symbols-rounded">play_circle</span></div>
+                <div class="content"><div class="headline">ClusterService</div><div class="support">pid 4318 · 2h 14min</div></div>
+                <span class="badge badge-success">RUN</span>
+              </div>
+              <div class="list-item">
+                <div class="leading" style="background: var(--md-success-container); color: var(--md-success);"><span class="material-symbols-rounded">play_circle</span></div>
+                <div class="content"><div class="headline">MirrorDaemon</div><div class="support">poller pidof · 500 ms</div></div>
+                <span class="badge badge-success">RUN</span>
+              </div>
+              <div class="list-item">
+                <div class="leading" style="background: var(--md-success-container); color: var(--md-success);"><span class="material-symbols-rounded">play_circle</span></div>
+                <div class="content"><div class="headline">AdbLocalClient</div><div class="support">127.0.0.1:5555</div></div>
+                <span class="badge badge-success">CONN</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: full report -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Rapport complet</div>
+            <div class="mono-box" style="height: calc(100% - 40px);">
+<span class="key">═══ DEVICE ═══</span>
+<span class="key">model</span>:        <span class="val">BYD Seal EU (BYD_E_2.0)</span>
+<span class="key">android</span>:      <span class="val">10 (API 29) — DiLink 3.0</span>
+<span class="key">build</span>:        <span class="val">2024.08 / QPR3</span>
+<span class="key">arch</span>:         <span class="val">armeabi-v7a (32-bit)</span>
+<span class="key">serial</span>:       <span class="val">BYD****Q2K3</span>
+<span class="key">density</span>:      <span class="val">160 dpi (DENSITY_DEFAULT)</span>
+
+<span class="key">═══ DASHCAST ═══</span>
+<span class="key">version</span>:      <span class="val">0.8.6 (alpha/0.7)</span>
+<span class="key">build</span>:        <span class="val">117 · 2026-05-19 14:00 UTC</span>
+<span class="key">signed</span>:       <span class="ok">platform certificate</span>
+<span class="key">uptime</span>:       <span class="val">2h 14min 32s</span>
+
+<span class="key">═══ DISPLAYS ═══</span>
+[0] <span class="val">Main             1920×1080 @ 60Hz</span>  <span class="ok">●</span>
+[1] <span class="val">Cluster          1920× 720 @ 60Hz</span>  <span class="ok">●</span>
+[2] <span class="val">Virtual mirror   1920× 720 @ 60Hz</span>  <span class="ok">●</span>
+
+<span class="key">═══ MEMORY ═══</span>
+heap (Java):  <span class="val">28 MB / 192 MB</span>
+native:       <span class="val">42 MB</span>
+graphics:     <span class="val">18 MB</span>
+
+<span class="key">═══ PERMISSIONS ═══</span>
+CAPTURE_VIDEO_OUTPUT     <span class="ok">granted</span>
+SYSTEM_ALERT_WINDOW      <span class="ok">granted</span>
+WRITE_SECURE_SETTINGS    <span class="ok">granted</span>
+ACCESS_SURFACE_FLINGER   <span class="ok">granted</span>
+BIND_ACCESSIBILITY_SVC   <span class="wrn">not granted</span>
+
+<span class="key">═══ NETWORK ═══</span>
+adbd:         <span class="ok">listening 127.0.0.1:5555</span>
+wifi:         <span class="val">Seal-Hotspot · -42 dBm</span>
+
+<span class="key">═══ RECENT EVENTS (last 5) ═══</span>
+14:33:58  <span class="ok">[I]</span> ClusterService VirtualDisplay created
+14:33:59  <span class="wrn">[W]</span> AdbLocalClient retry handshake (2/5)
+14:34:01  <span class="ok">[I]</span> AdbLocalClient handshake OK
+14:34:03  <span class="err">[E]</span> DiagActivity getRunningTasks() SecurityException
+14:34:05  <span class="ok">[I]</span> MainActivity fallback to pidof poller
+</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SCREEN 6 — LOG VIEWER
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-6">
+    <div class="screen-label">6. Journal <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">apps</span></div><div class="lbl">Apps</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">tune</span></div><div class="lbl">Réglages</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
+        <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+      </div>
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Journal</span>
+          <button class="icon-btn toggled"><span class="material-symbols-rounded">pause</span></button>
+          <button class="icon-btn"><span class="material-symbols-rounded">delete_sweep</span></button>
+          <button class="icon-btn"><span class="material-symbols-rounded">share</span></button>
+          <button class="icon-btn"><span class="material-symbols-rounded">save</span></button>
+          <span class="clock" style="margin-left: 12px;">14:34</span>
+        </div>
+
+        <div class="content" style="padding-right: 24px;">
+          <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+            <div class="search-bar" style="flex: 1; margin-bottom: 0;">
+              <span class="material-symbols-rounded">filter_alt</span>
+              <input type="text" placeholder="Filtrer le journal (tag, message, regex)…">
+            </div>
+            <div class="chip-row" style="margin-bottom: 0;">
+              <span class="chip selected">Tous (243)</span>
+              <span class="chip">Info (210)</span>
+              <span class="chip">Warn (28)</span>
+              <span class="chip">Error (5)</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:33:58</span>
+              <span class="tag">ClusterService</span>
+              <span class="msg">VirtualDisplay 1920×720 created (id=42, flags=PUBLIC|OWN_CONTENT)</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:33:58</span>
+              <span class="tag">MirrorDaemon</span>
+              <span class="msg">Surface attached → reconciling state (was DISCONNECTED)</span>
+            </div>
+            <div class="log-line warn">
+              <span class="lvl warn-lbl">WARN</span>
+              <span class="ts">14:33:59</span>
+              <span class="tag">AdbLocalClient</span>
+              <span class="msg">Retry handshake: connection refused (try 2/5)</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:34:01</span>
+              <span class="tag">AdbLocalClient</span>
+              <span class="msg">ADB handshake OK on 127.0.0.1:5555 (latency 12ms)</span>
+            </div>
+            <div class="log-line error">
+              <span class="lvl error-lbl">ERROR</span>
+              <span class="ts">14:34:03</span>
+              <span class="tag">DiagActivity</span>
+              <span class="msg">Failed to query getRunningTasks(): SecurityException — falling back to pidof</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:34:05</span>
+              <span class="tag">MainActivity</span>
+              <span class="msg">Fallback poller activated (interval 500ms)</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:34:07</span>
+              <span class="tag">ClusterService</span>
+              <span class="msg">Frame stats: 60 fps, dropped=0/600, avg=16.6ms</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:34:09</span>
+              <span class="tag">UpdateChecker</span>
+              <span class="msg">No update available (current 0.8.6 ≥ remote 0.8.6)</span>
+            </div>
+            <div class="log-line warn">
+              <span class="lvl warn-lbl">WARN</span>
+              <span class="ts">14:34:12</span>
+              <span class="tag">MirrorDaemon</span>
+              <span class="msg">Cluster frame timeout (1 dropped) — recovered after retry</span>
+            </div>
+            <div class="log-line info">
+              <span class="lvl info-lbl">INFO</span>
+              <span class="ts">14:34:15</span>
+              <span class="tag">MainActivity</span>
+              <span class="msg">User tapped Settings · transitioning to SettingsActivity</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════
+     DESIGN NOTES
+     ════════════════════════════════════════════════ -->
+<div class="notes">
+  <h2>Design notes — Material 3 sur écran auto 15.6"</h2>
+
+  <h3>Adaptations clés pour le format paysage automotive</h3>
+  <div class="ergonomics-grid">
+    <div class="ergo-tile">
+      <div class="title">Touch target min.</div>
+      <div class="val">56 × 56 dp</div>
+      <div class="desc">vs 48 dp standard M3 — réduit les erreurs en conduite</div>
+    </div>
+    <div class="ergo-tile">
+      <div class="title">Type minimum</div>
+      <div class="val">14 sp body / 16 sp button</div>
+      <div class="desc">Lecture rapide à 60-80 cm</div>
+    </div>
+    <div class="ergo-tile">
+      <div class="title">Layout primary</div>
+      <div class="val">Nav Rail (96 dp)</div>
+      <div class="desc">Toujours visible — pas de bottom nav (mains sur volant)</div>
+    </div>
+    <div class="ergo-tile">
+      <div class="title">Master / Detail</div>
+      <div class="val">2-column split</div>
+      <div class="desc">Exploite la largeur 1920px — pas besoin de naviguer profond</div>
+    </div>
+    <div class="ergo-tile">
+      <div class="title">Status persistant</div>
+      <div class="val">Top bar</div>
+      <div class="desc">Heure + clim + batterie + signal toujours visibles</div>
+    </div>
+    <div class="ergo-tile">
+      <div class="title">Theme</div>
+      <div class="val">Dark only</div>
+      <div class="desc">Conduite de nuit = priorité absolue. Day mode synchronisé véhicule</div>
+    </div>
+  </div>
+
+  <h3>Composants Material 3 utilisés</h3>
+  <ul>
+    <li><strong>Navigation Rail</strong> — 96 dp à gauche, 5 destinations, toujours visible (équivalent voiture du bottom nav mobile)</li>
+    <li><strong>Top App Bar</strong> Small avec actions contextuelles à droite + horloge</li>
+    <li><strong>FAB Extended</strong> — action principale (ex. "Lancer mirror")</li>
+    <li><strong>Filled / Tonal / Outlined / Text Buttons</strong> — 56 dp de hauteur (vs 40 standard)</li>
+    <li><strong>Icon Buttons</strong> 56×56 avec état toggled (background secondaryContainer)</li>
+    <li><strong>Cards</strong> filled / outlined avec tonal elevation (pas d'ombre)</li>
+    <li><strong>List items</strong> avec leading icon circulaire 48 dp et trailing widget</li>
+    <li><strong>Material Switch</strong> M3 (track + thumb anim, plus large que mobile)</li>
+    <li><strong>Filter / Assist Chips</strong> — 44 dp pour faciliter le tap en mouvement</li>
+    <li><strong>Search bar</strong> docked (corner pill, surfaceContainerHigh)</li>
+    <li><strong>Slider</strong> avec thumb 24 dp et badge de valeur</li>
+    <li><strong>Tabs</strong> primary avec indicator coloré</li>
+  </ul>
+
+  <h3>Palette (générée à partir de #1565C0 BYD blue)</h3>
+  <div class="palette-grid">
+    <div class="swatch" style="background: #A8C7FA; color: #002F65;"><div>Primary</div><div class="hex">#A8C7FA</div></div>
+    <div class="swatch" style="background: #08458F; color: #D5E3FF;"><div>Primary cont.</div><div class="hex">#08458F</div></div>
+    <div class="swatch" style="background: #BCC7DC; color: #263141;"><div>Secondary</div><div class="hex">#BCC7DC</div></div>
+    <div class="swatch" style="background: #3D4759; color: #D8E2F8;"><div>Secondary cont.</div><div class="hex">#3D4759</div></div>
+    <div class="swatch" style="background: #DEBCDF; color: #402843;"><div>Tertiary</div><div class="hex">#DEBCDF</div></div>
+    <div class="swatch" style="background: #FFB4AB; color: #690005;"><div>Error</div><div class="hex">#FFB4AB</div></div>
+    <div class="swatch" style="background: #11131A; color: #E3E2E6; border: 1px solid #43474E;"><div>Surface</div><div class="hex">#11131A</div></div>
+    <div class="swatch" style="background: #1D2026; color: #E3E2E6;"><div>Surf. container</div><div class="hex">#1D2026</div></div>
+    <div class="swatch" style="background: #272A30; color: #E3E2E6;"><div>Surf. cont. high</div><div class="hex">#272A30</div></div>
+    <div class="swatch" style="background: #7DDB94; color: #003915;"><div>Success*</div><div class="hex">#7DDB94</div></div>
+    <div class="swatch" style="background: #FFB870; color: #4C2700;"><div>Warn*</div><div class="hex">#FFB870</div></div>
+  </div>
+  <p style="margin-top: 8px; font-size: 11px; opacity: 0.7;">* Success / Warn ne sont pas dans la spec M3 mais nécessaires pour le diag (couleurs custom à ajouter en resource).</p>
+
+  <h3>Patterns spécifiques DashCast</h3>
+  <ul>
+    <li><strong>Main 2-column</strong> : grille d'apps (gauche, 60%) + statut cluster + aperçu temps réel (droite, 40%). Tu n'as plus besoin de switcher d'écran pour voir l'état du mirror.</li>
+    <li><strong>Cluster preview live</strong> : reproduction mini du rendu cluster (1920×720) directement dans le panneau de droite, mise à jour en temps réel.</li>
+    <li><strong>Diag master/detail</strong> : liste des tests à gauche, résultat structuré à droite (mono-box syntax highlighted). Plus de scroll pour voir le résultat.</li>
+    <li><strong>Settings 2-column</strong> : type/overscan à gauche, comportement/about à droite — tout visible sans scroll sur les options principales.</li>
+    <li><strong>SysInfo dashboard tiles</strong> : 4 cartes overview en haut, listes affichages/services en dessous, rapport monospace à droite. Lecture en un coup d'œil.</li>
+    <li><strong>Log table-like</strong> : colonnes alignées (level / timestamp / tag / message) avec border-left coloré selon niveau. Parsing visuel rapide.</li>
+    <li><strong>Status persistant top-right</strong> : clim + batterie + signal + heure, sans interférer avec l'écran clim natif BYD.</li>
+  </ul>
+
+  <h3>Stratégie de migration (rappel)</h3>
+  <ol>
+    <li>Bump <code>androidx.appcompat:1.1.0</code> → <code>1.6.1</code> + ajout <code>com.google.android.material:material:1.11.0</code></li>
+    <li>Création <code>themes.xml</code> avec parent <code>Theme.Material3.DayNight.NoActionBar</code> (variant dark forcée par défaut)</li>
+    <li>Import de la palette ci-dessus dans <code>colors.xml</code> + <code>values-night/colors.xml</code> (mais theme par défaut = dark vu le contexte)</li>
+    <li>Refonte des layouts existants pour exploiter la largeur (split panes via <code>ConstraintLayout</code> avec guidelines à 60%)</li>
+    <li>Ajout du <strong>NavigationRailView</strong> en remplacement des boutons toolbar actuels</li>
+    <li>Remplacement <code>Button → MaterialButton</code>, <code>Switch → MaterialSwitch</code>, <code>CardView → MaterialCardView</code></li>
+    <li>Hauteur de boutons : créer un style <code>Widget.DashCast.Button.Automotive</code> avec <code>minHeight=56dp</code></li>
+    <li>Substitution <code>AlertDialog.Builder → MaterialAlertDialogBuilder</code></li>
+    <li>Test visuel sur device + ajustements (probablement padding et density-specific)</li>
+  </ol>
+</div>
+
+</body>
+</html>

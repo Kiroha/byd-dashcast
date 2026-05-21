@@ -25,6 +25,7 @@ import android.widget.TextView;
  * Visibility is controlled externally via the static show() / hide() helpers
  * called by MainActivity whenever mCurrentDashboardApp changes.
  */
+@android.annotation.SuppressLint("ClickableViewAccessibility") // badge is drag+tap; tap handled in onTouch ACTION_UP
 public class FloatingRemoteButton extends Service {
 
     private static final String TAG     = "FloatingRemoteBtn";

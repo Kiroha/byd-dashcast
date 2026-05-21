@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SuppressWarnings("try")
 public class AdbLocalClient {
     // Capped at 4 threads to avoid OutOfMemoryError or socket exhaustion
     // if the user hammers the UI triggering slow ADB commands.

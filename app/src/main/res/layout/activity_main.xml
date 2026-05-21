@@ -1,454 +1,929 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- DashCast Main Activity — Material 3 redesign (strict mockup, v0.9.7)
+     Layout: nav rail (left) + main area (top bar + 2-col content).
+     LEFT pane: search + filter chips + apps RecyclerView.
+     RIGHT pane: cluster hero card + live preview + 4 actions + control panel.
+     IMPORTANT: every ImageView declares its layout attrs INLINE (style on ImageView
+     is not honored on the BYD device, see /memories/repo/byd-project.md).
+     v0.9.74: root wrapped in FrameLayout to host the fullscreen mirror overlay
+     (close button) sitting on top of the regular content. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_overlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    tools:ignore="HardcodedText,Overdraw"
+    android:background="@color/md_background">
 
-    <!-- ===== BARRE DE STATUT DASHBOARD ===== -->
+<LinearLayout
+    android:id="@+id/root_content"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- NAV RAIL                                         -->
+    <!-- ════════════════════════════════════════════════ -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@color/bg_top_bar"
-        android:padding="12dp">
-
-        <!-- Status dot: grey=off, yellow=pending, green=active -->
-        <View
-            android:id="@+id/view_status_dot"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_marginEnd="8dp"
-            android:background="#888888"/>
-
-        <TextView
-            android:id="@+id/tv_dashboard_status"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/status_disconnected"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:textStyle="bold"/>
-
-        <Button
-            android:id="@+id/btn_activate_cluster"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="@string/btn_activate_cluster"
-            android:textSize="12sp"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:textColor="@color/text_primary"
-            android:backgroundTint="#1976D2"/>
-
-        <Button
-            android:id="@+id/btn_show_mirror"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="@string/btn_show_mirror"
-            android:textSize="12sp"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:layout_marginStart="6dp"
-            android:textColor="@color/text_primary"
-            android:backgroundTint="#00897B"
-            android:visibility="gone"/>
-
-        <Button
-            android:id="@+id/btn_restore_cluster"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text="@string/btn_restore_cluster"
-            android:textSize="12sp"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:layout_marginStart="6dp"
-            android:textColor="@color/text_primary"
-            android:backgroundTint="#D32F2F"/>
-
-        <!-- ⋮ : settings + dev tools (Diag, Report, Log, Language, etc.) -->
-        <Button
-            android:id="@+id/btn_overflow"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:text="⋮"
-            android:textSize="18sp"
-            android:padding="0dp"
-            android:layout_marginStart="8dp"
-            android:contentDescription="@string/app_name"/>
-    </LinearLayout>
-
-    <!-- ===== EN-TÊTE LISTE + BARRE DE RECHERCHE ===== -->
-    <LinearLayout
-        android:id="@+id/ll_app_list_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <!-- Title row: label + list/grid toggle button -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@color/bg_top_bar"
-            android:paddingStart="12dp"
-            android:paddingEnd="4dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/title_app_list"
-                android:textSize="16sp"
-                android:textStyle="bold"/>
-
-            <Button
-                android:id="@+id/btn_view_toggle"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:text="⊞"
-                android:textSize="16sp"
-                android:padding="0dp"
-                android:backgroundTint="#DDDDDD"
-                android:textColor="@color/text_primary"
-                android:contentDescription="@string/menu_view_grid"/>
-
-        </LinearLayout>
-
-        <!-- Search bar -->
-        <EditText
-            android:id="@+id/et_search_apps"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:hint="@string/hint_search_apps"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:background="@color/bg_button_secondary"
-            android:inputType="text"
-            android:imeOptions="actionSearch"
-            android:singleLine="true"
-            android:drawableStart="@android:drawable/ic_menu_search"
-            android:drawablePadding="8dp"
-            android:textSize="14sp"/>
-
-        <!-- Category filter buttons (hidden by default, toggled via Settings) -->
-        <LinearLayout
-            android:id="@+id/ll_category_filters"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:background="@color/bg_top_bar"
-            android:visibility="gone">
-
-            <Button
-                android:id="@+id/btn_filter_all"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1"
-                android:text="@string/filter_all"
-                android:textSize="12sp"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="4dp"
-                android:backgroundTint="#1976D2"
-                android:textColor="@color/text_primary"/>
-
-            <Button
-                android:id="@+id/btn_filter_nav"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1"
-                android:text="@string/filter_nav"
-                android:textSize="12sp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:backgroundTint="#607D8B"
-                android:textColor="@color/text_primary"/>
-
-            <Button
-                android:id="@+id/btn_filter_media"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1"
-                android:text="@string/filter_media"
-                android:textSize="12sp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="8dp"
-                android:backgroundTint="#607D8B"
-                android:textColor="@color/text_primary"/>
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-    <!-- ===== LISTE DES APPS ===== -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_apps"
-        android:layout_width="match_parent"
+        android:id="@+id/ll_nav_rail"
+        android:layout_width="96dp"
         android:layout_height="match_parent"
-        android:scrollbars="vertical"/>
-
-    <!-- ===== MIROIR CLUSTER =====
-         Wrapper FrameLayout contenant le SurfaceView miroir ET un placeholder texte.
-         TextureView requires ACCESS_SURFACE_FLINGER (system permission):
-         if unavailable, the placeholder is shown instead. -->
-    <FrameLayout
-        android:id="@+id/frame_cluster_mirror"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone">
-
-        <!-- TextureView: SF est le PRODUCTEUR (il rend le contenu du display dans la surface).
-             new Surface(textureView.getSurfaceTexture()) = surface SF writes into → TextureView displays.
-             SurfaceView.getSurface() was wrong: the app was the producer, not SF. -->
-        <TextureView
-            android:id="@+id/cluster_mirror"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="Miroir"/>
-
-        <!-- Fallback screencap when SurfaceControl.createDisplay() fails (ROM permissions) -->
-        <ImageView
-            android:id="@+id/cluster_mirror_screenshot"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:background="@color/bg_main"
-            android:clickable="true"
-            android:focusable="true"
-            android:contentDescription="Screenshot"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/tv_mirror_placeholder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="@string/mirror_placeholder"
-            android:textColor="@color/text_accent"
-            android:textSize="18sp"
-            android:background="@color/bg_main"
-            android:visibility="gone"/>
-
-        <!-- Overlay: shows inset margins during resize adjustment -->
-        <com.byd.dashcast.InsetOverlayView
-            android:id="@+id/inset_overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clickable="false"
-            android:focusable="false"/>
-
-    </FrameLayout>
-
-    <!-- ===== CLUSTER CONTROL PANEL =====
-         Shown only when a third-party app is active on the cluster.
-         Allows controlling the app from the main screen (cluster is non-touch). -->
-    <LinearLayout
-        android:id="@+id/panel_cluster_control"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="?android:attr/windowBackground"
-        android:visibility="gone"
-        android:layout_alignParentBottom="true">
+        android:background="@color/md_surface_container_low"
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
 
-        <!-- Collapse strip: always visible, toggles controls below -->
+        <!-- Logo (long-press = overflow menu since v0.9.80) -->
+        <ImageView
+            android:id="@+id/iv_nav_logo"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:scaleType="fitCenter"
+            android:src="@mipmap/ic_launcher"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/app_name"/>
+
+        <!-- Apps (active) -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="26dp"
-            android:orientation="horizontal"
-            android:gravity="end|center_vertical"
-            android:background="@color/bg_card"
-            android:paddingEnd="4dp">
-
-            <Button
-                android:id="@+id/btn_panel_toggle"
-                android:layout_width="60dp"
-                android:layout_height="22dp"
-                android:text="&#9660;"
-                android:textSize="10sp"
-                android:padding="0dp"
-                android:backgroundTint="@color/bg_button_secondary"
-                android:textColor="@color/text_secondary"/>
-
-        </LinearLayout>
-
-        <!-- Collapsible controls (header row + resize zone) -->
-        <LinearLayout
-            android:id="@+id/panel_controls_content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-        <!-- Header: app name + action buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="8dp"
-            android:background="@color/bg_top_bar">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/cluster_control_title"
-                android:textColor="@color/text_accent"
-                android:textSize="12sp"
-                android:textStyle="bold"/>
-
-            <TextView
-                android:id="@+id/tv_control_app_name"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text=""
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:ellipsize="end"
-                android:maxLines="1"/>
-
-            <Button
-                android:id="@+id/btn_toggle_resize"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                android:text="@string/btn_adjust"
-                android:textSize="10sp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="#00838F"/>
-
-            <Button
-                android:id="@+id/btn_relaunch"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:text="&#8635;"
-                android:textSize="14sp"
-                android:padding="0dp"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="#E65100"
-                android:textColor="@color/text_primary"
-                android:contentDescription="@string/btn_relaunch"/>
-
-            <Button
-                android:id="@+id/btn_cluster_split"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                android:text="@string/btn_cluster_split"
-                android:textSize="10sp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="#5C6BC0"/>
-
-            <Button
-                android:id="@+id/btn_control_hide"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                android:text="@string/cluster_control_hide"
-                android:textSize="10sp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"/>
-
-
-        </LinearLayout>
-
-
-        <!-- === ZONE REDIMENSIONNEMENT === -->
-        <LinearLayout
-            android:id="@+id/panel_resize"
+            android:id="@+id/nav_apps"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="8dp"
-            android:background="@color/bg_dialog"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <TextView
-                    android:id="@+id/tv_resize_w_label"
-                    android:layout_width="80dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_width_inset"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp"/>
-                <SeekBar
-                    android:id="@+id/sb_resize_w"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:max="400"/>
-                <TextView
-                    android:id="@+id/tv_resize_w_val"
-                    android:layout_width="35dp"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_accent"
-                    android:textSize="12sp"
-                    android:text="0"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="4dp">
-                <TextView
-                    android:id="@+id/tv_resize_h_label"
-                    android:layout_width="80dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_height_inset"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp"/>
-                <SeekBar
-                    android:id="@+id/sb_resize_h"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:max="400"/>
-                <TextView
-                    android:id="@+id/tv_resize_h_val"
-                    android:layout_width="35dp"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_accent"
-                    android:textSize="12sp"
-                    android:text="0"/>
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/btn_resize_apply"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_secondary_container"
+                android:background="@drawable/bg_nav_pill_active"
+                android:src="@drawable/ic_apps"
+                android:contentDescription="@string/main_nav_apps"/>
+            <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="35dp"
-                android:layout_gravity="end"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/btn_apply"
-                android:textSize="12sp"
-                android:backgroundTint="#2EA043"/>
+                android:text="@string/main_nav_apps"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface"/>
         </LinearLayout>
 
-        </LinearLayout> <!-- end panel_controls_content -->
+        <!-- Settings -->
+        <LinearLayout
+            android:id="@+id/nav_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_tune"
+                android:contentDescription="@string/main_nav_settings"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_settings"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Diag -->
+        <LinearLayout
+            android:id="@+id/nav_diag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_stethoscope"
+                android:contentDescription="@string/main_nav_diag"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_diag"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Sysinfo -->
+        <LinearLayout
+            android:id="@+id/nav_sysinfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_info"
+                android:contentDescription="@string/main_nav_sysinfo"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_sysinfo"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Log -->
+        <LinearLayout
+            android:id="@+id/nav_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_notes"
+                android:contentDescription="@string/main_nav_log"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_log"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Help (bottom) -->
+        <LinearLayout
+            android:id="@+id/nav_help"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_help_outline"
+                android:contentDescription="@string/main_nav_help"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_help"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
 
     </LinearLayout>
 
-    </RelativeLayout>
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- MAIN AREA                                        -->
+    <!-- ════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp">
 
-</LinearLayout>
+        <!-- ────── TOP BAR ────── -->
+        <LinearLayout
+            android:id="@+id/ll_top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/main_title_dashboard"
+                android:textColor="@color/md_on_surface"
+                android:textSize="26sp"
+                android:textStyle="bold"/>
+
+            <!-- v0.9.80: clock + overflow ⋮ removed too. Long-press the nav rail
+                 logo to open the overflow menu (Language / Updates / Stats / etc.). -->
+
+        </LinearLayout>
+
+        <!-- ────── CONTENT ROW (left pane + right pane) ────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <!-- ═══════════════════════════════════════ -->
+            <!-- LEFT PANE: apps                         -->
+            <!-- ═══════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/ll_app_list_section"
+                android:layout_width="0dp"
+                android:layout_weight="1.4"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:layout_marginEnd="20dp">
+
+                <!-- Search bar (rounded, M3 surface container high) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_search_bar"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="8dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_gravity="center_vertical"
+                        android:scaleType="fitCenter"
+                        android:tint="@color/md_on_surface_variant"
+                        android:src="@drawable/ic_search"
+                        android:contentDescription="@null"/>
+
+                    <EditText
+                        android:id="@+id/et_search_apps"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="match_parent"
+                        android:hint="@string/hint_search_apps"
+                        android:importantForAutofill="no"
+                        android:background="@android:color/transparent"
+                        android:inputType="text"
+                        android:imeOptions="actionSearch"
+                        android:singleLine="true"
+                        android:textColor="@color/md_on_surface"
+                        android:textColorHint="@color/md_on_surface_variant"
+                        android:textSize="15sp"/>
+
+                    <Button
+                        android:id="@+id/btn_view_toggle"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:text="⊞"
+                        android:textSize="18sp"
+                        android:padding="0dp"
+                        android:backgroundTint="@android:color/transparent"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:contentDescription="@string/menu_view_grid"/>
+                </LinearLayout>
+
+                <!-- Filter chips row (hidden by default, toggled via Settings) -->
+                <HorizontalScrollView
+                    android:id="@+id/ll_category_filters"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_filter_all"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:text="@string/filter_all"
+                            android:textSize="13sp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            app:cornerRadius="20dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_filter_nav"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="8dp"
+                            android:text="@string/filter_nav"
+                            android:textSize="13sp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            app:cornerRadius="20dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_filter_media"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="@string/filter_media"
+                            android:textSize="13sp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            app:cornerRadius="20dp"/>
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- v0.9.74 — Favorites horizontal strip (visible only when at least one favorite). -->
+                <LinearLayout
+                    android:id="@+id/ll_favorites_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/main_section_favorites"
+                        android:textAllCaps="true"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/md_tertiary"
+                        android:letterSpacing="0.1"/>
+
+                    <HorizontalScrollView
+                        android:id="@+id/hsv_favorites"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:id="@+id/ll_favorites_strip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"/>
+                    </HorizontalScrollView>
+                </LinearLayout>
+
+                <!-- Section: All applications -->
+                <TextView
+                    android:id="@+id/tv_all_apps_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/main_section_all_apps"
+                    android:textAllCaps="true"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_primary"
+                    android:letterSpacing="0.1"/>
+
+                <!-- Apps RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_apps"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:scrollbars="vertical"
+                    android:clipToPadding="false"/>
+
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════ -->
+            <!-- RIGHT PANE: cluster                     -->
+            <!-- ═══════════════════════════════════════ -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/sv_right_pane"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:scrollbars="none"
+                android:fillViewport="true"
+                android:clipToPadding="false">
+
+                <LinearLayout
+                    android:id="@+id/ll_right_pane_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- ────── Hero status card ────── -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_hero_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/md_secondary_container"
+                        app:contentPadding="20dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <View
+                                    android:id="@+id/view_status_dot"
+                                    android:layout_width="10dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:background="#888888"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/main_cluster_label"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/md_on_secondary_container"
+                                    android:letterSpacing="0.12"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_dashboard_status"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/main_cluster_status_off"
+                                android:textSize="22sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_secondary_container"
+                                android:ellipsize="end"
+                                android:maxLines="2"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/main_cluster_status_subtitle"
+                                android:textSize="13sp"
+                                android:textColor="@color/md_on_surface_variant"/>
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ────── Section: live preview ────── -->
+                    <TextView
+                        android:id="@+id/tv_preview_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/main_preview_section"
+                        android:textAllCaps="true"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/md_primary"
+                        android:letterSpacing="0.1"/>
+
+                    <!-- ────── Preview card (holds the cluster mirror frame) ────── -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/card_cluster_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#0F1115"
+                        app:contentPadding="0dp">
+
+                        <!-- Cluster mirror frame: always visible inside the preview card.
+                             Old behaviour: visibility toggled to GONE/VISIBLE by show*View().
+                             Since v0.9.7 the apps pane remains visible at all times,
+                             the visibility toggles in MainActivity have been neutralised
+                             (see showAppList/showMirrorView). -->
+                        <FrameLayout
+                            android:id="@+id/frame_cluster_mirror"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <TextureView
+                                android:id="@+id/cluster_mirror"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:contentDescription="@string/main_preview_section"/>
+
+                            <ImageView
+                                android:id="@+id/cluster_mirror_screenshot"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="fitCenter"
+                                android:background="#0F1115"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:contentDescription="@string/main_preview_section"
+                                android:visibility="gone"/>
+
+                            <TextView
+                                android:id="@+id/tv_mirror_placeholder"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:text="@string/mirror_placeholder"
+                                android:textColor="@color/md_on_surface_variant"
+                                android:textSize="14sp"
+                                android:visibility="gone"/>
+
+                            <com.byd.dashcast.InsetOverlayView
+                                android:id="@+id/inset_overlay"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:clickable="false"
+                                android:focusable="false"/>
+                        </FrameLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ────── 4 action buttons (2x2 grid) ────── -->
+                    <GridLayout
+                        android:id="@+id/grid_main_actions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:columnCount="2"
+                        android:rowCount="2"
+                        android:useDefaultMargins="false">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_show_mirror"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_gravity="fill_horizontal"
+                            android:layout_margin="4dp"
+                            android:text="@string/main_btn_full_preview"
+                            android:textSize="14sp"
+                            android:minHeight="52dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:cornerRadius="26dp"
+                            app:icon="@drawable/ic_visibility"
+                            app:iconGravity="textStart"
+                            app:iconSize="20dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_capture"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_gravity="fill_horizontal"
+                            android:layout_margin="4dp"
+                            android:text="@string/main_btn_capture"
+                            android:textSize="14sp"
+                            android:minHeight="52dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:cornerRadius="26dp"
+                            app:icon="@drawable/ic_screenshot"
+                            app:iconGravity="textStart"
+                            app:iconSize="20dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_activate_cluster"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_gravity="fill_horizontal"
+                            android:layout_margin="4dp"
+                            android:text="@string/main_btn_reconnect"
+                            android:textSize="14sp"
+                            android:minHeight="52dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:cornerRadius="26dp"
+                            app:icon="@drawable/ic_refresh"
+                            app:iconGravity="textStart"
+                            app:iconSize="20dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_restore_cluster"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_gravity="fill_horizontal"
+                            android:layout_margin="4dp"
+                            android:text="@string/main_btn_stop_mirror"
+                            android:textSize="14sp"
+                            android:minHeight="52dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:backgroundTint="@color/md_error_container"
+                            android:textColor="@color/md_on_error_container"
+                            app:cornerRadius="26dp"
+                            app:icon="@drawable/ic_stop"
+                            app:iconGravity="textStart"
+                            app:iconSize="20dp"
+                            app:iconTint="@color/md_on_error_container"/>
+                    </GridLayout>
+
+                    <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->
+                    <LinearLayout
+                        android:id="@+id/panel_cluster_control"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp"
+                        android:background="@color/md_surface_container_low"
+                        android:visibility="gone">
+
+                        <!-- Header strip with collapse toggle -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="32dp"
+                            android:orientation="horizontal"
+                            android:gravity="end|center_vertical"
+                            android:paddingStart="0dp"
+                            android:paddingEnd="6dp">
+                            <Button
+                                android:id="@+id/btn_panel_toggle"
+                                android:layout_width="60dp"
+                                android:layout_height="26dp"
+                                android:text="▼"
+                                android:textSize="10sp"
+                                android:padding="0dp"
+                                android:backgroundTint="@color/md_surface_container_high"
+                                android:textColor="@color/md_on_surface_variant"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"/>
+                        </LinearLayout>
+
+                        <!-- Collapsible content -->
+                        <LinearLayout
+                            android:id="@+id/panel_controls_content"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Header row: title + app name -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cluster_control_title"
+                                    android:textColor="@color/md_on_surface"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/tv_control_app_name"
+                                    android:layout_width="0dp"
+                                    android:layout_weight="1"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text=""
+                                    android:textColor="@color/md_on_surface_variant"
+                                    android:textSize="12sp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"/>
+                            </LinearLayout>
+
+                            <!-- Buttons row -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:paddingStart="10dp"
+                                android:paddingEnd="10dp"
+                                android:paddingBottom="10dp">
+
+                                <Button
+                                    android:id="@+id/btn_toggle_resize"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:text="@string/btn_adjust"
+                                    android:textSize="11sp"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:backgroundTint="@color/md_surface_container_high"
+                                    android:textColor="@color/md_on_surface"/>
+
+                                <Button
+                                    android:id="@+id/btn_relaunch"
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:text="↺"
+                                    android:textSize="14sp"
+                                    android:padding="0dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:backgroundTint="@color/md_tertiary_container"
+                                    android:textColor="@color/md_on_tertiary_container"
+                                    android:contentDescription="@string/btn_relaunch"/>
+
+                                <Button
+                                    android:id="@+id/btn_cluster_split"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:text="@string/btn_cluster_split"
+                                    android:textSize="11sp"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:backgroundTint="@color/md_surface_container_high"
+                                    android:textColor="@color/md_on_surface"/>
+
+                                <Button
+                                    android:id="@+id/btn_control_hide"
+                                    android:layout_width="0dp"
+                                    android:layout_weight="1"
+                                    android:layout_height="36dp"
+                                    android:text="@string/cluster_control_hide"
+                                    android:textSize="11sp"
+                                    android:paddingStart="10dp"
+                                    android:paddingEnd="10dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:backgroundTint="@color/md_surface_container_high"
+                                    android:textColor="@color/md_on_surface"
+                                    android:visibility="gone"/>
+                            </LinearLayout>
+
+                            <!-- Resize panel -->
+                            <LinearLayout
+                                android:id="@+id/panel_resize"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="10dp"
+                                android:background="@color/md_surface_container"
+                                android:visibility="gone">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+                                    <TextView
+                                        android:id="@+id/tv_resize_w_label"
+                                        android:layout_width="80dp"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/label_width_inset"
+                                        android:textColor="@color/md_on_surface"
+                                        android:textSize="12sp"/>
+                                    <SeekBar
+                                        android:id="@+id/sb_resize_w"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:max="400"/>
+                                    <TextView
+                                        android:id="@+id/tv_resize_w_val"
+                                        android:layout_width="35dp"
+                                        android:layout_height="wrap_content"
+                                        android:textColor="@color/md_primary"
+                                        android:textSize="12sp"
+                                        android:text="0"
+                                        tools:ignore="HardcodedText"/>
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="4dp">
+                                    <TextView
+                                        android:id="@+id/tv_resize_h_label"
+                                        android:layout_width="80dp"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/label_height_inset"
+                                        android:textColor="@color/md_on_surface"
+                                        android:textSize="12sp"/>
+                                    <SeekBar
+                                        android:id="@+id/sb_resize_h"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:max="400"/>
+                                    <TextView
+                                        android:id="@+id/tv_resize_h_val"
+                                        android:layout_width="35dp"
+                                        android:layout_height="wrap_content"
+                                        android:textColor="@color/md_primary"
+                                        android:textSize="12sp"
+                                        android:text="0"
+                                        tools:ignore="HardcodedText"/>
+                                </LinearLayout>
+
+                                <Button
+                                    android:id="@+id/btn_resize_apply"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:layout_gravity="end"
+                                    android:layout_marginTop="6dp"
+                                    android:text="@string/btn_apply"
+                                    android:textSize="12sp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:backgroundTint="@color/md_primary"
+                                    android:textColor="@color/md_on_primary"/>
+                            </LinearLayout>
+
+                        </LinearLayout> <!-- /panel_controls_content -->
+                    </LinearLayout> <!-- /panel_cluster_control -->
+
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+        </LinearLayout> <!-- /content row -->
+    </LinearLayout> <!-- /main area -->
+</LinearLayout> <!-- /root_content -->
+
+    <!-- v0.9.74 — Floating Exit button shown only in pseudo-fullscreen mirror mode. -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_exit_fullscreen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:src="@drawable/ic_close"
+        android:contentDescription="@string/main_btn_exit_fullscreen"
+        app:backgroundTint="@color/md_error_container"
+        app:tint="@color/md_on_error_container"
+        app:fabSize="mini"
+        android:visibility="gone"/>
+
+</FrameLayout>

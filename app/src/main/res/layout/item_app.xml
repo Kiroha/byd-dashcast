@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Tap = envoyer sur le cluster | Long press = menu contextuel -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="HardcodedText,Overdraw"
     android:layout_width="match_parent"
     android:layout_height="68dp"
     android:orientation="horizontal"
@@ -14,6 +16,7 @@
     android:background="?android:attr/selectableItemBackground">
 
     <ImageView
+        android:contentDescription="@null"
         android:id="@+id/iv_app_icon"
         android:layout_width="44dp"
         android:layout_height="44dp"

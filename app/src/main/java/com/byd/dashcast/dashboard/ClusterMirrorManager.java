@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Requires: ACCESS_SURFACE_FLINGER (signature permission, granted with platform.keystore)
  */
+@SuppressWarnings("deprecation")
 public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
@@ -76,7 +77,7 @@ public class ClusterMirrorManager {
             Method getRuntimeMethod = (Method) getDeclaredMethod.invoke(vmRuntimeClass, "getRuntime", null);
             Object vmRuntime = getRuntimeMethod.invoke(null);
             Method setExemptions = (Method) getDeclaredMethod.invoke(vmRuntimeClass,
-                    "setHiddenApiExemptions", new Class[]{String[].class});
+                    "setHiddenApiExemptions", new Class<?>[]{String[].class});
             setExemptions.invoke(vmRuntime, new Object[]{
                     new String[]{"Landroid/", "Lcom/android/", "Ljava/lang/"}
             });
@@ -277,19 +278,25 @@ public class ClusterMirrorManager {
      */
     public void stopMirrorViaDaemon(IBinder daemonBinder) {
         if (daemonBinder == null) return;
-        Parcel data = Parcel.obtain();
+        Parcel data  = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+            // v0.9.77: SYNCHRONOUS stop (no FLAG_ONEWAY) so callers can immediately
+            // restart the mirror at a different size (e.g. fullscreen toggle) without
+            // a race where the daemon's stop is still queued behind the new start.
             daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
-                    data, null, android.os.IBinder.FLAG_ONEWAY);
+                    data, reply, 0);
+            try { reply.readException(); } catch (Throwable ignored) { /* daemon may not write reply */ }
         } catch (Exception e) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: " + e.getMessage());
         } finally {
             data.recycle();
+            reply.recycle();
         }
         mMirrorActive  = false;
         mMirrorSurface = null;
-        AppLogger.i(TAG, "stopMirrorViaDaemon sent");
+        AppLogger.i(TAG, "stopMirrorViaDaemon done (sync)");
     }
 
     // ──────────────────────────────────────────────────────────────────────────

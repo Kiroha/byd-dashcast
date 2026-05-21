@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Favorite tile for the horizontal strip on Main (v0.9.74).
+     Inline ImageView attrs (BYD device quirk — see /memories/repo/byd-project.md). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="80dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="6dp"
+    android:layout_marginEnd="4dp"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="Overdraw">
+
+    <FrameLayout
+        android:layout_width="56dp"
+        android:layout_height="56dp">
+
+        <ImageView
+            android:id="@+id/iv_fav_icon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@null"/>
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="top|end"
+            android:src="@drawable/ic_favorite"
+            android:tint="@color/md_tertiary"
+            android:contentDescription="@null"/>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tv_fav_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:textSize="11sp"
+        android:textColor="@color/md_on_surface"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- v0.9.80: "app launched" indicator (green bar) shown when this favorite
+         is currently the running cluster app or the main display app. -->
+    <View
+        android:id="@+id/view_fav_active_indicator"
+        android:layout_width="24dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="#4CAF50"
+        android:visibility="gone"/>
+</LinearLayout>
