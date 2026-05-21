@@ -93,8 +93,30 @@ public final class DiLink5TestRunner {
                 "127.0.0.1:5555 reachable (required by D8)."));
         list.add(new TestDef("D8", "Guarded cluster launch (selected app)",
                 "am start --display <clusterId> → wait → am start --display 0 (retract) → force-stop."));
-        list.add(new TestDef("D9", "BYD packages inventory",
-                "Versions of car.server / crosscontrol / xdja.containerservice for triage."));
+        list.add(new TestDef("D9", "BYD/XDJA/DiLink packages discovery",
+                "Dynamic scan via 'pm list packages -f' — every com.byd.*, com.xdja.*, com.dilink.* and *cluster* package with versionName + versionCode + APK path."));
+        list.add(new TestDef("D10", "Extract RE-relevant APKs",
+                "Copies a curated whitelist (clusterdebug, car.server, crosscontrol, containerservice, appstartmanagement, smarttravel, commander, freedom, overdrive, windowmanagement + any *cluster* / *fission* / *projection* / *dilink5*) to externalFilesDir/extracted_apks/ — 'adb pull /sdcard/Android/data/com.byd.dashcast/files/extracted_apks/'."));
+        list.add(new TestDef("D11", "AutoContainer sendInfo refresh probe",
+                "service call auto_container 2 i32 1000 i32 0 s16 \"\" — harmless refresh, confirms typed sendInfo path is reachable on DL5."));
+        list.add(new TestDef("D12", "AutoContainer Qt standby probe",
+                "sendInfo(16) → wait → sendInfo(18) — active Qt standby + close cycle (no projection, just protocol validation)."));
+        list.add(new TestDef("D13", "IATM.setTaskWindowingMode reflection probe",
+                "Try reflective call from app uid — expected SecurityException on un-signed app; confirms whether the typed DL5 windowing path is accessible."));
+        list.add(new TestDef("D14", "Window manager state dump",
+                "dumpsys window | grep -E 'Display #|stack|focused|mDisplayId' — real windowing state for cluster app diagnosis."));
+        list.add(new TestDef("D15", "appstartmanagement package inspection",
+                "dumpsys package com.byd.appstartmanagement (Permission/Receiver/Service/Activity) — understand the DL5 launch gatekeeper."));
+        list.add(new TestDef("D16", "containerservice package inspection",
+                "dumpsys package com.byd.containerservice (Permission/Receiver/Service) — understand the BYD-rebranded XDJA container service."));
+        list.add(new TestDef("D17", "Proxy daemon spawn capability",
+                "app_process64 + getuid sanity check from shell — validates that our Beta proxy daemon strategy can spawn on DL5/API 32 under SELinux."));
+        list.add(new TestDef("D18", "SELinux context",
+                "id + ps -Z (shell + our app) — SELinux domain identification for DL5 diagnostics."));
+        list.add(new TestDef("D19", "Full system services inventory",
+                "service list | grep -iE 'auto|byd|cluster|fission|display|window|projection|crosscontrol|xdja' — broader than D3."));
+        list.add(new TestDef("D20", "IActivityTaskManager service presence",
+                "service list | grep -i activity_task — confirms IATM binder available (required by D13 typed path)."));
         return list;
     }
 
@@ -139,6 +161,17 @@ public final class DiLink5TestRunner {
                         case "D7": runD7(ctx, r); break;
                         case "D8": runD8(ctx, d8Params, r); break;
                         case "D9": runD9(ctx, r); break;
+                        case "D10": runD10(ctx, r); break;
+                        case "D11": runD11(ctx, r); break;
+                        case "D12": runD12(ctx, r); break;
+                        case "D13": runD13(ctx, r); break;
+                        case "D14": runD14(ctx, r); break;
+                        case "D15": runD15(ctx, r); break;
+                        case "D16": runD16(ctx, r); break;
+                        case "D17": runD17(ctx, r); break;
+                        case "D18": runD18(ctx, r); break;
+                        case "D19": runD19(ctx, r); break;
+                        case "D20": runD20(ctx, r); break;
                         default:
                             r.status = Status.SKIPPED;
                             r.message = "not implemented";
@@ -420,26 +453,351 @@ public final class DiLink5TestRunner {
         }
     }
 
+    /** Holder used to pass discovery from D9 to D10. */
+    private static final class DiscoveredPkg {
+        final String pkg;
+        final String apkPath;
+        final String versionName;
+        final long   versionCode;
+        DiscoveredPkg(String pkg, String apkPath, String versionName, long versionCode) {
+            this.pkg = pkg; this.apkPath = apkPath; this.versionName = versionName; this.versionCode = versionCode;
+        }
+    }
+    private static final List<DiscoveredPkg> sLastDiscovery = new ArrayList<>();
+
     private static void runD9(Context ctx, TestResult r) {
-        String[] interestingPkgs = new String[] {
-                "com.byd.car.server", "com.byd.crosscontrol", "com.xdja.containerservice",
-                "com.byd.containerservice", "com.byd.dashcast", "com.byd.appstartmanagement",
-                "com.byd.providers.appstartup",
-        };
+        // Dynamic scan: every com.byd.*, com.xdja.*, com.dilink.* and *cluster* package.
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "pm list packages -f 2>/dev/null"
+                + " | grep -iE 'com\\.byd\\.|com\\.xdja\\.|com\\.dilink\\.|cluster|automotive'"
+                + " | sort -u",
+                out, 6000);
+        String raw = out.get();
+        sLastDiscovery.clear();
         StringBuilder sb = new StringBuilder();
-        int found = 0;
-        for (String p : interestingPkgs) {
-            String v = readPackageVersion(ctx, p);
-            if (v == null) {
-                sb.append("  ✗ ").append(p).append("  (not installed)\n");
+        if (raw.isEmpty() || raw.startsWith("ERROR") || raw.startsWith("TIMEOUT")) {
+            r.detail = "shell output: " + raw;
+            r.status = Status.FAIL;
+            r.message = "Package scan failed";
+            return;
+        }
+        // pm list packages -f format: "package:/data/app/.../base.apk=<pkg>"
+        for (String line : raw.split("\\r?\\n")) {
+            line = line.trim();
+            if (line.isEmpty() || !line.startsWith("package:")) continue;
+            int eq = line.lastIndexOf('=');
+            if (eq < 0) continue;
+            String pkg     = line.substring(eq + 1).trim();
+            String apkPath = line.substring("package:".length(), eq).trim();
+            String vn = "?";
+            long   vc = -1;
+            try {
+                android.content.pm.PackageInfo pi = ctx.getPackageManager().getPackageInfo(pkg, 0);
+                vn = pi.versionName != null ? pi.versionName : "?";
+                vc = android.os.Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+            } catch (Throwable ignored) {}
+            sLastDiscovery.add(new DiscoveredPkg(pkg, apkPath, vn, vc));
+            sb.append("  ").append(pkg)
+              .append("  v").append(vn).append(" (").append(vc).append(")\n")
+              .append("    ").append(apkPath).append('\n');
+        }
+        r.detail = sb.length() == 0 ? "(no matching package)" : sb.toString();
+        if (sLastDiscovery.isEmpty()) {
+            r.status = Status.WARN;
+            r.message = "No BYD/XDJA/DiLink/cluster package matched";
+        } else {
+            r.status = Status.PASS;
+            r.message = sLastDiscovery.size() + " package(s) discovered (saved for D10)";
+        }
+    }
+
+    /** Curated whitelist used by D10 to avoid extracting the entire BYD OS. */
+    private static final String[] D10_INTERESTING = new String[] {
+            "com.byd.clusterdebug",
+            "com.byd.car.server",
+            "com.byd.crosscontrol",
+            "com.byd.containerservice",
+            "com.xdja.containerservice",
+            "com.byd.appstartmanagement",
+            "com.byd.providers.appstartup",
+            "com.byd.smarttravel",
+            "com.byd.commander",
+            "com.byd.freedom",
+            "com.byd.overdrive",
+            "com.byd.windowmanagement",
+            // substring patterns (any discovered pkg containing these tokens):
+            "fission", "projection", "cluster", "dilink5", "automotive.cluster",
+    };
+
+    private static boolean d10IsInteresting(String pkg) {
+        String low = pkg.toLowerCase();
+        for (String s : D10_INTERESTING) {
+            if (s.contains(".")) {
+                if (low.equals(s)) return true;
             } else {
-                found++;
-                sb.append("  ✓ ").append(p).append("  ").append(v).append('\n');
+                if (low.contains(s)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void runD10(Context ctx, TestResult r) {
+        if (sLastDiscovery.isEmpty()) {
+            r.status = Status.SKIPPED;
+            r.message = "Run D9 first (discovery empty)";
+            return;
+        }
+        java.io.File dir = ctx.getExternalFilesDir(null);
+        if (dir == null) dir = ctx.getFilesDir();
+        java.io.File outDir = new java.io.File(dir, "extracted_apks");
+        if (!outDir.exists() && !outDir.mkdirs()) {
+            r.status = Status.FAIL;
+            r.message = "Cannot create " + outDir.getAbsolutePath();
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Output dir: ").append(outDir.getAbsolutePath()).append('\n');
+        sb.append("Retrieve with: adb pull ").append(outDir.getAbsolutePath()).append('\n');
+        sb.append("Filtered (whitelist) \u2014 ").append(sLastDiscovery.size())
+          .append(" pkg discovered, only RE-relevant ones extracted.\n\n");
+        int ok = 0, fail = 0, skipped = 0;
+        for (DiscoveredPkg d : sLastDiscovery) {
+            if (!d10IsInteresting(d.pkg)) {
+                skipped++;
+                sb.append("  \u2013 ").append(d.pkg).append("  (skipped, not in whitelist)\n");
+                continue;
+            }
+            String safe = d.pkg.replace('/', '_');
+            String dst  = outDir.getAbsolutePath() + "/" + safe + "_v" + d.versionCode + ".apk";
+            AtomicReference<String> out = new AtomicReference<>("");
+            // cat + redirect avoids cp permission quirks on some BYD builds.
+            runShellSync(ctx, "cat '" + d.apkPath + "' > '" + dst + "' 2>&1 && ls -l '" + dst + "' 2>&1", out, 15000);
+            String raw = out.get().trim();
+            java.io.File f = new java.io.File(dst);
+            boolean exists = f.exists() && f.length() > 0;
+            if (exists) {
+                ok++;
+                sb.append("  \u2713 ").append(d.pkg).append("  (").append(f.length() / 1024).append(" KB)\n");
+            } else {
+                fail++;
+                sb.append("  \u2717 ").append(d.pkg).append("  \u2014 ").append(raw).append('\n');
             }
         }
         r.detail = sb.toString();
-        r.status = found >= 2 ? Status.PASS : Status.WARN;
-        r.message = found + " BYD package(s) detected";
+        if (ok > 0 && fail == 0) {
+            r.status = Status.PASS;
+            r.message = ok + " APK(s) extracted, " + skipped + " skipped — adb pull the dir";
+        } else if (ok > 0) {
+            r.status = Status.WARN;
+            r.message = ok + " ok / " + fail + " failed / " + skipped + " skipped";
+        } else if (skipped > 0 && fail == 0) {
+            r.status = Status.WARN;
+            r.message = "No package matched the RE whitelist (" + skipped + " discovered)";
+        } else {
+            r.status = Status.FAIL;
+            r.message = "No APK could be extracted";
+        }
+    }
+
+    private static void runD11(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(no output)" : raw;
+        String lower = raw.toLowerCase();
+        if (lower.contains("securityexception") || lower.contains("permission denial")) {
+            r.status = Status.FAIL;
+            r.message = "SecurityException \u2014 service rejects uid 2000";
+        } else if (lower.contains("does not exist") || lower.contains("could not find service")) {
+            r.status = Status.FAIL;
+            r.message = "auto_container service not found";
+        } else if (lower.contains("result:") || lower.contains("parcel")) {
+            r.status = Status.PASS;
+            r.message = "service call accepted (no SecurityException)";
+        } else {
+            r.status = Status.WARN;
+            r.message = "Inconclusive \u2014 check raw output";
+        }
+    }
+
+    private static void runD12(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+        sb.append("[sendInfo 16 / Qt standby]\n").append(out.get()).append('\n');
+        try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
+        sb.append("\n[sendInfo 18 / close]\n").append(out.get()).append('\n');
+        try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
+        sb.append("\n[sendInfo 0 / refresh]\n").append(out.get()).append('\n');
+        String all = sb.toString().toLowerCase();
+        r.detail = sb.toString();
+        if (all.contains("securityexception") || all.contains("permission denial")) {
+            r.status = Status.FAIL;
+            r.message = "Qt standby cycle blocked by permission check";
+        } else if (all.contains("does not exist") || all.contains("could not find service")) {
+            r.status = Status.FAIL;
+            r.message = "auto_container service not found";
+        } else {
+            r.status = Status.PASS;
+            r.message = "Qt standby cycle accepted (16 \u2192 18 \u2192 0)";
+        }
+    }
+
+    private static void runD13(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iatm = atmCls.getMethod("getService").invoke(null);
+            sb.append("IATM getService: ").append(iatm != null ? "obtained" : "null").append('\n');
+            if (iatm != null) {
+                try {
+                    iatm.getClass().getMethod("setTaskWindowingMode", int.class, int.class, boolean.class)
+                            .invoke(iatm, 0, 4, true);
+                    sb.append("setTaskWindowingMode(0,4,true): NO exception (unexpected on un-signed app)\n");
+                    r.status = Status.WARN;
+                    r.message = "Call did not throw \u2014 platform may silently no-op";
+                } catch (java.lang.reflect.InvocationTargetException ite) {
+                    Throwable cause = ite.getCause() != null ? ite.getCause() : ite;
+                    sb.append("setTaskWindowingMode threw: ")
+                      .append(cause.getClass().getSimpleName()).append(": ").append(cause.getMessage()).append('\n');
+                    String cs = cause.getClass().getSimpleName();
+                    if (cs.contains("Security") || cs.contains("Permission")) {
+                        r.status = Status.WARN;
+                        r.message = "SecurityException (expected) \u2014 typed path needs signature perms or proxy daemon";
+                    } else if (cs.contains("IllegalArgument")) {
+                        r.status = Status.PASS;
+                        r.message = "Method reachable; threw IllegalArgument on bogus taskId (good news)";
+                    } else {
+                        r.status = Status.WARN;
+                        r.message = cs + " \u2014 see detail";
+                    }
+                } catch (NoSuchMethodException nsme) {
+                    sb.append("setTaskWindowingMode: method not present\n");
+                    r.status = Status.FAIL;
+                    r.message = "API absent on this DL5 build";
+                }
+            } else {
+                r.status = Status.FAIL;
+                r.message = "IATM service unavailable";
+            }
+        } catch (Throwable t) {
+            sb.append("ATM resolve failed: ").append(t.getClass().getSimpleName())
+              .append(": ").append(t.getMessage()).append('\n');
+            r.status = Status.FAIL;
+            r.message = "ActivityTaskManager not resolvable";
+        }
+        r.detail = sb.toString();
+    }
+
+    private static void runD14(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "dumpsys window 2>/dev/null | grep -E 'Display #|mDisplayId|imeLayerStack|focused|mStackId|mCurrentFocus|mDisplayContent' | head -80",
+                out, 8000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(no matching window state)" : raw;
+        r.status = raw.isEmpty() ? Status.WARN : Status.PASS;
+        r.message = raw.isEmpty() ? "dumpsys window returned nothing" : "Window state dumped";
+    }
+
+    private static void runD15(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "dumpsys package com.byd.appstartmanagement 2>/dev/null"
+                + " | grep -iE 'permission|receiver|service |activity |authority|provider|signature|version'"
+                + " | head -120",
+                out, 8000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(empty \u2014 package may not be installed)" : raw;
+        if (raw.isEmpty()) {
+            r.status = Status.WARN;
+            r.message = "appstartmanagement not present or dumpsys empty";
+        } else {
+            r.status = Status.PASS;
+            r.message = "Inventory captured (review detail)";
+        }
+    }
+
+    private static void runD16(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "dumpsys package com.byd.containerservice 2>/dev/null"
+                + " | grep -iE 'permission|receiver|service |activity |authority|provider|signature|version'"
+                + " | head -120",
+                out, 8000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(empty \u2014 package may not be installed)" : raw;
+        if (raw.isEmpty()) {
+            r.status = Status.WARN;
+            r.message = "containerservice not present or dumpsys empty";
+        } else {
+            r.status = Status.PASS;
+            r.message = "Inventory captured (review detail)";
+        }
+    }
+
+    private static void runD17(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "id 2>&1; echo ---; which app_process64 app_process 2>&1; echo ---;"
+                + " app_process64 -Xnoimage-dex2oat /system/bin --nice-name=dl5_probe -version 2>&1 | head -5; echo ---;"
+                + " ls /system/bin/app_process64 2>&1",
+                out, 6000);
+        String raw = out.get();
+        r.detail = raw;
+        String lower = raw.toLowerCase();
+        boolean hasApp = lower.contains("/system/bin/app_process");
+        boolean denied = lower.contains("permission denied") || lower.contains("avc:");
+        if (hasApp && !denied) {
+            r.status = Status.PASS;
+            r.message = "app_process64 reachable from shell uid \u2014 proxy daemon spawn viable";
+        } else if (hasApp && denied) {
+            r.status = Status.FAIL;
+            r.message = "app_process64 present but SELinux denied \u2014 daemon spawn blocked";
+        } else {
+            r.status = Status.WARN;
+            r.message = "app_process64 not found at expected path";
+        }
+    }
+
+    private static void runD18(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "id 2>&1; echo ---; ps -Z -o LABEL,USER,PID,NAME 2>/dev/null | head -10",
+                out, 4000);
+        r.detail = out.get();
+        r.status = out.get().isEmpty() ? Status.WARN : Status.PASS;
+        r.message = out.get().isEmpty() ? "ps -Z returned empty" : "SELinux context captured";
+    }
+
+    private static void runD19(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "service list 2>/dev/null | grep -iE 'auto|byd|cluster|fission|display|window|projection|crosscontrol|xdja|task' | head -60",
+                out, 6000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(no matching service)" : raw;
+        r.status = raw.isEmpty() ? Status.WARN : Status.PASS;
+        r.message = raw.isEmpty() ? "No interesting service surfaced" : "Service inventory captured";
+    }
+
+    private static void runD20(Context ctx, TestResult r) {
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx,
+                "service list 2>/dev/null | grep -iE 'activity_task|activitytask' | head -5",
+                out, 4000);
+        String raw = out.get();
+        r.detail = raw.isEmpty() ? "(no activity_task service line)" : raw;
+        if (raw.toLowerCase().contains("activitytask") || raw.toLowerCase().contains("activity_task")) {
+            r.status = Status.PASS;
+            r.message = "IActivityTaskManager binder present";
+        } else {
+            r.status = Status.WARN;
+            r.message = "IATM service not visible in 'service list'";
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────

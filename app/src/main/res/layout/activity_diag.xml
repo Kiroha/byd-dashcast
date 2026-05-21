@@ -165,6 +165,9 @@
                 android:text="@string/diag_tab_beta_engine"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_dilink5"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="Sniffer"
+                tools:ignore="HardcodedText"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -185,6 +188,11 @@
             <include
                 android:id="@+id/panel_dilink5"
                 layout="@layout/include_diag_dilink5"/>
+
+            <!-- RE Sniffer dedicated diagnostic panel (build 181) -->
+            <include
+                android:id="@+id/panel_sniffer"
+                layout="@layout/include_diag_sniffer"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include
