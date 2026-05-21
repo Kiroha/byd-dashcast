@@ -11,6 +11,7 @@ import android.widget.Toast;
  * With INSTALL_PACKAGES (granted via platform.keystore), the install is silent.
  * STATUS_PENDING_USER_ACTION is the fallback when silent install is not permitted.
  */
+@SuppressWarnings("deprecation")
 public class InstallResultReceiver extends BroadcastReceiver {
 
     private static final String TAG = "InstallResultReceiver";

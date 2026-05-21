@@ -6,7 +6,9 @@
     android:orientation="vertical"
     android:background="@color/md_surface_container_high"
     android:paddingTop="12dp"
-    android:paddingBottom="20dp">
+    android:paddingBottom="20dp"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="Overdraw">
 
     <!-- Drag handle -->
     <View
@@ -58,6 +60,7 @@
         android:background="?android:attr/selectableItemBackground">
 
         <ImageView
+            android:contentDescription="@null"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginEnd="20dp"

@@ -41,6 +41,7 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
         mColorTime  = ctx.getColor(R.color.md_on_surface_variant);
     }
 
+    @android.annotation.SuppressLint("NotifyDataSetChanged") // bulk replace
     public void setEntries(List<AppLogger.Entry> entries) {
         mEntries.clear();
         mEntries.addAll(entries);

@@ -1,5 +1,6 @@
 package com.byd.dashcast.dashboard;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.hardware.display.DisplayManager;
@@ -25,6 +26,7 @@ import java.lang.reflect.Method;
  *   2. null                  → skip validation sur certains ROM (permissif)
  *   3. "android"             → system UID (peut marcher si ROM permissive)
  */
+@SuppressWarnings({"deprecation","WrongConstant"})
 public class DashCastDaemon {
 
     private static final String[] PACKAGE_CANDIDATES = {
@@ -90,6 +92,9 @@ public class DashCastDaemon {
             DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
             if (dm == null) continue;
             try {
+                // flags=320 : valeur empiriquement validée sur ROM BYD DiLink 3.0
+                // (combinaison de flags @hide privés). Ne pas modifier sans test device.
+                @SuppressLint("WrongConstant")
                 VirtualDisplay vd = dm.createVirtualDisplay(
                     "remote_dashboard", 1920, 720, 320, reader.getSurface(), 320);
                 System.out.println("[DashCastDaemon] packageName=\"" + pkg + "\" → SUCCESS");

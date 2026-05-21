@@ -29,6 +29,7 @@ import java.lang.reflect.Method;
  * ACTION_REQUEST_BINDER. Only uid=2000 can call SurfaceControl.createDisplay()
  * and InputManager.injectInputEvent() without additional permission.
  */
+@SuppressWarnings("deprecation")
 public class MirrorDaemon {
 
     private static final String TAG = "MirrorDaemon";
@@ -391,7 +392,7 @@ public class MirrorDaemon {
                     vmRuntimeClass, "getRuntime", null);
             Object vmRuntime = getRuntimeMethod.invoke(null);
             Method setExemptions = (Method) getDeclaredMethod.invoke(vmRuntimeClass,
-                    "setHiddenApiExemptions", new Class[]{String[].class});
+                    "setHiddenApiExemptions", new Class<?>[]{String[].class});
             setExemptions.invoke(vmRuntime,
                     new Object[]{new String[]{"Landroid/", "Lcom/android/", "Ljava/lang/"}});
             Log.i(TAG, "unlockHiddenApis OK");

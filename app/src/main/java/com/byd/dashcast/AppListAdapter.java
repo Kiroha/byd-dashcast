@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+@android.annotation.SuppressLint("SetTextI18n")
 public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolder> {
 
     public interface OnSendToDashboardListener {
@@ -58,6 +59,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         mListener = listener;
     }
 
+    @android.annotation.SuppressLint("NotifyDataSetChanged") // full layout swap
     public void setGridMode(boolean isGridMode) {
         if (mIsGridMode != isGridMode) {
             mIsGridMode = isGridMode;
@@ -96,6 +98,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         return mCategoryFilter;
     }
 
+    @android.annotation.SuppressLint("NotifyDataSetChanged") // bulk filter rebuild
     private void applyFilter(String query) {
         List<AppInfo> base = mAllApps;
         // Category filter

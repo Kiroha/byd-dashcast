@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
  *  2. Display overscan margins (left/right and top/bottom in pixels)
  *     Applied via: wm overscan LEFT,TOP,RIGHT,BOTTOM -d <cluster_display_id>
  */
+@android.annotation.SuppressLint("SetTextI18n")
 public class SettingsActivity extends AppCompatActivity {
 
     @Override

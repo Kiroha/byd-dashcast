@@ -13,12 +13,14 @@
     android:id="@+id/root_overlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    tools:ignore="HardcodedText,Overdraw"
     android:background="@color/md_background">
 
 <LinearLayout
     android:id="@+id/root_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:baselineAligned="false"
     android:orientation="horizontal">
 
     <!-- ════════════════════════════════════════════════ -->

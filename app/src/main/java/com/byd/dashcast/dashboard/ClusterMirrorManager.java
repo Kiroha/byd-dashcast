@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Requires: ACCESS_SURFACE_FLINGER (signature permission, granted with platform.keystore)
  */
+@SuppressWarnings("deprecation")
 public class ClusterMirrorManager {
 
     private static final String TAG = "ClusterMirrorManager";
@@ -76,7 +77,7 @@ public class ClusterMirrorManager {
             Method getRuntimeMethod = (Method) getDeclaredMethod.invoke(vmRuntimeClass, "getRuntime", null);
             Object vmRuntime = getRuntimeMethod.invoke(null);
             Method setExemptions = (Method) getDeclaredMethod.invoke(vmRuntimeClass,
-                    "setHiddenApiExemptions", new Class[]{String[].class});
+                    "setHiddenApiExemptions", new Class<?>[]{String[].class});
             setExemptions.invoke(vmRuntime, new Object[]{
                     new String[]{"Landroid/", "Lcom/android/", "Ljava/lang/"}
             });

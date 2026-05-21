@@ -17,6 +17,7 @@ import android.widget.TextView;
  * On subsequent launches, MainActivity starts directly
  * (voir logique dans onStart ci-dessous).
  */
+@android.annotation.SuppressLint("SetTextI18n")
 public class WelcomeActivity extends AppCompatActivity {
 
     @Override

@@ -46,6 +46,8 @@ import java.util.concurrent.Executors;
  *   /sdcard/Android/data/com.byd.dashcast/files/byd_report_<date>.txt
  * Retrievable via: adb pull /sdcard/Android/data/com.byd.dashcast/files/
  */
+@SuppressWarnings("deprecation")
+@android.annotation.SuppressLint("SetTextI18n")
 public class SysInfoActivity extends AppCompatActivity {
 
     private TextView tvReport;
@@ -632,9 +634,8 @@ public class SysInfoActivity extends AppCompatActivity {
         try {
             PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
             if (dVal != null) dVal.setText("v" + pi.versionName);
-            int code;
-            if (Build.VERSION.SDK_INT >= 28) code = (int) pi.getLongVersionCode();
-            else code = pi.versionCode;
+            // minSdk=29 -> getLongVersionCode() always available
+            int code = (int) pi.getLongVersionCode();
             String signTag = isPlatformSigned()
                     ? getString(R.string.sysinfo_tile_dashcast_platform_signed)
                     : getString(R.string.sysinfo_tile_dashcast_user_signed);

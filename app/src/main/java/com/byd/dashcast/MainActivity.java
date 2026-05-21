@@ -66,6 +66,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
  * clicks "→ Dashboard" to send it to the small screen behind the steering wheel.
  * The "Restore BYD" button brings back the speed/battery/gear widget.
  */
+@android.annotation.SuppressLint({"ClickableViewAccessibility","SetTextI18n"}) // cluster touches forwarded to display 1; debug labels intentional
+@SuppressWarnings("deprecation")
 public class MainActivity extends AppCompatActivity
         implements ClusterService.Listener,
                    AppListAdapter.OnSendToDashboardListener {
@@ -305,7 +307,7 @@ public class MainActivity extends AppCompatActivity
         // (Activity exists in back stack → onNewIntent fires instead of onCreate)
         handleShowMirrorIntent(getIntent());
 
-        mStatusDot          = (View)     findViewById(R.id.view_status_dot);
+        mStatusDot          =            findViewById(R.id.view_status_dot);
         tvDashboardStatus   = (TextView) findViewById(R.id.tv_dashboard_status);
         mStatusDotDrawable  = new android.graphics.drawable.GradientDrawable();
         mStatusDotDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
@@ -314,7 +316,7 @@ public class MainActivity extends AppCompatActivity
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
         ivNavLogo           = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
         btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
-        llAppListSection    = (View)     findViewById(R.id.ll_app_list_section);
+        llAppListSection    =            findViewById(R.id.ll_app_list_section);
         rvApps             = (RecyclerView) findViewById(R.id.rv_apps);
         etSearch           = (android.widget.EditText) findViewById(R.id.et_search_apps);
         btnViewToggle      = (Button)   findViewById(R.id.btn_view_toggle);
@@ -992,6 +994,7 @@ public class MainActivity extends AppCompatActivity
         }
         // Use post to avoid IllegalStateException (cannot call notify during bind)
         rvApps.post(new Runnable() {
+            @android.annotation.SuppressLint("NotifyDataSetChanged") // full refresh after auto-launch toggle
             @Override
             public void run() {
                 mAdapter.notifyDataSetChanged();
@@ -1017,6 +1020,7 @@ public class MainActivity extends AppCompatActivity
     // v0.9.72 — long-press opens a bottom sheet with the per-app actions that
     // used to live as cramped chips inside each grid cell.
     @Override
+    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
     public void onShowActions(final AppInfo app) {
         if (app == null || isFinishing() || isDestroyed()) return;
         final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
@@ -2673,6 +2677,7 @@ public class MainActivity extends AppCompatActivity
      * the "Restore origin cluster" action. The action delegates to {@link #originCluster()}
      * which uses the screen size chosen in Settings (sendInfo cmd 29/30/31).
      */
+    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
     private void showStopProjectionSheet() {
         if (isFinishing() || isDestroyed()) return;
         final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
@@ -2903,48 +2908,6 @@ public class MainActivity extends AppCompatActivity
     /**
      * Loads the list of installed apps in a background thread, then publishes
      * the result on the main thread via Handler.
-     *
-     * HISTORY: before v2.07 this code used AsyncTask (API deprecated in API 30).
-     * The hardware target being Android 10 (API 29 — BYD DiLink 3.0), AsyncTask
-     * still worked, but its usage generates a warning and creates a strong implicit reference
-     * on MainActivity (risk of leak if the list takes time to load).
-     *
-     * ── ROLLBACK to AsyncTask (if needed) ────────────────────────────────────────
-     * 1. Replace this call in onCreate():
-     *        loadAppsAsync();
-     *    par :
-     *        new LoadAppsTask().execute();
-     *
-     * 2. Delete this method (loadAppsAsync) and replace it with the inner class:
-     *
-     *    private class LoadAppsTask extends android.os.AsyncTask<Void, Void, List<AppInfo>> {
-     *        @Override
-     *        protected List<AppInfo> doInBackground(Void... voids) {
-     *            PackageManager pm = getPackageManager();
-     *            Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
-     *            launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-     *            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
-     *            List<AppInfo> apps = new ArrayList<>();
-     *            for (ResolveInfo ri : resolveInfos) {
-     *                String pkg = ri.activityInfo.packageName;
-     *                if (pkg.equals(getPackageName())) continue;
-     *                apps.add(new AppInfo(pkg, ri.loadLabel(pm).toString(), ri.loadIcon(pm)));
-     *            }
-     *            Collections.sort(apps, new Comparator<AppInfo>() {
-     *                @Override public int compare(AppInfo a, AppInfo b) {
-     *                    return a.appName.compareToIgnoreCase(b.appName);
-     *                }
-     *            });
-     *            return apps;
-     *        }
-     *        @Override
-     *        protected void onPostExecute(List<AppInfo> apps) {
-     *            mAdapter.setApps(apps);
-     *        }
-     *    }
-     *
-     * 3. Re-add the import:  import android.os.AsyncTask;
-     * ────────────────────────────────────────────────────────────────────────────
      */
     private void loadAppsAsync() {
         java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {

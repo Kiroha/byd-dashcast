@@ -10,7 +10,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="?attr/colorSurface">
+    android:baselineAligned="false"
+    android:background="?attr/colorSurface"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="Overdraw">
 
     <!-- ============= Nav rail ============= -->
     <LinearLayout

@@ -18,7 +18,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="?attr/colorSurface">
+    android:baselineAligned="false"
+    android:background="?attr/colorSurface"
+    tools:ignore="ContentDescription,Overdraw">
 
     <!-- ============= Nav rail ============= -->
     <LinearLayout
@@ -153,6 +155,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
+            android:baselineAligned="false"
             android:weightSum="2">
 
             <!-- ═══════════════════════════════════════════════════════════ -->
