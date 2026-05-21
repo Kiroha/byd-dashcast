@@ -42,9 +42,8 @@
             android:layout_marginBottom="24dp"
             android:padding="10dp"
             android:scaleType="fitCenter"
-            android:tint="@color/md_on_primary_container"
+            android:src="@mipmap/ic_launcher"
             android:background="@drawable/bg_pulse_dot"
-            android:src="@drawable/ic_cast"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="@string/app_name"/>
