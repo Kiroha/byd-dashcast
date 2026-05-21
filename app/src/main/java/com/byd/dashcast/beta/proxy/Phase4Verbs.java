@@ -227,4 +227,61 @@ public final class Phase4Verbs {
             data.recycle();
         }
     }
+
+    // ─── IActivityManager (Phase 4d) ───────────────────────────────────────
+
+    private static volatile Object sActivityManager;
+    private static volatile Method sForceStopPackage;
+
+    private static Object activityManager() throws Throwable {
+        Object am = sActivityManager;
+        if (am != null) return am;
+        synchronized (Phase4Verbs.class) {
+            am = sActivityManager;
+            if (am != null) return am;
+            try {
+                Class<?> c = Class.forName("android.app.ActivityManager");
+                am = c.getMethod("getService").invoke(null);
+            } catch (Throwable ignore) {
+                Class<?> c = Class.forName("android.app.ActivityManagerNative");
+                am = c.getMethod("getDefault").invoke(null);
+            }
+            if (am == null) throw new IllegalStateException("no IActivityManager");
+            sActivityManager = am;
+            return am;
+        }
+    }
+
+    private static Method forceStopMethod(Object am) throws Throwable {
+        Method m = sForceStopPackage;
+        if (m != null) return m;
+        synchronized (Phase4Verbs.class) {
+            m = sForceStopPackage;
+            if (m != null) return m;
+            m = am.getClass().getMethod("forceStopPackage", String.class, int.class);
+            sForceStopPackage = m;
+            return m;
+        }
+    }
+
+    /**
+     * Equivalent of {@code am force-stop <packageName>}.
+     *
+     * <p>Probe P3 (build 173) confirmed {@code IActivityManager.forceStopPackage}
+     * is callable from uid 2000 on the BYD Seal EU (Android 10).
+     * Replaces the {@code dadb.shell("am force-stop …")} fork used by
+     * {@code AdbLocalClient.restoreBydOnCluster} and {@code restoreOriginCluster}
+     * — both run at the end of every projection session.
+     *
+     * <p>{@code userId} is the Android user ID; pass {@code -1} for
+     * {@code UserHandle.USER_ALL} (legacy {@code am force-stop} default).
+     */
+    public static void forceStopPackage(String packageName, int userId) throws Throwable {
+        if (packageName == null || packageName.isEmpty()) {
+            throw new IllegalArgumentException("packageName empty");
+        }
+        Object am = activityManager();
+        Method m = forceStopMethod(am);
+        m.invoke(am, packageName, userId);
+    }
 }

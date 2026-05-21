@@ -439,6 +439,38 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Phase 4d typed verb — direct {@code IActivityManager.forceStopPackage} in
+     * the daemon, replacing {@code dadb.shell("am force-stop <pkg>")} forks
+     * used by {@code AdbLocalClient.restoreBydOnCluster} and
+     * {@code restoreOriginCluster} (end-of-session teardown hot path).
+     *
+     * <p>Probe P3 (build 173) confirmed this call is accepted from uid 2000
+     * on the BYD Seal EU. Pass {@code -1} for {@code userId} to target all
+     * users (legacy {@code am force-stop} default behaviour).
+     */
+    public static void forceStopPackage(String packageName, int userId)
+            throws BetaProxyException {
+        synchronized (LOCK) {
+            if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeString(packageName);
+                data.writeInt(userId);
+                sBinder.transact(ProxyDaemonMain.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
+                reply.readException();
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
