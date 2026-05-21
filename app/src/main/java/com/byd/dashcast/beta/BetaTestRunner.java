@@ -175,6 +175,12 @@ public final class BetaTestRunner {
     }
 
     private static void testB1(TestResult r) throws Exception {
+        // systemMain() builds a Handler internally → needs a Looper on the
+        // current thread (matches BydAgent's Looper.prepare() prologue).
+        if (android.os.Looper.myLooper() == null) {
+            try { android.os.Looper.prepare(); }
+            catch (Throwable ignore) { /* already prepared */ }
+        }
         Class<?> at = Class.forName("android.app.ActivityThread");
         Method   m  = at.getMethod("systemMain");
         Object   thread = m.invoke(null);

@@ -2,6 +2,7 @@ package com.byd.dashcast.beta;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.os.Looper;
 
 import com.byd.dashcast.AppLogger;
 
@@ -57,6 +58,14 @@ public final class BetaSystemContext {
         if (c != null) return c;
         synchronized (BetaSystemContext.class) {
             if (sCached != null) return sCached;
+            // ActivityThread.systemMain() instantiates an internal Handler, which
+            // requires a Looper on the current thread. Match the BydAgent
+            // reference pattern (external_code/BydAgent.java) and prepare one if
+            // the caller is a background thread without a Looper.
+            if (Looper.myLooper() == null) {
+                try { Looper.prepare(); }
+                catch (Throwable ignore) { /* another thread or already prepared */ }
+            }
             try {
                 Class<?> at = Class.forName("android.app.ActivityThread");
                 Method   m1 = at.getMethod("systemMain");
