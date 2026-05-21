@@ -491,9 +491,15 @@ public class AdbLocalClient {
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
-                            BetaProxyClient.forceStopPackage(targetPackage, -1);
-                            sb.append("force-stop ").append(targetPackage).append(" (typed)\n");
+                            // Phase 4d.1 (build 180): userId=0 (current user) instead of -1.
+                            // USER_ALL (-1) is silently no-op on some API 29 BYD framework
+                            // builds — the call returned without throwing but the package
+                            // process remained alive (Waze stayed visible on display 0
+                            // after restoreBydOnCluster reported "typed ok").
+                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
                             Thread.sleep(500);
+                            verifyForceStop(targetPackage, sb);
                         }
                         BetaProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
@@ -578,9 +584,11 @@ public class AdbLocalClient {
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
-                            BetaProxyClient.forceStopPackage(targetPackage, -1);
-                            sb.append("force-stop ").append(targetPackage).append(" (typed)\n");
+                            // Phase 4d.1 (build 180): see restoreBydOnCluster above.
+                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
                             Thread.sleep(500);
+                            verifyForceStop(targetPackage, sb);
                         }
                         BetaProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
@@ -1093,6 +1101,29 @@ public class AdbLocalClient {
         if (s == null) return "(null)";
         s = s.trim();
         return s.isEmpty() ? "(empty)" : s;
+    }
+
+    /**
+     * Phase 4d.1 verification helper — after a typed forceStopPackage call,
+     * queries the daemon for surviving PIDs of {@code pkg}. Logs a WARN line
+     * if the kill was ineffective so we can spot silently-failing
+     * IActivityManager.forceStopPackage invocations in device logs (root cause
+     * of "Waze stays on display 0 after restoreBydOnCluster typed ok" in 179).
+     */
+    private static void verifyForceStop(String pkg, StringBuilder sb) {
+        try {
+            String pids = BetaProxyClient.getPidsByPackage(pkg);
+            if (pids != null && !pids.trim().isEmpty()) {
+                AppLogger.w(TAG, "beta force-stop ineffective for " + pkg
+                        + " (pids=" + pids.trim() + ")");
+                sb.append("  WARN: still alive, pids=").append(pids.trim()).append("\n");
+            } else {
+                sb.append("  verified killed\n");
+            }
+        } catch (Throwable t) {
+            // Verification must not break the teardown sequence.
+            AppLogger.w(TAG, "verifyForceStop(" + pkg + ") threw: " + t.getMessage());
+        }
     }
 
 }
