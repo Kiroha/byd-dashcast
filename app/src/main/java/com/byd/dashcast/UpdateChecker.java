@@ -119,15 +119,16 @@ public class UpdateChecker {
         String tag = release.getString("tag_name");
         String latestVer = tag.startsWith("v") ? tag.substring(1) : tag;
 
-        if (!isNewer(latestVer, BuildConfig.VERSION_NAME)) {
+        if (!isNewer(latestVer, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)) {
             AppLogger.i(TAG, "Up to date (current=" + BuildConfig.VERSION_NAME
-                    + " latest=" + latestVer + ")");
+                    + "+build" + BuildConfig.VERSION_CODE + " latest=" + latestVer + ")");
             if (listener != null) ui.post(listener::onUpToDate);
             return;
         }
 
         String changelog = release.optString("body", "No changelog provided.");
-        AppLogger.i(TAG, "Update available: " + BuildConfig.VERSION_NAME + " → " + latestVer);
+        AppLogger.i(TAG, "Update available: " + BuildConfig.VERSION_NAME
+                + "+build" + BuildConfig.VERSION_CODE + " → " + latestVer);
 
         // 2. Find APK asset URL
         JSONArray assets = release.getJSONArray("assets");
@@ -151,20 +152,53 @@ public class UpdateChecker {
 
     // ── Version comparison ────────────────────────────────────────────────────
 
-    static boolean isNewer(String latest, String current) {
-        int[] l = parseVer(latest);
-        int[] c = parseVer(current);
+    /**
+     * @param latest tag from GitHub (e.g. "1.1.9", "1.1.9-build170", "1.2.0-rc1")
+     * @param currentName {@link BuildConfig#VERSION_NAME} (e.g. "1.1.9")
+     * @param currentCode {@link BuildConfig#VERSION_CODE} (e.g. 170)
+     *
+     * <p>Algorithm:
+     * <ol>
+     *   <li>Compare base semantic versions (numeric parts only). If they differ,
+     *       the higher one wins.</li>
+     *   <li>If base versions are equal AND the latest tag carries a {@code -buildN}
+     *       suffix, the build number is compared against {@code currentCode}.
+     *       This supports the versioning policy where {@code versionName} is
+     *       pinned and only {@code versionCode} increments between releases.</li>
+     * </ol>
+     */
+    static boolean isNewer(String latest, String currentName, int currentCode) {
+        int latestBuild = extractBuild(latest);     // -1 if no "-buildN" suffix
+        String latestBase = stripSuffix(latest);    // "1.1.9-build170" → "1.1.9"
+        int[] l = parseVer(latestBase);
+        int[] c = parseVer(currentName);
         for (int i = 0; i < Math.max(l.length, c.length); i++) {
             int lv = i < l.length ? l[i] : 0;
             int cv = i < c.length ? c[i] : 0;
             if (lv != cv) return lv > cv;
         }
-        return false;
+        // Base versions are equal — fall back to the build number when available.
+        return latestBuild > 0 && latestBuild > currentCode;
+    }
+
+    /** Returns the integer N from a "-buildN" / "-bN" suffix, or {@code -1}. */
+    private static int extractBuild(String tag) {
+        int dash = tag.indexOf('-');
+        if (dash < 0 || dash + 1 >= tag.length()) return -1;
+        String suffix = tag.substring(dash + 1);
+        if (suffix.startsWith("build")) suffix = suffix.substring(5);
+        else if (suffix.startsWith("b") && suffix.length() > 1
+                && Character.isDigit(suffix.charAt(1))) suffix = suffix.substring(1);
+        try { return Integer.parseInt(suffix); } catch (NumberFormatException e) { return -1; }
+    }
+
+    /** Strips anything from the first '-' onwards. */
+    private static String stripSuffix(String v) {
+        int dash = v.indexOf('-');
+        return dash < 0 ? v : v.substring(0, dash);
     }
 
     private static int[] parseVer(String v) {
-        int dash = v.indexOf('-');
-        if (dash >= 0) v = v.substring(0, dash);
         String[] parts = v.split("\\.");
         int[] nums = new int[parts.length];
         for (int i = 0; i < parts.length; i++) {
