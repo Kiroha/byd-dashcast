@@ -46,7 +46,7 @@
     <string name="menu_log">📜 Журналдар</string>
     <string name="menu_language">🌐 Тіл</string>
     <string name="menu_check_updates">🔄 Жаңартуларды тексеру</string>
-    <string name="settings_prerelease_label">Алдын нұсқаларды қосу (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">Ресми шығарылымға дейін сынақ нұсқаларды алу</string>
     <string name="cluster_label_88">8,8 дюйм  (cmd=29)</string>
     <string name="cluster_label_123">12,3 дюйм (cmd=30) — Seal EU</string>

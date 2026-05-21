@@ -45,7 +45,7 @@
     <string name="menu_log">📜 السجلات</string>
     <string name="menu_language">🌐 اللغة</string>
     <string name="menu_check_updates">🔄 التحقق من التحديثات</string>
-    <string name="settings_prerelease_label">تضمين إصدارات ما قبل الإصدار (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">استلام إصدارات تجريبية قبل الإصدار الرسمي</string>
     <string name="cluster_label_88">8,8 بوصة  (cmd=29)</string>
     <string name="cluster_label_123">12,3 بوصة (cmd=30) — Seal EU</string>

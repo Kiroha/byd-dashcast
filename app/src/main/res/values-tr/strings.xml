@@ -48,7 +48,7 @@
     <string name="menu_log">📜 Günlükler</string>
     <string name="menu_language">🌐 Dil</string>
     <string name="menu_check_updates">🔄 Güncellemeleri kontrol et</string>
-    <string name="settings_prerelease_label">Ön sürümleri dahil et (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">Resmi sürümden önce test sürümlerini al</string>
     <string name="cluster_label_88">8,8 inç  (cmd=29)</string>
     <string name="cluster_label_123">12,3 inç (cmd=30) — Seal EU</string>

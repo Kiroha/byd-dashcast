@@ -48,7 +48,7 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Language</string>
     <string name="menu_check_updates">🔄 Check for updates</string>
-    <string name="settings_prerelease_label">Include pre-release builds (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">Receive test builds before official releases</string>
     <string name="cluster_label_88">8.8 inches  (cmd=29)</string>
     <string name="cluster_label_123">12.3 inches (cmd=30) — Seal EU</string>
