@@ -67,6 +67,12 @@ public final class ProxyDaemonMain {
     public static final int TXN_WHOAMI = android.os.IBinder.FIRST_CALL_TRANSACTION + 1;    // 2
     /** Transaction: {@code String cmd} → {@code int exit, String combinedOutput}. */
     public static final int TXN_EXEC   = android.os.IBinder.FIRST_CALL_TRANSACTION + 2;    // 3
+    /** Transaction: no args → {@code String pipeSeparatedProbeResults}. Phase 4 feasibility. */
+    public static final int TXN_PROBE_PHASE4 = android.os.IBinder.FIRST_CALL_TRANSACTION + 3; // 4
+
+    /** Set in {@link #main(String[])} once the system context is acquired, so
+     *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
+    private static volatile Context sSystemContext;
 
     private ProxyDaemonMain() {}
 
@@ -86,6 +92,7 @@ public final class ProxyDaemonMain {
                 System.exit(2);
                 return;
             }
+            sSystemContext = systemContext;
 
             Intent intent = new Intent(ACTION_PROXY_CONNECTED)
                     .setPackage(TARGET_PKG)
@@ -167,6 +174,23 @@ public final class ProxyDaemonMain {
                         reply.writeNoException();
                         reply.writeInt(er.exit);
                         reply.writeString(er.output);
+                    }
+                    return true;
+                }
+                case TXN_PROBE_PHASE4: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String result;
+                    try {
+                        result = Phase4Probes.runAll(sSystemContext);
+                    } catch (Throwable t) {
+                        // Probe harness must never crash the daemon — fall back to a
+                        // synthetic single-token error so the client side still parses.
+                        result = "P0=FAIL_OTHER:harness " + t.getClass().getSimpleName()
+                                + " " + (t.getMessage() == null ? "" : t.getMessage());
+                    }
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeString(result);
                     }
                     return true;
                 }
