@@ -69,6 +69,9 @@ public final class ProxyDaemonMain {
     public static final int TXN_EXEC   = android.os.IBinder.FIRST_CALL_TRANSACTION + 2;    // 3
     /** Transaction: no args → {@code String pipeSeparatedProbeResults}. Phase 4 feasibility. */
     public static final int TXN_PROBE_PHASE4 = android.os.IBinder.FIRST_CALL_TRANSACTION + 3; // 4
+    /** Transaction: {@code int displayId, int l, int t, int r, int b} → nothing (or thrown exception).
+     *  Phase 4a typed verb replacing {@code wm overscan L,T,R,B -d displayId}. */
+    public static final int TXN_SET_OVERSCAN = android.os.IBinder.FIRST_CALL_TRANSACTION + 4; // 5
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -191,6 +194,35 @@ public final class ProxyDaemonMain {
                     if (reply != null) {
                         reply.writeNoException();
                         reply.writeString(result);
+                    }
+                    return true;
+                }
+                case TXN_SET_OVERSCAN: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int displayId = data.readInt();
+                    int l = data.readInt();
+                    int t = data.readInt();
+                    int r = data.readInt();
+                    int b = data.readInt();
+                    try {
+                        Phase4Verbs.setOverscan(displayId, l, t, r, b);
+                        if (reply != null) {
+                            reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        // Surface the real cause to the client so it can fall back to
+                        // the shell path with full diagnostic context.
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            // writeException needs a real Exception subclass; wrap if necessary.
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
                     }
                     return true;
                 }

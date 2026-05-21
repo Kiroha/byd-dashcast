@@ -329,6 +329,42 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Phase 4a typed verb — direct {@code IWindowManager.setOverscan} via the
+     * daemon's cached binder, replacing the {@code sh -c "wm overscan …"} fork.
+     *
+     * <p>Equivalent to {@code wm overscan left,top,right,bottom -d displayId}.
+     * Probe P1 (build 173) proved this call succeeds from uid 2000 on the
+     * BYD Seal EU. Typical latency: a few ms (first call may include the
+     * one-shot reflection cache warm-up in {@link com.byd.dashcast.beta.proxy.Phase4Verbs}).
+     */
+    public static void setOverscan(int displayId, int left, int top, int right, int bottom)
+            throws BetaProxyException {
+        synchronized (LOCK) {
+            if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInt(displayId);
+                data.writeInt(left);
+                data.writeInt(top);
+                data.writeInt(right);
+                data.writeInt(bottom);
+                sBinder.transact(ProxyDaemonMain.TXN_SET_OVERSCAN, data, reply, 0);
+                // readException() throws if the daemon side called writeException —
+                // that becomes our trigger for the legacy fallback in ShellGateway.
+                reply.readException();
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
