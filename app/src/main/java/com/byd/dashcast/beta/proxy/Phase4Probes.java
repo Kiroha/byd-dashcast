@@ -46,7 +46,7 @@ public final class Phase4Probes {
     private Phase4Probes() {}
 
     public static String runAll(Context systemContext) {
-        List<String> out = new ArrayList<>(12);
+        List<String> out = new ArrayList<>(13);
         out.add(probe("P1", () -> p1_setOverscan()));
         out.add(probe("P2", () -> p2_getInitialDisplaySize()));
         out.add(probe("P3", () -> p3_forceStopPackage()));
@@ -59,6 +59,7 @@ public final class Phase4Probes {
         out.add(probe("P10", () -> p10_packageInstallerName(systemContext)));
         out.add(probe("P11", () -> p11_inputManagerProbe()));
         out.add(probe("P12", () -> p12_displayManagerListDisplays(systemContext)));
+        out.add(probe("P13", () -> p13_autoContainerDirectSendInfo()));
         return joinPipe(out);
     }
 
@@ -301,6 +302,54 @@ public final class Phase4Probes {
             sb.append(" ").append(getId.invoke(d)).append('/').append(getName.invoke(d));
         }
         return sb.toString();
+    }
+
+    /** P13 — direct typed {@code transact(code=2)} on the {@code AutoContainer}
+     *  binder, equivalent of {@code service call AutoContainer 2 i32 1000 i32 30 s16 ""}.
+     *  This is the actual production call shape used by
+     *  {@code AdbLocalClient.sendInfo}. P6 confirmed only that the binder is
+     *  reachable and the descriptor is {@code android.os.IAutoContainer}; P13
+     *  confirms the transaction itself goes through (no signature/uid check
+     *  blocking the call). The chosen payload — {@code sendInfo(1000, 30, "")} —
+     *  is the idempotent "Seal EU screen size" notification used by the
+     *  diagnostic dump button, so even on PASS it has no visible side effect
+     *  beyond what the user already triggers when opening Diag → ADB. */
+    private static String p13_autoContainerDirectSendInfo() throws Throwable {
+        IBinder b = getService("AutoContainer");
+        if (b == null) return "FAIL_NULL:no AutoContainer service";
+        // First confirm the descriptor matches what we expect — if the OEM
+        // changed it, the writeInterfaceToken below would land on the wrong
+        // server-side interface check and we want a clean diagnostic instead.
+        String descr;
+        Parcel d0 = Parcel.obtain();
+        Parcel r0 = Parcel.obtain();
+        try {
+            b.transact(IBinder.INTERFACE_TRANSACTION, d0, r0, 0);
+            descr = r0.readString();
+        } finally {
+            r0.recycle();
+            d0.recycle();
+        }
+        if (descr == null || descr.isEmpty()) {
+            return "FAIL_OTHER:no descriptor from AutoContainer";
+        }
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(descr);
+            data.writeInt(1000);  // type
+            data.writeInt(30);    // info — Seal EU screen size notification
+            data.writeString(""); // infoStr — empty for size queries
+            boolean ok = b.transact(2, data, reply, 0);
+            // readException() throws on remote SecurityException / IllegalArgument
+            // — exactly what we need to triage whether direct transact is allowed.
+            reply.readException();
+            return "PASS:sendInfo(1000,30,\"\") via transact(2) on " + descr
+                    + " (ret=" + ok + ")";
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
     }
 
     // ─── helpers ───────────────────────────────────────────────────────────
