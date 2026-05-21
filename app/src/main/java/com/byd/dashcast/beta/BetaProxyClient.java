@@ -1,41 +1,47 @@
 package com.byd.dashcast.beta;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.net.LocalSocket;
-import android.net.LocalSocketAddress;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.IBinder;
+import android.os.Parcel;
+import android.os.RemoteException;
 import android.os.SystemClock;
 
 import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.beta.proxy.BinderParcelable;
+import com.byd.dashcast.beta.proxy.ProxyDaemonMain;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * BetaProxyClient — Component A client. Talks to the proxy daemon
- * (see {@link com.byd.dashcast.beta.proxy.ProxyDaemonMain}) over a
- * {@link LocalSocket} in the abstract namespace.
+ * BetaProxyClient — Component A client (v1.1.6+).
  *
- * <p>If no daemon is running, {@link #connect(Context)} attempts to bootstrap
- * one by issuing an {@code app_process} command through
- * {@link AdbLocalClient} (which triggers the standard ADB-pairing flow). The
- * spawned daemon inherits the {@code shell} UID (2000) and outlives the app.
+ * <p>Talks to the proxy daemon (see {@link ProxyDaemonMain}) over a
+ * direct {@link IBinder} reference obtained via a one-shot broadcast that
+ * the daemon emits at startup (from a system {@link Context} obtained via
+ * {@code ActivityThread.systemMain()}). This pattern is borrowed from
+ * OpenBYD and replaces the abstract-namespace {@link android.net.LocalSocket}
+ * used up to 1.1.5, which was blocked by SELinux for {@code untrusted_app}
+ * → {@code shell} connects on Android 10+.
  *
- * <p>Thread-safety: all public methods synchronize on a static lock, and the
- * underlying socket I/O is serialised. Concurrent callers will queue.
+ * <p>If no daemon is running, {@link #connect(Context)} registers a dynamic
+ * {@link BroadcastReceiver} for {@link ProxyDaemonMain#ACTION_PROXY_CONNECTED}
+ * and then bootstraps a daemon by issuing an {@code app_process64} command
+ * through {@link AdbLocalClient} (which triggers the standard ADB-pairing
+ * flow). The spawned daemon inherits the {@code shell} UID (2000) and
+ * outlives the app.
+ *
+ * <p>Thread-safety: all public methods synchronize on a static lock, and
+ * concurrent callers will queue.
  */
 public final class BetaProxyClient {
 
     private static final String TAG = "BetaProxyClient";
-
-    private static final String SOCKET_NAME = "dashcast_proxy";
 
     /** App package whose APK hosts the daemon main class. Must match the installed package. */
     private static final String DAEMON_PKG = "com.byd.dashcast";
@@ -47,42 +53,35 @@ public final class BetaProxyClient {
     private static final String DAEMON_LOG = "/data/local/tmp/dashcast_proxy.log";
 
     /**
-     * Bootstrap script run via local ADB. Mirrors the proven
-     * {@code MirrorDaemon} recipe used elsewhere in the app:
+     * Bootstrap script run via local ADB. Mirrors the proven {@code MirrorDaemon}
+     * recipe and preserves every hard-won fix from 1.1.3–1.1.5:
      * <ul>
      *   <li>{@code setsid} detaches from the ADB session group (survives SIGHUP);</li>
-     *   <li>explicit {@code /system/bin/app_process64} (bare {@code app_process}
-     *       symlink is not always present / SELinux-accessible on BYD images);</li>
+     *   <li>explicit {@code /system/bin/app_process64};</li>
      *   <li>{@code -Xnoimage-dex2oat} avoids an AOT crash at startup;</li>
-     *   <li>{@code /system/bin} as the parent directory (not {@code /});</li>
-     *   <li>{@code --nice-name=dashcast_proxy} sets argv[0] before our own
-     *       {@code setArgV0} call gets a chance;</li>
-     *   <li>stdout/stderr redirected to {@link #DAEMON_LOG} so cold-start
-     *       failures are diagnosable from the host.</li>
+     *   <li>{@code --nice-name=dashcast_proxy} sets argv[0] so the stale-kill
+     *       heuristic below ({@code ps -A | grep '[d]ashcast_proxy'}) keeps working;</li>
+     *   <li>stdout/stderr redirected to {@link #DAEMON_LOG} for cold-start diag.</li>
      * </ul>
      */
     private static final String BOOTSTRAP_CMD =
             "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
             + "LOG=" + DAEMON_LOG + "; "
-            // Kill any stale daemon still holding the abstract socket. Without this
-            // step a daemon spawned in a previous session (it survives app shutdown
-            // because of `setsid`) keeps owning @dashcast_proxy and every new
-            // bootstrap dies with "Address already in use" (observed in 1.1.4).
-            // The [d] trick avoids matching the grep process itself; `awk` extracts
-            // the PID; `xargs -r` is a no-op when no PID is found.
+            // Kill any stale daemon from a previous session (it survives app shutdown
+            // because of `setsid`). Without this, a new daemon would broadcast its
+            // binder on top of the old one — the app receiver only keeps the last
+            // one, but two live processes would still be wasteful.
             + "STALE=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}'); "
             + "if [ -n \"$STALE\" ]; then kill -9 $STALE 2>/dev/null; sleep 0.3; fi; "
-            // Wipe + instrument: makes future failures self-diagnostic.
+            // Self-diagnostic header so a failed bootstrap is debuggable from the log.
             + "{ echo \"[boot] $(date) apk=$APK\"; "
             +   "echo \"[boot] id=$(id)\"; "
             +   "echo \"[boot] getenforce=$(getenforce 2>/dev/null)\"; "
             +   "echo \"[boot] stale_killed=${STALE:-none}\"; "
             +   "ls -la \"$APK\" 2>&1; "
             +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
-            // Critical: double quotes around `sh -c \"...\"` so the OUTER shell expands
-            // $APK before handing it to setsid. With single quotes (the bug in 1.1.3),
-            // the inner shell saw CLASSPATH=$APK literally → app_process64 SIGABRT.
+            // Outer double-quotes so $APK expands BEFORE setsid hands the string to sh.
             + "setsid sh -c \"CLASSPATH='$APK' exec /system/bin/app_process64"
             +     " -Xnoimage-dex2oat /system/bin"
             +     " --nice-name=dashcast_proxy"
@@ -90,36 +89,40 @@ public final class BetaProxyClient {
             +     " </dev/null >>'$LOG' 2>&1\" & "
             + "echo OK $APK";
 
-    /** Fetched after a connect() failure to surface the daemon's first error line(s) in test messages. */
+    /** Fetched after a connect() failure to surface the daemon's first error line(s). */
     private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
-    private static final int  SOCKET_TIMEOUT_MS    = 3000;
     private static final int  BOOTSTRAP_TIMEOUT_MS = 8000;
-    private static final long RETRY_DELAY_MS       = 300L;
-    private static final int  RETRY_COUNT          = 8;
+    private static final int  BROADCAST_WAIT_MS    = 8000;
 
     private static final Object LOCK = new Object();
 
-    private static LocalSocket    sSocket;
-    private static BufferedReader sIn;
-    private static PrintWriter    sOut;
-    private static int            sDaemonUid = -1;
-    private static int            sDaemonPid = -1;
-    private static String         sDaemonVer;
+    /** The live binder reference, or {@code null} when the daemon is unreachable. */
+    private static IBinder sBinder;
+    /** Receiver registered once on first {@link #connect(Context)}; reused thereafter. */
+    private static BroadcastReceiver sReceiver;
+    /** Set just before bootstrap; counted-down by {@link #sReceiver} on arrival. */
+    private static volatile CountDownLatch sBinderLatch;
+
+    private static int    sDaemonUid = -1;
+    private static int    sDaemonPid = -1;
+    private static String sDaemonVer;
 
     private BetaProxyClient() {}
 
-    /** @return {@code true} if a socket connection to the daemon is currently open. */
+    /** @return {@code true} if a live binder to the daemon is currently held. */
     public static boolean isConnected() {
         synchronized (LOCK) {
-            return sSocket != null && sSocket.isConnected() && !sSocket.isClosed();
+            return sBinder != null && sBinder.pingBinder();
         }
     }
 
     /**
-     * Ensure the daemon is reachable. If a socket is already open, returns immediately.
-     * Otherwise: (1) tries to connect to the existing daemon; (2) on failure, spawns one
-     * via {@link AdbLocalClient}; (3) retries the connect a few times with backoff.
+     * Ensure the daemon is reachable. If a binder is already cached and live,
+     * returns immediately. Otherwise: (1) registers a receiver if not done yet;
+     * (2) bootstraps a daemon via {@link AdbLocalClient}; (3) waits up to
+     * {@link #BROADCAST_WAIT_MS} for the daemon's connect-broadcast; (4)
+     * runs the WHOAMI handshake.
      *
      * @return {@code true} on success.
      */
@@ -127,33 +130,39 @@ public final class BetaProxyClient {
         synchronized (LOCK) {
             if (isConnected()) return true;
 
-            // 1. fast path: try connecting to a daemon that's already alive
-            if (tryOpenSocket()) {
-                handshake();
-                if (isConnected()) return true;
-            }
+            ensureReceiverRegistered(ctx);
 
-            // 2. cold start: bootstrap via local ADB
-            AppLogger.i(TAG, "no daemon found, bootstrapping via AdbLocalClient");
+            // arm the latch BEFORE bootstrapping so a fast broadcast isn't missed
+            sBinderLatch = new CountDownLatch(1);
+
+            AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
             String bootMsg = bootstrap(ctx);
             AppLogger.d(TAG, "bootstrap result: " + bootMsg);
 
-            // 3. retry the connect with backoff
-            for (int i = 0; i < RETRY_COUNT; i++) {
-                try { Thread.sleep(RETRY_DELAY_MS); }
-                catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
-                if (tryOpenSocket()) {
-                    handshake();
-                    if (isConnected()) {
-                        AppLogger.i(TAG, "daemon ready after " + (i + 1) + " retries (uid="
-                                + sDaemonUid + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
-                        return true;
-                    }
+            CountDownLatch latch = sBinderLatch;
+            try {
+                if (!latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS)) {
+                    AppLogger.w(TAG, "no PROXY_CONNECTED broadcast within "
+                            + BROADCAST_WAIT_MS + "ms");
+                    return false;
                 }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
             }
 
-            AppLogger.w(TAG, "daemon unreachable after bootstrap");
-            return false;
+            if (sBinder == null) {
+                AppLogger.w(TAG, "broadcast received but binder was null");
+                return false;
+            }
+
+            handshake();
+            boolean ok = isConnected();
+            if (ok) {
+                AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
+                        + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
+            }
+            return ok;
         }
     }
 
@@ -162,12 +171,10 @@ public final class BetaProxyClient {
      * Useful to surface the real cold-start error (class not found, SELinux,
      * dex2oat failure, etc.) in the Diag test message when {@link #connect(Context)}
      * has returned {@code false}.
-     *
-     * @return the (trimmed) tail content, or a short marker if unavailable.
      */
     public static String readDaemonLogTail(Context ctx) {
-        final java.util.concurrent.atomic.AtomicReference<String> out = new java.util.concurrent.atomic.AtomicReference<>();
-        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        final AtomicReference<String> out = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(1);
         AdbLocalClient.executeShellWithResult(ctx, READ_LOG_CMD, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String s) { out.set(s); latch.countDown(); }
             @Override public void onError(String e)   { out.set("<log read failed: " + e + ">"); latch.countDown(); }
@@ -182,10 +189,13 @@ public final class BetaProxyClient {
         return (s == null || s.isEmpty()) ? "<empty>" : s;
     }
 
-    /** Close the socket. The daemon keeps running. */
+    /** Forget the cached binder. The daemon keeps running. */
     public static void disconnect() {
         synchronized (LOCK) {
-            closeQuietly();
+            sBinder = null;
+            sDaemonUid = -1;
+            sDaemonPid = -1;
+            sDaemonVer = null;
         }
     }
 
@@ -193,16 +203,23 @@ public final class BetaProxyClient {
     public static long ping() {
         synchronized (LOCK) {
             if (!isConnected()) return -1L;
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
             try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
                 long t0 = SystemClock.elapsedRealtime();
-                String reply = sendRecvSingle("PING");
+                sBinder.transact(ProxyDaemonMain.TXN_PING, data, reply, 0);
                 long t1 = SystemClock.elapsedRealtime();
-                if (reply == null || !reply.startsWith("OK ")) return -1L;
+                reply.readException();
+                reply.readLong(); // epoch ms — unused, kept to drain the parcel
                 return t1 - t0;
-            } catch (IOException e) {
+            } catch (RemoteException e) {
                 AppLogger.w(TAG, "ping failed: " + e.getMessage());
-                closeQuietly();
+                sBinder = null;
                 return -1L;
+            } finally {
+                reply.recycle();
+                data.recycle();
             }
         }
     }
@@ -224,76 +241,89 @@ public final class BetaProxyClient {
 
     /**
      * Run a shell command on the daemon and return its combined stdout/stderr.
-     * Blocks until the daemon sends an {@code OK exit=N} or {@code ERR ...} terminator.
+     * Blocks until the daemon completes the command.
      */
     public static String runShell(String cmd) throws BetaProxyException {
         synchronized (LOCK) {
             if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
             try {
-                sOut.println("EXEC " + cmd);
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = sIn.readLine()) != null) {
-                    if (line.startsWith("DAT ")) {
-                        if (sb.length() > 0) sb.append('\n');
-                        sb.append(line, 4, line.length());
-                    } else if (line.startsWith("OK ")) {
-                        return sb.toString();
-                    } else if (line.startsWith("ERR ")) {
-                        throw new BetaProxyException(line.substring(4));
-                    } else {
-                        // unknown frame — be tolerant
-                        if (sb.length() > 0) sb.append('\n');
-                        sb.append(line);
-                    }
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeString(cmd);
+                sBinder.transact(ProxyDaemonMain.TXN_EXEC, data, reply, 0);
+                reply.readException();
+                int exit = reply.readInt();
+                String output = reply.readString();
+                if (exit != 0 && output != null && output.startsWith("ERR ")) {
+                    throw new BetaProxyException(output.substring(4));
                 }
-                throw new BetaProxyException("connection closed mid-command");
-            } catch (IOException e) {
-                closeQuietly();
-                throw new BetaProxyException("I/O: " + e.getMessage(), e);
+                return output == null ? "" : output;
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
             }
         }
     }
 
     // ─── internals ─────────────────────────────────────────────────────────
 
-    private static boolean tryOpenSocket() {
-        try {
-            LocalSocket s = new LocalSocket();
-            s.connect(new LocalSocketAddress(SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT));
-            s.setSoTimeout(SOCKET_TIMEOUT_MS);
-            sSocket = s;
-            sIn  = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            sOut = new PrintWriter(
-                    new BufferedWriter(new OutputStreamWriter(s.getOutputStream())),
-                    true /* autoFlush */);
-            return true;
-        } catch (IOException e) {
-            return false; // expected when daemon not yet running
-        }
-    }
-
-    private static void handshake() {
-        try {
-            String reply = sendRecvSingle("WHOAMI");
-            if (reply != null && reply.startsWith("OK ")) {
-                String body = reply.substring(3);
-                sDaemonUid = parseInt(body, "uid=", -1);
-                sDaemonPid = parseInt(body, "pid=", -1);
-                sDaemonVer = parseStr(body, "ver=");
-            } else {
-                AppLogger.w(TAG, "unexpected WHOAMI reply: " + reply);
-                closeQuietly();
+    /**
+     * Register the dynamic {@link BroadcastReceiver} once per app process.
+     * Uses the application context so the lifetime is tied to the process,
+     * not to any short-lived Activity that happens to call us first.
+     */
+    private static void ensureReceiverRegistered(Context ctx) {
+        if (sReceiver != null) return;
+        final Context appCtx = ctx.getApplicationContext();
+        sReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                if (intent == null) return;
+                if (!ProxyDaemonMain.ACTION_PROXY_CONNECTED.equals(intent.getAction())) return;
+                BinderParcelable bp = intent.getParcelableExtra(ProxyDaemonMain.EXTRA_BINDER);
+                if (bp == null || bp.binder == null) {
+                    AppLogger.w(TAG, "PROXY_CONNECTED received without binder extra");
+                    return;
+                }
+                synchronized (LOCK) {
+                    sBinder = bp.binder;
+                    AppLogger.i(TAG, "binder received from daemon (alive=" + sBinder.pingBinder() + ")");
+                    CountDownLatch latch = sBinderLatch;
+                    if (latch != null) latch.countDown();
+                }
             }
-        } catch (IOException e) {
-            AppLogger.w(TAG, "handshake I/O failed: " + e.getMessage());
-            closeQuietly();
-        }
+        };
+        IntentFilter filter = new IntentFilter(ProxyDaemonMain.ACTION_PROXY_CONNECTED);
+        // 2-arg form: targetSdk=29 so platform does not enforce RECEIVER_EXPORTED.
+        // If targetSdk is ever raised to 33+, switch to the 3-arg overload with
+        // Context.RECEIVER_EXPORTED (the broadcaster is in another process / uid).
+        appCtx.registerReceiver(sReceiver, filter);
+        AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonMain.ACTION_PROXY_CONNECTED);
     }
 
-    private static String sendRecvSingle(String cmd) throws IOException {
-        sOut.println(cmd);
-        return sIn.readLine();
+    /** Issue the WHOAMI transaction to populate uid/pid/version caches. */
+    private static void handshake() {
+        if (sBinder == null) return;
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            sBinder.transact(ProxyDaemonMain.TXN_WHOAMI, data, reply, 0);
+            reply.readException();
+            sDaemonUid = reply.readInt();
+            sDaemonPid = reply.readInt();
+            sDaemonVer = reply.readString();
+        } catch (RemoteException e) {
+            AppLogger.w(TAG, "handshake failed: " + e.getMessage());
+            sBinder = null;
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
     }
 
     /** Issue the bootstrap script via legacy ADB and wait (briefly) for it to finish. */
@@ -313,29 +343,6 @@ public final class BetaProxyClient {
             return "ERR interrupted";
         }
         return out.get();
-    }
-
-    private static void closeQuietly() {
-        try { if (sOut    != null) sOut.close();    } catch (Throwable ignore) {}
-        try { if (sIn     != null) sIn.close();     } catch (Throwable ignore) {}
-        try { if (sSocket != null) sSocket.close(); } catch (Throwable ignore) {}
-        sSocket = null;
-        sIn     = null;
-        sOut    = null;
-    }
-
-    private static int parseInt(String body, String key, int fallback) {
-        String v = parseStr(body, key);
-        if (v == null) return fallback;
-        try { return Integer.parseInt(v); } catch (NumberFormatException e) { return fallback; }
-    }
-
-    private static String parseStr(String body, String key) {
-        int i = body.indexOf(key);
-        if (i < 0) return null;
-        int start = i + key.length();
-        int end = body.indexOf(' ', start);
-        return end < 0 ? body.substring(start) : body.substring(start, end);
     }
 
     /** Thrown when the proxy daemon path fails — caller should fall back to legacy. */

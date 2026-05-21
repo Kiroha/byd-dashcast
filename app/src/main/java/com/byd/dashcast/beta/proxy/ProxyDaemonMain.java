@@ -1,71 +1,120 @@
 package com.byd.dashcast.beta.proxy;
 
-import android.net.LocalServerSocket;
-import android.net.LocalSocket;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Binder;
+import android.os.Looper;
+import android.os.Parcel;
 import android.os.Process;
+import android.os.RemoteException;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.lang.reflect.Method;
 
 /**
- * ProxyDaemonMain — entry point for the Beta Engine Component A daemon.
+ * ProxyDaemonMain — entry point for the Beta Engine Component A daemon (v1.1.6+).
  *
- * <p>Started by the app via {@code AdbLocalClient} with a command of the form:
- * <pre>
- *   APK=$(pm path com.byd.dashcast | head -1 | cut -d: -f2-)
- *   CLASSPATH="$APK" nohup app_process / com.byd.dashcast.beta.proxy.ProxyDaemonMain \
- *       &gt;/dev/null 2&gt;&amp;1 &lt;/dev/null &amp;
- * </pre>
+ * <p>Started by {@link com.byd.dashcast.beta.BetaProxyClient} via {@code app_process64}
+ * over a local-ADB pairing session, so the JVM inherits the {@code shell} UID
+ * (2000) of the ADB connection.
  *
- * <p>The daemon thus inherits the {@code shell} UID (2000) of the ADB local
- * session, exposes a {@link LocalServerSocket} in the abstract namespace
- * ({@link #SOCKET_NAME}) and serves a tiny line-based protocol:
+ * <p>Since Android 10+ SELinux denies {@code untrusted_app}→{@code shell}
+ * {@code unix_stream_socket connectto} (the 1.1.5 failure mode), this version
+ * does NOT expose a {@link android.net.LocalServerSocket}. Instead it follows
+ * the pattern used by OpenBYD and our own {@code MirrorDaemon}:
+ * <ol>
+ *   <li>Acquire a system {@link Context} via reflective
+ *       {@code ActivityThread.systemMain().getSystemContext()}.</li>
+ *   <li>Publish a {@link Binder} subclass implementing the
+ *       {@code com.byd.dashcast.beta.proxy.IProxyDaemon} contract.</li>
+ *   <li>Broadcast {@link #ACTION_PROXY_CONNECTED} targeted at the app package
+ *       with the binder wrapped in a {@link BinderParcelable} extra.</li>
+ *   <li>Enter {@link Looper#loop()} to keep the binder pool alive.</li>
+ * </ol>
+ *
+ * <p>The wire protocol on top of {@link Binder#transact} is a tiny fixed set of
+ * transactions identified by integer codes:
  * <ul>
- *   <li>{@code PING} → {@code OK pong &lt;epoch_ms&gt;}</li>
- *   <li>{@code WHOAMI} → {@code OK uid=&lt;n&gt; pid=&lt;n&gt; ver=&lt;v&gt;}</li>
- *   <li>{@code EXEC &lt;cmd&gt;} → {@code DAT &lt;line&gt;}* {@code OK exit=&lt;n&gt;} or {@code ERR &lt;msg&gt;}</li>
- *   <li>{@code QUIT} → closes the current client connection</li>
+ *   <li>{@link #TXN_PING}   — no args → {@code long} epoch_ms</li>
+ *   <li>{@link #TXN_WHOAMI} — no args → {@code int uid, int pid, String ver}</li>
+ *   <li>{@link #TXN_EXEC}   — {@code String cmd} → {@code int exit, String combinedOutput}</li>
  * </ul>
- *
- * <p>The daemon is single-process, multi-thread (one thread per client). It does
- * not auto-restart — the client is expected to re-bootstrap if it is gone.
  */
 public final class ProxyDaemonMain {
 
-    /** Abstract socket namespace name (no leading {@code @}; {@link LocalServerSocket} adds it). */
-    public static final String SOCKET_NAME = "dashcast_proxy";
+    /** AIDL-style descriptor for {@link Binder#attachInterface(android.os.IInterface, String)}. */
+    public static final String DESCRIPTOR = "com.byd.dashcast.beta.proxy.IProxyDaemon";
 
-    /** Protocol version returned by {@code WHOAMI}. Bump on any wire-incompatible change. */
-    public static final String PROTOCOL_VERSION = "1";
+    /** Broadcast action delivered to the app once the daemon is ready. */
+    public static final String ACTION_PROXY_CONNECTED = "com.byd.dashcast.beta.PROXY_CONNECTED";
 
-    /** Process name shown in {@code ps} after {@code setArgV0}. */
+    /** Parcelable extra key carrying the daemon's {@link BinderParcelable}. */
+    public static final String EXTRA_BINDER = "proxy_binder";
+
+    /** App package that should receive the broadcast (must own the receiver). */
+    public static final String TARGET_PKG = "com.byd.dashcast";
+
+    /** Protocol version reported by {@link #TXN_WHOAMI}. Bump on any wire-incompatible change. */
+    public static final String PROTOCOL_VERSION = "2";
+
+    /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
+
+    /** Transaction: no args → {@code long} (epoch ms). */
+    public static final int TXN_PING   = android.os.IBinder.FIRST_CALL_TRANSACTION;        // 1
+    /** Transaction: no args → {@code int uid, int pid, String ver}. */
+    public static final int TXN_WHOAMI = android.os.IBinder.FIRST_CALL_TRANSACTION + 1;    // 2
+    /** Transaction: {@code String cmd} → {@code int exit, String combinedOutput}. */
+    public static final int TXN_EXEC   = android.os.IBinder.FIRST_CALL_TRANSACTION + 2;    // 3
 
     private ProxyDaemonMain() {}
 
     public static void main(String[] args) {
         try {
             renameProcess();
-            LocalServerSocket server = new LocalServerSocket(SOCKET_NAME);
-            log("listening on @" + SOCKET_NAME
-                    + " uid=" + Process.myUid()
+            Looper.prepareMainLooper();
+
+            ProxyBinder binder = new ProxyBinder();
+            log("binder ready uid=" + Process.myUid()
                     + " pid=" + Process.myPid()
                     + " ver=" + PROTOCOL_VERSION);
-            while (true) {
-                LocalSocket client = server.accept();
-                Thread t = new Thread(() -> handle(client), "proxy-client");
-                t.setDaemon(true);
-                t.start();
+
+            Context systemContext = acquireSystemContext();
+            if (systemContext == null) {
+                log("FATAL: no system context — cannot broadcast binder");
+                System.exit(2);
+                return;
             }
+
+            Intent intent = new Intent(ACTION_PROXY_CONNECTED)
+                    .setPackage(TARGET_PKG)
+                    .putExtra(EXTRA_BINDER, new BinderParcelable(binder))
+                    // FLAG_INCLUDE_STOPPED_PACKAGES so the app receives the broadcast
+                    // even right after a force-stop — important for the bootstrap flow
+                    // where the receiver was just dynamically registered.
+                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+            systemContext.sendBroadcast(intent);
+            log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
+
+            Looper.loop();
         } catch (Throwable t) {
             log("FATAL: " + t);
             t.printStackTrace();
             System.exit(1);
+        }
+    }
+
+    /** Reflective hop to obtain a usable system {@link Context} from inside {@code app_process}. */
+    private static Context acquireSystemContext() {
+        try {
+            Class<?> at = Class.forName("android.app.ActivityThread");
+            Object thread = at.getMethod("systemMain").invoke(null);
+            Object ctx    = at.getMethod("getSystemContext").invoke(thread);
+            return (Context) ctx;
+        } catch (Throwable t) {
+            log("acquireSystemContext failed: " + t);
+            return null;
         }
     }
 
@@ -74,54 +123,88 @@ public final class ProxyDaemonMain {
             Method m = Process.class.getDeclaredMethod("setArgV0", String.class);
             m.invoke(null, PROC_NAME);
         } catch (Throwable ignore) {
-            // not fatal — process keeps its app_process name
+            // not fatal — process keeps its app_process / --nice-name argv[0]
         }
     }
 
-    private static void handle(LocalSocket s) {
-        try (LocalSocket sock = s;
-             BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-             PrintWriter out = new PrintWriter(
-                     new BufferedWriter(new OutputStreamWriter(sock.getOutputStream())),
-                     true /* autoFlush */)) {
-            String line;
-            while ((line = in.readLine()) != null) {
-                if (line.equals("PING")) {
-                    out.println("OK pong " + System.currentTimeMillis());
-                } else if (line.equals("WHOAMI")) {
-                    out.println("OK uid=" + Process.myUid()
-                            + " pid=" + Process.myPid()
-                            + " ver=" + PROTOCOL_VERSION);
-                } else if (line.startsWith("EXEC ")) {
-                    runShell(line.substring(5), out);
-                } else if (line.equals("QUIT")) {
-                    out.println("OK bye");
-                    return;
-                } else {
-                    out.println("ERR unknown command");
+    /**
+     * Binder published to the app. Uses raw {@link Binder#onTransact} (no AIDL
+     * codegen needed — keeps the build simple and the wire format obvious).
+     */
+    static final class ProxyBinder extends Binder {
+
+        ProxyBinder() {
+            attachInterface(null, DESCRIPTOR);
+        }
+
+        @Override
+        protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
+                throws RemoteException {
+            switch (code) {
+                case TXN_PING: {
+                    data.enforceInterface(DESCRIPTOR);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeLong(System.currentTimeMillis());
+                    }
+                    return true;
                 }
+                case TXN_WHOAMI: {
+                    data.enforceInterface(DESCRIPTOR);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(Process.myUid());
+                        reply.writeInt(Process.myPid());
+                        reply.writeString(PROTOCOL_VERSION);
+                    }
+                    return true;
+                }
+                case TXN_EXEC: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String cmd = data.readString();
+                    ExecResult er = runShell(cmd);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(er.exit);
+                        reply.writeString(er.output);
+                    }
+                    return true;
+                }
+                case INTERFACE_TRANSACTION: {
+                    if (reply != null) reply.writeString(DESCRIPTOR);
+                    return true;
+                }
+                default:
+                    return super.onTransact(code, data, reply, flags);
             }
-        } catch (IOException e) {
-            log("client IO err: " + e);
         }
     }
 
-    private static void runShell(String cmd, PrintWriter out) {
+    private static final class ExecResult {
+        final int    exit;
+        final String output;
+        ExecResult(int exit, String output) { this.exit = exit; this.output = output; }
+    }
+
+    private static ExecResult runShell(String cmd) {
+        if (cmd == null) return new ExecResult(-1, "ERR null command");
         try {
             java.lang.Process p = new ProcessBuilder("sh", "-c", cmd)
                     .redirectErrorStream(true)
                     .start();
+            StringBuilder sb = new StringBuilder();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                 String l;
                 while ((l = r.readLine()) != null) {
-                    out.println("DAT " + l);
+                    if (sb.length() > 0) sb.append('\n');
+                    sb.append(l);
                 }
             }
             int code = p.waitFor();
-            out.println("OK exit=" + code);
+            return new ExecResult(code, sb.toString());
         } catch (Throwable t) {
             String msg = t.getMessage();
-            out.println("ERR " + (msg == null ? t.getClass().getSimpleName() : msg));
+            return new ExecResult(-1, "ERR " + (msg == null ? t.getClass().getSimpleName() : msg));
         }
     }
 
