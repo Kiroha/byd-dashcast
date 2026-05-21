@@ -145,6 +145,8 @@ public final class BetaTestRunner {
                 "Confirms input service stub bindable (injectInputEvent path)."));
         list.add(new TestDef("P12", Family.P, "DisplayManager.getDisplays",
                 "Typed display enumeration via system Context."));
+        list.add(new TestDef("P13", Family.P, "AutoContainer.transact(2) direct",
+                "sendInfo(1000,30,\"\") via direct transact — Phase 4c go/no-go."));
 
         return Collections.unmodifiableList(list);
     }
@@ -202,6 +204,7 @@ public final class BetaTestRunner {
             case "X3": testX3(r); break;
             case "P1": case "P2": case "P3": case "P4": case "P5": case "P6":
             case "P7": case "P8": case "P9": case "P10": case "P11": case "P12":
+            case "P13":
                 testProbe(ctx, r);
                 break;
             default:
