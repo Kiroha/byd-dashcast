@@ -52,10 +52,12 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_STRESS      = 4;
     private static final int TAB_BETA_ENGINE = 5;
     private static final int TAB_DILINK5     = 6;
+    private static final int TAB_SNIFFER     = 7;
 
     private TabLayout    tabs;
     private View         panelBeta;
     private View         panelDl5;
+    private View         panelSniffer;
     private View         panelComingSoon;
 
     // Beta panel views
@@ -97,9 +99,11 @@ public class DiagActivity extends AppCompatActivity {
         bindTabs();
         bindBetaPanel();
         bindDl5Panel();
+        bindSnifferPanel();
         prepareTestRows();
         prepareDl5TestRows();
         updateStatusPills();
+        restoreSnifferState();
         // Default tab: DiLink 5 when auto-detected as DL5, Beta Engine otherwise.
         int defaultTab = Platform.get().isAutoDetectedDiLink5() ? TAB_DILINK5 : TAB_BETA_ENGINE;
         tabs.selectTab(tabs.getTabAt(defaultTab));
@@ -134,6 +138,7 @@ public class DiagActivity extends AppCompatActivity {
         tabs            = findViewById(R.id.tabs_diag);
         panelBeta       = findViewById(R.id.panel_beta_engine);
         panelDl5        = findViewById(R.id.panel_dilink5);
+        panelSniffer    = findViewById(R.id.panel_sniffer);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -144,12 +149,14 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void showPanelForTab(int position) {
-        boolean isBeta = position == TAB_BETA_ENGINE;
-        boolean isDl5  = position == TAB_DILINK5;
+        boolean isBeta    = position == TAB_BETA_ENGINE;
+        boolean isDl5     = position == TAB_DILINK5;
+        boolean isSniffer = position == TAB_SNIFFER;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5) {
+        panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
+        panelComingSoon.setVisibility((isBeta || isDl5 || isSniffer) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isSniffer) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -484,5 +491,260 @@ public class DiagActivity extends AppCompatActivity {
         String report = DiLink5TestRunner.buildReport(this, dl5LastResults);
         AppLogger.i("DiagActivity", "DiLink 5 report:\n" + report);
         AppLogger.shareWithReport(this, report);
+    }
+
+    // ─── RE Sniffer panel (restored in build 181) ───────────────────────────
+    // Captures continuous logcat + periodic dumpsys snapshots into a single
+    // BYD_RE_Sniffer_*.txt file. Background processes use setsid so they
+    // survive Activity destruction (rotation, app pause). State restored from
+    // SharedPreferences on each onCreate.
+
+    private static final String RE_SNIFFER_TAG    = ".re_sniffer_run";
+    private static final String RE_SNIFFER_PIDS   = ".re_sniffer_pids";
+    private static final String RE_SNIFFER_PREFIX = "BYD_RE_Sniffer_";
+    private static final String PREF_SNIFFER      = "byd_diag_prefs";
+    private static final String PREF_SNIFFER_PATH = "re_sniffer_file_path";
+
+    private TextView       tvSnifferStatusPill;
+    private TextView       tvSnifferStatus;
+    private MaterialButton btnSnifferStart;
+    private MaterialButton btnSnifferStop;
+    private MaterialButton btnSnifferSnapshot;
+    private MaterialButton btnSnifferExport;
+    private java.io.File   mSnifferFile;
+
+    private void bindSnifferPanel() {
+        tvSnifferStatusPill = panelSniffer.findViewById(R.id.tv_sniffer_status_pill);
+        tvSnifferStatus     = panelSniffer.findViewById(R.id.tv_sniffer_status);
+        btnSnifferStart     = panelSniffer.findViewById(R.id.btn_sniffer_start);
+        btnSnifferStop      = panelSniffer.findViewById(R.id.btn_sniffer_stop);
+        btnSnifferSnapshot  = panelSniffer.findViewById(R.id.btn_sniffer_snapshot);
+        btnSnifferExport    = panelSniffer.findViewById(R.id.btn_sniffer_export);
+
+        btnSnifferStart.setOnClickListener(v -> startSniffer());
+        btnSnifferStop.setOnClickListener(v -> stopSniffer());
+        btnSnifferSnapshot.setOnClickListener(v -> snapshotSniffer());
+        btnSnifferExport.setOnClickListener(v -> exportSniffer());
+    }
+
+    private void setSnifferUiActive(boolean active, String detail) {
+        if (mDestroyed) return;
+        tvSnifferStatusPill.setText(active ? "ACTIF" : "INACTIF");
+        tvSnifferStatusPill.setTextColor(active ? 0xFF69F0AE : 0xFFFF8A80);
+        if (detail != null) tvSnifferStatus.setText(detail);
+        btnSnifferStart.setEnabled(!active);
+        btnSnifferStop.setEnabled(active);
+        btnSnifferSnapshot.setEnabled(active);
+        btnSnifferExport.setEnabled(mSnifferFile != null && mSnifferFile.exists() && mSnifferFile.length() > 0);
+    }
+
+    private java.io.File buildSnifferFile() {
+        String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                .format(new java.util.Date());
+        java.io.File dir = getExternalFilesDir(null);
+        if (dir == null) dir = getFilesDir();
+        return new java.io.File(dir, RE_SNIFFER_PREFIX + ts + ".txt");
+    }
+
+    /**
+     * Checks SharedPreferences for a saved sniffer path and verifies the
+     * .re_sniffer_run tag file still exists (meaning bg processes are still alive).
+     */
+    private void restoreSnifferState() {
+        String saved = getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE)
+                .getString(PREF_SNIFFER_PATH, null);
+        if (saved == null) { setSnifferUiActive(false, null); return; }
+
+        java.io.File f = new java.io.File(saved);
+        if (!f.exists() || f.length() == 0) {
+            getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                    .remove(PREF_SNIFFER_PATH).apply();
+            setSnifferUiActive(false, null);
+            return;
+        }
+
+        mSnifferFile = f;
+        AdbLocalClient.executeShellWithResult(this,
+                "[ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ] && echo ACTIVE || echo STOPPED",
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                final boolean active = out.trim().equals("ACTIVE");
+                safeRunOnUiThread(() -> {
+                    if (active) {
+                        setSnifferUiActive(true, "ACTIF → " + f.getName() + "\n("
+                                + (f.length() / 1024) + " KB capturés)");
+                    } else {
+                        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                                .remove(PREF_SNIFFER_PATH).apply();
+                        // File still exists on disk → keep export enabled
+                        setSnifferUiActive(false, "Capture précédente arrêtée → " + f.getName()
+                                + "\n(" + (f.length() / 1024) + " KB) — exportable.");
+                    }
+                });
+            }
+            @Override public void onError(String err) {
+                safeRunOnUiThread(() -> setSnifferUiActive(false,
+                        "Capture précédente : " + f.getName()
+                        + " (" + (f.length() / 1024) + " KB, ADB local indisponible — exportable)"));
+            }
+        });
+    }
+
+    private void startSniffer() {
+        killSnifferProcesses();
+
+        mSnifferFile = buildSnifferFile();
+        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                .putString(PREF_SNIFFER_PATH, mSnifferFile.getAbsolutePath()).apply();
+        final String p  = mSnifferFile.getAbsolutePath();
+        final String pf = "/data/local/tmp/" + RE_SNIFFER_PIDS;
+        AppLogger.i("RESniffer", "Starting → " + p);
+
+        setSnifferUiActive(false, "Initialisation…");
+        btnSnifferStart.setEnabled(false);
+
+        String headerCmd =
+            "logcat -c 2>/dev/null"
+            + " ; touch /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; echo === BYD RE SNIFFER === > " + p
+            + " ; date >> " + p
+            + " ; getprop ro.product.model >> " + p
+            + " ; getprop ro.build.fingerprint >> " + p
+            + " ; echo --- DISPLAYS INITIAL --- >> " + p
+            + " ; dumpsys display 2>/dev/null >> " + p
+            + " ; echo --- SURFACEFLINGER INITIAL --- >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null >> " + p
+            + " ; echo --- PROCESSUS INITIAL --- >> " + p
+            + " ; ps -A 2>/dev/null >> " + p
+            + " ; echo === LIVE CAPTURE START === >> " + p;
+
+        AdbLocalClient.executeShellWithResult(this, headerCmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                String snapLoop =
+                    "while [ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ]; do sleep 10;"
+                    + " echo >> " + p + ";"
+                    + " printf \"=== SNAP %s ===\\n\" $(date +%H:%M:%S) >> " + p + ";"
+                    + " dumpsys display 2>/dev/null"
+                    + "   | grep -E \"mDisplayId|mName|mState|fission|virtual|cluster|layerStack\""
+                    + "   >> " + p + ";"
+                    + " dumpsys SurfaceFlinger 2>/dev/null"
+                    + "   | grep -iE \"display|fission|layer|cluster|mirror|virtual|qt\""
+                    + "   | head -30 >> " + p + ";"
+                    + " ps -A 2>/dev/null"
+                    + "   | grep -iE \"byd|xdja|daemon|dilink|qt|cluster|app_process\""
+                    + "   >> " + p + ";"
+                    + " done";
+
+                String bgCmd =
+                    "echo > " + pf
+                    + " ; setsid sh -c 'logcat -v threadtime >> " + p + " 2>&1'"
+                    + "   & echo $! >> " + pf
+                    + " ; setsid sh -c '" + snapLoop + "'"
+                    + "   & echo $! >> " + pf
+                    + " ; setsid sh -c 'logcat -b events -v time >> " + p + " 2>&1'"
+                    + "   & echo $! >> " + pf;
+
+                AdbLocalClient.executeShell(DiagActivity.this, bgCmd);
+
+                safeRunOnUiThread(() -> {
+                    setSnifferUiActive(true, "ACTIF → " + mSnifferFile.getName()
+                            + "\nCapture en cours (logcat + snapshots auto / 10 s)");
+                    Toast.makeText(DiagActivity.this,
+                            "Sniffer démarré → " + mSnifferFile.getName(),
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+            @Override public void onError(String err) {
+                safeRunOnUiThread(() -> {
+                    setSnifferUiActive(false, "❌ Échec init : " + err);
+                    AppLogger.e("RESniffer", "init failed: " + err);
+                });
+            }
+        });
+    }
+
+    private void killSnifferProcesses() {
+        String pidFile = "/data/local/tmp/" + RE_SNIFFER_PIDS;
+        String killCmd =
+            "rm -f /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; if [ -f " + pidFile + " ]; then"
+            + "   while IFS= read -r pid; do"
+            + "     [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null; done < " + pidFile + ";"
+            + "   rm -f " + pidFile + ";"
+            + " fi"
+            + " ; pkill -f " + RE_SNIFFER_PREFIX + " 2>/dev/null; true";
+        AdbLocalClient.executeShell(this, killCmd);
+    }
+
+    private void stopSniffer() {
+        killSnifferProcesses();
+        getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                .remove(PREF_SNIFFER_PATH).apply();
+        final String fileName = mSnifferFile != null ? mSnifferFile.getName() : "(aucun)";
+        if (mSnifferFile != null) {
+            AdbLocalClient.executeShell(this,
+                    "echo '[RE Sniffer] Stopped.' >> " + mSnifferFile.getAbsolutePath());
+        }
+        safeRunOnUiThread(() -> {
+            setSnifferUiActive(false, "Arrêté → " + fileName + "\nPrêt pour export.");
+            Toast.makeText(this, "Sniffer arrêté.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void snapshotSniffer() {
+        if (mSnifferFile == null) {
+            Toast.makeText(this, "Démarrer le sniffer d'abord.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final String p = mSnifferFile.getAbsolutePath();
+        String cmd =
+            "echo '' >> " + p
+            + " && echo '=== SNAPSHOT MANUEL '$(date +%H:%M:%S)' ===' >> " + p
+            + " && echo '--- DISPLAYS ---' >> " + p
+            + " && dumpsys display 2>/dev/null >> " + p
+            + " && echo '--- WINDOWS ---' >> " + p
+            + " && dumpsys window 2>/dev/null >> " + p
+            + " && echo '--- SURFACEFLINGER ---' >> " + p
+            + " && dumpsys SurfaceFlinger 2>/dev/null >> " + p
+            + " && echo '--- PROCESSUS ---' >> " + p
+            + " && ps -A >> " + p
+            + " && echo '--- BROADCASTS ---' >> " + p
+            + " && dumpsys activity broadcasts history 2>/dev/null >> " + p;
+        AdbLocalClient.executeShell(this, cmd);
+        Toast.makeText(this, "Snapshot ajouté.", Toast.LENGTH_SHORT).show();
+    }
+
+    private void exportSniffer() {
+        if (mSnifferFile == null) {
+            String saved = getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE)
+                    .getString(PREF_SNIFFER_PATH, null);
+            if (saved != null) mSnifferFile = new java.io.File(saved);
+        }
+        java.io.File logFile = mSnifferFile;
+        if (logFile == null || !logFile.exists() || logFile.length() == 0) {
+            Toast.makeText(this, "Aucun fichier sniffer à exporter.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", logFile);
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, logFile.getName());
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            shareIntent.setClipData(android.content.ClipData.newRawUri("", uri));
+            Intent chooser = Intent.createChooser(shareIntent, "Exporter Sniffer RE");
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
+        } catch (Exception e) {
+            AppLogger.e("RESniffer", "Export erreur", e);
+            Toast.makeText(this, "Export erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void safeRunOnUiThread(Runnable r) {
+        if (mDestroyed) return;
+        runOnUiThread(() -> { if (!mDestroyed) r.run(); });
     }
 }
