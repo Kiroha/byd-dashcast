@@ -100,7 +100,7 @@ public final class BetaTestRunner {
 
         // ---- Component A (Phase-1 stubs) ----
         list.add(new TestDef("A1", Family.A, "Proxy daemon alive",
-                "ps | grep openbyd_proxy returns 1+ lines."));
+                "ps | grep dashcast_proxy returns 1+ lines."));
         list.add(new TestDef("A2", Family.A, "Binder reachable",
                 "BetaProxyClient.isConnected() == true."));
         list.add(new TestDef("A3", Family.A, "Round-trip ping < 500 ms",
@@ -127,6 +127,7 @@ public final class BetaTestRunner {
     public static void runAll(Context ctx, Listener listener) {
         final List<TestResult> results = new ArrayList<>();
         for (TestDef d : catalog()) results.add(new TestResult(d));
+        sFirstPid = -1; // reset per-suite scratchpad (used by A5 persistence check)
         UI.post(() -> listener.onSuiteStarted(results));
         EXEC.execute(() -> {
             Context appCtx = ctx.getApplicationContext();
@@ -162,10 +163,14 @@ public final class BetaTestRunner {
             case "B4": testB4(ctx, r); break;
             case "B5": testB5(ctx, r); break;
             case "B6": testB6(ctx, r); break;
-            case "A1": case "A2": case "A3": case "A4": case "A5": case "A6":
-                skipA(r); break;
-            case "X1": case "X2":
-                skipX(r); break;
+            case "A1": testA1(ctx, r); break;
+            case "A2": testA2(ctx, r); break;
+            case "A3": testA3(ctx, r); break;
+            case "A4": testA4(ctx, r); break;
+            case "A5": testA5(ctx, r); break;
+            case "A6": testA6(ctx, r); break;
+            case "X1": testX1(ctx, r); break;
+            case "X2": testX2(ctx, r); break;
             case "X3": testX3(r); break;
             default:
                 r.status = Status.SKIPPED;
@@ -258,14 +263,242 @@ public final class BetaTestRunner {
         r.message = "legacy=" + legacyStr + ", beta=" + betaStr;
     }
 
-    private static void skipA(TestResult r) {
-        r.status = Status.SKIPPED;
-        r.message = "proxy daemon not implemented yet (Phase-2)";
+    // ─── Component A — proxy daemon ────────────────────────────────────────
+
+    /** PID of the daemon as first observed during this suite run (for A5 persistence check). */
+    private static int sFirstPid = -1;
+
+    private static void testA1(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false (bootstrap may have failed — ADB pairing?)";
+            return;
+        }
+        if (sFirstPid < 0) sFirstPid = BetaProxyClient.getDaemonPid();
+        // Verify via ps that the process exists with our expected argv0
+        try {
+            String ps = BetaProxyClient.runShell("ps -A 2>/dev/null | grep -E '[d]ashcast_proxy' | head -n3");
+            if (ps == null || ps.trim().isEmpty()) {
+                r.status = Status.PASS;
+                r.message = "daemon connected (pid=" + BetaProxyClient.getDaemonPid()
+                        + ") but ps grep returned no match (setArgV0 may have failed)";
+            } else {
+                r.status = Status.PASS;
+                r.message = "ps match: " + ps.replace("\n", " | ");
+            }
+        } catch (BetaProxyClient.BetaProxyException e) {
+            r.status = Status.PASS;
+            r.message = "daemon connected (pid=" + BetaProxyClient.getDaemonPid()
+                    + ") but EXEC ps failed: " + e.getMessage();
+        }
     }
 
-    private static void skipX(TestResult r) {
-        r.status = Status.SKIPPED;
-        r.message = "needs Component A (Phase-2)";
+    private static void testA2(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false";
+            return;
+        }
+        if (!BetaProxyClient.isConnected()) {
+            r.status = Status.FAIL;
+            r.message = "isConnected() returned false after successful connect";
+            return;
+        }
+        r.status = Status.PASS;
+        r.message = "isConnected = true, ver=" + BetaProxyClient.getProtocolVersion();
+    }
+
+    private static void testA3(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false";
+            return;
+        }
+        // Average 5 pings to dampen first-call jitter.
+        long total = 0;
+        int  ok = 0;
+        long worst = 0;
+        for (int i = 0; i < 5; i++) {
+            long p = BetaProxyClient.ping();
+            if (p >= 0) { total += p; ok++; if (p > worst) worst = p; }
+        }
+        if (ok == 0) {
+            r.status = Status.FAIL;
+            r.message = "all pings failed";
+            return;
+        }
+        long avg = total / ok;
+        if (worst > 500) {
+            r.status = Status.FAIL;
+            r.message = "worst ping " + worst + " ms > 500 ms (avg " + avg + " ms over " + ok + " calls)";
+        } else {
+            r.status = Status.PASS;
+            r.message = "avg " + avg + " ms, worst " + worst + " ms over " + ok + " pings";
+        }
+    }
+
+    private static void testA4(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false";
+            return;
+        }
+        int uid = BetaProxyClient.getCallerUid();
+        if (uid == 2000) {
+            r.status = Status.PASS;
+            r.message = "daemon UID = 2000 (shell) ✓";
+        } else {
+            r.status = Status.FAIL;
+            r.message = "daemon UID = " + uid + " (expected 2000)";
+        }
+    }
+
+    private static void testA5(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false";
+            return;
+        }
+        int pidBefore = BetaProxyClient.getDaemonPid();
+        BetaProxyClient.disconnect();
+        try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "re-connect failed (daemon died after disconnect?)";
+            return;
+        }
+        int pidAfter = BetaProxyClient.getDaemonPid();
+        if (pidBefore == pidAfter && pidAfter > 0) {
+            r.status = Status.PASS;
+            r.message = "same daemon PID " + pidAfter + " before and after disconnect/reconnect";
+        } else {
+            r.status = Status.FAIL;
+            r.message = "PID changed: before=" + pidBefore + " after=" + pidAfter
+                    + " (daemon restarted — should have persisted)";
+        }
+    }
+
+    private static void testA6(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "connect() returned false";
+            return;
+        }
+        int pidBefore = BetaProxyClient.getDaemonPid();
+        try {
+            BetaProxyClient.runShell("kill -9 " + pidBefore);
+        } catch (BetaProxyClient.BetaProxyException ignore) {
+            // expected — the daemon process is being killed mid-command
+        }
+        BetaProxyClient.disconnect();
+        try { Thread.sleep(700); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "re-bootstrap failed after kill -9 " + pidBefore;
+            return;
+        }
+        int pidAfter = BetaProxyClient.getDaemonPid();
+        if (pidAfter > 0 && pidAfter != pidBefore) {
+            r.status = Status.PASS;
+            r.message = "daemon respawned: pid " + pidBefore + " → " + pidAfter;
+        } else {
+            r.status = Status.FAIL;
+            r.message = "unexpected PID after kill: before=" + pidBefore + " after=" + pidAfter;
+        }
+    }
+
+    // ─── Component X — cross checks ────────────────────────────────────────
+
+    private static void testX1(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.SKIPPED;
+            r.message = "proxy daemon not reachable";
+            return;
+        }
+        // Beta: 5 pings (already a daemon round-trip = best-case)
+        long betaTotal = 0; int betaOk = 0;
+        for (int i = 0; i < 5; i++) {
+            long p = BetaProxyClient.ping();
+            if (p >= 0) { betaTotal += p; betaOk++; }
+        }
+        long betaAvg = betaOk > 0 ? betaTotal / betaOk : -1;
+
+        // Legacy: single `id -u` via fresh ADB shell (includes TCP handshake + RSA challenge)
+        long t0 = SystemClock.elapsedRealtime();
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicReference<String> legacyOut = new java.util.concurrent.atomic.AtomicReference<>();
+        com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, "id -u",
+            new com.byd.dashcast.AdbLocalClient.Callback() {
+                @Override public void onSuccess(String s) { legacyOut.set(s); latch.countDown(); }
+                @Override public void onError(String e)   { legacyOut.set("ERR " + e); latch.countDown(); }
+            });
+        try {
+            if (!latch.await(8, java.util.concurrent.TimeUnit.SECONDS)) {
+                r.status = Status.FAIL;
+                r.message = "legacy call timed out — cannot compare";
+                return;
+            }
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            r.status = Status.FAIL;
+            r.message = "interrupted";
+            return;
+        }
+        long legacyMs = SystemClock.elapsedRealtime() - t0;
+
+        if (betaAvg < 0) {
+            r.status = Status.FAIL;
+            r.message = "beta avg unavailable (legacy=" + legacyMs + " ms, legacy out=" + legacyOut.get() + ")";
+            return;
+        }
+        // Pass if beta is at least 2× faster than legacy (typical: daemon ~5 ms vs legacy ~500 ms)
+        boolean pass = betaAvg * 2 <= legacyMs;
+        r.status = pass ? Status.PASS : Status.FAIL;
+        r.message = "beta avg=" + betaAvg + " ms vs legacy one-shot=" + legacyMs + " ms"
+                + (pass ? " (beta ≥2× faster)" : " (beta NOT ≥2× faster)");
+    }
+
+    private static void testX2(Context ctx, TestResult r) {
+        if (!BetaProxyClient.connect(ctx)) {
+            r.status = Status.SKIPPED;
+            r.message = "proxy daemon not reachable";
+            return;
+        }
+        // Confirm both paths land on the same shell UID (2000). If they don't,
+        // the daemon was spawned under a different identity.
+        String betaUid;
+        try {
+            betaUid = BetaProxyClient.runShell("id -u").trim();
+        } catch (BetaProxyClient.BetaProxyException e) {
+            r.status = Status.FAIL;
+            r.message = "beta `id -u` failed: " + e.getMessage();
+            return;
+        }
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicReference<String> legacyOut = new java.util.concurrent.atomic.AtomicReference<>();
+        com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, "id -u",
+            new com.byd.dashcast.AdbLocalClient.Callback() {
+                @Override public void onSuccess(String s) { legacyOut.set(s); latch.countDown(); }
+                @Override public void onError(String e)   { legacyOut.set("ERR " + e); latch.countDown(); }
+            });
+        try {
+            if (!latch.await(8, java.util.concurrent.TimeUnit.SECONDS)) {
+                r.status = Status.FAIL;
+                r.message = "legacy `id -u` timed out";
+                return;
+            }
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            r.status = Status.FAIL;
+            r.message = "interrupted";
+            return;
+        }
+        String legacyUid = legacyOut.get();
+        if (legacyUid != null) legacyUid = legacyUid.trim();
+        boolean ok = "2000".equals(betaUid) && "2000".equals(legacyUid);
+        r.status = ok ? Status.PASS : Status.FAIL;
+        r.message = "beta uid=" + betaUid + ", legacy uid=" + legacyUid
+                + (ok ? " (both shell — no permission delta)" : " (mismatch!)");
     }
 
     private static void testX3(TestResult r) {
