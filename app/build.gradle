@@ -21,7 +21,7 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 28
         targetSdkVersion 29
-        versionCode 176
+        versionCode 177
         versionName "1.1.9"
     }
 

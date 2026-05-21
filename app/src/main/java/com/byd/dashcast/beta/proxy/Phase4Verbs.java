@@ -1,6 +1,7 @@
 package com.byd.dashcast.beta.proxy;
 
 import android.os.IBinder;
+import android.os.Parcel;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -143,5 +144,87 @@ public final class Phase4Verbs {
             }
         }
         return pids == null ? "" : pids.toString();
+    }
+
+    // ─── AutoContainer (Phase 4c) ──────────────────────────────────────────
+
+    /** Service name as registered with {@code ServiceManager}. Confirmed by probe P9. */
+    private static final String AUTOCONTAINER_SVC = "AutoContainer";
+    /** Transaction code for {@code sendInfo(int type, int info, String str)} — the
+     *  same code the BYD ROM accepts via {@code service call AutoContainer 2 …}. */
+    private static final int TXN_SEND_INFO = 2;
+
+    private static volatile IBinder sAutoContainerBinder;
+    private static volatile String  sAutoContainerDescriptor;
+
+    /**
+     * Resolve (and cache) the live {@link IBinder} for the {@code AutoContainer}
+     * service plus the descriptor it advertises via {@code INTERFACE_TRANSACTION}.
+     *
+     * <p>We read the descriptor at runtime rather than hard-coding
+     * {@code "android.os.IAutoContainer"} so future OEM rebrands of the service
+     * (descriptor renamed but transaction code unchanged) still go through.
+     *
+     * <p>Cache invalidation: if {@link IBinder#pingBinder} returns {@code false}
+     * (service process restarted), the cache is cleared and re-resolved.
+     */
+    private static IBinder autoContainerBinder() throws Throwable {
+        IBinder b = sAutoContainerBinder;
+        if (b != null && b.pingBinder()) return b;
+        synchronized (Phase4Verbs.class) {
+            b = sAutoContainerBinder;
+            if (b != null && b.pingBinder()) return b;
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            b = (IBinder) sm.getMethod("getService", String.class).invoke(null, AUTOCONTAINER_SVC);
+            if (b == null) throw new IllegalStateException("no '" + AUTOCONTAINER_SVC + "' service");
+            String descr;
+            Parcel d0 = Parcel.obtain();
+            Parcel r0 = Parcel.obtain();
+            try {
+                b.transact(IBinder.INTERFACE_TRANSACTION, d0, r0, 0);
+                descr = r0.readString();
+            } finally {
+                r0.recycle();
+                d0.recycle();
+            }
+            if (descr == null || descr.isEmpty()) {
+                throw new IllegalStateException(AUTOCONTAINER_SVC + " advertised empty descriptor");
+            }
+            sAutoContainerDescriptor = descr;
+            sAutoContainerBinder = b;
+            return b;
+        }
+    }
+
+    /**
+     * Equivalent of {@code service call AutoContainer 2 i32 <type> i32 <info> s16 "<str>"}.
+     *
+     * <p>Probe P13 (build 176) confirmed {@code transact(2, …)} is accepted from
+     * uid 2000 on the BYD Seal EU with descriptor {@code android.os.IAutoContainer}.
+     * Replaces the {@code dadb.shell("service call AutoContainer 2 …")} relay
+     * used by {@code AdbLocalClient.sendInfo}, eliminating both the shell parse
+     * + escape of double-quoted arguments AND the {@code service} binary fork.
+     *
+     * <p>{@code readException()} surfaces any remote
+     * {@code SecurityException} / {@code IllegalArgumentException} so the
+     * client side can fall back to the legacy shell wrapper with full
+     * diagnostic context.
+     */
+    public static void autoContainerSendInfo(int type, int info, String str) throws Throwable {
+        IBinder b = autoContainerBinder();
+        String descr = sAutoContainerDescriptor;
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(descr);
+            data.writeInt(type);
+            data.writeInt(info);
+            data.writeString(str == null ? "" : str);
+            b.transact(TXN_SEND_INFO, data, reply, 0);
+            reply.readException();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
     }
 }

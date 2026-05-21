@@ -75,6 +75,10 @@ public final class ProxyDaemonMain {
     /** Transaction: {@code String packageName} → {@code String spaceSeparatedPids}.
      *  Phase 4b typed verb replacing {@code pidof <pkg>} (state-poll hot path). */
     public static final int TXN_GET_PIDS = android.os.IBinder.FIRST_CALL_TRANSACTION + 5; // 6
+    /** Transaction: {@code int type, int info, String str} → nothing (or thrown exception).
+     *  Phase 4c typed verb replacing {@code service call AutoContainer 2 i32 … i32 … s16 "…"}
+     *  used by {@code AdbLocalClient.sendInfo}. */
+    public static final int TXN_AUTOCONTAINER_SEND_INFO = android.os.IBinder.FIRST_CALL_TRANSACTION + 6; // 7
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -249,6 +253,30 @@ public final class ProxyDaemonMain {
                     if (reply != null) {
                         reply.writeNoException();
                         reply.writeString(pids);
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_SEND_INFO: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int type = data.readInt();
+                    int info = data.readInt();
+                    String str = data.readString();
+                    try {
+                        Phase4Verbs.autoContainerSendInfo(type, info, str);
+                        if (reply != null) {
+                            reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
                     }
                     return true;
                 }
