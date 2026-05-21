@@ -88,7 +88,7 @@ watch(
 
       <div class="mockup-frame">
         <iframe
-          :src="`${mockupBase}#${s.screen}`"
+          :src="`${mockupBase}?embed=1#${s.screen}`"
           :title="s.title"
           loading="lazy"
         ></iframe>
@@ -153,7 +153,8 @@ watch(
 }
 .mockup-frame iframe {
   width: 100%;
-  height: 540px;
+  aspect-ratio: 16 / 9;
+  height: auto;
   border: 0;
   display: block;
   background: #0e1b2c;
