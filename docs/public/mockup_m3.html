@@ -802,6 +802,32 @@ body {
 .ergo-tile .title { font-size: 13px; font-weight: 500; color: var(--md-primary); margin-bottom: 4px; }
 .ergo-tile .val { font-size: 12px; color: var(--md-on-surface); font-family: 'Roboto Mono', monospace; }
 .ergo-tile .desc { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 4px; }
+
+/* ════════════════════════════════════════════════
+   EMBED MODE — single-screen view for docs iframes
+   Activated via ?embed=1 or when loaded inside an iframe.
+   Strips page chrome, shows only the screen targeted by
+   the URL hash (#screen-N), removes the outer bezel and
+   sizes the screen to the viewport so it fits the iframe
+   exactly with no scrollbars.
+   ════════════════════════════════════════════════ */
+body.embed { padding: 0; background: var(--md-bg); overflow: hidden; }
+body.embed .page-title,
+body.embed .page-sub,
+body.embed .screen-label { display: none; }
+body.embed .screens { gap: 0; display: block; }
+body.embed .screen-wrap { gap: 0; align-items: stretch; }
+body.embed .screen-wrap { display: none; }
+body.embed .screen-wrap.active { display: block; }
+body.embed .car-screen {
+  width: 1280px;
+  height: 720px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform-origin: top left;
+  transform: scale(var(--embed-scale, 1));
+}
 </style>
 </head>
 <body>
@@ -1632,6 +1658,39 @@ wifi:         <span class="val">Seal-Hotspot · -42 dBm</span>
     <li>Test visuel sur device + ajustements (probablement padding et density-specific)</li>
   </ol>
 </div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var inIframe = false;
+  try { inIframe = window.self !== window.top; } catch (e) { inIframe = true; }
+  if (!params.has('embed') && !inIframe) return;
+
+  document.body.classList.add('embed');
+
+  function applyScale() {
+    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    document.documentElement.style.setProperty('--embed-scale', String(scale));
+  }
+
+  function activate() {
+    var hash = (window.location.hash || '').replace(/^#/, '');
+    var screens = document.querySelectorAll('.screen-wrap');
+    var found = false;
+    screens.forEach(function (el) {
+      var on = el.id === hash;
+      el.classList.toggle('active', on);
+      if (on) found = true;
+    });
+    if (!found && screens.length) screens[0].classList.add('active');
+  }
+
+  activate();
+  applyScale();
+  window.addEventListener('hashchange', activate);
+  window.addEventListener('resize', applyScale);
+})();
+</script>
 
 </body>
 </html>
