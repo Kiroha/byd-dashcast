@@ -371,4 +371,6 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="diag_placeholder_title">Page Diag en cours de refonte</string>
+    <string name="diag_placeholder_subtitle">Les tests précédents ont été supprimés. De nouveaux outils diagnostiques arriveront ici prochainement.</string>
 </resources>

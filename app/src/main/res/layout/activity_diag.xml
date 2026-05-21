@@ -1,1356 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  v0.9.81 — DiagActivity M3 redesign.
-  Top section: 5 highlight test cards + Reset button → result panel on the right.
-  Bottom section: collapsible "Outils avancés" containing the legacy cards
-  (kept verbatim so DiagActivity.java findViewById calls keep working).
+    DiagActivity — M3 redesign (v0.9.88).
+    Tests from previous versions have been wiped; new diagnostic tools will be added
+    here from scratch. This is intentionally a clean slate with only the nav rail
+    and a placeholder hero card.
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/root_diag"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/md_background">
+    android:orientation="horizontal"
+    android:background="?attr/colorSurface">
 
+    <!-- ============= Nav rail ============= -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/ll_nav_rail_diag"
+        android:layout_width="96dp"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:background="@color/md_surface_container_low"
+        android:paddingTop="14dp" android:paddingBottom="14dp">
 
-        <!-- ════ NAV RAIL ════ -->
+        <ImageView
+            android:id="@+id/iv_nav_logo_diag"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:src="@drawable/ic_cast"
+            android:padding="10dp"
+            android:background="@drawable/bg_pulse_dot"
+            android:contentDescription="@string/app_name"
+            android:clickable="true" android:focusable="true"/>
+
+        <ImageView
+            android:id="@+id/nav_apps_diag"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="22dp"
+            android:src="@drawable/ic_apps"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_apps"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_apps"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_settings_diag"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_tune"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_settings"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_settings"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_stethoscope"
+            android:padding="10dp"
+            android:background="@drawable/bg_nav_pill_active"
+            android:contentDescription="@string/main_nav_diag"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_diag"
+            android:textSize="10sp" android:textColor="@color/md_primary"
+            android:textStyle="bold"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_sysinfo_diag"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_info"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_sysinfo"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_sysinfo"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <ImageView
+            android:id="@+id/nav_log_diag"
+            android:layout_width="48dp" android:layout_height="48dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_notes"
+            android:padding="10dp"
+            android:contentDescription="@string/main_nav_log"
+            android:clickable="true" android:focusable="true"/>
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/main_nav_log"
+            android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+            android:layout_marginTop="2dp"/>
+
+        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+    </LinearLayout>
+
+    <!-- ============= Main area ============= -->
+    <LinearLayout
+        android:layout_width="0dp" android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="20dp" android:paddingEnd="20dp"
+        android:paddingTop="20dp" android:paddingBottom="20dp">
+
+        <!-- Top bar -->
         <LinearLayout
-            android:id="@+id/ll_nav_rail_diag"
-            android:layout_width="96dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/md_surface_container_low"
-            android:paddingTop="20dp"
-            android:paddingBottom="16dp">
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <ImageView
-                android:id="@+id/iv_nav_logo_diag"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="24dp"
-                android:padding="10dp"
-                android:scaleType="fitCenter"
-                android:tint="@color/md_on_primary_container"
-                android:background="@drawable/bg_pulse_dot"
-                android:src="@drawable/ic_cast"
-                android:clickable="true"
-                android:focusable="true"
-                android:contentDescription="@string/app_name"/>
+            <TextView
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/main_nav_diag"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"/>
 
-            <LinearLayout
-                android:id="@+id/nav_apps_diag"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center_horizontal"
-                android:paddingTop="6dp" android:paddingBottom="6dp"
-                android:clickable="true" android:focusable="true"
-                android:background="?android:attr/selectableItemBackground">
-                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
-                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
-                    android:src="@drawable/ic_apps" android:contentDescription="@string/main_nav_apps"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/main_nav_apps"
-                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/nav_settings_diag"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center_horizontal"
-                android:paddingTop="10dp" android:paddingBottom="6dp"
-                android:clickable="true" android:focusable="true"
-                android:background="?android:attr/selectableItemBackground">
-                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
-                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
-                    android:src="@drawable/ic_tune" android:contentDescription="@string/main_nav_settings"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/main_nav_settings"
-                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
-            </LinearLayout>
-
-            <!-- Diag (active) -->
-            <LinearLayout
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center_horizontal"
-                android:paddingTop="10dp" android:paddingBottom="6dp">
-                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
-                    android:scaleType="fitCenter" android:tint="@color/md_on_secondary_container"
-                    android:background="@drawable/bg_nav_pill_active"
-                    android:src="@drawable/ic_stethoscope" android:contentDescription="@string/main_nav_diag"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/main_nav_diag"
-                    android:textSize="11sp" android:textColor="@color/md_on_surface"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/nav_sysinfo_diag"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center_horizontal"
-                android:paddingTop="10dp" android:paddingBottom="6dp"
-                android:clickable="true" android:focusable="true"
-                android:background="?android:attr/selectableItemBackground">
-                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
-                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
-                    android:src="@drawable/ic_info" android:contentDescription="@string/main_nav_sysinfo"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/main_nav_sysinfo"
-                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/nav_log_diag"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center_horizontal"
-                android:paddingTop="10dp" android:paddingBottom="6dp"
-                android:clickable="true" android:focusable="true"
-                android:background="?android:attr/selectableItemBackground">
-                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
-                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
-                    android:src="@drawable/ic_notes" android:contentDescription="@string/main_nav_log"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="@string/main_nav_log"
-                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
-            </LinearLayout>
-
-            <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="HH:mm"
+                android:format24Hour="HH:mm"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
 
-        <!-- ════ MAIN AREA ════ -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="12dp">
+        <!-- Placeholder hero -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/md_outline_variant"
+            app:cardBackgroundColor="@color/md_surface_container_low">
 
-            <!-- ── TOP BAR ── -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingStart="32dp" android:paddingEnd="32dp"
+                android:paddingTop="48dp" android:paddingBottom="48dp">
+
+                <ImageView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:src="@drawable/ic_stethoscope"
+                    android:padding="22dp"
+                    android:background="@drawable/bg_diag_card_icon"
+                    app:tint="@color/md_primary"
+                    android:contentDescription="@string/main_nav_diag"/>
 
                 <TextView
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="@string/diag_header"
-                    android:textColor="@color/md_on_surface"
-                    android:textSize="26sp"
-                    android:textStyle="bold"/>
-
-                <!-- Status pill: "Tous systèmes OK" -->
-                <LinearLayout
-                    android:id="@+id/ll_diag_global_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="14dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:layout_marginEnd="14dp"
-                    android:background="@drawable/bg_status_pill_ok">
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_marginEnd="6dp"
-                        android:scaleType="fitCenter"
-                        android:tint="@color/md_status_ok"
-                        android:src="@drawable/ic_check_circle"
-                        android:contentDescription="@null"/>
-                    <TextView
-                        android:id="@+id/tv_diag_global_status"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/diag_global_ok"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/md_status_ok"/>
-                </LinearLayout>
-
-                <TextClock
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:format12Hour="HH:mm"
-                    android:format24Hour="HH:mm"
-                    android:textSize="18sp"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/diag_placeholder_title"
+                    android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="@color/md_on_surface"/>
+                    android:textColor="?attr/colorOnSurface"
+                    android:gravity="center"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginEnd="32dp"
+                    android:text="@string/diag_placeholder_subtitle"
+                    android:textSize="14sp"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:gravity="center"/>
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <!-- ── BODY: two columns ── -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
-
-                <!-- ▶ LEFT COLUMN (test cards + advanced section) -->
-                <androidx.core.widget.NestedScrollView
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="match_parent"
-                    android:fillViewport="true"
-                    android:paddingEnd="10dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- ████ HIGHLIGHT CARDS ████ -->
-
-                        <!-- Card 1: Tester le mirror cluster -->
-                        <LinearLayout
-                            android:id="@+id/card_diag_mirror"
-                            style="@style/DiagHighlightCard">
-                            <FrameLayout style="@style/DiagCardIcon">
-                                <ImageView
-                                    android:id="@+id/iv_card_mirror_icon"
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center"
-                                    android:tint="@color/md_status_ok"
-                                    android:src="@drawable/ic_check_circle"/>
-                            </FrameLayout>
-                            <LinearLayout style="@style/DiagCardText">
-                                <TextView style="@style/DiagCardTitle"
-                                    android:text="@string/diag_card_mirror_title"/>
-                                <TextView style="@style/DiagCardSubtitle"
-                                    android:text="@string/diag_card_mirror_desc"/>
-                            </LinearLayout>
-                            <TextView
-                                android:id="@+id/tv_card_mirror_badge"
-                                style="@style/DiagCardBadge"
-                                android:visibility="gone"
-                                tools:text="OK · 320 ms"/>
-                            <ImageView
-                                android:id="@+id/iv_card_mirror_play"
-                                style="@style/DiagCardPlay"/>
-                        </LinearLayout>
-
-                        <!-- Card 2: Capturer le cluster -->
-                        <LinearLayout
-                            android:id="@+id/card_diag_capture"
-                            style="@style/DiagHighlightCard">
-                            <FrameLayout style="@style/DiagCardIcon">
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center"
-                                    android:tint="@color/md_on_secondary_container"
-                                    android:src="@drawable/ic_screenshot"/>
-                            </FrameLayout>
-                            <LinearLayout style="@style/DiagCardText">
-                                <TextView style="@style/DiagCardTitle"
-                                    android:text="@string/diag_card_capture_title"/>
-                                <TextView style="@style/DiagCardSubtitle"
-                                    android:text="@string/diag_card_capture_desc"/>
-                            </LinearLayout>
-                            <TextView
-                                android:id="@+id/tv_card_capture_badge"
-                                style="@style/DiagCardBadge"
-                                android:visibility="gone"/>
-                            <ImageView
-                                android:id="@+id/iv_card_capture_play"
-                                style="@style/DiagCardPlay"/>
-                        </LinearLayout>
-
-                        <!-- Card 3: Redémarrer ClusterService -->
-                        <LinearLayout
-                            android:id="@+id/card_diag_restart"
-                            style="@style/DiagHighlightCard">
-                            <FrameLayout style="@style/DiagCardIcon">
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center"
-                                    android:tint="@color/md_on_secondary_container"
-                                    android:src="@drawable/ic_restart_alt"/>
-                            </FrameLayout>
-                            <LinearLayout style="@style/DiagCardText">
-                                <TextView style="@style/DiagCardTitle"
-                                    android:text="@string/diag_card_restart_title"/>
-                                <TextView style="@style/DiagCardSubtitle"
-                                    android:text="@string/diag_card_restart_desc"/>
-                            </LinearLayout>
-                            <TextView
-                                android:id="@+id/tv_card_restart_badge"
-                                style="@style/DiagCardBadge"
-                                android:visibility="gone"/>
-                            <ImageView
-                                android:id="@+id/iv_card_restart_play"
-                                style="@style/DiagCardPlay"/>
-                        </LinearLayout>
-
-                        <!-- Card 4: Vérifier ADB local -->
-                        <LinearLayout
-                            android:id="@+id/card_diag_adb"
-                            style="@style/DiagHighlightCard">
-                            <FrameLayout style="@style/DiagCardIcon">
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center"
-                                    android:tint="@color/md_on_secondary_container"
-                                    android:src="@drawable/ic_wifi"/>
-                            </FrameLayout>
-                            <LinearLayout style="@style/DiagCardText">
-                                <TextView style="@style/DiagCardTitle"
-                                    android:text="@string/diag_card_adb_title"/>
-                                <TextView style="@style/DiagCardSubtitle"
-                                    android:text="@string/diag_card_adb_desc"/>
-                            </LinearLayout>
-                            <TextView
-                                android:id="@+id/tv_card_adb_badge"
-                                style="@style/DiagCardBadge"
-                                android:visibility="gone"/>
-                            <ImageView
-                                android:id="@+id/iv_card_adb_play"
-                                style="@style/DiagCardPlay"/>
-                        </LinearLayout>
-
-                        <!-- Card 5: Vérifier les permissions -->
-                        <LinearLayout
-                            android:id="@+id/card_diag_perms"
-                            style="@style/DiagHighlightCard"
-                            android:layout_marginBottom="16dp">
-                            <FrameLayout style="@style/DiagCardIcon">
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center"
-                                    android:tint="@color/md_on_secondary_container"
-                                    android:src="@drawable/ic_security"/>
-                            </FrameLayout>
-                            <LinearLayout style="@style/DiagCardText">
-                                <TextView style="@style/DiagCardTitle"
-                                    android:text="@string/diag_card_perms_title"/>
-                                <TextView style="@style/DiagCardSubtitle"
-                                    android:text="@string/diag_card_perms_desc"/>
-                            </LinearLayout>
-                            <TextView
-                                android:id="@+id/tv_card_perms_badge"
-                                style="@style/DiagCardBadge"
-                                android:visibility="gone"/>
-                            <ImageView
-                                android:id="@+id/iv_card_perms_play"
-                                style="@style/DiagCardPlay"/>
-                        </LinearLayout>
-
-                        <!-- Reset configuration cluster -->
-                        <Button
-                            android:id="@+id/btn_diag_reset_cluster_config"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/diag_btn_reset_cluster_config"
-                            android:textAllCaps="false"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/md_on_error"
-                            android:backgroundTint="@color/md_error"
-                            android:drawableStart="@drawable/ic_warning"
-                            android:drawableTint="@color/md_on_error"
-                            android:drawablePadding="10dp"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp"
-                            android:layout_marginBottom="20dp"/>
-
-                        <!-- ── Toggle "Outils avancés" ── -->
-                        <LinearLayout
-                            android:id="@+id/ll_diag_advanced_toggle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="10dp"
-                            android:paddingBottom="10dp"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:background="?android:attr/selectableItemBackground"
-                            android:layout_marginBottom="6dp">
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_advanced_section_title"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/md_on_surface_variant"/>
-                            <ImageView
-                                android:id="@+id/iv_diag_advanced_chevron"
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_arrow_forward"
-                                android:contentDescription="@null"/>
-                        </LinearLayout>
-
-                        <!-- ── Advanced section (legacy cards) ── -->
-                        <LinearLayout
-                            android:id="@+id/ll_diag_advanced_section"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone">
-
-                <!-- 1. CONNEXION ADB LOCAL -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-            
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s1_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s1_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-                
-                            <TextView
-                                android:id="@+id/tv_adb_local_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s1_initial"
-                                android:textSize="13sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_adb_local"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_adb_connect"
-                                    android:backgroundTint="#5E81AC"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_adb_share"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_share_result"
-                                    android:backgroundTint="#88C0D0"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- 2. INJECTION DAEMON & VIRTUALDISPLAY -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-            
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s2_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s2_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-                
-                            <TextView
-                                android:id="@+id/tv_daemon_vd_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="--"
-                                android:textSize="12sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <Button
-                                android:id="@+id/btn_daemon_vd_test"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_create_vd"
-                                android:backgroundTint="#A3BE8C"
-                                android:textColor="@color/pure_white"
-                                android:layout_marginBottom="12dp"/>
-
-                        </LinearLayout>
-
-                        <!-- 3. CONFIGURATION CLUSTER -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-            
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s3_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="12dp"/>
-
-                            <TextView
-                                android:id="@+id/tv_display_size_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s3_initial"
-                                android:textSize="12sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-            
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="4dp">
-                                <Button android:id="@+id/btn_display_size_88" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="8.8&quot;" android:layout_marginRight="4dp"/>
-                                <Button android:id="@+id/btn_display_size_1025" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="10.25&quot;" android:layout_marginRight="4dp"/>
-                                <Button android:id="@+id/btn_display_size_123" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="12.3&quot;"/>
-                            </LinearLayout>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
-                                <Button android:id="@+id/btn_display_size_restore" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_size_restore" android:layout_marginRight="4dp"/>
-                                <Button android:id="@+id/btn_display_size_full" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_size_full" android:layout_marginRight="4dp"/>
-                                <Button android:id="@+id/btn_display_size_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result"/>
-                            </LinearLayout>
-
-                            <!-- Garde-fou écran principal -->
-                            <Button
-                                android:id="@+id/btn_reset_main_overscan"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_reset_main_overscan"
-                                android:backgroundTint="#D08770"
-                                android:layout_marginBottom="8dp"/>
-                            <TextView
-                                android:id="@+id/tv_reset_main_overscan_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"
-                                android:text=""/>
-
-                            <TextView
-                                android:id="@+id/tv_display1_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s3_display1_initial"
-                                android:textSize="12sp"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button android:id="@+id/btn_display1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/diag_btn_restore_display" android:layout_marginRight="4dp"/>
-                                <Button android:id="@+id/btn_display1_share" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diag_btn_share_result"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- ADAS CLUSTER (cmd 12 / 13) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_sadas_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="4dp"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_sadas_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"/>
-
-                            <TextView
-                                android:id="@+id/tv_adas_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_adas_initial"
-                                android:textSize="12sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_adas_show"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_adas_show"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:textColor="@color/text_primary"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_adas_hide"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_adas_hide"
-                                    android:backgroundTint="#BF616A"
-                                    android:textColor="@color/text_primary"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- 4. ANALYSE SYSTEM ET DUMPSYS -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-            
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s4_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="12dp"/>
-
-                            <!-- Dumpsys -->
-                            <TextView
-                                android:id="@+id/tv_dumpsys_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="120dp"
-                                android:text="@string/diag_dumpsys_initial"
-                                android:textSize="10sp"
-                                android:fontFamily="monospace"
-                                android:scrollbars="vertical"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <Button
-                                android:id="@+id/btn_dumpsys_windows"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_run_dumpsys"
-                                android:backgroundTint="#434C5E"
-                                android:layout_marginBottom="16dp"/>
-
-                            <!-- JNI Surface -->
-                            <TextView
-                                android:id="@+id/tv_test_13_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_jni_initial"
-                                android:textSize="12sp"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="16dp">
-                                <Button
-                                    android:id="@+id/btn_test_13"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_jni_probe"
-                                    android:backgroundTint="#434C5E"
-                                    android:layout_marginEnd="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_jni_start_probe"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_jni_start_probe"
-                                    android:backgroundTint="#5E81AC"/>
-                            </LinearLayout>
-
-                            <!-- Dump SF Mirror -->
-                            <TextView
-                                android:id="@+id/tv_sf_dump_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_sf_initial"
-                                android:textSize="12sp"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <Button
-                                android:id="@+id/btn_dump_sf_mirror"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_dump_mirror"
-                                android:backgroundTint="#434C5E"
-                                android:layout_marginBottom="16dp"/>
-
-                            <!-- AutoDisplayService — chemin direct Qt Surface → VirtualDisplay -->
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_auto_display_title"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="4dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_auto_display_desc"
-                                android:textSize="11sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"/>
-                            <TextView
-                                android:id="@+id/tv_auto_display_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="--"
-                                android:textSize="12sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_auto_display_start"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_start_auto_display"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_auto_display_stop"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_stop"
-                                    android:backgroundTint="#BF616A"/>
-                            </LinearLayout>
-
-                            <!-- ═══ PIPELINE FISSION (création VirtualDisplay cluster) ═══ -->
-                            <View android:layout_width="match_parent" android:layout_height="1dp"
-                                android:background="@color/bg_button_secondary" android:layout_marginVertical="12dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_fission_title"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="4dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_fission_desc"
-                                android:textSize="11sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"/>
-                            <TextView
-                                android:id="@+id/tv_fission_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="--"
-                                android:textSize="11sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_fission_via_binder"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_sendinf_java"
-                                    android:backgroundTint="#BF616A"
-                                    android:textColor="@color/text_primary"
-                                    android:layout_marginBottom="4dp"/>
-                            </LinearLayout>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_fission_pipeline"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_fission_create"
-                                    android:backgroundTint="#5E81AC"
-                                    android:textColor="@color/text_primary"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_fission_launch"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_fission_launch"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:textColor="@color/text_primary"
-                                    android:enabled="false"/>
-                            </LinearLayout>
-
-                            <!-- ═══ Surface diagnostics : mesurer, overscan 0 ═══ -->
-                            <View android:layout_width="match_parent" android:layout_height="1dp"
-                                android:background="@color/bg_button_secondary" android:layout_marginVertical="10dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_fission_surface_title"
-                                android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="4dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_fission_surface_desc"
-                                android:textSize="11sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"/>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_fission_measure"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_fission_measure"
-                                    android:backgroundTint="#434C5E"
-                                    android:textColor="@color/text_primary"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_fission_overscan_zero"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_fission_overscan_zero"
-                                    android:backgroundTint="#88C0D0"
-                                    android:textColor="@color/text_primary"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- 5. SNIFFER SYSTÈME (Reverse Engineering) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="32dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s5_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s5_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-
-                            <!-- Status -->
-                            <TextView
-                                android:id="@+id/tv_re_sniffer_status"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_sniffer_inactive"
-                                android:textSize="13sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-
-                            <!-- Start / Stop -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                                <Button
-                                    android:id="@+id/btn_re_sniffer_start"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_start"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_re_sniffer_stop"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_stop"
-                                    android:backgroundTint="#BF616A"/>
-                            </LinearLayout>
-
-                            <!-- Snapshot on demand + Export -->
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_re_sniffer_snapshot"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_snapshot"
-                                    android:backgroundTint="#5E81AC"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_re_sniffer_export"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_export_sniffer"
-                                    android:backgroundTint="#88C0D0"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- 7. TEST RESIZE DILINK5 (setTaskWindowingMode 4→5 + resizeTask FORCED=3) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s7_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s7_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-
-                            <TextView
-                                android:id="@+id/tv_resize_diag_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="--"
-                                android:textSize="11sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-
-                            <!-- Bouton 1 : séquence exacte DiLink5 (4→5→resize FORCED=3) -->
-                            <Button
-                                android:id="@+id/btn_resize_dilink5_seq"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_resize_dilink5_seq"
-                                android:backgroundTint="#5E81AC"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="6dp"/>
-
-                            <!-- Bouton 2 : resizeTask seul avec FORCED=3 (sans changement windowing) -->
-                            <Button
-                                android:id="@+id/btn_resize_forced_only"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_resize_forced_only"
-                                android:backgroundTint="#88C0D0"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="6dp"/>
-
-                            <!-- Bouton 3 : inspecter la task actuelle (windowing mode, stack id, bounds) -->
-                            <Button
-                                android:id="@+id/btn_resize_inspect_task"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_resize_inspect_task"
-                                android:backgroundTint="#434C5E"
-                                android:textColor="@color/text_primary"
-                                android:layout_marginBottom="6dp"/>
-
-                        </LinearLayout>
-
-                        <!-- 6. NETTOYAGE STOCKAGE -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s6_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s6_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-
-                            <Button
-                                android:id="@+id/btn_cleanup_files"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_cleanup"
-                                android:backgroundTint="#BF616A"/>
-
-                            <TextView
-                                android:id="@+id/tv_cleanup_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:text=""/>
-
-                        </LinearLayout>
-
-
-                        <!-- 8.8" SCREEN — DIRECT PROJECTION (no sendInfo 30) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s88_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="4dp"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s88_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="8dp"/>
-
-                            <TextView
-                                android:id="@+id/tv_screen88_result"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_s88_initial"
-                                android:textSize="12sp"
-                                android:fontFamily="monospace"
-                                android:background="@color/bg_button_secondary"
-                                android:padding="8dp"
-                                android:layout_marginBottom="8dp"/>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-                                <Button
-                                    android:id="@+id/btn_screen88_activate"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_88_activate"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:textColor="@color/text_primary"
-                                    android:layout_marginRight="4dp"/>
-                                <Button
-                                    android:id="@+id/btn_screen88_stop"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_btn_88_stop"
-                                    android:backgroundTint="#BF616A"
-                                    android:textColor="@color/text_primary"/>
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- 7. ADAS DEBUG -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@color/bg_card"
-                            android:elevation="3dp"
-                            android:padding="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:layout_marginHorizontal="4dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_adas47_title"
-                                android:textSize="18sp"
-                                android:textColor="@color/text_primary"
-                                android:textStyle="bold"
-                                android:layout_marginBottom="6dp"/>
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_adas47_desc"
-                                android:textSize="12sp"
-                                android:textColor="@color/text_secondary"
-                                android:layout_marginBottom="12dp"/>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-                
-                                <Button
-                                    android:id="@+id/btn_adas_on"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_adas47_on"
-                                    android:backgroundTint="#A3BE8C"
-                                    android:layout_marginEnd="4dp"/>
-
-                                <Button
-                                    android:id="@+id/btn_adas_off"
-                                    android:layout_width="0dp"
-                                    android:layout_weight="1"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_adas47_off"
-                                    android:backgroundTint="#BF616A"/>
-                            </LinearLayout>
-
-                        </LinearLayout>
-                        </LinearLayout>
-
-                    </LinearLayout>
-                </androidx.core.widget.NestedScrollView>
-
-                <!-- ▶ RIGHT COLUMN (result panel) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/card_diag_result"
-                    android:layout_width="0dp"
-                    android:layout_weight="1.05"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="10dp"
-                    app:cardBackgroundColor="@color/md_surface_container"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
-                    xmlns:app="http://schemas.android.com/apk/res-auto">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:padding="20dp">
-
-                        <!-- Header row: badge + title + time -->
-                        <LinearLayout
-                            android:id="@+id/ll_diag_result_header"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:visibility="gone">
-
-                            <LinearLayout
-                                android:id="@+id/ll_diag_result_badge"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:paddingStart="10dp"
-                                android:paddingEnd="14dp"
-                                android:paddingTop="6dp"
-                                android:paddingBottom="6dp"
-                                android:layout_marginEnd="14dp"
-                                android:background="@drawable/bg_status_pill_ok">
-                                <ImageView
-                                    android:id="@+id/iv_diag_result_badge_icon"
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginEnd="6dp"
-                                    android:scaleType="fitCenter"
-                                    android:tint="@color/md_status_ok"
-                                    android:src="@drawable/ic_check_circle"/>
-                                <TextView
-                                    android:id="@+id/tv_diag_result_badge"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/diag_result_success"
-                                    android:textSize="11sp"
-                                    android:textStyle="bold"
-                                    android:textAllCaps="true"
-                                    android:letterSpacing="0.05"
-                                    android:textColor="@color/md_status_ok"/>
-                            </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/tv_diag_result_title"
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/md_on_surface"
-                                tools:text="Tester le mirror cluster"/>
-
-                            <TextView
-                                android:id="@+id/tv_diag_result_time"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="13sp"
-                                android:textColor="@color/md_on_surface_variant"
-                                tools:text="14:32:58"/>
-                        </LinearLayout>
-
-                        <!-- Empty state -->
-                        <LinearLayout
-                            android:id="@+id/ll_diag_result_empty"
-                            android:layout_width="match_parent"
-                            android:layout_height="0dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center">
-                            <ImageView
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_play_arrow"
-                                android:alpha="0.5"
-                                android:contentDescription="@null"/>
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="@string/diag_result_empty"
-                                android:textSize="13sp"
-                                android:textColor="@color/md_on_surface_variant"/>
-                        </LinearLayout>
-
-                        <!-- Output box (scrollable) -->
-                        <androidx.core.widget.NestedScrollView
-                            android:id="@+id/sv_diag_result_output"
-                            android:layout_width="match_parent"
-                            android:layout_height="0dp"
-                            android:layout_weight="1"
-                            android:layout_marginTop="14dp"
-                            android:visibility="gone"
-                            android:background="@drawable/bg_diag_output_box"
-                            android:padding="14dp">
-                            <TextView
-                                android:id="@+id/tv_diag_result_output"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="monospace"
-                                android:textIsSelectable="true"
-                                android:textSize="12sp"
-                                android:textColor="@color/md_on_surface"
-                                tools:text="VirtualDisplay: created\n  size:    1920 × 720 @ 60Hz"/>
-                        </androidx.core.widget.NestedScrollView>
-
-                        <!-- Action buttons -->
-                        <LinearLayout
-                            android:id="@+id/ll_diag_result_actions"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="end"
-                            android:layout_marginTop="14dp"
-                            android:visibility="gone">
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_diag_result_copy"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_copy"
-                                app:icon="@drawable/ic_content_copy"
-                                android:layout_marginEnd="8dp"
-                                xmlns:app="http://schemas.android.com/apk/res-auto"/>
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_diag_result_share"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_share_only"
-                                app:icon="@drawable/ic_share"
-                                android:layout_marginEnd="8dp"
-                                xmlns:app="http://schemas.android.com/apk/res-auto"/>
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_diag_result_rerun"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/diag_btn_rerun"
-                                app:icon="@drawable/ic_play_arrow"
-                                xmlns:app="http://schemas.android.com/apk/res-auto"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-        </LinearLayout>
+        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
     </LinearLayout>
-</FrameLayout>
+</LinearLayout>

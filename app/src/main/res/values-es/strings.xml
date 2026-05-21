@@ -354,4 +354,6 @@
     <string name="log_btn_save_cd">Guardar</string>
     <string name="log_save_failed">No se pudo guardar el registro</string>
     <string name="log_saved_toast">Registro guardado: %1$s</string>
+    <string name="diag_placeholder_title">La página Diag se está reconstruyendo</string>
+    <string name="diag_placeholder_subtitle">Las pruebas anteriores se eliminaron. Próximamente nuevas herramientas de diagnóstico.</string>
 </resources>

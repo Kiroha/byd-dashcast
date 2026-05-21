@@ -356,4 +356,6 @@
     <string name="log_btn_save_cd">Сақтау</string>
     <string name="log_save_failed">Журналды сақтау сәтсіз</string>
     <string name="log_saved_toast">Журнал сақталды: %1$s</string>
+    <string name="diag_placeholder_title">Diag беті қайта құрылуда</string>
+    <string name="diag_placeholder_subtitle">Алдыңғы тесттер жойылды. Жаңа диагностика құралдары жақын арада қосылады.</string>
 </resources>

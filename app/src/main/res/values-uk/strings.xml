@@ -356,4 +356,6 @@
     <string name="log_btn_save_cd">Зберегти</string>
     <string name="log_save_failed">Не вдалося зберегти журнал</string>
     <string name="log_saved_toast">Журнал збережено: %1$s</string>
+    <string name="diag_placeholder_title">Сторінка Diag перебудовується</string>
+    <string name="diag_placeholder_subtitle">Попередні тести видалено. Нові діагностичні інструменти з\'являться найближчим часом.</string>
 </resources>

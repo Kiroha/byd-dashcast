@@ -356,4 +356,6 @@
     <string name="log_btn_save_cd">Сохранить</string>
     <string name="log_save_failed">Не удалось сохранить журнал</string>
     <string name="log_saved_toast">Журнал сохранён: %1$s</string>
+    <string name="diag_placeholder_title">Страница Diag перестраивается</string>
+    <string name="diag_placeholder_subtitle">Предыдущие тесты удалены. Новые диагностические инструменты появятся скоро.</string>
 </resources>

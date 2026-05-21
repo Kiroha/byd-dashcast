@@ -356,4 +356,6 @@
     <string name="log_btn_save_cd">Salva</string>
     <string name="log_save_failed">Salvataggio del registro fallito</string>
     <string name="log_saved_toast">Registro salvato: %1$s</string>
+    <string name="diag_placeholder_title">La pagina Diag è in fase di ricostruzione</string>
+    <string name="diag_placeholder_subtitle">I test precedenti sono stati rimossi. Nuovi strumenti diagnostici arriveranno qui a breve.</string>
 </resources>

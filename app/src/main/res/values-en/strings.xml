@@ -356,4 +356,6 @@
     <string name="log_btn_save_cd">Save</string>
     <string name="log_save_failed">Failed to save the journal</string>
     <string name="log_saved_toast">Journal saved: %1$s</string>
+    <string name="diag_placeholder_title">Diag page is being rebuilt</string>
+    <string name="diag_placeholder_subtitle">The previous tests have been removed. New diagnostic tools will land here shortly.</string>
 </resources>
