@@ -5,44 +5,85 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
+import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.beta.BetaProxyClient;
+
 public class BootReceiver extends BroadcastReceiver {
 
     private static final String PREFS_NAME = SettingsActivity.PREFS_NAME;
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
-            
-            if (autoStartEnabled) {
-                AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");
-                
-                // Démarrer automatiquement le service de projection (ClusterService)
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
+
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
+        boolean prewarmDaemon    = BetaConfig.isProxyDaemonEnabled(context);
+
+        // We need to keep the process alive across multiple async tasks that
+        // can run in parallel: (a) Phase 5 daemon pre-warm (~1.9 s connect()),
+        // (b) display-affinity cleanup when auto-start is OFF.
+        // PendingResult.finish() may only be called once, so we coordinate via
+        // a shared atomic counter that triggers finish on the last completion.
+        final Context appCtx = context.getApplicationContext();
+        final PendingResult result = goAsync();
+        final java.util.concurrent.atomic.AtomicInteger pending =
+                new java.util.concurrent.atomic.AtomicInteger(0);
+        final Runnable releaseOne = () -> {
+            if (pending.decrementAndGet() == 0) result.finish();
+        };
+
+        if (prewarmDaemon) {
+            // Phase 5 — pre-warm the proxy daemon at boot so the first user
+            // action doesn't pay the ~1.9 s bootstrap cost (measured cold
+            // sendInfo in build-178 device log = 1916 ms; warm = 3 ms).
+            pending.incrementAndGet();
+            new Thread(() -> {
                 try {
-                    Intent serviceIntent = new Intent(context, ClusterService.class);
-                    context.startForegroundService(serviceIntent);
-                } catch (Exception e) {
-                    AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
+                    AppLogger.i("BootReceiver", "beta daemon pre-warm starting...");
+                    long t0 = System.currentTimeMillis();
+                    boolean ok = BetaProxyClient.connect(appCtx);
+                    long dt = System.currentTimeMillis() - t0;
+                    AppLogger.i("BootReceiver", "beta daemon pre-warm "
+                            + (ok ? "ok" : "FAILED") + " (" + dt + "ms)");
+                } catch (Throwable t) {
+                    // Pre-warm failure must never block boot: the runtime
+                    // fallback in ShellGateway / AdbLocalClient will still
+                    // route through legacy shell on demand.
+                    AppLogger.w("BootReceiver",
+                            "beta daemon pre-warm threw: " + t.getMessage());
+                } finally {
+                    releaseOne.run();
                 }
-            } else {
-                AppLogger.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.");
-                // Projection not auto-started: move any apps that were on the cluster
-                // (from the previous session) back to Display 0 so they don't get stuck
-                // on the (possibly still-alive) VirtualDisplay.
-                // goAsync() keeps the process alive until result.finish() is called,
-                // preventing the OS from killing the thread before cleanup completes.
-                final PendingResult result = goAsync();
-                new Thread(() -> {
-                    try {
-                        MainActivity.cleanupDisplayAffinityAtBoot(context);
-                    } catch (Exception e) {
-                        AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
-                    } finally {
-                        result.finish();
-                    }
-                }, "boot-display-cleanup").start();
-            }
+            }, "beta-daemon-prewarm").start();
         }
+
+        if (autoStartEnabled) {
+            AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...");
+            try {
+                Intent serviceIntent = new Intent(context, ClusterService.class);
+                context.startForegroundService(serviceIntent);
+            } catch (Exception e) {
+                AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.getMessage());
+            }
+        } else {
+            AppLogger.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.");
+            // Projection not auto-started: move any apps that were on the cluster
+            // (from the previous session) back to Display 0 so they don't get stuck
+            // on the (possibly still-alive) VirtualDisplay.
+            pending.incrementAndGet();
+            new Thread(() -> {
+                try {
+                    MainActivity.cleanupDisplayAffinityAtBoot(context);
+                } catch (Exception e) {
+                    AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
+                } finally {
+                    releaseOne.run();
+                }
+            }, "boot-display-cleanup").start();
+        }
+
+        // If nothing was scheduled (no auto-start, no pre-warm), release immediately.
+        if (pending.get() == 0) result.finish();
     }
 }
