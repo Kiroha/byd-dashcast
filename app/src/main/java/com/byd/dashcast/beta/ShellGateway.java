@@ -8,6 +8,8 @@ import com.byd.dashcast.AppLogger;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * ShellGateway — drop-in replacement for {@link AdbLocalClient#executeShell(Context, String)}
@@ -20,8 +22,18 @@ import java.util.concurrent.Executors;
  *   <li>If the proxy flag is OFF → delegates to {@link AdbLocalClient} directly
  *       (bit-for-bit identical to the v1.0.1 behaviour).</li>
  *   <li>If the proxy flag is ON → posts to its own background executor, tries
- *       {@link BetaProxyClient#runShell(String)} first; on any throwable falls
- *       back to {@link AdbLocalClient#executeShellWithResult}.</li>
+ *       (in order):
+ *       <ol>
+ *         <li><b>Phase 4 typed verb</b> when the command matches a known
+ *             pattern ({@code wm overscan L,T,R,B -d N} or
+ *             {@code wm overscan reset -d N}) — see {@link #tryTypedVerb}.
+ *             Typically returns in single-digit ms.</li>
+ *         <li>Generic {@link BetaProxyClient#runShell(String)} otherwise (or
+ *             on typed-verb failure).</li>
+ *         <li>{@link AdbLocalClient#executeShellWithResult} as the last-resort
+ *             fallback.</li>
+ *       </ol>
+ *   </li>
  * </ul>
  *
  * <p>Migration target: any production call site of {@code AdbLocalClient.executeShell*}
@@ -30,6 +42,7 @@ import java.util.concurrent.Executors;
  * directly because they need to exercise the legacy code path.
  *
  * @since v1.1.9 build 172 — phase 3 (call-site migration).
+ * @since v1.1.9 build 174 — phase 4a (typed {@code wm overscan} interception).
  */
 public final class ShellGateway {
 
@@ -43,6 +56,19 @@ public final class ShellGateway {
         t.setDaemon(true);
         return t;
     });
+
+    /**
+     * Matches {@code wm overscan L,T,R,B -d N} with optional spaces. Capture
+     * groups: 1=L, 2=T, 3=R, 4=B, 5=displayId. Anchored on both ends so a
+     * compound command (e.g. {@code wm overscan … && wm size …}) falls through
+     * to the generic shell path.
+     */
+    private static final Pattern WM_OVERSCAN = Pattern.compile(
+            "^\\s*wm\\s+overscan\\s+(-?\\d+)\\s*,\\s*(-?\\d+)\\s*,\\s*(-?\\d+)\\s*,\\s*(-?\\d+)\\s+-d\\s+(\\d+)\\s*$");
+
+    /** Matches {@code wm overscan reset -d N}. Capture group 1 = displayId. */
+    private static final Pattern WM_OVERSCAN_RESET = Pattern.compile(
+            "^\\s*wm\\s+overscan\\s+reset\\s+-d\\s+(\\d+)\\s*$");
 
     /** Fire-and-forget shell. Mirrors {@link AdbLocalClient#executeShell}. */
     public static void execShell(final Context ctx, final String cmd) {
@@ -70,6 +96,13 @@ public final class ShellGateway {
                 if (!BetaProxyClient.isConnected()) {
                     BetaProxyClient.connect(ctx);
                 }
+                // Phase 4a: try typed verb first. If it matches AND succeeds,
+                // we skip the shell entirely. If the parse fails OR the typed
+                // call throws, we fall through to runShell (then legacy).
+                if (tryTypedVerb(cmd, t0)) {
+                    if (cb != null) cb.onSuccess("");
+                    return;
+                }
                 String out = BetaProxyClient.runShell(cmd);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta runShell ok (" + dt + "ms): " + cmd);
@@ -82,5 +115,57 @@ public final class ShellGateway {
                 AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
             }
         });
+    }
+
+    /**
+     * Inspect {@code cmd} and, if it matches a Phase 4a verb pattern, route it
+     * through the typed binder call instead of the shell. Returns {@code true}
+     * iff the typed path was taken AND succeeded — callers fall through to the
+     * generic {@code runShell} path on {@code false}.
+     *
+     * <p>Currently handles:
+     * <ul>
+     *   <li>{@code wm overscan L,T,R,B -d N} → {@link BetaProxyClient#setOverscan}</li>
+     *   <li>{@code wm overscan reset -d N}   → {@link BetaProxyClient#setOverscan}(N,0,0,0,0)</li>
+     * </ul>
+     */
+    private static boolean tryTypedVerb(String cmd, long t0) {
+        Matcher m = WM_OVERSCAN.matcher(cmd);
+        if (m.matches()) {
+            try {
+                int l = Integer.parseInt(m.group(1));
+                int t = Integer.parseInt(m.group(2));
+                int r = Integer.parseInt(m.group(3));
+                int b = Integer.parseInt(m.group(4));
+                int d = Integer.parseInt(m.group(5));
+                BetaProxyClient.setOverscan(d, l, t, r, b);
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.d(TAG, "beta setOverscan typed ok (" + dt + "ms): d=" + d
+                        + " " + l + "," + t + "," + r + "," + b);
+                return true;
+            } catch (Throwable th) {
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.w(TAG, "beta setOverscan typed failed after " + dt
+                        + "ms, falling through to runShell: " + th.getMessage());
+                return false;
+            }
+        }
+        Matcher mr = WM_OVERSCAN_RESET.matcher(cmd);
+        if (mr.matches()) {
+            try {
+                int d = Integer.parseInt(mr.group(1));
+                // `wm overscan reset` clears overscan = setOverscan(d, 0, 0, 0, 0).
+                BetaProxyClient.setOverscan(d, 0, 0, 0, 0);
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.d(TAG, "beta setOverscan(reset) typed ok (" + dt + "ms): d=" + d);
+                return true;
+            } catch (Throwable th) {
+                long dt = SystemClock.elapsedRealtime() - t0;
+                AppLogger.w(TAG, "beta setOverscan(reset) typed failed after " + dt
+                        + "ms, falling through to runShell: " + th.getMessage());
+                return false;
+            }
+        }
+        return false;
     }
 }
