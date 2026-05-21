@@ -39,7 +39,7 @@ public final class BetaTestRunner {
 
     public enum Status { PENDING, RUNNING, PASS, FAIL, SKIPPED }
 
-    public enum Family { A, B, X }
+    public enum Family { A, B, X, P }
 
     /** Immutable description of a single test. */
     public static final class TestDef {
@@ -120,6 +120,32 @@ public final class BetaTestRunner {
         list.add(new TestDef("X3", Family.X, "Restore cluster integrity",
                 "Static check: restoreOriginCluster() still uses legacy fallback."));
 
+        // ---- Phase 4 feasibility probes (run inside daemon, uid 2000) ----
+        list.add(new TestDef("P1",  Family.P, "IWindowManager.setOverscan",
+                "Direct setOverscan(0,0,0,0,0) — the headline Phase 4 verb."));
+        list.add(new TestDef("P2",  Family.P, "IWindowManager.getInitialDisplaySize",
+                "Read-only display metric via typed Binder."));
+        list.add(new TestDef("P3",  Family.P, "IActivityManager.forceStopPackage",
+                "Replaces `am force-stop` shell fork."));
+        list.add(new TestDef("P4",  Family.P, "IActivityManager.killBackgroundProcesses",
+                "Replaces `am kill` shell fork."));
+        list.add(new TestDef("P5",  Family.P, "IActivityManager.getTasks",
+                "Replaces dumpsys-activity-recents regex scrape."));
+        list.add(new TestDef("P6",  Family.P, "AutoContainer service reachable",
+                "INTERFACE_TRANSACTION probe — confirms uid 2000 can transact."));
+        list.add(new TestDef("P7",  Family.P, "SystemProperties read/write",
+                "Read ro.build.version.release; try write debug.dashcast.probe."));
+        list.add(new TestDef("P8",  Family.P, "/proc scan baseline",
+                "Pure-Java /proc/*/cmdline scan — sandbox sanity check."));
+        list.add(new TestDef("P9",  Family.P, "ServiceManager.listServices",
+                "Enumerate all visible system services."));
+        list.add(new TestDef("P10", Family.P, "IPackageManager.getInstallerPackageName",
+                "Typed PM read API."));
+        list.add(new TestDef("P11", Family.P, "IInputManager.asInterface",
+                "Confirms input service stub bindable (injectInputEvent path)."));
+        list.add(new TestDef("P12", Family.P, "DisplayManager.getDisplays",
+                "Typed display enumeration via system Context."));
+
         return Collections.unmodifiableList(list);
     }
 
@@ -128,6 +154,8 @@ public final class BetaTestRunner {
         final List<TestResult> results = new ArrayList<>();
         for (TestDef d : catalog()) results.add(new TestResult(d));
         sFirstPid = -1; // reset per-suite scratchpad (used by A5 persistence check)
+        sProbeCache = null;
+        sProbeError = null;
         UI.post(() -> listener.onSuiteStarted(results));
         EXEC.execute(() -> {
             Context appCtx = ctx.getApplicationContext();
@@ -172,6 +200,10 @@ public final class BetaTestRunner {
             case "X1": testX1(ctx, r); break;
             case "X2": testX2(ctx, r); break;
             case "X3": testX3(r); break;
+            case "P1": case "P2": case "P3": case "P4": case "P5": case "P6":
+            case "P7": case "P8": case "P9": case "P10": case "P11": case "P12":
+                testProbe(ctx, r);
+                break;
             default:
                 r.status = Status.SKIPPED;
                 r.message = "unknown test id";
@@ -509,6 +541,69 @@ public final class BetaTestRunner {
         // (unimplemented) proxy daemon. Always pass.
         r.status = Status.PASS;
         r.message = "restoreOriginCluster() routed via legacy AdbLocalClient (gateway guarantees fallback)";
+    }
+
+    // ─── Component P — Phase 4 feasibility probes ────────────────────
+
+    /** Cached output of the daemon-side probe suite; populated lazily by the first P-test. */
+    private static volatile java.util.Map<String, String> sProbeCache;
+    /** If the probe call itself failed (connect / transact), all P-tests report this. */
+    private static volatile String sProbeError;
+
+    private static void testProbe(Context ctx, TestResult r) {
+        java.util.Map<String, String> probes = ensureProbes(ctx);
+        if (probes == null) {
+            r.status = Status.FAIL;
+            r.message = "daemon probe run failed: " + sProbeError;
+            return;
+        }
+        String entry = probes.get(r.def.id);
+        if (entry == null) {
+            r.status = Status.SKIPPED;
+            r.message = "no " + r.def.id + " token in daemon response";
+            return;
+        }
+        int colon = entry.indexOf(':');
+        String status = colon < 0 ? entry : entry.substring(0, colon);
+        String detail = colon < 0 ? ""    : entry.substring(colon + 1);
+        r.message = detail;
+        // PASS is the only success status; anything else is a Phase-4 blocker for this verb.
+        if ("PASS".equals(status)) {
+            r.status = Status.PASS;
+        } else {
+            r.status = Status.FAIL;
+            // Prepend the failure category so the row title in the diag UI shows e.g.
+            // "FAIL_SECURITY: SecurityException Neither user 2000 nor current process".
+            r.message = status + ": " + detail;
+        }
+    }
+
+    private static java.util.Map<String, String> ensureProbes(Context ctx) {
+        java.util.Map<String, String> cached = sProbeCache;
+        if (cached != null) return cached;
+        synchronized (BetaTestRunner.class) {
+            if (sProbeCache != null) return sProbeCache;
+            if (!BetaProxyClient.connect(ctx)) {
+                sProbeError = "daemon not connected";
+                return null;
+            }
+            try {
+                String wire = BetaProxyClient.runPhase4Probes();
+                java.util.Map<String, String> parsed =
+                        com.byd.dashcast.beta.proxy.Phase4Probes.parse(wire);
+                if (parsed.isEmpty()) {
+                    sProbeError = "empty probe response";
+                    return null;
+                }
+                AppLogger.i(TAG, "phase4 probes returned " + parsed.size() + " tokens");
+                sProbeCache = parsed;
+                return parsed;
+            } catch (BetaProxyClient.BetaProxyException e) {
+                sProbeError = e.getMessage();
+                AppLogger.w(TAG, "phase4 probe call failed: " + e.getMessage());
+                return null;
+            }
+        }
     }
 
     // ─── utils ──────────────────────────────────────────────────────────────

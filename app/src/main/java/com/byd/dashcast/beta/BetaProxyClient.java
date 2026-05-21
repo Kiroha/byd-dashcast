@@ -300,6 +300,35 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Run the full Phase 4 feasibility probe suite inside the daemon and return
+     * the raw pipe-separated result string ({@code "P1=PASS:...|P2=FAIL_SECURITY:..."}).
+     * Parse with {@link com.byd.dashcast.beta.proxy.Phase4Probes#parse(String)}.
+     *
+     * <p>Probes run sequentially in the daemon process under uid 2000; the whole
+     * call typically returns in &lt; 1 s.
+     */
+    public static String runPhase4Probes() throws BetaProxyException {
+        synchronized (LOCK) {
+            if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                sBinder.transact(ProxyDaemonMain.TXN_PROBE_PHASE4, data, reply, 0);
+                reply.readException();
+                String out = reply.readString();
+                return out == null ? "" : out;
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
