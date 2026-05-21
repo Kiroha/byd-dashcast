@@ -43,13 +43,36 @@ public final class BetaProxyClient {
     /** Fully-qualified main class of the daemon. */
     private static final String DAEMON_MAIN = "com.byd.dashcast.beta.proxy.ProxyDaemonMain";
 
-    /** Bootstrap script run via local ADB; the inner subshell + nohup detaches the daemon. */
+    /** Path of the daemon's stdout/stderr capture on the device (overwritten each bootstrap). */
+    private static final String DAEMON_LOG = "/data/local/tmp/dashcast_proxy.log";
+
+    /**
+     * Bootstrap script run via local ADB. Mirrors the proven
+     * {@code MirrorDaemon} recipe used elsewhere in the app:
+     * <ul>
+     *   <li>{@code setsid} detaches from the ADB session group (survives SIGHUP);</li>
+     *   <li>explicit {@code /system/bin/app_process64} (bare {@code app_process}
+     *       symlink is not always present / SELinux-accessible on BYD images);</li>
+     *   <li>{@code -Xnoimage-dex2oat} avoids an AOT crash at startup;</li>
+     *   <li>{@code /system/bin} as the parent directory (not {@code /});</li>
+     *   <li>{@code --nice-name=dashcast_proxy} sets argv[0] before our own
+     *       {@code setArgV0} call gets a chance;</li>
+     *   <li>stdout/stderr redirected to {@link #DAEMON_LOG} so cold-start
+     *       failures are diagnosable from the host.</li>
+     * </ul>
+     */
     private static final String BOOTSTRAP_CMD =
             "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
-            + "( CLASSPATH=\"$APK\" nohup app_process / " + DAEMON_MAIN
-            + " >/dev/null 2>&1 </dev/null & ); "
+            + "setsid sh -c 'CLASSPATH=\"$APK\" /system/bin/app_process64"
+            +     " -Xnoimage-dex2oat /system/bin"
+            +     " --nice-name=dashcast_proxy"
+            +     " " + DAEMON_MAIN
+            +     " </dev/null >" + DAEMON_LOG + " 2>&1' & "
             + "echo OK $APK";
+
+    /** Fetched after a connect() failure to surface the daemon's first error line(s) in test messages. */
+    private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
     private static final int  SOCKET_TIMEOUT_MS    = 3000;
     private static final int  BOOTSTRAP_TIMEOUT_MS = 8000;
@@ -113,6 +136,31 @@ public final class BetaProxyClient {
             AppLogger.w(TAG, "daemon unreachable after bootstrap");
             return false;
         }
+    }
+
+    /**
+     * Read the tail of the daemon's stdout/stderr capture file via legacy ADB.
+     * Useful to surface the real cold-start error (class not found, SELinux,
+     * dex2oat failure, etc.) in the Diag test message when {@link #connect(Context)}
+     * has returned {@code false}.
+     *
+     * @return the (trimmed) tail content, or a short marker if unavailable.
+     */
+    public static String readDaemonLogTail(Context ctx) {
+        final java.util.concurrent.atomic.AtomicReference<String> out = new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        AdbLocalClient.executeShellWithResult(ctx, READ_LOG_CMD, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String s) { out.set(s); latch.countDown(); }
+            @Override public void onError(String e)   { out.set("<log read failed: " + e + ">"); latch.countDown(); }
+        });
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) return "<log read timed out>";
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return "<interrupted>";
+        }
+        String s = out.get();
+        return (s == null || s.isEmpty()) ? "<empty>" : s;
     }
 
     /** Close the socket. The daemon keeps running. */
