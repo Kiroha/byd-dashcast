@@ -3,6 +3,10 @@ package com.byd.dashcast;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.SystemClock;
+
+import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.beta.BetaProxyClient;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
@@ -585,6 +589,35 @@ public class AdbLocalClient {
                                 final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
+                // Phase 4c: try the typed daemon path first. P13 (build 176)
+                // proved binder.transact(2, ...) on AutoContainer is accepted
+                // from uid 2000 with descriptor android.os.IAutoContainer.
+                // On any failure we fall through to the legacy ADB shell
+                // wrapper below — semantics are preserved for callers that
+                // only inspect callback.onSuccess(String) for emptiness.
+                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta sendInfo typed ok (" + dt + "ms): "
+                                + type + "," + infoInt + ",\"" + (infoStr == null ? "" : infoStr) + "\"");
+                        // Legacy wrapper returned `service call` stdout (Parcel
+                        // hex dump). Typed path has no equivalent payload —
+                        // empty string matches what every existing caller
+                        // already expects (none of them parses the dump).
+                        if (callback != null) callback.onSuccess("");
+                        return;
+                    } catch (Throwable t) {
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta sendInfo typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     // Escape shell metacharacters inside the double-quoted argument:
                     //   \  → must be first to avoid double-escaping

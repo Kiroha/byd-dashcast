@@ -402,6 +402,43 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Phase 4c typed verb — direct {@code AutoContainer.transact(2, …)} in the
+     * daemon, replacing the {@code dadb.shell("service call AutoContainer 2 …")}
+     * relay used by {@code AdbLocalClient.sendInfo}.
+     *
+     * <p>Probe P13 (build 176) measured the call at 0 ms on the BYD Seal EU,
+     * vs the legacy shell relay which had to fork a {@code service} binary
+     * and quote-escape the {@code s16} argument. Equivalent to
+     * {@code service call AutoContainer 2 i32 <type> i32 <info> s16 "<str>"}.
+     *
+     * <p>{@code str} may be {@code null} — it is normalised to {@code ""}
+     * on the wire (same as the legacy shell wrapper which passed
+     * {@code s16 ""} when {@code infoStr} was empty).
+     */
+    public static void autoContainerSendInfo(int type, int info, String str)
+            throws BetaProxyException {
+        synchronized (LOCK) {
+            if (!isConnected()) throw new BetaProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInt(type);
+                data.writeInt(info);
+                data.writeString(str == null ? "" : str);
+                sBinder.transact(ProxyDaemonMain.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
+                reply.readException();
+            } catch (RemoteException e) {
+                sBinder = null;
+                throw new BetaProxyException("transact: " + e.getMessage(), e);
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
