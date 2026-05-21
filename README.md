@@ -54,7 +54,7 @@ BYD APIs.
 | 6 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
 | 7 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
 | 8 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
-| 9 | **🔧 Diagnostic** | 7 sections: ADB/permissions, cluster restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test (WM:4→5 + resizeTask FORCED) |
+| 9 | **🔧 Diagnostic** | Placeholder screen — new diagnostic tools will be added here in upcoming releases |
 | 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
 | 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
 | 12 | **Multilingual** | French / English / German / Italian / **Spanish** / Turkish / Russian / Ukrainian / **Arabic** / Uzbek / Kazakh / Belarusian (12 languages), selected on first launch |
@@ -88,7 +88,7 @@ with DiLink 3.0.
 app/src/main/java/com/byd/dashcast/
 ├── MainActivity.java           — Main 15.6" screen: app list, cluster mirror, split
 ├── WelcomeActivity.java        — Language selection (first launch)
-├── DiagActivity.java           — Sections 1–7 (ADB, restore, display size, MirrorDaemon, Sniffer, cluster orientation, DiLink5 resize test)
+├── DiagActivity.java           — Placeholder (clean slate; new diagnostic tools will land here)
 ├── SysInfoActivity.java        — System report + share
 ├── ClusterService.java         — Foreground service: cluster projection independent of Activity lifecycle
 ├── AdbLocalClient.java         — All ADB logic (dadb, localhost:5555)
@@ -230,9 +230,9 @@ adb install DashCast-vX.Y.Z-release.apk
 ```
 
 4. Launch the app. On first launch, an **"Allow USB debugging?"** popup will appear **on the car's screen** — press **ALLOW**.
-5. The app should be functional immediately. If permissions are missing, open **⋮ menu → Diagnostic → TEST 1** to force-grant `BYDAUTO_*_COMMON` permissions via `pm grant`.
+5. The app should be functional immediately.
 
-   > On DiLink 3.0 with `platform.keystore` signing, these permissions are typically pre-granted by the ROM at install time and TEST 1 is not required.
+   > On DiLink 3.0 with `platform.keystore` signing, the BYD permissions are typically pre-granted by the ROM at install time.
 
 > If you don't have the car's IP, the app can also be installed via USB when ADB USB debugging is enabled (developer options).
 
@@ -313,7 +313,7 @@ cd MyBYDApp   # repo folder name
 | `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs (declared, not yet used) |
 | `BYDAUTO_*_GET` | signature | Extended read (not grantable without real BYD key) |
 
-`dangerous` permissions are granted via `pm grant` on first launch (TEST 1 — Diagnostic).
+`dangerous` permissions are typically pre-granted by the ROM at install time on DiLink 3.0 (platform-signed APK).
 
 ---
 
@@ -350,23 +350,10 @@ adb shell service call AutoContainer 2 i32 1000 i32 30 s16 ""
 ```
 
 > This command is sent automatically at the start of the cluster activation sequence (`sendInfo(1000, 30)`).
-> Use **TEST 3** in DiagActivity to cycle through sizes manually.
 
 ---
 
----
-
-## Field diagnostic
-
-1. **TEST 1** → ADB connection + `pm grant` `_COMMON` permissions
-2. **TEST 2** → cluster restore (sendInfo 30→16→18→0)
-3. **TEST 3** → cluster display size change (cmd 29/30/31)
-4. **TEST 4** → MirrorDaemon: scan / kill / kill+restart / export logs / SurfaceFlinger dump
-5. **TEST 5** → Sniffer: scan / start / stop / export logcat report / clean logs
-6. **TEST 6** → Cluster orientation: freeze LANDSCAPE/PORTRAIT / unfreeze / read rotation (`IWindowManager.freezeDisplayRotation` — no `wm size`)
-7. **TEST 7** → DiLink5 resize test: `WM:4→5` + `resizeTask(RESIZE_MODE_FORCED=3)` via raw Binder + task inspection
-
-### Retrieve logs without USB cable
+## Retrieve logs without USB cable
 
 ```bash
 adb pull /sdcard/Android/data/com.byd.dashcast/files/
