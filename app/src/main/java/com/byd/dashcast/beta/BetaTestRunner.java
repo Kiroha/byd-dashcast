@@ -271,7 +271,9 @@ public final class BetaTestRunner {
     private static void testA1(Context ctx, TestResult r) {
         if (!BetaProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
-            r.message = "connect() returned false (bootstrap may have failed — ADB pairing?)";
+            String tail = BetaProxyClient.readDaemonLogTail(ctx);
+            r.message = "connect() returned false (bootstrap failed — see daemon log tail)";
+            r.detail  = "daemon log tail:\n" + tail;
             return;
         }
         if (sFirstPid < 0) sFirstPid = BetaProxyClient.getDaemonPid();
