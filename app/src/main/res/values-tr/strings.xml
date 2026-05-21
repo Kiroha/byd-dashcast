@@ -60,10 +60,10 @@
     <string name="split_full_screen">⬜ Tam ekran</string>
     <string name="split_left">⬜⬛ Sol (%50)</string>
     <string name="split_right">⬛⬜ Sağ (%50)</string>
-    <string name="log_title">📋 Günlük</string>
+    <string name="log_title">Günlük</string>
     <string name="log_btn_clear">Temizle</string>
     <string name="log_btn_share">Paylaş</string>
-    <string name="log_filter_hint">Filtrele (etiket / mesaj / seviye)…</string>
+    <string name="log_filter_hint">Günlüğü filtrele (etiket, mesaj, regex)…</string>
     <string name="log_autoscroll">Oto↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -341,4 +341,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="log_chip_all">Tümü (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Tümü (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Duraklat</string>
+    <string name="log_btn_resume_cd">Sürdür</string>
+    <string name="log_btn_clear_cd">Temizle</string>
+    <string name="log_btn_share_cd">Paylaş</string>
+    <string name="log_btn_save_cd">Kaydet</string>
+    <string name="log_save_failed">Günlük kaydedilemedi</string>
+    <string name="log_saved_toast">Günlük kaydedildi: %1$s</string>
 </resources>

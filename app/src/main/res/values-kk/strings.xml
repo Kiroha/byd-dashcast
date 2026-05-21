@@ -58,10 +58,10 @@
     <string name="split_full_screen">⬜ Толық экран</string>
     <string name="split_left">⬜⬛ Сол жақ (50%%)</string>
     <string name="split_right">⬛⬜ Оң жақ (50%%)</string>
-    <string name="log_title">📋 Журнал</string>
+    <string name="log_title">Журнал</string>
     <string name="log_btn_clear">Тазалау</string>
     <string name="log_btn_share">Бөлісу</string>
-    <string name="log_filter_hint">Сүзгі (тег / хабар / деңгей)…</string>
+    <string name="log_filter_hint">Журналды сүзу (тег, хабар, regex)…</string>
     <string name="log_autoscroll">Авто↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -341,4 +341,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="log_chip_all">Барлығы (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Барлығы (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Кідіріс</string>
+    <string name="log_btn_resume_cd">Жалғастыру</string>
+    <string name="log_btn_clear_cd">Тазалау</string>
+    <string name="log_btn_share_cd">Бөлісу</string>
+    <string name="log_btn_save_cd">Сақтау</string>
+    <string name="log_save_failed">Журналды сақтау сәтсіз</string>
+    <string name="log_saved_toast">Журнал сақталды: %1$s</string>
 </resources>

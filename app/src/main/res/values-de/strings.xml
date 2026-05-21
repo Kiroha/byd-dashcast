@@ -60,10 +60,10 @@
     <string name="split_full_screen">⬜ Vollbild</string>
     <string name="split_left">⬜⬛ Links (50 %)</string>
     <string name="split_right">⬛⬜ Rechts (50 %)</string>
-    <string name="log_title">📋 Protokoll</string>
+    <string name="log_title">Protokoll</string>
     <string name="log_btn_clear">Löschen</string>
     <string name="log_btn_share">Teilen</string>
-    <string name="log_filter_hint">Filtern (Tag / Nachricht / Stufe)…</string>
+    <string name="log_filter_hint">Protokoll filtern (Tag, Nachricht, Regex)…</string>
     <string name="log_autoscroll">Auto↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -341,4 +341,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signiert</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signiert</string>
+    <string name="log_chip_all">Alle (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Alle (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Pause</string>
+    <string name="log_btn_resume_cd">Fortsetzen</string>
+    <string name="log_btn_clear_cd">Löschen</string>
+    <string name="log_btn_share_cd">Teilen</string>
+    <string name="log_btn_save_cd">Speichern</string>
+    <string name="log_save_failed">Speichern fehlgeschlagen</string>
+    <string name="log_saved_toast">Protokoll gespeichert: %1$s</string>
 </resources>

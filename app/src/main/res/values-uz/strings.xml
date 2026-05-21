@@ -58,10 +58,10 @@
     <string name="split_full_screen">⬜ Toʻliq ekran</string>
     <string name="split_left">⬜⬛ Chap (50%%)</string>
     <string name="split_right">⬛⬜ Oʻng (50%%)</string>
-    <string name="log_title">📋 Jurnal</string>
+    <string name="log_title">Jurnal</string>
     <string name="log_btn_clear">Tozalash</string>
     <string name="log_btn_share">Ulashish</string>
-    <string name="log_filter_hint">Filtr (teg / xabar / daraja)…</string>
+    <string name="log_filter_hint">Jurnalni filtrlash (teg, xabar, regex)…</string>
     <string name="log_autoscroll">Avto↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -341,4 +341,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="log_chip_all">Hammasi (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Hammasi (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Toʻxtatish</string>
+    <string name="log_btn_resume_cd">Davom ettirish</string>
+    <string name="log_btn_clear_cd">Tozalash</string>
+    <string name="log_btn_share_cd">Ulashish</string>
+    <string name="log_btn_save_cd">Saqlash</string>
+    <string name="log_save_failed">Jurnalni saqlab boʻlmadi</string>
+    <string name="log_saved_toast">Jurnal saqlandi: %1$s</string>
 </resources>

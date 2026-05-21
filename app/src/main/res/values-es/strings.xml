@@ -55,10 +55,10 @@
     <string name="split_full_screen">⬜ Pantalla completa</string>
     <string name="split_left">⬜⬛ Izquierda (50%)</string>
     <string name="split_right">⬛⬜ Derecha (50%)</string>
-    <string name="log_title">📋 Registro</string>
+    <string name="log_title">Registro</string>
     <string name="log_btn_clear">Limpiar</string>
     <string name="log_btn_share">Compartir</string>
-    <string name="log_filter_hint">Filtrar (etiqueta / mensaje / nivel)…</string>
+    <string name="log_filter_hint">Filtrar el registro (etiqueta, mensaje, regex)…</string>
     <string name="log_autoscroll">Auto↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -339,4 +339,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="log_chip_all">Todos (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Todos (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Pausa</string>
+    <string name="log_btn_resume_cd">Reanudar</string>
+    <string name="log_btn_clear_cd">Limpiar</string>
+    <string name="log_btn_share_cd">Compartir</string>
+    <string name="log_btn_save_cd">Guardar</string>
+    <string name="log_save_failed">No se pudo guardar el registro</string>
+    <string name="log_saved_toast">Registro guardado: %1$s</string>
 </resources>

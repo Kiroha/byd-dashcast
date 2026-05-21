@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="6dp"
+    android:paddingStart="0dp" android:paddingEnd="14dp"
+    android:paddingTop="10dp" android:paddingBottom="10dp"
+    android:id="@+id/row_log_root"
+    android:background="@drawable/bg_log_row_info">
+
+    <View
+        android:id="@+id/row_log_bar"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:minHeight="32dp"
+        android:layout_marginEnd="14dp"
+        android:background="@color/md_status_ok"/>
+
+    <TextView
+        android:id="@+id/row_log_level"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/md_status_ok"
+        android:fontFamily="monospace"
+        android:text="INFO"/>
+
+    <TextView
+        android:id="@+id/row_log_time"
+        android:layout_width="84dp"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/md_on_surface_variant"
+        android:fontFamily="monospace"
+        android:text="00:00:00"/>
+
+    <TextView
+        android:id="@+id/row_log_tag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/md_primary"
+        android:fontFamily="monospace"
+        android:text="Tag"/>
+
+    <TextView
+        android:id="@+id/row_log_msg"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="12sp"
+        android:textColor="@color/md_on_surface"
+        android:fontFamily="monospace"
+        android:textIsSelectable="true"
+        android:text="message"/>
+</LinearLayout>

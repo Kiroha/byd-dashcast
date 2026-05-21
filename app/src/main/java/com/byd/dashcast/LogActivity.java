@@ -1,67 +1,59 @@
 package com.byd.dashcast;
 
-import android.graphics.Color;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
-import android.text.Spannable;
-import android.text.SpannableString;
 import android.text.TextWatcher;
-import android.text.style.ForegroundColorSpan;
 import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import com.google.android.material.button.MaterialButton;
+
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * LogActivity — real-time log viewer.
+ * LogActivity — JOURNAL viewer (M3 redesign, mockup screen 6).
  *
- * • Scrollable display color-coded by level: DEBUG=grey, INFO=white, WARN=orange, ERROR=red
- * • Instant text filter (by tag or message)
- * • Auto-scroll vers le bas (toggle)
- * • Auto-refresh every 500 ms while the activity is visible
- * • Partage texte brut + effacement
+ * • Nav rail (Apps / Réglages / Diag / Système / Journal active)
+ * • Top bar: title + Pause/Clear/Share/Save icon buttons + clock
+ * • Search bar (filter by tag / message / level)
+ * • 4 chip filters: Tous / Info / Warn / Error (with counts)
+ * • RecyclerView of M3 rows (colored bar + tinted bg per level)
  */
 public class LogActivity extends AppCompatActivity {
 
     private static final long REFRESH_MS      = 500;   // delay when log changed
-    private static final long REFRESH_IDLE_MS  = 2000;  // delay when nothing new
+    private static final long REFRESH_IDLE_MS = 2000;  // delay when nothing new
 
-    // Couleurs par niveau
-    private static final int COLOR_DEBUG    = Color.parseColor("#999999");
-    private static final int COLOR_INFO     = Color.parseColor("#DDDDDD");
-    private static final int COLOR_WARN     = Color.parseColor("#FFA040");
-    private static final int COLOR_ERROR    = Color.parseColor("#FF4444");
-    private static final int COLOR_TAG      = Color.parseColor("#88CCFF");
-    private static final int COLOR_TIME     = Color.parseColor("#666666");
+    private RecyclerView    mRecycler;
+    private LogAdapter      mAdapter;
+    private EditText        mEtFilter;
+    private MaterialButton  mBtnPause, mBtnClear, mBtnShare, mBtnSave;
+    private MaterialButton  mChipAll, mChipInfo, mChipWarn, mChipError;
+    private TextView        mEmptyView;
 
-    private ScrollView  scrollView;
-    private TextView    tvLog;
-    private EditText    etFilter;
-    private CheckBox    cbAutoScroll;
-    private Button      btnShare;
-    private Button      btnClear;
-
-    private String mFilter = "";
-    private boolean mRunning = false;
-    private int    mLastEntryCount = -1;   // perf: skip rebuild si rien de nouveau
-    private String mLastFilter    = null; // perf: invalider si filtre change
+    private String                 mFilter      = "";
+    private AppLogger.Level        mLevelFilter = null;   // null = all
+    private boolean                mPaused      = false;
+    private boolean                mRunning     = false;
+    private int                    mLastEntryCount = -1;
+    private String                 mLastFilterKey  = null;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mRefreshRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mRunning) {
+        @Override public void run() {
+            if (mRunning && !mPaused) {
                 boolean changed = refreshLog();
                 mHandler.postDelayed(this, changed ? REFRESH_MS : REFRESH_IDLE_MS);
             }
@@ -78,44 +70,63 @@ public class LogActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_log);
 
-        scrollView   = (ScrollView)  findViewById(R.id.log_scroll);
-        tvLog        = (TextView)    findViewById(R.id.log_tv);
-        etFilter     = (EditText)    findViewById(R.id.log_filter);
-        cbAutoScroll = (CheckBox)    findViewById(R.id.log_autoscroll);
-        btnShare     = (Button)      findViewById(R.id.log_btn_share);
-        btnClear     = (Button)      findViewById(R.id.log_btn_clear);
+        wireLogNavRail();
 
-        // Fond sombre pour le log
-        tvLog.setBackgroundColor(getColor(R.color.bg_log));
-        tvLog.setTextColor(COLOR_INFO);
+        mRecycler   = findViewById(R.id.log_recycler);
+        mEtFilter   = findViewById(R.id.log_filter);
+        mBtnPause   = findViewById(R.id.log_btn_pause);
+        mBtnClear   = findViewById(R.id.log_btn_clear);
+        mBtnShare   = findViewById(R.id.log_btn_share);
+        mBtnSave    = findViewById(R.id.log_btn_save);
+        mChipAll    = findViewById(R.id.chip_all);
+        mChipInfo   = findViewById(R.id.chip_info);
+        mChipWarn   = findViewById(R.id.chip_warn);
+        mChipError  = findViewById(R.id.chip_error);
+        mEmptyView  = findViewById(R.id.log_empty_view);
 
-        cbAutoScroll.setChecked(true);
+        mAdapter = new LogAdapter(this);
+        mRecycler.setLayoutManager(new LinearLayoutManager(this));
+        mRecycler.setAdapter(mAdapter);
 
-        etFilter.addTextChangedListener(new TextWatcher() {
+        mEtFilter.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
                 mFilter = s.toString();
-                refreshLog();
+                forceRefresh();
             }
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        btnShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AppLogger.share(LogActivity.this);
-            }
+        mBtnPause.setOnClickListener(v -> togglePause());
+        mBtnClear.setOnClickListener(v -> { AppLogger.clear(); forceRefresh(); });
+        mBtnShare.setOnClickListener(v -> AppLogger.share(LogActivity.this));
+        mBtnSave.setOnClickListener(v -> {
+            File f = AppLogger.saveToFile(LogActivity.this);
+            String msg = (f != null)
+                    ? getString(R.string.log_saved_toast, f.getAbsolutePath())
+                    : getString(R.string.log_save_failed);
+            Toast.makeText(LogActivity.this, msg, Toast.LENGTH_LONG).show();
         });
 
-        btnClear.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AppLogger.clear();
-                refreshLog();
-            }
-        });
+        mChipAll.setOnClickListener(v   -> setLevelFilter(null));
+        mChipInfo.setOnClickListener(v  -> setLevelFilter(AppLogger.Level.INFO));
+        mChipWarn.setOnClickListener(v  -> setLevelFilter(AppLogger.Level.WARN));
+        mChipError.setOnClickListener(v -> setLevelFilter(AppLogger.Level.ERROR));
 
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");
+    }
+
+    private void wireLogNavRail() {
+        View navApps     = findViewById(R.id.nav_apps_log);
+        View navSettings = findViewById(R.id.nav_settings_log);
+        View navDiag     = findViewById(R.id.nav_diag_log);
+        View navSysinfo  = findViewById(R.id.nav_sysinfo_log);
+        View navLogo     = findViewById(R.id.iv_nav_logo_log);
+        if (navApps != null)     navApps.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        if (navSettings != null) navSettings.setOnClickListener(v -> { startActivity(new Intent(this, SettingsActivity.class)); finish(); });
+        if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new Intent(this, DiagActivity.class)); finish(); });
+        if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
+        if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
     }
 
     @Override
@@ -136,96 +147,101 @@ public class LogActivity extends AppCompatActivity {
 
     // ────────────────────────────────────────────────────────────────────────────
 
-    private final SimpleDateFormat mTimeFmt =
-            new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
+    private void togglePause() {
+        mPaused = !mPaused;
+        if (mPaused) {
+            mBtnPause.setIconResource(R.drawable.ic_play);
+            mBtnPause.setContentDescription(getString(R.string.log_btn_resume_cd));
+            mHandler.removeCallbacks(mRefreshRunnable);
+        } else {
+            mBtnPause.setIconResource(R.drawable.ic_pause);
+            mBtnPause.setContentDescription(getString(R.string.log_btn_pause_cd));
+            forceRefresh();
+            mHandler.post(mRefreshRunnable);
+        }
+    }
+
+    private void setLevelFilter(AppLogger.Level lvl) {
+        mLevelFilter = lvl;
+        applyChipState(mChipAll,   lvl == null);
+        applyChipState(mChipInfo,  lvl == AppLogger.Level.INFO);
+        applyChipState(mChipWarn,  lvl == AppLogger.Level.WARN);
+        applyChipState(mChipError, lvl == AppLogger.Level.ERROR);
+        forceRefresh();
+    }
+
+    private void applyChipState(MaterialButton chip, boolean selected) {
+        if (chip == null) return;
+        if (selected) {
+            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getColor(R.color.md_secondary_container)));
+            chip.setStrokeWidth(0);
+            chip.setTextColor(getColor(R.color.md_on_secondary_container));
+        } else {
+            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getColor(android.R.color.transparent)));
+            chip.setStrokeWidth(dp(1));
+            chip.setTextColor(getColor(R.color.md_on_surface_variant));
+        }
+    }
+
+    private int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density); }
+
+    private void forceRefresh() {
+        mLastEntryCount = -1;
+        mLastFilterKey  = null;
+        refreshLog();
+    }
 
     private boolean refreshLog() {
-        // Skip buffer copy if neither the entry count nor the filter has changed.
         int currentCount = AppLogger.getEntriesCount();
-        String filter = mFilter.toLowerCase(Locale.ROOT);
-        if (currentCount == mLastEntryCount && filter.equals(mLastFilter)) return false;
-        // Buffer or filter changed: copy and rebuild.
+        String filterKey = mFilter.toLowerCase(Locale.ROOT)
+                + "|" + (mLevelFilter == null ? "*" : mLevelFilter.name());
+        if (currentCount == mLastEntryCount && filterKey.equals(mLastFilterKey)) return false;
+
         List<AppLogger.Entry> entries = AppLogger.getEntries();
         mLastEntryCount = entries.size();
-        mLastFilter     = filter;
+        mLastFilterKey  = filterKey;
 
-        // Build a color-coded SpannableString
-        SpannableString span = buildSpannable(entries, filter);
+        // Counts per level (from full buffer, ignoring text filter)
+        int cAll = entries.size(), cInfo = 0, cWarn = 0, cErr = 0;
+        for (AppLogger.Entry e : entries) {
+            switch (e.level) {
+                case INFO:  cInfo++; break;
+                case WARN:  cWarn++; break;
+                case ERROR: cErr++;  break;
+                default: break;
+            }
+        }
+        mChipAll.setText(getString(R.string.log_chip_all, cAll));
+        mChipInfo.setText(getString(R.string.log_chip_info, cInfo));
+        mChipWarn.setText(getString(R.string.log_chip_warn, cWarn));
+        mChipError.setText(getString(R.string.log_chip_error, cErr));
 
-        tvLog.setText(span, TextView.BufferType.SPANNABLE);
+        // Apply filter (text + level)
+        String needle = mFilter.toLowerCase(Locale.ROOT);
+        List<AppLogger.Entry> filtered = new ArrayList<>(entries.size());
+        for (AppLogger.Entry e : entries) {
+            if (mLevelFilter != null && e.level != mLevelFilter) continue;
+            if (!needle.isEmpty()) {
+                boolean match = containsIgnoreCase(e.tag, needle)
+                        || containsIgnoreCase(e.message, needle)
+                        || containsIgnoreCase(e.level.name(), needle);
+                if (!match) continue;
+            }
+            filtered.add(e);
+        }
 
-        if (cbAutoScroll.isChecked()) {
-            scrollView.post(new Runnable() {
-                @Override public void run() { scrollView.fullScroll(View.FOCUS_DOWN); }
-            });
+        mAdapter.setEntries(filtered);
+        mEmptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+        mRecycler.setVisibility(filtered.isEmpty() ? View.GONE : View.VISIBLE);
+
+        if (!filtered.isEmpty()) {
+            mRecycler.scrollToPosition(filtered.size() - 1);
         }
         return true;
     }
 
-    /** Static cache — avoids allocating a Level[] on every buildSpannable call. */
-    private static final AppLogger.Level[] LEVEL_VALUES = AppLogger.Level.values();
-
-    private SpannableString buildSpannable(List<AppLogger.Entry> entries, String filter) {
-        StringBuilder sb = new StringBuilder();
-        // Store only the positions of entries that pass the filter:
-        //   {lineStart, lineEnd, timeStart, timeEnd, tagStart, tagEnd, level.ordinal()}
-        // Avoids allocating 7×entries.size() elements when the filter retains only a
-        // fraction of entries (e.g. 10/3000 → saves ~84 KB per rebuild).
-        java.util.ArrayList<int[]> spanData = new java.util.ArrayList<>();
-
-        for (AppLogger.Entry e : entries) {
-            // Filtre
-            if (!filter.isEmpty()) {
-                boolean match = containsIgnoreCase(e.tag, filter)
-                        || containsIgnoreCase(e.message, filter)
-                        || containsIgnoreCase(e.level.name(), filter);
-                if (!match) continue;
-            }
-
-            int lineStart = sb.length();
-
-            // "[HH:mm:ss.SSS]"
-            int timeStart = sb.length();
-            sb.append("[").append(mTimeFmt.format(new Date(e.timestamp))).append("]");
-            int timeEnd = sb.length();
-
-            // "[LEVEL][TAG] "
-            sb.append("[").append(e.level.name()).append("] ");
-            int tagStart = sb.length();
-            sb.append("[").append(e.tag).append("] ");
-            int tagEnd = sb.length();
-
-            sb.append(e.message);
-            // Thread si pas main
-            if (!"main".equals(e.threadName)) {
-                sb.append("  {").append(e.threadName).append("}");
-            }
-            sb.append("\n");
-
-            int lineEnd = sb.length();
-            spanData.add(new int[]{lineStart, lineEnd, timeStart, timeEnd, tagStart, tagEnd,
-                    e.level.ordinal()});
-        }
-
-        SpannableString span = new SpannableString(sb.toString());
-
-        for (int[] d : spanData) {
-            int msgColor = levelColor(LEVEL_VALUES[d[6]]);
-            // Full line: level color
-            span.setSpan(new ForegroundColorSpan(msgColor),
-                    d[0], d[1], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            // Timestamp en gris discret
-            span.setSpan(new ForegroundColorSpan(COLOR_TIME),
-                    d[2], d[3], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            // Tag en bleu clair
-            span.setSpan(new ForegroundColorSpan(COLOR_TAG),
-                    d[4], d[5], Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        return span;
-    }
-
-    /** Case-insensitive contains without allocating lowercase copies on every call. */
     private static boolean containsIgnoreCase(String text, String needleLowercase) {
         if (text == null) return false;
         if (needleLowercase == null || needleLowercase.isEmpty()) return true;
@@ -235,15 +251,5 @@ public class LogActivity extends AppCompatActivity {
             if (text.regionMatches(true, i, needleLowercase, 0, n)) return true;
         }
         return false;
-    }
-
-    private int levelColor(AppLogger.Level level) {
-        switch (level) {
-            case DEBUG: return COLOR_DEBUG;
-            case INFO:  return COLOR_INFO;
-            case WARN:  return COLOR_WARN;
-            case ERROR: return COLOR_ERROR;
-            default:    return COLOR_INFO;
-        }
     }
 }

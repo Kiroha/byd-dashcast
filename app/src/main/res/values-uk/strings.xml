@@ -60,10 +60,10 @@
     <string name="split_full_screen">⬜ Повний екран</string>
     <string name="split_left">⬜⬛ Ліворуч (50%%)</string>
     <string name="split_right">⬛⬜ Праворуч (50%%)</string>
-    <string name="log_title">📋 Журнал</string>
+    <string name="log_title">Журнал</string>
     <string name="log_btn_clear">Очистити</string>
     <string name="log_btn_share">Поділитися</string>
-    <string name="log_filter_hint">Фільтр (тег / повідомлення / рівень)…</string>
+    <string name="log_filter_hint">Фільтр журналу (тег, повідомлення, regex)…</string>
     <string name="log_autoscroll">Авто↓</string>
     <string name="log_level_debug">DEBUG </string>
     <string name="log_level_info">INFO </string>
@@ -341,4 +341,19 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
+    <string name="log_chip_all">Усі (%1$d)</string>
+    <string name="log_chip_info">Info (%1$d)</string>
+    <string name="log_chip_warn">Warn (%1$d)</string>
+    <string name="log_chip_error">Error (%1$d)</string>
+    <string name="log_chip_all_zero">Усі (0)</string>
+    <string name="log_chip_info_zero">Info (0)</string>
+    <string name="log_chip_warn_zero">Warn (0)</string>
+    <string name="log_chip_error_zero">Error (0)</string>
+    <string name="log_btn_pause_cd">Пауза</string>
+    <string name="log_btn_resume_cd">Продовжити</string>
+    <string name="log_btn_clear_cd">Очистити</string>
+    <string name="log_btn_share_cd">Поділитися</string>
+    <string name="log_btn_save_cd">Зберегти</string>
+    <string name="log_save_failed">Не вдалося зберегти журнал</string>
+    <string name="log_saved_toast">Журнал збережено: %1$s</string>
 </resources>
