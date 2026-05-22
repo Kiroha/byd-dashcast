@@ -2,8 +2,10 @@ package com.byd.dashcast;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Display;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -16,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 
 import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * User-facing settings screen.
@@ -67,6 +70,8 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnApply;
     private Button      btnReset;
     private TextView    tvResult;
+    private View        tvOverscanSectionTitle;
+    private View        cardOverscan;
     // Note: fields below are typed as CompoundButton so the layout can use either
     // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
@@ -100,6 +105,7 @@ public class SettingsActivity extends AppCompatActivity {
         loadPreferences();
         wireListeners();
         wireSettingsNavRail();
+        applyDiLink2OverscanGuard();
 
         // Mockup top-bar Apply button: mirrors the in-card Apply action.
         View btnApplyTop = findViewById(R.id.btn_apply_top);
@@ -187,6 +193,8 @@ public class SettingsActivity extends AppCompatActivity {
         btnApply      = findViewById(R.id.btn_apply_overscan);
         btnReset      = findViewById(R.id.btn_reset_overscan);
         tvResult      = findViewById(R.id.tv_overscan_result);
+        tvOverscanSectionTitle = findViewById(R.id.tv_overscan_section_title);
+        cardOverscan  = findViewById(R.id.card_overscan);
         cbPrerelease  = findViewById(R.id.cb_prerelease);
         cbVisualMode  = findViewById(R.id.cb_visual_mode);
         cbBootAutoStart = findViewById(R.id.cb_boot_auto_start);
@@ -451,7 +459,12 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     /**
-     * Sends "wm overscan H,V,H,V -d 1" to the cluster display (display id=1 on BYD Seal EU).
+     * Sends "wm overscan H,V,H,V -d <clusterId>" to the cluster display.
+     * The cluster display id is resolved dynamically via {@link #resolveClusterDisplayId()}
+     * (was hardcoded {@code -d 1} until build 189). If no cluster is detected
+     * (e.g. DL2 without secondary display), the call is aborted with a user-visible
+     * error — critical to prevent the BYD MTK ROM from silently applying the
+     * overscan to display 0 (the main screen), as reported in the field on 22/05/2026.
      * The result is shown in tvResult.
      */
     private void applyOverscan() {
@@ -459,7 +472,28 @@ public class SettingsActivity extends AppCompatActivity {
         final int v = sbInsetV.getProgress();
         saveInsets(h, v);
 
-        final String cmd = "wm overscan " + h + "," + v + "," + h + "," + v + " -d 1";
+        // DL2 HARD GUARD — never reach a wm command on DL2 even if the card
+        // somehow got displayed (defence in depth on top of applyDiLink2OverscanGuard
+        // and AdbLocalClient.blockDiLink2Resize). The MTK ROM silently falls back
+        // to display 0 on missing -d N → shrinks the main screen.
+        if (Platform.get().isDiLink2(this)) {
+            tvResult.setVisibility(View.VISIBLE);
+            tvResult.setText("⚠️ Marges désactivées sur DiLink 2 (un seul écran).");
+            AppLogger.w("SettingsActivity",
+                    "applyOverscan aborted: DL2 platform (no cluster display)");
+            return;
+        }
+
+        final int clusterId = resolveClusterDisplayId();
+        if (clusterId < 0) {
+            tvResult.setVisibility(View.VISIBLE);
+            tvResult.setText("⚠️ Aucun cluster détecté — marges ignorées (DL2 ?).");
+            AppLogger.w("SettingsActivity",
+                    "applyOverscan aborted: no cluster display found (h=" + h + " v=" + v + ")");
+            return;
+        }
+
+        final String cmd = "wm overscan " + h + "," + v + "," + h + "," + v + " -d " + clusterId;
         AppLogger.i("SettingsActivity", "applyOverscan → " + cmd);
 
         AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
@@ -484,5 +518,66 @@ public class SettingsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    /**
+     * Resolves the cluster display id dynamically.
+     *
+     * <p>Returns the id of the first non-default display reported by
+     * {@link DisplayManager} (PRESENTATION category first, then any non-default).
+     * Returns {@code -1} when no cluster display is present (typically DL2,
+     * which has only display 0). This guard is critical: on DL2 the previous
+     * hardcoded {@code -d 1} was silently applied to display 0 by the BYD MTK
+     * ROM, shrinking the main screen (field report 22/05/2026 — user changed
+     * margins to 80/50 in Settings and the main screen got smaller).
+     */
+    private int resolveClusterDisplayId() {
+        try {
+            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            if (dm == null) return -1;
+            Display[] presentations = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+            if (presentations != null) {
+                for (Display d : presentations) {
+                    if (d.getDisplayId() != Display.DEFAULT_DISPLAY) return d.getDisplayId();
+                }
+            }
+            Display[] all = dm.getDisplays();
+            if (all != null) {
+                for (Display d : all) {
+                    if (d.getDisplayId() != Display.DEFAULT_DISPLAY) return d.getDisplayId();
+                }
+            }
+        } catch (Throwable t) {
+            AppLogger.w("SettingsActivity", "resolveClusterDisplayId failed: " + t.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * Hides the overscan margins section on DL2 (alps / k65v1 / API 28) because the
+     * platform has no cluster display — the previous hardcoded {@code wm overscan -d 1}
+     * was silently applied to display 0 by the MTK ROM, shrinking the main screen.
+     * Also hides on any device where no secondary display is detected at activity
+     * launch (defensive — covers DL3/DL5 in a state where the cluster is not connected).
+     */
+    private void applyDiLink2OverscanGuard() {
+        boolean hide = false;
+        String reason = null;
+        try {
+            if (Platform.get().isDiLink2(this)) {
+                hide = true;
+                reason = "DL2 platform detected (alps/k65v1) — no cluster display";
+            } else if (resolveClusterDisplayId() < 0) {
+                hide = true;
+                reason = "no secondary display present at launch";
+            }
+        } catch (Throwable t) {
+            AppLogger.w("SettingsActivity", "applyDiLink2OverscanGuard probe failed: " + t.getMessage());
+        }
+        if (hide) {
+            if (tvOverscanSectionTitle != null) tvOverscanSectionTitle.setVisibility(View.GONE);
+            if (cardOverscan != null)           cardOverscan.setVisibility(View.GONE);
+            AppLogger.i("SettingsActivity", "Overscan section hidden: " + reason);
+        }
     }
 }

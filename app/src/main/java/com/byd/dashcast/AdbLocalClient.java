@@ -79,12 +79,52 @@ public class AdbLocalClient {
         } catch (Throwable ignore) { return false; }
     }
 
+    /** True if running on DiLink 2 (alps / k65v1, single display 0). */
+    public static boolean isDiLink2Safe(Context ctx) {
+        try {
+            return ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink2(ctx);
+        } catch (Throwable ignore) { return false; }
+    }
+
+    /**
+     * DL2 SAFETY GUARD — matches any {@code wm overscan|size|density} subcommand
+     * (with any arguments, anywhere in the line, including pipelines and chains).
+     *
+     * <p>On DiLink 2 (alps / k65v1 / MT6765 / API 28) there is only physical
+     * display 0 (verified L3/L5 of the DL2 RECON REPORT 22/05/2026). The MTK
+     * fork silently falls back to display 0 when {@code -d N} targets a
+     * non-existent display id, which shrinks the user's main UI screen
+     * (field report: user set margins 80/50 → main screen got smaller).
+     * Any such command is therefore unconditionally blocked on DL2.
+     */
+    public static boolean isDisplayResizeCmd(String cmd) {
+        if (cmd == null) return false;
+        return cmd.matches("(?s).*\\bwm\\s+(overscan|size|density)\\b.*");
+    }
+
+    /**
+     * Returns true and logs a warning when {@code cmd} must be blocked because
+     * it is a display-resize command running on DL2. Centralised so every
+     * shell entry point (legacy {@code executeShell*}, {@link com.byd.dashcast.beta.ShellGateway})
+     * applies the same guard.
+     */
+    public static boolean blockDiLink2Resize(Context ctx, String cmd) {
+        if (isDiLink2Safe(ctx) && isDisplayResizeCmd(cmd)) {
+            AppLogger.w(TAG, "DL2 BLOCK: refused resize cmd \"" + cmd
+                    + "\" — single display 0, would shrink main screen");
+            return true;
+        }
+        return false;
+    }
+
     // -------------------------------------------------------------------------
 
     /**
      * Executes a raw shell command via local ADB (asynchronous).
      */
     public static void executeShell(final Context context, final String command) {
+        if (blockDiLink2Resize(context, command)) return;
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {
@@ -101,6 +141,11 @@ public class AdbLocalClient {
     /** Executes a shell command and returns the result via callback (background thread). */
     public static void executeShellWithResult(final Context context, final String command,
                                               final Callback callback) {
+        if (blockDiLink2Resize(context, command)) {
+            if (callback != null) callback.onError(
+                    "blocked on DiLink 2: no cluster display (would shrink main screen)");
+            return;
+        }
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(context)) {
                 String output = dadb.shell(command).getAllOutput().trim();

@@ -45,6 +45,7 @@ public final class Platform {
     private final String  rawFingerprint;    // Build.FINGERPRINT
     private final int     androidApi;        // Build.VERSION.SDK_INT
     private final boolean autoDiLink5;       // pure auto-detection result
+    private final boolean autoDiLink2;       // pure auto-detection result (alps/MT6765/API 28)
 
     private Platform() {
         this.rawProductName = readProp("ro.product.name");
@@ -53,6 +54,7 @@ public final class Platform {
         this.rawFingerprint = safe(Build.FINGERPRINT);
         this.androidApi     = Build.VERSION.SDK_INT;
         this.autoDiLink5    = detectDiLink5(rawProductName, rawModel, rawFingerprint, androidApi);
+        this.autoDiLink2    = detectDiLink2(rawBrand, rawProductName, androidApi);
     }
 
     /** Lazy init — call from {@code DashCastApp.onCreate()} once. */
@@ -85,6 +87,21 @@ public final class Platform {
         return false;
     }
 
+    /**
+     * DiLink 2 auto-detection — based on the alps / k65v1_64_bsp / MT6765 / Android 9
+     * signature confirmed by two field reports (21/05/2026):
+     *   Build.BRAND = "alps", ro.product.name contains "k65v1", Build.VERSION.SDK_INT == 28.
+     * Conservative: requires brand=alps + product containing "k65" + API 28-29.
+     * Returns false on any uncertainty so DL3/DL5 logic stays unaffected.
+     */
+    private static boolean detectDiLink2(String brand, String product, int api) {
+        String b = (brand   == null ? "" : brand).toLowerCase();
+        String p = (product == null ? "" : product).toLowerCase();
+        if (!"alps".equals(b)) return false;
+        if (!p.contains("k65")) return false;
+        return api == 28 || api == 29;
+    }
+
     // ── Raw snapshot accessors ────────────────────────────────────────────────
 
     public String  rawProductName()  { return rawProductName; }
@@ -93,6 +110,16 @@ public final class Platform {
     public String  rawFingerprint()  { return rawFingerprint; }
     public int     androidApi()      { return androidApi; }
     public boolean isAutoDetectedDiLink5() { return autoDiLink5; }
+    public boolean isAutoDetectedDiLink2() { return autoDiLink2; }
+
+    /**
+     * Effective DiLink 2 mode — there is no user override for DL2 (no toggle in Settings).
+     * This is read every call so future override hooks can be added without API changes.
+     * Safe to call from any thread; cached at process start via the singleton.
+     */
+    public boolean isDiLink2(Context ctx) {
+        return autoDiLink2;
+    }
 
     // ── Effective state (auto + user override) ────────────────────────────────
 
