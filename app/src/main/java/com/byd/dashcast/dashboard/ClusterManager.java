@@ -120,6 +120,31 @@ public class ClusterManager {
     public void activateClusterDisplay(final DisplayReadyCallback callback) {
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
 
+        // DiLink 5.0 short-circuit: PRESENTATION displays #3/#4 (XDJAScreenProjection_0/1)
+        // exist persistently. The full DL3 sequence (30→16→35) is replaced by a single
+        // sendInfo(16) on auto_container — confirmed by D12/D31 PASS (log 22/05/2026).
+        // sendInfo(30) targets an empty slot on DL5, and sendInfo(35) is DL3-specific.
+        if (isDiLink5Safe()) {
+            AppLogger.i(TAG, "DL5 activation path: sendInfo(16) only on auto_container");
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "DL5 activation ADB(cmd=16): " + out);
+                        mHandler.postDelayed(new Runnable() {
+                            @Override public void run() { resolveDl5Display(dm, callback); }
+                        }, 500);
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: " + err);
+                        // Still attempt to resolve a display — they may be already up.
+                        mHandler.postDelayed(new Runnable() {
+                            @Override public void run() { resolveDl5Display(dm, callback); }
+                        }, 500);
+                    }
+                });
+            return;
+        }
+
         // 1. First check if the cluster VirtualDisplay is already present (DISPLAY_CATEGORY_PRESENTATION)
         //    AutoDisplayService creates it at BOOT → available immediately without waiting.
         Display found = findClusterDisplay(dm);
@@ -367,6 +392,50 @@ public class ClusterManager {
     private boolean isClusterDisplay(Display d) {
         // A display is considered cluster if it is not the primary display (id=0)
         return d != null && d.getDisplayId() != 0;
+    }
+
+    // ── DiLink 5.0 helpers ─────────────────────────────────────────────────
+
+    private boolean isDiLink5Safe() {
+        try {
+            return com.byd.dashcast.platform.Platform.get().isDiLink5(mContext);
+        } catch (Throwable ignore) { return false; }
+    }
+
+    /**
+     * DL5: pick the first PRESENTATION display (typically id=3 — XDJAScreenProjection_0)
+     * and notify. Falls back to any non-default display, then to a short polling window
+     * if nothing is up yet (sendInfo(16) is sometimes asynchronous).
+     */
+    private void resolveDl5Display(final DisplayManager dm, final DisplayReadyCallback callback) {
+        Display d = findClusterDisplay(dm);
+        if (d != null) {
+            AppLogger.i(TAG, "DL5 cluster display ready: id=" + d.getDisplayId()
+                    + " name=" + d.getName());
+            final Display target = d;
+            mHandler.post(new Runnable() {
+                @Override public void run() {
+                    callback.onDisplayReady(target, target.getDisplayId());
+                }
+            });
+            return;
+        }
+        // Brief polling window (up to 3 s) — should never trigger on DL5 in practice.
+        final long deadline = android.os.SystemClock.uptimeMillis() + 3000;
+        mHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                Display dd = findClusterDisplay(dm);
+                if (dd != null) {
+                    AppLogger.i(TAG, "DL5 cluster display (late) id=" + dd.getDisplayId());
+                    callback.onDisplayReady(dd, dd.getDisplayId());
+                } else if (android.os.SystemClock.uptimeMillis() < deadline) {
+                    mHandler.postDelayed(this, 250);
+                } else {
+                    AppLogger.w(TAG, "DL5 cluster display not found after 3s — timeout");
+                    callback.onDisplayTimeout();
+                }
+            }
+        }, 250);
     }
 
     // ── Cancellation ──────────────────────────────────────────────────────────
