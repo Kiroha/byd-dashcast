@@ -49,7 +49,7 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_DISPLAY     = 1;
     private static final int TAB_ADB_LOCAL   = 2;
     private static final int TAB_SYSTEM      = 3;
-    private static final int TAB_STRESS      = 4;
+    private static final int TAB_ADAS        = 4;
     private static final int TAB_BETA_ENGINE = 5;
     private static final int TAB_DILINK5     = 6;
     private static final int TAB_SNIFFER     = 7;
@@ -58,6 +58,7 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelBeta;
     private View         panelDl5;
     private View         panelSniffer;
+    private View         panelAdas;
     private View         panelComingSoon;
 
     // Beta panel views
@@ -100,6 +101,7 @@ public class DiagActivity extends AppCompatActivity {
         bindBetaPanel();
         bindDl5Panel();
         bindSnifferPanel();
+        bindAdasPanel();
         prepareTestRows();
         prepareDl5TestRows();
         updateStatusPills();
@@ -139,6 +141,7 @@ public class DiagActivity extends AppCompatActivity {
         panelBeta       = findViewById(R.id.panel_beta_engine);
         panelDl5        = findViewById(R.id.panel_dilink5);
         panelSniffer    = findViewById(R.id.panel_sniffer);
+        panelAdas       = findViewById(R.id.panel_adas);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -152,11 +155,13 @@ public class DiagActivity extends AppCompatActivity {
         boolean isBeta    = position == TAB_BETA_ENGINE;
         boolean isDl5     = position == TAB_DILINK5;
         boolean isSniffer = position == TAB_SNIFFER;
+        boolean isAdas    = position == TAB_ADAS;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isSniffer) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isSniffer) {
+        panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
+        panelComingSoon.setVisibility((isBeta || isDl5 || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isSniffer && !isAdas) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -164,7 +169,6 @@ public class DiagActivity extends AppCompatActivity {
                 case TAB_DISPLAY:   titleRes = R.string.diag_tab_display;   break;
                 case TAB_ADB_LOCAL: titleRes = R.string.diag_tab_adb_local; break;
                 case TAB_SYSTEM:    titleRes = R.string.diag_tab_system;    break;
-                case TAB_STRESS:    titleRes = R.string.diag_tab_stress;    break;
                 default:            titleRes = R.string.diag_coming_soon_title;
             }
             if (title != null) title.setText(titleRes);
@@ -525,6 +529,56 @@ public class DiagActivity extends AppCompatActivity {
         btnSnifferStop.setOnClickListener(v -> stopSniffer());
         btnSnifferSnapshot.setOnClickListener(v -> snapshotSniffer());
         btnSnifferExport.setOnClickListener(v -> exportSniffer());
+    }
+
+    // ─── ADAS panel ─────────────────────────────────────────────────────────
+    // Wraps clusterdebug.SecondActivity codes 12 (show) / 13 (hide) — confirmed
+    // generic across DiLink platforms (DL3/Di4/DL5/DL6) in v1.6.1.4. Service-name
+    // differs: Auto_container on DL3/Di4, auto_container on DL5+.
+
+    private TextView tvAdasResult;
+    private TextView tvAdasServicePill;
+
+    private void bindAdasPanel() {
+        tvAdasResult      = panelAdas.findViewById(R.id.tv_adas_result);
+        tvAdasServicePill = panelAdas.findViewById(R.id.tv_adas_service_pill);
+        MaterialButton btnShow = panelAdas.findViewById(R.id.btn_adas_show);
+        MaterialButton btnHide = panelAdas.findViewById(R.id.btn_adas_hide);
+
+        String svc = autoContainerSvcName();
+        if (tvAdasServicePill != null) tvAdasServicePill.setText(svc);
+
+        btnShow.setOnClickListener(v -> sendAdasCmd(12));
+        btnHide.setOnClickListener(v -> sendAdasCmd(13));
+    }
+
+    private String autoContainerSvcName() {
+        try {
+            return com.byd.dashcast.platform.Platform.get().isDiLink5(this)
+                    ? "auto_container" : "Auto_container";
+        } catch (Throwable t) {
+            return "Auto_container";
+        }
+    }
+
+    private void sendAdasCmd(final int code) {
+        final String svc = autoContainerSvcName();
+        final String cmd = "service call " + svc + " 2 i32 1000 i32 " + code + " s16 \"\" 2>&1";
+        if (tvAdasResult != null) tvAdasResult.setText("$ " + cmd + "\n…envoi en cours…");
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String report) {
+                safeRunOnUiThread(() -> {
+                    if (tvAdasResult != null)
+                        tvAdasResult.setText("$ " + cmd + "\n" + report);
+                });
+            }
+            @Override public void onError(final String error) {
+                safeRunOnUiThread(() -> {
+                    if (tvAdasResult != null)
+                        tvAdasResult.setText("$ " + cmd + "\nERREUR: " + error);
+                });
+            }
+        });
     }
 
     private void setSnifferUiActive(boolean active, String detail) {

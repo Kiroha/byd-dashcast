@@ -121,8 +121,8 @@ public final class DiLink5TestRunner {
                 "DisplayManager.getDisplays() + reflective DisplayInfo for every id: flags hex breakdown, ownerUid, ownerPackageName, type, size, density, removeMode — captures non-PRESENTATION displays (e.g. DL5 display #2)."));
         list.add(new TestDef("D22", "Display #2 owner / system-owned displays identification",
                 "dumpsys SurfaceFlinger --display-id + dumpsys display + ps -A -o PID,USER,NAME to identify which process owns the non-PRESENTATION displays surfaced by D21/D14."));
-        list.add(new TestDef("D23", "auto_container transaction codes scan",
-                "service call auto_container <N> for N=1..8 with neutral args — maps the binder API surface (other than sendInfo on code 2) to discover hidden capabilities."));
+        list.add(new TestDef("D23", "All warning lamps visual cycle (sendInfo 2 → 3 s → sendInfo 3)",
+                "service call auto_container 2 i32 1000 i32 2 s16 \"\" — allume tous les warning lamps du cluster, attend 3 s, puis envoie sendInfo(3) pour les éteindre. À l’utilisateur de confirmer visuellement si les témoins se sont bien allumés pendant 3 s."));
         list.add(new TestDef("D24", "BYD-specific services probe",
                 "service call on magicwindow, crossservice, mirror, BYDMgmt, byd_datacached, IBYDCDRService with interfaceDescriptor (code 0) and code 1 — confirms aliveness + captures interface name."));
         list.add(new TestDef("D25", "IActivityTaskManager methods enumeration",
@@ -132,7 +132,7 @@ public final class DiLink5TestRunner {
         list.add(new TestDef("D27", "BYD clusterdebug app launch probe",
                 "Resolve com.byd.clusterdebug launcher activity, am start it on display 0, then dump its activity stack + logcat — the official BYD cluster diagnostic app, will tell us what the legitimate projection flow looks like."));
         list.add(new TestDef("D28", "Live logcat capture during sendInfo cycle",
-                "logcat -c; sendInfo(30) → wait → sendInfo(16) → wait → logcat -d filtered — captures every BYD log line emitted during a real projection-start attempt; reveals which component rejects/accepts and why."));
+                "logcat -c → sendInfo(16) → wait → logcat -d filtered — captures every BYD log line emitted during a real projection-start attempt on DL5 (no screen-size hint needed); reveals which component rejects/accepts and why."));
         list.add(new TestDef("D29", "Projection-related intent filters discovery",
                 "pm query-intent-activities / query-services for actions: PROJECT, CLUSTER_PROJECTION, CAST, AutoDisplay, AppStartup — enumerates every intent BYD apps declare for projection so we can pick the official entry point."));
         list.add(new TestDef("D30", "SurfaceFlinger physical/virtual display topology",
@@ -591,7 +591,7 @@ public final class DiLink5TestRunner {
         sb.append("Retrieve with: adb pull ").append(outDir.getAbsolutePath()).append('\n');
         sb.append("Filtered (whitelist) \u2014 ").append(sLastDiscovery.size())
           .append(" pkg discovered, only RE-relevant ones extracted.\n\n");
-        int ok = 0, fail = 0, skipped = 0;
+        int ok = 0, fail = 0, skipped = 0, cached = 0;
         for (DiscoveredPkg d : sLastDiscovery) {
             if (!d10IsInteresting(d.pkg)) {
                 skipped++;
@@ -600,11 +600,19 @@ public final class DiLink5TestRunner {
             }
             String safe = d.pkg.replace('/', '_');
             String dst  = outDir.getAbsolutePath() + "/" + safe + "_v" + d.versionCode + ".apk";
+            java.io.File f = new java.io.File(dst);
+            // Cache: filename embeds versionCode, so an existing non-empty file is
+            // the same APK already extracted — no need to re-copy.
+            if (f.exists() && f.length() > 0) {
+                cached++;
+                ok++;
+                sb.append("  \u21bb ").append(d.pkg).append("  (cached, ").append(f.length() / 1024).append(" KB)\n");
+                continue;
+            }
             AtomicReference<String> out = new AtomicReference<>("");
             // cat + redirect avoids cp permission quirks on some BYD builds.
             runShellSync(ctx, "cat '" + d.apkPath + "' > '" + dst + "' 2>&1 && ls -l '" + dst + "' 2>&1", out, 15000);
             String raw = out.get().trim();
-            java.io.File f = new java.io.File(dst);
             boolean exists = f.exists() && f.length() > 0;
             if (exists) {
                 ok++;
@@ -617,10 +625,11 @@ public final class DiLink5TestRunner {
         r.detail = sb.toString();
         if (ok > 0 && fail == 0) {
             r.status = Status.PASS;
-            r.message = ok + " APK(s) extracted, " + skipped + " skipped — adb pull the dir";
+            r.message = ok + " APK(s) ready (" + cached + " cached), "
+                    + skipped + " skipped \u2014 adb pull the dir";
         } else if (ok > 0) {
             r.status = Status.WARN;
-            r.message = ok + " ok / " + fail + " failed / " + skipped + " skipped";
+            r.message = ok + " ok (" + cached + " cached) / " + fail + " failed / " + skipped + " skipped";
         } else if (skipped > 0 && fail == 0) {
             r.status = Status.WARN;
             r.message = "No package matched the RE whitelist (" + skipped + " discovered)";
@@ -888,28 +897,43 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD23(Context ctx, TestResult r) {
-        // Probe transaction codes 1..8 on auto_container with neutral args.
-        // Code 0 = INTERFACE_TRANSACTION (returns interfaceDescriptor).
+        // Visual cycle: sendInfo(2) = all warning lamps ON, wait 3 s, sendInfo(3) = OFF.
+        // Confirmed via com.byd.clusterdebug v1.6.1.4 (code 2 = 所有警告灯点亮, code 3 = 所有警告灯熄灭).
+        // No machine-readable feedback: relies on the user observing the cluster.
         StringBuilder sb = new StringBuilder();
         AtomicReference<String> out = new AtomicReference<>("");
-        for (int code = 0; code <= 8; code++) {
-            String cmd = "service call auto_container " + code + " i32 0 i32 0 s16 \"\" 2>&1";
-            runShellSync(ctx, cmd, out, 2500);
-            sb.append("[code ").append(code).append("] ").append(cmd).append('\n');
-            sb.append(out.get().trim()).append("\n\n");
-        }
+
+        String cmdOn  = "service call auto_container 2 i32 1000 i32 2 s16 \"\" 2>&1";
+        String cmdOff = "service call auto_container 2 i32 1000 i32 3 s16 \"\" 2>&1";
+
+        sb.append("[sendInfo(2) — ALL WARNING LAMPS ON]\n").append(cmdOn).append('\n');
+        runShellSync(ctx, cmdOn, out, 3000);
+        sb.append(out.get().trim()).append("\n\n");
+        String onResult = out.get();
+
+        try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
+        sb.append("[sendInfo(3) — ALL WARNING LAMPS OFF]\n").append(cmdOff).append('\n');
+        runShellSync(ctx, cmdOff, out, 3000);
+        sb.append(out.get().trim()).append("\n\n");
+        String offResult = out.get();
+
+        sb.append("→ Confirme visuellement sur le cluster :\n")
+          .append("  • Les warning lamps se sont-ils allumés pendant ~3 s puis éteints ?\n")
+          .append("  • Si OUI → auto_container.sendInfo accepté côté cluster (codes 2/3 opérationnels).\n")
+          .append("  • Si NON → binder accepté mais pas répercuté visuellement (Qt cluster déconnecté ?).\n");
         r.detail = sb.toString();
-        String lower = sb.toString().toLowerCase();
-        if (lower.contains("service auto_container does not exist")) {
+
+        String low = (onResult + "\n" + offResult).toLowerCase();
+        if (low.contains("service auto_container does not exist")) {
             r.status = Status.FAIL;
-            r.message = "auto_container service absent";
+            r.message = "auto_container service absent — cycle impossible";
+        } else if (low.contains("result: parcel")) {
+            r.status = Status.WARN;
+            r.message = "Cycle 2→3 envoyé — confirme visuellement les warning lamps (3 s)";
         } else {
-            int acceptedCount = 0;
-            for (String line : sb.toString().split("\\n")) {
-                if (line.startsWith("Result: Parcel")) acceptedCount++;
-            }
-            r.status = Status.PASS;
-            r.message = acceptedCount + " / 9 transaction codes accepted";
+            r.status = Status.WARN;
+            r.message = "Cycle envoyé mais réponse binder inhabituelle — voir detail";
         }
     }
 
@@ -1018,11 +1042,7 @@ public final class DiLink5TestRunner {
         AtomicReference<String> out = new AtomicReference<>("");
         runShellSync(ctx, "logcat -c 2>&1", out, 3000);
         sb.append("=== logcat cleared ===\n\n");
-        sb.append("=== sendInfo(1000, 30) screen size ===\n");
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 30 s16 \"\" 2>&1", out, 4000);
-        sb.append(out.get()).append('\n');
-        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        sb.append("\n=== sendInfo(1000, 16) projection ON ===\n");
+        sb.append("=== sendInfo(1000, 16) projection ON ===\n");
         runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
         sb.append(out.get()).append('\n');
         try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
