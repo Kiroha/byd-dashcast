@@ -166,6 +166,8 @@
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_dilink5"/>
             <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_dilink2"/>
+            <com.google.android.material.tabs.TabItem
                 android:text="Sniffer"
                 tools:ignore="HardcodedText"/>
         </com.google.android.material.tabs.TabLayout>
@@ -188,6 +190,11 @@
             <include
                 android:id="@+id/panel_dilink5"
                 layout="@layout/include_diag_dilink5"/>
+
+            <!-- DiLink 2 recon panel (build 185) -->
+            <include
+                android:id="@+id/panel_dilink2"
+                layout="@layout/include_diag_dilink2"/>
 
             <!-- RE Sniffer dedicated diagnostic panel (build 181) -->
             <include

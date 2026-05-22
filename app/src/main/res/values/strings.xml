@@ -262,6 +262,14 @@
     <string name="diag_dl5_d8_target_label">App cible (test D8 — cluster)</string>
     <string name="diag_dl5_d8_running_toast">Test D8 sur %1$s — l\'app sera relancée puis rappelée sur l\'écran principal.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+    <string name="diag_tab_dilink2">DiLink 2</string>
+    <string name="diag_dl2_header_title">Plateforme DiLink 2 — Recon</string>
+    <string name="diag_dl2_header_subtitle">Suite de reconnaissance reflection-only (sans ADB local).</string>
+    <string name="diag_dl2_header_subtitle_fmt">Produit : %1$s · brand : %2$s · API %3$d</string>
+    <string name="diag_dl2_pill_unknown">Signature : —</string>
+    <string name="diag_dl2_pill_detected">Signature : DL2 détectée</string>
+    <string name="diag_dl2_pill_other">Signature : non-DL2</string>
+    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- Settings — DiLink 5 -->
     <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
