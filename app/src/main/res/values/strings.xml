@@ -271,6 +271,17 @@
     <string name="diag_dl2_pill_other">Signature : non-DL2</string>
     <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
+    <!-- Diag — Mirror tab (build 193) -->
+    <string name="diag_tab_mirror">Mirror</string>
+    <string name="diag_mirror_header_title">Mirror — Diagnostic</string>
+    <string name="diag_mirror_header_subtitle">Topologie SurfaceFlinger, état du daemon mirror, écran cluster.</string>
+    <string name="diag_mirror_header_subtitle_fmt">Produit : %1$s · API %2$d</string>
+    <string name="diag_mirror_pill_unknown">Plateforme : —</string>
+    <string name="diag_mirror_pill_dl5">Plateforme : DiLink 5</string>
+    <string name="diag_mirror_pill_other">Plateforme : autre</string>
+    <string name="diag_mirror_hint">Lance le mirror depuis l\'app au moins une fois avant la suite, puis tape « Envoyer (.log) » pour partager le rapport via Telegram.</string>
+    <string name="diag_mirror_send_log">Envoyer (.log)</string>
+
     <!-- Settings — DiLink 5 -->
     <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
     <string name="settings_dilink5_mode_support">Adapte DashCast au protocole DiLink 5.0 / Android 12.</string>
