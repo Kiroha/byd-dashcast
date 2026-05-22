@@ -117,6 +117,26 @@ public final class DiLink5TestRunner {
                 "service list | grep -iE 'auto|byd|cluster|fission|display|window|projection|crosscontrol|xdja' — broader than D3."));
         list.add(new TestDef("D20", "IActivityTaskManager service presence",
                 "service list | grep -i activity_task — confirms IATM binder available (required by D13 typed path)."));
+        list.add(new TestDef("D21", "All displays — full inventory (no PRESENTATION filter)",
+                "DisplayManager.getDisplays() + reflective DisplayInfo for every id: flags hex breakdown, ownerUid, ownerPackageName, type, size, density, removeMode — captures non-PRESENTATION displays (e.g. DL5 display #2)."));
+        list.add(new TestDef("D22", "Display #2 owner / system-owned displays identification",
+                "dumpsys SurfaceFlinger --display-id + dumpsys display + ps -A -o PID,USER,NAME to identify which process owns the non-PRESENTATION displays surfaced by D21/D14."));
+        list.add(new TestDef("D23", "auto_container transaction codes scan",
+                "service call auto_container <N> for N=1..8 with neutral args — maps the binder API surface (other than sendInfo on code 2) to discover hidden capabilities."));
+        list.add(new TestDef("D24", "BYD-specific services probe",
+                "service call on magicwindow, crossservice, mirror, BYDMgmt, byd_datacached, IBYDCDRService with interfaceDescriptor (code 0) and code 1 — confirms aliveness + captures interface name."));
+        list.add(new TestDef("D25", "IActivityTaskManager methods enumeration",
+                "Reflective dump of every public method on IActivityTaskManager.Stub (DL5 / API 32) — find the right signature for windowing-mode / display-attach since D13 setTaskWindowingMode(int,int,boolean) is absent."));
+        list.add(new TestDef("D26", "am start --display N probe on each non-main display",
+                "For each display in (2, 3, 4): launch a tiny canary (StandardADB or our own NoOp) and check via dumpsys activity activities where it actually landed — reveals which displays accept arbitrary apps without sendInfo prep."));
+        list.add(new TestDef("D27", "BYD clusterdebug app launch probe",
+                "Resolve com.byd.clusterdebug launcher activity, am start it on display 0, then dump its activity stack + logcat — the official BYD cluster diagnostic app, will tell us what the legitimate projection flow looks like."));
+        list.add(new TestDef("D28", "Live logcat capture during sendInfo cycle",
+                "logcat -c; sendInfo(30) → wait → sendInfo(16) → wait → logcat -d filtered — captures every BYD log line emitted during a real projection-start attempt; reveals which component rejects/accepts and why."));
+        list.add(new TestDef("D29", "Projection-related intent filters discovery",
+                "pm query-intent-activities / query-services for actions: PROJECT, CLUSTER_PROJECTION, CAST, AutoDisplay, AppStartup — enumerates every intent BYD apps declare for projection so we can pick the official entry point."));
+        list.add(new TestDef("D30", "SurfaceFlinger physical/virtual display topology",
+                "dumpsys SurfaceFlinger --display-id + dumpsys SurfaceFlinger | grep -E 'Display|Layer' | head — ground-truth display topology from the compositor (bypasses WindowManager filtering)."));
         return list;
     }
 
@@ -172,6 +192,16 @@ public final class DiLink5TestRunner {
                         case "D18": runD18(ctx, r); break;
                         case "D19": runD19(ctx, r); break;
                         case "D20": runD20(ctx, r); break;
+                        case "D21": runD21(ctx, r); break;
+                        case "D22": runD22(ctx, r); break;
+                        case "D23": runD23(ctx, r); break;
+                        case "D24": runD24(ctx, r); break;
+                        case "D25": runD25(ctx, r); break;
+                        case "D26": runD26(ctx, r); break;
+                        case "D27": runD27(ctx, r); break;
+                        case "D28": runD28(ctx, r); break;
+                        case "D29": runD29(ctx, r); break;
+                        case "D30": runD30(ctx, r); break;
                         default:
                             r.status = Status.SKIPPED;
                             r.message = "not implemented";
@@ -798,6 +828,258 @@ public final class DiLink5TestRunner {
             r.status = Status.WARN;
             r.message = "IATM service not visible in 'service list'";
         }
+    }
+
+    private static void runD21(Context ctx, TestResult r) {
+        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
+        Display[] all = dm.getDisplays();
+        StringBuilder sb = new StringBuilder();
+        sb.append("Total displays: ").append(all.length).append('\n');
+        for (Display d : all) {
+            int flags = d.getFlags();
+            sb.append("  #").append(d.getDisplayId())
+              .append("  name=\"").append(d.getName()).append("\"")
+              .append("  flags=0x").append(Integer.toHexString(flags))
+              .append("  state=").append(d.getState()).append('\n');
+            sb.append("      flagBits:");
+            if ((flags & 0x1)  != 0) sb.append(" PROTECTED");
+            if ((flags & 0x2)  != 0) sb.append(" SECURE");
+            if ((flags & 0x4)  != 0) sb.append(" PRIVATE");
+            if ((flags & 0x8)  != 0) sb.append(" PRESENTATION");
+            if ((flags & 0x10) != 0) sb.append(" ROUND");
+            if ((flags & 0x20) != 0) sb.append(" CAN_SHOW_WITH_INSECURE_KEYGUARD");
+            if ((flags & 0x40) != 0) sb.append(" SHOULD_SHOW_SYSTEM_DECORATIONS");
+            if ((flags & 0x80) != 0) sb.append(" TRUSTED");
+            sb.append('\n');
+            // Reflective DisplayInfo for ownerUid/ownerPackageName/type
+            try {
+                java.lang.reflect.Method m = Display.class.getDeclaredMethod("getDisplayInfo", Class.forName("android.view.DisplayInfo"));
+                Object info = Class.forName("android.view.DisplayInfo").getDeclaredConstructor().newInstance();
+                m.setAccessible(true);
+                m.invoke(d, info);
+                Class<?> diCls = info.getClass();
+                for (String f : new String[]{"type", "ownerUid", "ownerPackageName", "logicalWidth", "logicalHeight", "logicalDensityDpi", "removeMode", "uniqueId"}) {
+                    try {
+                        Object v = diCls.getDeclaredField(f).get(info);
+                        sb.append("      ").append(f).append(" = ").append(String.valueOf(v)).append('\n');
+                    } catch (NoSuchFieldException ignored) {}
+                }
+            } catch (Throwable t) {
+                sb.append("      (DisplayInfo reflection failed: ").append(t.getClass().getSimpleName()).append(")\n");
+            }
+        }
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = all.length + " display(s) inventoried";
+    }
+
+    private static void runD22(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "dumpsys display 2>/dev/null | grep -E 'Display id|mDisplayId|mOwnerUid|mOwnerPackageName|mType|mFlags|mName' | head -120", out, 8000);
+        sb.append("=== dumpsys display ===\n").append(out.get()).append("\n\n");
+        runShellSync(ctx, "dumpsys SurfaceFlinger --display-id 2>/dev/null | head -40", out, 6000);
+        sb.append("=== SurfaceFlinger --display-id ===\n").append(out.get()).append("\n\n");
+        runShellSync(ctx, "ps -A -o PID,USER,NAME 2>/dev/null | head -80", out, 4000);
+        sb.append("=== ps -A (first 80 lines, helps identify PID owners seen in D14) ===\n").append(out.get());
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "Display ownership data captured";
+    }
+
+    private static void runD23(Context ctx, TestResult r) {
+        // Probe transaction codes 1..8 on auto_container with neutral args.
+        // Code 0 = INTERFACE_TRANSACTION (returns interfaceDescriptor).
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        for (int code = 0; code <= 8; code++) {
+            String cmd = "service call auto_container " + code + " i32 0 i32 0 s16 \"\" 2>&1";
+            runShellSync(ctx, cmd, out, 2500);
+            sb.append("[code ").append(code).append("] ").append(cmd).append('\n');
+            sb.append(out.get().trim()).append("\n\n");
+        }
+        r.detail = sb.toString();
+        String lower = sb.toString().toLowerCase();
+        if (lower.contains("service auto_container does not exist")) {
+            r.status = Status.FAIL;
+            r.message = "auto_container service absent";
+        } else {
+            int acceptedCount = 0;
+            for (String line : sb.toString().split("\\n")) {
+                if (line.startsWith("Result: Parcel")) acceptedCount++;
+            }
+            r.status = Status.PASS;
+            r.message = acceptedCount + " / 9 transaction codes accepted";
+        }
+    }
+
+    private static void runD24(Context ctx, TestResult r) {
+        String[] services = {"magicwindow", "crossservice", "mirror", "BYDMgmt", "byd_datacached",
+                "IBYDCDRService", "DevOperatorService", "autoservice", "byd_updated_service",
+                "cloud_server_app_service", "color_display"};
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        for (String svc : services) {
+            sb.append("─── ").append(svc).append(" ───\n");
+            runShellSync(ctx, "service check " + svc + " 2>&1; service call " + svc + " 0 2>&1 | head -3", out, 3000);
+            sb.append(out.get().trim()).append("\n\n");
+        }
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = services.length + " service(s) probed";
+    }
+
+    private static void runD25(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            Class<?> stub = Class.forName("android.app.IActivityTaskManager$Stub");
+            sb.append("Stub class: ").append(stub.getName()).append('\n');
+            Object iatm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null);
+            sb.append("Live binder: ").append(iatm != null ? iatm.getClass().getName() : "null").append('\n');
+            Class<?> iface = Class.forName("android.app.IActivityTaskManager");
+            java.lang.reflect.Method[] methods = iface.getDeclaredMethods();
+            sb.append("\nIActivityTaskManager declared methods (").append(methods.length).append("):\n");
+            // Filter to projection/windowing-relevant ones first
+            StringBuilder hot = new StringBuilder();
+            StringBuilder rest = new StringBuilder();
+            for (java.lang.reflect.Method m : methods) {
+                StringBuilder sig = new StringBuilder("  ").append(m.getName()).append("(");
+                Class<?>[] pts = m.getParameterTypes();
+                for (int i = 0; i < pts.length; i++) { if (i > 0) sig.append(','); sig.append(pts[i].getSimpleName()); }
+                sig.append(") : ").append(m.getReturnType().getSimpleName()).append('\n');
+                String n = m.getName().toLowerCase();
+                if (n.contains("windowing") || n.contains("display") || n.contains("task") || n.contains("launch") || n.contains("start") || n.contains("move")) {
+                    hot.append(sig);
+                } else {
+                    rest.append(sig);
+                }
+            }
+            sb.append("\n[HOT \u2014 windowing/display/task/launch/start/move]\n").append(hot);
+            sb.append("\n[OTHER]\n").append(rest);
+            r.status = Status.PASS;
+            r.message = methods.length + " IATM methods enumerated";
+        } catch (Throwable t) {
+            sb.append("Reflection failed: ").append(t.getClass().getSimpleName()).append(": ").append(t.getMessage()).append('\n');
+            r.status = Status.FAIL;
+            r.message = "IATM reflection unavailable";
+        }
+        r.detail = sb.toString();
+    }
+
+    private static void runD26(Context ctx, TestResult r) {
+        // For each non-main display, launch the standard ADB canary and check where it actually landed.
+        String canary = "com.github.standardadb";
+        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
+        java.util.Set<Integer> ids = new java.util.LinkedHashSet<>();
+        for (Display d : dm.getDisplays()) if (d.getDisplayId() != 0) ids.add(d.getDisplayId());
+        // Also force-probe id 2 in case it's not in getDisplays() output
+        ids.add(2);
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        for (int id : ids) {
+            sb.append("─── display ").append(id).append(" ───\n");
+            runShellSync(ctx, "am force-stop " + canary + " 2>&1; am start --display " + id
+                    + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "
+                    + canary + "/com.github.standardadb.SplashActivity 2>&1", out, 4000);
+            sb.append("[start] ").append(out.get().trim()).append('\n');
+            try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            runShellSync(ctx, "dumpsys activity activities 2>/dev/null | grep -E 'mResumedActivity|displayId|" + canary + "' | head -20", out, 4000);
+            sb.append("[where] ").append(out.get().trim()).append("\n\n");
+        }
+        runShellSync(ctx, "am force-stop " + canary + " 2>&1", out, 3000);
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "Probed " + ids.size() + " display(s) — see detail for actual landing";
+    }
+
+    private static void runD27(Context ctx, TestResult r) {
+        String pkg = "com.byd.clusterdebug";
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "cmd package resolve-activity --brief " + pkg + " 2>&1; echo ---; "
+                + "dumpsys package " + pkg + " 2>/dev/null | grep -E 'Activity|Service|Receiver|Permission' | head -40",
+                out, 6000);
+        sb.append("=== resolve + manifest ===\n").append(out.get()).append("\n\n");
+        runShellSync(ctx, "logcat -c 2>&1; am start -n " + pkg + "/.MainActivity 2>&1", out, 4000);
+        sb.append("=== am start ===\n").append(out.get()).append('\n');
+        try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        runShellSync(ctx, "dumpsys activity activities 2>/dev/null | grep -E '" + pkg + "|displayId' | head -10", out, 4000);
+        sb.append("\n=== where it landed ===\n").append(out.get()).append('\n');
+        runShellSync(ctx, "logcat -d 2>&1 | grep -iE 'clusterdebug|cluster|auto_container|AutoContainer|projection|fission' | tail -40", out, 6000);
+        sb.append("\n=== logcat trace ===\n").append(out.get()).append('\n');
+        runShellSync(ctx, "am force-stop " + pkg + " 2>&1", out, 3000);
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "clusterdebug launch probed — review detail";
+    }
+
+    private static void runD28(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "logcat -c 2>&1", out, 3000);
+        sb.append("=== logcat cleared ===\n\n");
+        sb.append("=== sendInfo(1000, 30) screen size ===\n");
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 30 s16 \"\" 2>&1", out, 4000);
+        sb.append(out.get()).append('\n');
+        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        sb.append("\n=== sendInfo(1000, 16) projection ON ===\n");
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+        sb.append(out.get()).append('\n');
+        try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        sb.append("\n=== dumpsys display (post-sendInfo) ===\n");
+        runShellSync(ctx, "dumpsys display 2>/dev/null | grep -E 'Display id|mDisplayId|mFlags|mState' | head -30", out, 5000);
+        sb.append(out.get()).append('\n');
+        sb.append("\n=== logcat filtered ===\n");
+        runShellSync(ctx, "logcat -d -v threadtime 2>&1 | grep -iE 'auto_container|AutoContainer|cluster|projection|fission|XDJA|magicwindow|MagicWindow|containerservice' | tail -80", out, 8000);
+        sb.append(out.get()).append('\n');
+        // Always close so we don't leave the cluster in a weird state
+        sb.append("\n=== cleanup sendInfo(1000, 18) + sendInfo(1000, 0) ===\n");
+        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1; sleep 1; service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 6000);
+        sb.append(out.get()).append('\n');
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "Live sendInfo cycle + logcat captured";
+    }
+
+    private static void runD29(Context ctx, TestResult r) {
+        String[] actions = {
+                "com.byd.action.PROJECT", "com.byd.action.CLUSTER_PROJECTION",
+                "com.byd.containerservice.PROJECT", "com.byd.containerservice.START",
+                "com.byd.appstartmanagement.START", "com.byd.appstartup.START",
+                "android.intent.action.MAIN", // baseline check
+                "com.byd.intent.action.CLUSTER", "com.byd.cluster.START",
+                "byd.intent.action.AUTO_DISPLAY"
+        };
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        for (String a : actions) {
+            if (a.equals("android.intent.action.MAIN")) continue; // skip baseline noise
+            sb.append("─── action: ").append(a).append(" ───\n");
+            runShellSync(ctx, "cmd package query-intent-activities -a '" + a + "' 2>&1 | head -10; echo ---; "
+                    + "cmd package query-intent-services -a '" + a + "' 2>&1 | head -10", out, 4000);
+            sb.append(out.get().trim()).append("\n\n");
+        }
+        // Bonus: list every intent filter declared by the suspected gatekeepers
+        sb.append("─── intent filters declared by containerservice + appstartmanagement ───\n");
+        runShellSync(ctx, "dumpsys package com.byd.containerservice com.byd.appstartmanagement 2>/dev/null | grep -E 'Action:|Category:|Scheme:' | sort -u | head -60", out, 6000);
+        sb.append(out.get()).append('\n');
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "Intent filter discovery captured";
+    }
+
+    private static void runD30(Context ctx, TestResult r) {
+        StringBuilder sb = new StringBuilder();
+        AtomicReference<String> out = new AtomicReference<>("");
+        runShellSync(ctx, "dumpsys SurfaceFlinger --display-id 2>/dev/null", out, 6000);
+        sb.append("=== SurfaceFlinger --display-id ===\n").append(out.get()).append("\n\n");
+        runShellSync(ctx, "dumpsys SurfaceFlinger 2>/dev/null | grep -E 'Display |layerStack|Output|orientation|hwc composition|HWComposer' | head -60", out, 8000);
+        sb.append("=== SurfaceFlinger (filtered) ===\n").append(out.get()).append("\n\n");
+        runShellSync(ctx, "dumpsys SurfaceFlinger --list 2>/dev/null | head -40", out, 6000);
+        sb.append("=== SurfaceFlinger --list (top layers) ===\n").append(out.get()).append('\n');
+        r.detail = sb.toString();
+        r.status = Status.PASS;
+        r.message = "SurfaceFlinger topology captured";
     }
 
     // ────────────────────────────────────────────────────────────────────────
