@@ -160,7 +160,7 @@
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_system"/>
             <com.google.android.material.tabs.TabItem
-                android:text="@string/diag_tab_stress"/>
+                android:text="@string/diag_tab_adas"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_beta_engine"/>
             <com.google.android.material.tabs.TabItem
@@ -193,6 +193,11 @@
             <include
                 android:id="@+id/panel_sniffer"
                 layout="@layout/include_diag_sniffer"/>
+
+            <!-- ADAS show/hide dedicated diagnostic panel -->
+            <include
+                android:id="@+id/panel_adas"
+                layout="@layout/include_diag_adas"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include
