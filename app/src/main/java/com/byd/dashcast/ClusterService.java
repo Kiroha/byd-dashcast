@@ -394,7 +394,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     opts.setLaunchDisplayId(displayId);
                     if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
 
-                    startActivityViaIAM(launchIntent, opts);
+                    // DiLink 5.0: our app (uid 10148) is denied launchDisplayId by IATM
+                    // (SecurityException seen in field log 22/05/2026 build 187).
+                    // Route through ADB shell (uid 2000) which D31 validated end-to-end.
+                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                        startActivityViaShell(packageName, displayId, launchIntent);
+                    } else {
+                        startActivityViaIAM(launchIntent, opts);
+                    }
 
                     AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                     if (callback != null) {
@@ -463,7 +470,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
                     }
-                    startActivityViaIAM(launchIntent, opts);
+                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                        // DL5: IATM denies our uid for cross-display launches — use shell.
+                        startActivityViaShell(packageName, displayId, launchIntent);
+                    } else {
+                        startActivityViaIAM(launchIntent, opts);
+                    }
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK [" + left + "," + top
                             + "," + right + "," + bottom + "] display=" + displayId);
                     if (callback != null) callback.onResult(true);
@@ -523,8 +535,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Since we run only one app at a time on the cluster, we apply the app-specific 
         // bounds directly as a display overscan at launch.
         if (displayId > 0) {
-            ShellGateway.execShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
-            AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
+            // wm overscan was removed from Android 11+ (API 30+). DL5 is API 32
+            // → "Unknown command: overscan". Skip the call entirely on DL5.
+            if (AdbLocalClient.isDiLink5Safe(this)) {
+                AppLogger.d(TAG, "DL5: skipping app-specific wm overscan (cmd removed in API 30+)");
+            } else {
+                ShellGateway.execShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
+                AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
+            }
         }
     }
 
@@ -552,6 +570,52 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         }
     }
 
+    /**
+     * DL5 launch path — bypasses IATM by shelling out to {@code am start --display N}.
+     *
+     * Background: on DiLink 5.0 (BYD-AUTO API 32), our process (uid 10148) is denied
+     * cross-display activity launches by IActivityTaskManager: a typed
+     * {@code startActivityAsUser} with {@code ActivityOptions.setLaunchDisplayId(3)}
+     * is rejected with {@code SecurityException: Permission Denial ... with launchDisplayId=3}
+     * (field log 22/05/2026 build 187, lines 38.767 / 46.196). The shell uid 2000
+     * has the privileges to land the activity on the cluster display — this is exactly
+     * what the D31 diagnostic probe validated end-to-end before build 188.
+     *
+     * The command pattern mirrors D31:
+     *   {@code am start --display N -a MAIN -c LAUNCHER -n <pkg>/<launcher> 2>&1}
+     *
+     * Fire-and-forget through {@link AdbLocalClient#executeShellWithResult}: the
+     * existing {@code launchOnDashboard} callback already optimistically reports
+     * success after dispatch, so the shell error path is logged but does not
+     * propagate (consistent with the legacy IATM path which also swallows
+     * RemoteException after best-effort).
+     */
+    private void startActivityViaShell(String packageName, int displayId,
+                                       android.content.Intent launchIntent) {
+        String component = null;
+        if (launchIntent != null && launchIntent.getComponent() != null) {
+            android.content.ComponentName cn = launchIntent.getComponent();
+            component = cn.getPackageName() + "/" + cn.getClassName();
+        }
+        if (component == null) {
+            AppLogger.e(TAG, "startActivityViaShell: cannot resolve component for " + packageName);
+            return;
+        }
+        final String cmd = "am start --display " + displayId
+                + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+                + " -n " + component
+                + " --activity-clear-task 2>&1";
+        AppLogger.i(TAG, "DL5 launch via shell: " + cmd);
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.i(TAG, "DL5 am start → " + out.trim());
+            }
+            @Override public void onError(String err) {
+                AppLogger.e(TAG, "DL5 am start ERROR: " + err);
+            }
+        });
+    }
+
     public void restartProjection() {
         AppLogger.log(TAG, "restartProjection requested natively");
         if (mDisplayHelper != null) {
@@ -566,7 +630,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      */
     public void stopProjectionNoAdb() {
         AppLogger.log(TAG, "stopProjectionNoAdb requested (ADB already sent)");
-        ShellGateway.execShell(this, "wm overscan reset -d 1");
+        if (!AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d 1");
+        }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
@@ -591,14 +657,19 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // because apps there are not tracked by the standard WM task system.
         // SAFETY GUARD: never apply overscan to the main display (id 0 or negative).
         if (displayId > 0) {
-            final int insetH = getInsetH(null);
-            final int insetV = getInsetV(null);
-            ShellGateway.execShell(this,
-                    "wm overscan " + insetH + "," + insetV
-                    + "," + insetH + "," + insetV
-                    + " -d " + displayId);
-            AppLogger.i(TAG, "wm overscan applied on display " + displayId
-                    + " inset=" + insetH + "," + insetV);
+            if (AdbLocalClient.isDiLink5Safe(this)) {
+                // wm overscan removed in API 30+ — DL5 is API 32. No-op on DL5.
+                AppLogger.d(TAG, "DL5: skipping display-level wm overscan (cmd removed in API 30+)");
+            } else {
+                final int insetH = getInsetH(null);
+                final int insetV = getInsetV(null);
+                ShellGateway.execShell(this,
+                        "wm overscan " + insetH + "," + insetV
+                        + "," + insetH + "," + insetV
+                        + " -d " + displayId);
+                AppLogger.i(TAG, "wm overscan applied on display " + displayId
+                        + " inset=" + insetH + "," + insetV);
+            }
         } else {
             AppLogger.w(TAG, "wm overscan skipped: displayId=" + displayId + " (must be > 0)");
         }
