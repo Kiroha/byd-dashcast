@@ -47,6 +47,9 @@ public class MirrorDaemon {
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
     private static volatile int     sClusterDisplayId = 2;
+    /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
+    private static volatile boolean sMotionFirstLogged = false;
+    private static volatile boolean sKeyFirstLogged    = false;
 
     // InputManager (init une seule fois, lu depuis les threads Binder → volatile)
     private static volatile Object  sInputManager    = null;
@@ -223,6 +226,9 @@ public class MirrorDaemon {
     private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
                                        int viewW, int viewH, Surface surface) {
         stopMirror();
+        // v1.2.7 — reset per-session first-event trace so M7 captures the next injection chain.
+        sMotionFirstLogged = false;
+        sKeyFirstLogged    = false;
         out("setupMirror BEGIN layerStack=" + layerStack
                 + " cluster=" + clusterW + "x" + clusterH
                 + " view=" + viewW + "x" + viewH
@@ -346,12 +352,29 @@ public class MirrorDaemon {
     // ── Input injection ───────────────────────────────────────────────────────
 
     private static void injectMotion(MotionEvent ev) {
-        if (ev == null || sInputManager == null) return;
+        if (ev == null || sInputManager == null) {
+            if (!sMotionFirstLogged) {
+                sMotionFirstLogged = true;
+                out("injectMotion FAIL pre-check: ev=" + (ev != null) + " im=" + (sInputManager != null));
+            }
+            return;
+        }
         try {
             if (sSetDisplayId != null) sSetDisplayId.invoke(ev, sClusterDisplayId);
-            sInjectMethod.invoke(sInputManager, ev, 0 /* ASYNC */);
+            Object r = sInjectMethod.invoke(sInputManager, ev, 0 /* ASYNC */);
+            if (!sMotionFirstLogged) {
+                sMotionFirstLogged = true;
+                out("injectMotion FIRST OK displayId=" + sClusterDisplayId
+                        + " setDisplayIdAvail=" + (sSetDisplayId != null)
+                        + " action=" + ev.getActionMasked()
+                        + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
+                        + " ret=" + r);
+            }
         } catch (Exception e) {
             Log.w(TAG, "injectMotion failed: " + e.getMessage());
+            out("injectMotion EXCEPTION displayId=" + sClusterDisplayId
+                    + " action=" + ev.getActionMasked() + " err=" + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
         }
     }
 
@@ -359,8 +382,14 @@ public class MirrorDaemon {
         if (kev == null || sInputManager == null) return;
         try {
             sInjectMethod.invoke(sInputManager, kev, 0 /* ASYNC */);
+            if (!sKeyFirstLogged) {
+                sKeyFirstLogged = true;
+                out("injectKey FIRST OK keyCode=" + kev.getKeyCode() + " action=" + kev.getAction());
+            }
         } catch (Exception e) {
             Log.w(TAG, "injectKey failed: " + e.getMessage());
+            out("injectKey EXCEPTION keyCode=" + kev.getKeyCode() + " err=" + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
         }
     }
 
