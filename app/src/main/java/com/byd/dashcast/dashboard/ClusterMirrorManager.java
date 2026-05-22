@@ -240,6 +240,11 @@ public class ClusterMirrorManager {
             AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
         }
         layerStack = applyDl5LayerStackOverride(ctx, layerStack);
+        // v1.2.7 — On DL5 the daemon must inject touch on displayId=2 (composed fission output),
+        // not on the shadow render displayId=3 whose framebufferSpace is 1×1 — see field test
+        // 22/05/2026 (preview OK after layerStack 3→2 override but tactile not working until
+        // we mirror that override on the daemon's setDisplayId target).
+        clusterDisplayId = applyDl5DisplayIdOverride(ctx, clusterDisplayId);
 
         Parcel data  = Parcel.obtain();
         Parcel reply = Parcel.obtain();
@@ -327,6 +332,30 @@ public class ClusterMirrorManager {
             return 2;
         }
         return detectedLayerStack;
+    }
+
+    /**
+     * v1.2.7 — Symmetric to {@link #applyDl5LayerStackOverride}: on DL5, when the detected
+     * displayId (used by the daemon's MotionEvent.setDisplayId target for touch injection) is
+     * the shadow render display 3 or 4 (framebufferSpace 1×1), rewrite it to 2 — the WMS
+     * displayId backing the composed 1920×720 cluster output where the user actually sees
+     * the apps. On DL3 and on any other displayId value, returns the input unchanged.
+     */
+    private static int applyDl5DisplayIdOverride(Context ctx, int detectedDisplayId) {
+        if (ctx == null) return detectedDisplayId;
+        boolean dl5;
+        try {
+            dl5 = Platform.get().isDiLink5(ctx);
+        } catch (Throwable t) {
+            return detectedDisplayId;
+        }
+        if (!dl5) return detectedDisplayId;
+        if (detectedDisplayId == 3 || detectedDisplayId == 4) {
+            AppLogger.i(TAG, "DL5 override: displayId " + detectedDisplayId
+                    + " → 2 (touch injection on composed cluster face)");
+            return 2;
+        }
+        return detectedDisplayId;
     }
 
     private void destroyMirrorToken() {
