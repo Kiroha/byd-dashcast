@@ -411,14 +411,17 @@ public final class MirrorTestRunner {
      *
      * <ol>
      *   <li>snapshot framebufferSpace of fission/XDJA displays (BEFORE)</li>
-     *   <li>{@code service call AutoContainer 2 i32 1000 i32 16 s16 ""}</li>
+     *   <li>{@code service call auto_container 2 i32 1000 i32 16 s16 ""}
+     *       (snake_case — verified against ClusterManager prod path)</li>
      *   <li>2 s settle, snapshot AFTER — the display whose framebufferSpace
      *       flips from 1×1 to 1920×720 is the one the cluster compositor
      *       latched onto</li>
      *   <li>{@code am start-activity -W --display 3} (then 4) of
-     *       com.android.settings to see if/where it lands</li>
+     *       {@code com.android.launcher3/.Launcher} (always installed on
+     *       BYD ROMs, unlike Settings which has a custom name) — to see
+     *       if/where it lands</li>
      *   <li>dumpsys window rootTasks per display — confirms the routing</li>
-     *   <li>cleanup: force-stop Settings, sendInfo 18 (close), sendInfo 0
+     *   <li>cleanup: force-stop Launcher, sendInfo 18 (close), sendInfo 0
      *       (restore Qt video stream)</li>
      * </ol>
      *
@@ -441,9 +444,9 @@ public final class MirrorTestRunner {
         runShellSync(ctx, fbGrep, tmp, 6000);
         full.append(tmp.get()).append('\n');
 
-        full.append("=== STEP 2 — service call AutoContainer 2 i32 1000 i32 16 s16 \"\" (open projection) ===\n");
+        full.append("=== STEP 2 — service call auto_container 2 i32 1000 i32 16 s16 \"\" (open projection) ===\n");
         runShellSync(ctx,
-                "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1",
+                "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1",
                 tmp, 5000);
         full.append(tmp.get()).append('\n');
 
@@ -454,22 +457,22 @@ public final class MirrorTestRunner {
         runShellSync(ctx, fbGrep, tmp, 6000);
         full.append(tmp.get()).append('\n');
 
-        full.append("=== STEP 4 — am start-activity -W --display 3 com.android.settings/.Settings ===\n");
+        full.append("=== STEP 4 — am start-activity -W --display 3 com.android.launcher3/.Launcher ===\n");
         runShellSync(ctx,
                 "am start-activity -W --display 3 "
               + "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER "
-              + "-n com.android.settings/.Settings 2>&1",
+              + "-n com.android.launcher3/.Launcher 2>&1",
                 tmp, 8000);
         full.append(tmp.get()).append('\n');
 
         try { Thread.sleep(1000); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
-        full.append("=== STEP 5 — am start-activity -W --display 4 com.android.settings/.Settings ===\n");
+        full.append("=== STEP 5 — am start-activity -W --display 4 com.android.launcher3/.Launcher ===\n");
         runShellSync(ctx,
                 "am start-activity -W --display 4 "
               + "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER "
-              + "-n com.android.settings/.Settings 2>&1",
+              + "-n com.android.launcher3/.Launcher 2>&1",
                 tmp, 8000);
         full.append(tmp.get()).append('\n');
 
@@ -484,12 +487,12 @@ public final class MirrorTestRunner {
                 tmp, 6000);
         full.append(tmp.get()).append('\n');
 
-        full.append("=== STEP 7 — cleanup (force-stop Settings, sendInfo 18 + 0) ===\n");
+        full.append("=== STEP 7 — cleanup (force-stop Launcher, sendInfo 18 + 0) ===\n");
         runShellSync(ctx,
-                "am force-stop com.android.settings 2>&1 ; "
-              + "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
+                "am force-stop com.android.launcher3 2>&1 ; "
+              + "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
               + "sleep 1 ; "
-              + "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1",
+              + "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1",
                 tmp, 8000);
         full.append(tmp.get()).append('\n');
 

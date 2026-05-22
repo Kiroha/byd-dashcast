@@ -8,8 +8,8 @@ import android.os.Parcel;
 import android.os.Process;
 import android.os.RemoteException;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 
 /**
@@ -330,16 +330,27 @@ public final class ProxyDaemonMain {
             java.lang.Process p = new ProcessBuilder("sh", "-c", cmd)
                     .redirectErrorStream(true)
                     .start();
-            StringBuilder sb = new StringBuilder();
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                String l;
-                while ((l = r.readLine()) != null) {
-                    if (sb.length() > 0) sb.append('\n');
-                    sb.append(l);
-                }
+            // Build 195 / P4 — read the full stdout/stderr stream into a single
+            // ByteArrayOutputStream then decode once. Replaces the per-line
+            // BufferedReader + StringBuilder.append('\n') pattern which on a
+            // 300-line dumpsys ate ~1000 String/StringBuilder allocations.
+            // Trailing newlines are stripped to preserve the exact semantics
+            // of the legacy line-by-line code (which never appended a final '\n').
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(2048);
+            byte[] chunk = new byte[4096];
+            try (InputStream in = p.getInputStream()) {
+                int n;
+                while ((n = in.read(chunk)) > 0) baos.write(chunk, 0, n);
             }
             int code = p.waitFor();
-            return new ExecResult(code, sb.toString());
+            String s = baos.toString("UTF-8");
+            int end = s.length();
+            while (end > 0) {
+                char c = s.charAt(end - 1);
+                if (c != '\n' && c != '\r') break;
+                end--;
+            }
+            return new ExecResult(code, end == s.length() ? s : s.substring(0, end));
         } catch (Throwable t) {
             String msg = t.getMessage();
             return new ExecResult(-1, "ERR " + (msg == null ? t.getClass().getSimpleName() : msg));

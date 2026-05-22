@@ -107,6 +107,13 @@ public final class Phase4Verbs {
         if (packageName == null || packageName.isEmpty()) return "";
         File[] dirs = new File("/proc").listFiles();
         if (dirs == null) return "";
+        // Reuse a single 256-byte buffer per calling thread (build 195 / P3).
+        // The daemon's binder pool dispatches concurrent transactions on a
+        // small set of long-lived threads, so a ThreadLocal yields one buffer
+        // per thread for the lifetime of the daemon — eliminating ~241 alloc
+        // per scan on a typical BYD device, on a hot path (pidof poll every
+        // ~5 s while a cluster app is alive).
+        byte[] buf = sCmdlineBuf.get();
         StringBuilder pids = null;
         for (File d : dirs) {
             String name = d.getName();
@@ -121,7 +128,6 @@ public final class Phase4Verbs {
             File cmd = new File(d, "cmdline");
             // canRead() is cheaper than catching the IOException — skip up front.
             if (!cmd.canRead()) continue;
-            byte[] buf = new byte[256];
             int read;
             try (FileInputStream fis = new FileInputStream(cmd)) {
                 read = fis.read(buf);
@@ -145,6 +151,11 @@ public final class Phase4Verbs {
         }
         return pids == null ? "" : pids.toString();
     }
+
+    /** Per-thread reusable scratch buffer for {@link #getPidsByPackage} (P3). */
+    private static final ThreadLocal<byte[]> sCmdlineBuf = new ThreadLocal<byte[]>() {
+        @Override protected byte[] initialValue() { return new byte[256]; }
+    };
 
     // ─── AutoContainer (Phase 4c) ──────────────────────────────────────────
 

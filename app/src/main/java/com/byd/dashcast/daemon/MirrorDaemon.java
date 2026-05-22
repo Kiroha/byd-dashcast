@@ -223,8 +223,13 @@ public class MirrorDaemon {
     private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
                                        int viewW, int viewH, Surface surface) {
         stopMirror();
+        out("setupMirror BEGIN layerStack=" + layerStack
+                + " cluster=" + clusterW + "x" + clusterH
+                + " view=" + viewW + "x" + viewH
+                + " surface=" + (surface == null ? "null" : ("valid=" + surface.isValid())));
         if (surface == null || !surface.isValid()) {
             Log.e(TAG, "setupMirror : surface invalide");
+            out("setupMirror FAIL surface invalide");
             return false;
         }
         try {
@@ -237,9 +242,11 @@ public class MirrorDaemon {
             sMirrorToken = (IBinder) createDisplay.invoke(null, "byd_myapp_mirror", false);
             if (sMirrorToken == null) {
                 Log.e(TAG, "setupMirror : createDisplay → null");
+                out("setupMirror FAIL createDisplay returned null (DL5 SurfaceControl quirk?)");
                 return false;
             }
             Log.i(TAG, "setupMirror : createDisplay token=" + sMirrorToken);
+            out("setupMirror createDisplay OK token=" + sMirrorToken);
 
             // 2. Letterbox projection (preserved ratio)
             float scale = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
@@ -295,17 +302,23 @@ public class MirrorDaemon {
                 }
                 p.waitFor();
                 Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
+                out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
+                        + (sb.length() == 0 ? "(empty — token NOT in SurfaceFlinger!)" : sb.toString().trim()));
             } catch (Exception e) {
                 Log.d(TAG, "SF dump read failed: " + e.getMessage());
+                out("setupMirror SF dump read failed: " + e.getMessage());
             }
 
             Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
                     + " dst=" + drawW + "×" + drawH + " offset=(" + offX + "," + offY + ")");
+            out("setupMirror DONE ok=true layerStack=" + layerStack
+                    + " dst=" + drawW + "x" + drawH + " off=(" + offX + "," + offY + ")");
             return true;
 
         } catch (Exception e) {
             Log.e(TAG, "setupMirror failed", e);
+            out("setupMirror EXCEPTION: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             // If createDisplay succeeded but a later reflection step threw, the
             // SurfaceFlinger display token must be released — otherwise it leaks
             // for the lifetime of the daemon process. stopMirror() handles the

@@ -9,6 +9,7 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceControl;
 import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.platform.Platform;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -101,7 +102,7 @@ public class ClusterMirrorManager {
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
-    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
+    public boolean startMirror(Context ctx, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         if (mMirrorActive) {
             AppLogger.d(TAG, "Mirror already active");
@@ -135,6 +136,7 @@ public class ClusterMirrorManager {
                 layerStack = (clusterDisplay != null) ? clusterDisplay.getDisplayId() : 2;
                 AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
             }
+            layerStack = applyDl5LayerStackOverride(ctx, layerStack);
 
             // 2. Create a display token for our mirror
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
@@ -203,7 +205,7 @@ public class ClusterMirrorManager {
      * SYNCHRONOUS call: the daemon replies 1 (success) or 0 (failure) → mMirrorActive reflects
      * reality, which allows the screencap fallback if the daemon fails.
      */
-    public boolean startMirrorViaDaemon(IBinder daemonBinder, Display clusterDisplay,
+    public boolean startMirrorViaDaemon(Context ctx, IBinder daemonBinder, Display clusterDisplay,
                                         Surface targetSurface, int viewW, int viewH) {
         if (mMirrorActive) return true;
         if (daemonBinder == null || targetSurface == null || !targetSurface.isValid()) return false;
@@ -237,6 +239,7 @@ public class ClusterMirrorManager {
             layerStack = clusterDisplayId;
             AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
         }
+        layerStack = applyDl5LayerStackOverride(ctx, layerStack);
 
         Parcel data  = Parcel.obtain();
         Parcel reply = Parcel.obtain();
@@ -300,6 +303,31 @@ public class ClusterMirrorManager {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * DL5 cluster architecture quirk: apps render on layerStack 3/4
+     * (shared_fission_bg_XDJAScreenProjection_0/_1) which expose a shadow
+     * framebuffer of 1×1 px — copying that layerStack into our preview yields
+     * a black image. The actually-composited 1920×720 content displayed on
+     * the physical cluster lives on layerStack=2 (fission_bg_XDJAScreenProjection).
+     * Override 3/4 → 2 only on effective DL5. DL3 path untouched.
+     */
+    private static int applyDl5LayerStackOverride(Context ctx, int detectedLayerStack) {
+        if (ctx == null) return detectedLayerStack;
+        boolean dl5;
+        try {
+            dl5 = Platform.get().isDiLink5(ctx);
+        } catch (Throwable t) {
+            return detectedLayerStack;
+        }
+        if (!dl5) return detectedLayerStack;
+        if (detectedLayerStack == 3 || detectedLayerStack == 4) {
+            AppLogger.i(TAG, "DL5 override: layerStack " + detectedLayerStack
+                    + " → 2 (mirror composed fission output)");
+            return 2;
+        }
+        return detectedLayerStack;
+    }
 
     private void destroyMirrorToken() {
         if (mMirrorDisplayToken != null) {
