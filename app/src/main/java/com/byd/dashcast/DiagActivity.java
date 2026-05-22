@@ -738,9 +738,9 @@ public class DiagActivity extends AppCompatActivity {
     private String autoContainerSvcName() {
         try {
             return com.byd.dashcast.platform.Platform.get().isDiLink5(this)
-                    ? "auto_container" : "Auto_container";
+                    ? "auto_container" : "AutoContainer";
         } catch (Throwable t) {
-            return "Auto_container";
+            return "AutoContainer";
         }
     }
 

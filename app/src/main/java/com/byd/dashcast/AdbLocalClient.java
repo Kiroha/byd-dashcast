@@ -55,6 +55,30 @@ public class AdbLocalClient {
     /** ADB TCP port — same for Android 7–10 in developer mode */
     private static final int ADB_PORT = 5555;
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // AutoContainer service name — DL3 vs DL5 dispatch
+    //   DiLink 3.0 (BYD Seal EU / Atto 3 …) → "AutoContainer" (PascalCase)
+    //   DiLink 5.0 (BYD-AUTO API 32)       → "auto_container" (snake_case)
+    // Confirmed by D11/D12 PASS on DL5 (log 22/05/2026) and by user on DL3.
+    // Helper must never throw (hot path called from background thread).
+    // ──────────────────────────────────────────────────────────────────────────
+    static String autoContainerSvcName(Context ctx) {
+        try {
+            if (ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx)) {
+                return "auto_container";
+            }
+        } catch (Throwable ignore) { /* DL3 safe default below */ }
+        return "AutoContainer";
+    }
+
+    private static boolean isDiLink5Safe(Context ctx) {
+        try {
+            return ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx);
+        } catch (Throwable ignore) { return false; }
+    }
+
     // -------------------------------------------------------------------------
 
     /**
@@ -483,7 +507,8 @@ public class AdbLocalClient {
                 // Phase 4d: try the typed daemon path for the whole sequence
                 // (force-stop + sendInfo×2). On any failure we fall through to
                 // the legacy shell sequence below so semantics are preserved.
-                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!BetaProxyClient.isConnected()) {
@@ -537,12 +562,12 @@ public class AdbLocalClient {
                     }
 
                     AdbShellResponse rStop = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
                     Thread.sleep(1000);
 
                     AdbShellResponse rRestore = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
 
                     AppLogger.log(TAG, "restoreBydOnCluster -> OK");
@@ -576,7 +601,8 @@ public class AdbLocalClient {
                         + (targetPackage != null ? " target=" + targetPackage : ""));
                 // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
                 // Falls back to the legacy shell flow on any failure.
-                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!BetaProxyClient.isConnected()) {
@@ -626,17 +652,17 @@ public class AdbLocalClient {
                     }
 
                     AdbShellResponse rStop = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
                     Thread.sleep(6000);
 
                     AdbShellResponse rRefresh = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
                     Thread.sleep(6000);
 
                     AdbShellResponse rSize = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
                     sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
                     sb.append(rSize.getAllOutput().trim()).append("\n");
 
@@ -677,7 +703,9 @@ public class AdbLocalClient {
                 // On any failure we fall through to the legacy ADB shell
                 // wrapper below — semantics are preserved for callers that
                 // only inspect callback.onSuccess(String) for emptiness.
-                if (BetaConfig.isProxyDaemonEnabled(context)) {
+                // DL5: skip typed path — Phase4Verbs hardcodes the DL3 service
+                // name ("AutoContainer") which does not exist on DL5.
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!BetaProxyClient.isConnected()) {
@@ -711,7 +739,8 @@ public class AdbLocalClient {
                             .replace("\"", "\\\"")
                             .replace("$",  "\\$")
                             .replace("`",  "\\`");
-                    String cmd = "service call AutoContainer 2 i32 " + type
+                    String svc = autoContainerSvcName(context);
+                    String cmd = "service call " + svc + " 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
                     AdbShellResponse r = dadb.shell(cmd);
