@@ -94,6 +94,8 @@ public final class MirrorTestRunner {
                 "Copies /data/local/tmp/mirrordaemon_latest.log to Download/dl5_mirror_diag/mirrordaemon_latest.log (uid=2000 has /sdcard write on A9+). The copy is the artifact the operator attaches to Telegram alongside the report."));
         list.add(new TestDef("M9", "Mirror token presence post-setup",
                 "dumpsys SurfaceFlinger | grep -E 'byd_myapp_mirror|mybyd_preview_mirror' — proves whether the daemon's createDisplay actually produced a SurfaceFlinger-side token. If absent, the daemon's reflective createDisplay silently failed. If present but black on screen, the layerStack mapping is wrong (the cluster pixels live elsewhere)."));
+        list.add(new TestDef("M10", "Cluster routing LIVE (sendInfo 16 + am start)",
+                "End-to-end probe: snapshots fission/XDJA displays framebufferSpace BEFORE sendInfo(1000,16), opens projection, snapshots AFTER, then attempts am start-activity --display 3 and --display 4 with com.android.settings, dumps window root tasks per display, finally restores via sendInfo 18 + 0. Reveals which display the cluster compositor latches onto, and whether an activity actually lands there."));
         return list;
     }
 
@@ -127,6 +129,7 @@ public final class MirrorTestRunner {
                         case "M7": runM7(ctx, r); break;
                         case "M8": runM8(ctx, r); break;
                         case "M9": runM9(ctx, r); break;
+                        case "M10": runM10(ctx, r); break;
                         default:
                             r.status = Status.SKIPPED;
                             r.message = "no impl";
@@ -396,6 +399,105 @@ public final class MirrorTestRunner {
             r.status = Status.PASS;
             r.message = "mirror token(s) present in SF (" + countLines(result) + " line(s))";
         }
+    }
+
+    /**
+     * M10 — Cluster routing LIVE probe.
+     *
+     * <p>Closes the build-193 information gap: D28 confirmed visually that
+     * {@code sendInfo(1000,16)} opens a black window on the cluster, and D26
+     * confirmed that {@code am start --display 3/4} routes activities, but no
+     * run captured both in the same session. This test does:
+     *
+     * <ol>
+     *   <li>snapshot framebufferSpace of fission/XDJA displays (BEFORE)</li>
+     *   <li>{@code service call AutoContainer 2 i32 1000 i32 16 s16 ""}</li>
+     *   <li>2 s settle, snapshot AFTER — the display whose framebufferSpace
+     *       flips from 1×1 to 1920×720 is the one the cluster compositor
+     *       latched onto</li>
+     *   <li>{@code am start-activity -W --display 3} (then 4) of
+     *       com.android.settings to see if/where it lands</li>
+     *   <li>dumpsys window rootTasks per display — confirms the routing</li>
+     *   <li>cleanup: force-stop Settings, sendInfo 18 (close), sendInfo 0
+     *       (restore Qt video stream)</li>
+     * </ol>
+     *
+     * Read-only diagnostically; the only side-effects are the projection
+     * open/close (already documented as user-safe) and a short Settings
+     * launch that is force-stopped at the end.
+     */
+    private static void runM10(Context ctx, TestResult r) {
+        StringBuilder full = new StringBuilder();
+        AtomicReference<String> tmp = new AtomicReference<>("");
+
+        // Grep pattern reused for BEFORE + AFTER. -A 6 because the
+        // framebufferSpace= line follows the DisplayDevice{...} header.
+        final String fbGrep =
+                "dumpsys SurfaceFlinger 2>&1 "
+              + "| grep -E 'DisplayDevice\\{|framebufferSpace=ProjectionSpace|layerStack=[[:digit:]]' "
+              + "| head -120";
+
+        full.append("=== STEP 1 — framebufferSpace BEFORE sendInfo(16) ===\n");
+        runShellSync(ctx, fbGrep, tmp, 6000);
+        full.append(tmp.get()).append('\n');
+
+        full.append("=== STEP 2 — service call AutoContainer 2 i32 1000 i32 16 s16 \"\" (open projection) ===\n");
+        runShellSync(ctx,
+                "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1",
+                tmp, 5000);
+        full.append(tmp.get()).append('\n');
+
+        try { Thread.sleep(2000); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+        full.append("=== STEP 3 — framebufferSpace AFTER sendInfo(16) ===\n");
+        runShellSync(ctx, fbGrep, tmp, 6000);
+        full.append(tmp.get()).append('\n');
+
+        full.append("=== STEP 4 — am start-activity -W --display 3 com.android.settings/.Settings ===\n");
+        runShellSync(ctx,
+                "am start-activity -W --display 3 "
+              + "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER "
+              + "-n com.android.settings/.Settings 2>&1",
+                tmp, 8000);
+        full.append(tmp.get()).append('\n');
+
+        try { Thread.sleep(1000); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+        full.append("=== STEP 5 — am start-activity -W --display 4 com.android.settings/.Settings ===\n");
+        runShellSync(ctx,
+                "am start-activity -W --display 4 "
+              + "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER "
+              + "-n com.android.settings/.Settings 2>&1",
+                tmp, 8000);
+        full.append(tmp.get()).append('\n');
+
+        try { Thread.sleep(1000); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+        full.append("=== STEP 6 — dumpsys window root tasks per display ===\n");
+        runShellSync(ctx,
+                "dumpsys window 2>&1 "
+              + "| grep -E 'Display: mDisplayId=|mCurrentFocus=|mFocusedApp=|rootTaskId=' "
+              + "| head -80",
+                tmp, 6000);
+        full.append(tmp.get()).append('\n');
+
+        full.append("=== STEP 7 — cleanup (force-stop Settings, sendInfo 18 + 0) ===\n");
+        runShellSync(ctx,
+                "am force-stop com.android.settings 2>&1 ; "
+              + "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
+              + "sleep 1 ; "
+              + "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1",
+                tmp, 8000);
+        full.append(tmp.get()).append('\n');
+
+        r.detail = full.toString();
+        // Always PASS: we shipped the data. Analysis is manual (compare
+        // STEP 1 vs STEP 3 framebufferSpace, then STEP 6 routing).
+        r.status = Status.PASS;
+        r.message = "live routing run complete — compare STEP 1 vs STEP 3, then STEP 6";
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
