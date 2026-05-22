@@ -94,6 +94,15 @@ public final class ShellGateway {
             if (cb != null) cb.onError("null ctx/cmd");
             return;
         }
+        // DL2 SAFETY GUARD — must be checked BEFORE the proxy path, which bypasses
+        // AdbLocalClient.executeShell* and would otherwise let a `wm overscan/size/density`
+        // through to the BYD MTK ROM (which silently applies it to display 0 and
+        // shrinks the main UI). See AdbLocalClient.blockDiLink2Resize.
+        if (AdbLocalClient.blockDiLink2Resize(ctx, cmd)) {
+            if (cb != null) cb.onError(
+                    "blocked on DiLink 2: no cluster display (would shrink main screen)");
+            return;
+        }
         // Fast path: proxy disabled → pure legacy, zero overhead.
         if (!BetaConfig.isProxyDaemonEnabled(ctx)) {
             AdbLocalClient.executeShellWithResult(ctx, cmd, cb);

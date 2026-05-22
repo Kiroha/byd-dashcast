@@ -124,8 +124,13 @@ public class DiagActivity extends AppCompatActivity {
         prepareDl2TestRows();
         updateStatusPills();
         restoreSnifferState();
-        // Default tab: DiLink 5 when auto-detected as DL5, Beta Engine otherwise.
-        int defaultTab = Platform.get().isAutoDetectedDiLink5() ? TAB_DILINK5 : TAB_BETA_ENGINE;
+        // Default tab: DiLink 2 when auto-detected as DL2 (build 192), DiLink 5 when DL5,
+        // Beta Engine otherwise. DL2 takes priority because its diag surface is the only
+        // useful one on that platform (cluster RE workflow).
+        int defaultTab;
+        if (Platform.get().isAutoDetectedDiLink2())      defaultTab = TAB_DILINK2;
+        else if (Platform.get().isAutoDetectedDiLink5()) defaultTab = TAB_DILINK5;
+        else                                             defaultTab = TAB_BETA_ENGINE;
         tabs.selectTab(tabs.getTabAt(defaultTab));
         showPanelForTab(defaultTab);
         AppLogger.lifecycle(getClass().getSimpleName(), "onCreate");

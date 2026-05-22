@@ -308,10 +308,12 @@
 
                 <!-- Section: MARGES OVERSCAN -->
                 <TextView
+                    android:id="@+id/tv_overscan_section_title"
                     style="@style/Widget.DashCast.SectionHead"
                     android:text="@string/settings_overscan_section_title"/>
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_overscan"
                     style="@style/Widget.DashCast.Card.Filled"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
