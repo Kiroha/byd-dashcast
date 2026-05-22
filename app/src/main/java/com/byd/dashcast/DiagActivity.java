@@ -56,16 +56,18 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_BETA_ENGINE = 5;
     private static final int TAB_DILINK5     = 6;
     private static final int TAB_DILINK2     = 7;
-    private static final int TAB_SNIFFER     = 8;
+    private static final int TAB_MIRROR      = 8;
+    private static final int TAB_SNIFFER     = 9;
 
     private TabLayout    tabs;
     private View         panelBeta;
     private View         panelDl5;
     private View         panelDl2;
+    private View         panelMirror;
     private View         panelSniffer;
     private View         panelAdas;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 9; // cluster,display,adb_local,system,adas,beta,dl5,dl2,sniffer
+    private static final int TAB_COUNT = 10; // cluster,display,adb_local,system,adas,beta,dl5,dl2,mirror,sniffer
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -117,11 +119,13 @@ public class DiagActivity extends AppCompatActivity {
         bindBetaPanel();
         bindDl5Panel();
         bindDl2Panel();
+        bindMirrorPanel();
         bindSnifferPanel();
         bindAdasPanel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
+        prepareMirrorTestRows();
         updateStatusPills();
         restoreSnifferState();
         // Default tab: DiLink 2 when auto-detected as DL2 (build 192), DiLink 5 when DL5,
@@ -164,6 +168,7 @@ public class DiagActivity extends AppCompatActivity {
         panelBeta       = findViewById(R.id.panel_beta_engine);
         panelDl5        = findViewById(R.id.panel_dilink5);
         panelDl2        = findViewById(R.id.panel_dilink2);
+        panelMirror     = findViewById(R.id.panel_mirror);
         panelSniffer    = findViewById(R.id.panel_sniffer);
         panelAdas       = findViewById(R.id.panel_adas);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
@@ -210,15 +215,17 @@ public class DiagActivity extends AppCompatActivity {
         boolean isBeta    = position == TAB_BETA_ENGINE;
         boolean isDl5     = position == TAB_DILINK5;
         boolean isDl2     = position == TAB_DILINK2;
+        boolean isMirror  = position == TAB_MIRROR;
         boolean isSniffer = position == TAB_SNIFFER;
         boolean isAdas    = position == TAB_ADAS;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
+        panelMirror.setVisibility(isMirror ? View.VISIBLE : View.GONE);
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isSniffer && !isAdas) {
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isMirror || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isMirror && !isSniffer && !isAdas) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -682,6 +689,152 @@ public class DiagActivity extends AppCompatActivity {
     private void copyDl2Report() {
         String report = DiLink2TestRunner.buildReport(this, dl2LastResults);
         AppLogger.i("DiagActivity", "DiLink 2 report:\n" + report);
+        AppLogger.shareWithReport(this, report);
+    }
+
+    // ─── Mirror diag panel (build 193) ──────────────────────────────────────
+
+    private TextView       tvMirrorHeaderSubtitle;
+    private TextView       tvMirrorModePill;
+    private TextView       tvMirrorCounters;
+    private MaterialButton btnMirrorRunAll;
+    private MaterialButton btnMirrorSendLog;
+    private LinearLayout   llMirrorTestList;
+    private final List<View> mirrorRowViews = new ArrayList<>();
+    private final List<com.byd.dashcast.mirror.MirrorTestRunner.TestResult> mirrorLastResults = new ArrayList<>();
+
+    private void bindMirrorPanel() {
+        tvMirrorHeaderSubtitle = panelMirror.findViewById(R.id.tv_mirror_header_subtitle);
+        tvMirrorModePill       = panelMirror.findViewById(R.id.tv_mirror_mode_pill);
+        tvMirrorCounters       = panelMirror.findViewById(R.id.tv_mirror_counters);
+        btnMirrorRunAll        = panelMirror.findViewById(R.id.btn_mirror_run_all);
+        btnMirrorSendLog       = panelMirror.findViewById(R.id.btn_mirror_send_log);
+        llMirrorTestList       = panelMirror.findViewById(R.id.ll_mirror_test_list);
+
+        Platform p = Platform.get();
+        String prod = p.rawProductName();
+        if (prod == null || prod.isEmpty()) prod = "?";
+        tvMirrorHeaderSubtitle.setText(getString(
+                R.string.diag_mirror_header_subtitle_fmt, prod, p.androidApi()));
+
+        boolean dl5 = p.isAutoDetectedDiLink5();
+        tvMirrorModePill.setText(dl5
+                ? R.string.diag_mirror_pill_dl5
+                : R.string.diag_mirror_pill_other);
+
+        btnMirrorRunAll.setOnClickListener(v -> runMirrorAllTests());
+        btnMirrorSendLog.setOnClickListener(v -> sendMirrorLog());
+        btnMirrorSendLog.setEnabled(false);
+    }
+
+    private void prepareMirrorTestRows() {
+        mirrorRowViews.clear();
+        mirrorLastResults.clear();
+        llMirrorTestList.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (com.byd.dashcast.mirror.MirrorTestRunner.TestDef def
+                : com.byd.dashcast.mirror.MirrorTestRunner.catalog()) {
+            View row = inflater.inflate(R.layout.item_beta_test, llMirrorTestList, false);
+            com.byd.dashcast.mirror.MirrorTestRunner.TestResult r =
+                    new com.byd.dashcast.mirror.MirrorTestRunner.TestResult(def);
+            r.status = com.byd.dashcast.mirror.MirrorTestRunner.Status.PENDING;
+            bindMirrorRow(row, r);
+            llMirrorTestList.addView(row);
+            mirrorRowViews.add(row);
+            mirrorLastResults.add(r);
+        }
+    }
+
+    private void bindMirrorRow(View row, com.byd.dashcast.mirror.MirrorTestRunner.TestResult r) {
+        TextView status = row.findViewById(R.id.tv_test_status);
+        TextView id     = row.findViewById(R.id.tv_test_id);
+        TextView title  = row.findViewById(R.id.tv_test_title);
+        TextView desc   = row.findViewById(R.id.tv_test_description);
+        TextView msg    = row.findViewById(R.id.tv_test_message);
+        TextView elap   = row.findViewById(R.id.tv_test_elapsed);
+
+        id.setText(r.def.id);
+        title.setText(r.def.title);
+        desc.setText(r.def.description);
+
+        String glyph; int color;
+        switch (r.status) {
+            case PASS:    glyph = "\u2713"; color = 0xFF4CAF50; break;
+            case FAIL:    glyph = "\u2717"; color = 0xFFE53935; break;
+            case WARN:    glyph = "!";      color = 0xFFFFB300; break;
+            case SKIPPED: glyph = "\u2298"; color = 0xFF9E9E9E; break;
+            case RUNNING: glyph = "\u2026"; color = 0xFFFFB300; break;
+            default:      glyph = "\u00b7"; color = 0xFF607D8B; break;
+        }
+        status.setText(glyph);
+        status.setTextColor(color);
+
+        elap.setText(r.elapsedMs > 0 ? (r.elapsedMs + " ms") : "");
+
+        if (r.message != null && !r.message.isEmpty()) {
+            msg.setVisibility(View.VISIBLE);
+            msg.setText(r.message);
+            int textColor;
+            switch (r.status) {
+                case FAIL: textColor = 0xFFE53935; break;
+                case PASS: textColor = 0xFF4CAF50; break;
+                case WARN: textColor = 0xFFFFB300; break;
+                default:   textColor = 0xFF9E9E9E; break;
+            }
+            msg.setTextColor(textColor);
+        } else {
+            msg.setVisibility(View.GONE);
+        }
+    }
+
+    private void runMirrorAllTests() {
+        btnMirrorRunAll.setEnabled(false);
+        btnMirrorSendLog.setEnabled(false);
+        com.byd.dashcast.mirror.MirrorTestRunner.runAll(this,
+                new com.byd.dashcast.mirror.MirrorTestRunner.Listener() {
+            @Override public void onSuiteStarted(
+                    List<com.byd.dashcast.mirror.MirrorTestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                mirrorLastResults.clear();
+                mirrorLastResults.addAll(results);
+                for (int i = 0; i < results.size() && i < mirrorRowViews.size(); i++) {
+                    bindMirrorRow(mirrorRowViews.get(i), results.get(i));
+                }
+                tvMirrorCounters.setText(getString(R.string.diag_beta_counters_running));
+            }
+            @Override public void onTestUpdated(int index,
+                    com.byd.dashcast.mirror.MirrorTestRunner.TestResult result) {
+                if (mDestroyed) return;
+                if (index < mirrorRowViews.size()) bindMirrorRow(mirrorRowViews.get(index), result);
+                updateMirrorCounters();
+            }
+            @Override public void onSuiteFinished(
+                    List<com.byd.dashcast.mirror.MirrorTestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                btnMirrorRunAll.setEnabled(true);
+                btnMirrorSendLog.setEnabled(true);
+                updateMirrorCounters();
+            }
+        });
+    }
+
+    private void updateMirrorCounters() {
+        int pass = 0, fail = 0, skip = 0, warn = 0;
+        for (com.byd.dashcast.mirror.MirrorTestRunner.TestResult r : mirrorLastResults) {
+            switch (r.status) {
+                case PASS:    pass++; break;
+                case FAIL:    fail++; break;
+                case SKIPPED: skip++; break;
+                case WARN:    warn++; break;
+                default: break;
+            }
+        }
+        tvMirrorCounters.setText(getString(R.string.diag_dl5_counters_fmt, pass, fail, warn, skip));
+    }
+
+    private void sendMirrorLog() {
+        String report = com.byd.dashcast.mirror.MirrorTestRunner.buildReport(this, mirrorLastResults);
+        AppLogger.i("DiagActivity", "Mirror diag report:\n" + report);
         AppLogger.shareWithReport(this, report);
     }
 

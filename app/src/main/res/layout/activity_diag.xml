@@ -168,6 +168,8 @@
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_dilink2"/>
             <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_mirror"/>
+            <com.google.android.material.tabs.TabItem
                 android:text="Sniffer"
                 tools:ignore="HardcodedText"/>
         </com.google.android.material.tabs.TabLayout>
@@ -195,6 +197,11 @@
             <include
                 android:id="@+id/panel_dilink2"
                 layout="@layout/include_diag_dilink2"/>
+
+            <!-- Mirror diagnostic panel (build 193) -->
+            <include
+                android:id="@+id/panel_mirror"
+                layout="@layout/include_diag_mirror"/>
 
             <!-- RE Sniffer dedicated diagnostic panel (build 181) -->
             <include
