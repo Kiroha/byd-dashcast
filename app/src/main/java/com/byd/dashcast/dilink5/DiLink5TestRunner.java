@@ -96,7 +96,7 @@ public final class DiLink5TestRunner {
         list.add(new TestDef("D9", "BYD/XDJA/DiLink packages discovery",
                 "Dynamic scan via 'pm list packages -f' — every com.byd.*, com.xdja.*, com.dilink.* and *cluster* package with versionName + versionCode + APK path."));
         list.add(new TestDef("D10", "Extract RE-relevant APKs",
-                "Copies a curated whitelist (clusterdebug, car.server, crosscontrol, containerservice, appstartmanagement, smarttravel, commander, freedom, overdrive, windowmanagement + any *cluster* / *fission* / *projection* / *dilink5*) to externalFilesDir/extracted_apks/ — 'adb pull /sdcard/Android/data/com.byd.dashcast/files/extracted_apks/'."));
+                "Copies a curated whitelist (clusterdebug, car.server, crosscontrol, containerservice, appstartmanagement, smarttravel, commander, freedom, overdrive, windowmanagement + any *cluster* / *fission* / *projection* / *dilink5*) to /storage/emulated/0/Download/dashcast_apks/ — directly visible in the device file manager. Also wipes the legacy app-private location to avoid filling memory."));
         list.add(new TestDef("D11", "AutoContainer sendInfo refresh probe",
                 "service call auto_container 2 i32 1000 i32 0 s16 \"\" — harmless refresh, confirms typed sendInfo path is reachable on DL5."));
         list.add(new TestDef("D12", "AutoContainer Qt standby probe",
@@ -137,6 +137,8 @@ public final class DiLink5TestRunner {
                 "pm query-intent-activities / query-services for actions: PROJECT, CLUSTER_PROJECTION, CAST, AutoDisplay, AppStartup — enumerates every intent BYD apps declare for projection so we can pick the official entry point."));
         list.add(new TestDef("D30", "SurfaceFlinger physical/virtual display topology",
                 "dumpsys SurfaceFlinger --display-id + dumpsys SurfaceFlinger | grep -E 'Display|Layer' | head — ground-truth display topology from the compositor (bypasses WindowManager filtering)."));
+        list.add(new TestDef("D31", "Live cluster projection end-to-end (sendInfo 16 + am start --display N + sendInfo 18/0)",
+                "For each PRESENTATION display: sendInfo(1000,16) opens projection → wait 1.5 s → am start --display N <pkg> → wait 3 s (user observes cluster) → am force-stop → sendInfo(1000,18) closes projection → sendInfo(1000,0) restores normal video flow. Defaults to com.byd.clusterdebug (BYD's own cluster diagnostic app, always present on DL5). If a package is selected in the D8 dropdown, that one is used instead."));
         return list;
     }
 
@@ -202,6 +204,7 @@ public final class DiLink5TestRunner {
                         case "D28": runD28(ctx, r); break;
                         case "D29": runD29(ctx, r); break;
                         case "D30": runD30(ctx, r); break;
+                        case "D31": runD31(ctx, d8Params, r); break;
                         default:
                             r.status = Status.SKIPPED;
                             r.message = "not implemented";
@@ -572,25 +575,53 @@ public final class DiLink5TestRunner {
         return false;
     }
 
+    /**
+     * D10 — Extracts whitelisted APKs to {@code /storage/emulated/0/Download/dashcast_apks/}
+     * so the user can grab them directly via the device file manager (no adb pull needed).
+     *
+     * <p>The old app-private location ({@code getExternalFilesDir(null)/extracted_apks/}) was
+     * effectively invisible to the user on most BYD file managers; we now actively wipe it so we
+     * don't fill the device with orphaned copies build after build. Filesystem ops use the ADB
+     * shell (uid 2000), which has unrestricted access to {@code /sdcard/Download/} on Android 10+.
+     */
     private static void runD10(Context ctx, TestResult r) {
         if (sLastDiscovery.isEmpty()) {
             r.status = Status.SKIPPED;
             r.message = "Run D9 first (discovery empty)";
             return;
         }
-        java.io.File dir = ctx.getExternalFilesDir(null);
-        if (dir == null) dir = ctx.getFilesDir();
-        java.io.File outDir = new java.io.File(dir, "extracted_apks");
-        if (!outDir.exists() && !outDir.mkdirs()) {
+        final String outDir = "/storage/emulated/0/Download/dashcast_apks";
+        AtomicReference<String> out = new AtomicReference<>("");
+
+        // 1) Wipe the legacy app-private extraction dir so it stops eating storage.
+        StringBuilder cleanup = new StringBuilder();
+        java.io.File legacy = ctx.getExternalFilesDir(null);
+        if (legacy != null) {
+            java.io.File legacyDir = new java.io.File(legacy, "extracted_apks");
+            if (legacyDir.exists()) {
+                runShellSync(ctx, "rm -rf '" + legacyDir.getAbsolutePath() + "' 2>&1", out, 8000);
+                cleanup.append("Legacy dir wiped: ").append(legacyDir.getAbsolutePath()).append('\n');
+            }
+        }
+
+        // 2) Ensure the public Download target exists (mkdir via shell — app uid can't on A10+).
+        runShellSync(ctx, "mkdir -p '" + outDir + "' 2>&1 && ls -ld '" + outDir + "' 2>&1", out, 4000);
+        String mkdirOut = out.get().trim();
+        if (mkdirOut.toLowerCase().contains("permission denied")
+                || mkdirOut.toLowerCase().contains("cannot create")) {
             r.status = Status.FAIL;
-            r.message = "Cannot create " + outDir.getAbsolutePath();
+            r.message = "Cannot create " + outDir + " \u2014 " + mkdirOut;
             return;
         }
+
         StringBuilder sb = new StringBuilder();
-        sb.append("Output dir: ").append(outDir.getAbsolutePath()).append('\n');
-        sb.append("Retrieve with: adb pull ").append(outDir.getAbsolutePath()).append('\n');
+        if (cleanup.length() > 0) sb.append(cleanup).append('\n');
+        sb.append("Output dir: ").append(outDir).append('\n');
+        sb.append("Visible in the on-device file manager under Download/dashcast_apks/.\n");
+        sb.append("Also retrievable via: adb pull ").append(outDir).append('\n');
         sb.append("Filtered (whitelist) \u2014 ").append(sLastDiscovery.size())
           .append(" pkg discovered, only RE-relevant ones extracted.\n\n");
+
         int ok = 0, fail = 0, skipped = 0, cached = 0;
         for (DiscoveredPkg d : sLastDiscovery) {
             if (!d10IsInteresting(d.pkg)) {
@@ -599,24 +630,29 @@ public final class DiLink5TestRunner {
                 continue;
             }
             String safe = d.pkg.replace('/', '_');
-            String dst  = outDir.getAbsolutePath() + "/" + safe + "_v" + d.versionCode + ".apk";
-            java.io.File f = new java.io.File(dst);
-            // Cache: filename embeds versionCode, so an existing non-empty file is
-            // the same APK already extracted — no need to re-copy.
-            if (f.exists() && f.length() > 0) {
+            String dst  = outDir + "/" + safe + "_v" + d.versionCode + ".apk";
+
+            // Cache via shell stat (avoids relying on app uid being able to read /sdcard on A10+).
+            runShellSync(ctx, "stat -c %s '" + dst + "' 2>/dev/null", out, 3000);
+            String sizeStr = out.get().trim();
+            long existingSize = 0L;
+            try { if (!sizeStr.isEmpty()) existingSize = Long.parseLong(sizeStr); }
+            catch (NumberFormatException ignore) { /* not present */ }
+            if (existingSize > 0L) {
                 cached++;
                 ok++;
-                sb.append("  \u21bb ").append(d.pkg).append("  (cached, ").append(f.length() / 1024).append(" KB)\n");
+                sb.append("  \u21bb ").append(d.pkg).append("  (cached, ").append(existingSize / 1024).append(" KB)\n");
                 continue;
             }
-            AtomicReference<String> out = new AtomicReference<>("");
+
             // cat + redirect avoids cp permission quirks on some BYD builds.
-            runShellSync(ctx, "cat '" + d.apkPath + "' > '" + dst + "' 2>&1 && ls -l '" + dst + "' 2>&1", out, 15000);
+            runShellSync(ctx, "cat '" + d.apkPath + "' > '" + dst + "' 2>&1 && stat -c %s '" + dst + "' 2>&1", out, 15000);
             String raw = out.get().trim();
-            boolean exists = f.exists() && f.length() > 0;
-            if (exists) {
+            long writtenSize = 0L;
+            try { writtenSize = Long.parseLong(raw); } catch (NumberFormatException ignore) { /* fall through */ }
+            if (writtenSize > 0L) {
                 ok++;
-                sb.append("  \u2713 ").append(d.pkg).append("  (").append(f.length() / 1024).append(" KB)\n");
+                sb.append("  \u2713 ").append(d.pkg).append("  (").append(writtenSize / 1024).append(" KB)\n");
             } else {
                 fail++;
                 sb.append("  \u2717 ").append(d.pkg).append("  \u2014 ").append(raw).append('\n');
@@ -625,8 +661,7 @@ public final class DiLink5TestRunner {
         r.detail = sb.toString();
         if (ok > 0 && fail == 0) {
             r.status = Status.PASS;
-            r.message = ok + " APK(s) ready (" + cached + " cached), "
-                    + skipped + " skipped \u2014 adb pull the dir";
+            r.message = ok + " APK(s) in Download/dashcast_apks/ (" + cached + " cached), " + skipped + " skipped";
         } else if (ok > 0) {
             r.status = Status.WARN;
             r.message = ok + " ok (" + cached + " cached) / " + fail + " failed / " + skipped + " skipped";
@@ -1157,6 +1192,149 @@ public final class DiLink5TestRunner {
                 }
                 try { lock.wait(remain); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
             }
+        }
+    }
+
+    /**
+     * D31 — Live cluster projection end-to-end probe.
+     *
+     * <p>For each PRESENTATION display, drives the full visual cycle the user has so far had
+     * to do by hand:
+     * <ol>
+     *   <li>{@code sendInfo(1000, 16)} — opens the projection tunnel (Qt switches to
+     *       standby; the {@code shared_fission_bg_XDJAScreenProjection_*} layerStack becomes
+     *       visible, initially empty/black);</li>
+     *   <li>wait ~1.5 s so Qt repositions the overlay;</li>
+     *   <li>{@code am start --display N <selected pkg>/<launcher activity>} — pushes a real
+     *       activity onto the projection layerStack;</li>
+     *   <li>wait ~3 s so the user can observe the cluster (this is the user-visible window);</li>
+     *   <li>{@code am force-stop <selected pkg>};</li>
+     *   <li>{@code sendInfo(1000, 18)} — closes the projection;</li>
+     *   <li>{@code sendInfo(1000, 0)} — restores the normal cluster video flow;</li>
+     *   <li>wait ~1.5 s to give a clear visual separation between iterations.</li>
+     * </ol>
+     *
+     * <p>Reuses the package selected for D8 (no new UI). The package must already be installed
+     * on the device — checked up front via {@link PackageManager#getPackageInfo(String, int)}.
+     */
+    private static void runD31(Context ctx, D8Params params, TestResult r) {
+        // Default to BYD's own clusterdebug — always installed on DL5, designed for the cluster.
+        // The D8 dropdown is an optional override for users who want to test their own app.
+        final boolean overridden = params != null
+                && params.targetPackage != null
+                && !params.targetPackage.isEmpty();
+        final String pkg = overridden ? params.targetPackage : "com.byd.clusterdebug";
+
+        // 1) Make sure the package is actually installed.
+        try {
+            ctx.getPackageManager().getPackageInfo(pkg, 0);
+        } catch (PackageManager.NameNotFoundException nfe) {
+            r.status = Status.FAIL;
+            r.message = "Package '" + pkg + "' is not installed on this device";
+            r.detail = "PackageManager.getPackageInfo threw NameNotFoundException for " + pkg + ".\n"
+                     + (overridden
+                         ? "You selected this package in the D8 dropdown but it isn't installed.\n"
+                           + "Clear the D8 selection to fall back to com.byd.clusterdebug, or pick an installed package."
+                         : "com.byd.clusterdebug should be present on every DL5 head unit \u2014 if it isn't,\n"
+                           + "select an installed BYD package in the D8 dropdown to use instead.");
+            return;
+        }
+
+        // 2) Collect target displays (PRESENTATION = the cluster-class displays).
+        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
+        Display[] presentation = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+        if (presentation == null || presentation.length == 0) {
+            r.status = Status.FAIL;
+            r.message = "No PRESENTATION display available";
+            return;
+        }
+
+        // 3) Resolve launcher component once (shell needs the full ComponentName for --display).
+        String component = resolveLauncherComponent(ctx, pkg);
+        if (component == null || component.isEmpty()) {
+            r.status = Status.FAIL;
+            r.message = "Could not resolve a launcher activity for '" + pkg + "'";
+            return;
+        }
+
+        StringBuilder detail = new StringBuilder();
+        detail.append("Target package : ").append(pkg)
+              .append(overridden ? "  (D8 dropdown override)" : "  (default clusterdebug)").append('\n');
+        detail.append("Launcher       : ").append(component).append('\n');
+        detail.append("PRESENTATION displays found: ");
+        for (int i = 0; i < presentation.length; i++) {
+            if (i > 0) detail.append(", ");
+            detail.append(presentation[i].getDisplayId());
+        }
+        detail.append("\n\n");
+
+        AtomicReference<String> out = new AtomicReference<>("");
+        int passes = 0, fails = 0;
+
+        for (Display disp : presentation) {
+            int displayId = disp.getDisplayId();
+            detail.append("\u2500\u2500\u2500 display ").append(displayId).append(" (").append(disp.getName()).append(") \u2500\u2500\u2500\n");
+
+            // a) Open projection
+            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+            detail.append("[a] sendInfo(1000, 16) projection ON  \u2192 ").append(out.get().trim()).append('\n');
+
+            try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
+            // b) Push activity onto the projection layerStack
+            String launchCmd = "am start --display " + displayId
+                    + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+                    + " -n " + component + " 2>&1";
+            runShellSync(ctx, launchCmd, out, 6000);
+            String launchOut = out.get().trim();
+            detail.append("[b] ").append(launchCmd).append('\n')
+                  .append("    \u2192 ").append(launchOut).append('\n');
+
+            // c) User-visible window
+            try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
+            // d) Snapshot of where the activity landed (correlate visual with stack state).
+            runShellSync(ctx,
+                    "dumpsys activity activities 2>/dev/null"
+                  + " | grep -E '" + java.util.regex.Pattern.quote(pkg) + "|displayId=|topResumed'"
+                  + " | head -8 2>&1", out, 4000);
+            detail.append("[d] activity stack snapshot:\n").append(out.get()).append('\n');
+
+            // e) Kill and tear down the projection cleanly
+            runShellSync(ctx, "am force-stop " + pkg + " 2>&1", out, 4000);
+            detail.append("[e] am force-stop ").append(pkg).append(" \u2192 ").append(out.get().trim()).append('\n');
+
+            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
+            detail.append("[f] sendInfo(1000, 18) projection OFF \u2192 ").append(out.get().trim()).append('\n');
+
+            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0  s16 \"\" 2>&1", out, 4000);
+            detail.append("[g] sendInfo(1000, 0)  restore video \u2192 ").append(out.get().trim()).append('\n');
+
+            // Visual separation between iterations
+            try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+
+            // Pass criterion: shell accepted both the launch and the cleanup without obvious errors.
+            String low = launchOut.toLowerCase();
+            boolean launchOk = !low.contains("error")
+                            && !low.contains("securityexception")
+                            && !low.contains("permission denial");
+            if (launchOk) passes++; else fails++;
+            detail.append('\n');
+        }
+
+        detail.append("User question: on which display(s) did '").append(pkg)
+              .append("' actually render on the cluster?\n");
+
+        r.detail = detail.toString();
+        if (fails == 0 && passes > 0) {
+            r.status = Status.PASS;
+            r.message = "Cycle run on " + passes + " display(s) \u2014 user to confirm visual rendering";
+        } else if (passes > 0) {
+            r.status = Status.WARN;
+            r.message = passes + " ok / " + fails + " failed \u2014 see detail";
+        } else {
+            r.status = Status.FAIL;
+            r.message = "Every am start --display refused";
         }
     }
 }
