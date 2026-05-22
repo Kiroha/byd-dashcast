@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -22,6 +24,7 @@ import com.byd.dashcast.beta.BetaTestRunner.TestDef;
 import com.byd.dashcast.beta.BetaTestRunner.TestResult;
 import com.byd.dashcast.beta.BetaTestRunner.Status;
 import com.byd.dashcast.dilink5.DiLink5TestRunner;
+import com.byd.dashcast.dilink2.DiLink2TestRunner;
 import com.byd.dashcast.platform.Platform;
 
 import com.google.android.material.button.MaterialButton;
@@ -52,14 +55,17 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_ADAS        = 4;
     private static final int TAB_BETA_ENGINE = 5;
     private static final int TAB_DILINK5     = 6;
-    private static final int TAB_SNIFFER     = 7;
+    private static final int TAB_DILINK2     = 7;
+    private static final int TAB_SNIFFER     = 8;
 
     private TabLayout    tabs;
     private View         panelBeta;
     private View         panelDl5;
+    private View         panelDl2;
     private View         panelSniffer;
     private View         panelAdas;
     private View         panelComingSoon;
+    private static final int TAB_COUNT = 9; // cluster,display,adb_local,system,adas,beta,dl5,dl2,sniffer
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -82,6 +88,16 @@ public class DiagActivity extends AppCompatActivity {
     private final List<View> dl5RowViews = new ArrayList<>();
     private final List<DiLink5TestRunner.TestResult> dl5LastResults = new ArrayList<>();
 
+    // DiLink 2 panel views (build 185 — recon-only)
+    private TextView       tvDl2HeaderSubtitle;
+    private TextView       tvDl2SignaturePill;
+    private TextView       tvDl2Counters;
+    private MaterialButton btnDl2RunAll;
+    private MaterialButton btnDl2CopyReport;
+    private LinearLayout   llDl2TestList;
+    private final List<View> dl2RowViews = new ArrayList<>();
+    private final List<DiLink2TestRunner.TestResult> dl2LastResults = new ArrayList<>();
+
     // Per-test row views, indexed by test position
     private final List<View> rowViews = new ArrayList<>();
     private final List<TestResult> lastResults = new ArrayList<>();
@@ -100,10 +116,12 @@ public class DiagActivity extends AppCompatActivity {
         bindTabs();
         bindBetaPanel();
         bindDl5Panel();
+        bindDl2Panel();
         bindSnifferPanel();
         bindAdasPanel();
         prepareTestRows();
         prepareDl5TestRows();
+        prepareDl2TestRows();
         updateStatusPills();
         restoreSnifferState();
         // Default tab: DiLink 5 when auto-detected as DL5, Beta Engine otherwise.
@@ -140,6 +158,7 @@ public class DiagActivity extends AppCompatActivity {
         tabs            = findViewById(R.id.tabs_diag);
         panelBeta       = findViewById(R.id.panel_beta_engine);
         panelDl5        = findViewById(R.id.panel_dilink5);
+        panelDl2        = findViewById(R.id.panel_dilink2);
         panelSniffer    = findViewById(R.id.panel_sniffer);
         panelAdas       = findViewById(R.id.panel_adas);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
@@ -149,19 +168,52 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onTabUnselected(TabLayout.Tab tab) {}
             @Override public void onTabReselected(TabLayout.Tab tab) {}
         });
+
+        // Build 185 — horizontal swipe on the content frame to navigate between tabs.
+        // Lightweight Option B (see /memories/repo/byd-project.md TODO for proper ViewPager2 refactor).
+        attachSwipeNavigation(findViewById(R.id.fl_diag_content));
+    }
+
+    private void attachSwipeNavigation(View target) {
+        if (target == null) return;
+        final GestureDetector detector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            private static final int MIN_DISTANCE = 120; // px
+            private static final int MIN_VELOCITY = 220; // px/s
+            @Override public boolean onDown(MotionEvent e) { return true; }
+            @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float vx, float vy) {
+                if (e1 == null || e2 == null) return false;
+                float dx = e2.getX() - e1.getX();
+                float dy = e2.getY() - e1.getY();
+                if (Math.abs(dx) < MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5f) return false;
+                if (Math.abs(vx) < MIN_VELOCITY) return false;
+                int current = tabs.getSelectedTabPosition();
+                int next = current + (dx < 0 ? 1 : -1);
+                if (next < 0 || next >= TAB_COUNT) return false;
+                TabLayout.Tab t = tabs.getTabAt(next);
+                if (t != null) t.select();
+                return true;
+            }
+        });
+        target.setOnTouchListener((v, ev) -> {
+            // Only intercept clear horizontal flings; never consume the event so child scrollers keep working.
+            detector.onTouchEvent(ev);
+            return false;
+        });
     }
 
     private void showPanelForTab(int position) {
         boolean isBeta    = position == TAB_BETA_ENGINE;
         boolean isDl5     = position == TAB_DILINK5;
+        boolean isDl2     = position == TAB_DILINK2;
         boolean isSniffer = position == TAB_SNIFFER;
         boolean isAdas    = position == TAB_ADAS;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
+        panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isSniffer && !isAdas) {
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isSniffer && !isAdas) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -494,6 +546,137 @@ public class DiagActivity extends AppCompatActivity {
     private void copyDl5Report() {
         String report = DiLink5TestRunner.buildReport(this, dl5LastResults);
         AppLogger.i("DiagActivity", "DiLink 5 report:\n" + report);
+        AppLogger.shareWithReport(this, report);
+    }
+
+    // ─── DiLink 2 recon panel (build 185) ───────────────────────────────────
+
+    private void bindDl2Panel() {
+        tvDl2HeaderSubtitle = panelDl2.findViewById(R.id.tv_dl2_header_subtitle);
+        tvDl2SignaturePill  = panelDl2.findViewById(R.id.tv_dl2_signature_pill);
+        tvDl2Counters       = panelDl2.findViewById(R.id.tv_dl2_counters);
+        btnDl2RunAll        = panelDl2.findViewById(R.id.btn_dl2_run_all);
+        btnDl2CopyReport    = panelDl2.findViewById(R.id.btn_dl2_copy_report);
+        llDl2TestList       = panelDl2.findViewById(R.id.ll_dl2_test_list);
+
+        String product = android.os.Build.PRODUCT == null ? "?" : android.os.Build.PRODUCT;
+        String brand   = android.os.Build.BRAND   == null ? "?" : android.os.Build.BRAND;
+        tvDl2HeaderSubtitle.setText(getString(
+                R.string.diag_dl2_header_subtitle_fmt, product, brand, android.os.Build.VERSION.SDK_INT));
+
+        boolean dl2Sig = "alps".equalsIgnoreCase(brand)
+                && product.toLowerCase().contains("k65v1");
+        tvDl2SignaturePill.setText(dl2Sig
+                ? R.string.diag_dl2_pill_detected
+                : R.string.diag_dl2_pill_other);
+
+        btnDl2RunAll.setOnClickListener(v -> runDl2AllTests());
+        btnDl2CopyReport.setOnClickListener(v -> copyDl2Report());
+        btnDl2CopyReport.setEnabled(false);
+    }
+
+    private void prepareDl2TestRows() {
+        dl2RowViews.clear();
+        dl2LastResults.clear();
+        llDl2TestList.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (DiLink2TestRunner.TestDef def : DiLink2TestRunner.catalog()) {
+            View row = inflater.inflate(R.layout.item_beta_test, llDl2TestList, false);
+            DiLink2TestRunner.TestResult r = new DiLink2TestRunner.TestResult(def);
+            r.status = DiLink2TestRunner.Status.PENDING;
+            bindDl2Row(row, r);
+            llDl2TestList.addView(row);
+            dl2RowViews.add(row);
+            dl2LastResults.add(r);
+        }
+    }
+
+    private void bindDl2Row(View row, DiLink2TestRunner.TestResult r) {
+        TextView status = row.findViewById(R.id.tv_test_status);
+        TextView id     = row.findViewById(R.id.tv_test_id);
+        TextView title  = row.findViewById(R.id.tv_test_title);
+        TextView desc   = row.findViewById(R.id.tv_test_description);
+        TextView msg    = row.findViewById(R.id.tv_test_message);
+        TextView elap   = row.findViewById(R.id.tv_test_elapsed);
+
+        id.setText(r.def.id);
+        title.setText(r.def.title);
+        desc.setText(r.def.description);
+
+        String glyph; int color;
+        switch (r.status) {
+            case PASS:    glyph = "\u2713"; color = 0xFF4CAF50; break;
+            case FAIL:    glyph = "\u2717"; color = 0xFFE53935; break;
+            case WARN:    glyph = "!";      color = 0xFFFFB300; break;
+            case SKIPPED: glyph = "\u2298"; color = 0xFF9E9E9E; break;
+            case RUNNING: glyph = "\u2026"; color = 0xFFFFB300; break;
+            default:      glyph = "\u00b7"; color = 0xFF607D8B; break;
+        }
+        status.setText(glyph);
+        status.setTextColor(color);
+
+        elap.setText(r.elapsedMs > 0 ? (r.elapsedMs + " ms") : "");
+
+        if (r.message != null && !r.message.isEmpty()) {
+            msg.setVisibility(View.VISIBLE);
+            msg.setText(r.message);
+            int textColor;
+            switch (r.status) {
+                case FAIL: textColor = 0xFFE53935; break;
+                case PASS: textColor = 0xFF4CAF50; break;
+                case WARN: textColor = 0xFFFFB300; break;
+                default:   textColor = 0xFF9E9E9E; break;
+            }
+            msg.setTextColor(textColor);
+        } else {
+            msg.setVisibility(View.GONE);
+        }
+    }
+
+    private void runDl2AllTests() {
+        btnDl2RunAll.setEnabled(false);
+        btnDl2CopyReport.setEnabled(false);
+        DiLink2TestRunner.runAll(this, new DiLink2TestRunner.Listener() {
+            @Override public void onSuiteStarted(List<DiLink2TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                dl2LastResults.clear();
+                dl2LastResults.addAll(results);
+                for (int i = 0; i < results.size() && i < dl2RowViews.size(); i++) {
+                    bindDl2Row(dl2RowViews.get(i), results.get(i));
+                }
+                tvDl2Counters.setText(getString(R.string.diag_beta_counters_running));
+            }
+            @Override public void onTestUpdated(int index, DiLink2TestRunner.TestResult result) {
+                if (mDestroyed) return;
+                if (index < dl2RowViews.size()) bindDl2Row(dl2RowViews.get(index), result);
+                updateDl2Counters();
+            }
+            @Override public void onSuiteFinished(List<DiLink2TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                btnDl2RunAll.setEnabled(true);
+                btnDl2CopyReport.setEnabled(true);
+                updateDl2Counters();
+            }
+        });
+    }
+
+    private void updateDl2Counters() {
+        int pass = 0, fail = 0, skip = 0, warn = 0;
+        for (DiLink2TestRunner.TestResult r : dl2LastResults) {
+            switch (r.status) {
+                case PASS:    pass++; break;
+                case FAIL:    fail++; break;
+                case SKIPPED: skip++; break;
+                case WARN:    warn++; break;
+                default: break;
+            }
+        }
+        tvDl2Counters.setText(getString(R.string.diag_dl2_counters_fmt, pass, fail, warn, skip));
+    }
+
+    private void copyDl2Report() {
+        String report = DiLink2TestRunner.buildReport(this, dl2LastResults);
+        AppLogger.i("DiagActivity", "DiLink 2 report:\n" + report);
         AppLogger.shareWithReport(this, report);
     }
 
