@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.IBinder;
+import android.os.IBinder.DeathRecipient;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -104,24 +105,68 @@ public final class BetaProxyClient {
 
     private static final Object LOCK = new Object();
 
-    /** The live binder reference, or {@code null} when the daemon is unreachable. */
-    private static IBinder sBinder;
+    /**
+     * The live binder reference, or {@code null} when the daemon is unreachable.
+     *
+     * <p>Declared {@code volatile} (build 195 / P1) so hot-path typed verbs
+     * ({@link #setOverscan}, {@link #getPidsByPackage},
+     * {@link #autoContainerSendInfo}, {@link #forceStopPackage}) can read it
+     * without acquiring {@link #LOCK} — critical for the resize SeekBar
+     * (~30 overscan/s) and pidof polling (~every 5 s during projection)
+     * which used to serialize behind any in-flight {@code runShell}.
+     *
+     * <p>Writes are still done under {@link #LOCK} from {@code connect()} /
+     * the receiver / handshake / explicit error-clear paths; only the cheap
+     * reads dropped the lock.
+     */
+    private static volatile IBinder sBinder;
     /** Receiver registered once on first {@link #connect(Context)}; reused thereafter. */
     private static BroadcastReceiver sReceiver;
     /** Set just before bootstrap; counted-down by {@link #sReceiver} on arrival. */
     private static volatile CountDownLatch sBinderLatch;
 
-    private static int    sDaemonUid = -1;
-    private static int    sDaemonPid = -1;
-    private static String sDaemonVer;
+    // Volatile (build 195 / P1) so the public getters below stay lockless.
+    private static volatile int    sDaemonUid = -1;
+    private static volatile int    sDaemonPid = -1;
+    private static volatile String sDaemonVer;
+
+    /**
+     * Death recipient that clears {@link #sBinder} as soon as the kernel
+     * notifies us that the daemon process died. With this in place
+     * {@link #isConnected()} no longer needs {@link IBinder#pingBinder()}
+     * (a full IPC roundtrip per call) — it can rely on the cheaper local
+     * {@link IBinder#isBinderAlive()} check (build 195 / P2).
+     */
+    private static final DeathRecipient sDeath = new DeathRecipient() {
+        @Override public void binderDied() {
+            synchronized (LOCK) {
+                AppLogger.w(TAG, "daemon binder died — clearing cached reference");
+                IBinder dead = sBinder;
+                if (dead != null) {
+                    try { dead.unlinkToDeath(this, 0); } catch (Throwable ignore) {}
+                }
+                sBinder = null;
+                sDaemonUid = -1;
+                sDaemonPid = -1;
+                sDaemonVer = null;
+            }
+        }
+    };
 
     private BetaProxyClient() {}
 
-    /** @return {@code true} if a live binder to the daemon is currently held. */
+    /**
+     * @return {@code true} if a live binder to the daemon is currently held.
+     *
+     * <p>Build 195 / P2: uses {@link IBinder#isBinderAlive()} (local check,
+     * 0 IPC) instead of {@link IBinder#pingBinder()} (real Binder roundtrip
+     * ~5 ms). Correctness preserved by {@link #sDeath}, which clears
+     * {@code sBinder} as soon as the daemon dies. Read is lock-free because
+     * {@code sBinder} is {@code volatile}.
+     */
     public static boolean isConnected() {
-        synchronized (LOCK) {
-            return sBinder != null && sBinder.pingBinder();
-        }
+        IBinder b = sBinder;
+        return b != null && b.isBinderAlive();
     }
 
     /**
@@ -232,71 +277,72 @@ public final class BetaProxyClient {
 
     /** Round-trip latency in ms, or {@code -1} on error / not connected. */
     public static long ping() {
-        synchronized (LOCK) {
-            if (!isConnected()) return -1L;
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                long t0 = SystemClock.elapsedRealtime();
-                sBinder.transact(ProxyDaemonMain.TXN_PING, data, reply, 0);
-                long t1 = SystemClock.elapsedRealtime();
-                reply.readException();
-                reply.readLong(); // epoch ms — unused, kept to drain the parcel
-                return t1 - t0;
-            } catch (RemoteException e) {
-                AppLogger.w(TAG, "ping failed: " + e.getMessage());
-                sBinder = null;
-                return -1L;
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) return -1L;
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            long t0 = SystemClock.elapsedRealtime();
+            b.transact(ProxyDaemonMain.TXN_PING, data, reply, 0);
+            long t1 = SystemClock.elapsedRealtime();
+            reply.readException();
+            reply.readLong(); // epoch ms — unused, kept to drain the parcel
+            return t1 - t0;
+        } catch (RemoteException e) {
+            AppLogger.w(TAG, "ping failed: " + e.getMessage());
+            // Don't null sBinder — sDeath will do it on real death. RemoteException
+            // can also mean transient backpressure, in which case the next typed
+            // verb may still succeed.
+            return -1L;
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
     /** UID of the daemon process as reported by its last {@code WHOAMI}. */
-    public static int getCallerUid() {
-        synchronized (LOCK) { return sDaemonUid; }
-    }
+    public static int getCallerUid() { return sDaemonUid; }
 
     /** PID of the daemon process as reported by its last {@code WHOAMI}. */
-    public static int getDaemonPid() {
-        synchronized (LOCK) { return sDaemonPid; }
-    }
+    public static int getDaemonPid() { return sDaemonPid; }
 
     /** Protocol version reported by the daemon, or {@code null} if never handshook. */
-    public static String getProtocolVersion() {
-        synchronized (LOCK) { return sDaemonVer; }
-    }
+    public static String getProtocolVersion() { return sDaemonVer; }
 
     /**
      * Run a shell command on the daemon and return its combined stdout/stderr.
      * Blocks until the daemon completes the command.
+     *
+     * <p>Build 195 / P1: lock-free. Concurrent {@code runShell} / typed-verb
+     * calls dispatch in parallel through the daemon's binder thread pool
+     * instead of serializing behind a single static mutex.
      */
     public static String runShell(String cmd) throws BetaProxyException {
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                data.writeString(cmd);
-                sBinder.transact(ProxyDaemonMain.TXN_EXEC, data, reply, 0);
-                reply.readException();
-                int exit = reply.readInt();
-                String output = reply.readString();
-                if (exit != 0 && output != null && output.startsWith("ERR ")) {
-                    throw new BetaProxyException(output.substring(4));
-                }
-                return output == null ? "" : output;
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(cmd);
+            b.transact(ProxyDaemonMain.TXN_EXEC, data, reply, 0);
+            reply.readException();
+            int exit = reply.readInt();
+            String output = reply.readString();
+            if (exit != 0 && output != null && output.startsWith("ERR ")) {
+                throw new BetaProxyException(output.substring(4));
             }
+            return output == null ? "" : output;
+        } catch (RemoteException e) {
+            // Volatile single-assignment publish; sDeath will also catch the
+            // dropped binder on its own, but clearing eagerly here lets the
+            // very next call see the disconnected state immediately.
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -309,23 +355,22 @@ public final class BetaProxyClient {
      * call typically returns in &lt; 1 s.
      */
     public static String runPhase4Probes() throws BetaProxyException {
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                sBinder.transact(ProxyDaemonMain.TXN_PROBE_PHASE4, data, reply, 0);
-                reply.readException();
-                String out = reply.readString();
-                return out == null ? "" : out;
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            b.transact(ProxyDaemonMain.TXN_PROBE_PHASE4, data, reply, 0);
+            reply.readException();
+            String out = reply.readString();
+            return out == null ? "" : out;
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -340,28 +385,27 @@ public final class BetaProxyClient {
      */
     public static void setOverscan(int displayId, int left, int top, int right, int bottom)
             throws BetaProxyException {
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                data.writeInt(displayId);
-                data.writeInt(left);
-                data.writeInt(top);
-                data.writeInt(right);
-                data.writeInt(bottom);
-                sBinder.transact(ProxyDaemonMain.TXN_SET_OVERSCAN, data, reply, 0);
-                // readException() throws if the daemon side called writeException —
-                // that becomes our trigger for the legacy fallback in ShellGateway.
-                reply.readException();
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInt(displayId);
+            data.writeInt(left);
+            data.writeInt(top);
+            data.writeInt(right);
+            data.writeInt(bottom);
+            b.transact(ProxyDaemonMain.TXN_SET_OVERSCAN, data, reply, 0);
+            // readException() throws if the daemon side called writeException —
+            // that becomes our trigger for the legacy fallback in ShellGateway.
+            reply.readException();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -381,24 +425,23 @@ public final class BetaProxyClient {
      */
     public static String getPidsByPackage(String packageName) throws BetaProxyException {
         if (packageName == null) packageName = "";
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                data.writeString(packageName);
-                sBinder.transact(ProxyDaemonMain.TXN_GET_PIDS, data, reply, 0);
-                reply.readException();
-                String pids = reply.readString();
-                return pids == null ? "" : pids;
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(packageName);
+            b.transact(ProxyDaemonMain.TXN_GET_PIDS, data, reply, 0);
+            reply.readException();
+            String pids = reply.readString();
+            return pids == null ? "" : pids;
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -418,24 +461,23 @@ public final class BetaProxyClient {
      */
     public static void autoContainerSendInfo(int type, int info, String str)
             throws BetaProxyException {
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                data.writeInt(type);
-                data.writeInt(info);
-                data.writeString(str == null ? "" : str);
-                sBinder.transact(ProxyDaemonMain.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
-                reply.readException();
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInt(type);
+            data.writeInt(info);
+            data.writeString(str == null ? "" : str);
+            b.transact(ProxyDaemonMain.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
+            reply.readException();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -451,23 +493,22 @@ public final class BetaProxyClient {
      */
     public static void forceStopPackage(String packageName, int userId)
             throws BetaProxyException {
-        synchronized (LOCK) {
-            if (!isConnected()) throw new BetaProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-                data.writeString(packageName);
-                data.writeInt(userId);
-                sBinder.transact(ProxyDaemonMain.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
-                reply.readException();
-            } catch (RemoteException e) {
-                sBinder = null;
-                throw new BetaProxyException("transact: " + e.getMessage(), e);
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(packageName);
+            data.writeInt(userId);
+            b.transact(ProxyDaemonMain.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
+            reply.readException();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
         }
     }
 
@@ -503,13 +544,28 @@ public final class BetaProxyClient {
                 synchronized (LOCK) {
                     // If we already hold a live binder, prefer it (avoid spurious
                     // handshake/state churn from late duplicate broadcasts).
-                    if (sBinder != null && sBinder.pingBinder() && sBinder != bp.binder) {
+                    // Local check via isBinderAlive() (P2) — sDeath would have
+                    // cleared sBinder if the cached one had actually died.
+                    if (sBinder != null && sBinder.isBinderAlive() && sBinder != bp.binder) {
                         AppLogger.d(TAG, "ignoring duplicate PROXY_CONNECTED (already have a live binder)");
                         CountDownLatch latch = sBinderLatch;
                         if (latch != null) latch.countDown();
                         return;
                     }
+                    // Unhook the previous death recipient (if any) before swapping.
+                    if (sBinder != null && sBinder != bp.binder) {
+                        try { sBinder.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    }
                     sBinder = bp.binder;
+                    // Hook the new binder so a future death immediately clears
+                    // our cached reference (P2). Best-effort: if linkToDeath
+                    // fails (binder already dead between pingBinder above and
+                    // here — vanishingly unlikely), isBinderAlive() on the next
+                    // call still gives the right answer.
+                    try { sBinder.linkToDeath(sDeath, 0); }
+                    catch (RemoteException re) {
+                        AppLogger.w(TAG, "linkToDeath failed: " + re.getMessage());
+                    }
                     // Invalidate WHOAMI cache — handshake() will refresh it.
                     sDaemonUid = -1;
                     sDaemonPid = -1;

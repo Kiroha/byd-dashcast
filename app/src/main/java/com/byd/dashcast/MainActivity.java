@@ -1430,12 +1430,12 @@ public class MainActivity extends AppCompatActivity
         boolean mirrorOk = false;
         if (mDaemonBinder != null) {
             mirrorOk = mClusterService.getMirrorManager().startMirrorViaDaemon(
-                    mDaemonBinder, clusterDisplay, mMirrorSurface, viewW, viewH);
+                    this, mDaemonBinder, clusterDisplay, mMirrorSurface, viewW, viewH);
         }
         // Fallback: direct SurfaceControl uid=10100 (fails if ACCESS_SURFACE_FLINGER missing)
         if (!mirrorOk) {
             mirrorOk = mClusterService.getMirrorManager().startMirror(
-                    clusterDisplay, mMirrorSurface, viewW, viewH);
+                    this, clusterDisplay, mMirrorSurface, viewW, viewH);
         }
 
         if (mirrorOk) {
