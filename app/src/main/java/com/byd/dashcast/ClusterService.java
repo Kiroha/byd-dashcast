@@ -272,6 +272,16 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // no-op. Capture exit code + stderr and, if the first attempt
                 // doesn't look successful, chain a `cmd activity task resize`
                 // attempt (modern equivalent).
+                //
+                // v1.2.26 — Field log BYD_RE_Sniffer_20260523_172007.txt (DL5)
+                // confirms `am task resize` returns "exit=0" deterministically
+                // on DL5 (API 32) with zero visible effect on the cluster face
+                // (XDJA fission Presentation VirtualDisplay). The exit=0
+                // ⇒ looksOk=true shortcut therefore swallows every resize on
+                // DL5 and the `cmd activity task resize` fallback is never
+                // attempted. Fix: on DL5, skip `am task` altogether and shell
+                // straight to `cmd activity task resize` (the AOSP API 30+
+                // verb). On DL3 (API 29) keep the legacy chain.
                 final int rTaskId = taskId;
                 final String rPkg = packageName;
                 final android.graphics.Rect rBounds = bounds;
@@ -279,33 +289,49 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         + " " + rBounds.right + " " + rBounds.bottom;
                 final String amCmd  = "am task resize " + coords + " 2>&1; echo \"exit=$?\"";
                 final String cmdAct = "cmd activity task resize " + coords + " 2>&1; echo \"exit=$?\"";
-                AdbLocalClient.executeShellWithResult(this, amCmd, new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String out) {
-                        String trimmed = (out == null ? "" : out.trim());
-                        boolean looksOk = trimmed.contains("exit=0")
-                                && !trimmed.toLowerCase().contains("unknown command")
-                                && !trimmed.toLowerCase().contains("error")
-                                && !trimmed.toLowerCase().contains("exception");
-                        AppLogger.i(TAG, "resizeActiveTask `am task resize` -> \""
-                                + trimmed + "\" (looksOk=" + looksOk + ")");
-                        if (looksOk) return;
-                        AppLogger.i(TAG, "resizeActiveTask: trying `cmd activity task resize` fallback");
-                        AdbLocalClient.executeShellWithResult(ClusterService.this, cmdAct,
-                                new AdbLocalClient.Callback() {
-                                    @Override public void onSuccess(String out2) {
-                                        AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
-                                                + (out2 == null ? "" : out2.trim()) + "\"");
-                                    }
-                                    @Override public void onError(String err2) {
-                                        AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: " + err2);
-                                    }
-                                });
-                    }
-                    @Override public void onError(String err) {
-                        AppLogger.w(TAG, "resizeActiveTask `am task resize` AdbLocal error: " + err
-                                + " (taskId=" + rTaskId + " pkg=" + rPkg + ")");
-                    }
-                });
+                if (AdbLocalClient.isDiLink5Safe(this)) {
+                    AppLogger.i(TAG, "resizeActiveTask DL5: dispatching `cmd activity task resize` "
+                            + "(skipping `am task resize` — known silent no-op on API 30+) taskId="
+                            + rTaskId + " pkg=" + rPkg);
+                    AdbLocalClient.executeShellWithResult(this, cmdAct, new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
+                                    + (out == null ? "" : out.trim()) + "\"");
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: "
+                                    + err + " (taskId=" + rTaskId + " pkg=" + rPkg + ")");
+                        }
+                    });
+                } else {
+                    AdbLocalClient.executeShellWithResult(this, amCmd, new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            String trimmed = (out == null ? "" : out.trim());
+                            boolean looksOk = trimmed.contains("exit=0")
+                                    && !trimmed.toLowerCase().contains("unknown command")
+                                    && !trimmed.toLowerCase().contains("error")
+                                    && !trimmed.toLowerCase().contains("exception");
+                            AppLogger.i(TAG, "resizeActiveTask `am task resize` -> \""
+                                    + trimmed + "\" (looksOk=" + looksOk + ")");
+                            if (looksOk) return;
+                            AppLogger.i(TAG, "resizeActiveTask: trying `cmd activity task resize` fallback");
+                            AdbLocalClient.executeShellWithResult(ClusterService.this, cmdAct,
+                                    new AdbLocalClient.Callback() {
+                                        @Override public void onSuccess(String out2) {
+                                            AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
+                                                    + (out2 == null ? "" : out2.trim()) + "\"");
+                                        }
+                                        @Override public void onError(String err2) {
+                                            AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: " + err2);
+                                        }
+                                    });
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w(TAG, "resizeActiveTask `am task resize` AdbLocal error: " + err
+                                    + " (taskId=" + rTaskId + " pkg=" + rPkg + ")");
+                        }
+                    });
+                }
             }
         } catch (Exception e) {
             AppLogger.w(TAG, "resizeActiveTask outer failure: "
