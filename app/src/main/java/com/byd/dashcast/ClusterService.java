@@ -310,6 +310,58 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Throwable t) {
             AppLogger.w(TAG, "findRunningTaskId daemon dumpsys fallback: " + t.getMessage());
         }
+
+        // Path 3 (v1.2.15) — fallback via AdbLocalClient shell. Required when the
+        // proxy daemon is not running (DL5 testeur in field log
+        // BYD_RE_Sniffer_20260523_150803.txt — daemon was off, every Apply tap
+        // produced "daemon not connected" then taskId<=0). AdbLocalClient
+        // already provides shell access through the local adb-over-TCP path
+        // that is also used by MainActivity.btnResizeApply for the (dead) wm
+        // overscan command, so we know it is functional on this ROM.
+        //
+        // executeShellWithResult is async by API — block with a CountDownLatch.
+        // This method is documented "Must be called from a background thread"
+        // so blocking is fine.
+        try {
+            final java.util.concurrent.atomic.AtomicReference<String> outRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.atomic.AtomicReference<String> errRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.CountDownLatch latch =
+                    new java.util.concurrent.CountDownLatch(1);
+            AdbLocalClient.executeShellWithResult(this, "dumpsys activity recents",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String report) { outRef.set(report); latch.countDown(); }
+                        @Override public void onError(String error)   { errRef.set(error);  latch.countDown(); }
+                    });
+            // Generous timeout — dumpsys activity recents normally returns in <1 s,
+            // but the AdbLocal connect path may need to establish a TCP connection.
+            boolean done = latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!done) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys timeout (5s)");
+                return -1;
+            }
+            String err = errRef.get();
+            if (err != null) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys error: " + err);
+                return -1;
+            }
+            String out = outRef.get();
+            if (out != null && !out.isEmpty()) {
+                int id = parseTaskIdFromDumpsysRecents(out, packageName);
+                if (id > 0) {
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName
+                            + " → taskId=" + id + " (via AdbLocal dumpsys recents)");
+                    return id;
+                }
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — not found in AdbLocal dumpsys (out.length=" + out.length() + ")");
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "findRunningTaskId AdbLocal dumpsys fallback: " + t.getMessage());
+        }
         return -1;
     }
 
