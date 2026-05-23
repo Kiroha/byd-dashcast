@@ -1188,9 +1188,40 @@ public class AdbLocalClient {
         try {
             String pids = BetaProxyClient.getPidsByPackage(pkg);
             if (pids != null && !pids.trim().isEmpty()) {
+                String alive = pids.trim();
                 AppLogger.w(TAG, "beta force-stop ineffective for " + pkg
-                        + " (pids=" + pids.trim() + ")");
-                sb.append("  WARN: still alive, pids=").append(pids.trim()).append("\n");
+                        + " (pids=" + alive + ") — escalating kill -9");
+                sb.append("  WARN: still alive, pids=").append(alive).append("\n");
+                // v1.2.9 (Bug 1/2 défense en profondeur) : si IActivityManager
+                // .forceStopPackage a échoué silencieusement (cas connu BYD AUTO
+                // ROM avec certaines apps système-like), escalader avec kill -9
+                // sur les PIDs survivants via le daemon (uid=2000, droit kill
+                // sur process même uid).
+                try {
+                    String killCmd = "kill -9 " + alive.replaceAll("\\s+", " ");
+                    BetaProxyClient.runShell(killCmd);
+                    sb.append("  escalated: ").append(killCmd).append("\n");
+                    // Petit délai pour laisser le kernel libérer les PIDs avant re-check.
+                    try { Thread.sleep(200); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    String pids2 = BetaProxyClient.getPidsByPackage(pkg);
+                    if (pids2 != null && !pids2.trim().isEmpty()) {
+                        AppLogger.w(TAG, "verifyForceStop: " + pkg
+                                + " STILL alive after kill -9 (pids=" + pids2.trim() + ")");
+                        sb.append("  WARN: still alive after kill -9, pids=")
+                                .append(pids2.trim()).append("\n");
+                    } else {
+                        AppLogger.i(TAG, "verifyForceStop: " + pkg
+                                + " killed after escalation ✓");
+                        sb.append("  verified killed after escalation\n");
+                    }
+                } catch (Throwable escalateError) {
+                    AppLogger.w(TAG, "verifyForceStop: kill -9 escalation failed for "
+                            + pkg + ": " + escalateError.getMessage());
+                    sb.append("  WARN: escalation failed: ")
+                            .append(escalateError.getMessage()).append("\n");
+                }
             } else {
                 sb.append("  verified killed\n");
             }
