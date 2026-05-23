@@ -1,8 +1,7 @@
 package com.byd.dashcast;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+// LOT 4 — Bitmap/BitmapFactory imports removed (captureClusterDisplay deleted).
 import android.os.SystemClock;
 
 import com.byd.dashcast.beta.BetaConfig;
@@ -167,11 +166,8 @@ public class AdbLocalClient {
         void onError(String error);
     }
 
-    public interface BitmapCallback {
-        void onBitmap(Bitmap bitmap);
-        void onError(String error);
-    }
-
+    // LOT 4 — BitmapCallback interface removed: only used by captureClusterDisplay
+    // (also removed). No external caller across the codebase.
 
     // Grep pattern uses the [m] trick to prevent grep from matching its own cmdline.
     // "[m]irrordaemon" matches "mirrordaemon" in process names but not in the
@@ -1138,38 +1134,9 @@ public class AdbLocalClient {
         }); // adb-forcestop-thread
     }
 
-    /**
-     * Captures a frame of the cluster display via screencap (uid=2000 = guaranteed SurfaceFlinger access).
-     * Saves to the app's external cache dir; the app can read it directly (no
-     * READ_EXTERNAL_STORAGE required for the package-specific directory o 29).
-     */
-    public static void captureClusterDisplay(final Context context,
-            final int displayId, final BitmapCallback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    File cacheDir = context.getExternalCacheDir();
-                    if (cacheDir == null) cacheDir = context.getCacheDir();
-                    File outFile = new File(cacheDir, "cluster_live.png");
-                    // Chemin ADB : /storage/emulated/0 → /sdcard (symlink standard)
-                    @SuppressWarnings("SdCardPath")
-                    String remotePath = outFile.getAbsolutePath()
-                            .replace("/storage/emulated/0", "/sdcard");
-                    dadb.shell("screencap -d " + displayId + " -p " + remotePath);
-                    Bitmap bm = BitmapFactory.decodeFile(outFile.getAbsolutePath());
-                    if (bm != null) {
-                        callback.onBitmap(bm);
-                    } else {
-                        callback.onError("decodeFile null: " + outFile.getAbsolutePath());
-                    }
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.w(TAG, "captureClusterDisplay erreur: " + e.getMessage());
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // screenshot-mirror-thread
-    }
+    // LOT 4 — captureClusterDisplay removed: dead code (0 caller across the
+    // codebase, only referenced via reflection comment in AppLogger cleanup).
+    // The cluster preview is now sourced from the mirror surface (no screencap).
 
     private static String safeOut(String s) {
         if (s == null) return "(null)";

@@ -1720,7 +1720,23 @@ public class MainActivity extends AppCompatActivity
                     }
                     new Thread(new Runnable() {
                         @Override public void run() {
-                            int taskId = svc.findRunningTaskId(pkg);
+                            // LOT 4 — Waze taskId race fix: dumpsys activity recents
+                            // does not always list a freshly-launched task within the
+                            // initial 500 ms window (observed on field log
+                            // BYD_RE_Sniffer_20260523_204155.txt: Waze launched at
+                            // 20:42:25.669 but absent from recents at 20:42:26.696,
+                            // 1027 ms later → resizeActiveTask aborted with
+                            // taskId<=0). Retry up to 3 times with 500 ms backoff.
+                            int taskId = -1;
+                            for (int attempt = 1; attempt <= 3; attempt++) {
+                                taskId = svc.findRunningTaskId(pkg);
+                                if (taskId > 0) break;
+                                if (!pkg.equals(mCurrentDashboardPkg)) return; // user switched app
+                                AppLogger.d(TAG, "autoApplyInsets: taskId<=0 for " + pkg
+                                        + " (attempt " + attempt + "/3) — retrying in 500 ms");
+                                try { Thread.sleep(500); }
+                                catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                            }
                             svc.resizeActiveTask(taskId, pkg);
                         }
                     }, "auto-resize-thread").start();
