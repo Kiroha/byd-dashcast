@@ -53,7 +53,25 @@ public class ClusterInputForwarder {
     private boolean mAvailable = false;
     private volatile long mTouchDownTime = 0L;
 
+    // 1.2.31 — pre-allocated pointer arrays reused across touch events.
+    // Constraint: passed to MotionEvent.obtain(...) which only reads the first
+    // `pointerCount` entries (AOSP nativeInitialize copies the data → safe to
+    // reuse the arrays). Cap at MAX_POINTERS=16 (= Android InputDispatcher max).
+    // Access serialised via mTouchInjectLock since cluster touch can be driven
+    // by the UI thread (mirror onTouch) AND by Beta diagnostic probes on worker
+    // threads.
+    private static final int MAX_POINTERS = 16;
+    private final Object mTouchInjectLock = new Object();
+    private final MotionEvent.PointerProperties[] mProps  = new MotionEvent.PointerProperties[MAX_POINTERS];
+    private final MotionEvent.PointerCoords[]     mCoords = new MotionEvent.PointerCoords[MAX_POINTERS];
+
     public ClusterInputForwarder(Context context) {
+        // 1.2.31 — pre-fill the pointer scratch arrays so injectTouchAtMulti
+        // never has to allocate during a touch burst.
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            mProps[i]  = new MotionEvent.PointerProperties();
+            mCoords[i] = new MotionEvent.PointerCoords();
+        }
         try {
             // InputManager.getInstance() is a @hide method since API 16
             Class<?> imClass = Class.forName("android.hardware.input.InputManager");
@@ -143,77 +161,82 @@ public class ClusterInputForwarder {
                                     final int actionMasked,
                                     final int actionIndex,
                                     final int pointerCount) {
-        if (actionMasked == MotionEvent.ACTION_DOWN || mTouchDownTime == 0L) {
-            mTouchDownTime = SystemClock.uptimeMillis();
-        }
-        long now = SystemClock.uptimeMillis();
-        int safeActionIndex = Math.max(0, Math.min(actionIndex, pointerCount - 1));
-        int action;
-        if (actionMasked == MotionEvent.ACTION_POINTER_DOWN
-                || actionMasked == MotionEvent.ACTION_POINTER_UP) {
-            action = actionMasked | (safeActionIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-        } else {
-            action = actionMasked;
-        }
+        // 1.2.31 — reuse pre-allocated mProps / mCoords. Cap pointerCount at
+        // MAX_POINTERS so a malformed caller can never overrun the scratch arrays.
+        final int n = Math.min(pointerCount, MAX_POINTERS);
+        synchronized (mTouchInjectLock) {
+            if (actionMasked == MotionEvent.ACTION_DOWN || mTouchDownTime == 0L) {
+                mTouchDownTime = SystemClock.uptimeMillis();
+            }
+            long now = SystemClock.uptimeMillis();
+            int safeActionIndex = Math.max(0, Math.min(actionIndex, n - 1));
+            int action;
+            if (actionMasked == MotionEvent.ACTION_POINTER_DOWN
+                    || actionMasked == MotionEvent.ACTION_POINTER_UP) {
+                action = actionMasked | (safeActionIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            } else {
+                action = actionMasked;
+            }
 
-        MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[pointerCount];
-        MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[pointerCount];
-        for (int i = 0; i < pointerCount; i++) {
-            props[i] = new MotionEvent.PointerProperties();
-            props[i].id = pointerIds[i];
-            props[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
+            for (int i = 0; i < n; i++) {
+                MotionEvent.PointerProperties p = mProps[i];
+                p.clear();
+                p.id = pointerIds[i];
+                p.toolType = MotionEvent.TOOL_TYPE_FINGER;
 
-            coords[i] = new MotionEvent.PointerCoords();
-            coords[i].x = clusterXs[i];
-            coords[i].y = clusterYs[i];
-            coords[i].pressure = 1.0f;
-            coords[i].size = 1.0f;
-        }
+                MotionEvent.PointerCoords c = mCoords[i];
+                c.clear();
+                c.x = clusterXs[i];
+                c.y = clusterYs[i];
+                c.pressure = 1.0f;
+                c.size = 1.0f;
+            }
 
-        // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
-        if (mDaemonBinder != null) {
+            // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
+            if (mDaemonBinder != null) {
+                MotionEvent ev = MotionEvent.obtain(
+                        mTouchDownTime, now, action, n, mProps, mCoords,
+                        0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                Parcel data = Parcel.obtain();
+                try {
+                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                    data.writeParcelable(ev, 0);
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
+                            data, null, android.os.IBinder.FLAG_ONEWAY);
+                } catch (Exception e) {
+                    AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+                } finally {
+                    data.recycle();
+                    ev.recycle();
+                }
+                return;
+            }
+
+            if (!mAvailable) return;
+
             MotionEvent ev = MotionEvent.obtain(
-                    mTouchDownTime, now, action, pointerCount, props, coords,
+                    mTouchDownTime, now, action, n, mProps, mCoords,
                     0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-            Parcel data = Parcel.obtain();
             try {
-                data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
-                data.writeParcelable(ev, 0);
-                mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
-                        data, null, android.os.IBinder.FLAG_ONEWAY);
+                // setDisplayId is a @hide API — using the Method cached in the constructor
+                if (mSetDisplayIdMethod != null) {
+                    try {
+                        mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
+                    } catch (Exception e) {
+                        AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
+                    }
+                }
+                mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
             } catch (Exception e) {
-                AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+                AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
+                        + " ptrs=" + n + " disp=" + mClusterDisplayId, e);
             } finally {
-                data.recycle();
                 ev.recycle();
             }
-            return;
-        }
 
-        if (!mAvailable) return;
-
-        MotionEvent ev = MotionEvent.obtain(
-                mTouchDownTime, now, action, pointerCount, props, coords,
-                0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-        try {
-            // setDisplayId is a @hide API — using the Method cached in the constructor
-            if (mSetDisplayIdMethod != null) {
-                try {
-                    mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
-                } catch (Exception e) {
-                    AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
-                }
+            if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                mTouchDownTime = 0L;
             }
-            mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
-        } catch (Exception e) {
-            AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
-                    + " ptrs=" + pointerCount + " disp=" + mClusterDisplayId, e);
-        } finally {
-            ev.recycle();
-        }
-
-        if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
-            mTouchDownTime = 0L;
         }
     }
 

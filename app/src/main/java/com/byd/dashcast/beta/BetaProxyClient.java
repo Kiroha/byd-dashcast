@@ -215,7 +215,11 @@ public final class BetaProxyClient {
         synchronized (LOCK) {
             // Late-arrival recovery: the receiver may have signalled just after
             // the latch timed out — re-check rather than failing hard.
-            if (sBinder == null || !sBinder.pingBinder()) {
+            // 1.2.31 — isBinderAlive() (local check, 0 IPC) instead of
+            // pingBinder() (Binder roundtrip): the live binder cache is hooked
+            // via linkToDeath in the receiver above, so isBinderAlive is
+            // strictly equivalent here and avoids one IPC while holding LOCK.
+            if (sBinder == null || !sBinder.isBinderAlive()) {
                 AppLogger.w(TAG, "no live binder after " + BROADCAST_WAIT_MS
                         + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
                 sBinder = null;

@@ -58,6 +58,10 @@ public class AppLogger {
     // an O(N) copy of 3000 entries on every log call, reducing GC pressure.
     private static final java.util.ArrayDeque<Entry> sEntries = new java.util.ArrayDeque<>(MAX_ENTRIES + 1);
     private static final Object LOCK = new Object();
+    // 1.2.31 — incremental per-level counters maintained on every add/evict/clear.
+    // Lets LogActivity.refreshLog() update the level-filter chips without walking
+    // the entire 3000-entry buffer twice on every 500 ms tick.
+    private static final int[] sCountByLevel = new int[Level.values().length];
 
     // SimpleDateFormat is not thread-safe — one instance per thread via ThreadLocal
     // avoids repeated allocations without risk of corruption.
@@ -80,9 +84,11 @@ public class AppLogger {
         Entry e = new Entry(level, tag, msg);
         synchronized (LOCK) {
             if (sEntries.size() >= MAX_ENTRIES) {
-                sEntries.pollFirst(); // Remove oldest entry
+                Entry evicted = sEntries.pollFirst(); // Remove oldest entry
+                if (evicted != null) sCountByLevel[evicted.level.ordinal()]--;
             }
             sEntries.addLast(e);
+            sCountByLevel[level.ordinal()]++;
         }
     }
 
@@ -167,22 +173,40 @@ public class AppLogger {
     /** Returns the full buffer as a formatted String (for text sharing). */
     public static String get() {
         SimpleDateFormat fmt = sFmt.get();
-        StringBuilder sb;
+        // 1.2.31 — snapshot the buffer under LOCK, format outside. Previously
+        // the format loop ran inside synchronized(LOCK) and blocked every
+        // logger thread (Beta probes, ADB worker, daemon connect) for the
+        // duration of formatting 3000 entries (~5-10 ms). Aligned with
+        // getEntries() which already uses the snapshot pattern.
+        Entry[] snapshot;
         synchronized (LOCK) {
-            sb = new StringBuilder(sEntries.size() * 80); // ~80 chars per line — avoids costly reallocations
-            for (Entry e : sEntries) {
-                sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
-                  .append("[").append(e.level.name()).append("]")
-                  .append("[").append(e.tag).append("] ")
-                  .append(e.message).append("\n");
-            }
+            snapshot = sEntries.toArray(new Entry[0]);
+        }
+        StringBuilder sb = new StringBuilder(snapshot.length * 80);
+        for (Entry e : snapshot) {
+            sb.append("[").append(fmt.format(new Date(e.timestamp))).append("]")
+              .append("[").append(e.level.name()).append("]")
+              .append("[").append(e.tag).append("] ")
+              .append(e.message).append("\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * 1.2.31 — Returns a snapshot copy of the per-level entry counts indexed
+     * by {@link Level#ordinal()}. O(Level.values().length) instead of O(N) so
+     * the LogActivity chips can refresh at 2 Hz without walking the full buffer.
+     */
+    public static int[] getCountByLevel() {
+        synchronized (LOCK) {
+            return java.util.Arrays.copyOf(sCountByLevel, sCountByLevel.length);
+        }
     }
 
     public static void clear() {
         synchronized (LOCK) {
             sEntries.clear();
+            java.util.Arrays.fill(sCountByLevel, 0);
         }
     }
 

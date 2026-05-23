@@ -21,25 +21,29 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 28
         targetSdkVersion 29
-        // Public versionName bumped to 1.2.30 for the LOT 2 audit cleanup:
-        //   - ClusterInputForwarder.injectKey direct path: route to cluster display
-        //     (was missing setDisplayId() on the non-daemon path; Back/Home went to
-        //      display 0 instead of the cluster).
-        //   - SysInfoActivity.saveReport: FileWriter on ExecutorService (no UI ANR).
-        //   - SysInfoActivity.colorizeReport: 8 Pattern.compile() pre-compiled
-        //     as static final (per-render allocations gone).
-        //   - SysInfoActivity.pidOf: waitFor(2s) + destroyForcibly (anti-hang on
-        //     ROMs where pgrep is missing or blocked).
-        //   - FloatingRemoteButton: track quick-switch dialog and dismiss in
-        //     onDestroy (no leaked overlay window on service teardown).
-        //   - DiagActivity.mSnifferFile: volatile (cross-thread read by exporter).
-        //   - MainActivity/KeyboardBridge: isFinishing/isDestroyed guards on
-        //     async runOnUiThread lambdas (no NPE after teardown).
-        //   - WelcomeActivity.setLanguageButton: defensive null-check on findViewById.
-        //   - MirrorDaemon.broadcastBinder: signature-protected receiverPermission
-        //     (other apps can no longer intercept the daemon IBinder broadcast).
-        versionCode 226
-        versionName "1.2.30"
+        // Public versionName bumped to 1.2.31 for the LOT 3 perf pass:
+        //   - ClusterInputForwarder.injectTouchAtMulti: PointerProperties[16] +
+        //     PointerCoords[16] pre-allocated once in the constructor, fields
+        //     reset per call → 0 array/object allocations per cluster touch event.
+        //   - MainActivity.forwardTouchFromMirror: pre-allocated mPointerIds /
+        //     mClusterXs / mClusterYs (int[16] / float[16] x2) reused per touch.
+        //   - BetaProxyClient.connect() late-arrival recovery: pingBinder()
+        //     replaced by isBinderAlive() (the live cache is hooked via
+        //     linkToDeath in the broadcast receiver, so isBinderAlive is
+        //     accurate — saves one IPC roundtrip on every recovery attempt).
+        //   - Phase4Verbs.autoContainerBinder: pingBinder() replaced by
+        //     isBinderAlive() + linkToDeath registered on first cache. Saves
+        //     one IPC per Phase4Verbs.autoContainerSendInfo() call.
+        //   - AppLogger.get(): defensive snapshot under LOCK, StringBuilder
+        //     format loop moved outside the lock — logger calls from worker
+        //     threads (Beta/ADB/Phase4 probes) no longer wait for the UI thread
+        //     to finish formatting 3000 entries.
+        //   - AppLogger.getCountByLevel(): incremental int[] counters
+        //     maintained in addEntry() / clear() / overflow eviction. LogActivity
+        //     refreshLog() no longer walks 3000 entries every 500 ms just to
+        //     compute the chip totals.
+        versionCode 227
+        versionName "1.2.31"
     }
 
     buildTypes {
