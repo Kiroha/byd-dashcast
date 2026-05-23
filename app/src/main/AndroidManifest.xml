@@ -124,7 +124,7 @@
             android:screenOrientation="landscape"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+            android:theme="@style/KeyboardBridgeTheme"/>
 
         <!-- v1.2.9 — Optional a11y service: auto-launches the bridge when an
              EditText takes focus on the cluster. DL5 only; user must enable it

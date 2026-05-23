@@ -213,11 +213,54 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             android.graphics.Rect bounds = new android.graphics.Rect(
                     insetH, insetV, cw - insetH, ch - insetV);
             
-            iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
-                    .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
-            AppLogger.i(TAG, "resizeActiveTask " + packageName + " " + bounds + " OK");
+            // v1.2.16 — try the 3-arg signature first (Android 11/12),
+            // then the 2-arg signature (older / vendor variants). If both
+            // throw, surface the *real* cause: InvocationTargetException
+            // hides it behind getCause(), and getMessage() on the wrapper
+            // is null (exact symptom seen in v1.2.15 field log:
+            // "resizeActiveTask failed: null").
+            Throwable lastError = null;
+            boolean done = false;
+            try {
+                iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
+                        .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
+                done = true;
+            } catch (java.lang.reflect.InvocationTargetException ite) {
+                lastError = ite.getTargetException() != null ? ite.getTargetException() : ite;
+            } catch (NoSuchMethodException nsme) {
+                lastError = nsme;
+            } catch (Throwable t) {
+                lastError = t;
+            }
+            if (!done) {
+                try {
+                    iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class)
+                            .invoke(iatm, taskId, bounds);
+                    done = true;
+                    lastError = null;
+                } catch (java.lang.reflect.InvocationTargetException ite) {
+                    lastError = ite.getTargetException() != null ? ite.getTargetException() : ite;
+                } catch (NoSuchMethodException nsme) {
+                    /* keep first error */
+                } catch (Throwable t) {
+                    if (lastError == null) lastError = t;
+                }
+            }
+            if (done) {
+                AppLogger.i(TAG, "resizeActiveTask " + packageName + " " + bounds
+                        + " (cw=" + cw + " ch=" + ch + " clusterDisplay=" + clusterId + ") OK");
+            } else {
+                String detail = (lastError == null) ? "unknown"
+                        : lastError.getClass().getSimpleName()
+                                + ": " + lastError.getMessage();
+                AppLogger.w(TAG, "resizeActiveTask failed: " + detail
+                        + " (taskId=" + taskId + " pkg=" + packageName
+                        + " bounds=" + bounds + " cw=" + cw + " ch=" + ch
+                        + " clusterDisplay=" + clusterId + ")");
+            }
         } catch (Exception e) {
-            AppLogger.w(TAG, "resizeActiveTask failed: " + e.getMessage());
+            AppLogger.w(TAG, "resizeActiveTask outer failure: "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
