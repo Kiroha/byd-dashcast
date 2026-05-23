@@ -253,10 +253,29 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 String detail = (lastError == null) ? "unknown"
                         : lastError.getClass().getSimpleName()
                                 + ": " + lastError.getMessage();
-                AppLogger.w(TAG, "resizeActiveTask failed: " + detail
-                        + " (taskId=" + taskId + " pkg=" + packageName
-                        + " bounds=" + bounds + " cw=" + cw + " ch=" + ch
-                        + " clusterDisplay=" + clusterId + ")");
+                AppLogger.w(TAG, "resizeActiveTask reflection failed: " + detail
+                        + " — falling back to shell `am task resize` (taskId=" + taskId
+                        + " pkg=" + packageName + " bounds=" + bounds + ")");
+                // v1.2.17 — Field log proved the reflection path hits
+                // SecurityException because resizeTask() requires
+                // android.permission.MANAGE_ACTIVITY_TASKS, which is
+                // signature|privileged and unreachable for normal apps.
+                // The shell-side `am task resize <id> <l> <t> <r> <b>` runs
+                // in shell uid context via AdbLocalClient (same pipe that
+                // already executes `wm overscan` successfully) and bypasses
+                // the app-level perm check.
+                final String cmd = "am task resize " + taskId + " "
+                        + bounds.left + " " + bounds.top + " "
+                        + bounds.right + " " + bounds.bottom;
+                AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "resizeActiveTask (via AdbLocal `am task resize`) OK: "
+                                + (out == null ? "" : out.trim()));
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.w(TAG, "resizeActiveTask AdbLocal fallback failed: " + err);
+                    }
+                });
             }
         } catch (Exception e) {
             AppLogger.w(TAG, "resizeActiveTask outer failure: "
