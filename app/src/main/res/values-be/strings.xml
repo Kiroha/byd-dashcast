@@ -262,4 +262,5 @@
     <string name="ime_banner_btn_dismiss">Больш не паказваць</string>
     <string name="ime_banner_toast_enabled">Аўта-клавіятура актыўная ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Немагчыма адкрыць Налады — уключыце ўручную службу спецыяльных магчымасцей « Аўта-клавіятура кластара ».</string>
+    <string name="keyboard_bridge_a11y_required_toast">Уключыце « DashCast Cluster IME » у Налады → Спецыяльныя магчымасці, каб клавіятура працавала на прыборнай панэлі.</string>
 </resources>

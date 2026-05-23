@@ -267,4 +267,5 @@
     <string name="ime_banner_btn_dismiss">Don\'t show again</string>
     <string name="ime_banner_toast_enabled">Auto-keyboard active ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Cannot open Settings — please enable the « Cluster auto-keyboard » accessibility service manually.</string>
+    <string name="keyboard_bridge_a11y_required_toast">Enable « DashCast Cluster IME » under Settings → Accessibility so the keyboard works on the cluster.</string>
 </resources>

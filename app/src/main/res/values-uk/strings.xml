@@ -262,4 +262,5 @@
     <string name="ime_banner_btn_dismiss">Більше не показувати</string>
     <string name="ime_banner_toast_enabled">Авто-клавіатура активна ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Не вдалося відкрити Налаштування — увімкніть вручну службу спеціальних можливостей « Авто-клавіатура кластера ».</string>
+    <string name="keyboard_bridge_a11y_required_toast">Увімкніть « DashCast Cluster IME » у Налаштування → Спеціальні можливості, щоб клавіатура працювала на приладовій панелі.</string>
 </resources>

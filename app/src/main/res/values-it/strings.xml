@@ -262,4 +262,5 @@
     <string name="ime_banner_btn_dismiss">Non mostrare più</string>
     <string name="ime_banner_toast_enabled">Tastiera automatica attiva ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Impossibile aprire Impostazioni — attiva manualmente il servizio di accessibilità « Tastiera auto del cluster ».</string>
+    <string name="keyboard_bridge_a11y_required_toast">Attiva « DashCast Cluster IME » in Impostazioni → Accessibilità affinché la tastiera funzioni sul cluster.</string>
 </resources>

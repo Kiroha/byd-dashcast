@@ -172,7 +172,7 @@ public class KeyboardBridgeActivity extends Activity {
                         + "text typed in the bridge will not reach the cluster. "
                         + "Prompting user to enable it in Accessibility settings.");
                 android.widget.Toast.makeText(this,
-                        "Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l'instrumentation.",
+                        getString(R.string.keyboard_bridge_a11y_required_toast),
                         android.widget.Toast.LENGTH_LONG).show();
                 try {
                     android.content.Intent i = new android.content.Intent(

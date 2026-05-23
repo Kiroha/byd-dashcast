@@ -260,4 +260,5 @@
     <string name="ime_banner_btn_dismiss">No volver a mostrar</string>
     <string name="ime_banner_toast_enabled">Teclado automático activo ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">No se puede abrir Ajustes — active manualmente el servicio de accesibilidad « Teclado auto del clúster ».</string>
+    <string name="keyboard_bridge_a11y_required_toast">Active « DashCast Cluster IME » en Ajustes → Accesibilidad para que el teclado funcione en el clúster.</string>
 </resources>
