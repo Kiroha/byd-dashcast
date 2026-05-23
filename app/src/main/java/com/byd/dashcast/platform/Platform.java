@@ -45,6 +45,7 @@ public final class Platform {
     private final String  rawFingerprint;    // Build.FINGERPRINT
     private final int     androidApi;        // Build.VERSION.SDK_INT
     private final boolean autoDiLink5;       // pure auto-detection result
+    private final boolean autoDiLink4;       // pure auto-detection result (BYD-AUTO/DiLink4.0, API 29)
     private final boolean autoDiLink2;       // pure auto-detection result (alps/MT6765/API 28)
 
     private Platform() {
@@ -54,6 +55,7 @@ public final class Platform {
         this.rawFingerprint = safe(Build.FINGERPRINT);
         this.androidApi     = Build.VERSION.SDK_INT;
         this.autoDiLink5    = detectDiLink5(rawProductName, rawModel, rawFingerprint, androidApi);
+        this.autoDiLink4    = detectDiLink4(rawProductName, rawModel, rawFingerprint, androidApi);
         this.autoDiLink2    = detectDiLink2(rawBrand, rawProductName, androidApi);
     }
 
@@ -88,6 +90,27 @@ public final class Platform {
     }
 
     /**
+     * DiLink 4 auto-detection — based on the field report of a BYD-AUTO / DiLink4.0
+     * test vehicle (23/05/2026) running Android 10 / API 29:
+     *   ro.product.name = "DiLink4.0", Build.MODEL = "DiLink4.0 For BYD AUTO",
+     *   Build.FINGERPRINT = "BYD-AUTO/DiLink4.0/DiLink4.0:10/...", API 29.
+     * Conservative: requires "dilink4" / "dilink 4" / "dilink_4" substring AND API 29
+     * (API 32 would already have been claimed by DL5). Returns false on any uncertainty
+     * so DL3/DL5 logic stays unaffected on devices we have not field-validated.
+     */
+    private static boolean detectDiLink4(String product, String model, String fingerprint, int api) {
+        String p = (product == null ? "" : product).toLowerCase();
+        String m = (model    == null ? "" : model).toLowerCase();
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase();
+        boolean nameHit = p.contains("dilink4") || m.contains("dilink4") || f.contains("dilink4")
+                       || p.contains("dilink_4") || m.contains("dilink 4") || f.contains("dilink 4");
+        if (!nameHit) return false;
+        // DL4 ships Android 10 (API 29). If someone names a future Android 12 ROM
+        // "DiLink4" we don't want to mis-route it here, hence the API gate.
+        return api == 29 || api == 28;
+    }
+
+    /**
      * DiLink 2 auto-detection — based on the alps / k65v1_64_bsp / MT6765 / Android 9
      * signature confirmed by two field reports (21/05/2026):
      *   Build.BRAND = "alps", ro.product.name contains "k65v1", Build.VERSION.SDK_INT == 28.
@@ -110,7 +133,20 @@ public final class Platform {
     public String  rawFingerprint()  { return rawFingerprint; }
     public int     androidApi()      { return androidApi; }
     public boolean isAutoDetectedDiLink5() { return autoDiLink5; }
+    public boolean isAutoDetectedDiLink4() { return autoDiLink4; }
     public boolean isAutoDetectedDiLink2() { return autoDiLink2; }
+
+    /**
+     * Effective DiLink 4 mode — there is no user override for DL4 (no toggle in
+     * Settings). DL4 is mutually exclusive with DL5: the {@link #isDiLink5} getter
+     * neutralises any FORCE_ON DL5 override when {@code autoDiLink4} is true, so a
+     * mis-flipped switch in Settings does not push a DL4 device onto the DL5
+     * activation path (which calls the snake_case {@code auto_container} binder
+     * that does not exist on the DL3/DL4 service namespace).
+     */
+    public boolean isDiLink4(Context ctx) {
+        return autoDiLink4;
+    }
 
     /**
      * Effective DiLink 2 mode — there is no user override for DL2 (no toggle in Settings).
@@ -130,6 +166,15 @@ public final class Platform {
      * cache this value at process start.
      */
     public boolean isDiLink5(Context ctx) {
+        // Hard guard: a device auto-detected as DiLink 4 can never be DiLink 5,
+        // regardless of the user override. The two generations share the BYD-AUTO
+        // brand + DisplayManager primitives but differ on the AutoContainer binder
+        // name (DL3/DL4 = "AutoContainer" PascalCase, DL5 = "auto_container"
+        // snake_case). Field log BYD_RE_Sniffer_20260523_173033 caught a DL4 testeur
+        // who had FORCE_ON DL5 enabled in Settings, which sent every projection
+        // attempt at the non-existent snake_case binder. This guard absorbs the
+        // mistake transparently so misconfigured Settings cannot break DL4 cars.
+        if (autoDiLink4) return false;
         String ov = readOverride(ctx);
         if (OV_FORCE_ON.equals(ov))  return true;
         if (OV_FORCE_OFF.equals(ov)) return false;
@@ -138,6 +183,11 @@ public final class Platform {
 
     /** Short summary used for diagnostics ("AUTO=on", "FORCED off", …). */
     public String describeMode(Context ctx) {
+        if (autoDiLink4) {
+            String ov = readOverride(ctx);
+            if (OV_FORCE_ON.equals(ov)) return "AUTO=off (DL4 detected — DL5 FORCE_ON ignored)";
+            return "AUTO=off (DL4 detected)";
+        }
         String ov = readOverride(ctx);
         if (OV_FORCE_ON.equals(ov))  return "FORCED on";
         if (OV_FORCE_OFF.equals(ov)) return "FORCED off";

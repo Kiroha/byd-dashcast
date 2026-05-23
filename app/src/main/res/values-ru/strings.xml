@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">Платформа: другая</string>
     <string name="diag_mirror_hint">Запустите mirror из приложения хотя бы один раз перед запуском набора, затем нажмите « Отправить (.log) », чтобы поделиться отчётом через Telegram.</string>
     <string name="diag_mirror_send_log">Отправить (.log)</string>
+
+    <!-- DiLink 4 — Выделенная диагностика (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">Платформа DiLink 4 — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">Тесты, выделенные для DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + путь DL3).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Продукт: %1$s · бренд: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Сигнатура: —</string>
+    <string name="diag_dl4_pill_detected">Сигнатура: DL4 обнаружена</string>
+    <string name="diag_dl4_pill_other">Сигнатура: не DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ Уровень D1–D10 отправляет реальные команды sendInfo в AutoContainer, затем запускает clusterdebug на экране кластера. Видимый эффект на автомобиле.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Снифер</string>
+    <string name="diag_adas_title">ADAS — окно кластера</string>
+    <string name="diag_adas_description">Показывает или скрывает окно ADAS кластера Qt (коды AutoContainer 12 / 13, общие DiLink)</string>
+    <string name="diag_adas_btn_show">Показать ADAS (12)</string>
+    <string name="diag_adas_btn_hide">Скрыть ADAS (13)</string>
+    <string name="diag_adas_last_result">Последний результат</string>
+    <string name="diag_adas_no_test">Ни один тест не выполнен.\nНажмите «Показать ADAS» или «Скрыть ADAS», чтобы отправить команду в кластер.</string>
+    <string name="diag_adas_technical_details">Технические детали</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…отправка…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nОШИБКА: %2$s</string>
+    <string name="diag_sniffer_description">Непрерывный захват logcat + снимки dumpsys в экспортируемый файл</string>
+    <string name="diag_sniffer_pill_active">АКТИВЕН</string>
+    <string name="diag_sniffer_pill_inactive">НЕАКТИВЕН</string>
+    <string name="diag_sniffer_idle_text">Захват не идёт.\nНажмите «Запустить», чтобы создать новый файл BYD_RE_Sniffer_*.txt.</string>
+    <string name="diag_sniffer_btn_start">Запустить</string>
+    <string name="diag_sniffer_btn_stop">Остановить</string>
+    <string name="diag_sniffer_btn_snapshot">Снимок</string>
+    <string name="diag_sniffer_btn_export">Экспорт</string>
+    <string name="diag_sniffer_btn_clean">Очистить</string>
+    <string name="diag_sniffer_content_title">Захваченное содержимое</string>
+    <string name="diag_sniffer_procedure_title">Типичная процедура</string>
+    <string name="diag_sniffer_initializing">Инициализация…</string>
+    <string name="diag_sniffer_active_fmt">АКТИВЕН → %1$s\nЗахват выполняется (logcat + авто-снимки / 10 с)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Сбой инициализации: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Остановлено → %1$s\nГотово к экспорту.</string>
+    <string name="diag_sniffer_none">(нет)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Предыдущий захват остановлен → %1$s\n(%2$d KB) — экспортируется.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Предыдущий захват: %1$s (%2$d KB, локальный ADB недоступен — экспортируется)</string>
+    <string name="diag_sniffer_active_detail_fmt">АКТИВЕН → %1$s\n(%2$d KB захвачено)</string>
+    <string name="diag_sniffer_toast_started_fmt">Сниффер запущен → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Сниффер остановлен.</string>
+    <string name="diag_sniffer_toast_need_start">Сначала запустите сниффер.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Снимок добавлен.</string>
+    <string name="diag_sniffer_toast_no_file">Нет файла сниффера для экспорта.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Ошибка экспорта: %1$s</string>
+    <string name="diag_sniffer_chooser_title">Экспортировать Сниффер RE</string>
+    <string name="diag_sniffer_cleanup_busy">Остановите сниффер перед очисткой (захват пишет в файл).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">Очистить файлы DashCast</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Удаляет все журналы и захваты (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) из хранилища приложения.\n\nКлючи ADB и настройки сохраняются.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Очистить</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Очистка: удалено файлов: %1$d · осталось: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">Удалено файлов: %1$d — осталось: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Поля отключены на DiLink 2 (один экран).</string>
+    <string name="settings_warn_no_cluster">⚠️ Кластер не обнаружен — поля проигнорированы (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">Нет браузера для открытия %1$s</string>
+    <string name="diag_adas_doc_help">• Shell-команда: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Служба: Auto_container на DL3/Di4 (PascalCase), auto_container на DL5+ (snake_case)\n• Код 12 = 显示Adas (Показать ADAS) — генерируется clusterdebug.SecondActivity.infoListInit()\n• Код 13 = 关闭Adas (Скрыть ADAS) — то же\n• Идентичные варианты: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-серия: коды 12/13 удалены (пустые слоты) — здесь не поддерживается</string>
+    <string name="diag_sniffer_doc_content">• Начальный заголовок: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: полный logcat threadtime + буфер events (без фильтра, ничего не упущено)\n• Авто-снимки каждые 10 с: displays, SurfaceFlinger, процессы BYD/xdja/qt/cluster\n• Ручной снимок: добавляет dumpsys window + историю broadcasts\n• Сохранность: запись переживает поворот/уничтожение Activity (процесс setsid)</string>
+    <string name="diag_sniffer_doc_workflow">1. Запустить → запись идёт в фоне (setsid, переживает Activity)\n2. Воспроизвести баг / изучаемый сценарий\n3. Ручной снимок в ключевые моменты (например, прямо до/после краха)\n4. Остановить\n5. Экспортировать → выбрать Telegram для отправки файла</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

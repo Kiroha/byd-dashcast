@@ -294,4 +294,67 @@
     <string name="diag_mirror_pill_other">Platform: other</string>
     <string name="diag_mirror_hint">Launch the mirror from the app at least once before running the suite, then tap « Send (.log) » to share the report via Telegram.</string>
     <string name="diag_mirror_send_log">Send (.log)</string>
+
+    <!-- DiLink 4 — Dedicated diagnostic (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">DiLink 4 platform — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">Tests dedicated to DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + DL3 path).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Product: %1$s · brand: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Signature: —</string>
+    <string name="diag_dl4_pill_detected">Signature: DL4 detected</string>
+    <string name="diag_dl4_pill_other">Signature: non-DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ Tier D1–D10 sends live sendInfo commands to AutoContainer then launches clusterdebug on the cluster screen. Visible effect on the car.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Sniffer</string>
+    <string name="diag_adas_title">ADAS — cluster window</string>
+    <string name="diag_adas_description">Shows or hides the ADAS window of the Qt cluster (AutoContainer codes 12 / 13, generic DiLink)</string>
+    <string name="diag_adas_btn_show">Show ADAS (12)</string>
+    <string name="diag_adas_btn_hide">Hide ADAS (13)</string>
+    <string name="diag_adas_last_result">Last result</string>
+    <string name="diag_adas_no_test">No test executed.\nTap Show ADAS or Hide ADAS to send the command to the cluster.</string>
+    <string name="diag_adas_technical_details">Technical details</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…sending…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nERROR: %2$s</string>
+    <string name="diag_sniffer_description">Continuous logcat capture + dumpsys snapshots to an exportable file</string>
+    <string name="diag_sniffer_pill_active">ACTIVE</string>
+    <string name="diag_sniffer_pill_inactive">INACTIVE</string>
+    <string name="diag_sniffer_idle_text">No capture in progress.\nTap Start to launch a new BYD_RE_Sniffer_*.txt file.</string>
+    <string name="diag_sniffer_btn_start">Start</string>
+    <string name="diag_sniffer_btn_stop">Stop</string>
+    <string name="diag_sniffer_btn_snapshot">Snapshot</string>
+    <string name="diag_sniffer_btn_export">Export</string>
+    <string name="diag_sniffer_btn_clean">Clean</string>
+    <string name="diag_sniffer_content_title">Captured content</string>
+    <string name="diag_sniffer_procedure_title">Typical procedure</string>
+    <string name="diag_sniffer_initializing">Initializing…</string>
+    <string name="diag_sniffer_active_fmt">ACTIVE → %1$s\nCapture in progress (logcat + auto snapshots / 10 s)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Init failed: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Stopped → %1$s\nReady for export.</string>
+    <string name="diag_sniffer_none">(none)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Previous capture stopped → %1$s\n(%2$d KB) — exportable.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Previous capture: %1$s (%2$d KB, local ADB unavailable — exportable)</string>
+    <string name="diag_sniffer_active_detail_fmt">ACTIVE → %1$s\n(%2$d KB captured)</string>
+    <string name="diag_sniffer_toast_started_fmt">Sniffer started → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Sniffer stopped.</string>
+    <string name="diag_sniffer_toast_need_start">Start the sniffer first.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Snapshot added.</string>
+    <string name="diag_sniffer_toast_no_file">No sniffer file to export.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Export error: %1$s</string>
+    <string name="diag_sniffer_chooser_title">Export RE Sniffer</string>
+    <string name="diag_sniffer_cleanup_busy">Stop the sniffer before cleaning up (the capture is writing to a file).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">Clean DashCast files</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Deletes all logs and captures (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) from the app storage.\n\nADB keys and preferences are preserved.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Clean</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Cleanup: %1$d file(s) deleted · remaining: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">%1$d file(s) deleted — remaining: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Margins disabled on DiLink 2 (single screen).</string>
+    <string name="settings_warn_no_cluster">⚠️ No cluster detected — margins ignored (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">No browser available to open %1$s</string>
+    <string name="diag_adas_doc_help">• Shell command: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Service: Auto_container on DL3/Di4 (PascalCase), auto_container on DL5+ (snake_case)\n• Code 12 = 显示Adas (Show ADAS) — emitted by clusterdebug.SecondActivity.infoListInit()\n• Code 13 = 关闭Adas (Hide ADAS) — same\n• Identical variants: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-series: codes 12/13 stripped (empty slots) — unsupported here</string>
+    <string name="diag_sniffer_doc_content">• Initial header: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: full logcat threadtime + events buffer (unfiltered, nothing missed)\n• Auto snapshots every 10 s: displays, SurfaceFlinger, BYD/xdja/qt/cluster processes\n• Manual snapshot: adds dumpsys window + broadcasts history\n• Persistence: capture survives Activity rotation/destruction (setsid process)</string>
+    <string name="diag_sniffer_doc_workflow">1. Start → capture runs in the background (setsid, survives the Activity)\n2. Reproduce the bug / scenario under study\n3. Manual snapshot at key moments (e.g. just before/after crash)\n4. Stop\n5. Export → pick Telegram to share the file</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

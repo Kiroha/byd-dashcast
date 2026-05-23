@@ -203,13 +203,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
             int insetH = getInsetH(packageName);
             int insetV = getInsetV(packageName);
-            // DL5 fix: use the real cluster dimensions instead of the hardcoded
-            // 1920×720. On DL3 the cluster IS 1920×720, so the fallback keeps the
-            // legacy behaviour; on DL5 the virtual cluster face may differ.
-            int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
-            int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
-            if (cw <= 0) cw = 1920;
-            if (ch <= 0) ch = 720;
+            // v1.2.30 — DL5 framebuffer-space fix.
+            // The task lives on display 3 (XDJA fission VirtualDisplay), whose
+            // framebuffer reports 1920×1080 via getRealSize() — NOT the 1920×720
+            // of the physical cluster face (display 2). Qt scales 1080→720
+            // before compositing onto the dalle. resizeTask() applies bounds
+            // in the task's own display coordinate space, so bounds must be
+            // expressed in display 3 dimensions, otherwise we shrink the task
+            // to a tiny rectangle inside a 1920×1080 buffer (visible in field
+            // log BYD_RE_Sniffer_20260523_184727.txt as resize bounds capped
+            // at 445 against a 1080-tall framebuffer).
+            int cw = 1920, ch = 720;
+            try {
+                android.hardware.display.DisplayManager dm =
+                        (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
+                android.view.Display d = (dm != null) ? dm.getDisplay(clusterId) : null;
+                if (d != null) {
+                    android.graphics.Point sz = new android.graphics.Point();
+                    d.getRealSize(sz);
+                    if (sz.x > 0) cw = sz.x;
+                    if (sz.y > 0) ch = sz.y;
+                }
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "resizeActiveTask: getRealSize(" + clusterId
+                        + ") failed → falling back to InputForwarder dims: " + t.getMessage());
+                if (mInputForwarder != null) {
+                    int fw = mInputForwarder.getClusterWidth();
+                    int fh = mInputForwarder.getClusterHeight();
+                    if (fw > 0) cw = fw;
+                    if (fh > 0) ch = fh;
+                }
+            }
             android.graphics.Rect bounds = new android.graphics.Rect(
                     insetH, insetV, cw - insetH, ch - insetV);
             
@@ -292,11 +316,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 if (AdbLocalClient.isDiLink5Safe(this)) {
                     AppLogger.i(TAG, "resizeActiveTask DL5: dispatching `cmd activity task resize` "
                             + "(skipping `am task resize` — known silent no-op on API 30+) taskId="
-                            + rTaskId + " pkg=" + rPkg);
+                            + rTaskId + " pkg=" + rPkg + " bounds=" + rBounds
+                            + " (cluster framebuffer " + cw + "x" + ch + ")");
                     AdbLocalClient.executeShellWithResult(this, cmdAct, new AdbLocalClient.Callback() {
                         @Override public void onSuccess(String out) {
                             AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
                                     + (out == null ? "" : out.trim()) + "\"");
+                            // v1.2.30 — verification probe.
+                            // Field log BYD_RE_Sniffer_20260523_184727.txt showed
+                            // `cmd activity task resize` returning exit=0 with zero
+                            // visible effect (cause: task launched in FULLSCREEN
+                            // mode by `am start --display N`, no FREEFORM flag).
+                            // Now that startActivityViaShell() launches with
+                            // --windowingMode 5, dumpsys the activity to confirm
+                            // the windowing mode AND that the post-resize bounds
+                            // were actually accepted by ATM.
+                            final String verify =
+                                    "dumpsys activity activities 2>/dev/null"
+                                  + " | grep -E 'taskId=" + rTaskId + "( |$)|Task=Task\\{[^}]*#" + rTaskId
+                                  + "|mBounds|getWindowingMode|windowingMode='"
+                                  + " | head -20";
+                            AdbLocalClient.executeShellWithResult(ClusterService.this, verify,
+                                    new AdbLocalClient.Callback() {
+                                        @Override public void onSuccess(String dump) {
+                                            String d = (dump == null) ? "" : dump.trim();
+                                            AppLogger.i(TAG, "resizeActiveTask VERIFY taskId="
+                                                    + rTaskId + " pkg=" + rPkg + " →\n" + d);
+                                        }
+                                        @Override public void onError(String e) {
+                                            AppLogger.w(TAG, "resizeActiveTask VERIFY error: " + e);
+                                        }
+                                    });
                         }
                         @Override public void onError(String err) {
                             AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: "
@@ -882,7 +932,18 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             AppLogger.e(TAG, "startActivityViaShell: cannot resolve component for " + packageName);
             return;
         }
+        // v1.2.30 — DL5 resize root cause fix.
+        // Field log BYD_RE_Sniffer_20260523_184727.txt proved that without
+        // an explicit windowing mode the task lands as WINDOWING_MODE_FULLSCREEN
+        // on display 3, and `cmd activity task resize` is a silent no-op on
+        // fullscreen tasks since API 30+ (returns exit=0, never changes bounds).
+        // Adding `--windowingMode 5` (FREEFORM) is the documented `am start`
+        // flag for selecting a windowing mode at launch time (AOSP ≥API 26,
+        // still present in API 32) and is the prerequisite for the subsequent
+        // resizeActiveTask() call to actually apply our inset bounds on the
+        // XDJA fission VirtualDisplay backing the cluster.
         final String cmd = "am start --display " + displayId
+                + " --windowingMode 5"
                 + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
                 + " -n " + component
                 + " --activity-clear-task 2>&1";

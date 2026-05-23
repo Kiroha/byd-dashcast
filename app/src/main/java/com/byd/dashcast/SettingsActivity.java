@@ -149,7 +149,7 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(intent);
         } catch (Exception e) {
             android.widget.Toast.makeText(this,
-                    "Aucun navigateur disponible pour ouvrir " + url,
+                    getString(R.string.settings_no_browser_fmt, url),
                     android.widget.Toast.LENGTH_LONG).show();
         }
     }
@@ -478,7 +478,7 @@ public class SettingsActivity extends AppCompatActivity {
         // to display 0 on missing -d N → shrinks the main screen.
         if (Platform.get().isDiLink2(this)) {
             tvResult.setVisibility(View.VISIBLE);
-            tvResult.setText("⚠️ Marges désactivées sur DiLink 2 (un seul écran).");
+            tvResult.setText(R.string.settings_warn_dl2_no_margins);
             AppLogger.w("SettingsActivity",
                     "applyOverscan aborted: DL2 platform (no cluster display)");
             return;
@@ -487,7 +487,7 @@ public class SettingsActivity extends AppCompatActivity {
         final int clusterId = resolveClusterDisplayId();
         if (clusterId < 0) {
             tvResult.setVisibility(View.VISIBLE);
-            tvResult.setText("⚠️ Aucun cluster détecté — marges ignorées (DL2 ?).");
+            tvResult.setText(R.string.settings_warn_no_cluster);
             AppLogger.w("SettingsActivity",
                     "applyOverscan aborted: no cluster display found (h=" + h + " v=" + v + ")");
             return;
@@ -512,7 +512,7 @@ public class SettingsActivity extends AppCompatActivity {
                     @Override public void run() {
                         if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
-                        tvResult.setText("❌ " + error.trim());
+                        tvResult.setText(getString(R.string.settings_error_prefix_fmt, error.trim()));
                         AppLogger.e("SettingsActivity", "overscan error: " + error);
                     }
                 });

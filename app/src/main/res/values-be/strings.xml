@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">Платформа: іншая</string>
     <string name="diag_mirror_hint">Запусціце mirror у праграме хаця б раз перад наборам, затым націсніце « Адправіць (.log) », каб падзяліцца справаздачай праз Telegram.</string>
     <string name="diag_mirror_send_log">Адправіць (.log)</string>
+
+    <!-- DiLink 4 — Адмысловая дыягностыка (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">Платформа DiLink 4 — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">Тэсты, прызначаныя для DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + шлях DL3).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Прадукт: %1$s · брэнд: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Сігнатура: —</string>
+    <string name="diag_dl4_pill_detected">Сігнатура: DL4 выяўлена</string>
+    <string name="diag_dl4_pill_other">Сігнатура: не DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ Узровень D1–D10 адпраўляе рэальныя каманды sendInfo у AutoContainer, затым запускае clusterdebug на экране кластара. Бачны эфект на машыне.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Сніфер</string>
+    <string name="diag_adas_title">ADAS — акно кластара</string>
+    <string name="diag_adas_description">Паказвае або хавае акно ADAS кластара Qt (коды AutoContainer 12 / 13, агульныя DiLink)</string>
+    <string name="diag_adas_btn_show">Паказаць ADAS (12)</string>
+    <string name="diag_adas_btn_hide">Схаваць ADAS (13)</string>
+    <string name="diag_adas_last_result">Апошні вынік</string>
+    <string name="diag_adas_no_test">Ніводны тэст не выкананы.\nНацісніце «Паказаць ADAS» або «Схаваць ADAS», каб адправіць каманду ў кластар.</string>
+    <string name="diag_adas_technical_details">Тэхнічныя дэталі</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…адпраўка…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nПАМЫЛКА: %2$s</string>
+    <string name="diag_sniffer_description">Бесперапынны захоп logcat + здымкі dumpsys у файл для экспарту</string>
+    <string name="diag_sniffer_pill_active">АКТЫЎНЫ</string>
+    <string name="diag_sniffer_pill_inactive">НЕАКТЫЎНЫ</string>
+    <string name="diag_sniffer_idle_text">Захоп не выконваецца.\nНацісніце «Запусціць», каб стварыць новы файл BYD_RE_Sniffer_*.txt.</string>
+    <string name="diag_sniffer_btn_start">Запусціць</string>
+    <string name="diag_sniffer_btn_stop">Спыніць</string>
+    <string name="diag_sniffer_btn_snapshot">Здымак</string>
+    <string name="diag_sniffer_btn_export">Экспарт</string>
+    <string name="diag_sniffer_btn_clean">Ачысціць</string>
+    <string name="diag_sniffer_content_title">Захоплены змест</string>
+    <string name="diag_sniffer_procedure_title">Тыповая працэдура</string>
+    <string name="diag_sniffer_initializing">Ініцыялізацыя…</string>
+    <string name="diag_sniffer_active_fmt">АКТЫЎНЫ → %1$s\nЗахоп выконваецца (logcat + аўта-здымкі / 10 с)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Збой ініцыялізацыі: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Спынена → %1$s\nГатова да экспарту.</string>
+    <string name="diag_sniffer_none">(няма)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Папярэдні захоп спынены → %1$s\n(%2$d KB) — экспартуецца.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Папярэдні захоп: %1$s (%2$d KB, лакальны ADB недаступны — экспартуецца)</string>
+    <string name="diag_sniffer_active_detail_fmt">АКТЫЎНЫ → %1$s\n(%2$d KB захоплена)</string>
+    <string name="diag_sniffer_toast_started_fmt">Сніфер запушчаны → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Сніфер спынены.</string>
+    <string name="diag_sniffer_toast_need_start">Спачатку запусціце сніфер.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Здымак дададзены.</string>
+    <string name="diag_sniffer_toast_no_file">Няма файла сніфера для экспарту.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Памылка экспарту: %1$s</string>
+    <string name="diag_sniffer_chooser_title">Экспартаваць Сніфер RE</string>
+    <string name="diag_sniffer_cleanup_busy">Спыніце сніфер перад ачысткай (захоп піша ў файл).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">Ачысціць файлы DashCast</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Выдаляе ўсе журналы і захопы (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) са сховішча праграмы.\n\nКлючы ADB і налады захоўваюцца.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Ачысціць</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Ачыстка: выдалена файлаў: %1$d · засталося: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">Выдалена файлаў: %1$d — засталося: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Палі адключаны на DiLink 2 (адзін экран).</string>
+    <string name="settings_warn_no_cluster">⚠️ Кластар не выяўлены — палі ігнаруюцца (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">Няма браўзера для адкрыцця %1$s</string>
+    <string name="diag_adas_doc_help">• Shell-каманда: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Сэрвіс: Auto_container на DL3/Di4 (PascalCase), auto_container на DL5+ (snake_case)\n• Код 12 = 显示Adas (Паказаць ADAS) — генеруецца clusterdebug.SecondActivity.infoListInit()\n• Код 13 = 关闭Adas (Схаваць ADAS) — тое ж\n• Ідэнтычныя варыянты: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-серыя: коды 12/13 выдаленыя (пустыя слоты) — тут не падтрымліваецца</string>
+    <string name="diag_sniffer_doc_content">• Пачатковы загаловак: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: поўны logcat threadtime + буфер events (без фільтра, нічога не страчана)\n• Аўта-здымкі кожныя 10 с: displays, SurfaceFlinger, працэсы BYD/xdja/qt/cluster\n• Ручны здымак: дадае dumpsys window + гісторыю broadcasts\n• Захаванне: запіс перажывае паварот/знішчэнне Activity (працэс setsid)</string>
+    <string name="diag_sniffer_doc_workflow">1. Запусціць → запіс ідзе ў фоне (setsid, перажывае Activity)\n2. Узнавіць баг / сцэнар, што вывучаецца\n3. Ручны здымак у ключавыя моманты (напр., якраз перад/пасля краху)\n4. Спыніць\n5. Экспартаваць → выбраць Telegram, каб падзяліцца файлам</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>
