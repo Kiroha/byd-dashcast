@@ -262,4 +262,5 @@
     <string name="ime_banner_btn_dismiss">Қайта көрсетпеу</string>
     <string name="ime_banner_toast_enabled">Авто-пернетақта белсенді ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Параметрлерді ашу мүмкін емес — « Кластер авто-пернетақтасы » арнайы мүмкіндіктер қызметін қолмен қосыңыз.</string>
+    <string name="keyboard_bridge_a11y_required_toast">Пернетақта аспаптар тақтасында жұмыс істеуі үшін Параметрлер → Арнайы мүмкіндіктер бөлімінде « DashCast Cluster IME » қызметін қосыңыз.</string>
 </resources>
