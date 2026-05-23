@@ -66,7 +66,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Capture logcat continu + snapshots dumpsys vers fichier exportable"
+                            android:text="@string/diag_sniffer_description"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="@color/md_on_surface_variant"/>
                     </LinearLayout>
@@ -81,7 +81,7 @@
                         android:paddingTop="6dp" android:paddingBottom="6dp"
                         android:background="@drawable/bg_beta_pill"
                         android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                        android:text="INACTIF"/>
+                        android:text="@string/diag_sniffer_pill_inactive"/>
                 </LinearLayout>
 
                 <!-- Current file / detailed status -->
@@ -95,7 +95,7 @@
                     android:fontFamily="monospace"
                     android:textSize="13sp"
                     android:textColor="@color/md_on_surface_variant"
-                    android:text="Aucune capture en cours.\nAppuie sur Démarrer pour lancer un nouveau fichier BYD_RE_Sniffer_*.txt."/>
+                    android:text="@string/diag_sniffer_idle_text"/>
 
                 <!-- Action row -->
                 <LinearLayout
@@ -108,7 +108,7 @@
                         style="@style/Widget.Material3.Button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Démarrer"
+                        android:text="@string/diag_sniffer_btn_start"
                         app:icon="@drawable/ic_stethoscope"
                         app:iconGravity="textStart"/>
                     <com.google.android.material.button.MaterialButton
@@ -117,7 +117,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="Arrêter"
+                        android:text="@string/diag_sniffer_btn_stop"
                         android:enabled="false"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_sniffer_snapshot"
@@ -125,7 +125,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="Snapshot"
+                        android:text="@string/diag_sniffer_btn_snapshot"
                         android:enabled="false"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_sniffer_export"
@@ -133,7 +133,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="Exporter"
+                        android:text="@string/diag_sniffer_btn_export"
                         android:enabled="false"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_sniffer_cleanup"
@@ -141,7 +141,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="Nettoyer"
+                        android:text="@string/diag_sniffer_btn_clean"
                         tools:ignore="HardcodedText"/>
                 </LinearLayout>
 
@@ -168,7 +168,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Contenu capturé"
+                    android:text="@string/diag_sniffer_content_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"/>
@@ -180,7 +180,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="@color/md_on_surface_variant"
                     android:lineSpacingExtra="3dp"
-                    android:text="• Header initial : ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live : logcat threadtime complet + buffer events (sans filtre, rien manqué)\n• Snapshots auto toutes les 10 s : displays, SurfaceFlinger, processus BYD/xdja/qt/cluster\n• Snapshot manuel : ajoute dumpsys window + broadcasts history\n• Persistance : la capture survit à la rotation/destruction d\u2019Activity (processus setsid)"/>
+                    android:text="@string/diag_sniffer_doc_content"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -205,7 +205,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Procédure type"
+                    android:text="@string/diag_sniffer_procedure_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"/>
@@ -217,7 +217,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="@color/md_on_surface_variant"
                     android:lineSpacingExtra="3dp"
-                    android:text="1. Démarrer → la capture tourne en tâche de fond (setsid, survit à l\u2019Activity)\n2. Reproduire le bug / scénario à étudier\n3. Snapshot manuel aux moments clés (ex. juste avant/après crash)\n4. Arrêter\n5. Exporter → choisir Telegram pour partager le fichier"/>
+                    android:text="@string/diag_sniffer_doc_workflow"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

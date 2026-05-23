@@ -240,7 +240,7 @@ public class KeyboardBridgeActivity extends Activity {
                             // hit a bound sInstance and route end-to-end.
                             android.widget.Toast.makeText(
                                     KeyboardBridgeActivity.this,
-                                    "DashCast Cluster IME ✓",
+                                    R.string.keyboard_bridge_active_toast,
                                     android.widget.Toast.LENGTH_SHORT).show();
                         } else {
                             AppLogger.w(TAG, "tryAdbEnableA11y unexpected reply: " + r

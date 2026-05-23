@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">Платформа: басқа</string>
     <string name="diag_mirror_hint">Жинақты іске қоспас бұрын қолданбадан mirror-ды кемінде бір рет іске қосыңыз, содан кейін есепті Telegram арқылы бөлісу үшін « Жіберу (.log) » түймесін басыңыз.</string>
     <string name="diag_mirror_send_log">Жіберу (.log)</string>
+
+    <!-- DiLink 4 — Арнайы диагностика (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">DiLink 4 платформасы — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 үшін арналған тесттер (AutoContainer PascalCase + DL3 жолы).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Өнім: %1$s · бренд: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Қолтаңба: —</string>
+    <string name="diag_dl4_pill_detected">Қолтаңба: DL4 анықталды</string>
+    <string name="diag_dl4_pill_other">Қолтаңба: DL4 емес</string>
+    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 деңгейі AutoContainer-ге шынайы sendInfo командаларын жібереді, содан кейін кластер экранында clusterdebug-ты іске қосады. Көлікте көрінетін әсер.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Сниффер</string>
+    <string name="diag_adas_title">ADAS — кластер терезесі</string>
+    <string name="diag_adas_description">Qt кластерінің ADAS терезесін көрсетеді немесе жасырады (AutoContainer кодтары 12 / 13, жалпы DiLink)</string>
+    <string name="diag_adas_btn_show">ADAS көрсету (12)</string>
+    <string name="diag_adas_btn_hide">ADAS жасыру (13)</string>
+    <string name="diag_adas_last_result">Соңғы нәтиже</string>
+    <string name="diag_adas_no_test">Бірде-бір тест орындалмады.\nКластерге команда жіберу үшін «ADAS көрсету» немесе «ADAS жасыру» түймесін басыңыз.</string>
+    <string name="diag_adas_technical_details">Техникалық мәліметтер</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…жіберілуде…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nҚАТЕ: %2$s</string>
+    <string name="diag_sniffer_description">Үздіксіз logcat түсіру + dumpsys суреттері экспорттауға болатын файлға</string>
+    <string name="diag_sniffer_pill_active">БЕЛСЕНДІ</string>
+    <string name="diag_sniffer_pill_inactive">БЕЛСЕНДІ ЕМЕС</string>
+    <string name="diag_sniffer_idle_text">Түсіру жоқ.\nЖаңа BYD_RE_Sniffer_*.txt файлын іске қосу үшін «Іске қосу» түймесін басыңыз.</string>
+    <string name="diag_sniffer_btn_start">Іске қосу</string>
+    <string name="diag_sniffer_btn_stop">Тоқтату</string>
+    <string name="diag_sniffer_btn_snapshot">Сурет</string>
+    <string name="diag_sniffer_btn_export">Экспорт</string>
+    <string name="diag_sniffer_btn_clean">Тазалау</string>
+    <string name="diag_sniffer_content_title">Түсірілген мазмұн</string>
+    <string name="diag_sniffer_procedure_title">Әдеттегі процедура</string>
+    <string name="diag_sniffer_initializing">Инициализация…</string>
+    <string name="diag_sniffer_active_fmt">БЕЛСЕНДІ → %1$s\nТүсіру жүріп жатыр (logcat + авто-суреттер / 10 с)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Инициализация сәтсіз: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Тоқтатылды → %1$s\nЭкспортқа дайын.</string>
+    <string name="diag_sniffer_none">(жоқ)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Алдыңғы түсіру тоқтатылды → %1$s\n(%2$d KB) — экспортталады.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Алдыңғы түсіру: %1$s (%2$d KB, жергілікті ADB қолжетімсіз — экспортталады)</string>
+    <string name="diag_sniffer_active_detail_fmt">БЕЛСЕНДІ → %1$s\n(%2$d KB түсірілді)</string>
+    <string name="diag_sniffer_toast_started_fmt">Сниффер іске қосылды → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Сниффер тоқтатылды.</string>
+    <string name="diag_sniffer_toast_need_start">Алдымен снифферді іске қосыңыз.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Сурет қосылды.</string>
+    <string name="diag_sniffer_toast_no_file">Экспорттайтын сниффер файлы жоқ.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Экспорт қатесі: %1$s</string>
+    <string name="diag_sniffer_chooser_title">RE Снифферді экспорттау</string>
+    <string name="diag_sniffer_cleanup_busy">Тазалау алдында снифферді тоқтатыңыз (түсіру файлға жазып жатыр).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">DashCast файлдарын тазалау</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Қолданба жадынан барлық журналдар мен түсірулерді жояды (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png).\n\nADB кілттері мен теңшелімдер сақталады.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Тазалау</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Тазалау: %1$d файл жойылды · қалғаны: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">%1$d файл жойылды — қалғаны: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2-де жиектер өшірілген (бір экран).</string>
+    <string name="settings_warn_no_cluster">⚠️ Кластер табылмады — жиектер еленбейді (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">%1$s ашуға арналған браузер жоқ</string>
+    <string name="diag_adas_doc_help">• Shell-командасы: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Қызмет: Auto_container DL3/Di4-те (PascalCase), auto_container DL5+ -де (snake_case)\n• Код 12 = 显示Adas (ADAS көрсету) — clusterdebug.SecondActivity.infoListInit() жасайды\n• Код 13 = 关闭Adas (ADAS жасыру) — сондай-ақ\n• Бірдей нұсқалар: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-сериясы: 12/13 кодтары жойылған (бос ұялар) — мұнда қолдау көрсетілмейді</string>
+    <string name="diag_sniffer_doc_content">• Бастапқы тақырып: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: толық logcat threadtime + events буфері (сүзгісіз, ештеңе жоғалмайды)\n• Әр 10 с сайын авто-суреттер: displays, SurfaceFlinger, BYD/xdja/qt/cluster процестері\n• Қолмен түсірілген сурет: dumpsys window + broadcasts тарихын қосады\n• Тұрақтылық: жазба Activity бұрылуын/жойылуын асып шығады (setsid процесі)</string>
+    <string name="diag_sniffer_doc_workflow">1. Бастау → жазба фонда жүреді (setsid, Activity-ден аман қалады)\n2. Бағ-ты / зерттелетін сценарийді қайталау\n3. Кілт сәттерде қолмен сурет (мыс., құлаудан тура алдында/кейін)\n4. Тоқтату\n5. Экспорт → файлды бөлісу үшін Telegram таңдау</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

@@ -25,6 +25,7 @@ import com.byd.dashcast.beta.BetaTestRunner.TestResult;
 import com.byd.dashcast.beta.BetaTestRunner.Status;
 import com.byd.dashcast.dilink5.DiLink5TestRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
+import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
 
 import com.google.android.material.button.MaterialButton;
@@ -56,18 +57,20 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_BETA_ENGINE = 5;
     private static final int TAB_DILINK5     = 6;
     private static final int TAB_DILINK2     = 7;
-    private static final int TAB_MIRROR      = 8;
-    private static final int TAB_SNIFFER     = 9;
+    private static final int TAB_DILINK4     = 8;
+    private static final int TAB_MIRROR      = 9;
+    private static final int TAB_SNIFFER     = 10;
 
     private TabLayout    tabs;
     private View         panelBeta;
     private View         panelDl5;
     private View         panelDl2;
+    private View         panelDl4;
     private View         panelMirror;
     private View         panelSniffer;
     private View         panelAdas;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 10; // cluster,display,adb_local,system,adas,beta,dl5,dl2,mirror,sniffer
+    private static final int TAB_COUNT = 11; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -100,6 +103,16 @@ public class DiagActivity extends AppCompatActivity {
     private final List<View> dl2RowViews = new ArrayList<>();
     private final List<DiLink2TestRunner.TestResult> dl2LastResults = new ArrayList<>();
 
+    // DiLink 4 panel views (v1.2.28 — full DL4 diagnostic suite with live D-tier)
+    private TextView       tvDl4HeaderSubtitle;
+    private TextView       tvDl4SignaturePill;
+    private TextView       tvDl4Counters;
+    private MaterialButton btnDl4RunAll;
+    private MaterialButton btnDl4CopyReport;
+    private LinearLayout   llDl4TestList;
+    private final List<View> dl4RowViews = new ArrayList<>();
+    private final List<DiLink4TestRunner.TestResult> dl4LastResults = new ArrayList<>();
+
     // Per-test row views, indexed by test position
     private final List<View> rowViews = new ArrayList<>();
     private final List<TestResult> lastResults = new ArrayList<>();
@@ -119,12 +132,14 @@ public class DiagActivity extends AppCompatActivity {
         bindBetaPanel();
         bindDl5Panel();
         bindDl2Panel();
+        bindDl4Panel();
         bindMirrorPanel();
         bindSnifferPanel();
         bindAdasPanel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
+        prepareDl4TestRows();
         prepareMirrorTestRows();
         updateStatusPills();
         restoreSnifferState();
@@ -133,6 +148,7 @@ public class DiagActivity extends AppCompatActivity {
         // useful one on that platform (cluster RE workflow).
         int defaultTab;
         if (Platform.get().isAutoDetectedDiLink2())      defaultTab = TAB_DILINK2;
+        else if (Platform.get().isAutoDetectedDiLink4()) defaultTab = TAB_DILINK4;
         else if (Platform.get().isAutoDetectedDiLink5()) defaultTab = TAB_DILINK5;
         else                                             defaultTab = TAB_BETA_ENGINE;
         tabs.selectTab(tabs.getTabAt(defaultTab));
@@ -168,6 +184,7 @@ public class DiagActivity extends AppCompatActivity {
         panelBeta       = findViewById(R.id.panel_beta_engine);
         panelDl5        = findViewById(R.id.panel_dilink5);
         panelDl2        = findViewById(R.id.panel_dilink2);
+        panelDl4        = findViewById(R.id.panel_dilink4);
         panelMirror     = findViewById(R.id.panel_mirror);
         panelSniffer    = findViewById(R.id.panel_sniffer);
         panelAdas       = findViewById(R.id.panel_adas);
@@ -215,17 +232,19 @@ public class DiagActivity extends AppCompatActivity {
         boolean isBeta    = position == TAB_BETA_ENGINE;
         boolean isDl5     = position == TAB_DILINK5;
         boolean isDl2     = position == TAB_DILINK2;
+        boolean isDl4     = position == TAB_DILINK4;
         boolean isMirror  = position == TAB_MIRROR;
         boolean isSniffer = position == TAB_SNIFFER;
         boolean isAdas    = position == TAB_ADAS;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
+        panelDl4.setVisibility(isDl4 ? View.VISIBLE : View.GONE);
         panelMirror.setVisibility(isMirror ? View.VISIBLE : View.GONE);
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isMirror || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isMirror && !isSniffer && !isAdas) {
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -692,6 +711,135 @@ public class DiagActivity extends AppCompatActivity {
         AppLogger.shareWithReport(this, report);
     }
 
+    // ─── DiLink 4 diagnostic panel (v1.2.28) ────────────────────────────────
+
+    private void bindDl4Panel() {
+        tvDl4HeaderSubtitle = panelDl4.findViewById(R.id.tv_dl4_header_subtitle);
+        tvDl4SignaturePill  = panelDl4.findViewById(R.id.tv_dl4_signature_pill);
+        tvDl4Counters       = panelDl4.findViewById(R.id.tv_dl4_counters);
+        btnDl4RunAll        = panelDl4.findViewById(R.id.btn_dl4_run_all);
+        btnDl4CopyReport    = panelDl4.findViewById(R.id.btn_dl4_copy_report);
+        llDl4TestList       = panelDl4.findViewById(R.id.ll_dl4_test_list);
+
+        String product = android.os.Build.PRODUCT == null ? "?" : android.os.Build.PRODUCT;
+        String brand   = android.os.Build.BRAND   == null ? "?" : android.os.Build.BRAND;
+        tvDl4HeaderSubtitle.setText(getString(
+                R.string.diag_dl4_header_subtitle_fmt, product, brand, android.os.Build.VERSION.SDK_INT));
+
+        tvDl4SignaturePill.setText(Platform.get().isAutoDetectedDiLink4()
+                ? R.string.diag_dl4_pill_detected
+                : R.string.diag_dl4_pill_other);
+
+        btnDl4RunAll.setOnClickListener(v -> runDl4AllTests());
+        btnDl4CopyReport.setOnClickListener(v -> copyDl4Report());
+        btnDl4CopyReport.setEnabled(false);
+    }
+
+    private void prepareDl4TestRows() {
+        dl4RowViews.clear();
+        dl4LastResults.clear();
+        llDl4TestList.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (DiLink4TestRunner.TestDef def : DiLink4TestRunner.catalog()) {
+            View row = inflater.inflate(R.layout.item_beta_test, llDl4TestList, false);
+            DiLink4TestRunner.TestResult r = new DiLink4TestRunner.TestResult(def);
+            r.status = DiLink4TestRunner.Status.PENDING;
+            bindDl4Row(row, r);
+            llDl4TestList.addView(row);
+            dl4RowViews.add(row);
+            dl4LastResults.add(r);
+        }
+    }
+
+    private void bindDl4Row(View row, DiLink4TestRunner.TestResult r) {
+        TextView status = row.findViewById(R.id.tv_test_status);
+        TextView id     = row.findViewById(R.id.tv_test_id);
+        TextView title  = row.findViewById(R.id.tv_test_title);
+        TextView desc   = row.findViewById(R.id.tv_test_description);
+        TextView msg    = row.findViewById(R.id.tv_test_message);
+        TextView elap   = row.findViewById(R.id.tv_test_elapsed);
+
+        id.setText(r.def.id);
+        title.setText(r.def.title);
+        desc.setText(r.def.description);
+
+        String glyph; int color;
+        switch (r.status) {
+            case PASS:    glyph = "\u2713"; color = 0xFF4CAF50; break;
+            case FAIL:    glyph = "\u2717"; color = 0xFFE53935; break;
+            case WARN:    glyph = "!";      color = 0xFFFFB300; break;
+            case SKIPPED: glyph = "\u2298"; color = 0xFF9E9E9E; break;
+            case RUNNING: glyph = "\u2026"; color = 0xFFFFB300; break;
+            default:      glyph = "\u00b7"; color = 0xFF607D8B; break;
+        }
+        status.setText(glyph);
+        status.setTextColor(color);
+
+        elap.setText(r.elapsedMs > 0 ? (r.elapsedMs + " ms") : "");
+
+        if (r.message != null && !r.message.isEmpty()) {
+            msg.setVisibility(View.VISIBLE);
+            msg.setText(r.message);
+            int textColor;
+            switch (r.status) {
+                case FAIL: textColor = 0xFFE53935; break;
+                case PASS: textColor = 0xFF4CAF50; break;
+                case WARN: textColor = 0xFFFFB300; break;
+                default:   textColor = 0xFF9E9E9E; break;
+            }
+            msg.setTextColor(textColor);
+        } else {
+            msg.setVisibility(View.GONE);
+        }
+    }
+
+    private void runDl4AllTests() {
+        btnDl4RunAll.setEnabled(false);
+        btnDl4CopyReport.setEnabled(false);
+        DiLink4TestRunner.runAll(this, new DiLink4TestRunner.Listener() {
+            @Override public void onSuiteStarted(List<DiLink4TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                dl4LastResults.clear();
+                dl4LastResults.addAll(results);
+                for (int i = 0; i < results.size() && i < dl4RowViews.size(); i++) {
+                    bindDl4Row(dl4RowViews.get(i), results.get(i));
+                }
+                tvDl4Counters.setText(getString(R.string.diag_beta_counters_running));
+            }
+            @Override public void onTestUpdated(int index, DiLink4TestRunner.TestResult result) {
+                if (mDestroyed) return;
+                if (index < dl4RowViews.size()) bindDl4Row(dl4RowViews.get(index), result);
+                updateDl4Counters();
+            }
+            @Override public void onSuiteFinished(List<DiLink4TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                btnDl4RunAll.setEnabled(true);
+                btnDl4CopyReport.setEnabled(true);
+                updateDl4Counters();
+            }
+        });
+    }
+
+    private void updateDl4Counters() {
+        int pass = 0, fail = 0, skip = 0, warn = 0;
+        for (DiLink4TestRunner.TestResult r : dl4LastResults) {
+            switch (r.status) {
+                case PASS:    pass++; break;
+                case FAIL:    fail++; break;
+                case SKIPPED: skip++; break;
+                case WARN:    warn++; break;
+                default: break;
+            }
+        }
+        tvDl4Counters.setText(getString(R.string.diag_dl4_counters_fmt, pass, fail, warn, skip));
+    }
+
+    private void copyDl4Report() {
+        String report = DiLink4TestRunner.buildReport(this, dl4LastResults);
+        AppLogger.i("DiagActivity", "DiLink 4 report:\n" + report);
+        AppLogger.shareWithReport(this, report);
+    }
+
     // ─── Mirror diag panel (build 193) ──────────────────────────────────────
 
     private TextView       tvMirrorHeaderSubtitle;
@@ -908,7 +1056,7 @@ public class DiagActivity extends AppCompatActivity {
     private void sendAdasCmd(final int code) {
         final String svc = autoContainerSvcName();
         final String cmd = "service call " + svc + " 2 i32 1000 i32 " + code + " s16 \"\" 2>&1";
-        if (tvAdasResult != null) tvAdasResult.setText("$ " + cmd + "\n…envoi en cours…");
+        if (tvAdasResult != null) tvAdasResult.setText(getString(R.string.diag_adas_sending_fmt, cmd));
         AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(final String report) {
                 safeRunOnUiThread(() -> {
@@ -919,7 +1067,7 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onError(final String error) {
                 safeRunOnUiThread(() -> {
                     if (tvAdasResult != null)
-                        tvAdasResult.setText("$ " + cmd + "\nERREUR: " + error);
+                        tvAdasResult.setText(getString(R.string.diag_adas_error_fmt, cmd, error));
                 });
             }
         });
@@ -927,7 +1075,7 @@ public class DiagActivity extends AppCompatActivity {
 
     private void setSnifferUiActive(boolean active, String detail) {
         if (mDestroyed) return;
-        tvSnifferStatusPill.setText(active ? "ACTIF" : "INACTIF");
+        tvSnifferStatusPill.setText(active ? R.string.diag_sniffer_pill_active : R.string.diag_sniffer_pill_inactive);
         tvSnifferStatusPill.setTextColor(active ? 0xFF69F0AE : 0xFFFF8A80);
         if (detail != null) tvSnifferStatus.setText(detail);
         btnSnifferStart.setEnabled(!active);
@@ -969,21 +1117,21 @@ public class DiagActivity extends AppCompatActivity {
                 final boolean active = out.trim().equals("ACTIVE");
                 safeRunOnUiThread(() -> {
                     if (active) {
-                        setSnifferUiActive(true, "ACTIF → " + f.getName() + "\n("
-                                + (f.length() / 1024) + " KB capturés)");
+                        setSnifferUiActive(true, getString(R.string.diag_sniffer_active_detail_fmt,
+                                f.getName(), (int) (f.length() / 1024)));
                     } else {
                         getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
                                 .remove(PREF_SNIFFER_PATH).apply();
                         // File still exists on disk → keep export enabled
-                        setSnifferUiActive(false, "Capture précédente arrêtée → " + f.getName()
-                                + "\n(" + (f.length() / 1024) + " KB) — exportable.");
+                        setSnifferUiActive(false, getString(R.string.diag_sniffer_previous_stopped_fmt,
+                                f.getName(), (int) (f.length() / 1024)));
                     }
                 });
             }
             @Override public void onError(String err) {
                 safeRunOnUiThread(() -> setSnifferUiActive(false,
-                        "Capture précédente : " + f.getName()
-                        + " (" + (f.length() / 1024) + " KB, ADB local indisponible — exportable)"));
+                        getString(R.string.diag_sniffer_previous_no_adb_fmt,
+                                f.getName(), (int) (f.length() / 1024))));
             }
         });
     }
@@ -998,7 +1146,7 @@ public class DiagActivity extends AppCompatActivity {
         final String pf = "/data/local/tmp/" + RE_SNIFFER_PIDS;
         AppLogger.i("RESniffer", "Starting → " + p);
 
-        setSnifferUiActive(false, "Initialisation…");
+        setSnifferUiActive(false, getString(R.string.diag_sniffer_initializing));
         btnSnifferStart.setEnabled(false);
 
         String headerCmd =
@@ -1045,16 +1193,16 @@ public class DiagActivity extends AppCompatActivity {
                 AdbLocalClient.executeShell(DiagActivity.this, bgCmd);
 
                 safeRunOnUiThread(() -> {
-                    setSnifferUiActive(true, "ACTIF → " + mSnifferFile.getName()
-                            + "\nCapture en cours (logcat + snapshots auto / 10 s)");
+                    setSnifferUiActive(true, getString(R.string.diag_sniffer_active_fmt,
+                            mSnifferFile.getName()));
                     Toast.makeText(DiagActivity.this,
-                            "Sniffer démarré → " + mSnifferFile.getName(),
+                            getString(R.string.diag_sniffer_toast_started_fmt, mSnifferFile.getName()),
                             Toast.LENGTH_LONG).show();
                 });
             }
             @Override public void onError(String err) {
                 safeRunOnUiThread(() -> {
-                    setSnifferUiActive(false, "❌ Échec init : " + err);
+                    setSnifferUiActive(false, getString(R.string.diag_sniffer_init_fail_fmt, err));
                     AppLogger.e("RESniffer", "init failed: " + err);
                 });
             }
@@ -1078,20 +1226,20 @@ public class DiagActivity extends AppCompatActivity {
         killSnifferProcesses();
         getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
                 .remove(PREF_SNIFFER_PATH).apply();
-        final String fileName = mSnifferFile != null ? mSnifferFile.getName() : "(aucun)";
+        final String fileName = mSnifferFile != null ? mSnifferFile.getName() : getString(R.string.diag_sniffer_none);
         if (mSnifferFile != null) {
             AdbLocalClient.executeShell(this,
                     "echo '[RE Sniffer] Stopped.' >> " + mSnifferFile.getAbsolutePath());
         }
         safeRunOnUiThread(() -> {
-            setSnifferUiActive(false, "Arrêté → " + fileName + "\nPrêt pour export.");
-            Toast.makeText(this, "Sniffer arrêté.", Toast.LENGTH_SHORT).show();
+            setSnifferUiActive(false, getString(R.string.diag_sniffer_stopped_fmt, fileName));
+            Toast.makeText(this, R.string.diag_sniffer_toast_stopped, Toast.LENGTH_SHORT).show();
         });
     }
 
     private void snapshotSniffer() {
         if (mSnifferFile == null) {
-            Toast.makeText(this, "Démarrer le sniffer d'abord.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.diag_sniffer_toast_need_start, Toast.LENGTH_SHORT).show();
             return;
         }
         final String p = mSnifferFile.getAbsolutePath();
@@ -1109,7 +1257,7 @@ public class DiagActivity extends AppCompatActivity {
             + " && echo '--- BROADCASTS ---' >> " + p
             + " && dumpsys activity broadcasts history 2>/dev/null >> " + p;
         AdbLocalClient.executeShell(this, cmd);
-        Toast.makeText(this, "Snapshot ajouté.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.diag_sniffer_toast_snapshot_added, Toast.LENGTH_SHORT).show();
     }
 
     private void exportSniffer() {
@@ -1120,7 +1268,7 @@ public class DiagActivity extends AppCompatActivity {
         }
         java.io.File logFile = mSnifferFile;
         if (logFile == null || !logFile.exists() || logFile.length() == 0) {
-            Toast.makeText(this, "Aucun fichier sniffer à exporter.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.diag_sniffer_toast_no_file, Toast.LENGTH_SHORT).show();
             return;
         }
         try {
@@ -1132,12 +1280,12 @@ public class DiagActivity extends AppCompatActivity {
             shareIntent.putExtra(Intent.EXTRA_SUBJECT, logFile.getName());
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             shareIntent.setClipData(android.content.ClipData.newRawUri("", uri));
-            Intent chooser = Intent.createChooser(shareIntent, "Exporter Sniffer RE");
+            Intent chooser = Intent.createChooser(shareIntent, getString(R.string.diag_sniffer_chooser_title));
             chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(chooser);
         } catch (Exception e) {
             AppLogger.e("RESniffer", "Export erreur", e);
-            Toast.makeText(this, "Export erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.diag_sniffer_toast_export_error_fmt, e.getMessage()), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1155,17 +1303,15 @@ public class DiagActivity extends AppCompatActivity {
         // Snapshot button is enabled iff capture is active → cheap proxy probe.
         if (btnSnifferSnapshot != null && btnSnifferSnapshot.isEnabled()) {
             Toast.makeText(this,
-                    "Arrête le sniffer avant de nettoyer (la capture écrit dans un fichier).",
+                    R.string.diag_sniffer_cleanup_busy,
                     Toast.LENGTH_LONG).show();
             return;
         }
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Nettoyer les fichiers DashCast")
-                .setMessage("Supprime tous les logs et captures (byd_log_*, byd_report_*, "
-                        + "BYD_RE_Sniffer_*, cluster_live.png) du stockage de l'application.\n\n"
-                        + "Les clés ADB et préférences sont préservées.")
+                .setTitle(R.string.diag_sniffer_cleanup_dialog_title)
+                .setMessage(R.string.diag_sniffer_cleanup_dialog_msg)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Nettoyer", (d, w) -> doCleanupSnifferFiles())
+                .setPositiveButton(R.string.diag_sniffer_cleanup_dialog_confirm, (d, w) -> doCleanupSnifferFiles())
                 .show();
     }
 
@@ -1197,10 +1343,9 @@ public class DiagActivity extends AppCompatActivity {
             safeRunOnUiThread(() -> {
                 btnSnifferCleanup.setEnabled(true);
                 setSnifferUiActive(false,
-                        "Nettoyage : " + finalDeleted + " fichier(s) supprimé(s) · "
-                                + "restant : " + sizeStr);
+                        getString(R.string.diag_sniffer_cleanup_status_fmt, finalDeleted, sizeStr));
                 Toast.makeText(DiagActivity.this,
-                        finalDeleted + " fichier(s) supprimé(s) — restant : " + sizeStr,
+                        getString(R.string.diag_sniffer_cleanup_toast_fmt, finalDeleted, sizeStr),
                         Toast.LENGTH_LONG).show();
                 AppLogger.i("RESniffer",
                         "cleanupSnifferFiles: " + finalDeleted + " deleted, remaining=" + sizeStr);

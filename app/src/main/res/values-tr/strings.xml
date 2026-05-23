@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">Platform: diğer</string>
     <string name="diag_mirror_hint">Paketi çalıştırmadan önce mirror\'ı uygulamadan en az bir kez başlatın, ardından raporu Telegram üzerinden paylaşmak için « Gönder (.log) » düğmesine dokunun.</string>
     <string name="diag_mirror_send_log">Gönder (.log)</string>
+
+    <!-- DiLink 4 — Özel tanılama (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">DiLink 4 platformu — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 için özel testler (AutoContainer PascalCase + DL3 yolu).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Ürün: %1$s · marka: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">İmza: —</string>
+    <string name="diag_dl4_pill_detected">İmza: DL4 algılandı</string>
+    <string name="diag_dl4_pill_other">İmza: DL4 değil</string>
+    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 katmanı AutoContainer\'a gerçek sendInfo komutları gönderir ve ardından cluster ekranında clusterdebug uygulamasını başlatır. Araçta görünür etki.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Sniffer</string>
+    <string name="diag_adas_title">ADAS — küme penceresi</string>
+    <string name="diag_adas_description">Qt küme ADAS penceresini gösterir veya gizler (AutoContainer kodları 12 / 13, genel DiLink)</string>
+    <string name="diag_adas_btn_show">ADAS\'ı göster (12)</string>
+    <string name="diag_adas_btn_hide">ADAS\'ı gizle (13)</string>
+    <string name="diag_adas_last_result">Son sonuç</string>
+    <string name="diag_adas_no_test">Hiçbir test yürütülmedi.\nKümeye komut göndermek için ADAS\'ı göster veya ADAS\'ı gizle\'ye dokunun.</string>
+    <string name="diag_adas_technical_details">Teknik ayrıntılar</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…gönderiliyor…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nHATA: %2$s</string>
+    <string name="diag_sniffer_description">Sürekli logcat yakalama + dışa aktarılabilir bir dosyaya dumpsys anlık görüntüleri</string>
+    <string name="diag_sniffer_pill_active">ETKİN</string>
+    <string name="diag_sniffer_pill_inactive">PASİF</string>
+    <string name="diag_sniffer_idle_text">Devam eden yakalama yok.\nYeni bir BYD_RE_Sniffer_*.txt dosyası başlatmak için Başlat\'a dokunun.</string>
+    <string name="diag_sniffer_btn_start">Başlat</string>
+    <string name="diag_sniffer_btn_stop">Durdur</string>
+    <string name="diag_sniffer_btn_snapshot">Anlık görüntü</string>
+    <string name="diag_sniffer_btn_export">Dışa aktar</string>
+    <string name="diag_sniffer_btn_clean">Temizle</string>
+    <string name="diag_sniffer_content_title">Yakalanan içerik</string>
+    <string name="diag_sniffer_procedure_title">Tipik prosedür</string>
+    <string name="diag_sniffer_initializing">Başlatılıyor…</string>
+    <string name="diag_sniffer_active_fmt">ETKİN → %1$s\nYakalama devam ediyor (logcat + otomatik anlık görüntüler / 10 sn)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Başlatma başarısız: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Durduruldu → %1$s\nDışa aktarmaya hazır.</string>
+    <string name="diag_sniffer_none">(yok)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Önceki yakalama durduruldu → %1$s\n(%2$d KB) — dışa aktarılabilir.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Önceki yakalama: %1$s (%2$d KB, yerel ADB kullanılamıyor — dışa aktarılabilir)</string>
+    <string name="diag_sniffer_active_detail_fmt">ETKİN → %1$s\n(%2$d KB yakalandı)</string>
+    <string name="diag_sniffer_toast_started_fmt">Sniffer başlatıldı → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Sniffer durduruldu.</string>
+    <string name="diag_sniffer_toast_need_start">Önce sniffer\'ı başlatın.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Anlık görüntü eklendi.</string>
+    <string name="diag_sniffer_toast_no_file">Dışa aktarılacak sniffer dosyası yok.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Dışa aktarma hatası: %1$s</string>
+    <string name="diag_sniffer_chooser_title">RE Sniffer\'ı dışa aktar</string>
+    <string name="diag_sniffer_cleanup_busy">Temizlemeden önce sniffer\'ı durdurun (yakalama bir dosyaya yazıyor).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">DashCast dosyalarını temizle</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Tüm logları ve yakalamaları (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) uygulama depolama alanından siler.\n\nADB anahtarları ve tercihler korunur.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Temizle</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Temizlik: %1$d dosya silindi · kalan: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">%1$d dosya silindi — kalan: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Kenar boşlukları DiLink 2\'de devre dışı (tek ekran).</string>
+    <string name="settings_warn_no_cluster">⚠️ Küme algılanmadı — kenar boşlukları yok sayıldı (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">%1$s\'yi açacak tarayıcı yok</string>
+    <string name="diag_adas_doc_help">• Kabuk komutu: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Servis: DL3/Di4 üzerinde Auto_container (PascalCase), DL5+ üzerinde auto_container (snake_case)\n• Kod 12 = 显示Adas (ADAS göster) — clusterdebug.SecondActivity.infoListInit() tarafından üretilir\n• Kod 13 = 关闭Adas (ADAS gizle) — aynısı\n• Aynı varyantlar: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-serisi: 12/13 kodları çıkarılmış (boş slotlar) — burada desteklenmiyor</string>
+    <string name="diag_sniffer_doc_content">• İlk başlık: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Canlı: tam logcat threadtime + events tamponu (filtresiz, hiçbir şey kaçırılmaz)\n• 10 s’de bir otomatik anlık görüntüler: displays, SurfaceFlinger, BYD/xdja/qt/cluster süreçleri\n• Manuel anlık görüntü: dumpsys window + broadcasts geçmişini ekler\n• Kalıcılık: kayıt Activity dönmesi/yok edilmesinden sağ çıkar (setsid süreci)</string>
+    <string name="diag_sniffer_doc_workflow">1. Başlat → kayıt arka planda çalışır (setsid, Activity\u2019den sağ çıkar)\n2. Hatayı / incelenen senaryoyu yeniden üret\n3. Kritik anlarda manuel anlık görüntü (örn. çökmeden hemen önce/sonra)\n4. Durdur\n5. Dışa aktar → dosyayı paylaşmak için Telegram seç</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

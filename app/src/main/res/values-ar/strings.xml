@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">المنصة: أخرى</string>
     <string name="diag_mirror_hint">ابدأ mirror من التطبيق مرة واحدة على الأقل قبل تشغيل الحزمة، ثم اضغط « إرسال (.log) » لمشاركة التقرير عبر Telegram.</string>
     <string name="diag_mirror_send_log">إرسال (.log)</string>
+
+    <!-- DiLink 4 — تشخيص مخصص (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">منصة DiLink 4 — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">اختبارات مخصصة لـ DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + مسار DL3).</string>
+    <string name="diag_dl4_header_subtitle_fmt">المنتج: %1$s · العلامة: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">التوقيع: —</string>
+    <string name="diag_dl4_pill_detected">التوقيع: تم اكتشاف DL4</string>
+    <string name="diag_dl4_pill_other">التوقيع: ليس DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ يرسل المستوى D1–D10 أوامر sendInfo حقيقية إلى AutoContainer ثم يشغّل clusterdebug على شاشة الكلاستر. تأثير مرئي على السيارة.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">السنيفر</string>
+    <string name="diag_adas_title">ADAS — نافذة الكلاستر</string>
+    <string name="diag_adas_description">يعرض أو يخفي نافذة ADAS لكلاستر Qt (رموز AutoContainer 12 / 13، عام DiLink)</string>
+    <string name="diag_adas_btn_show">عرض ADAS (12)</string>
+    <string name="diag_adas_btn_hide">إخفاء ADAS (13)</string>
+    <string name="diag_adas_last_result">آخر نتيجة</string>
+    <string name="diag_adas_no_test">لم يتم تنفيذ أي اختبار.\nاضغط على عرض ADAS أو إخفاء ADAS لإرسال الأمر إلى الكلاستر.</string>
+    <string name="diag_adas_technical_details">تفاصيل تقنية</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…جارٍ الإرسال…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nخطأ: %2$s</string>
+    <string name="diag_sniffer_description">التقاط logcat مستمر + لقطات dumpsys إلى ملف قابل للتصدير</string>
+    <string name="diag_sniffer_pill_active">نشط</string>
+    <string name="diag_sniffer_pill_inactive">غير نشط</string>
+    <string name="diag_sniffer_idle_text">لا يوجد التقاط جارٍ.\nاضغط على بدء لإطلاق ملف جديد BYD_RE_Sniffer_*.txt.</string>
+    <string name="diag_sniffer_btn_start">بدء</string>
+    <string name="diag_sniffer_btn_stop">إيقاف</string>
+    <string name="diag_sniffer_btn_snapshot">لقطة</string>
+    <string name="diag_sniffer_btn_export">تصدير</string>
+    <string name="diag_sniffer_btn_clean">تنظيف</string>
+    <string name="diag_sniffer_content_title">المحتوى الملتقط</string>
+    <string name="diag_sniffer_procedure_title">الإجراء النموذجي</string>
+    <string name="diag_sniffer_initializing">جارٍ التهيئة…</string>
+    <string name="diag_sniffer_active_fmt">نشط → %1$s\nالالتقاط جارٍ (logcat + لقطات تلقائية / 10 ث)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ فشل التهيئة: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">متوقف → %1$s\nجاهز للتصدير.</string>
+    <string name="diag_sniffer_none">(لا شيء)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">تم إيقاف الالتقاط السابق → %1$s\n(%2$d KB) — قابل للتصدير.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">الالتقاط السابق: %1$s (%2$d KB، ADB المحلي غير متاح — قابل للتصدير)</string>
+    <string name="diag_sniffer_active_detail_fmt">نشط → %1$s\n(%2$d KB ملتقطة)</string>
+    <string name="diag_sniffer_toast_started_fmt">تم بدء السنيفر → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">تم إيقاف السنيفر.</string>
+    <string name="diag_sniffer_toast_need_start">ابدأ السنيفر أولاً.</string>
+    <string name="diag_sniffer_toast_snapshot_added">تمت إضافة اللقطة.</string>
+    <string name="diag_sniffer_toast_no_file">لا يوجد ملف سنيفر للتصدير.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">خطأ في التصدير: %1$s</string>
+    <string name="diag_sniffer_chooser_title">تصدير سنيفر RE</string>
+    <string name="diag_sniffer_cleanup_busy">أوقف السنيفر قبل التنظيف (الالتقاط يكتب في ملف).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">تنظيف ملفات DashCast</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">يحذف جميع السجلات والالتقاطات (byd_log_*، byd_report_*، BYD_RE_Sniffer_*، cluster_live.png) من تخزين التطبيق.\n\nيتم الحفاظ على مفاتيح ADB والتفضيلات.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">تنظيف</string>
+    <string name="diag_sniffer_cleanup_status_fmt">التنظيف: تم حذف %1$d ملف · المتبقي: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">تم حذف %1$d ملف — المتبقي: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ تم تعطيل الهوامش على DiLink 2 (شاشة واحدة).</string>
+    <string name="settings_warn_no_cluster">⚠️ لم يتم اكتشاف الكلاستر — تم تجاهل الهوامش (DL2؟).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">لا يوجد متصفح متاح لفتح %1$s</string>
+    <string name="diag_adas_doc_help">• أمر shell: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• الخدمة: Auto_container على DL3/Di4 (PascalCase)، auto_container على DL5+ (snake_case)\n• الكود 12 = 显示Adas (إظهار ADAS) — يُولَّد بواسطة clusterdebug.SecondActivity.infoListInit()\n• الكود 13 = 关闭Adas (إخفاء ADAS) — نفس الشيء\n• متغيرات متطابقة: DL3 (infoListInit) و Di4 (infoListInit) و DL5 (infoListInit_Di5)\n• سلسلة R: الكودان 12/13 محذوفان (فتحات فارغة) — غير مدعوم هنا</string>
+    <string name="diag_sniffer_doc_content">• الترويسة الأولية: ro.product.model، fingerprint، dumpsys display، dumpsys SurfaceFlinger، ps -A\n• البث المباشر: logcat threadtime كامل + مخزن events (دون تصفية، لا شيء يضيع)\n• لقطات تلقائية كل 10 ث: displays، SurfaceFlinger، عمليات BYD/xdja/qt/cluster\n• لقطة يدوية: تضيف dumpsys window + سجل broadcasts\n• الاستمرارية: التسجيل ينجو من دوران/تدمير Activity (عملية setsid)</string>
+    <string name="diag_sniffer_doc_workflow">1. ابدأ ← يعمل التسجيل في الخلفية (setsid، ينجو من Activity)\n2. أعد إنتاج الخلل / السيناريو قيد الدراسة\n3. لقطة يدوية في اللحظات الرئيسية (مثلاً قبل/بعد التعطل مباشرة)\n4. أوقف\n5. صدّر ← اختر Telegram لمشاركة الملف</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

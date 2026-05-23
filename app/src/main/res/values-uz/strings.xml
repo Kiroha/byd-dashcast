@@ -289,4 +289,67 @@
     <string name="diag_mirror_pill_other">Platforma: boshqa</string>
     <string name="diag_mirror_hint">To\'plamni ishga tushirishdan oldin ilovadan mirror-ni kamida bir marta ishga tushiring, so\'ng hisobotni Telegram orqali ulashish uchun « Yuborish (.log) » tugmasini bosing.</string>
     <string name="diag_mirror_send_log">Yuborish (.log)</string>
+
+    <!-- DiLink 4 — Maxsus tashxis (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">DiLink 4 platformasi — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 uchun maxsus testlar (AutoContainer PascalCase + DL3 yo\'li).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Mahsulot: %1$s · brend: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Imzo: —</string>
+    <string name="diag_dl4_pill_detected">Imzo: DL4 aniqlandi</string>
+    <string name="diag_dl4_pill_other">Imzo: DL4 emas</string>
+    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 darajasi AutoContainer\'ga real sendInfo buyruqlarini yuboradi, so\'ng cluster ekranida clusterdebug ilovasini ishga tushiradi. Avtomobilda ko\'rinadigan ta\'sir.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Sniffer</string>
+    <string name="diag_adas_title">ADAS — klaster oynasi</string>
+    <string name="diag_adas_description">Qt klaster ADAS oynasini ko\'rsatadi yoki yashiradi (AutoContainer kodlari 12 / 13, umumiy DiLink)</string>
+    <string name="diag_adas_btn_show">ADAS\'ni ko\'rsatish (12)</string>
+    <string name="diag_adas_btn_hide">ADAS\'ni yashirish (13)</string>
+    <string name="diag_adas_last_result">Oxirgi natija</string>
+    <string name="diag_adas_no_test">Hech bir test bajarilmadi.\nKlasterga buyruq yuborish uchun ADAS\'ni ko\'rsatish yoki ADAS\'ni yashirish tugmasini bosing.</string>
+    <string name="diag_adas_technical_details">Texnik tafsilotlar</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…yuborilmoqda…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nXATO: %2$s</string>
+    <string name="diag_sniffer_description">Uzluksiz logcat olish + eksport qilinadigan faylga dumpsys suratlar</string>
+    <string name="diag_sniffer_pill_active">FAOL</string>
+    <string name="diag_sniffer_pill_inactive">FAOL EMAS</string>
+    <string name="diag_sniffer_idle_text">Davom etayotgan olish yo\'q.\nYangi BYD_RE_Sniffer_*.txt faylini ishga tushirish uchun Boshlash tugmasini bosing.</string>
+    <string name="diag_sniffer_btn_start">Boshlash</string>
+    <string name="diag_sniffer_btn_stop">To\'xtatish</string>
+    <string name="diag_sniffer_btn_snapshot">Surat</string>
+    <string name="diag_sniffer_btn_export">Eksport</string>
+    <string name="diag_sniffer_btn_clean">Tozalash</string>
+    <string name="diag_sniffer_content_title">Olingan kontent</string>
+    <string name="diag_sniffer_procedure_title">Tipik tartib</string>
+    <string name="diag_sniffer_initializing">Ishga tushirilmoqda…</string>
+    <string name="diag_sniffer_active_fmt">FAOL → %1$s\nOlish davom etmoqda (logcat + avto suratlar / 10 s)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Ishga tushirish muvaffaqiyatsiz: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">To\'xtatildi → %1$s\nEksportga tayyor.</string>
+    <string name="diag_sniffer_none">(yo\'q)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Oldingi olish to\'xtatildi → %1$s\n(%2$d KB) — eksport qilish mumkin.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Oldingi olish: %1$s (%2$d KB, mahalliy ADB mavjud emas — eksport qilish mumkin)</string>
+    <string name="diag_sniffer_active_detail_fmt">FAOL → %1$s\n(%2$d KB olindi)</string>
+    <string name="diag_sniffer_toast_started_fmt">Sniffer ishga tushirildi → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Sniffer to\'xtatildi.</string>
+    <string name="diag_sniffer_toast_need_start">Avval snifferni ishga tushiring.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Surat qo\'shildi.</string>
+    <string name="diag_sniffer_toast_no_file">Eksport qilish uchun sniffer fayli yo\'q.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Eksport xatosi: %1$s</string>
+    <string name="diag_sniffer_chooser_title">RE Snifferni eksport qilish</string>
+    <string name="diag_sniffer_cleanup_busy">Tozalashdan oldin snifferni to\'xtating (olish faylga yozmoqda).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">DashCast fayllarini tozalash</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Ilova xotirasidan barcha jurnallar va olishlarni (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) o\'chiradi.\n\nADB kalitlari va sozlamalar saqlanadi.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Tozalash</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Tozalash: %1$d ta fayl o\'chirildi · qolgan: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">%1$d ta fayl o\'chirildi — qolgan: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2\'da chetlar o\'chirilgan (bitta ekran).</string>
+    <string name="settings_warn_no_cluster">⚠️ Klaster aniqlanmadi — chetlar e\'tiborga olinmadi (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">%1$s ochish uchun brauzer mavjud emas</string>
+    <string name="diag_adas_doc_help">• Shell buyrug‘i: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Xizmat: Auto_container DL3/Di4 da (PascalCase), auto_container DL5+ da (snake_case)\n• Kod 12 = 显示Adas (ADAS ko‘rsatish) — clusterdebug.SecondActivity.infoListInit() tomonidan chiqariladi\n• Kod 13 = 关闭Adas (ADAS yashirish) — xuddi shu\n• Bir xil variantlar: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-seriya: 12/13 kodlari olib tashlangan (bo‘sh slotlar) — bu yerda qo‘llab-quvvatlanmaydi</string>
+    <string name="diag_sniffer_doc_content">• Boshlang‘ich sarlavha: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: to‘liq logcat threadtime + events buferi (filtrsiz, hech narsa o‘tkazib yuborilmaydi)\n• Har 10 s da avto-suratlar: displays, SurfaceFlinger, BYD/xdja/qt/cluster jarayonlari\n• Qo‘lda olingan surat: dumpsys window + broadcasts tarixini qo‘shadi\n• Davomiylik: yozuv Activity aylanishi/yo‘q qilinishidan omon qoladi (setsid jarayoni)</string>
+    <string name="diag_sniffer_doc_workflow">1. Boshlash → yozish fonda ishlaydi (setsid, Activity dan omon qoladi)\n2. Bug / o‘rganilayotgan stsenariyni takrorlash\n3. Asosiy paytlarda qo‘lda surat (mas., qulashdan oldin/keyin)\n4. To‘xtatish\n5. Eksport → faylni ulashish uchun Telegram tanlash</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 </resources>

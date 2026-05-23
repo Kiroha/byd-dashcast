@@ -21,8 +21,15 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 28
         targetSdkVersion 29
-        versionCode 217
-        versionName "1.2.26"
+        // versionName displayed to end-users via the cluster updater UI is
+        // intentionally kept at "1.2.27" while versionCode keeps climbing —
+        // the car's update detection relies on versionCode (>= last installed,
+        // currently 220 on the user's device) so 222 will be picked up as an
+        // upgrade, while the public version string stays in the announced
+        // 1.2.x cadence. Internal cadence is tracked via versionCode + the
+        // CHANGELOG entries below (1.2.30-build221, 1.2.31-build222).
+        versionCode 222
+        versionName "1.2.27"
     }
 
     buildTypes {

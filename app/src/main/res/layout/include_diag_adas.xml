@@ -60,14 +60,14 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="ADAS — fenêtre cluster"
+                            android:text="@string/diag_adas_title"
                             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textStyle="bold"
                             android:textColor="?attr/colorOnSurface"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Affiche ou masque la fenêtre ADAS du cluster Qt (codes AutoContainer 12 / 13, génériques DiLink)"
+                            android:text="@string/diag_adas_description"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="@color/md_on_surface_variant"/>
                     </LinearLayout>
@@ -95,7 +95,7 @@
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
-                        android:text="Afficher ADAS (12)"
+                        android:text="@string/diag_adas_btn_show"
                         app:icon="@drawable/ic_stethoscope"
                         app:iconGravity="textStart"/>
                     <com.google.android.material.button.MaterialButton
@@ -105,7 +105,7 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="Masquer ADAS (13)"
+                        android:text="@string/diag_adas_btn_hide"
                         app:icon="@drawable/ic_stethoscope"
                         app:iconGravity="textStart"/>
                 </LinearLayout>
@@ -133,7 +133,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Dernier résultat"
+                    android:text="@string/diag_adas_last_result"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"/>
@@ -148,7 +148,7 @@
                     android:fontFamily="monospace"
                     android:textSize="13sp"
                     android:textColor="@color/md_on_surface_variant"
-                    android:text="Aucun test exécuté.\nAppuie sur Afficher ADAS ou Masquer ADAS pour envoyer la commande au cluster."/>
+                    android:text="@string/diag_adas_no_test"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -173,7 +173,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Détails techniques"
+                    android:text="@string/diag_adas_technical_details"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"/>
@@ -185,7 +185,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="@color/md_on_surface_variant"
                     android:lineSpacingExtra="3dp"
-                    android:text="• Commande shell : service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 &quot;&quot;\n• Service : Auto_container sur DL3/Di4 (PascalCase), auto_container sur DL5+ (snake_case)\n• Code 12 = 显示Adas (Show ADAS) — généré par clusterdebug.SecondActivity.infoListInit()\n• Code 13 = 关闭Adas (Hide ADAS) — idem\n• Variants identiques : DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-series : codes 12/13 stripés (slots vides) — non supporté ici"/>
+                    android:text="@string/diag_adas_doc_help"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
