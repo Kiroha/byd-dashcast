@@ -64,6 +64,43 @@ public class ClusterImeWatcherService extends AccessibilityService {
     private long mLastLaunchAt = 0L;
     private boolean mIsDiLink5  = false;
 
+    // v1.2.24 — Background worker for setTextOnCluster / performImeEnterOnCluster.
+    // Field log BYD_RE_Sniffer_20260523_164557.txt showed an Input-dispatch ANR
+    // (5000ms KeyEvent wait → process killed at 16:46:47) caused by running the
+    // expensive a11y tree walk (`findClusterFocusedEditable() → getWindows() →
+    // findFocus()`, all cross-display Binder calls) on the UI thread on every
+    // keystroke. We now hop to a dedicated HandlerThread and coalesce rapid
+    // text updates with a small debounce so a fast typist stays single-flight.
+    private android.os.HandlerThread mWorkerThread;
+    private android.os.Handler       mWorker;
+    /** Latest text submitted by {@link #setTextOnCluster(CharSequence)}. */
+    private volatile CharSequence    mPendingText;
+    /** Coalescing window for rapid keystrokes — last-writer-wins. */
+    private static final long        SET_TEXT_DEBOUNCE_MS = 80L;
+    private final Runnable mSetTextRunner = new Runnable() {
+        @Override public void run() {
+            CharSequence text = mPendingText;
+            if (text == null) return;
+            AccessibilityNodeInfo node = findClusterFocusedEditable();
+            if (node == null) {
+                AppLogger.w(TAG, "setTextOnCluster no-op: no focused editable on cluster");
+                return;
+            }
+            try {
+                Bundle args = new Bundle();
+                args.putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        text);
+                boolean ok = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+                if (!ok) AppLogger.w(TAG, "setTextOnCluster ACTION_SET_TEXT refused");
+            } catch (Throwable t) {
+                AppLogger.e(TAG, "setTextOnCluster failed", t);
+            } finally {
+                try { node.recycle(); } catch (Throwable ignored) { }
+            }
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -73,6 +110,17 @@ public class ClusterImeWatcherService extends AccessibilityService {
         } catch (Throwable t) {
             AppLogger.e(TAG, "onCreate Platform check failed", t);
             mIsDiLink5 = false;
+        }
+        // v1.2.24 — Spin up the background worker once; reused for every
+        // setText / performImeEnter dispatch.
+        try {
+            mWorkerThread = new android.os.HandlerThread(
+                    "cluster-ime-relay",
+                    android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            mWorkerThread.start();
+            mWorker = new android.os.Handler(mWorkerThread.getLooper());
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "onCreate worker setup failed", t);
         }
     }
 
@@ -105,6 +153,15 @@ public class ClusterImeWatcherService extends AccessibilityService {
         try {
             if (sInstance == this) sInstance = null;
         } catch (Throwable ignored) { }
+        // v1.2.24 — Tear down the worker so the HandlerThread does not leak
+        // past service unbind (system may rebind us repeatedly).
+        try {
+            if (mWorker != null) mWorker.removeCallbacksAndMessages(null);
+            if (mWorkerThread != null) mWorkerThread.quitSafely();
+        } catch (Throwable ignored) { }
+        mWorker = null;
+        mWorkerThread = null;
+        mPendingText = null;
         super.onDestroy();
     }
 
@@ -243,25 +300,19 @@ public class ClusterImeWatcherService extends AccessibilityService {
                     + "(enable ‘DashCast Cluster IME’ in Settings → Accessibility)");
             return false;
         }
-        AccessibilityNodeInfo node = self.findClusterFocusedEditable();
-        if (node == null) {
-            AppLogger.w(TAG, "setTextOnCluster no-op: no focused editable on cluster");
+        // v1.2.24 — Never run the a11y tree walk on the caller's thread.
+        // Coalesce rapid keystrokes (last-writer-wins) and dispatch to the
+        // background worker. We optimistically return true; failures are
+        // logged inside mSetTextRunner.
+        android.os.Handler worker = self.mWorker;
+        if (worker == null) {
+            AppLogger.w(TAG, "setTextOnCluster no-op: worker not ready");
             return false;
         }
-        try {
-            Bundle args = new Bundle();
-            args.putCharSequence(
-                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                    text == null ? "" : text);
-            boolean ok = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-            if (!ok) AppLogger.w(TAG, "setTextOnCluster ACTION_SET_TEXT refused");
-            return ok;
-        } catch (Throwable t) {
-            AppLogger.e(TAG, "setTextOnCluster failed", t);
-            return false;
-        } finally {
-            try { node.recycle(); } catch (Throwable ignored) { }
-        }
+        self.mPendingText = text == null ? "" : text;
+        worker.removeCallbacks(self.mSetTextRunner);
+        worker.postDelayed(self.mSetTextRunner, SET_TEXT_DEBOUNCE_MS);
+        return true;
     }
 
     /**
@@ -275,25 +326,43 @@ public class ClusterImeWatcherService extends AccessibilityService {
             AppLogger.w(TAG, "performImeEnterOnCluster no-op: a11y service not bound");
             return false;
         }
-        AccessibilityNodeInfo node = self.findClusterFocusedEditable();
-        if (node == null) {
-            AppLogger.w(TAG, "performImeEnterOnCluster no-op: no focused editable on cluster");
+        // v1.2.24 — Hop to the worker so we never block the UI thread on the
+        // a11y tree walk. Flush any pending setText first so Enter sees the
+        // final string, then run the IME-Enter action.
+        final android.os.Handler worker = self.mWorker;
+        if (worker == null) {
+            AppLogger.w(TAG, "performImeEnterOnCluster no-op: worker not ready");
             return false;
         }
-        try {
-            int actionId;
-            if (Build.VERSION.SDK_INT >= 30) {
-                actionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId();
-            } else {
-                actionId = AccessibilityNodeInfo.ACTION_CLICK;
+        // Cancel debounced setText and run it now, then perform Enter.
+        worker.removeCallbacks(self.mSetTextRunner);
+        worker.post(new Runnable() {
+            @Override public void run() {
+                // Flush any pending text first.
+                if (self.mPendingText != null) {
+                    try { self.mSetTextRunner.run(); } catch (Throwable ignored) { }
+                }
+                AccessibilityNodeInfo node = self.findClusterFocusedEditable();
+                if (node == null) {
+                    AppLogger.w(TAG, "performImeEnterOnCluster no-op: no focused editable on cluster");
+                    return;
+                }
+                try {
+                    int actionId;
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        actionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId();
+                    } else {
+                        actionId = AccessibilityNodeInfo.ACTION_CLICK;
+                    }
+                    node.performAction(actionId);
+                } catch (Throwable t) {
+                    AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
+                } finally {
+                    try { node.recycle(); } catch (Throwable ignored) { }
+                }
             }
-            return node.performAction(actionId);
-        } catch (Throwable t) {
-            AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
-            return false;
-        } finally {
-            try { node.recycle(); } catch (Throwable ignored) { }
-        }
+        });
+        return true;
     }
 
     /**
