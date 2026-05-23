@@ -575,8 +575,15 @@ public class MainActivity extends AppCompatActivity
                     // (avoids shrinking display 0 on DL2/disconnected states).
                     final int clusterId = svc.getDisplayId();
                     if (clusterId > 0) {
-                        ShellGateway.execShell(MainActivity.this,
-                                "wm overscan " + w + "," + h + "," + w + "," + h + " -d " + clusterId);
+                        // v1.2.13 — wm overscan was removed from Android 11+ (API 30+).
+                        // DL5 is API 32 → "Unknown command: overscan" on every call.
+                        // resizeActiveTask (typed verb below) is the real path on DL5.
+                        if (AdbLocalClient.isDiLink5Safe(MainActivity.this)) {
+                            AppLogger.d(TAG, "Apply resize DL5: skipping wm overscan (cmd removed in API 30+) — resizeTask handles it");
+                        } else {
+                            ShellGateway.execShell(MainActivity.this,
+                                    "wm overscan " + w + "," + h + "," + w + "," + h + " -d " + clusterId);
+                        }
                     } else {
                         AppLogger.w(TAG, "Apply resize: cluster display not connected — wm overscan skipped");
                     }
@@ -1714,9 +1721,14 @@ public class MainActivity extends AppCompatActivity
                     // DL5 fix: resolve cluster display id dynamically (was hardcoded -d 1).
                     final int clusterId = svc.getDisplayId();
                     if (clusterId > 0) {
-                        ShellGateway.execShell(MainActivity.this,
-                                "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH
-                                        + " -d " + clusterId);
+                        // v1.2.13 — wm overscan removed in API 30+ (DL5 = API 32). Skip on DL5.
+                        if (AdbLocalClient.isDiLink5Safe(MainActivity.this)) {
+                            AppLogger.d(TAG, "autoApplyInsets DL5: skipping wm overscan (cmd removed in API 30+) — resizeTask handles it");
+                        } else {
+                            ShellGateway.execShell(MainActivity.this,
+                                    "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH
+                                            + " -d " + clusterId);
+                        }
                     } else {
                         AppLogger.w(TAG, "autoApplyInsets: cluster display not connected — wm overscan skipped");
                     }

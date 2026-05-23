@@ -173,7 +173,15 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     
     public void resizeActiveTask(int taskId, String packageName) {
-        if (taskId <= 0) return;
+        if (taskId <= 0) {
+            // v1.2.13 — was silent return; the real cause is almost always that
+            // ActivityManager.getRunningTasks() returned only the caller's own task
+            // (API 21+ restriction). The dumpsys-based fallback in findRunningTaskId
+            // should fix it; log here so a residual failure is visible in field logs.
+            AppLogger.w(TAG, "resizeActiveTask: taskId<=0 for pkg=" + packageName
+                    + " — cannot resize (lookup via AM + daemon dumpsys both failed)");
+            return;
+        }
         // HARD GUARD — never resize anything if no cluster display is connected.
         // resizeTask() applies bounds in the task's current display coordinates; if
         // the task happens to be on display 0 (head unit) because the cluster move
@@ -255,22 +263,97 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * Returns -1 if no running task is found.
      */
     public int findRunningTaskId(String packageName) {
+        // Path 1 — ActivityManager.getRunningTasks: on API 21+ returns ONLY the
+        // caller's own task for non-system apps. Kept for the rare device where
+        // DashCast has GET_TASKS (legacy BYD ROMs) and as a fast-path probe.
         try {
             android.app.ActivityManager am =
                     (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
             java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks =
                     am.getRunningTasks(50);
-            if (tasks == null) return -1;
-            for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
-                if (t.topActivity != null
-                        && packageName.equals(t.topActivity.getPackageName())) {
-                    AppLogger.d(TAG, "findRunningTaskId " + packageName + " → taskId=" + t.id);
-                    return t.id;
+            if (tasks != null) {
+                for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
+                    if (t.topActivity != null
+                            && packageName.equals(t.topActivity.getPackageName())) {
+                        AppLogger.d(TAG, "findRunningTaskId " + packageName
+                                + " → taskId=" + t.id + " (via AM)");
+                        return t.id;
+                    }
                 }
             }
         } catch (Exception e) {
-            AppLogger.w(TAG, "findRunningTaskId: " + e.getMessage());
+            AppLogger.w(TAG, "findRunningTaskId AM path: " + e.getMessage());
         }
+
+        // Path 2 (v1.2.13) — fallback via proxy daemon (uid 2000, shell privileges).
+        // dumpsys activity recents lists all TaskRecords with their numeric id and
+        // their affinity package, regardless of caller package. Required on DL5
+        // (and any modern Android) because path 1 is API-21-restricted.
+        try {
+            if (com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
+                String out = com.byd.dashcast.beta.BetaProxyClient
+                        .runShell("dumpsys activity recents");
+                if (out != null && !out.isEmpty()) {
+                    int id = parseTaskIdFromDumpsysRecents(out, packageName);
+                    if (id > 0) {
+                        AppLogger.d(TAG, "findRunningTaskId " + packageName
+                                + " → taskId=" + id + " (via daemon dumpsys recents)");
+                        return id;
+                    }
+                    AppLogger.w(TAG, "findRunningTaskId " + packageName
+                            + " — not found in dumpsys recents (out.length=" + out.length() + ")");
+                }
+            } else {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — daemon not connected; cannot fallback to dumpsys");
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "findRunningTaskId daemon dumpsys fallback: " + t.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * v1.2.13 — Parse a numeric taskId out of a {@code dumpsys activity recents} dump
+     * for the given package. Each Task appears as
+     * <pre>* Recent #N: Task{xxxxxxx #88 type=standard A=ru.yandex.yandexmaps U=0 ...</pre>
+     * The affinity {@code A=...} is almost always equal to the package name; if a Task
+     * has a different affinity, we fall back to matching {@code realActivity=&lt;pkg&gt;/...}
+     * or {@code cmp=&lt;pkg&gt;/...} on a line within the same Task block.
+     *
+     * Returns the first match (most-recent task), or -1 if none.
+     */
+    static int parseTaskIdFromDumpsysRecents(String dump, String packageName) {
+        if (dump == null || packageName == null) return -1;
+        // Fast path — "Task{... #ID ... A=<pkg>" on the same line.
+        try {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "Task\\{[^}]*#(\\d+)[^}]*\\bA=" + java.util.regex.Pattern.quote(packageName) + "\\b");
+            java.util.regex.Matcher m = p.matcher(dump);
+            if (m.find()) {
+                try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException ignored) {}
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback — scan block by block, accept realActivity= or cmp= match.
+        try {
+            // Split on the "* Recent #" boundary so each block contains exactly one Task header.
+            String[] blocks = dump.split("(?m)^\\s*\\* Recent #\\d+:\\s*");
+            java.util.regex.Pattern idP =
+                    java.util.regex.Pattern.compile("Task\\{[^}]*#(\\d+)");
+            String marker1 = "realActivity=" + packageName + "/";
+            String marker2 = "cmp=" + packageName + "/";
+            String marker3 = " A=" + packageName + " ";
+            for (String block : blocks) {
+                if (block == null || block.isEmpty()) continue;
+                if (block.contains(marker1) || block.contains(marker2) || block.contains(marker3)) {
+                    java.util.regex.Matcher mm = idP.matcher(block);
+                    if (mm.find()) {
+                        try { return Integer.parseInt(mm.group(1)); } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
         return -1;
     }
 
