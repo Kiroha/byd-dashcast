@@ -856,6 +856,7 @@ public class DiagActivity extends AppCompatActivity {
     private MaterialButton btnSnifferStop;
     private MaterialButton btnSnifferSnapshot;
     private MaterialButton btnSnifferExport;
+    private MaterialButton btnSnifferCleanup;
     private java.io.File   mSnifferFile;
 
     private void bindSnifferPanel() {
@@ -865,11 +866,13 @@ public class DiagActivity extends AppCompatActivity {
         btnSnifferStop      = panelSniffer.findViewById(R.id.btn_sniffer_stop);
         btnSnifferSnapshot  = panelSniffer.findViewById(R.id.btn_sniffer_snapshot);
         btnSnifferExport    = panelSniffer.findViewById(R.id.btn_sniffer_export);
+        btnSnifferCleanup   = panelSniffer.findViewById(R.id.btn_sniffer_cleanup);
 
         btnSnifferStart.setOnClickListener(v -> startSniffer());
         btnSnifferStop.setOnClickListener(v -> stopSniffer());
         btnSnifferSnapshot.setOnClickListener(v -> snapshotSniffer());
         btnSnifferExport.setOnClickListener(v -> exportSniffer());
+        btnSnifferCleanup.setOnClickListener(v -> cleanupSnifferFiles());
     }
 
     // ─── ADAS panel ─────────────────────────────────────────────────────────
@@ -1136,6 +1139,73 @@ public class DiagActivity extends AppCompatActivity {
             AppLogger.e("RESniffer", "Export erreur", e);
             Toast.makeText(this, "Export erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    /**
+     * Restored from pre-redesign DiagActivity (pre v0.9.88 wipe). Deletes all
+     * DashCast-generated files in the app's external/internal storage
+     * (byd_log_*.log, byd_report_*.txt, BYD_RE_Sniffer_*.txt, cluster_live.png)
+     * via {@link AppLogger#cleanupFiles(Context)}. Refuses to run while a
+     * capture is active to avoid deleting the file the sniffer is writing to.
+     * Field report (23/05/2026): app footprint can grow > 500 MB on long-lived
+     * installs (multiple sniffer captures accumulating).
+     */
+    private void cleanupSnifferFiles() {
+        // Active capture would be writing to a file we're about to delete.
+        // Snapshot button is enabled iff capture is active → cheap proxy probe.
+        if (btnSnifferSnapshot != null && btnSnifferSnapshot.isEnabled()) {
+            Toast.makeText(this,
+                    "Arrête le sniffer avant de nettoyer (la capture écrit dans un fichier).",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Nettoyer les fichiers DashCast")
+                .setMessage("Supprime tous les logs et captures (byd_log_*, byd_report_*, "
+                        + "BYD_RE_Sniffer_*, cluster_live.png) du stockage de l'application.\n\n"
+                        + "Les clés ADB et préférences sont préservées.")
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Nettoyer", (d, w) -> doCleanupSnifferFiles())
+                .show();
+    }
+
+    private void doCleanupSnifferFiles() {
+        btnSnifferCleanup.setEnabled(false);
+        new Thread(() -> {
+            int deleted = AppLogger.cleanupFiles(DiagActivity.this);
+            long usedBytes = 0;
+            java.io.File extDir = getExternalFilesDir(null);
+            if (extDir != null && extDir.exists()) {
+                java.io.File[] files = extDir.listFiles();
+                if (files != null) for (java.io.File f : files) usedBytes += f.length();
+            }
+            java.io.File extCache = getExternalCacheDir();
+            if (extCache != null && extCache.exists()) {
+                java.io.File[] files = extCache.listFiles();
+                if (files != null) for (java.io.File f : files) usedBytes += f.length();
+            }
+            final int finalDeleted = deleted;
+            final String sizeStr = usedBytes < 1024
+                    ? usedBytes + " B"
+                    : usedBytes < 1024L * 1024L
+                            ? (usedBytes / 1024L) + " KB"
+                            : String.format(java.util.Locale.US, "%.1f MB", usedBytes / 1048576.0);
+            // Cleared file is no longer exportable.
+            mSnifferFile = null;
+            getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
+                    .remove(PREF_SNIFFER_PATH).apply();
+            safeRunOnUiThread(() -> {
+                btnSnifferCleanup.setEnabled(true);
+                setSnifferUiActive(false,
+                        "Nettoyage : " + finalDeleted + " fichier(s) supprimé(s) · "
+                                + "restant : " + sizeStr);
+                Toast.makeText(DiagActivity.this,
+                        finalDeleted + " fichier(s) supprimé(s) — restant : " + sizeStr,
+                        Toast.LENGTH_LONG).show();
+                AppLogger.i("RESniffer",
+                        "cleanupSnifferFiles: " + finalDeleted + " deleted, remaining=" + sizeStr);
+            });
+        }, "sniffer-cleanup-thread").start();
     }
 
     private void safeRunOnUiThread(Runnable r) {
