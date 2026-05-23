@@ -42,8 +42,16 @@ android {
         //     maintained in addEntry() / clear() / overflow eviction. LogActivity
         //     refreshLog() no longer walks 3000 entries every 500 ms just to
         //     compute the chip totals.
-        versionCode 227
-        versionName "1.2.31"
+        // LOT 4 (v1.2.32 / build 228) — hygiene + Waze retry:
+        //   - patch_*.py (7 scripts) moved to scripts_archive/ (root cleanup).
+        //   - ClusterService.sIsRunning → volatile (auto-resize-thread visibility).
+        //   - AdbLocalClient.captureClusterDisplay + BitmapCallback removed
+        //     (dead code, 0 caller); Bitmap/BitmapFactory imports pruned.
+        //   - MainActivity.autoApplyInsetsIfNeeded(): retry findRunningTaskId up
+        //     to 3× with 500 ms backoff when taskId<=0 (Waze post-launch race
+        //     observed in BYD_RE_Sniffer_20260523_204155.txt at 20:42:26.696).
+        versionCode 228
+        versionName "1.2.32"
     }
 
     buildTypes {

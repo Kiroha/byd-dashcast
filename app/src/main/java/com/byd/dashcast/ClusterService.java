@@ -40,7 +40,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private static final String TAG = "ClusterService";
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int NOTIF_ID = 1;
-    public static boolean sIsRunning = false;
+    // LOT 4 — volatile: written on main thread (onCreate/onDestroy) and read from
+    // worker threads (auto-resize-thread in MainActivity.autoApplyInsetsIfNeeded,
+    // BetaProxyClient connect path). Without volatile, the worker could observe a
+    // stale `false` after the service started and bail out incorrectly.
+    public static volatile boolean sIsRunning = false;
     /** v1.2.8 — exposed so satellite activities (KeyboardBridgeActivity) can reach the
      *  InputForwarder without binding the service themselves. */
     private static volatile ClusterService sInstance = null;

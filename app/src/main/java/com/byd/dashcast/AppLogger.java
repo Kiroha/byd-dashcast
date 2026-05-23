@@ -327,7 +327,7 @@ public class AppLogger {
      *   - byd_log_*.log         (AppLogger.saveToFile)
      *   - byd_report_*.txt      (SysInfoActivity)
      *   - BYD_RE_Sniffer_*.txt  (DiagActivity)
-     *   - cluster_live.png      (AdbLocalClient.captureClusterDisplay)
+     *   - cluster_live.png      (legacy — produced by captureClusterDisplay, removed in LOT 4 / v1.2.32)
      * ADB keys (adb.key / adb.pub) in getFilesDir() are NOT deleted.
      * Also clears the in-memory log buffer.
      *
