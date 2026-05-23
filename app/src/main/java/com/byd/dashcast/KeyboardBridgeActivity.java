@@ -79,6 +79,15 @@ public class KeyboardBridgeActivity extends Activity {
         // window is transparent and pinned bottom-end so it doesn't obscure
         // the cluster mirror. The IME chrome itself appears as usual at the
         // bottom of the head unit.
+        //
+        // v1.2.15 — Field log BYD_RE_Sniffer_20260523_150803.txt showed the
+        // EditText laid out as 330×0 px (height=0) and IMM rejecting it again
+        // with "is not served". Root cause: SOFT_INPUT_ADJUST_RESIZE shrinks
+        // the window to fit above the IME, but our window IS at the bottom
+        // → no vertical room → height collapses to 0. Switching to
+        // SOFT_INPUT_ADJUST_NOTHING keeps the 220×48 dp footprint intact;
+        // the IME overlaps it visually but that's fine (it's transparent
+        // chrome, not user-visible content).
         Window w = getWindow();
         int wPx = dp(220);
         int hPx = dp(48);
@@ -88,7 +97,7 @@ public class KeyboardBridgeActivity extends Activity {
             w.setBackgroundDrawableResource(android.R.color.transparent);
             w.setDimAmount(0f);
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
-                    | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+                    | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         }
 
         mImm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
