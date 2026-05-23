@@ -1767,6 +1767,17 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    // 1.2.31 — pre-allocated touch-forwarding scratch arrays. The mirror
+    // touch path runs at 60-120 Hz, so a fresh int[] + 2 float[] per event was
+    // ~180 array allocations/sec just for transcoding view coords → cluster
+    // coords. Cap at 16 pointers (= Android InputDispatcher limit and matches
+    // ClusterInputForwarder.MAX_POINTERS). The forwarder copies values into its
+    // own MotionEvent so we can safely reuse these arrays on the next event.
+    private static final int MAX_FWD_POINTERS = 16;
+    private final int[]   mFwdPointerIds = new int[MAX_FWD_POINTERS];
+    private final float[] mFwdClusterXs  = new float[MAX_FWD_POINTERS];
+    private final float[] mFwdClusterYs  = new float[MAX_FWD_POINTERS];
+
     /**
      * Maps touch coordinates from the mirror TextureView to the cluster display.
      * The SurfaceControl projection preserves the ratio (letterboxing), so we recalculate
@@ -1793,18 +1804,15 @@ public class MainActivity extends AppCompatActivity
         int   clusterH = mirror.getClusterHeight();
         if (clusterW <= 0 || clusterH <= 0) return;
 
-        int pointerCount = event.getPointerCount();
+        int pointerCount = Math.min(event.getPointerCount(), MAX_FWD_POINTERS);
         if (pointerCount <= 0) return;
 
-        int[] pointerIds = new int[pointerCount];
-        float[] clusterXs = new float[pointerCount];
-        float[] clusterYs = new float[pointerCount];
         for (int i = 0; i < pointerCount; i++) {
-            pointerIds[i] = event.getPointerId(i);
+            mFwdPointerIds[i] = event.getPointerId(i);
             float cx = (event.getX(i) - offsetX) / scale;
             float cy = (event.getY(i) - offsetY) / scale;
-            clusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
-            clusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
+            mFwdClusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
+            mFwdClusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
         }
 
         if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
@@ -1817,15 +1825,15 @@ public class MainActivity extends AppCompatActivity
                         + " view(" + (int)event.getX(ai) + "," + (int)event.getY(ai) + ")"
                         + " off=(" + (int)offsetX + "," + (int)offsetY + ")"
                         + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
-                        + " cluster=(" + (int)clusterXs[ai] + "," + (int)clusterYs[ai]
+                        + " cluster=(" + (int)mFwdClusterXs[ai] + "," + (int)mFwdClusterYs[ai]
                         + ")/" + clusterW + "×" + clusterH);
             }
         }
 
         forwarder.forwardTouchFinalMulti(
-                pointerIds,
-                clusterXs,
-                clusterYs,
+                mFwdPointerIds,
+                mFwdClusterXs,
+                mFwdClusterYs,
                 event.getActionMasked(),
                 event.getActionIndex(),
                 pointerCount

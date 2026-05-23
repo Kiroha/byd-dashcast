@@ -168,6 +168,17 @@ public final class Phase4Verbs {
     private static volatile IBinder sAutoContainerBinder;
     private static volatile String  sAutoContainerDescriptor;
 
+    // 1.2.31 — hooked once on first cache; clears the cache when the
+    // AutoContainer host process dies so the next call re-resolves.
+    private static final IBinder.DeathRecipient sAutoContainerDeath = new IBinder.DeathRecipient() {
+        @Override public void binderDied() {
+            synchronized (Phase4Verbs.class) {
+                sAutoContainerBinder = null;
+                sAutoContainerDescriptor = null;
+            }
+        }
+    };
+
     /**
      * Resolve (and cache) the live {@link IBinder} for the {@code AutoContainer}
      * service plus the descriptor it advertises via {@code INTERFACE_TRANSACTION}.
@@ -176,15 +187,16 @@ public final class Phase4Verbs {
      * {@code "android.os.IAutoContainer"} so future OEM rebrands of the service
      * (descriptor renamed but transaction code unchanged) still go through.
      *
-     * <p>Cache invalidation: if {@link IBinder#pingBinder} returns {@code false}
-     * (service process restarted), the cache is cleared and re-resolved.
+     * <p>Cache invalidation: a {@link IBinder.DeathRecipient} clears the cache
+     * when the host process dies. Subsequent calls observe a stale reference
+     * via {@link IBinder#isBinderAlive()} (local check, 0 IPC) and re-resolve.
      */
     private static IBinder autoContainerBinder() throws Throwable {
         IBinder b = sAutoContainerBinder;
-        if (b != null && b.pingBinder()) return b;
+        if (b != null && b.isBinderAlive()) return b;
         synchronized (Phase4Verbs.class) {
             b = sAutoContainerBinder;
-            if (b != null && b.pingBinder()) return b;
+            if (b != null && b.isBinderAlive()) return b;
             Class<?> sm = Class.forName("android.os.ServiceManager");
             b = (IBinder) sm.getMethod("getService", String.class).invoke(null, AUTOCONTAINER_SVC);
             if (b == null) throw new IllegalStateException("no '" + AUTOCONTAINER_SVC + "' service");
@@ -201,6 +213,11 @@ public final class Phase4Verbs {
             if (descr == null || descr.isEmpty()) {
                 throw new IllegalStateException(AUTOCONTAINER_SVC + " advertised empty descriptor");
             }
+            // 1.2.31 — best-effort death hook so isBinderAlive() stays accurate
+            // on the fast path; if linkToDeath fails (binder already dead in the
+            // tiny race window) we just don't cache.
+            try { b.linkToDeath(sAutoContainerDeath, 0); }
+            catch (Throwable t) { return b; /* don't cache a dead binder */ }
             sAutoContainerDescriptor = descr;
             sAutoContainerBinder = b;
             return b;
