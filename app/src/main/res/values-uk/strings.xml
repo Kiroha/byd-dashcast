@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">Режим DiLink 5 (експериментальний)</string>
     <string name="settings_dilink5_mode_support">Адаптує DashCast до протоколу DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Потрібен перезапуск.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Авто-клавіатура кластера (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Показує мостову клавіатуру при дотику до текстового поля на кластері.</string>
+    <string name="a11y_ime_watcher_description">Стежить за подіями фокусу на екрані кластера, щоб автоматично відкривати міст клавіатури DashCast. Не зчитує й не зберігає вміст полів.</string>
+    <string name="ime_banner_title">Авто-клавіатура на кластері</string>
+    <string name="ime_banner_body">На цьому автомобілі (DiLink 5) системна клавіатура не може з\'явитися на кластері. Увімкніть службу спеціальних можливостей, щоб DashCast автоматично відкривав міст клавіатури при дотику до текстового поля. Інакше використовуйте кнопку ⌨ у дзеркалі.</string>
+    <string name="ime_banner_btn_enable">Увімкнути</string>
+    <string name="ime_banner_btn_later">Пізніше</string>
+    <string name="ime_banner_btn_dismiss">Більше не показувати</string>
+    <string name="ime_banner_toast_enabled">Авто-клавіатура активна ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Не вдалося відкрити Налаштування — увімкніть вручну службу спеціальних можливостей « Авто-клавіатура кластера ».</string>
 </resources>

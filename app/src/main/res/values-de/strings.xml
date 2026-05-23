@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">DiLink-5-Modus (experimentell)</string>
     <string name="settings_dilink5_mode_support">Passt DashCast an das Protokoll DiLink 5.0 / Android 12 an.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Neustart erforderlich.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Cluster-Auto-Tastatur (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Zeigt die übertragene Tastatur, wenn Sie ein Textfeld auf dem Cluster antippen.</string>
+    <string name="a11y_ime_watcher_description">Beobachtet Fokus-Ereignisse auf dem Cluster-Bildschirm, um die Tastatur-Brücke von DashCast automatisch zu öffnen. Liest oder speichert keine Feldinhalte.</string>
+    <string name="ime_banner_title">Auto-Tastatur auf dem Cluster</string>
+    <string name="ime_banner_body">In diesem Fahrzeug (DiLink 5) kann die System-Tastatur nicht auf dem Cluster erscheinen. Aktivieren Sie den Bedienungshilfen-Dienst, damit DashCast die Tastatur-Brücke automatisch öffnet, sobald Sie ein Textfeld antippen. Andernfalls verwenden Sie die ⌨-Taste im Spiegel.</string>
+    <string name="ime_banner_btn_enable">Aktivieren</string>
+    <string name="ime_banner_btn_later">Später</string>
+    <string name="ime_banner_btn_dismiss">Nicht mehr anzeigen</string>
+    <string name="ime_banner_toast_enabled">Auto-Tastatur aktiv ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Einstellungen können nicht geöffnet werden — bitte aktivieren Sie den Bedienungshilfen-Dienst « Cluster-Auto-Tastatur » manuell.</string>
 </resources>

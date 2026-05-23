@@ -3221,14 +3221,7 @@ public class MainActivity extends AppCompatActivity
             if (btnEnable != null) {
                 btnEnable.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        try {
-                            android.content.Intent i = new android.content.Intent(
-                                    android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(i);
-                        } catch (Throwable t) {
-                            AppLogger.e("MainActivity", "open a11y settings failed", t);
-                        }
+                        enableImeA11yServiceOneClick(card, btnEnable);
                     }
                 });
             }
@@ -3292,6 +3285,125 @@ public class MainActivity extends AppCompatActivity
             shouldShow = false;
         }
         card.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * v1.2.10 — One-click activation of the IME accessibility service via the
+     * proxy daemon's shell (uid=2000 owns the same uid namespace and the `settings`
+     * binary writes to {@code Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES}
+     * directly — no user trip to Settings).
+     *
+     * Falls back to opening the system Accessibility Settings screen if the
+     * shell route fails (no daemon, ROM blocks `settings put`).
+     */
+    private void enableImeA11yServiceOneClick(final View card, final View btnEnable) {
+        if (btnEnable != null) btnEnable.setEnabled(false);
+        try {
+            final String comp = "com.byd.dashcast/com.byd.dashcast.ime.ClusterImeWatcherService";
+            // Single-line POSIX sh: read current list, append if missing, write back,
+            // then flip the master accessibility_enabled flag to 1. Final `settings get`
+            // is used as a verification echo (we still re-read Settings.Secure in
+            // Android-land below before trusting it).
+            final String cmd =
+                "COMP='" + comp + "'; "
+              + "CURRENT=$(settings get secure enabled_accessibility_services 2>/dev/null); "
+              + "if [ \"$CURRENT\" = \"null\" ] || [ -z \"$CURRENT\" ]; then "
+              +   "NEW=\"$COMP\"; "
+              + "elif echo \"$CURRENT\" | grep -q \"$COMP\"; then "
+              +   "NEW=\"$CURRENT\"; "
+              + "else "
+              +   "NEW=\"$CURRENT:$COMP\"; "
+              + "fi; "
+              + "settings put secure enabled_accessibility_services \"$NEW\"; "
+              + "settings put secure accessibility_enabled 1; "
+              + "echo OUT=$(settings get secure enabled_accessibility_services)";
+
+            ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(final String report) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            // Trust the OS, not the shell echo: re-read from
+                            // Settings.Secure via the same helper used by the banner.
+                            boolean ok = com.byd.dashcast.ime.ClusterImeWatcherService
+                                    .isEnabled(MainActivity.this);
+                            if (ok) {
+                                AppLogger.i("MainActivity",
+                                        "IME a11y enabled via shell (one-click) ✓");
+                                try {
+                                    android.widget.Toast.makeText(MainActivity.this,
+                                            R.string.ime_banner_toast_enabled,
+                                            android.widget.Toast.LENGTH_SHORT).show();
+                                } catch (Throwable ignored) { }
+                                if (card != null) card.setVisibility(View.GONE);
+                                if (btnEnable != null) btnEnable.setEnabled(true);
+                            } else {
+                                AppLogger.w("MainActivity",
+                                        "shell succeeded but a11y still not enabled, falling back to Settings UI. report=" + report);
+                                openA11ySettingsFallback();
+                                if (btnEnable != null) btnEnable.setEnabled(true);
+                            }
+                        }
+                    });
+                }
+                @Override public void onError(final String error) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            AppLogger.w("MainActivity",
+                                    "one-click a11y enable shell failed: " + error
+                                  + " — falling back to Settings UI");
+                            openA11ySettingsFallback();
+                            if (btnEnable != null) btnEnable.setEnabled(true);
+                        }
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "enableImeA11yServiceOneClick threw", t);
+            openA11ySettingsFallback();
+            if (btnEnable != null) btnEnable.setEnabled(true);
+        }
+    }
+
+    /** Best-effort fallback: open the system Accessibility Settings screen. */
+    private void openA11ySettingsFallback() {
+        // 1) Standard AOSP intent.
+        try {
+            android.content.Intent i = new android.content.Intent(
+                    android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            return;
+        } catch (Throwable t) {
+            AppLogger.w("MainActivity", "ACTION_ACCESSIBILITY_SETTINGS unavailable: "
+                    + t.getMessage());
+        }
+        // 2) Direct component (BYD ROM may not advertise the standard action).
+        try {
+            android.content.Intent i = new android.content.Intent();
+            i.setComponent(new android.content.ComponentName(
+                    "com.android.settings",
+                    "com.android.settings.Settings$AccessibilitySettingsActivity"));
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            return;
+        } catch (Throwable t) {
+            AppLogger.w("MainActivity", "direct AccessibilitySettingsActivity unavailable: "
+                    + t.getMessage());
+        }
+        // 3) Generic Settings as a last resort.
+        try {
+            android.content.Intent i = new android.content.Intent(
+                    android.provider.Settings.ACTION_SETTINGS);
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "no Settings activity reachable on this ROM", t);
+            try {
+                android.widget.Toast.makeText(this,
+                        R.string.ime_banner_toast_cannot_open_settings,
+                        android.widget.Toast.LENGTH_LONG).show();
+            } catch (Throwable ignored) { }
+        }
     }
 
 }

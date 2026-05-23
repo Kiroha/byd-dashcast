@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">Modalità DiLink 5 (sperimentale)</string>
     <string name="settings_dilink5_mode_support">Adatta DashCast al protocollo DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Riavvio necessario.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Tastiera auto del cluster (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Mostra la tastiera condivisa quando tocchi un campo di testo sul cluster.</string>
+    <string name="a11y_ime_watcher_description">Osserva gli eventi di focus sullo schermo del cluster per aprire automaticamente il ponte tastiera di DashCast. Non legge né memorizza il contenuto dei campi.</string>
+    <string name="ime_banner_title">Tastiera automatica sul cluster</string>
+    <string name="ime_banner_body">Su questo veicolo (DiLink 5) la tastiera di sistema non può apparire sul cluster. Attiva il servizio di accessibilità in modo che DashCast apra automaticamente il ponte tastiera quando tocchi un campo di testo. Altrimenti usa il pulsante ⌨ del mirror.</string>
+    <string name="ime_banner_btn_enable">Attiva</string>
+    <string name="ime_banner_btn_later">Più tardi</string>
+    <string name="ime_banner_btn_dismiss">Non mostrare più</string>
+    <string name="ime_banner_toast_enabled">Tastiera automatica attiva ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Impossibile aprire Impostazioni — attiva manualmente il servizio di accessibilità « Tastiera auto del cluster ».</string>
 </resources>
