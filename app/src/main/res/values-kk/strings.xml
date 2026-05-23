@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">DiLink 5 режимі (эксперименттік)</string>
     <string name="settings_dilink5_mode_support">DashCast-ты DiLink 5.0 / Android 12 хаттамасына бейімдейді.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Қайта іске қосу қажет.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Кластердің авто-пернетақтасы (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Кластердегі мәтін өрісін түрткенде көпір пернетақтасын көрсетеді.</string>
+    <string name="a11y_ime_watcher_description">DashCast\'тің пернетақта көпірін автоматты ашу үшін кластер экранындағы фокус оқиғаларын бақылайды. Өріс мазмұнын оқымайды немесе сақтамайды.</string>
+    <string name="ime_banner_title">Кластерде авто-пернетақта</string>
+    <string name="ime_banner_body">Бұл көлікте (DiLink 5) жүйелік пернетақта кластерде көріне алмайды. Мәтін өрісін түрткенде DashCast пернетақта көпірін автоматты ашуы үшін арнайы мүмкіндіктер қызметін қосыңыз. Әйтпесе айнадағы ⌨ түймесін пайдаланыңыз.</string>
+    <string name="ime_banner_btn_enable">Қосу</string>
+    <string name="ime_banner_btn_later">Кейінірек</string>
+    <string name="ime_banner_btn_dismiss">Қайта көрсетпеу</string>
+    <string name="ime_banner_toast_enabled">Авто-пернетақта белсенді ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Параметрлерді ашу мүмкін емес — « Кластер авто-пернетақтасы » арнайы мүмкіндіктер қызметін қолмен қосыңыз.</string>
 </resources>

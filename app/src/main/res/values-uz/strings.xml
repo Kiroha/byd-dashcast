@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">DiLink 5 rejimi (eksperimental)</string>
     <string name="settings_dilink5_mode_support">DashCast\'ni DiLink 5.0 / Android 12 protokoliga moslashtiradi.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Qayta ishga tushirish kerak.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Klaster avto-klaviaturasi (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Klasterdagi matn maydoniga tegsangiz, ko\'prikli klaviaturani ko\'rsatadi.</string>
+    <string name="a11y_ime_watcher_description">DashCast klaviatura ko\'prigini avtomatik ochish uchun klaster ekranidagi fokus voqealarini kuzatadi. Maydon mazmunini o\'qimaydi yoki saqlamaydi.</string>
+    <string name="ime_banner_title">Klasterda avto-klaviatura</string>
+    <string name="ime_banner_body">Bu avtomobilda (DiLink 5) tizim klaviaturasi klasterda ko\'rinishi mumkin emas. Matn maydoniga teganingizda DashCast klaviatura ko\'prigini avtomatik ochishi uchun maxsus imkoniyatlar xizmatini yoqing. Aks holda oynadagi ⌨ tugmasidan foydalaning.</string>
+    <string name="ime_banner_btn_enable">Yoqish</string>
+    <string name="ime_banner_btn_later">Keyinroq</string>
+    <string name="ime_banner_btn_dismiss">Boshqa ko\'rsatilmasin</string>
+    <string name="ime_banner_toast_enabled">Avto-klaviatura faol ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Sozlamalarni ochib bo\'lmadi — « Klaster avto-klaviaturasi » maxsus imkoniyatlar xizmatini qo\'lda yoqing.</string>
 </resources>

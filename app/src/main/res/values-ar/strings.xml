@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">وضع DiLink 5 (تجريبي)</string>
     <string name="settings_dilink5_mode_support">يكيّف DashCast مع بروتوكول DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. يلزم إعادة التشغيل.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">لوحة المفاتيح التلقائية للعنقود (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">تعرض لوحة المفاتيح الجسرية عند لمس حقل نص على العنقود.</string>
+    <string name="a11y_ime_watcher_description">تراقب أحداث التركيز على شاشة العنقود لفتح جسر لوحة المفاتيح في DashCast تلقائيًا. لا تقرأ ولا تخزن محتوى الحقول.</string>
+    <string name="ime_banner_title">لوحة مفاتيح تلقائية على العنقود</string>
+    <string name="ime_banner_body">في هذه السيارة (DiLink 5) لا يمكن أن تظهر لوحة المفاتيح النظامية على العنقود. فعّل خدمة إمكانية الوصول حتى يفتح DashCast جسر لوحة المفاتيح تلقائيًا عند لمس حقل نص. وإلا استخدم زر ⌨ في المرآة.</string>
+    <string name="ime_banner_btn_enable">تفعيل</string>
+    <string name="ime_banner_btn_later">لاحقًا</string>
+    <string name="ime_banner_btn_dismiss">عدم الإظهار مرة أخرى</string>
+    <string name="ime_banner_toast_enabled">لوحة المفاتيح التلقائية نشطة ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">تعذر فتح الإعدادات — فعّل يدويًا خدمة إمكانية الوصول « لوحة المفاتيح التلقائية للعنقود ».</string>
 </resources>

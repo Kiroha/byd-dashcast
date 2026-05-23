@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">DiLink 5 modu (deneysel)</string>
     <string name="settings_dilink5_mode_support">DashCast\'i DiLink 5.0 / Android 12 protokolüne uyarlar.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Yeniden başlatma gerekli.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Küme otomatik klavyesi (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Küme ekranındaki bir metin alanına dokunduğunuzda köprü klavyesini gösterir.</string>
+    <string name="a11y_ime_watcher_description">DashCast\'in klavye köprüsünü otomatik açmak için küme ekranındaki odak olaylarını izler. Alan içeriğini okumaz veya saklamaz.</string>
+    <string name="ime_banner_title">Kümede otomatik klavye</string>
+    <string name="ime_banner_body">Bu araçta (DiLink 5) sistem klavyesi kümede görüntülenemez. Bir metin alanına dokunduğunuzda DashCast\'in klavye köprüsünü otomatik açması için erişilebilirlik hizmetini etkinleştirin. Aksi takdirde aynadaki ⌨ düğmesini kullanın.</string>
+    <string name="ime_banner_btn_enable">Etkinleştir</string>
+    <string name="ime_banner_btn_later">Sonra</string>
+    <string name="ime_banner_btn_dismiss">Bir daha gösterme</string>
+    <string name="ime_banner_toast_enabled">Otomatik klavye aktif ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Ayarlar açılamadı — « Küme otomatik klavyesi » erişilebilirlik hizmetini elle etkinleştirin.</string>
 </resources>

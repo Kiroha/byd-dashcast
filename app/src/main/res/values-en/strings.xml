@@ -256,4 +256,15 @@
     <string name="settings_dilink5_mode">DiLink 5 mode (experimental)</string>
     <string name="settings_dilink5_mode_support">Adapt DashCast to the DiLink 5.0 / Android 12 protocol.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Restart required.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Cluster auto-keyboard (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Shows the bridged keyboard when you tap a text field on the cluster.</string>
+    <string name="a11y_ime_watcher_description">Watches focus events on the cluster screen to auto-launch DashCast\'s keyboard bridge. Does not read or store field contents.</string>
+    <string name="ime_banner_title">Auto-keyboard on the cluster</string>
+    <string name="ime_banner_body">On this vehicle (DiLink 5) the system keyboard cannot appear on the cluster. Enable the accessibility service so DashCast opens the keyboard bridge automatically when you tap a text field. Otherwise use the ⌨ button in the mirror.</string>
+    <string name="ime_banner_btn_enable">Enable</string>
+    <string name="ime_banner_btn_later">Later</string>
+    <string name="ime_banner_btn_dismiss">Don\'t show again</string>
+    <string name="ime_banner_toast_enabled">Auto-keyboard active ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Cannot open Settings — please enable the « Cluster auto-keyboard » accessibility service manually.</string>
 </resources>

@@ -251,4 +251,15 @@
     <string name="settings_dilink5_mode">Рэжым DiLink 5 (эксперыментальны)</string>
     <string name="settings_dilink5_mode_support">Адаптуе DashCast да пратакола DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Патрэбен перазапуск.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Аўта-клавіятура кластара (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Паказвае моставаную клавіятуру пры дакрананні да тэкставага поля на кластары.</string>
+    <string name="a11y_ime_watcher_description">Сочыць за падзеямі фокусу на экране кластара, каб аўтаматычна адкрываць мост клавіятуры DashCast. Не чытае і не захоўвае змесціва палёў.</string>
+    <string name="ime_banner_title">Аўта-клавіятура на кластары</string>
+    <string name="ime_banner_body">На гэтым аўтамабілі (DiLink 5) сістэмная клавіятура не можа з\'явіцца на кластары. Уключыце службу спецыяльных магчымасцей, каб DashCast аўтаматычна адкрываў мост клавіятуры пры дакрананні да тэкставага поля. Інакш карыстайцеся кнопкай ⌨ у люстры.</string>
+    <string name="ime_banner_btn_enable">Уключыць</string>
+    <string name="ime_banner_btn_later">Пазней</string>
+    <string name="ime_banner_btn_dismiss">Больш не паказваць</string>
+    <string name="ime_banner_toast_enabled">Аўта-клавіятура актыўная ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Немагчыма адкрыць Налады — уключыце ўручную службу спецыяльных магчымасцей « Аўта-клавіятура кластара ».</string>
 </resources>

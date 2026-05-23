@@ -136,6 +136,7 @@
     <string name="ime_banner_btn_later">Plus tard</string>
     <string name="ime_banner_btn_dismiss">Ne plus afficher</string>
     <string name="ime_banner_toast_enabled">Clavier automatique actif ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Impossible d\'ouvrir les Réglages — activez manuellement le service d\'accessibilité « Clavier auto cluster ».</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>

@@ -249,4 +249,15 @@
     <string name="settings_dilink5_mode">Modo DiLink 5 (experimental)</string>
     <string name="settings_dilink5_mode_support">Adapta DashCast al protocolo DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Reinicio necesario.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Teclado auto del clúster (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Muestra el teclado puenteado cuando toca un campo de texto en el clúster.</string>
+    <string name="a11y_ime_watcher_description">Observa los eventos de foco en la pantalla del clúster para abrir automáticamente el puente de teclado de DashCast. No lee ni almacena el contenido de los campos.</string>
+    <string name="ime_banner_title">Teclado automático en el clúster</string>
+    <string name="ime_banner_body">En este vehículo (DiLink 5) el teclado del sistema no puede aparecer en el clúster. Active el servicio de accesibilidad para que DashCast abra el puente de teclado automáticamente al tocar un campo de texto. Si no, utilice el botón ⌨ del espejo.</string>
+    <string name="ime_banner_btn_enable">Activar</string>
+    <string name="ime_banner_btn_later">Más tarde</string>
+    <string name="ime_banner_btn_dismiss">No volver a mostrar</string>
+    <string name="ime_banner_toast_enabled">Teclado automático activo ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">No se puede abrir Ajustes — active manualmente el servicio de accesibilidad « Teclado auto del clúster ».</string>
 </resources>
