@@ -135,11 +135,17 @@ public class KeyboardBridgeActivity extends Activity {
         mInput.setHintTextColor(0x00000000);
         mInput.setCursorVisible(false);
         mInput.setPadding(0, 0, 0, 0);
+        mInput.setMinWidth(wPx);
+        mInput.setMinHeight(hPx);
 
-        setContentView(mInput,
-                new ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
+        // v1.2.17 — Field log BYD_RE_Sniffer_20260523_153544.txt showed the
+        // EditText laid out at 0×37 px with the new floating Dialog theme.
+        // The Dialog wraps to its content, the empty EditText wraps to 0
+        // width, and IMM rejects width-0 views as "not served". Force the
+        // EditText to wPx × hPx explicitly via its own LayoutParams instead
+        // of MATCH_PARENT — the floating Dialog window then wraps around
+        // those concrete pixels, IMM sees a real bounding box and serves it.
+        setContentView(mInput, new ViewGroup.LayoutParams(wPx, hPx));
     }
 
     @Override
