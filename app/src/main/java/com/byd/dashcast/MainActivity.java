@@ -1340,15 +1340,12 @@ public class MainActivity extends AppCompatActivity
 
         // 2. Move the app back to Display 0 before killing — safety net so that
         //    if force-stop fails silently, Android won't re-launch it on Display 1.
-        if (mSessionClusterPackages.contains(app.packageName)
-                && mServiceBound && mClusterService != null) {
-            mClusterService.moveTaskToDisplay(app.packageName, 0, null);
-        }
-        mSessionClusterPackages.remove(app.packageName);
-        persistSessionClusterPackages();
-
-        // 3. am force-stop via ADB
-        AdbLocalClient.forceStopApp(this, app.packageName, new AdbLocalClient.Callback() {
+        //    v1.2.9 fix (Bug 1) : SÉRIALISER move → forceStop via LaunchCallback.
+        //    Avant : move() async + forceStop() async sur thread différent →
+        //    le dumpsys interne à forceStopApp pouvait tomber pendant le déplacement,
+        //    voir un TaskId fantôme ou plus aucun match → am task remove
+        //    s'exécutait sur rien et la TaskRecord restait orpheline dans Recents.
+        final AdbLocalClient.Callback killCallback = new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
@@ -1377,7 +1374,26 @@ public class MainActivity extends AppCompatActivity
                     }
                 });
             }
-        });
+        };
+
+        if (mSessionClusterPackages.contains(app.packageName)
+                && mServiceBound && mClusterService != null) {
+            mClusterService.moveTaskToDisplay(app.packageName, 0,
+                    new com.byd.dashcast.ClusterService.LaunchCallback() {
+                @Override public void onResult(boolean ok) {
+                    AppLogger.i(TAG, "doKillApp: move→display0 " + (ok ? "OK" : "KO")
+                            + " for " + app.packageName + " — now force-stop");
+                    mSessionClusterPackages.remove(app.packageName);
+                    persistSessionClusterPackages();
+                    AdbLocalClient.forceStopApp(MainActivity.this, app.packageName, killCallback);
+                }
+            });
+        } else {
+            mSessionClusterPackages.remove(app.packageName);
+            persistSessionClusterPackages();
+            // 3. am force-stop via ADB
+            AdbLocalClient.forceStopApp(this, app.packageName, killCallback);
+        }
     }
 
     // ---- Miroir cluster ----
@@ -2144,6 +2160,18 @@ public class MainActivity extends AppCompatActivity
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
 
+        // v1.2.9 fix (Bug 2) : retirer le pkg cluster du set AVANT
+        // moveSessionAppsToMainDisplay(), pour qu'il ne soit PAS déplacé sur
+        // display 0. Il sera force-stoppé en place (display 1) par
+        // restoreBydOnCluster, juste avant sendInfo(18). Sinon : déplacement
+        // sur display 0 → force-stop tue le process MAIS la TaskRecord reste
+        // → sendInfo(18+0) déclenche le rafraîchissement Qt qui ressuscite
+        // l'app en plein écran sur display 0.
+        if (capturedClusterPkg != null) {
+            mSessionClusterPackages.remove(capturedClusterPkg);
+            persistSessionClusterPackages();
+        }
+
         // Move ALL apps that were launched on the cluster during this session back to Display 0.
         // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
         // when the user opens the app from the BYD launcher after stopping the projection.
@@ -2773,6 +2801,14 @@ public class MainActivity extends AppCompatActivity
                 .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
+
+        // v1.2.9 fix (Bug 2) — cf. restoreBydDashboard : retirer le pkg cluster
+        // du set AVANT moveSessionAppsToMainDisplay pour qu'il soit force-stoppé
+        // en place (display 1) au lieu d'être déplacé sur display 0.
+        if (capturedClusterPkg != null) {
+            mSessionClusterPackages.remove(capturedClusterPkg);
+            persistSessionClusterPackages();
+        }
 
         moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
