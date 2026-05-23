@@ -429,12 +429,19 @@ public class MirrorDaemon {
 
     // ── Broadcast helpers ─────────────────────────────────────────────────────
 
+    // 1.2.30 — custom signature permission tag used as the receiverPermission on
+    // the ACTION_DAEMON_READY broadcast. Only apps signed with the same cert as
+    // this APK (= our own app) hold the permission and can receive the binder.
+    // The fallback ServiceManager.getService("byd_mirror_daemon") path still
+    // works for ROMs where receiverPermission filtering misbehaves.
+    public static final String PERM_DAEMON_READY = "com.byd.dashcast.permission.DAEMON_READY";
+
     private static void broadcastBinder(Context context, IBinder binder) {
         Bundle extras = new Bundle();
         extras.putBinder("daemon_binder", binder);
         Intent intent = new Intent(ACTION_DAEMON_READY);
         intent.putExtras(extras);
-        context.sendBroadcast(intent);
+        context.sendBroadcast(intent, PERM_DAEMON_READY);
     }
 
     // ── Hidden API unlock ─────────────────────────────────────────────────────

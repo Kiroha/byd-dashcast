@@ -357,7 +357,7 @@ public class SysInfoActivity extends AppCompatActivity {
     private void saveReport() {
         if (mReport == null) return;
 
-        String filename = "byd_report_"
+        final String filename = "byd_report_"
                 + SDF_FILE_STAMP.get().format(new Date())
                 + ".txt";
 
@@ -370,21 +370,38 @@ public class SysInfoActivity extends AppCompatActivity {
         }
         if (!outDir.exists()) outDir.mkdirs();
 
-        File outFile = new File(outDir, filename);
-        try (FileWriter fw = new FileWriter(outFile)) {
-            fw.write(mReport.toString());
-        } catch (IOException e) {
-            Toast.makeText(this, getString(R.string.toast_write_error, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        Toast.makeText(this,
-                getString(R.string.toast_report_saved, outFile.getAbsolutePath()),
-                Toast.LENGTH_LONG).show();
-
-        // Display the path in the report itself
-        tvReport.append(getString(R.string.sysinfo_file_saved, outFile.getAbsolutePath()));
+        final File outFile = new File(outDir, filename);
+        final String payload = mReport.toString();
+        // 1.2.30 — file write moved off the UI thread (StrictMode disk write +
+        // potential ANR if /sdcard is slow on DL2/DL5).
+        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "sysinfo-save");
+            t.setDaemon(true);
+            return t;
+        }).submit(new Runnable() { @Override public void run() {
+            String error = null;
+            try (FileWriter fw = new FileWriter(outFile)) {
+                fw.write(payload);
+            } catch (IOException e) {
+                error = e.getMessage();
+            }
+            final String err = error;
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                if (err != null) {
+                    Toast.makeText(SysInfoActivity.this,
+                            getString(R.string.toast_write_error, err),
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Toast.makeText(SysInfoActivity.this,
+                        getString(R.string.toast_report_saved, outFile.getAbsolutePath()),
+                        Toast.LENGTH_LONG).show();
+                if (tvReport != null) {
+                    tvReport.append(getString(R.string.sysinfo_file_saved, outFile.getAbsolutePath()));
+                }
+            }});
+        }});
     }
 
     // =========================================================================
@@ -409,20 +426,31 @@ public class SysInfoActivity extends AppCompatActivity {
         int cOk   = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok);
         int cWarn = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_warn);
         int cErr  = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err);
-        applyRegex(ssb, "═══ [^═]+ ═══",                       cPrim, true);
-        applyRegex(ssb, "\\b(GRANTED|OPEN|RUN|CONN|YES)\\b",   cOk,   true);
-        applyRegex(ssb, "✓",                                    cOk,   true);
-        applyRegex(ssb, "\\b(DENIED|closed|OFF|NO)\\b",        cWarn, true);
-        applyRegex(ssb, "✗",                                    cWarn, true);
-        applyRegex(ssb, "\\[I\\]",                              cOk,   true);
-        applyRegex(ssb, "\\[W\\]",                              cWarn, true);
-        applyRegex(ssb, "\\[E\\]",                              cErr,  true);
+        applyPattern(ssb, P_SECTION,  cPrim, true);
+        applyPattern(ssb, P_OK_WORDS, cOk,   true);
+        applyPattern(ssb, P_OK_TICK,  cOk,   true);
+        applyPattern(ssb, P_WARN_WORDS, cWarn, true);
+        applyPattern(ssb, P_WARN_CROSS, cWarn, true);
+        applyPattern(ssb, P_TAG_I,    cOk,   true);
+        applyPattern(ssb, P_TAG_W,    cWarn, true);
+        applyPattern(ssb, P_TAG_E,    cErr,  true);
         return ssb;
     }
 
-    private static void applyRegex(android.text.SpannableStringBuilder ssb,
-                                   String regex, int color, boolean bold) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile(regex).matcher(ssb);
+    // 1.2.30 — patterns pre-compiled once; previously Pattern.compile() ran 8x
+    // on every refresh of the report TextView (auto-refresh = perceptible jank).
+    private static final java.util.regex.Pattern P_SECTION    = java.util.regex.Pattern.compile("═══ [^═]+ ═══");
+    private static final java.util.regex.Pattern P_OK_WORDS   = java.util.regex.Pattern.compile("\\b(GRANTED|OPEN|RUN|CONN|YES)\\b");
+    private static final java.util.regex.Pattern P_OK_TICK    = java.util.regex.Pattern.compile("✓");
+    private static final java.util.regex.Pattern P_WARN_WORDS = java.util.regex.Pattern.compile("\\b(DENIED|closed|OFF|NO)\\b");
+    private static final java.util.regex.Pattern P_WARN_CROSS = java.util.regex.Pattern.compile("✗");
+    private static final java.util.regex.Pattern P_TAG_I      = java.util.regex.Pattern.compile("\\[I\\]");
+    private static final java.util.regex.Pattern P_TAG_W      = java.util.regex.Pattern.compile("\\[W\\]");
+    private static final java.util.regex.Pattern P_TAG_E      = java.util.regex.Pattern.compile("\\[E\\]");
+
+    private static void applyPattern(android.text.SpannableStringBuilder ssb,
+                                     java.util.regex.Pattern p, int color, boolean bold) {
+        java.util.regex.Matcher m = p.matcher(ssb);
         while (m.find()) {
             ssb.setSpan(new android.text.style.ForegroundColorSpan(color),
                     m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -877,7 +905,12 @@ public class SysInfoActivity extends AppCompatActivity {
                     new java.io.InputStreamReader(p.getInputStream()));
             String line = br.readLine();
             br.close();
-            p.waitFor();
+            // 1.2.30 — bounded waitFor: on MTK DL2 ROMs without pgrep, the
+            // child may hang in I/O wait forever. Cap at 2s + destroyForcibly.
+            if (!p.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                p.destroyForcibly();
+                return -1;
+            }
             if (line != null && !line.trim().isEmpty()) {
                 return Integer.parseInt(line.trim());
             }

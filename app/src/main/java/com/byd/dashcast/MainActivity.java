@@ -1410,6 +1410,12 @@ public class MainActivity extends AppCompatActivity
                         AppLogger.i(TAG, "DaemonBinder retrieved from ServiceManager ✓");
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
+                                // 1.2.30 — activity teardown guard: the lookup is async
+                                // (separate Thread) and may resolve after onDestroy()
+                                // when the user backs out during daemon startup. Touching
+                                // mClusterService / panelClusterControl after destroy
+                                // can NPE the input forwarder.
+                                if (isFinishing() || isDestroyed()) return;
                                 mDaemonBinder = binder;
                                 if (mServiceBound && mClusterService != null) {
                                     mClusterService.getInputForwarder().setDaemonBinder(binder);
@@ -3015,6 +3021,9 @@ public class MainActivity extends AppCompatActivity
                     if (!a.isFavorite) nonFavs.add(a);
                 }
                 runOnUiThread(() -> {
+                    // 1.2.30 — if the activity tore down while the loader thread was
+                    // still walking PackageManager, do not touch the adapter / strip.
+                    if (isFinishing() || isDestroyed()) return;
                     mAdapter.setApps(nonFavs);
                     refreshFavoritesStrip(result);
                     // One-shot tip: show once, on first ever launch

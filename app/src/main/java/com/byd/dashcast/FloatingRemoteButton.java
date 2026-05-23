@@ -93,6 +93,9 @@ public class FloatingRemoteButton extends Service {
     private WindowManager mWindowManager;
     private View          mFloatView;
     private boolean       mGrantAttempted = false;
+    // 1.2.30 \u2014 tracked so onDestroy() can dismiss the overlay dialog and avoid a
+    // leaked TYPE_APPLICATION_OVERLAY window when the service tears down.
+    private android.app.AlertDialog mQuickSwitchDialog;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -112,6 +115,13 @@ public class FloatingRemoteButton extends Service {
         super.onDestroy();
         mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
+        // 1.2.30 — dismiss the quick-switch dialog if still showing, otherwise
+        // its window leaks (overlay token kept alive after the service dies).
+        if (mQuickSwitchDialog != null) {
+            try { if (mQuickSwitchDialog.isShowing()) mQuickSwitchDialog.dismiss(); }
+            catch (Throwable ignored) {}
+            mQuickSwitchDialog = null;
+        }
         if (mFloatView != null) {
             try { mWindowManager.removeView(mFloatView); } catch (Exception ignored) {
                 AppLogger.d(TAG, "removeView skipped (view already detached): " + ignored.getMessage());
@@ -306,6 +316,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
         if (dlg.getWindow() != null) {
             dlg.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         }
+        // 1.2.30 — keep a reference so onDestroy() can dismiss the overlay.
+        mQuickSwitchDialog = dlg;
+        dlg.setOnDismissListener(d -> { if (mQuickSwitchDialog == d) mQuickSwitchDialog = null; });
         dlg.show();
     }
 

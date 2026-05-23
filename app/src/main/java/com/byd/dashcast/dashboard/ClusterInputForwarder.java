@@ -250,6 +250,15 @@ public class ClusterInputForwarder {
         try {
             KeyEvent down = new KeyEvent(now, now,     KeyEvent.ACTION_DOWN, keyCode, 0);
             KeyEvent up   = new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0);
+            // 1.2.30 — mirror the injectKeyEvent() direct path: route to the
+            // cluster display so the cluster-side focused window receives the
+            // key (BACK/HOME used to go to display 0 on the no-daemon path).
+            if (mSetDisplayIdKeyMethod != null) {
+                try {
+                    mSetDisplayIdKeyMethod.invoke(down, mClusterDisplayId);
+                    mSetDisplayIdKeyMethod.invoke(up,   mClusterDisplayId);
+                } catch (Exception ignored) { /* inject anyway */ }
+            }
             mInjectMethod.invoke(mInputManager, down, INJECT_INPUT_EVENT_MODE_ASYNC);
             mInjectMethod.invoke(mInputManager, up,   INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception e) {
