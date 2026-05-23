@@ -226,11 +226,22 @@ public class KeyboardBridgeActivity extends Activity {
                     @Override public void run() {
                         if (ok) {
                             AppLogger.i(TAG, "tryAdbEnableA11y SUCCESS: " + r);
+                            // v1.2.25 — Do NOT finish() the bridge here.
+                            // Field log BYD_RE_Sniffer_20260523_170436.txt
+                            // shows AccessibilityManagerService rebinds our
+                            // ClusterImeWatcherService within ~30 ms of the
+                            // `settings put` (line 23491 onServiceConnected
+                            // arrives at 17:05:02.243, before the SUCCESS
+                            // line at 17:05:02.272). The bridge already has
+                            // input focus on its EditText and the IME is up
+                            // — finishing here forced the user to tap ⌨ a
+                            // second time before typing could actually route.
+                            // Keep the bridge open; the next keystroke will
+                            // hit a bound sInstance and route end-to-end.
                             android.widget.Toast.makeText(
                                     KeyboardBridgeActivity.this,
                                     "DashCast Cluster IME ✓",
                                     android.widget.Toast.LENGTH_SHORT).show();
-                            finish();
                         } else {
                             AppLogger.w(TAG, "tryAdbEnableA11y unexpected reply: " + r
                                     + " — falling back to Settings UI");
