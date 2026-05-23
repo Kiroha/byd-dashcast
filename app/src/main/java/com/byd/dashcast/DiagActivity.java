@@ -1005,7 +1005,7 @@ public class DiagActivity extends AppCompatActivity {
     private MaterialButton btnSnifferSnapshot;
     private MaterialButton btnSnifferExport;
     private MaterialButton btnSnifferCleanup;
-    private java.io.File   mSnifferFile;
+    private volatile java.io.File   mSnifferFile;
 
     private void bindSnifferPanel() {
         tvSnifferStatusPill = panelSniffer.findViewById(R.id.tv_sniffer_status_pill);

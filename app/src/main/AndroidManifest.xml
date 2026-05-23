@@ -2,6 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.byd.dashcast">
 
+    <!-- 1.2.30 — custom signature permission used by MirrorDaemon to protect
+         the ACTION_DAEMON_READY broadcast that carries the daemon IBinder.
+         protectionLevel=signature → only apps signed with our certificate
+         (i.e. this APK itself) hold the permission and can receive the binder.
+         Other apps on the device are filtered out by AMS before delivery. -->
+    <permission
+        android:name="com.byd.dashcast.permission.DAEMON_READY"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.byd.dashcast.permission.DAEMON_READY" />
+
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
     <!-- Auto-Boot -->

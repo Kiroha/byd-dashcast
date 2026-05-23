@@ -224,6 +224,9 @@ public class KeyboardBridgeActivity extends Activity {
                 final boolean ok = r.startsWith("OK");
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        // 1.2.30 — the ADB callback fires on a worker thread well after
+                        // the bridge activity may have been finished by the user.
+                        if (isFinishing() || isDestroyed()) return;
                         if (ok) {
                             AppLogger.i(TAG, "tryAdbEnableA11y SUCCESS: " + r);
                             // v1.2.25 — Do NOT finish() the bridge here.
@@ -253,6 +256,9 @@ public class KeyboardBridgeActivity extends Activity {
             @Override public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        // 1.2.30 — same guard as onSuccess: don't open Settings on
+                        // top of a finished bridge activity.
+                        if (isFinishing() || isDestroyed()) return;
                         AppLogger.w(TAG, "tryAdbEnableA11y ADB unavailable: " + error
                                 + " — falling back to Settings UI");
                         promptAndOpenSettings();

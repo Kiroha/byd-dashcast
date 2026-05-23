@@ -21,17 +21,25 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 28
         targetSdkVersion 29
-        // Public versionName bumped to 1.2.29 for the LOT 1 audit cleanup:
-        //   - Screenshot mirror fallback removed (no longer usable in real-world
-        //     conditions, eliminates Bitmap-recycle leak in startScreenshotLoop).
-        //   - ProxyDaemon.runShell: 30s waitFor timeout (prevents binder pool gel).
-        //   - ClusterManager.activateClusterDisplay: cancel() at entry
-        //     (fixes DisplayListener leak on retry → double launch).
-        //   - ClusterInputForwarder: 5 hot-path fields → volatile (DL5 touch).
-        //   - Phase4Probes P1: non-destructive (signature lookup only,
-        //     no longer resets user overscan margins on display 0).
-        versionCode 225
-        versionName "1.2.29"
+        // Public versionName bumped to 1.2.30 for the LOT 2 audit cleanup:
+        //   - ClusterInputForwarder.injectKey direct path: route to cluster display
+        //     (was missing setDisplayId() on the non-daemon path; Back/Home went to
+        //      display 0 instead of the cluster).
+        //   - SysInfoActivity.saveReport: FileWriter on ExecutorService (no UI ANR).
+        //   - SysInfoActivity.colorizeReport: 8 Pattern.compile() pre-compiled
+        //     as static final (per-render allocations gone).
+        //   - SysInfoActivity.pidOf: waitFor(2s) + destroyForcibly (anti-hang on
+        //     ROMs where pgrep is missing or blocked).
+        //   - FloatingRemoteButton: track quick-switch dialog and dismiss in
+        //     onDestroy (no leaked overlay window on service teardown).
+        //   - DiagActivity.mSnifferFile: volatile (cross-thread read by exporter).
+        //   - MainActivity/KeyboardBridge: isFinishing/isDestroyed guards on
+        //     async runOnUiThread lambdas (no NPE after teardown).
+        //   - WelcomeActivity.setLanguageButton: defensive null-check on findViewById.
+        //   - MirrorDaemon.broadcastBinder: signature-protected receiverPermission
+        //     (other apps can no longer intercept the daemon IBinder broadcast).
+        versionCode 226
+        versionName "1.2.30"
     }
 
     buildTypes {
