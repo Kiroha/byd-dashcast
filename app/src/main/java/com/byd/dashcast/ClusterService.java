@@ -331,11 +331,22 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                             // --windowingMode 5, dumpsys the activity to confirm
                             // the windowing mode AND that the post-resize bounds
                             // were actually accepted by ATM.
+                            //
+                            // v1.2.32 — verify probe refined.
+                            // The previous probe spammed mGlobalConfig dumps (one
+                            // per Configuration carrier in the activities tree)
+                            // and head -20 truncated before reaching the actual
+                            // task #N stanza. Use awk to extract precisely the
+                            // task's own stanza (between "TaskRecord{...#N}" and
+                            // the next TaskRecord or the end of the section)
+                            // and trim to the only two fields that matter:
+                            // mWindowingMode= and mBounds= inside that stanza.
                             final String verify =
                                     "dumpsys activity activities 2>/dev/null"
-                                  + " | grep -E 'taskId=" + rTaskId + "( |$)|Task=Task\\{[^}]*#" + rTaskId
-                                  + "|mBounds|getWindowingMode|windowingMode='"
-                                  + " | head -20";
+                                  + " | awk '/Task=Task\\{[^}]*#" + rTaskId + "[ }]/,"
+                                  +       "/Task=Task\\{[^}]*#[0-9]+[ }]/'"
+                                  + " | grep -E 'mBounds|WindowingMode|displayId|resizeMode|#" + rTaskId + " '"
+                                  + " | head -25";
                             AdbLocalClient.executeShellWithResult(ClusterService.this, verify,
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String dump) {
@@ -942,7 +953,36 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // still present in API 32) and is the prerequisite for the subsequent
         // resizeActiveTask() call to actually apply our inset bounds on the
         // XDJA fission VirtualDisplay backing the cluster.
-        final String cmd = "am start --display " + displayId
+        //
+        // v1.2.32 — DL5 resize second-order fix.
+        // Field log BYD_RE_Sniffer_20260523_194219.txt (build 222) proved
+        // Fix #1+#2 took effect — `am start --display 3 --windowingMode 5`
+        // is honored at root-task level (ATM logs "getOrCreateRootTask
+        // windowingMode=5, activityType=1") — but the activity itself is
+        // immediately coerced to mWindowingMode=fullscreen by ATM, because
+        // most navigation apps (Yandex Maps, Yandex Navi, Google Maps, …)
+        // declare `android:resizeableActivity="false"` in their manifest
+        // to prevent split-screen. On API 32+ a non-resizable activity
+        // forces its task into fullscreen regardless of the parent root
+        // task's windowing mode, and `cmd activity task resize` becomes a
+        // silent no-op again.
+        //
+        // The documented AOSP override is the developer-option global
+        // setting `force_resizable_activities` (visible in Settings →
+        // Developer options → "Force activities to be resizable"). When
+        // set to 1, ATM ignores the manifest flag and every activity is
+        // treated as resizable, allowing freeform + bounds resize to land.
+        // We set it from shell uid 2000 (has WRITE_SECURE_SETTINGS)
+        // immediately before the launch, and `am force-stop` the package
+        // so the new task is created fresh under the new setting (existing
+        // processes don't re-evaluate the global on the fly).
+        //
+        // The setting is persistent (Settings.Global) — re-applying it on
+        // every launch is idempotent and cheap, and guarantees a recovery
+        // if the user (or another app) ever turns it back off.
+        final String cmd = "settings put global force_resizable_activities 1 2>&1; "
+                + "am force-stop " + packageName + " 2>&1; "
+                + "am start --display " + displayId
                 + " --windowingMode 5"
                 + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
                 + " -n " + component

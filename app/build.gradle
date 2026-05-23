@@ -27,8 +27,9 @@ android {
         // currently 220 on the user's device) so 222 will be picked up as an
         // upgrade, while the public version string stays in the announced
         // 1.2.x cadence. Internal cadence is tracked via versionCode + the
-        // CHANGELOG entries below (1.2.30-build221, 1.2.31-build222).
-        versionCode 222
+        // CHANGELOG entries below (1.2.30-build221, 1.2.31-build222,
+        // 1.2.32-build223).
+        versionCode 223
         versionName "1.2.27"
     }
 
