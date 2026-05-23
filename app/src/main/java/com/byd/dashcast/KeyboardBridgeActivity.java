@@ -2,12 +2,11 @@ package com.byd.dashcast;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -17,31 +16,42 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.byd.dashcast.dashboard.ClusterInputForwarder;
+import com.byd.dashcast.ime.ClusterImeWatcherService;
 
 /**
  * v1.2.8 — Keyboard Bridge: workaround for the DL5 limitation where the system
- * IME cannot render on the cluster display (its window is a Presentation on a
- * 1×1 shadow framebuffer, layerStack 3/4 composed into a 1920×720 virtual
- * output that has no DisplayManager entry).
+ * IME cannot render natively on the cluster display.
  *
- * <p>Pattern:
- * <ol>
- *   <li>User taps the ⌨ button in the mirror toolbar (or anywhere else)</li>
- *   <li>This Activity launches on the main 15.6" head-unit display</li>
- *   <li>An EditText auto-focuses → the system IME pops up normally on the
- *       head unit</li>
- *   <li>{@link TextWatcher} converts each typed char to a {@link KeyEvent}
- *       sequence via {@link KeyCharacterMap#getEvents(char[])} (handles
- *       SHIFT/ALT meta for uppercase &amp; symbols)</li>
- *   <li>Each {@link KeyEvent} is forwarded to the cluster window via
- *       {@link ClusterInputForwarder#injectKeyEvent(KeyEvent)} which routes
- *       through the existing MirrorDaemon (uid=2000) Binder path</li>
- * </ol>
+ * <p>v1.2.12 — Forwarding pivot. The original v1.2.8 design injected synthetic
+ * {@link KeyEvent}s through {@code MirrorDaemon.injectKey()} routed via
+ * {@code KeyEvent.setDisplayId(clusterId)}. Field testing showed two problems:
+ * <ul>
+ *   <li>v1.2.11 made the EditText 1×1 to remove visual chrome — but at that
+ *       size the IMM logged {@code "Ignoring showSoftInput() … is not served"},
+ *       no {@link android.view.inputmethod.InputConnection} was ever
+ *       established, the {@link TextWatcher} never fired and nothing reached
+ *       the daemon (zero {@code injectKey FIRST OK} traces in the captured
+ *       logs).</li>
+ *   <li>Even if v1.2.11 had been "served", the focus + window of cluster apps
+ *       live on the 1×1 shadow framebuffer ({@code mDisplayId=3}) while only
+ *       the composed face is on {@code displayId=2}. Routing keys with
+ *       {@code setDisplayId(2)} is not symmetric to the touch path and was
+ *       never empirically validated.</li>
+ * </ul>
  *
- * <p>The activity is purely a relay — it does not display the captured text
- * (avoids confusion: the user types on the cluster app and sees the result
- * there). The local EditText is kept tiny &amp; transparent.
+ * <p>The new pivot uses the accessibility subsystem instead. The bridge hosts
+ * a normally-sized (220 dp × 48 dp, transparent) EditText so the IMM serves it
+ * → IME pops up on the head unit → {@link TextWatcher} fires per character →
+ * we forward the full content via
+ * {@link ClusterImeWatcherService#setTextOnCluster(CharSequence)} which calls
+ * {@link android.view.accessibility.AccessibilityNodeInfo#ACTION_SET_TEXT} on
+ * the cluster-focused editable node. {@code IME_ACTION_DONE} → Search/Send →
+ * {@link ClusterImeWatcherService#performImeEnterOnCluster()} fires
+ * {@code ACTION_IME_ENTER}.
+ *
+ * <p>The accessibility path is cross-display by construction (TalkBack uses
+ * the same mechanism) and is immune to per-display IME isolation or
+ * compositor / framebuffer asymmetry.
  */
 public class KeyboardBridgeActivity extends Activity {
 
@@ -57,44 +67,36 @@ public class KeyboardBridgeActivity extends Activity {
     public static boolean isShowing() { return sShowing; }
 
     private EditText           mInput;
-    private CharSequence       mLastText = "";
-    private KeyCharacterMap    mKcm;
     private InputMethodManager mImm;
-    private boolean            mSuppressWatcher = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // v1.2.11 — fully invisible window. The activity exists only to host
-        // a focused EditText so the system IME pops up on the head unit. All
-        // visible chrome (title, hint, buttons) was removed per user feedback:
-        // typed characters are forwarded straight to the cluster app via the
-        // daemon, the user sees the result on the cluster mirror, the head-unit
-        // shows only the IME keyboard at the bottom of the screen.
+        // v1.2.12 — Small but non-degenerate window so the EditText actually
+        // becomes "served" by the IMM (a 1×1 EditText was silently rejected
+        // in v1.2.11 with "Ignoring showSoftInput() … is not served"). The
+        // window is transparent and pinned bottom-end so it doesn't obscure
+        // the cluster mirror. The IME chrome itself appears as usual at the
+        // bottom of the head unit.
         Window w = getWindow();
+        int wPx = dp(220);
+        int hPx = dp(48);
         if (w != null) {
-            // 1×1 px window pinned bottom-end so it doesn't visually intercept
-            // anything. Touches outside this 1 px obviously fall through to the
-            // windows below (DashCast mirror tile etc.).
             w.setGravity(Gravity.BOTTOM | Gravity.END);
-            w.setLayout(1, 1);
+            w.setLayout(wPx, hPx);
             w.setBackgroundDrawableResource(android.R.color.transparent);
             w.setDimAmount(0f);
-            // Ensure the IME is shown automatically when the EditText takes focus.
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
                     | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
 
-        mKcm = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
         mImm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
-        // Single invisible EditText — the only purpose is to receive IME input.
         mInput = new EditText(this);
         mInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         mInput.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-        mInput.setSingleLine(false);
-        mInput.setMaxLines(3);
+        mInput.setSingleLine(true);
         mInput.addTextChangedListener(mWatcher);
         mInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
@@ -103,13 +105,22 @@ public class KeyboardBridgeActivity extends Activity {
                         || actionId == EditorInfo.IME_ACTION_GO
                         || actionId == EditorInfo.IME_ACTION_SEARCH
                         || actionId == EditorInfo.IME_ACTION_SEND) {
-                    forwardKeyCode(KeyEvent.KEYCODE_ENTER);
+                    boolean ok = false;
+                    try {
+                        ok = ClusterImeWatcherService.performImeEnterOnCluster();
+                    } catch (Throwable t) {
+                        AppLogger.e(TAG, "performImeEnterOnCluster failed", t);
+                    }
+                    if (ok) {
+                        // Reset local field so next session starts fresh.
+                        try { mInput.setText(""); } catch (Throwable ignored) { }
+                    }
                     return true;
                 }
                 return false;
             }
         });
-        // Strip every visual property so the EditText is undetectable.
+        // Visually neutral but still served by the IMM (non-zero size, no chrome).
         mInput.setBackground(null);
         mInput.setTextColor(0x00000000);
         mInput.setHintTextColor(0x00000000);
@@ -117,15 +128,24 @@ public class KeyboardBridgeActivity extends Activity {
         mInput.setPadding(0, 0, 0, 0);
 
         setContentView(mInput,
-                new ViewGroup.LayoutParams(1, 1));
+                new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+    }
 
-        mInput.requestFocus();
-        // Ensure the IME pops up reliably on entry.
-        mInput.post(new Runnable() {
-            @Override public void run() {
-                if (mImm != null) mImm.showSoftInput(mInput, InputMethodManager.SHOW_IMPLICIT);
-            }
-        });
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // v1.2.12 — wait for the window to actually have focus before requesting
+        // the IME. Posting from onCreate raced with the IMM's startInput which
+        // is what produced the "is not served" warning in v1.2.11.
+        if (!hasFocus || mInput == null || mImm == null) return;
+        try {
+            mInput.requestFocus();
+            mImm.showSoftInput(mInput, InputMethodManager.SHOW_IMPLICIT);
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "onWindowFocusChanged showSoftInput failed", t);
+        }
     }
 
     @Override
@@ -152,7 +172,7 @@ public class KeyboardBridgeActivity extends Activity {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // TextWatcher → KeyEvent translation
+    // TextWatcher → AccessibilityNodeInfo.ACTION_SET_TEXT on cluster
     // ─────────────────────────────────────────────────────────────────────────
 
     private final TextWatcher mWatcher = new TextWatcher() {
@@ -161,78 +181,20 @@ public class KeyboardBridgeActivity extends Activity {
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (mSuppressWatcher) return;
+            // v1.2.12 — forward the FULL current content of the local field as
+            // the cluster editable's text. No per-character KeyEvent path, no
+            // diff calculation — ACTION_SET_TEXT is atomic by design and
+            // matches what the user sees in their local field.
             try {
-                // Diff against previous content.
-                //   before > 0 && count == 0  → pure deletion of `before` chars at `start`
-                //   count  > 0 && before == 0 → pure insertion of `count` chars at `start`
-                //   else                      → replacement (delete `before`, insert `count`)
-                if (before > 0) {
-                    for (int i = 0; i < before; i++) {
-                        forwardKeyCode(KeyEvent.KEYCODE_DEL);
-                    }
-                }
-                if (count > 0) {
-                    char[] added = new char[count];
-                    for (int i = 0; i < count; i++) added[i] = s.charAt(start + i);
-                    KeyEvent[] events = (mKcm != null) ? mKcm.getEvents(added) : null;
-                    if (events != null) {
-                        for (KeyEvent ev : events) {
-                            forwardKeyEvent(ev);
-                        }
-                    } else {
-                        // Fallback: char-by-char as plain ASCII when KCM cannot map.
-                        for (char c : added) {
-                            int kc = mapAsciiToKeyCode(c);
-                            if (kc != KeyEvent.KEYCODE_UNKNOWN) forwardKeyCode(kc);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                AppLogger.e(TAG, "TextWatcher forward failed", e);
-            } finally {
-                mLastText = s.toString();
-            }
-
-            // Keep our local EditText short so the diff window doesn't grow unboundedly.
-            // After 80 chars we silently reset, leaving the cluster app unaffected.
-            if (s.length() > 80) {
-                mSuppressWatcher = true;
-                try { mInput.setText(""); } catch (Exception ignored) { }
-                mLastText = "";
-                mSuppressWatcher = false;
+                ClusterImeWatcherService.setTextOnCluster(s == null ? "" : s.toString());
+            } catch (Throwable t) {
+                AppLogger.e(TAG, "setTextOnCluster relay failed", t);
             }
         }
     };
 
-    private void forwardKeyCode(int keyCode) {
-        long now = SystemClock.uptimeMillis();
-        forwardKeyEvent(new KeyEvent(now, now,     KeyEvent.ACTION_DOWN, keyCode, 0));
-        forwardKeyEvent(new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0));
-    }
-
-    private void forwardKeyEvent(KeyEvent ev) {
-        if (ev == null) return;
-        ClusterService svc = ClusterService.getInstance();
-        if (svc == null) return;
-        ClusterInputForwarder fwd = svc.getInputForwarder();
-        if (fwd == null) return;
-        fwd.injectKeyEvent(ev);
-    }
-
-    private static int mapAsciiToKeyCode(char c) {
-        if (c >= '0' && c <= '9') return KeyEvent.KEYCODE_0 + (c - '0');
-        if (c >= 'a' && c <= 'z') return KeyEvent.KEYCODE_A + (c - 'a');
-        if (c >= 'A' && c <= 'Z') return KeyEvent.KEYCODE_A + (c - 'A');
-        switch (c) {
-            case ' ':  return KeyEvent.KEYCODE_SPACE;
-            case '\n': return KeyEvent.KEYCODE_ENTER;
-            case '\t': return KeyEvent.KEYCODE_TAB;
-            case '.':  return KeyEvent.KEYCODE_PERIOD;
-            case ',':  return KeyEvent.KEYCODE_COMMA;
-            case '-':  return KeyEvent.KEYCODE_MINUS;
-            case '/':  return KeyEvent.KEYCODE_SLASH;
-            default:   return KeyEvent.KEYCODE_UNKNOWN;
-        }
+    private int dp(int v) {
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics());
     }
 }
