@@ -55,6 +55,7 @@ public class MirrorDaemon {
     private static volatile Object  sInputManager    = null;
     private static volatile Method  sInjectMethod    = null;
     private static volatile Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
+    private static volatile Method  sSetDisplayIdKey = null;  // KeyEvent.setDisplayId    — may be null (v1.2.11)
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -381,10 +382,20 @@ public class MirrorDaemon {
     private static void injectKey(KeyEvent kev) {
         if (kev == null || sInputManager == null) return;
         try {
+            // v1.2.11 — route the KeyEvent to the cluster display, same as MotionEvent.
+            // Without this, keys go to the globally focused window (= our own
+            // KeyboardBridgeActivity on display 0) and never reach the cluster
+            // app. Mirrors the touch-injection displayId pattern.
+            if (sSetDisplayIdKey != null) {
+                try { sSetDisplayIdKey.invoke(kev, sClusterDisplayId); }
+                catch (Exception ignored) { /* fall through, inject anyway */ }
+            }
             sInjectMethod.invoke(sInputManager, kev, 0 /* ASYNC */);
             if (!sKeyFirstLogged) {
                 sKeyFirstLogged = true;
-                out("injectKey FIRST OK keyCode=" + kev.getKeyCode() + " action=" + kev.getAction());
+                out("injectKey FIRST OK displayId=" + sClusterDisplayId
+                        + " setDisplayIdAvail=" + (sSetDisplayIdKey != null)
+                        + " keyCode=" + kev.getKeyCode() + " action=" + kev.getAction());
             }
         } catch (Exception e) {
             Log.w(TAG, "injectKey failed: " + e.getMessage());
@@ -406,6 +417,10 @@ public class MirrorDaemon {
                 sSetDisplayId = MotionEvent.class.getDeclaredMethod("setDisplayId", int.class);
                 sSetDisplayId.setAccessible(true);
             } catch (Exception ignored) { /* ROM sans setDisplayId */ }
+            try {
+                sSetDisplayIdKey = KeyEvent.class.getDeclaredMethod("setDisplayId", int.class);
+                sSetDisplayIdKey.setAccessible(true);
+            } catch (Exception ignored) { /* ROM sans KeyEvent.setDisplayId */ }
             Log.i(TAG, "InputManager init OK");
         } catch (Exception e) {
             Log.e(TAG, "initInputManager failed", e);

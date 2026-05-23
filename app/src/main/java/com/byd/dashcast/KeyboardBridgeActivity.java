@@ -9,15 +9,12 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
-import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.byd.dashcast.dashboard.ClusterInputForwarder;
@@ -69,17 +66,22 @@ public class KeyboardBridgeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Floating dialog at the top so the on-screen keyboard occupies the
-        // bottom half without our window covering it.
+        // v1.2.11 — fully invisible window. The activity exists only to host
+        // a focused EditText so the system IME pops up on the head unit. All
+        // visible chrome (title, hint, buttons) was removed per user feedback:
+        // typed characters are forwarded straight to the cluster app via the
+        // daemon, the user sees the result on the cluster mirror, the head-unit
+        // shows only the IME keyboard at the bottom of the screen.
         Window w = getWindow();
         if (w != null) {
-            w.setGravity(Gravity.TOP);
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT);
-            // Ask the system to NOT dim the background — the user must still
-            // see the cluster mirror live to confirm characters arrive.
+            // 1×1 px window pinned bottom-end so it doesn't visually intercept
+            // anything. Touches outside this 1 px obviously fall through to the
+            // windows below (DashCast mirror tile etc.).
+            w.setGravity(Gravity.BOTTOM | Gravity.END);
+            w.setLayout(1, 1);
             w.setBackgroundDrawableResource(android.R.color.transparent);
             w.setDimAmount(0f);
+            // Ensure the IME is shown automatically when the EditText takes focus.
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
                     | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
@@ -87,29 +89,8 @@ public class KeyboardBridgeActivity extends Activity {
         mKcm = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
         mImm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(12);
-        root.setPadding(pad, pad, pad, pad);
-        root.setBackgroundColor(0xCC202020); // semi-opaque dark, MD-ish
-
-        TextView title = new TextView(this);
-        title.setText(getString(R.string.keyboard_bridge_title));
-        title.setTextColor(0xFFFFFFFF);
-        title.setTextSize(14f);
-        root.addView(title);
-
-        TextView hint = new TextView(this);
-        hint.setText(getString(R.string.keyboard_bridge_hint));
-        hint.setTextColor(0xCCFFFFFF);
-        hint.setTextSize(12f);
-        hint.setPadding(0, dp(4), 0, dp(8));
-        root.addView(hint);
-
+        // Single invisible EditText — the only purpose is to receive IME input.
         mInput = new EditText(this);
-        mInput.setHint(getString(R.string.keyboard_bridge_input_hint));
-        mInput.setTextColor(0xFFFFFFFF);
-        mInput.setHintTextColor(0x80FFFFFF);
         mInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         mInput.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
         mInput.setSingleLine(false);
@@ -128,43 +109,15 @@ public class KeyboardBridgeActivity extends Activity {
                 return false;
             }
         });
-        root.addView(mInput);
+        // Strip every visual property so the EditText is undetectable.
+        mInput.setBackground(null);
+        mInput.setTextColor(0x00000000);
+        mInput.setHintTextColor(0x00000000);
+        mInput.setCursorVisible(false);
+        mInput.setPadding(0, 0, 0, 0);
 
-        LinearLayout buttonRow = new LinearLayout(this);
-        buttonRow.setOrientation(LinearLayout.HORIZONTAL);
-        buttonRow.setPadding(0, dp(8), 0, 0);
-
-        Button btnEnter = new Button(this);
-        btnEnter.setText(getString(R.string.keyboard_bridge_btn_enter));
-        btnEnter.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { forwardKeyCode(KeyEvent.KEYCODE_ENTER); }
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMarginEnd(dp(4));
-        buttonRow.addView(btnEnter, lp);
-
-        Button btnBack = new Button(this);
-        btnBack.setText(getString(R.string.keyboard_bridge_btn_back));
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { forwardKeyCode(KeyEvent.KEYCODE_BACK); }
-        });
-        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp2.setMarginEnd(dp(4));
-        buttonRow.addView(btnBack, lp2);
-
-        Button btnClose = new Button(this);
-        btnClose.setText(getString(R.string.keyboard_bridge_btn_close));
-        btnClose.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { finish(); }
-        });
-        buttonRow.addView(btnClose,
-                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        root.addView(buttonRow);
-
-        setContentView(root);
+        setContentView(mInput,
+                new ViewGroup.LayoutParams(1, 1));
 
         mInput.requestFocus();
         // Ensure the IME pops up reliably on entry.
@@ -281,9 +234,5 @@ public class KeyboardBridgeActivity extends Activity {
             case '/':  return KeyEvent.KEYCODE_SLASH;
             default:   return KeyEvent.KEYCODE_UNKNOWN;
         }
-    }
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
     }
 }
