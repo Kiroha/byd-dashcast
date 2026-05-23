@@ -244,6 +244,41 @@ public class ClusterInputForwarder {
         }
     }
 
+    /**
+     * Injects a fully-formed KeyEvent (with meta state, scan code, source, etc.).
+     * Used by KeyboardBridgeActivity to forward typed characters produced by
+     * {@link android.view.KeyCharacterMap#getEvents(char[])} (which includes
+     * SHIFT/ALT for uppercase and symbols).
+     *
+     * @since v1.2.8
+     */
+    public void injectKeyEvent(KeyEvent kev) {
+        if (kev == null) return;
+        // Preferred path: daemon uid=2000
+        if (mDaemonBinder != null) {
+            try {
+                Parcel data = Parcel.obtain();
+                try {
+                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                    data.writeParcelable(kev, 0);
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                            data, null, android.os.IBinder.FLAG_ONEWAY);
+                } finally {
+                    data.recycle();
+                }
+            } catch (Exception e) {
+                AppLogger.e(TAG, "injectKeyEvent via daemon failed", e);
+            }
+            return;
+        }
+        if (!mAvailable) return;
+        try {
+            mInjectMethod.invoke(mInputManager, kev, INJECT_INPUT_EVENT_MODE_ASYNC);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "injectKeyEvent direct failed", e);
+        }
+    }
+
     public boolean isAvailable() {
         return mAvailable;
     }

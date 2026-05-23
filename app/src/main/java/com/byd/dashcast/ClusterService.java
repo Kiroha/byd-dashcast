@@ -41,6 +41,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int NOTIF_ID = 1;
     public static boolean sIsRunning = false;
+    /** v1.2.8 — exposed so satellite activities (KeyboardBridgeActivity) can reach the
+     *  InputForwarder without binding the service themselves. */
+    private static volatile ClusterService sInstance = null;
+    public static ClusterService getInstance() { return sInstance; }
 
     // Overscan inset values are stored in SharedPreferences and editable via SettingsActivity.
     // Defaults: H=80 (left/right), V=50 (top/bottom). Read at each use so changes apply live.
@@ -80,6 +84,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onCreate() {
         super.onCreate();
         sIsRunning = true;
+        sInstance  = this;
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
         mLauncher       = new DashboardLauncher(this);
         mMirrorManager  = new ClusterMirrorManager();
@@ -123,6 +128,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         sIsRunning = false;
+        if (sInstance == this) sInstance = null;
         mDestroyed = true;
         mListener = null;
         // Cancel all pending Runnables on mMainHandler BEFORE release():
@@ -168,6 +174,16 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     
     public void resizeActiveTask(int taskId, String packageName) {
         if (taskId <= 0) return;
+        // HARD GUARD — never resize anything if no cluster display is connected.
+        // resizeTask() applies bounds in the task's current display coordinates; if
+        // the task happens to be on display 0 (head unit) because the cluster move
+        // failed earlier, we would shrink the main UI. Abort instead.
+        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
+        if (clusterId <= 0) {
+            AppLogger.w(TAG, "resizeActiveTask aborted: no cluster display connected (taskId="
+                    + taskId + " pkg=" + packageName + ")");
+            return;
+        }
         try {
             Class<?> iAtmClass = Class.forName("android.app.IActivityTaskManager");
             Object iatm;
@@ -179,8 +195,15 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
             int insetH = getInsetH(packageName);
             int insetV = getInsetV(packageName);
+            // DL5 fix: use the real cluster dimensions instead of the hardcoded
+            // 1920×720. On DL3 the cluster IS 1920×720, so the fallback keeps the
+            // legacy behaviour; on DL5 the virtual cluster face may differ.
+            int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
+            int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
+            if (cw <= 0) cw = 1920;
+            if (ch <= 0) ch = 720;
             android.graphics.Rect bounds = new android.graphics.Rect(
-                    insetH, insetV, 1920 - insetH, 720 - insetV);
+                    insetH, insetV, cw - insetH, ch - insetV);
             
             iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
                     .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
@@ -314,8 +337,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         try {
                             int insetH = getInsetH(packageName);
                             int insetV = getInsetV(packageName);
+                            // DL5 fix: dynamic cluster size (was hardcoded 1920×720).
+                            int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
+                            int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
+                            if (cw <= 0) cw = 1920;
+                            if (ch <= 0) ch = 720;
                             android.graphics.Rect bounds = new android.graphics.Rect(
-                                    insetH, insetV, 1920 - insetH, 720 - insetV);
+                                    insetH, insetV, cw - insetH, ch - insetV);
                             iAtmClass.getMethod("resizeTask",
                                     int.class, android.graphics.Rect.class, int.class)
                                     .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);

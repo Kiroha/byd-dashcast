@@ -140,6 +140,8 @@ public class MainActivity extends AppCompatActivity
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
     private static final String PREF_FIRST_LAUNCH_TIP   = "first_launch_tip_shown";
+    /** v1.2.9 — set to true once the user permanently dismisses the IME a11y banner. */
+    private static final String PREF_IME_BANNER_DISMISSED = "ime_a11y_banner_dismissed";
     /** Last app voluntarily launched on the cluster — never cleared on disconnect, for reconnect reminder. */
     private static final String PREF_LAST_CLUSTER_PKG  = "last_cluster_pkg";
     private static final String PREF_LAST_CLUSTER_NAME = "last_cluster_name";
@@ -568,7 +570,16 @@ public class MainActivity extends AppCompatActivity
                     // findRunningTaskId() calls getRunningTasks() — must run off the main thread.
                     final String pkg = mCurrentDashboardPkg;
                     final ClusterService svc = mClusterService;
-                    ShellGateway.execShell(MainActivity.this, "wm overscan " + w + "," + h + "," + w + "," + h + " -d 1");
+                    // DL5 fix: cluster display id is NOT hardcoded 1 — resolve dynamically
+                    // via DashboardDisplayHelper. Skip wm overscan if no cluster is connected
+                    // (avoids shrinking display 0 on DL2/disconnected states).
+                    final int clusterId = svc.getDisplayId();
+                    if (clusterId > 0) {
+                        ShellGateway.execShell(MainActivity.this,
+                                "wm overscan " + w + "," + h + "," + w + "," + h + " -d " + clusterId);
+                    } else {
+                        AppLogger.w(TAG, "Apply resize: cluster display not connected — wm overscan skipped");
+                    }
                     new Thread(new Runnable() {
                         @Override public void run() {
                             int taskId = svc.findRunningTaskId(pkg);
@@ -652,6 +663,37 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View v) { relaunchCurrentApp(); }
         });
+
+        // v1.2.8 — Keyboard bridge: relays IME from head unit to cluster window.
+        // DL5 limitation: the cluster Presentation display lives on a 1×1 shadow
+        // framebuffer, so the system IME has nowhere to render there. We launch a
+        // tiny relay Activity on display 0; characters typed locally are forwarded
+        // as KeyEvents to the focused cluster window via TRANSACT_INJECT_KEY.
+        // v1.2.9 — hidden on DL3 where the system IME renders natively on the cluster.
+        Button btnKeyboardBridge = (Button) findViewById(R.id.btn_keyboard_bridge);
+        if (btnKeyboardBridge != null) {
+            boolean isDl5 = false;
+            try {
+                isDl5 = com.byd.dashcast.platform.Platform.get().isDiLink5(this);
+            } catch (Throwable t) {
+                AppLogger.e("MainActivity", "isDiLink5 check failed (keyboard btn)", t);
+            }
+            btnKeyboardBridge.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
+            btnKeyboardBridge.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        startActivity(new android.content.Intent(
+                                MainActivity.this, KeyboardBridgeActivity.class));
+                    } catch (Exception e) {
+                        AppLogger.e("MainActivity", "KeyboardBridge launch failed", e);
+                    }
+                }
+            });
+        }
+
+        // v1.2.9 — IME a11y onboarding banner (DL5 only)
+        setupImeA11yBanner();
 
         // Cluster mirror: touch → map coordinates → inject on display 1
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
@@ -757,6 +799,10 @@ public class MainActivity extends AppCompatActivity
     protected void onStart() {
         super.onStart();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
+        // v1.2.9 — user may have just enabled/disabled the a11y service in Settings.
+        try { refreshImeA11yBanner(); } catch (Throwable t) {
+            AppLogger.e("MainActivity", "refreshImeA11yBanner failed", t);
+        }
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .getBoolean(SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, true);
@@ -1647,10 +1693,17 @@ public class MainActivity extends AppCompatActivity
         mScreenshotHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 if (!pkg.equals(mCurrentDashboardPkg)) return; // app changed in the meantime
-                ShellGateway.execShell(MainActivity.this,
-                        "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH + " -d 1");
                 if (mServiceBound && mClusterService != null) {
                     final ClusterService svc = mClusterService;
+                    // DL5 fix: resolve cluster display id dynamically (was hardcoded -d 1).
+                    final int clusterId = svc.getDisplayId();
+                    if (clusterId > 0) {
+                        ShellGateway.execShell(MainActivity.this,
+                                "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH
+                                        + " -d " + clusterId);
+                    } else {
+                        AppLogger.w(TAG, "autoApplyInsets: cluster display not connected — wm overscan skipped");
+                    }
                     new Thread(new Runnable() {
                         @Override public void run() {
                             int taskId = svc.findRunningTaskId(pkg);
@@ -3113,6 +3166,96 @@ public class MainActivity extends AppCompatActivity
         if (hours > 0) return hours + "h " + (minutes % 60) + "m";
         if (minutes > 0) return minutes + "m " + (seconds % 60) + "s";
         return seconds + "s";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // v1.2.9 — IME a11y onboarding banner (DL5 only)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Wire the banner buttons once. Visibility is decided by {@link #refreshImeA11yBanner()}. */
+    private void setupImeA11yBanner() {
+        try {
+            final View card = findViewById(R.id.card_ime_a11y_banner);
+            if (card == null) return;
+
+            View btnEnable  = findViewById(R.id.btn_ime_banner_enable);
+            View btnLater   = findViewById(R.id.btn_ime_banner_later);
+            View btnDismiss = findViewById(R.id.btn_ime_banner_dismiss);
+
+            if (btnEnable != null) {
+                btnEnable.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        try {
+                            android.content.Intent i = new android.content.Intent(
+                                    android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(i);
+                        } catch (Throwable t) {
+                            AppLogger.e("MainActivity", "open a11y settings failed", t);
+                        }
+                    }
+                });
+            }
+            if (btnLater != null) {
+                btnLater.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        // Hide for this session only — banner reappears on next launch
+                        // if the user still has not enabled the service.
+                        card.setVisibility(View.GONE);
+                    }
+                });
+            }
+            if (btnDismiss != null) {
+                btnDismiss.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        try {
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                    .edit()
+                                    .putBoolean(PREF_IME_BANNER_DISMISSED, true)
+                                    .apply();
+                        } catch (Throwable ignored) { }
+                        card.setVisibility(View.GONE);
+                    }
+                });
+            }
+
+            refreshImeA11yBanner();
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "setupImeA11yBanner failed", t);
+        }
+    }
+
+    /**
+     * Recomputes whether the banner should be visible.
+     * Banner shows iff (DL5) AND (a11y service NOT enabled) AND (user did not
+     * permanently dismiss it). Safe to call repeatedly.
+     */
+    private void refreshImeA11yBanner() {
+        final View card = findViewById(R.id.card_ime_a11y_banner);
+        if (card == null) return;
+
+        boolean shouldShow = false;
+        try {
+            boolean isDl5 = com.byd.dashcast.platform.Platform.get().isDiLink5(this);
+            if (isDl5) {
+                boolean dismissed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .getBoolean(PREF_IME_BANNER_DISMISSED, false);
+                boolean enabled = com.byd.dashcast.ime.ClusterImeWatcherService.isEnabled(this);
+                shouldShow = !dismissed && !enabled;
+                if (enabled && card.getVisibility() == View.VISIBLE) {
+                    // User returned from Settings after enabling — confirm + hide.
+                    try {
+                        android.widget.Toast.makeText(this,
+                                R.string.ime_banner_toast_enabled,
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    } catch (Throwable ignored) { }
+                }
+            }
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "refreshImeA11yBanner inner failed", t);
+            shouldShow = false;
+        }
+        card.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
     }
 
 }
