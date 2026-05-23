@@ -366,59 +366,119 @@ public class ClusterImeWatcherService extends AccessibilityService {
     }
 
     /**
-     * Walk every interactive window, prefer those on a non-default display
-     * (the cluster on DL3/DL5), and return the first editable focused node.
-     * Caller owns the returned node — must {@code recycle()} it.
+     * Walk every interactive window across every display, prefer those on a
+     * non-default display (the cluster on DL3/DL5) and SKIP our own bridge
+     * package (so we never overwrite the local EditText instead of the
+     * cluster one), then return the first editable focused node. Caller
+     * owns the returned node — must {@code recycle()} it.
+     *
+     * <p>v1.2.25 — Field log {@code BYD_RE_Sniffer_20260523_170436.txt}
+     * showed the v1.2.24 worker logging
+     * {@code setTextOnCluster no-op: no focused editable on cluster} on
+     * every keystroke: {@link AccessibilityService#getWindows()} returns
+     * only the windows on the <em>default</em> display, so the cluster
+     * Yandex editable on display 2/3 was never reachable. We now use
+     * {@link AccessibilityService#getWindowsOnAllDisplays()} (API 30+,
+     * DL5 ships API 32) and fall back to the single-display walk only on
+     * older API levels. We also explicitly exclude windows from our own
+     * package because v1.2.25 keeps the bridge open after ADB success →
+     * the bridge's own EditText would otherwise compete for {@code
+     * findFocus(FOCUS_INPUT)} and win on the default display.
      */
     private AccessibilityNodeInfo findClusterFocusedEditable() {
-        List<AccessibilityWindowInfo> windows;
-        try {
-            windows = getWindows();
-        } catch (Throwable t) {
-            return null;
-        }
-        if (windows == null || windows.isEmpty()) return null;
-
+        final String selfPkg = getPackageName();
         AccessibilityNodeInfo bestNonDefault = null;
         AccessibilityNodeInfo bestAny = null;
         try {
-            for (AccessibilityWindowInfo w : windows) {
-                if (w == null) continue;
-                AccessibilityNodeInfo root = w.getRoot();
-                if (root == null) continue;
-                AccessibilityNodeInfo focused = null;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.util.SparseArray<List<AccessibilityWindowInfo>> all;
                 try {
-                    focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-                } catch (Throwable ignored) { }
-                if (focused == null || !focused.isEditable()) {
-                    if (focused != null) focused.recycle();
-                    root.recycle();
-                    continue;
+                    all = getWindowsOnAllDisplays();
+                } catch (Throwable t) {
+                    all = null;
                 }
-                // Prefer cluster window (displayId > 0 on API 30+).
-                int displayId = 0;
-                if (Build.VERSION.SDK_INT >= 30) {
-                    try { displayId = w.getDisplayId(); } catch (Throwable ignored) { }
+                if (all != null) {
+                    for (int i = 0; i < all.size(); i++) {
+                        int displayId = all.keyAt(i);
+                        List<AccessibilityWindowInfo> wins = all.valueAt(i);
+                        if (wins == null) continue;
+                        for (AccessibilityWindowInfo w : wins) {
+                            AccessibilityNodeInfo cand = pickFocusedEditableFrom(w, selfPkg);
+                            if (cand == null) continue;
+                            if (displayId != 0 && bestNonDefault == null) {
+                                bestNonDefault = cand;
+                            } else if (bestAny == null) {
+                                bestAny = cand;
+                            } else {
+                                cand.recycle();
+                            }
+                        }
+                    }
                 }
-                if (displayId > 0 && bestNonDefault == null) {
-                    bestNonDefault = focused;
-                } else if (bestAny == null) {
-                    bestAny = focused;
-                } else {
-                    focused.recycle();
+            }
+            // Fallback (or supplement): default-display walk.
+            if (bestNonDefault == null) {
+                List<AccessibilityWindowInfo> windows;
+                try {
+                    windows = getWindows();
+                } catch (Throwable t) {
+                    windows = null;
                 }
-                root.recycle();
+                if (windows != null) {
+                    for (AccessibilityWindowInfo w : windows) {
+                        AccessibilityNodeInfo cand = pickFocusedEditableFrom(w, selfPkg);
+                        if (cand == null) continue;
+                        int displayId = 0;
+                        if (Build.VERSION.SDK_INT >= 30) {
+                            try { displayId = w.getDisplayId(); } catch (Throwable ignored) { }
+                        }
+                        if (displayId > 0 && bestNonDefault == null) {
+                            bestNonDefault = cand;
+                        } else if (bestAny == null) {
+                            bestAny = cand;
+                        } else {
+                            cand.recycle();
+                        }
+                    }
+                }
             }
         } catch (Throwable t) {
             AppLogger.e(TAG, "findClusterFocusedEditable scan failed", t);
-        } finally {
-            // AccessibilityWindowInfo released via the framework; explicit recycle
-            // is not required on each entry of getWindows().
         }
         if (bestNonDefault != null) {
             if (bestAny != null) bestAny.recycle();
             return bestNonDefault;
         }
         return bestAny;
+    }
+
+    /** Helper for {@link #findClusterFocusedEditable()} — returns the
+     *  window's focused editable node (caller owns + must recycle) iff it
+     *  exists and is NOT from our own bridge package; null otherwise.
+     *  Always recycles the window root internally. */
+    private static AccessibilityNodeInfo pickFocusedEditableFrom(
+            AccessibilityWindowInfo w, String selfPkg) {
+        if (w == null) return null;
+        AccessibilityNodeInfo root = w.getRoot();
+        if (root == null) return null;
+        AccessibilityNodeInfo focused = null;
+        try {
+            focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        } catch (Throwable ignored) { }
+        try {
+            if (focused == null) return null;
+            if (!focused.isEditable()) { focused.recycle(); return null; }
+            // v1.2.25 — Skip our own bridge EditText so we never push the
+            // user's keystrokes back into the local field instead of the
+            // cluster Yandex search.
+            CharSequence pkg = focused.getPackageName();
+            if (pkg != null && selfPkg.contentEquals(pkg)) {
+                focused.recycle();
+                return null;
+            }
+            return focused;
+        } finally {
+            root.recycle();
+        }
     }
 }
