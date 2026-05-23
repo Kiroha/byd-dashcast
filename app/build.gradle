@@ -21,15 +21,17 @@ android {
         applicationId "com.byd.dashcast"
         minSdkVersion 28
         targetSdkVersion 29
-        // Public versionName bumped to 1.2.28 for the pre-release of the
-        // 218→224 cumulative work (DL4 auto-detection, DL4 Diag tab, i18n
-        // 100%, DL5 cluster resize fixes #1-4). The car-side updater
-        // detects an upgrade strictly via versionCode, which is always
-        // monotonically increasing. Internal cadence remains tracked via
-        // the CHANGELOG entries below (last: 1.2.32-build223; this build
-        // is 1.2.28-build224 — the public marketing label catches up).
-        versionCode 224
-        versionName "1.2.28"
+        // Public versionName bumped to 1.2.29 for the LOT 1 audit cleanup:
+        //   - Screenshot mirror fallback removed (no longer usable in real-world
+        //     conditions, eliminates Bitmap-recycle leak in startScreenshotLoop).
+        //   - ProxyDaemon.runShell: 30s waitFor timeout (prevents binder pool gel).
+        //   - ClusterManager.activateClusterDisplay: cancel() at entry
+        //     (fixes DisplayListener leak on retry → double launch).
+        //   - ClusterInputForwarder: 5 hot-path fields → volatile (DL5 touch).
+        //   - Phase4Probes P1: non-destructive (signature lookup only,
+        //     no longer resets user overscan margins on display 0).
+        versionCode 225
+        versionName "1.2.29"
     }
 
     buildTypes {

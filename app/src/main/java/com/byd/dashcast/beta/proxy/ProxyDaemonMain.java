@@ -342,7 +342,15 @@ public final class ProxyDaemonMain {
                 int n;
                 while ((n = in.read(chunk)) > 0) baos.write(chunk, 0, n);
             }
-            int code = p.waitFor();
+            // 1.2.29 — bounded waitFor: a hung child (e.g. dumpsys on a wedged service,
+            // pgrep on an MTK ROM that doesn't ship it) used to block the binder thread
+            // forever. The pool has ~15 threads; N hangs = daemon unresponsive.
+            boolean finished = p.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                try { p.destroyForcibly(); } catch (Throwable ignored) {}
+                return new ExecResult(-1, "ERR timeout 30s");
+            }
+            int code = p.exitValue();
             String s = baos.toString("UTF-8");
             int end = s.length();
             while (end > 0) {

@@ -653,17 +653,6 @@
                                 android:focusable="true"
                                 android:contentDescription="@string/main_preview_section"/>
 
-                            <ImageView
-                                android:id="@+id/cluster_mirror_screenshot"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:scaleType="fitCenter"
-                                android:background="#0F1115"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:contentDescription="@string/main_preview_section"
-                                android:visibility="gone"/>
-
                             <TextView
                                 android:id="@+id/tv_mirror_placeholder"
                                 android:layout_width="match_parent"

@@ -21,6 +21,7 @@
     <string name="stop_sheet_subtitle">Maintenez appuyé pour des actions supplémentaires.</string>
     <string name="stop_sheet_origin_desc">Utilise la taille d\'écran choisie dans les paramètres (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Affichage actif sur le cluster ✓</string>
+    <string name="mirror_unavailable">Aperçu local indisponible — l’affichage cluster reste actif</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
     <string name="cluster_control_title">Contrôle cluster</string>
     <string name="cluster_control_hide">Masquer ▼</string>

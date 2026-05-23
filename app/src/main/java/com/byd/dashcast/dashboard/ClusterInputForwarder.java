@@ -34,19 +34,24 @@ public class ClusterInputForwarder {
     private static final String TAG = "ClusterInputForwarder";
     private static final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
 
-    private int mClusterWidth      = 1920;
-    private int mClusterHeight     = 720;  // Confirmed: cluster VirtualDisplay is 1920×720 (dumpsys window 03/05/2026)
-    private int mClusterDisplayId  = 1;   // Cluster display ID (routing for API 29)
+    // 1.2.29 — volatile: setClusterDisplay()/setDaemonBinder() run on the main
+    // thread, but injectTouchAt*/injectKey() can be invoked from the touch
+    // dispatcher thread on DL5 (multi-display routing) at 60-120 events/s.
+    // Without volatile, a stale read (esp. mDaemonBinder == null after a fresh
+    // set) silently drops events to the local path with no INJECT_EVENTS perm.
+    private volatile int mClusterWidth      = 1920;
+    private volatile int mClusterHeight     = 720;  // Confirmed: cluster VirtualDisplay is 1920×720 (dumpsys window 03/05/2026)
+    private volatile int mClusterDisplayId  = 1;   // Cluster display ID (routing for API 29)
 
     /** MirrorDaemon Binder — if non-null, events are routed through uid=2000. */
-    private IBinder mDaemonBinder = null;
+    private volatile IBinder mDaemonBinder = null;
 
     private Object mInputManager;
     private Method mInjectMethod;
     private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event (MotionEvent)
     private Method mSetDisplayIdKeyMethod = null; // v1.2.11 — KeyEvent.setDisplayId (route keys to cluster display)
     private boolean mAvailable = false;
-    private long mTouchDownTime = 0L;
+    private volatile long mTouchDownTime = 0L;
 
     public ClusterInputForwarder(Context context) {
         try {
