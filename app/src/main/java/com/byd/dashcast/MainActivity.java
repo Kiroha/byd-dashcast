@@ -467,7 +467,7 @@ public class MainActivity extends AppCompatActivity
                     it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(it);
                 } catch (Exception e) {
-                    Toast.makeText(MainActivity.this, R.string.main_nav_help, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), R.string.main_nav_help, Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -476,7 +476,7 @@ public class MainActivity extends AppCompatActivity
         View btnCapture = findViewById(R.id.btn_capture);
         if (btnCapture != null) btnCapture.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                Toast.makeText(MainActivity.this, R.string.main_capture_coming_soon, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), R.string.main_capture_coming_soon, Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -1173,7 +1173,7 @@ public class MainActivity extends AppCompatActivity
             if (pkgName.equals(mCurrentDashboardPkg) || pkgName.equals(mSecondDashboardPkg)) {
                 AppLogger.w(TAG, "split: duplicate ignored pkg=" + pkgName
                         + " (main=" + mCurrentDashboardPkg + " second=" + mSecondDashboardPkg + ")");
-                Toast.makeText(this, getString(R.string.toast_app_already_cluster), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), getString(R.string.toast_app_already_cluster), Toast.LENGTH_SHORT).show();
                 return;
             }
             int[] dims = getClusterDimensions();
@@ -1198,7 +1198,7 @@ public class MainActivity extends AppCompatActivity
                         persistSessionClusterPackages();
                         updateControlLabel();
                     } else {
-                        Toast.makeText(MainActivity.this,
+                        Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_app_incompatible, appName),
                                 Toast.LENGTH_LONG).show();
                     }
@@ -1238,7 +1238,7 @@ public class MainActivity extends AppCompatActivity
                     startClusterMirror();
                     autoApplyInsetsIfNeeded(pkgName);
                 } else {
-                    Toast.makeText(MainActivity.this,
+                    Toast.makeText(getApplicationContext(),
                             getString(R.string.toast_app_incompatible, appName),
                             Toast.LENGTH_LONG).show();
                 }
@@ -1343,7 +1343,7 @@ public class MainActivity extends AppCompatActivity
                             clearSplitState();
                         }
                         showAppList();
-                        Toast.makeText(MainActivity.this,
+                        Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_app_stopped, app.appName),
                                 Toast.LENGTH_SHORT).show();
                         AppLogger.log(TAG, "forceStop " + app.packageName + " OK");
@@ -1354,7 +1354,7 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        Toast.makeText(MainActivity.this,
+                        Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "forceStop FAILED: " + error);
                     }
@@ -2027,7 +2027,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onUpToDate() {
                 if (notifyIfUpToDate) {
-                    Toast.makeText(activity,
+                    Toast.makeText(activity.getApplicationContext(),
                             activity.getString(R.string.ota_up_to_date), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -2073,7 +2073,7 @@ public class MainActivity extends AppCompatActivity
                     case 1: startActivity(new Intent(MainActivity.this, SettingsActivity.class)); return true;
                     case 7:
                         toggleViewMode();
-                        Toast.makeText(MainActivity.this, mAdapter.isGridMode() ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), mAdapter.isGridMode() ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
                         return true;
                     case 8: originCluster(); return true;
                     case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
@@ -2175,7 +2175,7 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         btnRestoreCluster.setEnabled(true);
-                        Toast.makeText(MainActivity.this,
+                        Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_restore_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "Restore FAILED: " + error);
                     }
@@ -2603,7 +2603,7 @@ public class MainActivity extends AppCompatActivity
                 btnActivateCluster.setEnabled(true);
                 setStatusDot(DOT_COLOR_OFF);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
-                Toast.makeText(MainActivity.this,
+                Toast.makeText(getApplicationContext(),
                         getString(R.string.toast_activate_timeout), Toast.LENGTH_LONG).show();
                 AppLogger.w(TAG, "Activate cluster timeout (30s)");
             }
@@ -2799,7 +2799,7 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        Toast.makeText(MainActivity.this,
+                        Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "originCluster FAILED: " + error);
                     }
@@ -2816,7 +2816,7 @@ public class MainActivity extends AppCompatActivity
             AppLogger.w(TAG, "showSplitMenu ignored — serviceBound=" + mServiceBound
                     + " clusterService=" + (mClusterService != null)
                     + " currentPkg=" + mCurrentDashboardPkg);
-            Toast.makeText(this, getString(R.string.toast_no_app_cluster), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), getString(R.string.toast_no_app_cluster), Toast.LENGTH_SHORT).show();
             return;
         }
         AppLogger.d(TAG, "showSplitMenu — app=" + mCurrentDashboardPkg
@@ -2880,7 +2880,7 @@ public class MainActivity extends AppCompatActivity
                                     updateSplitButton();
                                 } else {
                                     AppLogger.e(TAG, "split relaunch FAILED slot=" + slot);
-                                    Toast.makeText(MainActivity.this,
+                                    Toast.makeText(getApplicationContext(),
                                             getString(R.string.toast_app_incompatible, splitApp),
                                             Toast.LENGTH_SHORT).show();
                                     mCurrentSplitSlot = 0;
@@ -3055,7 +3055,7 @@ public class MainActivity extends AppCompatActivity
                     if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {
                         _p.edit().putBoolean(PREF_FIRST_LAUNCH_TIP, true).apply();
                         mScreenshotHandler.postDelayed(() ->
-                                Toast.makeText(MainActivity.this,
+                                Toast.makeText(getApplicationContext(),
                                         getString(R.string.tooltip_tap_send),
                                         Toast.LENGTH_LONG).show(),
                                 1200);
@@ -3134,7 +3134,7 @@ public class MainActivity extends AppCompatActivity
             }
         }
         if (stats.isEmpty()) {
-            Toast.makeText(this, getString(R.string.usage_empty), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), getString(R.string.usage_empty), Toast.LENGTH_SHORT).show();
             return;
         }
         // Sort by name
@@ -3154,7 +3154,7 @@ public class MainActivity extends AppCompatActivity
                         if (key.startsWith("usage_ms_")) editor.remove(key);
                     }
                     editor.apply();
-                    Toast.makeText(this, "✓", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "✓", Toast.LENGTH_SHORT).show();
                 })
                 .show();
     }
@@ -3238,7 +3238,7 @@ public class MainActivity extends AppCompatActivity
                 if (enabled && card.getVisibility() == View.VISIBLE) {
                     // User returned from Settings after enabling — confirm + hide.
                     try {
-                        android.widget.Toast.makeText(this,
+                        android.widget.Toast.makeText(getApplicationContext(),
                                 R.string.ime_banner_toast_enabled,
                                 android.widget.Toast.LENGTH_SHORT).show();
                     } catch (Throwable ignored) { }
@@ -3294,7 +3294,7 @@ public class MainActivity extends AppCompatActivity
                                 AppLogger.i("MainActivity",
                                         "IME a11y enabled via shell (one-click) ✓");
                                 try {
-                                    android.widget.Toast.makeText(MainActivity.this,
+                                    android.widget.Toast.makeText(getApplicationContext(),
                                             R.string.ime_banner_toast_enabled,
                                             android.widget.Toast.LENGTH_SHORT).show();
                                 } catch (Throwable ignored) { }
@@ -3363,7 +3363,7 @@ public class MainActivity extends AppCompatActivity
         } catch (Throwable t) {
             AppLogger.e("MainActivity", "no Settings activity reachable on this ROM", t);
             try {
-                android.widget.Toast.makeText(this,
+                android.widget.Toast.makeText(getApplicationContext(),
                         R.string.ime_banner_toast_cannot_open_settings,
                         android.widget.Toast.LENGTH_LONG).show();
             } catch (Throwable ignored) { }

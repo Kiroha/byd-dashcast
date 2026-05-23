@@ -50,8 +50,18 @@ android {
         //   - MainActivity.autoApplyInsetsIfNeeded(): retry findRunningTaskId up
         //     to 3× with 500 ms backoff when taskId<=0 (Waze post-launch race
         //     observed in BYD_RE_Sniffer_20260523_204155.txt at 20:42:26.696).
-        versionCode 228
-        versionName "1.2.32"
+        // LOT 5 (v1.2.33 / build 229) — Toast lifecycle:
+        //   - 20 Toast.makeText() sites in MainActivity now use
+        //     getApplicationContext() instead of the Activity context. Fixes
+        //     the "Toast already killed" NotificationService warnings observed
+        //     in BYD_RE_Sniffer_20260523_204155.txt at 20:41:58 and 20:44:03
+        //     when an Activity instance finishes between makeText() and show().
+        //     Application context outlives the Activity → queued Toast always
+        //     resolves cleanly. Behaviour is identical for the user.
+        //   - #17 (broadcast IBinder signature permission) verified already
+        //     fully in place since LOT 2 / 1.2.30 — no additional work needed.
+        versionCode 229
+        versionName "1.2.33"
     }
 
     buildTypes {
