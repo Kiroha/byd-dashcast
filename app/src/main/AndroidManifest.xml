@@ -117,6 +117,31 @@
             android:name=".MainActivity"
             android:screenOrientation="landscape"/>
 
+        <!-- v1.2.8 — Keyboard bridge for DL5 cluster mirror (IME relay) -->
+        <activity
+            android:name=".KeyboardBridgeActivity"
+            android:label="@string/keyboard_bridge_title"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+
+        <!-- v1.2.9 — Optional a11y service: auto-launches the bridge when an
+             EditText takes focus on the cluster. DL5 only; user must enable it
+             manually in Settings (Android system constraint). -->
+        <service
+            android:name=".ime.ClusterImeWatcherService"
+            android:exported="true"
+            android:label="@string/a11y_ime_watcher_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_ime_watcher"/>
+        </service>
+
         <!-- Compatibility diagnostic screen -->
         <activity
             android:name=".DiagActivity"

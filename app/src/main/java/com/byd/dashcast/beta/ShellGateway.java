@@ -71,6 +71,17 @@ public final class ShellGateway {
             "^\\s*wm\\s+overscan\\s+reset\\s+-d\\s+(\\d+)\\s*$");
 
     /**
+     * HARD GUARD — matches any {@code wm overscan|size|density ... -d 0} (or
+     * {@code -d 0} anywhere in a {@code wm} command). Display 0 is the head
+     * unit and must NEVER be resized by this app (would shrink the main UI,
+     * field-reported on DL2 22/05/2026, mirror risk on DL3/DL5 if a caller
+     * accidentally passes the wrong displayId). Blocked at the gateway so
+     * neither the proxy path nor the legacy path can reach the system.
+     */
+    private static final Pattern WM_DISPLAY_ZERO = Pattern.compile(
+            "^\\s*wm\\s+(?:overscan|size|density)\\b.*\\s-d\\s+0\\b.*$");
+
+    /**
      * Matches {@code pidof <packageName>} — capture group 1 = package. Anchored
      * so multi-word invocations (e.g. {@code pidof a b c}) fall through to shell.
      * The package character class matches Android package names and binary names
@@ -101,6 +112,13 @@ public final class ShellGateway {
         if (AdbLocalClient.blockDiLink2Resize(ctx, cmd)) {
             if (cb != null) cb.onError(
                     "blocked on DiLink 2: no cluster display (would shrink main screen)");
+            return;
+        }
+        // HARD GUARD — refuse any wm verb explicitly targeting display 0 (head
+        // unit). Defence in depth on top of the call-site `clusterId > 0` checks.
+        if (WM_DISPLAY_ZERO.matcher(cmd).matches()) {
+            AppLogger.e(TAG, "BLOCKED wm verb on display 0 (head unit): " + cmd);
+            if (cb != null) cb.onError("blocked: wm command targets display 0 (head unit)");
             return;
         }
         // Fast path: proxy disabled → pure legacy, zero overhead.

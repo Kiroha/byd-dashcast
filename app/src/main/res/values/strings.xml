@@ -117,6 +117,25 @@
     <string name="confirm_kill_msg">Forcer l\'arrêt de %1$s ?</string>
     <string name="confirm_kill_ok">Arrêter</string>
     <string name="btn_relaunch">↺</string>
+    <!-- v1.2.8 — Keyboard bridge (DL5 IME workaround) -->
+    <string name="btn_keyboard">⌨</string>
+    <string name="btn_keyboard_desc">Clavier</string>
+    <string name="keyboard_bridge_title">Clavier déporté</string>
+    <string name="keyboard_bridge_hint">Tapez ici : chaque caractère est envoyé au champ actif du cluster.</string>
+    <string name="keyboard_bridge_input_hint">Saisir du texte…</string>
+    <string name="keyboard_bridge_btn_enter">Entrée</string>
+    <string name="keyboard_bridge_btn_back">Retour</string>
+    <string name="keyboard_bridge_btn_close">Fermer</string>
+    <!-- v1.2.9 — Onboarding banner (DL5 only) + accessibility service strings -->
+    <string name="a11y_ime_watcher_label">Clavier auto cluster (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Affiche le clavier déporté quand vous touchez un champ texte du cluster.</string>
+    <string name="a11y_ime_watcher_description">Surveille les événements de focus sur l’écran du cluster pour ouvrir automatiquement le pont clavier de DashCast. Ne lit ni ne stocke le contenu des champs.</string>
+    <string name="ime_banner_title">Clavier automatique sur le cluster</string>
+    <string name="ime_banner_body">Sur ce véhicule (DiLink 5) le clavier système ne peut pas s’afficher sur le cluster. Activez le service d’accessibilité pour que DashCast ouvre le pont clavier automatiquement quand vous touchez un champ texte. Sinon utilisez le bouton ⌨ du miroir.</string>
+    <string name="ime_banner_btn_enable">Activer</string>
+    <string name="ime_banner_btn_later">Plus tard</string>
+    <string name="ime_banner_btn_dismiss">Ne plus afficher</string>
+    <string name="ime_banner_toast_enabled">Clavier automatique actif ✓</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
