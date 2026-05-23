@@ -64,6 +64,9 @@ public class KeyboardBridgeActivity extends Activity {
     /** v1.2.9 — tracked so the a11y watcher does not re-launch us if we are
      *  already on screen. Volatile because read from the a11y thread. */
     private static volatile boolean sShowing = false;
+    /** v1.2.21 — guard so we only prompt the user to enable a11y once
+     *  per Activity instance (onWindowFocusChanged fires repeatedly). */
+    private boolean mPromptedA11y = false;
     public static boolean isShowing() { return sShowing; }
 
     private EditText           mInput;
@@ -166,28 +169,75 @@ public class KeyboardBridgeActivity extends Activity {
         // silent no-op (sInstance == null) and the IME keystrokes never
         // reach the cluster Editable. Detect it here and surface a Toast +
         // open the system Accessibility settings so the user can enable us.
+        // v1.2.21 — onWindowFocusChanged fires multiple times; guard so we
+        // only prompt + open Settings once per Activity instance. Also try
+        // multiple intents because some BYD ROMs block the bare
+        // ACTION_ACCESSIBILITY_SETTINGS or restrict it to system signature.
         try {
-            if (!isClusterImeWatcherEnabled()) {
+            if (!mPromptedA11y && !isClusterImeWatcherEnabled()) {
+                mPromptedA11y = true;
                 AppLogger.w(TAG, "ClusterImeWatcherService is NOT enabled — "
                         + "text typed in the bridge will not reach the cluster. "
                         + "Prompting user to enable it in Accessibility settings.");
                 android.widget.Toast.makeText(this,
                         getString(R.string.keyboard_bridge_a11y_required_toast),
                         android.widget.Toast.LENGTH_LONG).show();
-                try {
-                    android.content.Intent i = new android.content.Intent(
-                            android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                    i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(i);
-                    finish();
-                } catch (Throwable t2) {
-                    AppLogger.w(TAG, "ACTION_ACCESSIBILITY_SETTINGS unavailable: "
-                            + t2.getMessage());
-                }
+                // Post the launch so we are out of onWindowFocusChanged and
+                // the floating Dialog window has fully settled — some ROMs
+                // refuse startActivity from inside a focus callback.
+                mInput.post(new Runnable() {
+                    @Override public void run() { openAccessibilitySettings(); }
+                });
             }
         } catch (Throwable t) {
             AppLogger.e(TAG, "a11y enablement check failed", t);
         }
+    }
+
+    /**
+     * v1.2.21 — Best-effort launch of the system Accessibility settings.
+     * Tries (1) the canonical {@code Settings.ACTION_ACCESSIBILITY_SETTINGS},
+     * (2) explicit AOSP component
+     * {@code com.android.settings/.Settings$AccessibilitySettingsActivity},
+     * (3) generic {@code Settings.ACTION_SETTINGS} as a last resort. Each
+     * attempt is gated by {@link android.content.pm.PackageManager#resolveActivity}
+     * so we never call startActivity on an unresolvable Intent (which would
+     * throw {@code ActivityNotFoundException} or be silently dropped by the
+     * AM on locked-down BYD ROMs). Always finishes the bridge after launch.
+     */
+    private void openAccessibilitySettings() {
+        android.content.pm.PackageManager pm = getPackageManager();
+        android.content.Intent[] attempts = new android.content.Intent[] {
+                new android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS),
+                new android.content.Intent().setComponent(new android.content.ComponentName(
+                        "com.android.settings",
+                        "com.android.settings.Settings$AccessibilitySettingsActivity")),
+                new android.content.Intent(android.provider.Settings.ACTION_SETTINGS),
+        };
+        for (int i = 0; i < attempts.length; i++) {
+            android.content.Intent it = attempts[i];
+            it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            try {
+                if (pm.resolveActivity(it, 0) == null) {
+                    AppLogger.w(TAG, "openAccessibilitySettings attempt " + (i + 1)
+                            + " unresolved: " + it);
+                    continue;
+                }
+                startActivity(it);
+                AppLogger.i(TAG, "openAccessibilitySettings attempt " + (i + 1)
+                        + " launched: " + it);
+                finish();
+                return;
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "openAccessibilitySettings attempt " + (i + 1)
+                        + " failed: " + t.getClass().getSimpleName() + " "
+                        + t.getMessage());
+            }
+        }
+        AppLogger.e(TAG, "openAccessibilitySettings: all attempts failed — "
+                + "user must navigate manually to Settings → Accessibility");
+        finish();
     }
 
     /**
