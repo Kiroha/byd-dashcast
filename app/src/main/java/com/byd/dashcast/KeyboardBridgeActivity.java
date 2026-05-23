@@ -161,6 +161,56 @@ public class KeyboardBridgeActivity extends Activity {
         } catch (Throwable t) {
             AppLogger.e(TAG, "onWindowFocusChanged showSoftInput failed", t);
         }
+        // v1.2.18 — If the user has not enabled DashCast Cluster IME under
+        // Android Settings → Accessibility, our setTextOnCluster() is a
+        // silent no-op (sInstance == null) and the IME keystrokes never
+        // reach the cluster Editable. Detect it here and surface a Toast +
+        // open the system Accessibility settings so the user can enable us.
+        try {
+            if (!isClusterImeWatcherEnabled()) {
+                AppLogger.w(TAG, "ClusterImeWatcherService is NOT enabled — "
+                        + "text typed in the bridge will not reach the cluster. "
+                        + "Prompting user to enable it in Accessibility settings.");
+                android.widget.Toast.makeText(this,
+                        "Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l'instrumentation.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                try {
+                    android.content.Intent i = new android.content.Intent(
+                            android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                    i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                    finish();
+                } catch (Throwable t2) {
+                    AppLogger.w(TAG, "ACTION_ACCESSIBILITY_SETTINGS unavailable: "
+                            + t2.getMessage());
+                }
+            }
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "a11y enablement check failed", t);
+        }
+    }
+
+    /**
+     * v1.2.18 — Returns true if the user has enabled our
+     * {@link ClusterImeWatcherService} in Android Accessibility settings.
+     * Checks the comma-separated {@code enabled_accessibility_services}
+     * secure setting against our service's component name.
+     */
+    private boolean isClusterImeWatcherEnabled() {
+        try {
+            String enabled = android.provider.Settings.Secure.getString(
+                    getContentResolver(),
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (enabled == null || enabled.isEmpty()) return false;
+            String myComp = getPackageName() + "/" + ClusterImeWatcherService.class.getName();
+            String myCompShort = getPackageName() + "/." + "ime.ClusterImeWatcherService";
+            for (String s : enabled.split(":")) {
+                if (s == null) continue;
+                String t = s.trim();
+                if (t.equalsIgnoreCase(myComp) || t.equalsIgnoreCase(myCompShort)) return true;
+            }
+        } catch (Throwable ignored) { }
+        return false;
     }
 
     @Override

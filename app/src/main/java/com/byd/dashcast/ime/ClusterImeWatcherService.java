@@ -234,9 +234,20 @@ public class ClusterImeWatcherService extends AccessibilityService {
      */
     public static boolean setTextOnCluster(CharSequence text) {
         ClusterImeWatcherService self = sInstance;
-        if (self == null) return false;
+        if (self == null) {
+            // v1.2.18 — was silent. Field log BYD_RE_Sniffer_20260523_161033.txt
+            // showed the user typing into the keyboard bridge with no trace from
+            // this class at all because the a11y service was not enabled. Log it
+            // once per call so the diagnostic is visible.
+            AppLogger.w(TAG, "setTextOnCluster no-op: a11y service not bound "
+                    + "(enable ‘DashCast Cluster IME’ in Settings → Accessibility)");
+            return false;
+        }
         AccessibilityNodeInfo node = self.findClusterFocusedEditable();
-        if (node == null) return false;
+        if (node == null) {
+            AppLogger.w(TAG, "setTextOnCluster no-op: no focused editable on cluster");
+            return false;
+        }
         try {
             Bundle args = new Bundle();
             args.putCharSequence(
@@ -260,9 +271,15 @@ public class ClusterImeWatcherService extends AccessibilityService {
      */
     public static boolean performImeEnterOnCluster() {
         ClusterImeWatcherService self = sInstance;
-        if (self == null) return false;
+        if (self == null) {
+            AppLogger.w(TAG, "performImeEnterOnCluster no-op: a11y service not bound");
+            return false;
+        }
         AccessibilityNodeInfo node = self.findClusterFocusedEditable();
-        if (node == null) return false;
+        if (node == null) {
+            AppLogger.w(TAG, "performImeEnterOnCluster no-op: no focused editable on cluster");
+            return false;
+        }
         try {
             int actionId;
             if (Build.VERSION.SDK_INT >= 30) {
