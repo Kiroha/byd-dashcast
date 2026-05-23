@@ -43,7 +43,8 @@ public class ClusterInputForwarder {
 
     private Object mInputManager;
     private Method mInjectMethod;
-    private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event
+    private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event (MotionEvent)
+    private Method mSetDisplayIdKeyMethod = null; // v1.2.11 — KeyEvent.setDisplayId (route keys to cluster display)
     private boolean mAvailable = false;
     private long mTouchDownTime = 0L;
 
@@ -68,6 +69,13 @@ public class ClusterInputForwarder {
             } catch (Exception ignored) {
                 // @hide API not available on this ROM — injection without displayId
             }
+            // v1.2.11 — same for KeyEvent so injected keys reach the cluster display
+            // (otherwise they target the globally focused window on display 0 →
+            // our own KeyboardBridgeActivity swallows them, cluster app gets nothing).
+            try {
+                mSetDisplayIdKeyMethod = KeyEvent.class.getDeclaredMethod("setDisplayId", int.class);
+                mSetDisplayIdKeyMethod.setAccessible(true);
+            } catch (Exception ignored) { /* not available on this ROM */ }
 
             mAvailable = true;
             AppLogger.i(TAG, "InputManager injection: available");
@@ -273,6 +281,12 @@ public class ClusterInputForwarder {
         }
         if (!mAvailable) return;
         try {
+            // v1.2.11 — route to the cluster display so the cluster-side focused
+            // window receives the key (not our own EditText on display 0).
+            if (mSetDisplayIdKeyMethod != null) {
+                try { mSetDisplayIdKeyMethod.invoke(kev, mClusterDisplayId); }
+                catch (Exception ignored) { /* inject anyway */ }
+            }
             mInjectMethod.invoke(mInputManager, kev, INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception e) {
             AppLogger.e(TAG, "injectKeyEvent direct failed", e);
