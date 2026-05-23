@@ -195,19 +195,34 @@ public class KeyboardBridgeActivity extends Activity {
     }
 
     /**
-     * v1.2.21 — Best-effort launch of the system Accessibility settings.
-     * Tries (1) the canonical {@code Settings.ACTION_ACCESSIBILITY_SETTINGS},
-     * (2) explicit AOSP component
-     * {@code com.android.settings/.Settings$AccessibilitySettingsActivity},
-     * (3) generic {@code Settings.ACTION_SETTINGS} as a last resort. Each
+     * v1.2.22 — Best-effort launch of the system Accessibility settings.
+     * Field log on DL5 (BYD ROM) showed that the canonical
+     * {@code android.settings.ACCESSIBILITY_SETTINGS} action has NO resolver
+     * (BYD's {@code com.byd.carsettings} does not declare that intent-filter);
+     * instead it ships a BYD-specific action
+     * {@code android.intent.action.BYD_ACCESSIBILITY} →
+     * {@code com.byd.carsettings/com.byd.systemsettings.accessibility.AccessibilityMainActivity}
+     * which is the same list of installed a11y services.
+     *
+     * Attempt order:
+     * (1) BYD action {@code BYD_ACCESSIBILITY} (preferred on BYD ROMs),
+     * (2) BYD explicit component (in case the action is stripped),
+     * (3) canonical {@code Settings.ACTION_ACCESSIBILITY_SETTINGS} (AOSP),
+     * (4) explicit AOSP component
+     *     {@code com.android.settings/.Settings$AccessibilitySettingsActivity},
+     * (5) generic {@code Settings.ACTION_SETTINGS} as a last resort. Each
      * attempt is gated by {@link android.content.pm.PackageManager#resolveActivity}
-     * so we never call startActivity on an unresolvable Intent (which would
-     * throw {@code ActivityNotFoundException} or be silently dropped by the
-     * AM on locked-down BYD ROMs). Always finishes the bridge after launch.
+     * so we never call startActivity on an unresolvable Intent. Always
+     * finishes the bridge after launch.
      */
     private void openAccessibilitySettings() {
         android.content.pm.PackageManager pm = getPackageManager();
         android.content.Intent[] attempts = new android.content.Intent[] {
+                new android.content.Intent("android.intent.action.BYD_ACCESSIBILITY")
+                        .addCategory(android.content.Intent.CATEGORY_DEFAULT),
+                new android.content.Intent().setComponent(new android.content.ComponentName(
+                        "com.byd.carsettings",
+                        "com.byd.systemsettings.accessibility.AccessibilityMainActivity")),
                 new android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS),
                 new android.content.Intent().setComponent(new android.content.ComponentName(
                         "com.android.settings",
