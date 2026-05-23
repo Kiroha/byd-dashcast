@@ -118,6 +118,12 @@ public class ClusterManager {
      * Details: doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md
      */
     public void activateClusterDisplay(final DisplayReadyCallback callback) {
+        // 1.2.29 — defensive cancel() at entry: on retry, the previous slow-path
+        // DisplayListener was only stored in mActiveDisplayListener — re-entering
+        // registered a new one without unregistering the old, leaking listeners
+        // and triggering double launches on the cluster.
+        cancel();
+
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
 
         // DiLink 5.0 short-circuit: PRESENTATION displays #3/#4 (XDJAScreenProjection_0/1)

@@ -65,23 +65,27 @@ public final class Phase4Probes {
 
     // ─── individual probes ─────────────────────────────────────────────────
 
-    /** P1 — {@code IWindowManager.setOverscan(displayId, l, t, r, b)}. The single
-     *  highest-value verb: replaces the {@code wm overscan} JVM fork. */
+    /** P1 — {@code IWindowManager.setOverscan(displayId, l, t, r, b)} signature
+     *  reachability probe. Replaces the {@code wm overscan} JVM fork.
+     *
+     *  1.2.29 — Non-destructive: we no longer invoke setOverscan(0,…) on display 0,
+     *  because on DL3/DL5 that overwrites any user-configured overscan margins to
+     *  zero (audit finding). The probe now only verifies that IWindowManager is
+     *  reachable AND that the setOverscan(int×5) signature is present. The real
+     *  verb is exercised end-to-end by Phase4Verbs.setOverscan via the daemon path. */
     private static String p1_setOverscan() throws Throwable {
         IBinder wmb = getService("window");
         if (wmb == null) return "FAIL_NULL:no window service";
         Class<?> stub = Class.forName("android.view.IWindowManager$Stub");
         Object wm = stub.getMethod("asInterface", IBinder.class).invoke(null, wmb);
+        if (wm == null) return "FAIL_NULL:asInterface returned null";
         Class<?> iface = Class.forName("android.view.IWindowManager");
-        Method m;
         try {
-            m = iface.getMethod("setOverscan", int.class, int.class, int.class, int.class, int.class);
+            iface.getMethod("setOverscan", int.class, int.class, int.class, int.class, int.class);
         } catch (NoSuchMethodException nse) {
             return "FAIL_API:setOverscan(int,int,int,int,int) absent on API " + Build.VERSION.SDK_INT;
         }
-        // Use a no-op (all zeros) so we never visibly perturb the display.
-        m.invoke(wm, 0, 0, 0, 0, 0);
-        return "PASS:setOverscan(0,0,0,0,0) accepted on display 0";
+        return "PASS:setOverscan(int x5) signature reachable on API " + Build.VERSION.SDK_INT;
     }
 
     /** P2 — read-only display size getter; if PASS we know we can read display

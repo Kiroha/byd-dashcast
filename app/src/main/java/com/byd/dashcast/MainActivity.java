@@ -226,12 +226,12 @@ public class MainActivity extends AppCompatActivity
     private android.widget.FrameLayout frameMirror;
     private TextureView clusterMirror;
     private TextView     tvMirrorPlaceholder;
-    private ImageView    clusterMirrorScreenshot;
     // Surface created from the TextureView's SurfaceTexture.
     // SF is the PRODUCER of this surface (setDisplaySurface) → TextureView renders.
     private Surface      mMirrorSurface;
 
-    // Screenshot mirror loop (fallback when SurfaceControl.createDisplay() fails)
+    // Shared handler for state-poll runnables (was also used by the screenshot
+    // mirror fallback removed in 1.2.29 — kept for startStatePoll/stopStatePoll).
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
 
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
@@ -257,11 +257,6 @@ public class MainActivity extends AppCompatActivity
             }
         }
     };
-    // volatile: read from the ADB background thread (captureClusterDisplay callback),
-    // written from the main thread (stopScreenshotLoop). Without volatile, the ADB thread
-    // could see the old non-null value after stopScreenshotLoop() has set it to null.
-    private volatile Runnable mScreenshotRunnable = null;
-    private static final int SCREENSHOT_INTERVAL_MS = 800;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -600,7 +595,6 @@ public class MainActivity extends AppCompatActivity
         frameMirror         = (android.widget.FrameLayout) findViewById(R.id.frame_cluster_mirror);
         clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
         tvMirrorPlaceholder = (TextView)     findViewById(R.id.tv_mirror_placeholder);
-        clusterMirrorScreenshot = (ImageView) findViewById(R.id.cluster_mirror_screenshot);
         mInsetOverlay       = (InsetOverlayView) findViewById(R.id.inset_overlay);
 
         // Restore mMainDisplayPkg (lost if Activity is destroyed and recreated)
@@ -709,17 +703,6 @@ public class MainActivity extends AppCompatActivity
                 // v0.9.79 — prevent NestedScrollView (or any ancestor) from stealing the
                 // gesture once the finger moves past touchSlop, otherwise vertical drags
                 // and pinch gestures get cancelled mid-flight.
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    v.getParent().requestDisallowInterceptTouchEvent(true);
-                }
-                forwardTouchFromMirror(v, event);
-                return true;
-            }
-        });
-        // Same listener for the screenshot ImageView (same coordinate space)
-        clusterMirrorScreenshot.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                     v.getParent().requestDisallowInterceptTouchEvent(true);
                 }
@@ -877,12 +860,8 @@ public class MainActivity extends AppCompatActivity
     protected void onDestroy() {
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
-        // Stop the screenshot loop first so an inflight ADB callback cannot re-post
-        // after we drain the handler (the callback reads mScreenshotRunnable which
-        // stopScreenshotLoop() nulls).
-        stopScreenshotLoop();
-        // Cancel all pending runnables (anonymous lambdas posted via postDelayed that
-        // individual removeCallbacks() calls may have missed).
+        // Cancel all pending runnables (state-poll + any anonymous lambdas posted via
+        // postDelayed that individual removeCallbacks() calls may have missed).
         mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
         if (mServiceBound) {
@@ -1472,7 +1451,7 @@ public class MainActivity extends AppCompatActivity
         if (mClusterService.getMirrorManager().isMirrorActive()) {
             AppLogger.d(TAG, "attemptStartMirror: mirror already active");
             clusterMirror.setVisibility(View.VISIBLE);
-            stopScreenshotLoop();
+            tvMirrorPlaceholder.setVisibility(View.GONE);
             return;
         }
 
@@ -1508,16 +1487,17 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (mirrorOk) {
-            // Miroir actif → afficher le SurfaceView, stopper les screenshots
+            // Mirror active → show TextureView, hide placeholder.
             clusterMirror.setVisibility(View.VISIBLE);
-            clusterMirrorScreenshot.setVisibility(View.GONE);
             tvMirrorPlaceholder.setVisibility(View.GONE);
-            stopScreenshotLoop();
         } else {
-            // No mirror available → periodic screencap via ADB shell
+            // Mirror unavailable (SurfaceControl + daemon both failed). Since 1.2.29
+            // we no longer fall back to the 800 ms screencap loop — display a static
+            // message instead. The cluster app keeps running normally; only the
+            // local preview pane is unavailable.
             clusterMirror.setVisibility(View.GONE);
-            tvMirrorPlaceholder.setVisibility(View.GONE);
-            startScreenshotLoop(displayId);
+            tvMirrorPlaceholder.setText(R.string.mirror_unavailable);
+            tvMirrorPlaceholder.setVisibility(View.VISIBLE);
         }
     }
 
@@ -1778,67 +1758,6 @@ public class MainActivity extends AppCompatActivity
             // Local cleanup (direct SurfaceControl token, residual VirtualDisplay)
             mClusterService.getMirrorManager().stopMirror();
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
-        }
-        stopScreenshotLoop();
-    }
-
-    /**
-     * Starts the periodic capture loop via screencap (mirror fallback).
-     * ADB shell = uid=2000 → always has SurfaceFlinger access regardless of our permissions.
-     */
-    private void startScreenshotLoop(final int displayId) {
-        stopScreenshotLoop();
-        clusterMirrorScreenshot.setVisibility(View.VISIBLE);
-        // WeakReference: if the Activity is stopped/destroyed while an ADB capture is
-        // in flight, the callback will not update a view belonging to a dead Activity.
-        final java.lang.ref.WeakReference<MainActivity> weakSelf =
-                new java.lang.ref.WeakReference<>(this);
-        mScreenshotRunnable = new Runnable() {
-            @Override public void run() {
-                // Use applicationContext so an inflight ADB capture does not keep
-                // a strong reference to the Activity via sExecutor's task queue.
-                AdbLocalClient.captureClusterDisplay(getApplicationContext(), displayId,
-                        new AdbLocalClient.BitmapCallback() {
-                    @Override public void onBitmap(final Bitmap bm) {
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                MainActivity self = weakSelf.get();
-                                if (self != null && !self.isFinishing()
-                                        && self.clusterMirrorScreenshot != null) {
-                                    self.clusterMirrorScreenshot.setImageBitmap(bm);
-                                }
-                            }
-                        });
-                        // Capture the volatile into a local to avoid a race where
-                        // stopScreenshotLoop() nulls it between the null check and postDelayed.
-                        Runnable r = mScreenshotRunnable;
-                        if (r != null) {
-                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS);
-                        }
-                    }
-                    @Override public void onError(String error) {
-                        AppLogger.w(TAG, "screenshotLoop erreur: " + error);
-                        Runnable r = mScreenshotRunnable;
-                        if (r != null) {
-                            mScreenshotHandler.postDelayed(r, SCREENSHOT_INTERVAL_MS * 2L);
-                        }
-                    }
-                });
-            }
-        };
-        mScreenshotHandler.post(mScreenshotRunnable);
-        AppLogger.i(TAG, "Screenshot mirror loop started (displayId=" + displayId + ")");
-    }
-
-    /** Stops the capture loop and hides the ImageView. */
-    private void stopScreenshotLoop() {
-        if (mScreenshotRunnable != null) {
-            mScreenshotHandler.removeCallbacks(mScreenshotRunnable);
-            mScreenshotRunnable = null;
-            AppLogger.d(TAG, "Screenshot mirror loop stopped");
-        }
-        if (clusterMirrorScreenshot != null) {
-            clusterMirrorScreenshot.setVisibility(View.GONE);
         }
     }
 
