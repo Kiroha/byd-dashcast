@@ -178,19 +178,91 @@ public class KeyboardBridgeActivity extends Activity {
                 mPromptedA11y = true;
                 AppLogger.w(TAG, "ClusterImeWatcherService is NOT enabled — "
                         + "text typed in the bridge will not reach the cluster. "
-                        + "Prompting user to enable it in Accessibility settings.");
-                android.widget.Toast.makeText(this,
-                        getString(R.string.keyboard_bridge_a11y_required_toast),
-                        android.widget.Toast.LENGTH_LONG).show();
-                // Post the launch so we are out of onWindowFocusChanged and
-                // the floating Dialog window has fully settled — some ROMs
-                // refuse startActivity from inside a focus callback.
-                mInput.post(new Runnable() {
-                    @Override public void run() { openAccessibilitySettings(); }
-                });
+                        + "Trying ADB auto-enable, with Accessibility settings as fallback.");
+                // v1.2.23 — Try to flip the secure flag via the local-ADB
+                // shell (uid=shell can `settings put secure
+                // enabled_accessibility_services`). If that works we never
+                // need to bother the user with the Settings UI at all.
+                tryAdbEnableA11y();
             }
         } catch (Throwable t) {
             AppLogger.e(TAG, "a11y enablement check failed", t);
+        }
+    }
+
+    /**
+     * v1.2.23 — Attempt to enable {@link ClusterImeWatcherService} headlessly
+     * via local ADB ({@link AdbLocalClient}, uid=shell). The {@code settings}
+     * binary running as uid 2000 can write {@code Settings.Secure
+     * .ENABLED_ACCESSIBILITY_SERVICES} (which third-party apps cannot — see
+     * Android source {@code SettingsProvider#assertWritePermissionsForSecureSettings}).
+     * Shell preserves any pre-existing a11y services (TalkBack, etc.) by
+     * appending our component to the colon-separated list. On success a brief
+     * Toast confirms and the bridge finishes — the user can retap the ⌨ icon
+     * and typing will route through the now-bound service. On error (port
+     * 5555 closed, ADB pairing dialog declined, etc.) falls back to the
+     * existing 5-intent Settings launcher.
+     */
+    private void tryAdbEnableA11y() {
+        final String comp = getPackageName()
+                + "/com.byd.dashcast.ime.ClusterImeWatcherService";
+        // POSIX shell — works with `dadb` toybox/mksh on Android.
+        // Note: settings(1) prints "null" (literal) when the row is unset.
+        final String cmd =
+                "COMP=" + comp + ";"
+                + " CUR=$(settings get secure enabled_accessibility_services);"
+                + " if [ -z \"$CUR\" ] || [ \"$CUR\" = \"null\" ]; then NEW=\"$COMP\";"
+                + " else case \":$CUR:\" in *\":$COMP:\"*) NEW=\"$CUR\";;"
+                + "             *) NEW=\"$CUR:$COMP\";; esac; fi;"
+                + " settings put secure enabled_accessibility_services \"$NEW\""
+                + " && settings put secure accessibility_enabled 1"
+                + " && echo OK:$NEW || echo FAIL";
+        AppLogger.i(TAG, "tryAdbEnableA11y: invoking local ADB settings put secure …");
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String report) {
+                final String r = report == null ? "" : report.trim();
+                final boolean ok = r.startsWith("OK");
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        if (ok) {
+                            AppLogger.i(TAG, "tryAdbEnableA11y SUCCESS: " + r);
+                            android.widget.Toast.makeText(
+                                    KeyboardBridgeActivity.this,
+                                    "DashCast Cluster IME ✓",
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                            finish();
+                        } else {
+                            AppLogger.w(TAG, "tryAdbEnableA11y unexpected reply: " + r
+                                    + " — falling back to Settings UI");
+                            promptAndOpenSettings();
+                        }
+                    }
+                });
+            }
+            @Override public void onError(final String error) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        AppLogger.w(TAG, "tryAdbEnableA11y ADB unavailable: " + error
+                                + " — falling back to Settings UI");
+                        promptAndOpenSettings();
+                    }
+                });
+            }
+        });
+    }
+
+    /** Fallback chain when ADB auto-enable is unavailable: localized Toast +
+     * deferred Accessibility settings launcher. v1.2.23. */
+    private void promptAndOpenSettings() {
+        android.widget.Toast.makeText(this,
+                getString(R.string.keyboard_bridge_a11y_required_toast),
+                android.widget.Toast.LENGTH_LONG).show();
+        if (mInput != null) {
+            mInput.post(new Runnable() {
+                @Override public void run() { openAccessibilitySettings(); }
+            });
+        } else {
+            openAccessibilitySettings();
         }
     }
 
