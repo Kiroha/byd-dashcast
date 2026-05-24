@@ -463,6 +463,8 @@ public class MainActivity extends AppCompatActivity
                 startActivity(new Intent(MainActivity.this, LogActivity.class));
             }
         });
+        // v1.2.36 — Hotspot (DL3 only) ; v1.2.42 — conditionné sur pref "use_own_sim".
+        refreshNavHotspot();
         View navHelp = findViewById(R.id.nav_help);
         if (navHelp != null) navHelp.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -724,6 +726,39 @@ public class MainActivity extends AppCompatActivity
         super.onNewIntent(intent);
         setIntent(intent);
         handleShowMirrorIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Hotspot navrail entry depends on the "use_own_sim" pref which can
+        // change in SettingsActivity ; re-evaluate on every resume.
+        refreshNavHotspot();
+    }
+
+    /**
+     * Show + wire the navrail Hotspot button only when:
+     *  - the device is a DiLink 3 head-unit (TetherFi is our only path there)
+     *  - AND the user has opted in via the "use_own_sim" Setting
+     * Otherwise hide it.
+     */
+    private void refreshNavHotspot() {
+        View navHotspot = findViewById(R.id.nav_hotspot);
+        if (navHotspot == null) return;
+        boolean isDl3 = com.byd.dashcast.platform.Platform.get().isDiLink3(this);
+        boolean useOwnSim = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, false);
+        if (isDl3 && useOwnSim) {
+            navHotspot.setVisibility(View.VISIBLE);
+            navHotspot.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    startActivity(new Intent(MainActivity.this, HotspotActivity.class));
+                }
+            });
+        } else {
+            navHotspot.setVisibility(View.GONE);
+            navHotspot.setOnClickListener(null);
+        }
     }
 
     private void handleShowMirrorIntent(Intent intent) {

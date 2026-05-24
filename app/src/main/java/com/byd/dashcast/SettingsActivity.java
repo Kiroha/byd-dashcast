@@ -62,6 +62,10 @@ public class SettingsActivity extends AppCompatActivity {
     // true            = quick stop: only sendInfo(18) + sendInfo(0), no size
     //                   reconfiguration of the original cluster.
     public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
+    public static final String PREF_USE_OWN_SIM           = "use_own_sim";
+    // v1.2.43 — Hotspot integration prefs (set from HotspotActivity, read at boot)
+    public static final String PREF_HOTSPOT_AUTOSTART_BOOT = "hotspot_autostart_boot";
+    public static final String PREF_HOTSPOT_WATCHDOG       = "hotspot_watchdog_enabled";
     // ── Auto-start projection on app launch ────────────────────────────────────
     // v1.2.77 — always on: activateCluster() is invoked automatically when
     // MainActivity starts and ClusterService is not already running. Saves one
@@ -91,6 +95,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
     private CompoundButton cbQuickStop;
+    private CompoundButton cbUseOwnSim;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
     private CompoundButton swDilink5Mode;
@@ -219,6 +224,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
         cbQuickStop      = findViewById(R.id.cb_quick_stop);
+        cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
@@ -268,6 +274,13 @@ public class SettingsActivity extends AppCompatActivity {
         // Quick stop toggle (default: disabled — Stop button restores origin cluster
         // with size from Settings; when enabled, Stop only sends sendInfo 18 + 0).
         boolean quickStop = prefs.getBoolean(PREF_QUICK_STOP, false);
+        cbQuickStop.setChecked(quickStop);
+
+        // Use-own-SIM toggle (default: disabled). Controls visibility of the
+        // Hotspot navrail entry. When the user uses a personal SIM card on a
+        // DL3 head-unit, they may want to tether their data via TetherFi.
+        boolean useOwnSim = prefs.getBoolean(PREF_USE_OWN_SIM, false);
+        cbUseOwnSim.setChecked(useOwnSim);
         cbQuickStop.setChecked(quickStop);
 
         // Beta Engine toggles (default OFF — restart required after change)
@@ -412,6 +425,13 @@ public class SettingsActivity extends AppCompatActivity {
         cbQuickStop.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_QUICK_STOP, isChecked).apply();
+        });
+
+        // Use-own-SIM checkbox — toggles visibility of the Hotspot navrail entry
+        cbUseOwnSim.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_USE_OWN_SIM, isChecked).apply();
+            AppLogger.i("SettingsActivity", "use_own_sim=" + isChecked);
         });
 
         // Beta Engine — both toggles require app restart to take effect

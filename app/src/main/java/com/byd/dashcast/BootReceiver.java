@@ -83,6 +83,47 @@ public class BootReceiver extends BroadcastReceiver {
             }, "boot-display-cleanup").start();
         }
 
+        // ─── v1.2.43 — Auto-start TetherFi hotspot at boot ─────────────────
+        // Fires the same TOGGLE→START intent that HotspotActivity uses, after
+        // a short delay so the Wi-Fi stack and PackageManager are fully up.
+        // Independent of the projection auto-boot above: a user can want one
+        // without the other.
+        boolean hotspotAutoStart =
+                prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, false);
+        if (hotspotAutoStart) {
+            // Verify TetherFi is still installed (user may have uninstalled it).
+            boolean installed = false;
+            try {
+                appCtx.getPackageManager().getPackageInfo("com.pyamsoft.tetherfi", 0);
+                installed = true;
+            } catch (android.content.pm.PackageManager.NameNotFoundException ignore) { }
+
+            if (installed) {
+                pending.incrementAndGet();
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        Intent it = new Intent();
+                        it.setClassName("com.pyamsoft.tetherfi",
+                                "com.pyamsoft.tetherfi.tile.ProxyTileActivity");
+                        it.putExtra("key_action", "START");
+                        it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                  | Intent.FLAG_ACTIVITY_NO_HISTORY);
+                        appCtx.startActivity(it);
+                        AppLogger.i("BootReceiver",
+                                "TetherFi auto-start at boot: START dispatched");
+                    } catch (Throwable t) {
+                        AppLogger.w("BootReceiver",
+                                "TetherFi auto-start failed: " + t.getMessage());
+                    } finally {
+                        releaseOne.run();
+                    }
+                }, 8_000L);
+            } else {
+                AppLogger.i("BootReceiver",
+                        "TetherFi auto-start: pref ON but app not installed — skipped");
+            }
+        }
+
         // If nothing was scheduled (no auto-start, no pre-warm), release immediately.
         if (pending.get() == 0) result.finish();
     }
