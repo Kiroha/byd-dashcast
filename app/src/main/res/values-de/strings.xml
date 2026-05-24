@@ -357,4 +357,6 @@
     <string name="sysinfo_restart_action">Neu starten</string>
     <string name="sysinfo_restart_started">Neustart…</string>
     <string name="sysinfo_restart_failed">Neustart fehlgeschlagen</string>
+    <string name="sysinfo_svc_projection">Projektion</string>
+    <string name="sysinfo_svc_projection_sub">Tippen: 30→6s→16→6s→0</string>
 </resources>

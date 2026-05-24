@@ -357,4 +357,6 @@
     <string name="sysinfo_restart_action">إعادة التشغيل</string>
     <string name="sysinfo_restart_started">جارٍ إعادة التشغيل…</string>
     <string name="sysinfo_restart_failed">فشل إعادة التشغيل</string>
+    <string name="sysinfo_svc_projection">الإسقاط</string>
+    <string name="sysinfo_svc_projection_sub">اضغط: 30→6ث→16→6ث→0</string>
 </resources>

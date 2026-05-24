@@ -101,10 +101,11 @@ public class ClusterManager {
         sQtInProjectionMode = false;
     }
 
-    /** Called internally after a successful activation sequence so the next
-     *  activate() can take the true fast path (instant reconnect to the
-     *  already-projecting Qt). */
-    private static void notifyProjectionActive() {
+    /** Called after a successful activation sequence so the next activate() can take
+     *  the true fast path (instant reconnect to the already-projecting Qt). Public so
+     *  manual recovery actions (SysInfo replay button, v1.2.78) can sync the flag
+     *  after a hand-rolled sendInfo(30→16) sequence. */
+    public static void notifyProjectionActive() {
         sQtInProjectionMode = true;
     }
 
