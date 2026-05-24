@@ -163,6 +163,10 @@
     <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
     <string name="resize_btn_cancel">Cancel</string>
     <string name="resize_btn_ok">Confirm</string>
+    <string name="resize_preset_full">Full screen</string>
+    <string name="resize_preset_left">Left ½</string>
+    <string name="resize_preset_right">Right ½</string>
+    <string name="resize_preset_center">Center 60%</string>
     <string name="sheet_force_stop">Force stop</string>
     <string name="main_cluster_status_off">Projection off</string>
     <string name="main_btn_exit_fullscreen">Exit fullscreen</string>

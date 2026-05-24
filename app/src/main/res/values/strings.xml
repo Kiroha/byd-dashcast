@@ -207,6 +207,11 @@
     <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
     <string name="resize_btn_cancel">Annuler</string>
     <string name="resize_btn_ok">Valider</string>
+    <!-- v1.2.72 — Presets ergonomie voiture -->
+    <string name="resize_preset_full">Plein écran</string>
+    <string name="resize_preset_left">Gauche ½</string>
+    <string name="resize_preset_right">Droite ½</string>
+    <string name="resize_preset_center">Centre 60 %</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
     <!-- v0.9.81 — Diag M3 cards -->
