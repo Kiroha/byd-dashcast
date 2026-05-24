@@ -1179,6 +1179,20 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
+        // v1.2.83 — same auto-activation if the service is bound but projection
+        // was stopped (stopProjectionNoAdb left displayId=-1). Without this, the
+        // following moveTaskToDisplay would issue an IAM call with
+        // launchDisplayId=-2 → SecurityException, and the user would have to go
+        // through SysInfo > slow-path replay to recover. Treat it as a fresh
+        // activation request and replay the tapped app once the cluster is back.
+        if (mClusterService.getDisplayId() <= 0) {
+            AppLogger.i(TAG, "ClusterService bound but displayId<=0 — auto-activating for "
+                    + app.packageName);
+            mPendingAppAfterActivation = app;
+            activateCluster();
+            return;
+        }
+
         AppLogger.log(TAG, "Envoi cluster — " + app.packageName
                 + " display=" + mDashboardLauncher.getDashboardDisplayId());
         final String appName = app.appName;
