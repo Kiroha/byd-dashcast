@@ -129,6 +129,8 @@
     <string name="settings_reconnect_popup_support">Күтпеген ажырау кезінде қалпына келтіру</string>
     <string name="settings_quick_stop">Жылдам тоқтату (бастапқы кластерді қалпына келтірмей)</string>
     <string name="settings_quick_stop_support">Тек sendInfo 18 + 0 жібереді, өлшемді өзгертпейді</string>
+    <string name="settings_auto_start_on_launch">Қолданба ашылғанда жобалауды бастау</string>
+    <string name="settings_auto_start_on_launch_support">Кластерді автоматты түрде іске қосады — бір түрту аз</string>
     <string name="settings_category_filters_support">Қолданбалар мәзірінде чиптерді көрсету</string>
     <string name="settings_section_about">Туралы</string>
     <string name="settings_about_version_label">Нұсқа</string>

@@ -600,6 +600,33 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <!-- Démarrage auto de la projection à l'ouverture de l'app -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_play"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_auto_start_on_launch"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_auto_start_on_launch_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_auto_start_on_launch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
                         <!-- Filtres par catégorie -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">

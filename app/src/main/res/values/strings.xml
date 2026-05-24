@@ -171,6 +171,8 @@
     <string name="settings_reconnect_popup_support">Restaure si déconnecté inopinément</string>
     <string name="settings_quick_stop">Arrêt rapide (sans restaurer le cluster d\'origine)</string>
     <string name="settings_quick_stop_support">Envoie seulement sendInfo 18 + 0, sans changer la taille</string>
+    <string name="settings_auto_start_on_launch">Démarrer la projection à l\'ouverture de l\'app</string>
+    <string name="settings_auto_start_on_launch_support">Lance automatiquement le cluster — un tap en moins</string>
     <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
     <string name="settings_section_about">À propos</string>
     <string name="settings_about_version_label">Version</string>
