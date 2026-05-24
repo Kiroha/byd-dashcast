@@ -821,6 +821,26 @@ public class SysInfoActivity extends AppCompatActivity {
                                         // Sync the projection-mode flag: the manual replay just put Qt back
                                         // into projection, so the next activate() can take the true fast path.
                                         com.byd.dashcast.dashboard.ClusterManager.notifyProjectionActive();
+                                        // v1.2.82 — re-init ClusterService so its DashboardLauncher
+                                        // re-discovers the cluster display. Without this, after a prior
+                                        // stopProjectionNoAdb() the launcher kept displayId=-1 and any
+                                        // subsequent moveTaskToDisplay → SecurityException launchDisplayId=-2.
+                                        // ClusterManager.activateClusterDisplay() will take the true fast
+                                        // path (VD already up + flag now true) → instant onClusterDisplayConnected
+                                        // → mLauncher.setDashboardDisplayId(realId).
+                                        try {
+                                            ClusterService inst = ClusterService.getInstance();
+                                            if (inst != null) {
+                                                inst.restartProjection();
+                                            } else {
+                                                android.content.Intent svc = new android.content.Intent(
+                                                        SysInfoActivity.this, ClusterService.class);
+                                                startForegroundService(svc);
+                                            }
+                                        } catch (Throwable t) {
+                                            AppLogger.w("SysInfoActivity",
+                                                    "replay: ClusterService re-init failed: " + t.getMessage());
+                                        }
                                         runOnUiThread(new Runnable() { @Override public void run() {
                                             if (!mDestroyed) populateServicesList();
                                         }});
