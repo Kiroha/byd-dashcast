@@ -373,4 +373,25 @@
     <string name="diag_sniffer_doc_content">• Header initial : ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live : logcat threadtime complet + buffer events (sans filtre, rien manqué)\n• Snapshots auto toutes les 10 s : displays, SurfaceFlinger, processus BYD/xdja/qt/cluster\n• Snapshot manuel : ajoute dumpsys window + broadcasts history\n• Persistance : la capture survit à la rotation/destruction d\u2019Activity (processus setsid)</string>
     <string name="diag_sniffer_doc_workflow">1. Démarrer → la capture tourne en tâche de fond (setsid, survit à l\u2019Activity)\n2. Reproduire le bug / scénario à étudier\n3. Snapshot manuel aux moments clés (ex. juste avant/après crash)\n4. Arrêter\n5. Exporter → choisir Telegram pour partager le fichier</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+
+    <!-- ═══ Cluster POC overlay (v1.2.34) — inspiré OpenBYD 2.0 ═══ -->
+    <string name="diag_cluster_poc_title">Cluster Move/Resize — display Fission</string>
+    <string name="diag_cluster_poc_subtitle">Pilote interactif d\'une app (Waze, Maps, …) sur le display trusted xdja « fission_* » comme le font WindowManagement / Dilink5 Dashboard. La VD locale est abandonnée : on piggyback sur le display système (uid 1000) pour éviter le toast « écran secondaire » et le rebound sur display 0.</string>
+    <string name="diag_cluster_poc_btn_enumerate">📋 Lister displays</string>
+    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
+    <string name="diag_cluster_poc_btn_share">📤 Partager rapport</string>
+    <string name="diag_cluster_poc_section_app">Cible</string>
+    <string name="diag_cluster_poc_label_pkg">package :</string>
+    <string name="diag_cluster_poc_btn_launch">▶ Lancer sur fission</string>
+    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
+    <string name="diag_cluster_poc_section_rect">Position &amp; taille (px du display fission)</string>
+    <string name="diag_cluster_poc_slider_x">X (gauche)</string>
+    <string name="diag_cluster_poc_slider_y">Y (haut)</string>
+    <string name="diag_cluster_poc_slider_w">W (largeur)</string>
+    <string name="diag_cluster_poc_slider_h">H (hauteur)</string>
+    <string name="diag_cluster_poc_btn_apply">✅ Appliquer rect</string>
+    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
+    <string name="diag_cluster_poc_chooser_title">Partager rapport Cluster</string>
+    <string name="diag_cluster_poc_toast_no_report">Aucun rapport. Clique d\'abord « Lister displays ».</string>
+    <string name="diag_cluster_poc_status_idle">Prêt. Clique « Lister » pour voir les displays, puis « Lancer sur fission » pour démarrer la cible. Ensuite manipule les sliders X/Y/W/H et appuie « Appliquer rect » (ou active « Auto »).</string>
 </resources>

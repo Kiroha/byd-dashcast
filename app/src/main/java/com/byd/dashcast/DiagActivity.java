@@ -1,16 +1,31 @@
 package com.byd.dashcast;
 
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Color;
+import android.graphics.Point;
+import android.graphics.drawable.GradientDrawable;
+import android.hardware.display.DisplayManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.view.Display;
 import android.view.GestureDetector;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -69,6 +84,7 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelMirror;
     private View         panelSniffer;
     private View         panelAdas;
+    private View         panelClusterPoc;
     private View         panelComingSoon;
     private static final int TAB_COUNT = 11; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer
 
@@ -136,6 +152,7 @@ public class DiagActivity extends AppCompatActivity {
         bindMirrorPanel();
         bindSnifferPanel();
         bindAdasPanel();
+        bindClusterPocPanel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
@@ -188,6 +205,7 @@ public class DiagActivity extends AppCompatActivity {
         panelMirror     = findViewById(R.id.panel_mirror);
         panelSniffer    = findViewById(R.id.panel_sniffer);
         panelAdas       = findViewById(R.id.panel_adas);
+        panelClusterPoc = findViewById(R.id.panel_cluster_poc);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -229,13 +247,14 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void showPanelForTab(int position) {
-        boolean isBeta    = position == TAB_BETA_ENGINE;
-        boolean isDl5     = position == TAB_DILINK5;
-        boolean isDl2     = position == TAB_DILINK2;
-        boolean isDl4     = position == TAB_DILINK4;
-        boolean isMirror  = position == TAB_MIRROR;
-        boolean isSniffer = position == TAB_SNIFFER;
-        boolean isAdas    = position == TAB_ADAS;
+        boolean isBeta       = position == TAB_BETA_ENGINE;
+        boolean isDl5        = position == TAB_DILINK5;
+        boolean isDl2        = position == TAB_DILINK2;
+        boolean isDl4        = position == TAB_DILINK4;
+        boolean isMirror     = position == TAB_MIRROR;
+        boolean isSniffer    = position == TAB_SNIFFER;
+        boolean isAdas       = position == TAB_ADAS;
+        boolean isClusterPoc = position == TAB_CLUSTER;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -243,12 +262,12 @@ public class DiagActivity extends AppCompatActivity {
         panelMirror.setVisibility(isMirror ? View.VISIBLE : View.GONE);
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas) {
+        panelClusterPoc.setVisibility(isClusterPoc ? View.VISIBLE : View.GONE);
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
-                case TAB_CLUSTER:   titleRes = R.string.diag_tab_cluster;   break;
                 case TAB_DISPLAY:   titleRes = R.string.diag_tab_display;   break;
                 case TAB_ADB_LOCAL: titleRes = R.string.diag_tab_adb_local; break;
                 case TAB_SYSTEM:    titleRes = R.string.diag_tab_system;    break;
@@ -1356,5 +1375,359 @@ public class DiagActivity extends AppCompatActivity {
     private void safeRunOnUiThread(Runnable r) {
         if (mDestroyed) return;
         runOnUiThread(() -> { if (!mDestroyed) r.run(); });
+    }
+
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Cluster Move/Resize panel (v1.2.58) — piggyback on the xdja fission VD
+    //
+    // VirtualDisplay path abandoned (CAPTURE_VIDEO_OUTPUT signature gate +
+    // FLAG_OWN_CONTENT_ONLY forced on uid-2000 VDs → toast "écran secondaire"
+    // + Telenav/Waze rebound). New approach matches Dilink5 Dashboard /
+    // WindowManagement : enumerate displays, find the trusted "fission_*"
+    // display owned by com.xdja.containerservice (uid 1000), and drive the
+    // target app via the daemon's typed verbs :
+    //   1. launchAndForce(pkg, null, fissionId, w, h)  — am start + relocate
+    //   2. moveAndResize(pkg, fissionId, l, t, r, b)   — interactive sliders
+    // ════════════════════════════════════════════════════════════════════════
+
+    private java.io.File mClusterPocReportFile;
+
+    private void bindClusterPocPanel() {
+        if (panelClusterPoc == null) return;
+        TextView status   = panelClusterPoc.findViewById(R.id.tv_cluster_poc_status);
+        TextView rectView = panelClusterPoc.findViewById(R.id.tv_cluster_poc_rect);
+        android.widget.EditText etPkg = panelClusterPoc.findViewById(R.id.et_cluster_poc_pkg);
+        View btnEnum    = panelClusterPoc.findViewById(R.id.btn_cluster_poc_enumerate);
+        View btnRestart = panelClusterPoc.findViewById(R.id.btn_cluster_poc_restart_daemon);
+        View btnShare   = panelClusterPoc.findViewById(R.id.btn_cluster_poc_share);
+        View btnLaunch  = panelClusterPoc.findViewById(R.id.btn_cluster_poc_launch);
+        View btnStop    = panelClusterPoc.findViewById(R.id.btn_cluster_poc_stop);
+        View btnApply   = panelClusterPoc.findViewById(R.id.btn_cluster_poc_apply);
+        final com.google.android.material.button.MaterialButton btnAuto =
+                panelClusterPoc.findViewById(R.id.btn_cluster_poc_auto_apply);
+        final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
+        final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
+        final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
+        final android.widget.SeekBar sbH = panelClusterPoc.findViewById(R.id.sb_cluster_poc_h);
+
+        android.widget.SeekBar.OnSeekBarChangeListener sl = new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                int x = sbX.getProgress(), y = sbY.getProgress();
+                int w = Math.max(100, sbW.getProgress()), h = Math.max(100, sbH.getProgress());
+                if (rectView != null) {
+                    rectView.setText("rect = (" + x + ", " + y + ") " + w + "×" + h);
+                }
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                if (btnAuto != null && btnAuto.isChecked()) {
+                    applyMoveResize(status, etPkg, sbX, sbY, sbW, sbH);
+                }
+            }
+        };
+        if (sbX != null) sbX.setOnSeekBarChangeListener(sl);
+        if (sbY != null) sbY.setOnSeekBarChangeListener(sl);
+        if (sbW != null) sbW.setOnSeekBarChangeListener(sl);
+        if (sbH != null) sbH.setOnSeekBarChangeListener(sl);
+
+        if (btnEnum    != null) btnEnum.setOnClickListener(v -> enumerateDisplaysForPoc(status));
+        if (btnRestart != null) btnRestart.setOnClickListener(v -> restartProxyDaemon(status));
+        if (btnShare   != null) btnShare.setOnClickListener(v -> shareClusterPocReport());
+        if (btnLaunch  != null) btnLaunch.setOnClickListener(v -> launchOnFission(status, etPkg, sbW, sbH));
+        if (btnStop    != null) btnStop.setOnClickListener(v -> stopTargetPkg(status, etPkg));
+        if (btnApply   != null) btnApply.setOnClickListener(v -> applyMoveResize(status, etPkg, sbX, sbY, sbW, sbH));
+    }
+
+    private void enumerateDisplaysForPoc(TextView status) {
+        if (status == null) return;
+        StringBuilder ui   = new StringBuilder();
+        StringBuilder file = new StringBuilder();
+
+        String header = "DashCast Cluster — display enumeration\n"
+                + "timestamp=" + new java.text.SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date()) + "\n"
+                + "app="       + BuildConfig.APPLICATION_ID + " v" + BuildConfig.VERSION_NAME
+                                + " build " + BuildConfig.VERSION_CODE + "\n"
+                + "device="    + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                                + " (" + android.os.Build.DEVICE + ")\n"
+                + "android="   + android.os.Build.VERSION.RELEASE + " (sdk "
+                                + android.os.Build.VERSION.SDK_INT + ")\n";
+        file.append(header).append('\n');
+
+        ui.append("[enum] Displays Android visibles :\n\n");
+        DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        if (dm == null) {
+            ui.append("  DisplayManager indisponible.");
+            file.append("ERROR: DisplayManager null\n");
+            status.setText(ui.toString());
+            writeClusterPocReport(file.toString());
+            return;
+        }
+        Display[] displays = dm.getDisplays();
+        int candidateId    = pickClusterDisplayId(displays);
+
+        file.append("== DisplayManager.getDisplays() (").append(displays.length).append(") ==\n");
+        for (Display d : displays) {
+            Point sz = new Point();
+            try { d.getRealSize(sz); } catch (Exception ignored) {}
+            android.util.DisplayMetrics dmx = new android.util.DisplayMetrics();
+            try { d.getRealMetrics(dmx); } catch (Exception ignored) {}
+            int flags = -1, rot = -1;
+            try { flags = d.getFlags();    } catch (Throwable ignored) {}
+            try { rot   = d.getRotation(); } catch (Throwable ignored) {}
+            String line = "  id=" + d.getDisplayId()
+                    + " name=\"" + d.getName() + "\""
+                    + " size=" + sz.x + "x" + sz.y
+                    + " density=" + dmx.densityDpi + "dpi"
+                    + " state=" + d.getState()
+                    + " flags=0x" + Integer.toHexString(flags)
+                    + " rot=" + rot
+                    + (d.getDisplayId() == candidateId ? "   ◀ fission/cluster" : "");
+            ui.append(line).append('\n');
+            file.append(line).append('\n');
+        }
+        ui.append('\n');
+
+        if (candidateId < 0) {
+            ui.append("⚠ Aucun display « fission » / « cluster ». ");
+            ui.append("Le display trusted xdja n'est pas présent — ");
+            ui.append("vérifie que le containerservice tourne.");
+        } else {
+            ui.append("Display fission : id=").append(candidateId).append('\n');
+            ui.append("→ Lance ta cible (Waze) avec « ▶ Lancer sur fission ».");
+        }
+        ui.append("\n\nClique « 📤 Partager rapport » pour exporter le détail.");
+
+        status.setText(ui.toString());
+        writeClusterPocReport(file.toString());
+        AppLogger.i("ClusterPoc", "enumerate: " + displays.length + " displays, fission=" + candidateId);
+    }
+
+    /** Heuristic — match Dilink5 Dashboard / WindowManagement : look for any
+     *  display whose name starts with "fission_" (the xdja containerservice
+     *  trusted VD) or contains "cluster". Returns -1 if none found. */
+    private int pickClusterDisplayId(Display[] displays) {
+        for (Display d : displays) {
+            String name = d.getName();
+            if (name == null) continue;
+            String lc = name.toLowerCase();
+            if (lc.startsWith("fission_") || lc.contains("fission") || lc.contains("cluster")) {
+                return d.getDisplayId();
+            }
+        }
+        return -1;
+    }
+
+    private String currentPkg(android.widget.EditText etPkg) {
+        if (etPkg == null) return "com.waze";
+        CharSequence s = etPkg.getText();
+        String p = s == null ? null : s.toString().trim();
+        return (p == null || p.isEmpty()) ? "com.waze" : p;
+    }
+
+    private void launchOnFission(TextView status, android.widget.EditText etPkg,
+                                  android.widget.SeekBar sbW, android.widget.SeekBar sbH) {
+        if (status == null) return;
+        DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        if (dm == null) { status.setText("[launch] ❌ DisplayManager null."); return; }
+        final int fissionId = pickClusterDisplayId(dm.getDisplays());
+        if (fissionId < 0) {
+            status.setText("[launch] ❌ Display fission introuvable. Clique « Lister » d'abord.");
+            return;
+        }
+        final String pkg = currentPkg(etPkg);
+        final int w = sbW == null ? 400 : Math.max(100, sbW.getProgress());
+        final int h = sbH == null ? 400 : Math.max(100, sbH.getProgress());
+        status.setText("[launch] ⏳ " + pkg + " → display=" + fissionId + " " + w + "×" + h + "…");
+
+        new Thread(() -> {
+            StringBuilder log = new StringBuilder();
+            log.append("== launchOnFission ").append(pkg)
+               .append(" → display=").append(fissionId)
+               .append(' ').append(w).append('x').append(h).append(" ==\n");
+            try {
+                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
+                    boolean ok = com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                    log.append("BetaProxy.connect() = ").append(ok).append('\n');
+                    if (!ok) {
+                        final String out = log + "\n❌ Daemon indisponible. Tente « 🔄 Restart daemon ».";
+                        safeRunOnUiThread(() -> status.setText(out));
+                        writeClusterPocReport(out);
+                        return;
+                    }
+                }
+                String forceLog = com.byd.dashcast.beta.BetaProxyClient.launchAndForce(
+                        pkg, /*activityCls*/ null, fissionId, w, h);
+                log.append(forceLog).append('\n');
+                final String out = log + "\n✅ Séquence terminée. Regarde le cluster :\n"
+                        + " • app visible en " + w + "×" + h + " → manipule les sliders puis « Appliquer rect »\n"
+                        + " • app plein écran → resizeTask a échoué (BYD lock probable)\n"
+                        + " • rien sur cluster → moveStackToDisplay a échoué (voir log)";
+                writeClusterPocReport(out);
+                safeRunOnUiThread(() -> status.setText(out));
+            } catch (com.byd.dashcast.beta.BetaProxyClient.BetaProxyException bex) {
+                log.append("❌ BetaProxyException : ").append(bex.getMessage()).append('\n');
+                if (bex.getMessage() != null && bex.getMessage().contains("Unknown transaction")) {
+                    log.append("\nDaemon obsolète (proto < 5). Hit « 🔄 Restart daemon » puis réessaie.");
+                }
+                final String out = log.toString();
+                AppLogger.w("ClusterPoc", "launchOnFission failed", bex);
+                writeClusterPocReport(out);
+                safeRunOnUiThread(() -> status.setText(out));
+            } catch (Throwable t) {
+                log.append("❌ ").append(t.getClass().getSimpleName()).append(" : ").append(t.getMessage());
+                final String out = log.toString();
+                AppLogger.w("ClusterPoc", "launchOnFission failed", t);
+                writeClusterPocReport(out);
+                safeRunOnUiThread(() -> status.setText(out));
+            }
+        }, "cluster-launch").start();
+    }
+
+    private void applyMoveResize(TextView status, android.widget.EditText etPkg,
+                                  android.widget.SeekBar sbX, android.widget.SeekBar sbY,
+                                  android.widget.SeekBar sbW, android.widget.SeekBar sbH) {
+        if (status == null) return;
+        DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        if (dm == null) { status.setText("[apply] ❌ DisplayManager null."); return; }
+        final int fissionId = pickClusterDisplayId(dm.getDisplays());
+        if (fissionId < 0) {
+            status.setText("[apply] ❌ Display fission introuvable.");
+            return;
+        }
+        final String pkg = currentPkg(etPkg);
+        final int x = sbX.getProgress();
+        final int y = sbY.getProgress();
+        final int w = Math.max(100, sbW.getProgress());
+        final int h = Math.max(100, sbH.getProgress());
+        final int l = x, t = y, r = x + w, b = y + h;
+
+        new Thread(() -> {
+            StringBuilder log = new StringBuilder();
+            log.append("== applyMoveResize ").append(pkg)
+               .append(" → display=").append(fissionId)
+               .append(" rect=[").append(l).append(',').append(t).append(',')
+               .append(r).append(',').append(b).append("] ==\n");
+            try {
+                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
+                    boolean ok = com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                    log.append("connect = ").append(ok).append('\n');
+                    if (!ok) {
+                        final String out = log + "❌ Daemon indisponible.";
+                        safeRunOnUiThread(() -> status.setText(out));
+                        return;
+                    }
+                }
+                String moveLog = com.byd.dashcast.beta.BetaProxyClient.moveAndResize(
+                        pkg, fissionId, l, t, r, b);
+                log.append(moveLog);
+                final String out = log.toString();
+                writeClusterPocReport(out);
+                safeRunOnUiThread(() -> status.setText(out));
+            } catch (com.byd.dashcast.beta.BetaProxyClient.BetaProxyException bex) {
+                log.append("❌ ").append(bex.getMessage()).append('\n');
+                if (bex.getMessage() != null && bex.getMessage().contains("Unknown transaction")) {
+                    log.append("\nDaemon obsolète (proto < 5 — pas de moveAndResize). "
+                            + "Hit « 🔄 Restart daemon » puis réessaie.");
+                }
+                final String out = log.toString();
+                AppLogger.w("ClusterPoc", "applyMoveResize failed", bex);
+                safeRunOnUiThread(() -> status.setText(out));
+            } catch (Throwable th) {
+                log.append("❌ ").append(th.getClass().getSimpleName()).append(" : ").append(th.getMessage());
+                final String out = log.toString();
+                AppLogger.w("ClusterPoc", "applyMoveResize failed", th);
+                safeRunOnUiThread(() -> status.setText(out));
+            }
+        }, "cluster-apply").start();
+    }
+
+    private void stopTargetPkg(TextView status, android.widget.EditText etPkg) {
+        if (status == null) return;
+        final String pkg = currentPkg(etPkg);
+        status.setText("[stop] ⏳ am force-stop " + pkg + "…");
+        new Thread(() -> {
+            StringBuilder log = new StringBuilder();
+            log.append("[stop] am force-stop ").append(pkg).append('\n');
+            try {
+                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
+                    com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                }
+                String out = com.byd.dashcast.beta.BetaProxyClient.runShell(
+                        "am force-stop " + pkg);
+                if (out != null && !out.isEmpty()) log.append(out).append('\n');
+                log.append("✓ force-stop OK");
+                final String finalLog = log.toString();
+                safeRunOnUiThread(() -> status.setText(finalLog));
+            } catch (Throwable t) {
+                log.append("❌ ").append(t.getClass().getSimpleName()).append(" : ").append(t.getMessage());
+                final String finalLog = log.toString();
+                safeRunOnUiThread(() -> status.setText(finalLog));
+            }
+        }, "cluster-stop").start();
+    }
+
+    private void writeClusterPocReport(String content) {
+        try {
+            java.io.File dir = getExternalFilesDir(null);
+            if (dir == null) dir = getFilesDir();
+            String name = "cluster_poc_" + new java.text.SimpleDateFormat(
+                    "yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date()) + ".txt";
+            java.io.File f = new java.io.File(dir, name);
+            try (java.io.FileWriter w = new java.io.FileWriter(f)) {
+                w.write(content);
+            }
+            mClusterPocReportFile = f;
+            AppLogger.i("ClusterPoc", "report written: " + f.getAbsolutePath()
+                    + " (" + f.length() + " B)");
+        } catch (Exception e) {
+            AppLogger.w("ClusterPoc", "writeReport failed", e);
+        }
+    }
+
+    private void shareClusterPocReport() {
+        java.io.File f = mClusterPocReportFile;
+        if (f == null || !f.exists() || f.length() == 0) {
+            Toast.makeText(this, R.string.diag_cluster_poc_toast_no_report, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", f);
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType("text/plain");
+            share.putExtra(Intent.EXTRA_STREAM, uri);
+            share.putExtra(Intent.EXTRA_SUBJECT, f.getName());
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            share.setClipData(android.content.ClipData.newRawUri("", uri));
+            Intent chooser = Intent.createChooser(share,
+                    getString(R.string.diag_cluster_poc_chooser_title));
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
+        } catch (Exception e) {
+            AppLogger.e("ClusterPoc", "share failed", e);
+            Toast.makeText(this, "Share erreur: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void restartProxyDaemon(TextView status) {
+        if (status == null) return;
+        status.setText("[restart] Kill + bootstrap daemon… (peut prendre 5–8 s)");
+        new Thread(() -> {
+            boolean ok = com.byd.dashcast.beta.BetaProxyClient.killAndRestartDaemon(this);
+            String ver = com.byd.dashcast.beta.BetaProxyClient.getProtocolVersion();
+            int uid = com.byd.dashcast.beta.BetaProxyClient.getCallerUid();
+            int pid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+            int verInt = -1;
+            try { verInt = ver == null ? -1 : Integer.parseInt(ver); } catch (Throwable ignored) {}
+            final String msg = ok
+                    ? ("[restart] ✅ Daemon up. pid=" + pid + " uid=" + uid + " proto=" + ver
+                       + (verInt >= 5
+                              ? "\n   moveAndResize dispo ✅"
+                              : "\n   ⚠ proto < 5 — moveAndResize PAS dispo"))
+                    : "[restart] ❌ Échec du bootstrap. Voir logcat.";
+            safeRunOnUiThread(() -> status.setText(msg));
+        }, "daemon-restart").start();
     }
 }

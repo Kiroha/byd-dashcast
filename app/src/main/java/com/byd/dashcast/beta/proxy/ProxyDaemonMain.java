@@ -55,8 +55,11 @@ public final class ProxyDaemonMain {
     /** App package that should receive the broadcast (must own the receiver). */
     public static final String TARGET_PKG = "com.byd.dashcast";
 
-    /** Protocol version reported by {@link #TXN_WHOAMI}. Bump on any wire-incompatible change. */
-    public static final String PROTOCOL_VERSION = "2";
+    /** Protocol version reported by {@link #TXN_WHOAMI}. Bump on any wire-incompatible change.
+     *  v3 (build 235): adds {@link #TXN_CREATE_VIRTUAL_DISPLAY} and
+     *  {@link #TXN_RELEASE_VIRTUAL_DISPLAY} (Phase 5a — cluster mini-mode POC).
+     *  Purely additive — old clients keep working unchanged. */
+    public static final String PROTOCOL_VERSION = "6";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -84,6 +87,31 @@ public final class ProxyDaemonMain {
      *  {@code AdbLocalClient.restoreBydOnCluster} / {@code restoreOriginCluster}
      *  (end-of-session teardown hot path). */
     public static final int TXN_FORCE_STOP_PACKAGE = android.os.IBinder.FIRST_CALL_TRANSACTION + 7; // 8
+    /** Transaction: {@code String name, int w, int h, int dpi, int flags, Surface surface}
+     *  → {@code int displayId}. Phase 5a — creates a VD on the daemon (uid 2000)
+     *  with the {@code CAPTURE_VIDEO_OUTPUT} permission an app uid cannot hold.
+     *  Mirrors OpenBYD 2.0 ClusterOverlayManager#launchOnVirtualDisplay. */
+    public static final int TXN_CREATE_VIRTUAL_DISPLAY = android.os.IBinder.FIRST_CALL_TRANSACTION + 8; // 9
+    /** Transaction: {@code int displayId} → nothing (or thrown exception).
+     *  Phase 5a — releases a VD previously created by
+     *  {@link #TXN_CREATE_VIRTUAL_DISPLAY}. */
+    public static final int TXN_RELEASE_VIRTUAL_DISPLAY = android.os.IBinder.FIRST_CALL_TRANSACTION + 9; // 10
+    /** Phase 5b — OpenBYD-style task relocation : am start, poll task id,
+     *  loop 2&times; (moveTaskToDisplay + resizeTask + setFocusedRootTask).
+     *  Bypasses {@code canPlaceEntityOnDisplay} which would otherwise reject
+     *  non-resizeable activities (Waze, Maps, …) on secondary displays. */
+    public static final int TXN_LAUNCH_AND_FORCE      = android.os.IBinder.FIRST_CALL_TRANSACTION + 10; // 11
+    /** Phase 6 — move + resize an existing task in place (no am start).
+     *  Args : {@code String pkg, int displayId, int l, int t, int r, int b}.
+     *  Returns a multi-line log. Used by Diag's interactive move/resize UI
+     *  on the fission display. */
+    public static final int TXN_MOVE_AND_RESIZE       = android.os.IBinder.FIRST_CALL_TRANSACTION + 11; // 12
+
+    /** Phase 6b — destroy every non-fullscreen, non-home stack on a display.
+     *  Args : {@code int displayId}. Returns a multi-line log.
+     *  Recovery verb for zombie split-screen-primary stacks that poison
+     *  fission display launches. */
+    public static final int TXN_CLEAN_FISSION_STACKS  = android.os.IBinder.FIRST_CALL_TRANSACTION + 12; // 13
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -293,6 +321,137 @@ public final class ProxyDaemonMain {
                         Phase4Verbs.forceStopPackage(pkg, userId);
                         if (reply != null) {
                             reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_CREATE_VIRTUAL_DISPLAY: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String name = data.readString();
+                    int w     = data.readInt();
+                    int h     = data.readInt();
+                    int dpi   = data.readInt();
+                    int vflag = data.readInt();
+                    android.view.Surface surface = data.readInt() != 0
+                            ? android.view.Surface.CREATOR.createFromParcel(data)
+                            : null;
+                    try {
+                        int displayId = Phase4Verbs.createVirtualDisplay(
+                                sSystemContext, name, w, h, dpi, surface, vflag);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeInt(displayId);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_RELEASE_VIRTUAL_DISPLAY: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int displayId = data.readInt();
+                    try {
+                        Phase4Verbs.releaseVirtualDisplay(displayId);
+                        if (reply != null) {
+                            reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_LAUNCH_AND_FORCE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    String cls = data.readInt() != 0 ? data.readString() : null;
+                    int    did = data.readInt();
+                    int    w   = data.readInt();
+                    int    h   = data.readInt();
+                    try {
+                        String log = Phase4Verbs.launchAndForce(pkg, cls, did, w, h);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeString(log == null ? "" : log);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_MOVE_AND_RESIZE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    int    did = data.readInt();
+                    int    l   = data.readInt();
+                    int    t   = data.readInt();
+                    int    r   = data.readInt();
+                    int    b   = data.readInt();
+                    try {
+                        String log = Phase4Verbs.moveAndResize(pkg, did, l, t, r, b);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeString(log == null ? "" : log);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_CLEAN_FISSION_STACKS: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int did = data.readInt();
+                    try {
+                        String log = Phase4Verbs.cleanFissionStacks(did);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeString(log == null ? "" : log);
                         }
                     } catch (Throwable ex) {
                         Throwable cause = ex;

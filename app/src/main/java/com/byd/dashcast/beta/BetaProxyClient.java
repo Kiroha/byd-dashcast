@@ -516,6 +516,263 @@ public final class BetaProxyClient {
         }
     }
 
+    /**
+     * Phase 5a typed verb — ask the daemon (uid 2000) to create a
+     * {@link android.hardware.display.VirtualDisplay} backed by the provided
+     * {@code Surface} and return its display id. App processes cannot create
+     * a {@code PUBLIC/TRUSTED} VD because {@code CAPTURE_VIDEO_OUTPUT} is
+     * {@code signature|privileged}; this typed verb is the OpenBYD 2.0
+     * cluster mini-window technique adapted to our existing proxy.
+     *
+     * <p>The {@code Surface} parameter is typically the output of a
+     * {@link android.view.SurfaceView} the caller posted inside the cluster
+     * overlay. Once the VD is alive, launch an activity onto it with
+     * {@code ActivityOptions.setLaunchDisplayId(returnedId)}.
+     *
+     * <p>Callers MUST eventually invoke {@link #releaseVirtualDisplay} to
+     * free the VD (the daemon retains a strong reference until then).
+     *
+     * <p>If the daemon predates build 235 (PROTOCOL_VERSION ≤ "2"), this
+     * call throws a {@link BetaProxyException} with cause
+     * {@link RemoteException} reporting "Unknown transaction" — caller
+     * should surface a "daemon obsolète, redémarre-le" hint.
+     *
+     * @since v1.2.39 build 235 — Phase 5a (Cluster mini-mode POC, Diag-only).
+     */
+    public static int createVirtualDisplay(String name, int width, int height,
+                                           int densityDpi,
+                                           android.view.Surface surface, int flags)
+            throws BetaProxyException {
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        if (surface == null || !surface.isValid()) {
+            throw new BetaProxyException("surface null or invalid");
+        }
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(name == null ? "DashCast_VD" : name);
+            data.writeInt(width);
+            data.writeInt(height);
+            data.writeInt(densityDpi);
+            data.writeInt(flags);
+            // Mirror the inline header used by readParcelable to signal "non-null".
+            data.writeInt(1);
+            surface.writeToParcel(data, 0);
+            b.transact(ProxyDaemonMain.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * Release a VirtualDisplay previously returned by
+     * {@link #createVirtualDisplay}. Best-effort: silently no-ops on
+     * unknown ids in the daemon. Always pair every successful
+     * createVirtualDisplay with a matching releaseVirtualDisplay (typically
+     * inside {@code SurfaceHolder.Callback#surfaceDestroyed}).
+     *
+     * @since v1.2.39 build 235 — Phase 5a.
+     */
+    public static void releaseVirtualDisplay(int displayId) throws BetaProxyException {
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInt(displayId);
+            b.transact(ProxyDaemonMain.TXN_RELEASE_VIRTUAL_DISPLAY, data, reply, 0);
+            reply.readException();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * OpenBYD 2.0 launchAndForce sequence — run inside the daemon (shell uid):
+     * <ol>
+     *   <li>{@code am start} the package (no {@code --display}) so it lands
+     *       on display 0 first;</li>
+     *   <li>poll {@code IActivityTaskManager.getTasks()} via reflection until
+     *       the new taskId appears (or timeout);</li>
+     *   <li>two-pass force-redirect loop: {@code moveTaskToDisplay},
+     *       {@code resizeTask}, {@code setFocusedRootTask}.</li>
+     * </ol>
+     * The second pass catches apps (Waze) that internally re-launch their
+     * main activity with {@code FLAG_ACTIVITY_LAUNCH_ADJACENT}, which would
+     * otherwise bounce back to display 0.
+     *
+     * <p>This bypasses {@code ActivityStackSupervisor.canPlaceEntityOnDisplay}
+     * because that gate only fires on new {@code startActivity} calls — task
+     * relocation of an existing task is unrestricted (modulo shell-level
+     * MANAGE_ACTIVITY_STACKS / INTERNAL_SYSTEM_WINDOW, which uid 2000 holds).
+     *
+     * @param pkg         target package, e.g. {@code "com.waze"}
+     * @param activityCls optional FQCN to force-launch, or null for the
+     *                    default launcher activity
+     * @param displayId   destination display id
+     * @param width       desired width inside the display (px); 0 = full
+     * @param height      desired height (px); 0 = full
+     * @return verbose multi-line log of what the daemon did
+     * @since v1.2.45 build 241 — Phase 5b.
+     */
+    public static String launchAndForce(String pkg, String activityCls,
+                                        int displayId, int width, int height)
+            throws BetaProxyException {
+        if (pkg == null || pkg.isEmpty()) throw new BetaProxyException("pkg required");
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(pkg);
+            if (activityCls != null) {
+                data.writeInt(1);
+                data.writeString(activityCls);
+            } else {
+                data.writeInt(0);
+            }
+            data.writeInt(displayId);
+            data.writeInt(width);
+            data.writeInt(height);
+            b.transact(ProxyDaemonMain.TXN_LAUNCH_AND_FORCE, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * Phase 6 — Move an existing task to {@code displayId} and resize it to
+     * the given rect (in destination-display pixels). No am-start, no
+     * polling. The task must already exist (use {@link #launchAndForce} once
+     * to create it, then drive this verb interactively to reposition the
+     * floating window inside the fission display).
+     *
+     * @return verbose multi-line log of what the daemon did
+     * @since v1.2.58 — Phase 6 (Diag move/resize UI).
+     */
+    public static String moveAndResize(String pkg, int displayId,
+                                       int left, int top, int right, int bottom)
+            throws BetaProxyException {
+        if (pkg == null || pkg.isEmpty()) throw new BetaProxyException("pkg required");
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeString(pkg);
+            data.writeInt(displayId);
+            data.writeInt(left);
+            data.writeInt(top);
+            data.writeInt(right);
+            data.writeInt(bottom);
+            b.transact(ProxyDaemonMain.TXN_MOVE_AND_RESIZE, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * Phase 6b — Destroy every non-fullscreen, non-home stack on
+     * {@code displayId}. Recovery verb for the fission display when an
+     * earlier session left a zombie split-screen-primary / freeform stack
+     * (regression v1.2.61 → 1.2.62 : "Can only have one child on stack
+     * mode=split-screen-primary" on every subsequent launch via IAM).
+     *
+     * <p>Safe to call repeatedly and at any time — on a clean display the
+     * call simply finds nothing to remove. Returns a verbose multi-line log
+     * of what was inspected and what was removed.
+     *
+     * @since v1.2.63
+     */
+    public static String cleanFissionStacks(int displayId) throws BetaProxyException {
+        IBinder b = sBinder;
+        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInt(displayId);
+            b.transact(ProxyDaemonMain.TXN_CLEAN_FISSION_STACKS, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } catch (RemoteException e) {
+            sBinder = null;
+            throw new BetaProxyException("transact: " + e.getMessage(), e);
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    /**
+     * Force-kill the running daemon (if any) so the next {@link #connect}
+     * bootstraps a fresh one. Useful after installing an APK that ships new
+     * typed verbs: the old daemon process keeps the previous APK's
+     * classpath loaded and would reject newer TXN codes with "Unknown
+     * transaction".
+     *
+     * <p>Diag-only helper. The rest of the app should keep using
+     * {@link #connect(Context)} which reuses the live daemon.
+     *
+     * <p>Safe to call when no daemon is alive — the kill is best-effort and
+     * the reconnect attempts the standard ADB-pairing bootstrap.
+     *
+     * @since v1.2.39 build 235 — Phase 5a.
+     */
+    public static boolean killAndRestartDaemon(Context ctx) {
+        try {
+            IBinder b = sBinder;
+            if (b != null && b.isBinderAlive()) {
+                try {
+                    // Use the existing EXEC transport to kill ourselves —
+                    // simplest and avoids new shell perms on the caller side.
+                    runShell("ps -A 2>/dev/null | grep '[d]ashcast_proxy' "
+                            + "| awk '{print $2}' | xargs -r kill -9");
+                } catch (Throwable ignore) { /* daemon may already be dead */ }
+            }
+            sBinder = null;
+            sDaemonUid = -1;
+            sDaemonPid = -1;
+            sDaemonVer = null;
+            // Give AMS / the kernel a moment to reap the old process before
+            // the receiver waits for the next broadcast.
+            try { Thread.sleep(400L); } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            return connect(ctx);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "killAndRestartDaemon failed: " + t.getMessage());
+            return false;
+        }
+    }
+
     // ─── internals ─────────────────────────────────────────────────────────
 
     /**
