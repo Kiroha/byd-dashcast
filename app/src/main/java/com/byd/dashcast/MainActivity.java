@@ -806,6 +806,20 @@ public class MainActivity extends AppCompatActivity
             // Activity back in the foreground: re-attach the listener
             // (onStop had set it to null to avoid leaks during background)
             mClusterService.setListener(this);
+            // v1.2.82 — re-sync the status UI if the cluster display is currently
+            // up (e.g. user returns from SysInfo after using the projection replay
+            // button while MainActivity was in background → no onClusterDisplayConnected
+            // was delivered because the listener was null). Without this, the top-right
+            // status stayed in "OFF" state even though projection is active.
+            try {
+                int curDispId = mClusterService.getDisplayId();
+                if (curDispId > 0) {
+                    updateDashboardStatus(mCurrentDashboardApp);
+                    setActivateBtnEnabled(true);
+                }
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "onStart: status re-sync failed: " + t.getMessage());
+            }
             // If an app was active and the panel visible, restart the mirror.
             if (mCurrentDashboardApp != null
                     && panelClusterControl != null
