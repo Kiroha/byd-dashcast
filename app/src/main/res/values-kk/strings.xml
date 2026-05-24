@@ -358,5 +358,5 @@
     <string name="sysinfo_restart_started">Қайта іске қосылуда…</string>
     <string name="sysinfo_restart_failed">Қайта іске қосу сәтсіз аяқталды</string>
     <string name="sysinfo_svc_projection">Проекция</string>
-    <string name="sysinfo_svc_projection_sub">басу: 30→6с→16→6с→0</string>
+    <string name="sysinfo_svc_projection_sub">басу: 30→3с→16→3с→0</string>
 </resources>
