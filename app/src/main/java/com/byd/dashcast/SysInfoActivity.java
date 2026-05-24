@@ -800,12 +800,12 @@ public class SysInfoActivity extends AppCompatActivity {
         }
     }
 
-    /** v1.2.78 — manual recovery: always replays sendInfo(30) → 6s → sendInfo(16) → 6s →
+    /** v1.2.78 — manual recovery: always replays sendInfo(30) → 3s → sendInfo(16) → 3s →
      *  sendInfo(0) regardless of the current projection state. Useful when Qt is in an
      *  inconsistent state and the warm/fast path detection missed the bus. */
     private void replayProjectionSlowPath() {
         Toast.makeText(this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
-        AppLogger.log("SysInfoActivity", "Projection slow-path replay: 30→6s→16→6s→0");
+        AppLogger.log("SysInfoActivity", "Projection slow-path replay: 30→3s→16→3s→0");
         final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
         AdbLocalClient.sendInfo(this, 1000, 30, "", new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
@@ -833,7 +833,7 @@ public class SysInfoActivity extends AppCompatActivity {
                                         }});
                                     }
                                 });
-                            }}, 6000L);
+                            }}, 3000L);
                         }
                         @Override public void onError(String err) {
                             AppLogger.w("SysInfoActivity", "replay cmd=16 ERR: " + err);
@@ -843,7 +843,7 @@ public class SysInfoActivity extends AppCompatActivity {
                             }});
                         }
                     });
-                }}, 6000L);
+                }}, 3000L);
             }
             @Override public void onError(String err) {
                 AppLogger.w("SysInfoActivity", "replay cmd=30 ERR: " + err);
@@ -931,7 +931,7 @@ public class SysInfoActivity extends AppCompatActivity {
 
         // Projection state (v1.2.78) — reflects ClusterManager.sQtInProjectionMode, which is
         // independent of the VirtualDisplay lifecycle. Tap always replays the slow path
-        // sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(0) regardless of current state,
+        // sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(0) regardless of current state,
         // as a manual recovery for cases where the warm/fast path missed Qt's state.
         final boolean projOn = com.byd.dashcast.dashboard.ClusterManager.isQtInProjectionMode();
         addServiceRow(inf, container, getString(R.string.sysinfo_svc_projection),

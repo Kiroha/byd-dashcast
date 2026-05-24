@@ -2125,13 +2125,12 @@ public class MainActivity extends AppCompatActivity
         setStatusDot(DOT_COLOR_PENDING);
         trackUsageStop(mCurrentDashboardPkg);
 
-        // Capture the package name before clearing state — restoreBydOnCluster
-        // needs it to force-stop the app before sendInfo(18).
         final String capturedClusterPkg = mCurrentDashboardPkg;
+        final String capturedSecondPkg  = mSecondDashboardPkg;
 
-        // Eagerly clear tracked cluster state BEFORE async move/restore so the
+        // Eagerly clear tracked cluster state BEFORE async eviction so the
         // display-state poll does not see a stale mCurrentDashboardPkg on display 0
-        // during the brief window between moveSessionApps and restoreBydOnCluster.
+        // during the brief window between moveTaskToDisplay and forceStopApp.
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
@@ -2139,31 +2138,21 @@ public class MainActivity extends AppCompatActivity
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
 
-        // v1.2.9 fix (Bug 2) : retirer le pkg cluster du set AVANT
-        // moveSessionAppsToMainDisplay(), pour qu'il ne soit PAS déplacé sur
-        // display 0. Il sera force-stoppé en place (display 1) par
-        // restoreBydOnCluster, juste avant sendInfo(18). Sinon : déplacement
-        // sur display 0 → force-stop tue le process MAIS la TaskRecord reste
-        // → sendInfo(18+0) déclenche le rafraîchissement Qt qui ressuscite
-        // l'app en plein écran sur display 0.
-        if (capturedClusterPkg != null) {
-            mSessionClusterPackages.remove(capturedClusterPkg);
-            persistSessionClusterPackages();
-        }
-
-        // Move ALL apps that were launched on the cluster during this session back to Display 0.
-        // This prevents Android from re-launching them on the (still-alive) VirtualDisplay
-        // when the user opens the app from the BYD launcher after stopping the projection.
+        // v1.2.81 — unified stop semantics: every cluster-occupying app (main +
+        // split second) is now moved back to display 0 AND force-stopped (am
+        // force-stop + task remove) before sendInfo(18) is dispatched, mirroring
+        // the long-press « kill » action. This replaces the v1.2.9 workaround that
+        // force-stopped the cluster pkg in place on display 1 (which left the user
+        // without any feedback that the app had really returned to the tablet).
         moveSessionAppsToMainDisplay();
 
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
-        // Split mode: force-stop the second app before sendInfo(18)
-        // (prevents it from relocating to the main display)
-        if (mSecondDashboardPkg != null) {
-            AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
-        }
 
-        AdbLocalClient.restoreBydOnCluster(this, capturedClusterPkg, new AdbLocalClient.Callback() {
+        evictClusterAppsThen(buildEvictList(capturedClusterPkg, capturedSecondPkg), new Runnable() {
+            @Override public void run() {
+                // Cluster pkg already killed → pass null targetPackage so the helper
+                // only sends sendInfo(18+0) without re-issuing force-stop.
+                AdbLocalClient.restoreBydOnCluster(MainActivity.this, null, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -2200,6 +2189,8 @@ public class MainActivity extends AppCompatActivity
                 });
             }
         });
+            }
+        });
     }
 
     /**
@@ -2221,6 +2212,58 @@ public class MainActivity extends AppCompatActivity
         }
         mSessionClusterPackages.clear();
         persistSessionClusterPackages();
+    }
+
+    /** v1.2.81 — Builds the deduped list of packages that occupy the cluster and must
+     *  be evicted (moved to display 0 + force-stopped) before sendInfo(18). */
+    private java.util.List<String> buildEvictList(String main, String second) {
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        if (main   != null && !main.isEmpty())   set.add(main);
+        if (second != null && !second.isEmpty()) set.add(second);
+        return new java.util.ArrayList<>(set);
+    }
+
+    /** v1.2.81 — Sequentially moves each cluster app back to display 0 then calls
+     *  AdbLocalClient.forceStopApp (which does am force-stop + task remove), exactly
+     *  like {@link #doKillApp(AppInfo)} does for the long-press kill button.
+     *  Runs {@code onAllDone} on the main thread once every app has been processed
+     *  (success or failure). */
+    private void evictClusterAppsThen(final java.util.List<String> pkgs, final Runnable onAllDone) {
+        if (pkgs == null || pkgs.isEmpty()) { onAllDone.run(); return; }
+        if (!mServiceBound || mClusterService == null) {
+            // Service not bound: fall back to bare force-stop and a short settle delay.
+            for (String p : pkgs) {
+                if (p != null && !p.isEmpty()) AdbLocalClient.forceStopApp(this, p, null);
+            }
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .postDelayed(onAllDone, 800L);
+            return;
+        }
+        evictNext(pkgs, 0, onAllDone);
+    }
+
+    private void evictNext(final java.util.List<String> pkgs, final int idx, final Runnable onAllDone) {
+        if (idx >= pkgs.size()) {
+            runOnUiThread(onAllDone);
+            return;
+        }
+        final String pkg = pkgs.get(idx);
+        if (pkg == null || pkg.isEmpty()) { evictNext(pkgs, idx + 1, onAllDone); return; }
+        AppLogger.i(TAG, "evictClusterApp: move→display0 " + pkg);
+        mClusterService.moveTaskToDisplay(pkg, 0, new com.byd.dashcast.ClusterService.LaunchCallback() {
+            @Override public void onResult(boolean ok) {
+                AppLogger.i(TAG, "evictClusterApp: move " + pkg + " → " + (ok ? "OK" : "KO") + " — force-stop");
+                mSessionClusterPackages.remove(pkg);
+                persistSessionClusterPackages();
+                AdbLocalClient.forceStopApp(MainActivity.this, pkg, new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String r) { evictNext(pkgs, idx + 1, onAllDone); }
+                    @Override public void onError(String e) {
+                        AppLogger.w(TAG, "evictClusterApp: forceStop " + pkg + " ERR: " + e);
+                        evictNext(pkgs, idx + 1, onAllDone);
+                    }
+                });
+            }
+        });
     }
 
     /** Persists the session cluster packages set to SharedPreferences. */
@@ -2738,8 +2781,8 @@ public class MainActivity extends AppCompatActivity
         setStatusDot(DOT_COLOR_PENDING);
         trackUsageStop(mCurrentDashboardPkg);
 
-        // Capture before clearing — restoreOriginCluster needs it for force-stop.
         final String capturedClusterPkg = mCurrentDashboardPkg;
+        final String capturedSecondPkg  = mSecondDashboardPkg;
 
         // Eagerly clear tracked cluster state (same rationale as restoreBydDashboard).
         mCurrentDashboardApp = null;
@@ -2749,22 +2792,13 @@ public class MainActivity extends AppCompatActivity
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
 
-        // v1.2.9 fix (Bug 2) — cf. restoreBydDashboard : retirer le pkg cluster
-        // du set AVANT moveSessionAppsToMainDisplay pour qu'il soit force-stoppé
-        // en place (display 1) au lieu d'être déplacé sur display 0.
-        if (capturedClusterPkg != null) {
-            mSessionClusterPackages.remove(capturedClusterPkg);
-            persistSessionClusterPackages();
-        }
-
+        // v1.2.81 — see restoreBydDashboard for the unified eviction rationale.
         moveSessionAppsToMainDisplay();
         AppLogger.log(TAG, "originCluster() cmd=" + getClusterTypeCmd());
-        // Split mode: force-stop the second app before restoration
-        if (mSecondDashboardPkg != null) {
-            AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
-        }
 
-        AdbLocalClient.restoreOriginCluster(this, getClusterTypeCmd(), capturedClusterPkg, new AdbLocalClient.Callback() {
+        evictClusterAppsThen(buildEvictList(capturedClusterPkg, capturedSecondPkg), new Runnable() {
+            @Override public void run() {
+                AdbLocalClient.restoreOriginCluster(MainActivity.this, getClusterTypeCmd(), null, new AdbLocalClient.Callback() {
             @Override
             public void onSuccess(final String report) {
                 runOnUiThread(new Runnable() {
@@ -2790,6 +2824,8 @@ public class MainActivity extends AppCompatActivity
                         AppLogger.log(TAG, "originCluster FAILED: " + error);
                     }
                 });
+            }
+        });
             }
         });
     }

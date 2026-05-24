@@ -66,9 +66,9 @@ public class ClusterManager {
     public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMED 16/04/2026)
     public static final int CMD_DI40_MODE            = 35; // Di4.0 mode — triggers VirtualDisplay creation (CONFIRMED 03/05/2026)
     // Timeout waiting for VirtualDisplay after full sendInfo(30→16→35) sequence.
-    // Sequence: 2s delay + 6s (30→16) + 6s (16→35) + ~280ms creation = ~14.3s → 18s total with margin.
+    // Sequence: 2s delay + 3s (30→16) + 3s (16→35) + ~280ms creation = ~8.3s → 12s total with margin.
     // 🚨 VirtualDisplay does NOT exist at boot on Seal EU (confirmed by logcat 03/05/2026).
-    private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 18000;
+    private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 12000;
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
 
@@ -89,7 +89,7 @@ public class ClusterManager {
     //   false → unknown / Qt is in native mode (default at app start, or after
     //           any restoreOriginCluster / restoreBydOnCluster). Even when the
     //           VirtualDisplay still exists from a previous session we MUST
-    //           replay 30 → 6s → 16 to put Qt back into projection.
+    //           replay 30 → 3s → 16 to put Qt back into projection.
     //
     // Volatile because notifyProjection*() may be called from any thread
     // (AdbLocalClient callbacks).
@@ -150,19 +150,19 @@ public class ClusterManager {
      *      Qt switches back to native rendering.)
      *
      *   Warm path (VD present AND sQtInProjectionMode == false):
-     *     sendInfo(30) → 6s → sendInfo(16) → onDisplayReady
+     *     sendInfo(30) → 3s → sendInfo(16) → onDisplayReady
      *     (v1.2.78 — must replay the full handover when Qt is in native mode
      *      even if a stale VirtualDisplay from a previous session exists.
      *      The previous 800ms shortcut was too short to wake Qt out of native
      *      mode, manifesting as "no black rectangle, no projection".)
      *
      *   Slow path (VD not yet created):
-     *     sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35)
+     *     sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35)
      *     → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
      *     → VirtualDisplay "fission_bg_xdjaVirtualSurface" id=1 appears in ~280ms
      *     → DisplayListener / polling fires → onDisplayReady()
      *
-     *   Timeout: 18s (2s init + 6s + 6s + margin)
+     *   Timeout: 12s (2s init + 3s + 3s + margin)
      *
      * The callback is called on the main thread.
      *
@@ -224,12 +224,12 @@ public class ClusterManager {
         if (found != null) {
             // Warm path: VD persisted from a previous session (or boot) but Qt has
             // returned to native mode (after a stop, or at first launch since boot).
-            // We MUST replay sendInfo(30) → 6s → sendInfo(16) to put Qt back into
-            // projection. The 6s delay matches the slow-path 30→16 transition;
+            // We MUST replay sendInfo(30) → 3s → sendInfo(16) to put Qt back into
+            // projection. The 3s delay matches the slow-path 30→16 transition;
             // 800ms is NOT enough when Qt is coming out of native mode (the user-
             // reported "no black rectangle" symptom is exactly this race).
             AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
-                    + " but Qt in native mode — warm path (30→6s→16)");
+                    + " but Qt in native mode — warm path (30→3s→16)");
             final Display displayFound = found;
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
@@ -261,7 +261,7 @@ public class ClusterManager {
                                         }
                                     });
                             }
-                        }, 6000);
+                        }, 3000);
                     }
                     @Override public void onError(String err) {
                         AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
@@ -290,12 +290,12 @@ public class ClusterManager {
             return;
         }
 
-        // Display not found immediately — send full sequence 30→6s→16→6s→35 to create the VirtualDisplay.
+        // Display not found immediately — send full sequence 30→3s→16→3s→35 to create the VirtualDisplay.
         // sendInfo(35) = Di4.0 mode → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
         // VirtualDisplay appears ~280ms after sendInfo(35). DisplayListener + polling will detect it.
-        AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→6s→16→6s→35) + polling");
+        AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→3s→16→3s→35) + polling");
 
-        // Timeout: sequence 30→6s→16→6s→35 + ~280ms creation = ~14.3s → 18s with margin.
+        // Timeout: sequence 30→3s→16→3s→35 + ~280ms creation = ~8.3s → 12s with margin.
         final long timeoutMs = CLUSTER_DISPLAY_TIMEOUT_MS;
 
         // Do not start AppStartManagement in foreground: it briefly opens a visible BYD app.
@@ -376,7 +376,7 @@ public class ClusterManager {
     // ── Activation sequence sendInfo(30 → 16) ──────────────────────────────
 
     /**
-     * Full activation sequence: sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35).
+     * Full activation sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35).
      * Confirmed sequence from logcat (03/05/2026, BYD Seal EU):
      *   sendInfo(35) triggers Qt JNI → AutoDisplayService.createVirtualDisplay() → VD appears ~280ms later.
      * The DisplayReadyCallback is NOT called here: the DisplayListener / polling handles it.
@@ -400,7 +400,7 @@ public class ClusterManager {
                                                         @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                                     });
                                             }
-                                        }, 6000);
+                                        }, 3000);
                                     }
                                     @Override public void onError(String err) {
                                         AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: " + err);
@@ -413,15 +413,15 @@ public class ClusterManager {
                                                         @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                                     });
                                             }
-                                        }, 6000);
+                                        }, 3000);
                                     }
                                 });
                         }
-                    }, 6000);
+                    }, 3000);
                 }
                 @Override public void onError(String err) {
                     AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: " + err);
-                    // On cmd=30 error: still send 16 → 6s → 35
+                    // On cmd=30 error: still send 16 → 3s → 35
                     AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                         new AdbLocalClient.Callback() {
                             @Override public void onSuccess(String out2) {
@@ -434,7 +434,7 @@ public class ClusterManager {
                                                 @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                             });
                                     }
-                                }, 6000);
+                                }, 3000);
                             }
                             @Override public void onError(String err2) { AppLogger.e(TAG, "activation ADB(cmd=16) ERROR after err30: " + err2); }
                         });
