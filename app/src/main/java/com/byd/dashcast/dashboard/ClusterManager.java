@@ -72,6 +72,46 @@ public class ClusterManager {
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
 
+    // ────────────────────────────────────────────────────────────────────────
+    // v1.2.78 — Qt projection state tracker.
+    //
+    // After sendInfo(18) (stop projection), the cluster VirtualDisplay (id=1)
+    // PERSISTS but Qt switches back to its native cluster rendering. Detecting
+    // "fast path" based on the mere existence of the VirtualDisplay is therefore
+    // wrong: on the next activation the code would skip the proper 30 → delay → 16
+    // sequence and Qt would never re-enter projection mode (no black rectangle,
+    // no surface handover — user-visible symptom).
+    //
+    // We track our own best-effort view of Qt's state:
+    //   true  → we successfully drove a sendInfo(30)→sendInfo(16) sequence and
+    //           no subsequent stop has been requested. Re-binding our app to
+    //           the existing display is enough; no need to re-issue 30/16.
+    //   false → unknown / Qt is in native mode (default at app start, or after
+    //           any restoreOriginCluster / restoreBydOnCluster). Even when the
+    //           VirtualDisplay still exists from a previous session we MUST
+    //           replay 30 → 6s → 16 to put Qt back into projection.
+    //
+    // Volatile because notifyProjection*() may be called from any thread
+    // (AdbLocalClient callbacks).
+    private static volatile boolean sQtInProjectionMode = false;
+
+    /** Hooked by AdbLocalClient at the entry of restoreBydOnCluster() and
+     *  restoreOriginCluster() (both of which dispatch sendInfo(18)). */
+    public static void notifyProjectionStopped() {
+        sQtInProjectionMode = false;
+    }
+
+    /** Called internally after a successful activation sequence so the next
+     *  activate() can take the true fast path (instant reconnect to the
+     *  already-projecting Qt). */
+    private static void notifyProjectionActive() {
+        sQtInProjectionMode = true;
+    }
+
+    public static boolean isQtInProjectionMode() {
+        return sQtInProjectionMode;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Notified when the cluster VirtualDisplay becomes available (or on timeout). */
@@ -102,10 +142,18 @@ public class ClusterManager {
      *
      *   🚨 The VirtualDisplay does NOT exist at boot. It is created by the sequence below.
      *
-     *   Fast path (VD already present from a previous session):
-     *     sendInfo(30) → 800ms → sendInfo(16) → onDisplayReady immediately
-     *     (1.2.73 — was 6s; Qt size already set, 30 is no-op confirmation,
-     *      doc at top of file says "wait 1s" for this transition.)
+     *   True fast path (VD present AND sQtInProjectionMode == true):
+     *     instant onDisplayReady — Qt is already projecting, just reconnect.
+     *     (v1.2.78 — added flag check; "VD present" alone is not sufficient
+     *      because the VirtualDisplay persists across sendInfo(18) stops while
+     *      Qt switches back to native rendering.)
+     *
+     *   Warm path (VD present AND sQtInProjectionMode == false):
+     *     sendInfo(30) → 6s → sendInfo(16) → onDisplayReady
+     *     (v1.2.78 — must replay the full handover when Qt is in native mode
+     *      even if a stale VirtualDisplay from a previous session exists.
+     *      The previous 800ms shortcut was too short to wake Qt out of native
+     *      mode, manifesting as "no black rectangle, no projection".)
      *
      *   Slow path (VD not yet created):
      *     sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35)
@@ -156,26 +204,43 @@ public class ClusterManager {
         // 1. First check if the cluster VirtualDisplay is already present (DISPLAY_CATEGORY_PRESENTATION)
         //    AutoDisplayService creates it at BOOT → available immediately without waiting.
         Display found = findClusterDisplay(dm);
+        if (found != null && sQtInProjectionMode) {
+            // True fast path: VD is up AND we already drove Qt into projection mode
+            // earlier in this app lifetime. No need to resend 30/16; just hand the
+            // existing display back to the caller. Typical case: MainActivity is
+            // re-opened while ClusterService keeps running, or split-screen second
+            // launch happens while the first launch is still on the cluster.
+            AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id="
+                    + found.getDisplayId() + ")");
+            final Display displayFound = found;
+            mHandler.post(new Runnable() {
+                @Override public void run() {
+                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                }
+            });
+            return;
+        }
         if (found != null) {
-            // Fast path: VirtualDisplay already present (previous session, not destroyed yet).
-            // Send 30→800ms→16 to put Qt back in projection mode. VD already exists → immediate callback.
-            // 1.2.73 — was 6000ms (copied from slow-path "VD creation" timing). When VD already
-            // exists, Qt has its size set; sendInfo(30) is a no-op confirmation and the long
-            // stabilisation delay is unnecessary. Doc at top of this file specifies "wait 1s"
-            // between 30 and 16 — 800ms keeps a safety margin while cutting ~5s from start.
-            AppLogger.i(TAG, "VirtualDisplay already present: id=" + found.getDisplayId()
-                    + " name=" + found.getName() + " — fast path (30→800ms→16)");
+            // Warm path: VD persisted from a previous session (or boot) but Qt has
+            // returned to native mode (after a stop, or at first launch since boot).
+            // We MUST replay sendInfo(30) → 6s → sendInfo(16) to put Qt back into
+            // projection. The 6s delay matches the slow-path 30→16 transition;
+            // 800ms is NOT enough when Qt is coming out of native mode (the user-
+            // reported "no black rectangle" symptom is exactly this race).
+            AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
+                    + " but Qt in native mode — warm path (30→6s→16)");
             final Display displayFound = found;
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String out) {
-                        AppLogger.i(TAG, "fast path ADB(cmd=30): " + out);
+                        AppLogger.i(TAG, "warm path ADB(cmd=30): " + out);
                         mHandler.postDelayed(new Runnable() {
                             @Override public void run() {
                                 AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String out2) {
-                                            AppLogger.i(TAG, "fast path ADB(cmd=16): " + out2);
+                                            AppLogger.i(TAG, "warm path ADB(cmd=16): " + out2);
+                                            notifyProjectionActive();
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -183,7 +248,10 @@ public class ClusterManager {
                                             });
                                         }
                                         @Override public void onError(String err) {
-                                            AppLogger.e(TAG, "fast path ADB(cmd=16) ERROR: " + err);
+                                            AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: " + err);
+                                            // We still report the display back — caller logic handles
+                                            // post-activation discovery; flag stays false so the next
+                                            // explicit activate() will retry the warm path.
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -192,14 +260,15 @@ public class ClusterManager {
                                         }
                                     });
                             }
-                        }, 800);
+                        }, 6000);
                     }
                     @Override public void onError(String err) {
-                        AppLogger.e(TAG, "fast path ADB(cmd=30) ERROR: " + err);
+                        AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
                         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                             new AdbLocalClient.Callback() {
                                 @Override public void onSuccess(String out2) {
-                                    AppLogger.i(TAG, "fast path ADB(cmd=16) fallback: " + out2);
+                                    AppLogger.i(TAG, "warm path ADB(cmd=16) fallback: " + out2);
+                                    notifyProjectionActive();
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -207,7 +276,7 @@ public class ClusterManager {
                                     });
                                 }
                                 @Override public void onError(String err2) {
-                                    AppLogger.e(TAG, "fast path ADB(cmd=16) fallback ERROR: " + err2);
+                                    AppLogger.e(TAG, "warm path ADB(cmd=16) fallback ERROR: " + err2);
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -247,6 +316,7 @@ public class ClusterManager {
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
                     AppLogger.i(TAG, "VirtualDisplay cluster detected: id=" + displayId);
+                    notifyProjectionActive();
                     callback.onDisplayReady(d, displayId);
                 }
             }
@@ -293,6 +363,7 @@ public class ClusterManager {
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
                     AppLogger.i(TAG, "VirtualDisplay found by polling: id=" + found.getDisplayId());
+                    notifyProjectionActive();
                     callback.onDisplayReady(found, found.getDisplayId());
                 } else {
                     scheduleDisplayPoll(dm, listenerHolder, callback, pollCount, POLL_INTERVAL_MS);
@@ -425,6 +496,7 @@ public class ClusterManager {
             AppLogger.i(TAG, "DL5 cluster display ready: id=" + d.getDisplayId()
                     + " name=" + d.getName());
             final Display target = d;
+            notifyProjectionActive();
             mHandler.post(new Runnable() {
                 @Override public void run() {
                     callback.onDisplayReady(target, target.getDisplayId());
@@ -439,6 +511,7 @@ public class ClusterManager {
                 Display dd = findClusterDisplay(dm);
                 if (dd != null) {
                     AppLogger.i(TAG, "DL5 cluster display (late) id=" + dd.getDisplayId());
+                    notifyProjectionActive();
                     callback.onDisplayReady(dd, dd.getDisplayId());
                 } else if (android.os.SystemClock.uptimeMillis() < deadline) {
                     mHandler.postDelayed(this, 250);
