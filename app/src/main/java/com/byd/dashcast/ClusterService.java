@@ -102,6 +102,27 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         startForeground(NOTIF_ID, buildNotification("Cluster: initializing…"));
         AppLogger.log(TAG, "ClusterService created — starting native projection");
         mProjectionActive = true;
+        // v1.2.35 — one-shot cleanup of v1.2.32..v1.2.34 side effect on DiLink 5.
+        // Those builds set `force_resizable_activities=1` globally on every
+        // DL5 cluster launch and never reset it, which made BYD head-unit
+        // apps (e.g. 360° camera) wrongly split-screen capable. We now read
+        // it back and force it to 0 on DL5 only, so any user who installed
+        // 1.2.32..1.2.34 is healed the next time they open DashCast. DL2/3/4
+        // never set this flag and are not touched.
+        if (AdbLocalClient.isDiLink5Safe(this)) {
+            final String check = "v=$(settings get global force_resizable_activities); "
+                    + "if [ \"$v\" = \"1\" ]; then "
+                    + "settings put global force_resizable_activities 0 2>&1; "
+                    + "echo RESET; else echo OK=$v; fi";
+            AdbLocalClient.executeShellWithResult(this, check, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "DL5 force_resizable_activities cleanup → " + out.trim());
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "DL5 force_resizable_activities cleanup ERROR: " + err);
+                }
+            });
+        }
         // Signature + permissions diagnostics — debug only (opens an ADB connection).
         if (BuildConfig.DEBUG) {
             AdbLocalClient.dumpSignatureAndPermissions(this);
@@ -984,34 +1005,19 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // resizeActiveTask() call to actually apply our inset bounds on the
         // XDJA fission VirtualDisplay backing the cluster.
         //
-        // v1.2.32 — DL5 resize second-order fix.
-        // Field log BYD_RE_Sniffer_20260523_194219.txt (build 222) proved
-        // Fix #1+#2 took effect — `am start --display 3 --windowingMode 5`
-        // is honored at root-task level (ATM logs "getOrCreateRootTask
-        // windowingMode=5, activityType=1") — but the activity itself is
-        // immediately coerced to mWindowingMode=fullscreen by ATM, because
-        // most navigation apps (Yandex Maps, Yandex Navi, Google Maps, …)
-        // declare `android:resizeableActivity="false"` in their manifest
-        // to prevent split-screen. On API 32+ a non-resizable activity
-        // forces its task into fullscreen regardless of the parent root
-        // task's windowing mode, and `cmd activity task resize` becomes a
-        // silent no-op again.
-        //
-        // The documented AOSP override is the developer-option global
-        // setting `force_resizable_activities` (visible in Settings →
-        // Developer options → "Force activities to be resizable"). When
-        // set to 1, ATM ignores the manifest flag and every activity is
-        // treated as resizable, allowing freeform + bounds resize to land.
-        // We set it from shell uid 2000 (has WRITE_SECURE_SETTINGS)
-        // immediately before the launch, and `am force-stop` the package
-        // so the new task is created fresh under the new setting (existing
-        // processes don't re-evaluate the global on the fly).
-        //
-        // The setting is persistent (Settings.Global) — re-applying it on
-        // every launch is idempotent and cheap, and guarantees a recovery
-        // if the user (or another app) ever turns it back off.
-        final String cmd = "settings put global force_resizable_activities 1 2>&1; "
-                + "am force-stop " + packageName + " 2>&1; "
+        // v1.2.32 — DL5 resize second-order fix (REVERTED in v1.2.35).
+        // We used to also `settings put global force_resizable_activities 1`
+        // here to make non-resizable navigation apps (Yandex Maps, Google
+        // Maps, …) honor freeform bounds on the cluster display. That global
+        // is system-wide and persistent (Settings.Global) and had the very
+        // unwanted side effect of making every BYD head-unit app split-screen
+        // capable too (e.g. the 360° camera became resizable). We no longer
+        // touch that setting at launch time, and ClusterService.onCreate()
+        // proactively resets it back to 0 on DiLink 5 to clean up users who
+        // upgraded from v1.2.32 – v1.2.34. The freeform launch + per-task
+        // resize still works for apps whose manifest already declares
+        // resizeableActivity=true (or doesn't declare it on API 24+).
+        final String cmd = "am force-stop " + packageName + " 2>&1; "
                 + "am start --display " + displayId
                 + " --windowingMode 5"
                 + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"

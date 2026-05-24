@@ -364,4 +364,7 @@
     <string name="sysinfo_restart_failed">Помилка перезапуску</string>
     <string name="sysinfo_svc_projection">Проєкція</string>
     <string name="sysinfo_svc_projection_sub">натисни: 30→3с→16→3с→0</string>
+    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · значення %1$s</string>
+    <string name="sysinfo_svc_force_resizable_checking">DL5 · перевірка…</string>
 </resources>

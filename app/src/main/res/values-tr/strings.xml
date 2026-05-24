@@ -364,4 +364,7 @@
     <string name="sysinfo_restart_failed">Yeniden başlatma başarısız</string>
     <string name="sysinfo_svc_projection">Yansıtma</string>
     <string name="sysinfo_svc_projection_sub">dokun: 30→3s→16→3s→0</string>
+    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · değer %1$s</string>
+    <string name="sysinfo_svc_force_resizable_checking">DL5 · kontrol…</string>
 </resources>
