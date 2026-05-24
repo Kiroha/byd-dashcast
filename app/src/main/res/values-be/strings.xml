@@ -126,8 +126,6 @@
     <string name="settings_reconnect_popup_support">Аднаўляць пры нечаканым адключэнні</string>
     <string name="settings_quick_stop">Хуткі стоп (без аднаўлення зыходнага кластара)</string>
     <string name="settings_quick_stop_support">Адпраўляе толькі sendInfo 18 + 0, без змены памеру</string>
-    <string name="settings_auto_start_on_launch">Запускаць праекцыю пры адкрыцці прыкладання</string>
-    <string name="settings_auto_start_on_launch_support">Аўтаматычна актывуе кластар — мінус адзін націск</string>
     <string name="settings_category_filters_support">Паказваць чыпы ў меню праграм</string>
     <string name="settings_section_about">Пра праграму</string>
     <string name="settings_about_version_label">Версія</string>

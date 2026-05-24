@@ -126,8 +126,6 @@
     <string name="settings_reconnect_popup_support">الاستعادة عند الانفصال غير المتوقع</string>
     <string name="settings_quick_stop">إيقاف سريع (بدون استعادة العنقود الأصلي)</string>
     <string name="settings_quick_stop_support">يرسل فقط sendInfo 18 + 0 دون تغيير الحجم</string>
-    <string name="settings_auto_start_on_launch">بدء العرض عند فتح التطبيق</string>
-    <string name="settings_auto_start_on_launch_support">يقوم بتفعيل العنقود تلقائيًا — توفير نقرة</string>
     <string name="settings_category_filters_support">إظهار الرقاقات في قائمة التطبيقات</string>
     <string name="settings_section_about">حول</string>
     <string name="settings_about_version_label">الإصدار</string>

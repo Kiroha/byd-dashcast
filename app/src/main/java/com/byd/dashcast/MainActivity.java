@@ -829,17 +829,12 @@ public class MainActivity extends AppCompatActivity
                 tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
                 Intent svcIntent = new Intent(this, ClusterService.class);
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
-            } else if (getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                        .getBoolean(SettingsActivity.PREF_AUTO_START_ON_LAUNCH,
-                                    SettingsActivity.DEFAULT_AUTO_START_ON_LAUNCH)) {
-                // v1.2.75 — auto-start projection: opening DashCast almost always
-                // means the user wants to project. Saves one tap on the typical
-                // "open app → press Start projection" flow. Opt-out via Settings.
-                AppLogger.i(TAG, "Auto-start projection on launch (PREF_AUTO_START_ON_LAUNCH=true)");
-                activateCluster();
             } else {
-                // Auto-start disabled by user: wait for explicit click on Start projection.
-                AppLogger.d(TAG, "Not starting ClusterService automatically (auto_start_on_launch=false).");
+                // v1.2.77 — auto-start projection: always on. Opening DashCast means
+                // wanting to project. Saves one tap on the "open app → Start projection" flow.
+                // Previously gated by PREF_AUTO_START_ON_LAUNCH (removed in v1.2.77).
+                AppLogger.i(TAG, "Auto-start projection on launch");
+                activateCluster();
             }
         }
         startStatePoll();
