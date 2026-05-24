@@ -126,8 +126,6 @@
     <string name="settings_reconnect_popup_support">Kutilmagan uzilganda tiklash</string>
     <string name="settings_quick_stop">Tezkor toʻxtatish (asl klasterni tiklamasdan)</string>
     <string name="settings_quick_stop_support">Faqat sendInfo 18 + 0 yuboradi, oʻlchamni oʻzgartirmaydi</string>
-    <string name="settings_auto_start_on_launch">Ilova ochilganda proyeksiyani ishga tushirish</string>
-    <string name="settings_auto_start_on_launch_support">Klasterni avtomatik faollashtiradi — bitta tegishdan kam</string>
     <string name="settings_category_filters_support">Ilovalar menyusida chiplarni koʻrsatish</string>
     <string name="settings_section_about">Haqida</string>
     <string name="settings_about_version_label">Versiya</string>

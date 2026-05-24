@@ -126,8 +126,6 @@
     <string name="settings_reconnect_popup_support">Restaurar si se desconecta inesperadamente</string>
     <string name="settings_quick_stop">Parada rápida (sin restaurar el clúster original)</string>
     <string name="settings_quick_stop_support">Solo envía sendInfo 18 + 0, sin cambiar el tamaño</string>
-    <string name="settings_auto_start_on_launch">Iniciar proyección al abrir la app</string>
-    <string name="settings_auto_start_on_launch_support">Activa el clúster automáticamente — un toque menos</string>
     <string name="settings_category_filters_support">Mostrar chips en el menú de apps</string>
     <string name="settings_section_about">Acerca de</string>
     <string name="settings_about_version_label">Versión</string>

@@ -126,8 +126,6 @@
     <string name="settings_reconnect_popup_support">Відновлювати у разі несподіваного відключення</string>
     <string name="settings_quick_stop">Швидка зупинка (без відновлення вихідного кластера)</string>
     <string name="settings_quick_stop_support">Лише відправляє sendInfo 18 + 0, без зміни розміру</string>
-    <string name="settings_auto_start_on_launch">Запускати проєкцію при відкритті застосунку</string>
-    <string name="settings_auto_start_on_launch_support">Автоматично активує кластер — на один дотик менше</string>
     <string name="settings_category_filters_support">Показувати чипи в меню додатків</string>
     <string name="settings_section_about">Про застосунок</string>
     <string name="settings_about_version_label">Версія</string>
