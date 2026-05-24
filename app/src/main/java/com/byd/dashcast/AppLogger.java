@@ -2,6 +2,7 @@ package com.byd.dashcast;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.util.Log;
 
@@ -318,6 +319,69 @@ public class AppLogger {
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         context.startActivity(Intent.createChooser(intent, chooserTitle));
+    }
+
+    // ── Telegram targeted share ───────────────────────────────────────────────
+
+    /**
+     * Same as {@link #shareWithReport(Context, String)} but tries to open
+     * Telegram directly (org.telegram.messenger, then org.telegram.messenger.web,
+     * then nekogram/plus variants). Falls back to the generic chooser if no
+     * Telegram package is installed. Used by the DL5 Cluster recon panel so
+     * the tester can ship the recon report to the developer in one tap.
+     */
+    public static void shareReportToTelegram(Context context, String reportText) {
+        String combined = (reportText != null ? reportText : "")
+                + "\n\n════════════════════════════════════\n"
+                + "LOG\n"
+                + "════════════════════════════════════\n"
+                + get();
+        File f = writeFile(context, "byd_report_", combined);
+        // Known Telegram package candidates, ordered by popularity.
+        String[] tgPkgs = new String[] {
+                "org.telegram.messenger",
+                "org.telegram.messenger.web",
+                "org.telegram.plus",
+                "nekox.messenger",
+                "org.thunderdog.challegram"
+        };
+        PackageManager pm = context.getPackageManager();
+        String hit = null;
+        for (String p : tgPkgs) {
+            try {
+                pm.getPackageInfo(p, 0);
+                hit = p; break;
+            } catch (PackageManager.NameNotFoundException ignored) {}
+        }
+        if (f != null && hit != null) {
+            try {
+                Uri uri = FileProvider.getUriForFile(
+                        context, context.getPackageName() + ".fileprovider", f);
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.setPackage(hit);
+                intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — DL5 Cluster Recon");
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+                return;
+            } catch (Exception ex) {
+                Log.w("AppLogger", "shareReportToTelegram: direct intent failed, falling back", ex);
+            }
+        }
+        // Fallback: generic chooser (text-only if file write failed).
+        if (f != null) {
+            shareFile(context, f, "DashCast — DL5 Cluster Recon",
+                    context.getString(R.string.share_report_title));
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "DashCast — DL5 Cluster Recon (text fallback)");
+        intent.putExtra(Intent.EXTRA_TEXT, combined);
+        context.startActivity(Intent.createChooser(intent,
+                context.getString(R.string.share_report_title)));
     }
 
     // ── Storage cleanup ───────────────────────────────────────────────────────

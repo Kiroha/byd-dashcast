@@ -39,6 +39,7 @@ import com.byd.dashcast.beta.BetaTestRunner.TestDef;
 import com.byd.dashcast.beta.BetaTestRunner.TestResult;
 import com.byd.dashcast.beta.BetaTestRunner.Status;
 import com.byd.dashcast.dilink5.DiLink5TestRunner;
+import com.byd.dashcast.dilink5.Dl5ClusterReconRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
 import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
@@ -75,6 +76,7 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_DILINK4     = 8;
     private static final int TAB_MIRROR      = 9;
     private static final int TAB_SNIFFER     = 10;
+    private static final int TAB_CLUSTER_DL5 = 11;
 
     private TabLayout    tabs;
     private View         panelBeta;
@@ -85,8 +87,9 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelSniffer;
     private View         panelAdas;
     private View         panelClusterPoc;
+    private View         panelClusterDl5;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 11; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer
+    private static final int TAB_COUNT = 12; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -108,6 +111,17 @@ public class DiagActivity extends AppCompatActivity {
     private String                    dl5SelectedPkg;
     private final List<View> dl5RowViews = new ArrayList<>();
     private final List<DiLink5TestRunner.TestResult> dl5LastResults = new ArrayList<>();
+
+    // Cluster DL5 recon panel views (v1.2.37 — capability probing for DL5 cluster resize)
+    private TextView       tvDl5ClusterSubtitle;
+    private TextView       tvDl5ClusterPill;
+    private TextView       tvDl5ClusterCounters;
+    private MaterialButton btnDl5ClusterRunAll;
+    private MaterialButton btnDl5ClusterCopyReport;
+    private MaterialButton btnDl5ClusterSendTelegram;
+    private LinearLayout   llDl5ClusterTestList;
+    private final List<View> dl5ClusterRowViews = new ArrayList<>();
+    private final List<com.byd.dashcast.dilink5.DiLink5TestRunner.TestResult> dl5ClusterLastResults = new ArrayList<>();
 
     // DiLink 2 panel views (build 185 — recon-only)
     private TextView       tvDl2HeaderSubtitle;
@@ -153,11 +167,13 @@ public class DiagActivity extends AppCompatActivity {
         bindSnifferPanel();
         bindAdasPanel();
         bindClusterPocPanel();
+        bindClusterDl5Panel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
         prepareDl4TestRows();
         prepareMirrorTestRows();
+        prepareClusterDl5TestRows();
         updateStatusPills();
         restoreSnifferState();
         // Default tab: DiLink 2 when auto-detected as DL2 (build 192), DiLink 5 when DL5,
@@ -206,6 +222,7 @@ public class DiagActivity extends AppCompatActivity {
         panelSniffer    = findViewById(R.id.panel_sniffer);
         panelAdas       = findViewById(R.id.panel_adas);
         panelClusterPoc = findViewById(R.id.panel_cluster_poc);
+        panelClusterDl5 = findViewById(R.id.panel_cluster_dl5);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -255,6 +272,7 @@ public class DiagActivity extends AppCompatActivity {
         boolean isSniffer    = position == TAB_SNIFFER;
         boolean isAdas       = position == TAB_ADAS;
         boolean isClusterPoc = position == TAB_CLUSTER;
+        boolean isClusterDl5 = position == TAB_CLUSTER_DL5;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -263,8 +281,9 @@ public class DiagActivity extends AppCompatActivity {
         panelSniffer.setVisibility(isSniffer ? View.VISIBLE : View.GONE);
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
         panelClusterPoc.setVisibility(isClusterPoc ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc) {
+        panelClusterDl5.setVisibility(isClusterDl5 ? View.VISIBLE : View.GONE);
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -597,6 +616,113 @@ public class DiagActivity extends AppCompatActivity {
         String report = DiLink5TestRunner.buildReport(this, dl5LastResults);
         AppLogger.i("DiagActivity", "DiLink 5 report:\n" + report);
         AppLogger.shareWithReport(this, report);
+    }
+
+    // ─── Cluster DL5 recon panel (v1.2.37) ──────────────────────────────────
+
+    private void bindClusterDl5Panel() {
+        tvDl5ClusterSubtitle      = panelClusterDl5.findViewById(R.id.tv_dl5_cluster_subtitle);
+        tvDl5ClusterPill          = panelClusterDl5.findViewById(R.id.tv_dl5_cluster_pill);
+        tvDl5ClusterCounters      = panelClusterDl5.findViewById(R.id.tv_dl5_cluster_counters);
+        btnDl5ClusterRunAll       = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_run_all);
+        btnDl5ClusterCopyReport   = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_copy_report);
+        btnDl5ClusterSendTelegram = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_send_telegram);
+        llDl5ClusterTestList      = panelClusterDl5.findViewById(R.id.ll_dl5_cluster_test_list);
+
+        boolean dl5 = Platform.get().isAutoDetectedDiLink5();
+        int pillRes;
+        if (dl5)                                  pillRes = R.string.diag_dl5_cluster_pill_dl5;
+        else if (android.os.Build.VERSION.SDK_INT >= 29) pillRes = R.string.diag_dl5_cluster_pill_other;
+        else                                      pillRes = R.string.diag_dl5_cluster_pill_unknown;
+        tvDl5ClusterPill.setText(pillRes);
+
+        btnDl5ClusterRunAll.setOnClickListener(v -> runClusterDl5AllTests());
+        btnDl5ClusterCopyReport.setOnClickListener(v -> copyClusterDl5Report());
+        btnDl5ClusterSendTelegram.setOnClickListener(v -> sendClusterDl5ToTelegram());
+        btnDl5ClusterCopyReport.setEnabled(false);
+        btnDl5ClusterSendTelegram.setEnabled(false);
+    }
+
+    private void prepareClusterDl5TestRows() {
+        dl5ClusterRowViews.clear();
+        dl5ClusterLastResults.clear();
+        llDl5ClusterTestList.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (DiLink5TestRunner.TestDef def : Dl5ClusterReconRunner.catalog()) {
+            View row = inflater.inflate(R.layout.item_beta_test, llDl5ClusterTestList, false);
+            DiLink5TestRunner.TestResult r = new DiLink5TestRunner.TestResult(def);
+            r.status = DiLink5TestRunner.Status.PENDING;
+            bindDl5Row(row, r); // reuse existing row binder — same TestResult type
+            llDl5ClusterTestList.addView(row);
+            dl5ClusterRowViews.add(row);
+            dl5ClusterLastResults.add(r);
+        }
+    }
+
+    private void runClusterDl5AllTests() {
+        btnDl5ClusterRunAll.setEnabled(false);
+        btnDl5ClusterCopyReport.setEnabled(false);
+        btnDl5ClusterSendTelegram.setEnabled(false);
+        Dl5ClusterReconRunner.runAll(this, new Dl5ClusterReconRunner.Listener() {
+            @Override public void onSuiteStarted(List<DiLink5TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                dl5ClusterLastResults.clear();
+                dl5ClusterLastResults.addAll(results);
+                for (int i = 0; i < results.size() && i < dl5ClusterRowViews.size(); i++) {
+                    bindDl5Row(dl5ClusterRowViews.get(i), results.get(i));
+                }
+                tvDl5ClusterCounters.setText(getString(R.string.diag_beta_counters_running));
+            }
+            @Override public void onTestUpdated(int index, DiLink5TestRunner.TestResult result) {
+                if (mDestroyed) return;
+                if (index < dl5ClusterRowViews.size()) bindDl5Row(dl5ClusterRowViews.get(index), result);
+                updateClusterDl5Counters();
+            }
+            @Override public void onSuiteFinished(List<DiLink5TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                btnDl5ClusterRunAll.setEnabled(true);
+                btnDl5ClusterCopyReport.setEnabled(true);
+                btnDl5ClusterSendTelegram.setEnabled(true);
+                updateClusterDl5Counters();
+            }
+        });
+    }
+
+    private void updateClusterDl5Counters() {
+        int pass = 0, fail = 0, skip = 0, warn = 0;
+        for (DiLink5TestRunner.TestResult r : dl5ClusterLastResults) {
+            switch (r.status) {
+                case PASS:    pass++; break;
+                case FAIL:    fail++; break;
+                case SKIPPED: skip++; break;
+                case WARN:    warn++; break;
+                default: break;
+            }
+        }
+        tvDl5ClusterCounters.setText(getString(R.string.diag_dl5_counters_fmt, pass, fail, warn, skip));
+    }
+
+    private void copyClusterDl5Report() {
+        if (dl5ClusterLastResults.isEmpty()) {
+            Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String report = Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
+        AppLogger.i("DiagActivity", "DL5 Cluster recon report:\n" + report);
+        AppLogger.shareWithReport(this, report);
+        Toast.makeText(this,
+                getString(R.string.diag_dl5_cluster_toast_report_copied, dl5ClusterLastResults.size()),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    private void sendClusterDl5ToTelegram() {
+        if (dl5ClusterLastResults.isEmpty()) {
+            Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String report = Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
+        AppLogger.i("DiagActivity", "DL5 Cluster recon report (Telegram):\n" + report);
+        AppLogger.shareReportToTelegram(this, report);
     }
 
     // ─── DiLink 2 recon panel (build 185) ───────────────────────────────────

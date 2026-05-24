@@ -295,8 +295,23 @@
     <string name="beta_restart_message">Cette option prendra effet au prochain lancement de DashCast. Vous pouvez continuer à utiliser l\'application normalement entre temps.</string>
 
     <!-- Diag tabs -->
-    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_cluster">Cluster DL3</string>
+    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
     <string name="diag_tab_display">Display</string>
+
+    <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
+    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
+    <string name="diag_dl5_cluster_header_subtitle">Sonde non destructive : détecte les commandes shell, compat flags et services disponibles pour le redimensionnement cluster sur DiLink 5.</string>
+    <string name="diag_dl5_cluster_run_all">Lancer la recon</string>
+    <string name="diag_dl5_cluster_copy_report">Copier rapport</string>
+    <string name="diag_dl5_cluster_send_telegram">Envoyer via Telegram</string>
+    <string name="diag_dl5_cluster_counters_idle">Prêt — aucune sonde exécutée</string>
+    <string name="diag_dl5_cluster_pill_unknown">Plateforme : inconnue</string>
+    <string name="diag_dl5_cluster_pill_dl5">Plateforme : DiLink 5</string>
+    <string name="diag_dl5_cluster_pill_other">Plateforme : autre</string>
+    <string name="diag_dl5_cluster_toast_report_copied">Rapport copié dans le presse-papier (%1$d entrées)</string>
+    <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
+    <string name="diag_dl5_cluster_toast_telegram_missing">Telegram non installé — ouverture du sélecteur de partage.</string>
     <string name="diag_tab_adb_local">ADB local</string>
     <string name="diag_tab_system">Système</string>
     <string name="diag_tab_stress">Stress test</string>
