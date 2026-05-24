@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Sol ½</string>
     <string name="resize_preset_right">Sağ ½</string>
     <string name="resize_preset_center">Merkez %60</string>
+    <string name="resize_btn_close">Kapat</string>
+    <string name="resize_live_label">Canlı önizleme</string>
+    <string name="resize_live_warn_title">Canlı önizlemeyi etkinleştir?</string>
+    <string name="resize_live_warn_msg">Canlı önizleme her hareketi kümeye gerçek zamanlı olarak uygular. Bu, ayarlama sırasında küme ekranında parlamalara ve görsel kusurlara neden olabilir. Devam edilsin mi?</string>
+    <string name="resize_live_warn_ok">Etkinleştir</string>
     <string name="sheet_force_stop">Durmaya zorla</string>
     <string name="main_cluster_status_off">Yansıtma kapalı</string>
     <string name="main_btn_exit_fullscreen">Tam ekrandan çık</string>

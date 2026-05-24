@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Chap ½</string>
     <string name="resize_preset_right">Oʻng ½</string>
     <string name="resize_preset_center">Markaz 60 %</string>
+    <string name="resize_btn_close">Yopish</string>
+    <string name="resize_live_label">Jonli koʻrib chiqish</string>
+    <string name="resize_live_warn_title">Jonli koʻrib chiqishni yoqasizmi?</string>
+    <string name="resize_live_warn_msg">Jonli koʻrib chiqish har bir harakatni klasterga real vaqtda qoʻllaydi. Bu sozlash paytida klaster ekranida chaqnashlar va vizual artefaktlarga sabab boʻlishi mumkin. Davom etilsinmi?</string>
+    <string name="resize_live_warn_ok">Yoqish</string>
     <string name="sheet_force_stop">Majburiy toʻxtatish</string>
     <string name="main_cluster_status_off">Proyeksiya oʻchirilgan</string>
     <string name="main_btn_exit_fullscreen">Toʻliq ekrandan chiqish</string>

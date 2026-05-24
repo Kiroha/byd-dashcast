@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Links ½</string>
     <string name="resize_preset_right">Rechts ½</string>
     <string name="resize_preset_center">Mitte 60 %</string>
+    <string name="resize_btn_close">Schließen</string>
+    <string name="resize_live_label">Live-Vorschau</string>
+    <string name="resize_live_warn_title">Live-Vorschau aktivieren?</string>
+    <string name="resize_live_warn_msg">Die Live-Vorschau wendet jede Bewegung in Echtzeit auf das Cluster an. Dies kann während der Bedienung zu Blitzen und visuellen Artefakten auf dem Cluster-Bildschirm führen. Fortfahren?</string>
+    <string name="resize_live_warn_ok">Aktivieren</string>
     <string name="sheet_force_stop">Beenden erzwingen</string>
     <string name="main_cluster_status_off">Projektion aus</string>
     <string name="main_btn_exit_fullscreen">Vollbild verlassen</string>

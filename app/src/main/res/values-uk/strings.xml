@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Ліва ½</string>
     <string name="resize_preset_right">Права ½</string>
     <string name="resize_preset_center">Центр 60 %</string>
+    <string name="resize_btn_close">Закрити</string>
+    <string name="resize_live_label">Живий перегляд</string>
+    <string name="resize_live_warn_title">Увімкнути живий перегляд?</string>
+    <string name="resize_live_warn_msg">Живий перегляд застосовує кожен рух до кластера в реальному часі. Це може спричинити спалахи та візуальні артефакти на екрані кластера під час налаштування. Продовжити?</string>
+    <string name="resize_live_warn_ok">Увімкнути</string>
     <string name="sheet_force_stop">Примусова зупинка</string>
     <string name="main_cluster_status_off">Проекція вимкнена</string>
     <string name="main_btn_exit_fullscreen">Вийти з повного екрана</string>

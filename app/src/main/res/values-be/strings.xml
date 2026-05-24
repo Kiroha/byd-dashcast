@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Левая ½</string>
     <string name="resize_preset_right">Правая ½</string>
     <string name="resize_preset_center">Цэнтр 60 %</string>
+    <string name="resize_btn_close">Закрыць</string>
+    <string name="resize_live_label">Жывы папярэдні прагляд</string>
+    <string name="resize_live_warn_title">Уключыць жывы папярэдні прагляд?</string>
+    <string name="resize_live_warn_msg">Жывы папярэдні прагляд прымяняе кожны рух да кластара ў рэжыме рэальнага часу. Гэта можа выклікаць ўспышкі і візуальныя артэфакты на экране кластара падчас маніпуляцыі. Працягнуць?</string>
+    <string name="resize_live_warn_ok">Уключыць</string>
     <string name="sheet_force_stop">Прымусовы прыпынак</string>
     <string name="main_cluster_status_off">Праекцыя выключана</string>
     <string name="main_btn_exit_fullscreen">Выйсці з поўнага экрана</string>

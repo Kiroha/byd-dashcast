@@ -161,6 +161,11 @@
     <string name="resize_preset_left">Left ½</string>
     <string name="resize_preset_right">Right ½</string>
     <string name="resize_preset_center">Center 60%</string>
+    <string name="resize_btn_close">Close</string>
+    <string name="resize_live_label">Live preview</string>
+    <string name="resize_live_warn_title">Enable live preview?</string>
+    <string name="resize_live_warn_msg">Live preview applies every move to the cluster in real time. This can cause flashes and visual artefacts on the cluster screen while you adjust. Continue?</string>
+    <string name="resize_live_warn_ok">Enable</string>
     <string name="sheet_force_stop">Force stop</string>
     <string name="main_cluster_status_off">Projection off</string>
     <string name="main_btn_exit_fullscreen">Exit fullscreen</string>

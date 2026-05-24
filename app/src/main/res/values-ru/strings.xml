@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Левая ½</string>
     <string name="resize_preset_right">Правая ½</string>
     <string name="resize_preset_center">Центр 60 %</string>
+    <string name="resize_btn_close">Закрыть</string>
+    <string name="resize_live_label">Живой предпросмотр</string>
+    <string name="resize_live_warn_title">Включить живой предпросмотр?</string>
+    <string name="resize_live_warn_msg">Живой предпросмотр применяет каждое перемещение к кластеру в реальном времени. Это может вызвать вспышки и визуальные артефакты на экране кластера во время настройки. Продолжить?</string>
+    <string name="resize_live_warn_ok">Включить</string>
     <string name="sheet_force_stop">Принудительная остановка</string>
     <string name="main_cluster_status_off">Проекция отключена</string>
     <string name="main_btn_exit_fullscreen">Выйти из полного экрана</string>

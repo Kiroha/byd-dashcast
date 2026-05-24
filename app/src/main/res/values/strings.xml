@@ -206,6 +206,12 @@
     <string name="resize_preset_left">Gauche ½</string>
     <string name="resize_preset_right">Droite ½</string>
     <string name="resize_preset_center">Centre 60 %</string>
+    <!-- v1.2.84 — Live mode + close button -->
+    <string name="resize_btn_close">Fermer</string>
+    <string name="resize_live_label">Aperçu live</string>
+    <string name="resize_live_warn_title">Activer l\'aperçu live ?</string>
+    <string name="resize_live_warn_msg">L\'aperçu live applique chaque déplacement au cluster en temps réel. Cela peut provoquer des flashs et des artefacts visuels sur l\'écran cluster pendant la manipulation. Continuer ?</string>
+    <string name="resize_live_warn_ok">Activer</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
     <!-- v0.9.81 — Diag M3 cards -->
