@@ -724,6 +724,24 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // Direct launch via IActivityManager on the Freedom display (proven v2.29).
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching via IActivityManager on display=" + displayId + " → " + packageName);
+
+                // Recovery : a previous diag session may have left an orphan
+                // split-screen-primary stack on this display (v1.2.61 fallback
+                // path used setCustomTaskWindowingModeSplitScreenPrimary which
+                // poisons the stack mode). AOSP then routes our new task into
+                // that stack and throws "Can only have one child on stack
+                // mode=split-screen-primary". Pre-cleanup is cheap and a no-op
+                // on a healthy display.
+                if (displayId > 0) {
+                    try {
+                        String cleanLog = com.byd.dashcast.beta.BetaProxyClient
+                                .cleanFissionStacks(displayId);
+                        AppLogger.d(TAG, "cleanFissionStacks(" + displayId + ")\n" + cleanLog);
+                    } catch (Throwable ce) {
+                        AppLogger.w(TAG, "cleanFissionStacks pre-launch failed: " + ce.getMessage());
+                    }
+                }
+
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
@@ -784,6 +802,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+                // Recovery cleanup — see launchOnDashboard() for rationale.
+                if (displayId > 0) {
+                    try {
+                        com.byd.dashcast.beta.BetaProxyClient.cleanFissionStacks(displayId);
+                    } catch (Throwable ce) {
+                        AppLogger.w(TAG, "cleanFissionStacks(WithBounds) failed: " + ce.getMessage());
+                    }
+                }
                 try {
                     android.content.Intent launchIntent =
                             getPackageManager().getLaunchIntentForPackage(packageName);

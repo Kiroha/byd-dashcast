@@ -312,4 +312,1029 @@ public final class Phase4Verbs {
         Method m = forceStopMethod(am);
         m.invoke(am, packageName, userId);
     }
+
+    // ─── VirtualDisplay relay (Phase 5 — Cluster mini-mode POC) ────────────
+    //
+    // OpenBYD-style technique: an app process cannot create a PUBLIC/TRUSTED
+    // VirtualDisplay because CAPTURE_VIDEO_OUTPUT is signature|privileged.
+    // The daemon however runs as uid 2000 (shell) which is granted that
+    // permission, so it can create the VD on the app's behalf and stream the
+    // composited output back into the Surface the app passed via Parcel.
+    //
+    // Callers MUST eventually invoke {@link #releaseVirtualDisplay} — Java GC
+    // on the daemon side does NOT release the VD on its own; an unreleased
+    // VD keeps a SurfaceFlinger composition layer alive and pins the producer
+    // endpoint of the caller's BufferQueue.
+    //
+    // @since v1.2.39 build 235 — Phase 5a (Cluster mini-mode POC).
+
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, android.hardware.display.VirtualDisplay>
+            sVirtualDisplays = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Create a VirtualDisplay on behalf of the calling app and return its
+     * {@link android.view.Display#getDisplayId() display id}. The provided
+     * {@link android.view.Surface} is the VD's output target — typically a
+     * surface obtained from a {@code SurfaceView} the caller already posted
+     * on the cluster overlay so the VD's content shows in the small region
+     * occupied by that SurfaceView, while the rest of the native cluster UI
+     * remains visible behind it.
+     *
+     * <p>The returned VD is retained in a static map so the GC does not
+     * release the underlying {@code IVirtualDisplay} token. Callers must
+     * release it via {@link #releaseVirtualDisplay} once the SurfaceView's
+     * surface is destroyed (or the overlay torn down).
+     *
+     * <p>{@code flags} mirrors {@code DisplayManager.VIRTUAL_DISPLAY_FLAG_*}.
+     * OpenBYD 2.0 uses {@code 322 = PRESENTATION | SUPPORTS_TOUCH |
+     * DESTROY_CONTENT_ON_REMOVAL} for its cluster mini-window.
+     */
+    public static int createVirtualDisplay(android.content.Context sysCtx,
+                                           String name, int width, int height, int dpi,
+                                           android.view.Surface surface, int flags) {
+        if (sysCtx == null) throw new IllegalStateException("system context null");
+        if (name == null || name.isEmpty()) name = "DashCast_VD";
+        if (width <= 0 || height <= 0 || dpi <= 0) {
+            throw new IllegalArgumentException("bad geometry " + width + "x" + height + "@" + dpi);
+        }
+        if (surface == null || !surface.isValid()) {
+            throw new IllegalArgumentException("surface null or invalid");
+        }
+        // The daemon runs as uid 2000 (shell) but {@code sSystemContext} is the
+        // "android" system package context (uid 1000). DisplayManagerService
+        // matches the calling uid against the Context's packageName via
+        // {@code AppOpsManager.checkPackage} \u2014 so we MUST go through a
+        // {@code com.android.shell} package context, which is the package
+        // legitimately tied to uid 2000.
+        //
+        // Without this, build 235 surfaced:
+        //   SecurityException: packageName must match the calling uid
+        // on the BYD Seal EU (Android 10) at the very first createVirtualDisplay.
+        android.content.Context shellCtx;
+        try {
+            shellCtx = sysCtx.createPackageContext("com.android.shell",
+                    android.content.Context.CONTEXT_INCLUDE_CODE
+                            | android.content.Context.CONTEXT_IGNORE_SECURITY);
+        } catch (android.content.pm.PackageManager.NameNotFoundException nnfe) {
+            throw new IllegalStateException("com.android.shell context unavailable", nnfe);
+        }
+        android.hardware.display.DisplayManager dm =
+                (android.hardware.display.DisplayManager) shellCtx.getSystemService(
+                        android.content.Context.DISPLAY_SERVICE);
+        if (dm == null) throw new IllegalStateException("DisplayManager null");
+        android.hardware.display.VirtualDisplay vd =
+                dm.createVirtualDisplay(name, width, height, dpi, surface, flags);
+        if (vd == null) throw new IllegalStateException("createVirtualDisplay returned null");
+        android.view.Display d = vd.getDisplay();
+        if (d == null) {
+            try { vd.release(); } catch (Throwable ignore) {}
+            throw new IllegalStateException("VirtualDisplay.getDisplay() null");
+        }
+        int id = d.getDisplayId();
+        sVirtualDisplays.put(id, vd);
+        return id;
+    }
+
+    /** Release a VD previously created via {@link #createVirtualDisplay}. No-op if unknown. */
+    public static void releaseVirtualDisplay(int displayId) {
+        android.hardware.display.VirtualDisplay vd = sVirtualDisplays.remove(displayId);
+        if (vd != null) {
+            try { vd.release(); } catch (Throwable ignore) {}
+        }
+    }
+
+    /** Release every VD held by the daemon. Best-effort cleanup helper. */
+    public static void releaseAllVirtualDisplays() {
+        for (java.util.Map.Entry<Integer, android.hardware.display.VirtualDisplay> e
+                : sVirtualDisplays.entrySet()) {
+            try { e.getValue().release(); } catch (Throwable ignore) {}
+        }
+        sVirtualDisplays.clear();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  Task relocation primitives (Phase 5b — "OpenBYD launchAndForce")
+    // ──────────────────────────────────────────────────────────────────────
+    //
+    // canPlaceEntityOnDisplay gates only *new* startActivity calls. Once a
+    // task already exists, IActivityTaskManager.moveTaskToDisplay / resizeTask
+    // / setFocusedRootTask move it freely — including non-resizeable
+    // activities like Waze that would otherwise be bounced with the
+    // "secondary display" toast. Shell uid (2000) has
+    // MANAGE_ACTIVITY_STACKS + INTERNAL_SYSTEM_WINDOW (granted to the shell
+    // role) so these reflection calls succeed. This is the technique
+    // OpenBYD 2.0 uses verbatim (CarControlImpl.launchAndForce).
+
+    /** Lookup the taskId hosting {@code packageName} (any activity).
+     *  Returns -1 if no such task exists. Best-effort: reads
+     *  ActivityTaskManager.getService().getTasks(maxNum,false,false) and
+     *  inspects each RecentTaskInfo.topActivity. */
+    public static int findTaskIdForPackage(String packageName) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            // BYD fork of Android 10 doesn't expose getTasks(int,boolean,boolean)
+            // (the stock AOSP API 29 signature). Enumerate all overloads of
+            // `getTasks` on the Proxy class and invoke whichever one we find,
+            // filling extra args with safe defaults (false / 0).
+            Method getTasks = null;
+            for (Method cand : iAtm.getClass().getMethods()) {
+                if ("getTasks".equals(cand.getName())) { getTasks = cand; break; }
+            }
+            if (getTasks == null) {
+                android.util.Log.w("Phase4Verbs", "findTaskIdForPackage: no getTasks method on " + iAtm.getClass());
+                return -1;
+            }
+            Class<?>[] pt = getTasks.getParameterTypes();
+            Object[] args = new Object[pt.length];
+            for (int i = 0; i < pt.length; i++) {
+                if (pt[i] == int.class)          args[i] = (i == 0 ? 64 : 0);
+                else if (pt[i] == boolean.class) args[i] = false;
+                else                              args[i] = null;
+            }
+            Object res = getTasks.invoke(iAtm, args);
+            if (!(res instanceof java.util.List)) return -1;
+            for (Object task : (java.util.List<?>) res) {
+                if (task == null) continue;
+                android.content.ComponentName topActivity =
+                        (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
+                android.content.ComponentName baseActivity =
+                        (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
+                String pkg = (topActivity != null ? topActivity.getPackageName()
+                            : baseActivity != null ? baseActivity.getPackageName() : null);
+                if (packageName.equals(pkg)) {
+                    Object id = readFieldNoThrow(task, "taskId");
+                    if (id == null) id = readFieldNoThrow(task, "id");
+                    if (id instanceof Integer) return (Integer) id;
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("Phase4Verbs", "findTaskIdForPackage(" + packageName + ") failed: " + t);
+        }
+        return -1;
+    }
+
+    /** Reflection helper — returns field value or null on miss. */
+    private static Object readFieldNoThrow(Object target, String fieldName) {
+        try {
+            java.lang.reflect.Field f = target.getClass().getField(fieldName);
+            f.setAccessible(true);
+            return f.get(target);
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    /** Move an existing task to {@code displayId} via reflection.
+     *  Enumerates getMethods() to catch any BYD-renamed variant
+     *  (moveTaskToDisplay / moveRootTaskToDisplay / moveTopActivityToDisplay …)
+     *  with 2 int params. Dumps every method whose name contains "Display"
+     *  or "Stack" on failure for next-iteration RE. */
+    public static String moveTaskToDisplay(int taskId, int displayId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method target = null;
+            String[] preferred = {
+                    "moveRootTaskToDisplay",
+                    "moveTaskToDisplay",
+                    "moveTopActivityToDisplay",
+                    "reparentTaskToDisplay"
+            };
+            Method[] methods = iAtm.getClass().getMethods();
+            outer:
+            for (String wanted : preferred) {
+                for (Method m : methods) {
+                    if (!m.getName().equals(wanted)) continue;
+                    Class<?>[] pt = m.getParameterTypes();
+                    if (pt.length == 2 && pt[0] == int.class && pt[1] == int.class) {
+                        target = m;
+                        break outer;
+                    }
+                }
+            }
+            if (target == null) {
+                StringBuilder dump = new StringBuilder(
+                        "ERR moveTaskToDisplay: no (int,int) variant. Candidates: ");
+                boolean first = true;
+                for (Method m : methods) {
+                    String n = m.getName();
+                    if (n.contains("Display") || n.contains("Stack") || n.contains("Task")) {
+                        if (!first) dump.append(", ");
+                        dump.append(n).append('(');
+                        Class<?>[] pt = m.getParameterTypes();
+                        for (int i = 0; i < pt.length; i++) {
+                            if (i > 0) dump.append(',');
+                            dump.append(pt[i].getSimpleName());
+                        }
+                        dump.append(')');
+                        first = false;
+                    }
+                }
+                return dump.toString();
+            }
+            target.invoke(iAtm, taskId, displayId);
+            return "OK " + target.getName() + "(" + taskId + "," + displayId + ")";
+        } catch (Throwable t) {
+            Throwable cause = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR moveTaskToDisplay: " + cause.getClass().getSimpleName()
+                    + " — " + cause.getMessage();
+        }
+    }
+
+    /** BYD Seal EU / Android 10 stack-based move :
+     *  1) flip task to FREEFORM via AOSP setTaskWindowingMode (also flips
+     *     containing stack — required for subsequent resizeTask to be
+     *     accepted; BYD's setCustomTaskWindowingMode flips only the task
+     *     hint and leaves the stack in fullscreen, which causes
+     *     "resizeTask not allowed on task")
+     *  2) find the task's stackId + current displayId via getAllStackInfos()
+     *  3) moveStackToDisplay(stackId, displayId), skipped if already on
+     *     target (BYD throws IllegalArgumentException for same-display moves) */
+    public static String moveTaskToDisplayViaStack(int taskId, int displayId) {
+        StringBuilder log = new StringBuilder();
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+
+            // Step A : flip task (and containing stack) to FREEFORM.
+            //   AOSP setTaskWindowingMode(int,int,boolean) with toTop=true
+            //   internally calls stack.setWindowingMode(mode) — works on BYD too.
+            //   Only fall back to setCustomTaskWindowingMode if AOSP variant
+            //   is missing (it isn't on BYD Seal but we keep the path for
+            //   forks that strip it).
+            try {
+                Method setWm;
+                String which;
+                try {
+                    setWm = iAtm.getClass().getMethod(
+                            "setTaskWindowingMode", int.class, int.class, boolean.class);
+                    which = "setTaskWindowingMode";
+                } catch (NoSuchMethodException nsm) {
+                    setWm = iAtm.getClass().getMethod(
+                            "setCustomTaskWindowingMode", int.class, int.class, boolean.class);
+                    which = "setCustomTaskWindowingMode";
+                }
+                setWm.invoke(iAtm, taskId, 5 /*WINDOWING_MODE_FREEFORM*/, true /*toTop*/);
+                log.append("OK ").append(which).append('(').append(taskId).append(",FREEFORM)");
+            } catch (Throwable wmEx) {
+                Throwable c = (wmEx instanceof java.lang.reflect.InvocationTargetException
+                        && wmEx.getCause() != null) ? wmEx.getCause() : wmEx;
+                log.append("WARN setTaskWindowingMode: ").append(c.getClass().getSimpleName())
+                   .append(" — ").append(c.getMessage());
+            }
+            log.append(" ; ");
+
+            // Step B : find stackId AND its current displayId.
+            int stackId = -1, currentDisplayId = -1;
+            try {
+                Method getAll = iAtm.getClass().getMethod("getAllStackInfos");
+                Object res = getAll.invoke(iAtm);
+                java.util.List<?> stacks;
+                if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
+                else if (res != null && res.getClass().isArray())
+                    stacks = java.util.Arrays.asList((Object[]) res);
+                else stacks = java.util.Collections.emptyList();
+                for (Object si : stacks) {
+                    if (si == null) continue;
+                    int sid = -1, did = -1;
+                    int[] tids = null;
+                    try {
+                        java.lang.reflect.Field fStack = si.getClass().getField("stackId");
+                        sid = fStack.getInt(si);
+                    } catch (NoSuchFieldException ignore) {}
+                    try {
+                        java.lang.reflect.Field fDid = si.getClass().getField("displayId");
+                        did = fDid.getInt(si);
+                    } catch (NoSuchFieldException ignore) {}
+                    try {
+                        java.lang.reflect.Field fTaskIds = si.getClass().getField("taskIds");
+                        tids = (int[]) fTaskIds.get(si);
+                    } catch (NoSuchFieldException ignore) {}
+                    if (tids != null) {
+                        for (int t : tids) {
+                            if (t == taskId) {
+                                stackId = sid;
+                                currentDisplayId = did;
+                                break;
+                            }
+                        }
+                    }
+                    if (stackId != -1) break;
+                }
+            } catch (Throwable lookupEx) {
+                log.append("WARN getAllStackInfos: ").append(lookupEx.getClass().getSimpleName())
+                   .append(" — ").append(lookupEx.getMessage()).append(" ; ");
+            }
+            log.append("stackId=").append(stackId).append(" currentDisplay=")
+               .append(currentDisplayId).append(" ; ");
+            if (stackId < 0) {
+                log.append("ERR no stack for task=").append(taskId);
+                return log.toString();
+            }
+
+            // Step C : moveStackToDisplay — only if not already on target.
+            if (currentDisplayId == displayId) {
+                log.append("SKIP moveStackToDisplay (already on display ")
+                   .append(displayId).append(')');
+                return log.toString();
+            }
+            Method mv = iAtm.getClass().getMethod(
+                    "moveStackToDisplay", int.class, int.class);
+            mv.invoke(iAtm, stackId, displayId);
+            log.append("OK moveStackToDisplay(").append(stackId).append(',')
+               .append(displayId).append(')');
+            return log.toString();
+        } catch (Throwable t) {
+            Throwable cause = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            log.append("ERR moveTaskToDisplayViaStack: ")
+               .append(cause.getClass().getSimpleName())
+               .append(" — ").append(cause.getMessage());
+            return log.toString();
+        }
+    }
+
+    /** Resize an existing task. RESIZE_MODE_FORCED = 1 (skip user-driven gate).
+     *  Pass all-zero bounds to clear (full display).
+     *  Enumerates resize* signatures so we can adapt to BYD/AOSP variants. */
+    public static String resizeTaskRect(int taskId, int l, int t, int r, int b) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            android.graphics.Rect bounds = (l == 0 && t == 0 && r == 0 && b == 0)
+                    ? null : new android.graphics.Rect(l, t, r, b);
+
+            // Try, in order :
+            //   resizeTask(int, Rect, int)              — Android 10 stock
+            //   resizeTask(int, Rect)                   — older
+            //   resizeDockedStack / resizeStack         — fallback
+            Method m = null;
+            Object[] args = null;
+            Method[] methods = iAtm.getClass().getMethods();
+            for (Method cand : methods) {
+                if (!cand.getName().equals("resizeTask")) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length == 3 && pt[0] == int.class
+                        && pt[1] == android.graphics.Rect.class
+                        && pt[2] == int.class) {
+                    m = cand; args = new Object[]{taskId, bounds, 1}; break;
+                }
+                if (pt.length == 2 && pt[0] == int.class
+                        && pt[1] == android.graphics.Rect.class) {
+                    m = cand; args = new Object[]{taskId, bounds};
+                }
+            }
+            if (m == null) {
+                StringBuilder dump = new StringBuilder("ERR resizeTask: no variant. Candidates: ");
+                boolean first = true;
+                for (Method cand : methods) {
+                    if (!cand.getName().toLowerCase().contains("resize")) continue;
+                    if (!first) dump.append(", ");
+                    dump.append(cand.getName()).append('(');
+                    Class<?>[] pt = cand.getParameterTypes();
+                    for (int i = 0; i < pt.length; i++) {
+                        if (i > 0) dump.append(',');
+                        dump.append(pt[i].getSimpleName());
+                    }
+                    dump.append(')');
+                    first = false;
+                }
+                return dump.toString();
+            }
+            m.invoke(iAtm, args);
+            return "OK " + m.getName() + "(" + taskId + ","
+                    + (bounds == null ? "null" : bounds.toShortString()) + ")";
+        } catch (Throwable ex) {
+            Throwable cause = (ex instanceof java.lang.reflect.InvocationTargetException
+                    && ex.getCause() != null) ? ex.getCause() : ex;
+            String msg = cause.getMessage();
+            return "ERR resizeTask: " + cause.getClass().getSimpleName()
+                    + " — " + (msg == null ? cause.toString() : msg);
+        }
+    }
+
+    /** Set focused task — drives input + brings task to top of its display. */
+    public static String setFocusedRootTask(int taskId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m;
+            try {
+                m = iAtm.getClass().getMethod("setFocusedRootTask", int.class);
+            } catch (NoSuchMethodException nsm) {
+                m = iAtm.getClass().getMethod("setFocusedTask", int.class);
+            }
+            m.invoke(iAtm, taskId);
+            return "OK " + m.getName() + "(" + taskId + ")";
+        } catch (Throwable t) {
+            return "ERR setFocusedRootTask: " + t.getClass().getSimpleName() + " — " + t.getMessage();
+        }
+    }
+
+    /** Mark a display as single-task instance. BYD/AOSP API: side-effect on most
+     *  forks is that the display becomes "system-trusted" for activity launch —
+     *  bypasses the secondary-display gate that kicks Waze back to display 0. */
+    public static String setDisplayToSingleTaskInstance(int displayId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m = iAtm.getClass().getMethod("setDisplayToSingleTaskInstance", int.class);
+            m.invoke(iAtm, displayId);
+            return "OK setDisplayToSingleTaskInstance(" + displayId + ")";
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR setDisplayToSingleTaskInstance: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
+    /** Force a task to be resizeable. resizeMode values (AOSP):
+     *  0=UNRESIZEABLE 1=CROP_WINDOWS 2=RESIZEABLE 3=RESIZEABLE_AND_PIPABLE 4=FORCE_RESIZEABLE. */
+    public static String setTaskResizeable(int taskId, int resizeMode) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m = iAtm.getClass().getMethod("setTaskResizeable", int.class, int.class);
+            m.invoke(iAtm, taskId, resizeMode);
+            return "OK setTaskResizeable(" + taskId + "," + resizeMode + ")";
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR setTaskResizeable: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
+    /** Diagnostic: ask AMS if {@code packageName} is allowed to start on {@code displayId}. */
+    public static String isActivityStartAllowedOnDisplay(int displayId, String packageName) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            android.content.Intent intent = new android.content.Intent(
+                    android.content.Intent.ACTION_MAIN);
+            intent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+            intent.setPackage(packageName);
+            Method m = iAtm.getClass().getMethod("isActivityStartAllowedOnDisplay",
+                    int.class, android.content.Intent.class, String.class, int.class);
+            Object res = m.invoke(iAtm, displayId, intent, (String) null, 0);
+            return "isActivityStartAllowedOnDisplay(" + displayId + "," + packageName + ") = " + res;
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR isActivityStartAllowedOnDisplay: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
+    /** Full OpenBYD 2.0 launchAndForce sequence : am start &rarr; poll task id &rarr;
+     *  loop 2&times; (moveTaskToDisplay + resizeTask + setFocusedRootTask).
+     *
+     *  <p>Empirically the only path that reliably lands an app in FREEFORM
+     *  windowing mode on the BYD fission cluster display (which lacks
+     *  {@code FLAG_SUPPORTS_FREEFORM_WINDOW_MANAGEMENT}) is the AOSP
+     *  {@code am start --windowingMode 5 --display N} flag combo, observed in
+     *  Dilink5 Dashboard ({@code c0.k} case 12). Setting the windowing mode
+     *  at launch bypasses the AOSP {@code canChangeWindowingMode} gate that
+     *  silently no-ops {@code setTaskWindowingMode} on an already-running task.
+     *  We always force-stop the package first (via {@code -S}) so a re-launch
+     *  takes effect even when the task already exists.
+     *
+     *  <p>Returns a multi-line log of every step so the caller can render it. */
+    public static String launchAndForce(String packageName, String activityClass,
+                                        int displayId, int width, int height) {
+        StringBuilder log = new StringBuilder();
+        log.append("== launchAndForce ").append(packageName)
+           .append(activityClass != null ? "/" + activityClass : "")
+           .append(" → display=").append(displayId)
+           .append(' ').append(width).append('x').append(height).append(" ==\n");
+        try {
+            // Pre-cleanup : nuke any zombie split-screen-primary / freeform
+            // stack left on the target display by a previous session.
+            // Without this, AMS routes the new task into the orphan stack and
+            // throws "Can only have one child on stack ... mode=split-screen-
+            // primary" on the second launch (regression seen 1.2.61 → 1.2.62).
+            log.append(cleanFissionStacks(displayId));
+
+            // Always force-stop : if the task already exists we need a clean
+            // relaunch so AMS observes the --windowingMode flag (a running task
+            // keeps its existing stack's mode otherwise).
+            log.append("$ am force-stop ").append(packageName).append('\n');
+            String stopOut = execShell("am force-stop " + packageName, 3000);
+            log.append(stopOut == null ? "(no output)" : stopOut).append('\n');
+
+            // Resolve component if caller didn't provide one.
+            String cmpFlat = activityClass != null
+                    ? packageName + "/" + activityClass : null;
+            if (cmpFlat == null) {
+                String resolveCmd = "cmd package resolve-activity --brief"
+                        + " -a android.intent.action.MAIN"
+                        + " -c android.intent.category.LAUNCHER"
+                        + " " + packageName;
+                log.append("$ ").append(resolveCmd).append('\n');
+                String resolveOut = execShell(resolveCmd, 3000);
+                log.append(resolveOut == null ? "(no output)" : resolveOut).append('\n');
+                if (resolveOut != null) {
+                    for (String line : resolveOut.split("\\r?\\n")) {
+                        line = line.trim();
+                        if (line.contains("/") && !line.startsWith("[err]")
+                                && !line.equals(packageName)) {
+                            cmpFlat = line;
+                            break;
+                        }
+                    }
+                }
+                log.append("resolved component = ").append(cmpFlat).append('\n');
+            }
+
+            boolean started = false;
+
+            // Dilink5 Dashboard pattern : -S -W --windowingMode 5 --display N pkg/cls.
+            // -S  : stop first if running (already done above, kept defensively).
+            // -W  : wait for launch result.
+            // --windowingMode 5 : FREEFORM — the only mode where resizeTask is
+            //                     accepted on a display that doesn't itself
+            //                     advertise FLAG_SUPPORTS_FREEFORM.
+            if (cmpFlat != null) {
+                String cmd = "am start-activity -S -W"
+                        + " --windowingMode 5"
+                        + " --display " + displayId
+                        + " --activity-no-animation"
+                        + " -n " + cmpFlat;
+                log.append("$ ").append(cmd).append('\n');
+                String out = execShell(cmd, 5000);
+                log.append(out == null ? "(no output)" : out).append('\n');
+                started = (out == null || !out.contains("Error:"));
+            }
+
+            // Fallback : bare MAIN with -p when component resolution failed.
+            if (!started) {
+                String cmd = "am start-activity -S -W"
+                        + " --windowingMode 5"
+                        + " --display " + displayId
+                        + " -a android.intent.action.MAIN"
+                        + " -c android.intent.category.LAUNCHER"
+                        + " --activity-no-animation"
+                        + " -p " + packageName;
+                log.append("$ ").append(cmd).append('\n');
+                String out = execShell(cmd, 5000);
+                log.append(out == null ? "(no output)" : out).append('\n');
+                started = (out == null || !out.contains("Error:"));
+            }
+
+            // Poll up to ~5 s for the task to appear.
+            int taskId = -1;
+            for (int i = 1; i <= 16 && taskId <= 0; i++) {
+                try { Thread.sleep(300); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                taskId = findTaskIdForPackage(packageName);
+            }
+            log.append("findTask(post-poll) = ").append(taskId).append('\n');
+
+            if (taskId <= 0) {
+                log.append("FAIL: no task discovered for ").append(packageName).append('\n');
+                return log.toString();
+            }
+
+            // Task should already be on displayId in FREEFORM mode. Resize +
+            // focus once. We keep a single short re-resize pass to catch the
+            // FLAG_ACTIVITY_LAUNCH_ADJACENT self-relaunch (Waze's
+            // FreeMapAppActivity → MainActivity).
+            log.append("  ").append(setDisplayToSingleTaskInstance(displayId)).append('\n');
+            log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
+            log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
+            log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
+            try { Thread.sleep(400); } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            // Second pass — re-find taskId in case the launcher Activity got
+            // replaced by a child Activity that opened a new task.
+            int taskId2 = findTaskIdForPackage(packageName);
+            if (taskId2 > 0 && taskId2 != taskId) {
+                log.append("taskId rebound: ").append(taskId).append(" → ")
+                   .append(taskId2).append('\n');
+                taskId = taskId2;
+            }
+            log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
+            log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
+            log.append("  ").append(getTaskBoundsVerb(taskId)).append('\n');
+            log.append("FINISH: launchAndForce complete.\n");
+        } catch (Throwable t) {
+            log.append("EXCEPTION: ").append(t).append('\n');
+        }
+        return log.toString();
+    }
+
+    /** Destroy every non-fullscreen, non-home stack on {@code displayId}.
+     *  Recovery verb for the fission display when an earlier session left a
+     *  zombie stack in {@code split-screen-primary} (or freeform) mode :
+     *  AOSP's {@code ActivityStackSupervisor} then routes every new task into
+     *  that stack and throws {@code IllegalStateException: Can only have one
+     *  child on stack=...mode=split-screen-primary} on the second launch.
+     *
+     *  <p>Iterates {@code IActivityTaskManager.getAllStackInfos()}, filters
+     *  by {@code displayId}, and calls {@code removeStack(stackId)} on each
+     *  stack whose {@code windowingMode} is not {@code FULLSCREEN(1)} and
+     *  {@code activityType} is not {@code HOME(2)}.
+     *
+     *  <p>Returns a multi-line log line of every stack inspected and removed.
+     *  Safe to call repeatedly — on a clean display the loop simply finds
+     *  nothing to remove. */
+    public static String cleanFissionStacks(int displayId) {
+        StringBuilder log = new StringBuilder();
+        log.append("== cleanFissionStacks display=").append(displayId).append(" ==\n");
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
+            java.util.List<?> stacks;
+            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
+            else if (res != null && res.getClass().isArray())
+                stacks = java.util.Arrays.asList((Object[]) res);
+            else { log.append("no stacks returned\n"); return log.toString(); }
+
+            // Resolve removeStack(int) once.
+            Method removeStack = null;
+            for (Method cand : iAtm.getClass().getMethods()) {
+                if (!"removeStack".equals(cand.getName())) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length == 1 && pt[0] == int.class) { removeStack = cand; break; }
+            }
+            if (removeStack == null) {
+                log.append("WARN: no removeStack(int) on ATM proxy\n");
+            }
+
+            int removed = 0, kept = 0;
+            for (Object si : stacks) {
+                if (si == null) continue;
+                Integer sid = (Integer) readFieldNoThrow(si, "stackId");
+                Integer did = (Integer) readFieldNoThrow(si, "displayId");
+                Integer wm  = (Integer) readFieldNoThrow(si, "windowingMode");
+                Integer at  = (Integer) readFieldNoThrow(si, "activityType");
+                if (sid == null || did == null) continue;
+                if (did != displayId) continue;
+                int wmV = wm != null ? wm : -1;
+                int atV = at != null ? at : -1;
+                // FULLSCREEN=1 → leave (normal projection lives here).
+                // HOME=2      → leave (default fallback Activity).
+                if (wmV == 1 || atV == 2) {
+                    log.append("  keep   stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
+                    kept++;
+                    continue;
+                }
+                // DEFENSIVE: if both fields are unreadable (-1/-1) the
+                // StackInfo class shape differs on this ROM and we cannot
+                // safely classify. Removing such a stack risks emptying the
+                // display, which triggers a system_server NPE in AOSP's
+                // ActivityDisplay.createStackUnchecked on the next
+                // `am start --windowingMode 5 --display N`. Keep it.
+                if (wmV == -1 && atV == -1) {
+                    log.append("  keep?  stackId=").append(sid)
+                       .append(" wm=-1 at=-1 (unreadable, defensive keep)\n");
+                    kept++;
+                    continue;
+                }
+                if (removeStack == null) {
+                    log.append("  SKIP   stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" (no removeStack verb)\n");
+                    continue;
+                }
+                try {
+                    removeStack.invoke(iAtm, (int) sid);
+                    log.append("  REMOVE stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
+                    removed++;
+                } catch (Throwable rex) {
+                    Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
+                            && rex.getCause() != null) ? rex.getCause() : rex;
+                    log.append("  ERR    stackId=").append(sid).append(": ")
+                       .append(c.getClass().getSimpleName())
+                       .append(": ").append(c.getMessage()).append('\n');
+                }
+            }
+            log.append("done — removed=").append(removed).append(" kept=").append(kept).append('\n');
+        } catch (Throwable t) {
+            log.append("EXCEPTION: ").append(t).append('\n');
+        }
+        return log.toString();
+    }
+
+    /** Look up the stackId containing {@code taskId} via {@code getAllStackInfos()}.
+     *  Returns -1 if not found. */
+    public static int findStackIdForTask(int taskId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
+            java.util.List<?> stacks;
+            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
+            else if (res != null && res.getClass().isArray())
+                stacks = java.util.Arrays.asList((Object[]) res);
+            else return -1;
+            for (Object si : stacks) {
+                if (si == null) continue;
+                int sid;
+                int[] tids;
+                try {
+                    sid = si.getClass().getField("stackId").getInt(si);
+                    tids = (int[]) si.getClass().getField("taskIds").get(si);
+                } catch (NoSuchFieldException e) { continue; }
+                if (tids == null) continue;
+                for (int t : tids) if (t == taskId) return sid;
+            }
+        } catch (Throwable ignore) {}
+        return -1;
+    }
+
+    /** Flip a STACK's windowing mode via every known ATM verb. Tries, in order :
+     *  setActivityStackWindowingMode, setStackWindowingMode (multiple arities),
+     *  setActivityStackWindowingModeForced. Returns a log line. */
+    public static String setStackWindowingMode(int stackId, int mode) {        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            String[] names = {
+                    "setActivityStackWindowingMode",
+                    "setStackWindowingMode",
+                    "setActivityStackWindowingModeForced",
+            };
+            for (String name : names) {
+                for (Method cand : iAtm.getClass().getMethods()) {
+                    if (!cand.getName().equals(name)) continue;
+                    Class<?>[] pt = cand.getParameterTypes();
+                    try {
+                        if (pt.length == 2 && pt[0] == int.class && pt[1] == int.class) {
+                            cand.invoke(iAtm, stackId, mode);
+                            return "OK " + name + "(" + stackId + "," + mode + ")";
+                        }
+                        if (pt.length == 3 && pt[0] == int.class && pt[1] == int.class
+                                && pt[2] == boolean.class) {
+                            cand.invoke(iAtm, stackId, mode, true);
+                            return "OK " + name + "(" + stackId + "," + mode + ",true)";
+                        }
+                    } catch (Throwable inv) {
+                        Throwable c = (inv instanceof java.lang.reflect.InvocationTargetException
+                                && inv.getCause() != null) ? inv.getCause() : inv;
+                        return "ERR " + name + ": " + c.getClass().getSimpleName()
+                                + " — " + c.getMessage();
+                    }
+                }
+            }
+            return "SKIP setStackWindowingMode: no candidate method";
+        } catch (Throwable t) {
+            return "ERR setStackWindowingMode: " + t.getClass().getSimpleName()
+                    + " — " + t.getMessage();
+        }
+    }
+
+    /** Resize a stack directly. Different code path than resizeTask — does NOT
+     *  hit the {@code canResizeTask()} gate (which requires FREEFORM windowing
+     *  mode). Useful when the display lacks {@code FLAG_SUPPORTS_FREEFORM}. */
+    public static String resizeStackRect(int stackId, int l, int t, int r, int b) {        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            android.graphics.Rect bounds = (l == 0 && t == 0 && r == 0 && b == 0)
+                    ? null : new android.graphics.Rect(l, t, r, b);
+            Method[] methods = iAtm.getClass().getMethods();
+            Method m = null;
+            Object[] args = null;
+            for (Method cand : methods) {
+                if (!cand.getName().equals("resizeStack")) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                // AOSP Android 10 signature: (int, Rect, boolean, boolean, boolean, int)
+                if (pt.length == 6 && pt[0] == int.class
+                        && pt[1] == android.graphics.Rect.class
+                        && pt[2] == boolean.class && pt[3] == boolean.class
+                        && pt[4] == boolean.class && pt[5] == int.class) {
+                    m = cand;
+                    args = new Object[]{stackId, bounds, true, true, false, -1};
+                    break;
+                }
+                if (pt.length == 2 && pt[0] == int.class
+                        && pt[1] == android.graphics.Rect.class) {
+                    m = cand;
+                    args = new Object[]{stackId, bounds};
+                }
+            }
+            if (m == null) return "SKIP resizeStack: no matching variant";
+            m.invoke(iAtm, args);
+            return "OK resizeStack(" + stackId + ","
+                    + (bounds == null ? "null" : bounds.toShortString()) + ")";
+        } catch (Throwable ex) {
+            Throwable cause = (ex instanceof java.lang.reflect.InvocationTargetException
+                    && ex.getCause() != null) ? ex.getCause() : ex;
+            return "ERR resizeStack: " + cause.getClass().getSimpleName()
+                    + " — " + cause.getMessage();
+        }
+    }
+
+    /** Dump every ATM method whose name matches one of the given lowercase
+     *  substrings — used to RE the right reflection target at runtime. */
+    public static String dumpAtmMethods(String[] substrings) {        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            StringBuilder out = new StringBuilder("ATM methods matching ")
+                    .append(java.util.Arrays.toString(substrings)).append(":\n");
+            java.util.TreeSet<String> sorted = new java.util.TreeSet<>();
+            for (Method m : iAtm.getClass().getMethods()) {
+                String nm = m.getName().toLowerCase();
+                boolean match = false;
+                for (String s : substrings) if (nm.contains(s)) { match = true; break; }
+                if (!match) continue;
+                StringBuilder sig = new StringBuilder(m.getName()).append('(');
+                Class<?>[] pt = m.getParameterTypes();
+                for (int i = 0; i < pt.length; i++) {
+                    if (i > 0) sig.append(',');
+                    sig.append(pt[i].getSimpleName());
+                }
+                sig.append(')');
+                sorted.add(sig.toString());
+            }
+            for (String s : sorted) out.append("  ").append(s).append('\n');
+            return out.toString();
+        } catch (Throwable t) {
+            return "ERR dumpAtmMethods: " + t;
+        }
+    }
+
+    /** Read a task's current bounds via {@code getTaskBounds(int)} — diagnostic
+     *  to verify whether a preceding resize/move actually took effect. */
+    public static String getTaskBoundsVerb(int taskId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            Method m = iAtm.getClass().getMethod("getTaskBounds", int.class);
+            Object res = m.invoke(iAtm, taskId);
+            return "getTaskBounds(" + taskId + ") = "
+                    + (res instanceof android.graphics.Rect
+                            ? ((android.graphics.Rect) res).toShortString() : String.valueOf(res));
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR getTaskBounds: " + c.getClass().getSimpleName() + " — " + c.getMessage();
+        }
+    }
+
+    /** BYD-specific verb that takes a Rect alongside a windowing mode hint.
+     *  Empirically present on BYD Seal EU / Android 10 — used by BYD's own
+     *  WindowManagement / Dilink5Dashboard to place floating windows on the
+     *  fission cluster display, where standard FREEFORM is not supported.
+     *
+     *  <p>Signature observed at runtime :
+     *  {@code setCustomTaskWindowingModeSplitScreenPrimary(int taskId,
+     *  int mode, boolean onTop, boolean animate, Rect bounds, boolean ?)}
+     *
+     *  <p>Tries multiple {@code mode} values in this order :
+     *  5=FREEFORM, 3=SPLIT_SCREEN_PRIMARY. Returns the first {@code OK}
+     *  result, or the last {@code ERR}. */
+    public static String setTaskWindowingModeWithBounds(int taskId,
+                                                        int l, int t, int r, int b) {
+        StringBuilder log = new StringBuilder();
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            android.graphics.Rect bounds = new android.graphics.Rect(l, t, r, b);
+
+            // Method candidates (BYD-custom first, AOSP split-screen fallback).
+            String[] names = {
+                    "setCustomTaskWindowingModeSplitScreenPrimary",
+                    "setTaskWindowingModeSplitScreenPrimary",
+            };
+            // Try mode 5 (FREEFORM) then 3 (SPLIT_SCREEN_PRIMARY) then 0
+            // (createMode TOP_OR_LEFT for the AOSP variant).
+            int[] modes = {5, 3, 0};
+
+            Method target = null;
+            String targetName = null;
+            for (String nm : names) {
+                for (Method cand : iAtm.getClass().getMethods()) {
+                    if (!cand.getName().equals(nm)) continue;
+                    Class<?>[] pt = cand.getParameterTypes();
+                    if (pt.length == 6
+                            && pt[0] == int.class && pt[1] == int.class
+                            && pt[2] == boolean.class && pt[3] == boolean.class
+                            && pt[4] == android.graphics.Rect.class
+                            && pt[5] == boolean.class) {
+                        target = cand;
+                        targetName = nm;
+                        break;
+                    }
+                }
+                if (target != null) break;
+            }
+            if (target == null) return "SKIP setTaskWindowingModeWithBounds: no matching variant";
+
+            Throwable lastEx = null;
+            for (int mode : modes) {
+                try {
+                    target.invoke(iAtm, taskId, mode,
+                            true /*onTop*/, false /*animate*/, bounds, false /*showRecents*/);
+                    log.append("OK ").append(targetName).append('(')
+                       .append(taskId).append(",mode=").append(mode)
+                       .append(',').append(bounds.toShortString()).append(')');
+                    return log.toString();
+                } catch (Throwable ex) {
+                    lastEx = (ex instanceof java.lang.reflect.InvocationTargetException
+                            && ex.getCause() != null) ? ex.getCause() : ex;
+                    log.append("[").append(mode).append("→")
+                       .append(lastEx.getClass().getSimpleName())
+                       .append(": ").append(lastEx.getMessage()).append("] ");
+                }
+            }
+            return "ERR " + targetName + " all modes failed: " + log;
+        } catch (Throwable ex) {
+            return "ERR setTaskWindowingModeWithBounds: "
+                    + ex.getClass().getSimpleName() + " — " + ex.getMessage();
+        }
+    }
+
+    /** Move + resize a task on the BYD cluster fission display.
+     *
+     *  <p>This is the EXACT v1.2.61 sequence, validated in v1.2.70 as the
+     *  only pipeline that reliably repositions Waze on every slider drag
+     *  (auto-apply included) without crashing system_server. See
+     *  {@code doc_api/CLUSTER_RESIZE_SEQUENCE.md} for the full rationale.
+     *
+     *  <p><b>Do not</b> add `if/else` gating, mode checks, or fallbacks
+     *  (especially not {@code launchAndForce}) — every previous "smart"
+     *  variant regressed because {@code StackInfo.windowingMode} is
+     *  unreadable on this ROM (always -1) and {@code am start --windowingMode
+     *  5 --display 1} triggers a system_server NPE in
+     *  {@code createStackUnchecked}. The cascade as a whole is the point. */
+    public static String moveAndResize(String packageName, int displayId,
+                                       int l, int t, int r, int b) {
+        StringBuilder log = new StringBuilder();
+        log.append("== moveAndResize ").append(packageName)
+           .append(" → display=").append(displayId)
+           .append(" rect=[").append(l).append(',').append(t).append(',')
+           .append(r).append(',').append(b).append("] ==\n");
+        try {
+            int taskId = findTaskIdForPackage(packageName);
+            log.append("findTask = ").append(taskId).append('\n');
+            if (taskId <= 0) {
+                log.append("FAIL: no task for ").append(packageName)
+                   .append(" — launch the app first via launchAndForce.\n");
+                return log.toString();
+            }
+            // EXACT v1.2.61 sequence — proven to repeatedly move + resize
+            // Waze on every slider drag (even in auto-apply mode). Each
+            // verb contributes; the cascade as a whole is the point.
+            //   - setDisplayToSingleTaskInstance     → loosens display
+            //   - moveTaskToDisplayViaStack          → wakes the stack
+            //   - setStackWindowingMode(stackId, 5) → FREEFORM via reflect
+            //   - resizeStackRect                    → stack-level bounds
+            //   - setTaskWindowingModeWithBounds    → BYD atomic flip+rect
+            //   - resizeTaskRect                     → task-level bounds
+            log.append("  ").append(setDisplayToSingleTaskInstance(displayId)).append('\n');
+            log.append("  ").append(moveTaskToDisplayViaStack(taskId, displayId)).append('\n');
+            log.append("  ").append(setTaskResizeable(taskId, 4)).append('\n');
+            int stackId = findStackIdForTask(taskId);
+            log.append("stackId = ").append(stackId).append('\n');
+            if (stackId > 0) {
+                log.append("  ").append(setStackWindowingMode(stackId, 5)).append('\n');
+                log.append("  ").append(resizeStackRect(stackId, l, t, r, b)).append('\n');
+            }
+            log.append("  ").append(setTaskWindowingModeWithBounds(taskId, l, t, r, b)).append('\n');
+            log.append("  ").append(resizeTaskRect(taskId, l, t, r, b)).append('\n');
+            log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
+            log.append("  ").append(getTaskBoundsVerb(taskId)).append('\n');
+            log.append("FINISH: moveAndResize complete.\n");
+        } catch (Throwable ex) {
+            log.append("EXCEPTION: ").append(ex).append('\n');
+        }
+        return log.toString();
+    }
+
+    /** Minimal shell exec used by launchAndForce. Reads both stdout + stderr,
+     *  bounded by {@code timeoutMs}. Returns null on hard failure. */
+    private static String execShell(String command, int timeoutMs) {
+        Process p = null;
+        try {
+            p = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
+            final Process proc = p;
+            StringBuilder out = new StringBuilder();
+            Thread reader = new Thread(() -> {
+                byte[] buf = new byte[4096];
+                try (java.io.InputStream is = proc.getInputStream();
+                     java.io.InputStream es = proc.getErrorStream()) {
+                    int n;
+                    while ((n = is.read(buf)) > 0) out.append(new String(buf, 0, n));
+                    while ((n = es.read(buf)) > 0) out.append("[err] ").append(new String(buf, 0, n));
+                } catch (Throwable ignore) {}
+            }, "phase4-shell-reader");
+            reader.setDaemon(true);
+            reader.start();
+            p.waitFor();
+            reader.join(Math.max(200, timeoutMs / 4));
+            return out.toString().trim();
+        } catch (Throwable t) {
+            return "[execShell EXCEPTION] " + t;
+        } finally {
+            if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
+        }
+    }
 }

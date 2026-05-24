@@ -220,6 +220,11 @@
                 android:id="@+id/panel_adas"
                 layout="@layout/include_diag_adas"/>
 
+            <!-- Cluster overlay POC panel (v1.2.34) -->
+            <include
+                android:id="@+id/panel_cluster_poc"
+                layout="@layout/include_diag_cluster_poc"/>
+
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include
                 android:id="@+id/panel_coming_soon"
