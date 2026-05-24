@@ -16,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="status_disconnected">Аспаптар панелі: қосылмаған</string>
     <string name="btn_origin_cluster">Бастапқы панельді қалпына келтіру</string>
-    <string name="stop_sheet_subtitle">Қосымша әрекеттер үшін басып тұрыңыз.</string>
-    <string name="stop_sheet_origin_desc">Параметрлерде таңдалған экран өлшемін пайдаланады (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Кластердегі белсенді бейне ✓</string>
     <string name="btn_cluster_split">⬛⬛ Бөлу</string>
     <string name="cluster_control_title">Кластерді басқару</string>
@@ -129,6 +127,8 @@
     <string name="settings_section_behavior">Әрекет</string>
     <string name="settings_boot_auto_start_support">Көлік іске қосылғанда айнаны қосу</string>
     <string name="settings_reconnect_popup_support">Күтпеген ажырау кезінде қалпына келтіру</string>
+    <string name="settings_quick_stop">Жылдам тоқтату (бастапқы кластерді қалпына келтірмей)</string>
+    <string name="settings_quick_stop_support">Тек sendInfo 18 + 0 жібереді, өлшемді өзгертпейді</string>
     <string name="settings_category_filters_support">Қолданбалар мәзірінде чиптерді көрсету</string>
     <string name="settings_section_about">Туралы</string>
     <string name="settings_about_version_label">Нұсқа</string>

@@ -390,18 +390,20 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) { activateCluster(); }
         });
 
-        // Button "Restore cluster" — always triggers restoreBydDashboard()
+        // Button "Restore cluster" — default: restore origin cluster with the size
+        // selected in Settings (sendInfo 29/30/31 + 18 + 0). When the user enables
+        // PREF_QUICK_STOP in Settings, fall back to a quick stop (sendInfo 18 + 0
+        // only, without changing the cluster size).
         btnRestoreCluster.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) { restoreBydDashboard(); }
-        });
-        // v0.9.89 — long-press exposes an expanded popup (like long-press on an app)
-        // with the "Restore origin cluster" action wired to originCluster()
-        // (uses the screen size selected in Settings: sendInfo cmd 29/30/31).
-        btnRestoreCluster.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override public boolean onLongClick(View v) {
-                showStopProjectionSheet();
-                return true;
+            public void onClick(View v) {
+                boolean quick = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .getBoolean(SettingsActivity.PREF_QUICK_STOP, false);
+                if (quick) {
+                    restoreBydDashboard();
+                } else {
+                    originCluster();
+                }
             }
         });
 
@@ -2727,38 +2729,6 @@ public class MainActivity extends AppCompatActivity
             sb.setSpan(new StyleSpan(Typeface.BOLD),
                     spanStart, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             i = boldEnd + 2;
-        }
-    }
-
-    /**
-     * v0.9.89 — Long-press popup on the "Stop projection" button.
-     * Opens an expanded BottomSheetDialog (like long-press on an app icon) exposing
-     * the "Restore origin cluster" action. The action delegates to {@link #originCluster()}
-     * which uses the screen size chosen in Settings (sendInfo cmd 29/30/31).
-     */
-    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
-    private void showStopProjectionSheet() {
-        if (isFinishing() || isDestroyed()) return;
-        final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
-                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
-        View v = getLayoutInflater().inflate(R.layout.dialog_stop_projection, null);
-        dialog.setContentView(v);
-
-        View rowOrigin = v.findViewById(R.id.sheet_action_origin_cluster);
-        rowOrigin.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                dialog.dismiss();
-                originCluster();
-            }
-        });
-
-        dialog.show();
-        try {
-            com.google.android.material.bottomsheet.BottomSheetBehavior<?> b = dialog.getBehavior();
-            b.setSkipCollapsed(true);
-            b.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
         }
     }
 

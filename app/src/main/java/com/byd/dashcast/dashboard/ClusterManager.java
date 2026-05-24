@@ -103,7 +103,9 @@ public class ClusterManager {
      *   🚨 The VirtualDisplay does NOT exist at boot. It is created by the sequence below.
      *
      *   Fast path (VD already present from a previous session):
-     *     sendInfo(30) → 6s → sendInfo(16) → onDisplayReady immediately
+     *     sendInfo(30) → 800ms → sendInfo(16) → onDisplayReady immediately
+     *     (1.2.73 — was 6s; Qt size already set, 30 is no-op confirmation,
+     *      doc at top of file says "wait 1s" for this transition.)
      *
      *   Slow path (VD not yet created):
      *     sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35)
@@ -156,9 +158,13 @@ public class ClusterManager {
         Display found = findClusterDisplay(dm);
         if (found != null) {
             // Fast path: VirtualDisplay already present (previous session, not destroyed yet).
-            // Send 30→6s→16 to put Qt back in projection mode. VD already exists → immediate callback.
+            // Send 30→800ms→16 to put Qt back in projection mode. VD already exists → immediate callback.
+            // 1.2.73 — was 6000ms (copied from slow-path "VD creation" timing). When VD already
+            // exists, Qt has its size set; sendInfo(30) is a no-op confirmation and the long
+            // stabilisation delay is unnecessary. Doc at top of this file specifies "wait 1s"
+            // between 30 and 16 — 800ms keeps a safety margin while cutting ~5s from start.
             AppLogger.i(TAG, "VirtualDisplay already present: id=" + found.getDisplayId()
-                    + " name=" + found.getName() + " — fast path (30→6s→16)");
+                    + " name=" + found.getName() + " — fast path (30→800ms→16)");
             final Display displayFound = found;
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
@@ -186,7 +192,7 @@ public class ClusterManager {
                                         }
                                     });
                             }
-                        }, 6000);
+                        }, 800);
                     }
                     @Override public void onError(String err) {
                         AppLogger.e(TAG, "fast path ADB(cmd=30) ERROR: " + err);

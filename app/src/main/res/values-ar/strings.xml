@@ -15,8 +15,6 @@
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">اللوحة: غير متصلة</string>
     <string name="btn_origin_cluster">استعادة اللوحة الأصلية</string>
-    <string name="stop_sheet_subtitle">اضغط مطولاً للحصول على إجراءات إضافية.</string>
-    <string name="stop_sheet_origin_desc">يستخدم حجم الشاشة المختار في الإعدادات (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">الشاشة النشطة على لوحة العدادات ✓</string>
     <string name="btn_cluster_split">⬛⬛ تقسيم</string>
     <string name="cluster_control_title">التحكم في العنقود</string>
@@ -129,6 +127,8 @@
     <string name="settings_section_behavior">السلوك</string>
     <string name="settings_boot_auto_start_support">تفعيل المرآة عند تشغيل السيارة</string>
     <string name="settings_reconnect_popup_support">الاستعادة عند الانفصال غير المتوقع</string>
+    <string name="settings_quick_stop">إيقاف سريع (بدون استعادة العنقود الأصلي)</string>
+    <string name="settings_quick_stop_support">يرسل فقط sendInfo 18 + 0 دون تغيير الحجم</string>
     <string name="settings_category_filters_support">إظهار الرقاقات في قائمة التطبيقات</string>
     <string name="settings_section_about">حول</string>
     <string name="settings_about_version_label">الإصدار</string>

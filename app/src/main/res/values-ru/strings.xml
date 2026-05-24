@@ -16,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="status_disconnected">Панель приборов: не подключена</string>
     <string name="btn_origin_cluster">Восстановить штатную панель</string>
-    <string name="stop_sheet_subtitle">Удерживайте для дополнительных действий.</string>
-    <string name="stop_sheet_origin_desc">Использует размер экрана, выбранный в настройках (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Активное изображение на кластере ✓</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
@@ -129,6 +127,8 @@
     <string name="settings_section_behavior">Поведение</string>
     <string name="settings_boot_auto_start_support">Включать зеркало при запуске автомобиля</string>
     <string name="settings_reconnect_popup_support">Восстанавливать при неожиданном отключении</string>
+    <string name="settings_quick_stop">Быстрая остановка (без восстановления исходного кластера)</string>
+    <string name="settings_quick_stop_support">Отправляет только sendInfo 18 + 0, без изменения размера</string>
     <string name="settings_category_filters_support">Показывать чипы в меню приложений</string>
     <string name="settings_section_about">О приложении</string>
     <string name="settings_about_version_label">Версия</string>

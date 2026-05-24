@@ -56,6 +56,12 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
     public static final String PREF_RECONNECT_POPUP       = "reconnect_popup_enabled";
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
+    // ── Stop Projection behaviour ───────────────────────────────────────────────
+    // false (default) = Stop button restores the origin cluster with the size
+    //                   selected in Settings (sendInfo 29/30/31 + 18 + 0).
+    // true            = quick stop: only sendInfo(18) + sendInfo(0), no size
+    //                   reconfiguration of the original cluster.
+    public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
     // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
     public static final String PREF_RECENT_APPS = "recent_cluster_apps";
     // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
@@ -80,6 +86,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbBootAutoStart;
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
+    private CompoundButton cbQuickStop;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
     private CompoundButton swDilink5Mode;
@@ -207,6 +214,7 @@ public class SettingsActivity extends AppCompatActivity {
         flSafeZone    = findViewById(R.id.fl_safe_zone);
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
+        cbQuickStop      = findViewById(R.id.cb_quick_stop);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
@@ -252,6 +260,11 @@ public class SettingsActivity extends AppCompatActivity {
         // Reconnect popup toggle (default: disabled — users find it intrusive)
         boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, false);
         cbReconnectPopup.setChecked(reconnectPopup);
+
+        // Quick stop toggle (default: disabled — Stop button restores origin cluster
+        // with size from Settings; when enabled, Stop only sends sendInfo 18 + 0).
+        boolean quickStop = prefs.getBoolean(PREF_QUICK_STOP, false);
+        cbQuickStop.setChecked(quickStop);
 
         // Beta Engine toggles (default OFF — restart required after change)
         cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
@@ -389,6 +402,12 @@ public class SettingsActivity extends AppCompatActivity {
         cbReconnectPopup.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
+        });
+
+        // Quick stop checkbox
+        cbQuickStop.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUICK_STOP, isChecked).apply();
         });
 
         // Beta Engine — both toggles require app restart to take effect
