@@ -162,6 +162,10 @@
     <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
     <string name="resize_btn_cancel">Отмена</string>
     <string name="resize_btn_ok">Подтвердить</string>
+    <string name="resize_preset_full">На весь экран</string>
+    <string name="resize_preset_left">Левая ½</string>
+    <string name="resize_preset_right">Правая ½</string>
+    <string name="resize_preset_center">Центр 60 %</string>
     <string name="sheet_force_stop">Принудительная остановка</string>
     <string name="main_cluster_status_off">Проекция отключена</string>
     <string name="main_btn_exit_fullscreen">Выйти из полного экрана</string>

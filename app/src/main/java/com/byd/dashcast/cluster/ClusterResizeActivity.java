@@ -66,7 +66,6 @@ public class ClusterResizeActivity extends Activity
     private TextView           mCoords;
     private Button             mCancel;
     private Button             mOk;
-
     private String  mPkg;
     private int     mDisplayId = 1;
     private int[]   mInitRect;     // [l,t,r,b]
@@ -117,6 +116,20 @@ public class ClusterResizeActivity extends Activity
         mFrame.setListener(this);
         updateCoordsLabel(mInitRect[0], mInitRect[1], mInitRect[2], mInitRect[3]);
 
+        // v1.2.72 — Presets (car ergonomics: one-tap to common layouts).
+        final int CW = cw, CH = ch;
+        findViewById(R.id.resize_preset_full).setOnClickListener(v ->
+                applyPreset(0, 0, CW, CH));
+        findViewById(R.id.resize_preset_left).setOnClickListener(v ->
+                applyPreset(0, 0, CW / 2, CH));
+        findViewById(R.id.resize_preset_right).setOnClickListener(v ->
+                applyPreset(CW / 2, 0, CW, CH));
+        findViewById(R.id.resize_preset_center).setOnClickListener(v -> {
+            int w = (int) (CW * 0.60f), h = (int) (CH * 0.60f);
+            int l = (CW - w) / 2, t = (CH - h) / 2;
+            applyPreset(l, t, l + w, t + h);
+        });
+
         mTexture.setSurfaceTextureListener(this);
 
         mCancel.setOnClickListener(v -> {
@@ -134,8 +147,16 @@ public class ClusterResizeActivity extends Activity
 
     @Override
     protected void onDestroy() {
+        if (mFrame != null) mFrame.clearGestureExclusion();
         stopMirrorSafely();
         super.onDestroy();
+    }
+
+    /** v1.2.72 — Apply a preset rectangle: updates frame + commits immediately. */
+    private void applyPreset(int l, int t, int r, int b) {
+        mFrame.setFrame(l, t, r, b);
+        updateCoordsLabel(l, t, r, b);
+        scheduleApply(l, t, r, b, /*commit*/ true);
     }
 
     // ── Mirror plumbing ────────────────────────────────────────────────────

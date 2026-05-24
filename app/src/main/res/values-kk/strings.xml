@@ -162,6 +162,10 @@
     <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
     <string name="resize_btn_cancel">Бас тарту</string>
     <string name="resize_btn_ok">Растау</string>
+    <string name="resize_preset_full">Толық экран</string>
+    <string name="resize_preset_left">Сол ½</string>
+    <string name="resize_preset_right">Оң ½</string>
+    <string name="resize_preset_center">Орта 60 %</string>
     <string name="sheet_force_stop">Күштеп тоқтату</string>
     <string name="main_cluster_status_off">Проекция өшірулі</string>
     <string name="main_btn_exit_fullscreen">Толық экраннан шығу</string>

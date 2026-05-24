@@ -162,6 +162,10 @@
     <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
     <string name="resize_btn_cancel">Bekor qilish</string>
     <string name="resize_btn_ok">Tasdiqlash</string>
+    <string name="resize_preset_full">Toʻliq ekran</string>
+    <string name="resize_preset_left">Chap ½</string>
+    <string name="resize_preset_right">Oʻng ½</string>
+    <string name="resize_preset_center">Markaz 60 %</string>
     <string name="sheet_force_stop">Majburiy toʻxtatish</string>
     <string name="main_cluster_status_off">Proyeksiya oʻchirilgan</string>
     <string name="main_btn_exit_fullscreen">Toʻliq ekrandan chiqish</string>
