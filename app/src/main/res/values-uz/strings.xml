@@ -16,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="status_disconnected">Asboblar paneli: ulanmagan</string>
     <string name="btn_origin_cluster">Asl panelni tiklash</string>
-    <string name="stop_sheet_subtitle">Qo\'shimcha amallar uchun bosib turing.</string>
-    <string name="stop_sheet_origin_desc">Sozlamalarda tanlangan ekran o\'lchamidan foydalanadi (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Klasterda faol tasvir ✓</string>
     <string name="btn_cluster_split">⬛⬛ Ajratish</string>
     <string name="cluster_control_title">Klaster boshqaruvi</string>
@@ -129,6 +127,8 @@
     <string name="settings_section_behavior">Xatti-harakat</string>
     <string name="settings_boot_auto_start_support">Avtomobil ishga tushganda mirror\'ni yoqish</string>
     <string name="settings_reconnect_popup_support">Kutilmagan uzilganda tiklash</string>
+    <string name="settings_quick_stop">Tezkor toʻxtatish (asl klasterni tiklamasdan)</string>
+    <string name="settings_quick_stop_support">Faqat sendInfo 18 + 0 yuboradi, oʻlchamni oʻzgartirmaydi</string>
     <string name="settings_category_filters_support">Ilovalar menyusida chiplarni koʻrsatish</string>
     <string name="settings_section_about">Haqida</string>
     <string name="settings_about_version_label">Versiya</string>

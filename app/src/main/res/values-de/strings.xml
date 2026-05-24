@@ -18,8 +18,6 @@
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">Dashboard: nicht verbunden</string>
     <string name="btn_origin_cluster">Original-Dashboard wiederherstellen</string>
-    <string name="stop_sheet_subtitle">Halten Sie für weitere Aktionen gedrückt.</string>
-    <string name="stop_sheet_origin_desc">Verwendet die in den Einstellungen gewählte Bildschirmgröße (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Aktive Anzeige auf Cluster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
     <string name="cluster_control_title">Cluster-Steuerung</string>
@@ -129,6 +127,8 @@
     <string name="settings_section_behavior">Verhalten</string>
     <string name="settings_boot_auto_start_support">Mirror beim Fahrzeugstart aktivieren</string>
     <string name="settings_reconnect_popup_support">Bei unerwarteter Trennung wiederherstellen</string>
+    <string name="settings_quick_stop">Schnellstopp (ohne Wiederherstellung des Original-Clusters)</string>
+    <string name="settings_quick_stop_support">Sendet nur sendInfo 18 + 0, ohne Größenänderung</string>
     <string name="settings_category_filters_support">Chips im Apps-Menü anzeigen</string>
     <string name="settings_section_about">Über</string>
     <string name="settings_about_version_label">Version</string>

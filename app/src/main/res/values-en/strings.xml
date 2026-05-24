@@ -18,8 +18,6 @@
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">Dashboard: not connected</string>
     <string name="btn_origin_cluster">Restore Original Dashboard</string>
-    <string name="stop_sheet_subtitle">Long-press for additional actions.</string>
-    <string name="stop_sheet_origin_desc">Uses the screen size chosen in Settings (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Active display on cluster ✓</string>
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
@@ -130,6 +128,8 @@
     <string name="settings_section_behavior">Behavior</string>
     <string name="settings_boot_auto_start_support">Enable mirror at vehicle start-up</string>
     <string name="settings_reconnect_popup_support">Restore if unexpectedly disconnected</string>
+    <string name="settings_quick_stop">Quick stop (no origin cluster restore)</string>
+    <string name="settings_quick_stop_support">Only sends sendInfo 18 + 0, without resizing</string>
     <string name="settings_category_filters_support">Show chips in the apps menu</string>
     <string name="settings_section_about">About</string>
     <string name="settings_about_version_label">Version</string>

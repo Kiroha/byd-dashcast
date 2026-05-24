@@ -15,8 +15,6 @@
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">Panel: no conectado</string>
     <string name="btn_origin_cluster">Restaurar panel original</string>
-    <string name="stop_sheet_subtitle">Mantén pulsado para más acciones.</string>
-    <string name="stop_sheet_origin_desc">Usa el tamaño de pantalla elegido en Ajustes (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Pantalla activa en el clúster ✓</string>
     <string name="btn_cluster_split">⬛⬛ Dividir</string>
     <string name="cluster_control_title">Control del clúster</string>
@@ -127,6 +125,8 @@
     <string name="settings_section_behavior">Comportamiento</string>
     <string name="settings_boot_auto_start_support">Activar mirror al arrancar el vehículo</string>
     <string name="settings_reconnect_popup_support">Restaurar si se desconecta inesperadamente</string>
+    <string name="settings_quick_stop">Parada rápida (sin restaurar el clúster original)</string>
+    <string name="settings_quick_stop_support">Solo envía sendInfo 18 + 0, sin cambiar el tamaño</string>
     <string name="settings_category_filters_support">Mostrar chips en el menú de apps</string>
     <string name="settings_section_about">Acerca de</string>
     <string name="settings_about_version_label">Versión</string>
