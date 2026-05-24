@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity
             trackUsageStop(mCurrentDashboardPkg);
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
-            btnActivateCluster.setEnabled(true);
+            setActivateBtnEnabled(true);
             mMainDisplayPkg      = null;
             clearSplitState();
             if (mAdapter != null) mAdapter.setCurrentPackage(null);
@@ -164,7 +164,9 @@ public class MainActivity extends AppCompatActivity
     private android.graphics.drawable.GradientDrawable mStatusDotDrawable;
     private TextView tvDashboardStatus;
     private View     llAppListSection;  // wrapper for title header + search bar
-    private Button   btnActivateCluster;
+    private Button   btnActivateCluster;  // v1.2.76 — button removed from layout, field kept as no-op host (always null).
+                                          // The 8 setEnabled() callsites below are wrapped by setActivateBtnEnabled(),
+                                          // a null-safe helper, so the call graph stays unchanged.
     private Button   btnRestoreCluster;
     private android.widget.ImageView ivNavLogo; // v0.9.81: long-press = overflow menu
     private Button   btnShowMirror;
@@ -310,7 +312,7 @@ public class MainActivity extends AppCompatActivity
         mStatusDotDrawable  = new android.graphics.drawable.GradientDrawable();
         mStatusDotDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         if (mStatusDot != null) mStatusDot.setBackground(mStatusDotDrawable);
-        btnActivateCluster  = (Button)   findViewById(R.id.btn_activate_cluster);
+        btnActivateCluster  = null;  // v1.2.76 — layout entry removed; field nulled explicitly.
         btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
         ivNavLogo           = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
         btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
@@ -384,11 +386,10 @@ public class MainActivity extends AppCompatActivity
         btnFilterNav.setOnClickListener(filterClick);
         btnFilterMedia.setOnClickListener(filterClick);
 
-        // Button "Activate cluster" — always triggers activateCluster()
-        btnActivateCluster.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { activateCluster(); }
-        });
+        // v1.2.76 — "Activate cluster" button removed from layout: opening the app
+        // auto-starts projection (via onStart → activateCluster()) and tapping any
+        // app also triggers activateCluster() if the service is not yet up.
+        // The legacy click handler is therefore no longer wired.
 
         // Button "Restore cluster" — default: restore origin cluster with the size
         // selected in Settings (sendInfo 29/30/31 + 18 + 0). When the user enables
@@ -474,13 +475,7 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        // ── v0.9.7 — Capture button (placeholder, real impl in a later release) ─
-        View btnCapture = findViewById(R.id.btn_capture);
-        if (btnCapture != null) btnCapture.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                Toast.makeText(getApplicationContext(), R.string.main_capture_coming_soon, Toast.LENGTH_SHORT).show();
-            }
-        });
+        // ── v0.9.7 — Capture button removed in v1.2.76 (was a coming-soon placeholder).
 
         // Start ClusterService now (startForegroundService in onStart)
         mDashboardLauncher = new DashboardLauncher(this); // temporary until bind
@@ -905,7 +900,7 @@ public class MainActivity extends AppCompatActivity
                 final boolean wasManual = mWasManualActivation;
                 mWasManualActivation = false;
                 updateDashboardStatus(null);
-                btnActivateCluster.setEnabled(true);
+                setActivateBtnEnabled(true);
 
                 // Restore active cluster app if Activity was recreated (in-memory state lost).
                 // mCurrentDashboardPkg is only null here if the Activity instance was killed
@@ -1002,7 +997,7 @@ public class MainActivity extends AppCompatActivity
                 mWasManualActivation = false;
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
-                btnActivateCluster.setEnabled(true);
+                setActivateBtnEnabled(true);
                 mMainDisplayPkg = null;
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                         .remove(PREF_MAIN_PKG)
@@ -1165,8 +1160,13 @@ public class MainActivity extends AppCompatActivity
         // ClusterService.launchOnDashboard() tries direct Binder then ADB relay
         // with displayId=1 hardcoded (Seal EU) as fallback → always functional.
         if (mClusterService == null) {
-            AppLogger.e(TAG, "ClusterService null — prompt user to activate for " + app.packageName);
-            showActivateClusterDialog(app);
+            // v1.2.76 — no more confirmation popup: tapping an app implies wanting to
+            // project it. Auto-trigger activateCluster() and replay the app once the
+            // service is up (handled by mPendingAppAfterActivation in the connect
+            // callback). Saves one tap on the "cold start → launch" flow.
+            AppLogger.i(TAG, "ClusterService null — auto-activating for " + app.packageName);
+            mPendingAppAfterActivation = app;
+            activateCluster();
             return;
         }
 
@@ -1303,7 +1303,7 @@ public class MainActivity extends AppCompatActivity
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
         updateDashboardStatus(null);
-        btnActivateCluster.setEnabled(true);
+        setActivateBtnEnabled(true);
         showAppList();
         // Move the running task to display 0 without relaunching.
         // Falls back to launchOnMainDisplay() if no task is found.
@@ -1883,21 +1883,19 @@ public class MainActivity extends AppCompatActivity
 
     // ---- Restaurer l'affichage BYD d'origine ----
 
-    private void showActivateClusterDialog(final AppInfo pendingApp) {
-        new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.toast_cluster_unavailable))
-                .setMessage(getString(R.string.dialog_cluster_not_active))
-                .setPositiveButton(getString(R.string.dialog_activate_now), (dialog, which) -> {
-                    activateCluster();
-                    // After activation, auto-send the app once connected
-                    mPendingAppAfterActivation = pendingApp;
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+    // v1.2.76 — showActivateClusterDialog() supprimé : tapper sur une app
+    // lance maintenant activateCluster() automatiquement sans popup de confirmation
+    // (cf. onSendToDashboard).
+
+    /** v1.2.76 — null-safe wrapper: btnActivateCluster is now always null (button
+     *  removed from layout), so this is a no-op. Kept to preserve the existing
+     *  call graph (8 callsites across MainActivity) without per-site refactor. */
+    private void setActivateBtnEnabled(boolean enabled) {
+        if (btnActivateCluster != null) btnActivateCluster.setEnabled(enabled);
     }
 
     private void activateCluster() {
-        btnActivateCluster.setEnabled(false);
+        setActivateBtnEnabled(false);
         tvDashboardStatus.setText(getString(R.string.status_activating_cluster));
         setStatusDot(DOT_COLOR_PENDING);
         mWasManualActivation = true;
@@ -2188,7 +2186,7 @@ public class MainActivity extends AppCompatActivity
                         clearSplitState();
                         // v0.9.73 — projection just stopped → OFF state, not READY/idle.
                         setDashboardOffState();
-                        btnActivateCluster.setEnabled(true);
+                        setActivateBtnEnabled(true);
                         showAppList();
                         btnRestoreCluster.setEnabled(true);
                         AppLogger.log(TAG, "BYD restored via ADB ✓");
@@ -2625,7 +2623,7 @@ public class MainActivity extends AppCompatActivity
             @Override public void run() {
                 mActivateTimeoutRunnable = null;
                 mWasManualActivation = false;
-                btnActivateCluster.setEnabled(true);
+                setActivateBtnEnabled(true);
                 setStatusDot(DOT_COLOR_OFF);
                 tvDashboardStatus.setText(getString(R.string.status_disconnected));
                 Toast.makeText(getApplicationContext(),
@@ -2782,7 +2780,7 @@ public class MainActivity extends AppCompatActivity
                         // Cluster state already cleared eagerly above.
                         clearSplitState();
                         updateDashboardStatus(null);
-                        btnActivateCluster.setEnabled(true);
+                        setActivateBtnEnabled(true);
                         showAppList();
                         AppLogger.log(TAG, "Original cluster restored ✓");
                     }

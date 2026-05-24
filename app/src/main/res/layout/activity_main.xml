@@ -679,7 +679,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:columnCount="2"
-                        android:rowCount="2"
+                        android:rowCount="1"
                         android:useDefaultMargins="false">
 
                         <com.google.android.material.button.MaterialButton
@@ -697,42 +697,6 @@
                             android:insetBottom="0dp"
                             app:cornerRadius="26dp"
                             app:icon="@drawable/ic_visibility"
-                            app:iconGravity="textStart"
-                            app:iconSize="20dp"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_capture"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_gravity="fill_horizontal"
-                            android:layout_margin="4dp"
-                            android:text="@string/main_btn_capture"
-                            android:textSize="14sp"
-                            android:minHeight="52dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:cornerRadius="26dp"
-                            app:icon="@drawable/ic_screenshot"
-                            app:iconGravity="textStart"
-                            app:iconSize="20dp"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_activate_cluster"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_gravity="fill_horizontal"
-                            android:layout_margin="4dp"
-                            android:text="@string/main_btn_reconnect"
-                            android:textSize="14sp"
-                            android:minHeight="52dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:cornerRadius="26dp"
-                            app:icon="@drawable/ic_refresh"
                             app:iconGravity="textStart"
                             app:iconSize="20dp"/>
 

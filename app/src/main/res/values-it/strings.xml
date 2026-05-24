@@ -31,9 +31,6 @@
     <string name="status_dashboard_byd">Proiezione pronta — scegli un’app</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
     <string name="toast_app_incompatible">%1$s: non installato o incompatibile con multi-display</string>
-    <string name="toast_cluster_unavailable">Servizio cluster non disponibile</string>
-    <string name="dialog_cluster_not_active">La proiezione cluster non è attiva. Vuoi attivarla ora?</string>
-    <string name="dialog_activate_now">Attiva</string>
     <string name="toast_app_already_cluster">App già sul cluster</string>
     <string name="toast_restore_failed">Ripristino fallito: %1$s</string>
     <string name="toast_origin_failed">Ripristino cluster originale fallito: %1$s</string>
@@ -149,12 +146,9 @@
     <string name="main_cluster_status_subtitle">Attiva la proiezione per iniziare</string>
     <string name="main_preview_section">Anteprima dal vivo</string>
     <string name="main_btn_full_preview">Specchio a tutto schermo</string>
-    <string name="main_btn_capture">Cattura</string>
-    <string name="main_btn_reconnect">Avvia proiezione</string>
     <string name="main_btn_stop_mirror">Ferma proiezione</string>
     <string name="main_section_favorites">PREFERITI</string>
     <string name="main_section_all_apps">Tutte le app</string>
-    <string name="main_capture_coming_soon">Cattura in arrivo</string>
     <string name="sheet_auto_launch">Avvio automatico all\'avvio</string>
     <string name="sheet_add_favorite">Aggiungi ai preferiti</string>
     <string name="sheet_remove_favorite">Rimuovi dai preferiti</string>
@@ -362,4 +356,7 @@
     <string name="diag_sniffer_doc_content">• Header iniziale: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: logcat threadtime completo + buffer events (senza filtro, nulla perso)\n• Snapshot automatici ogni 10 s: displays, SurfaceFlinger, processi BYD/xdja/qt/cluster\n• Snapshot manuale: aggiunge dumpsys window + cronologia broadcasts\n• Persistenza: la cattura sopravvive a rotazione/distruzione dell\u2019Activity (processo setsid)</string>
     <string name="diag_sniffer_doc_workflow">1. Avvia → la cattura gira in background (setsid, sopravvive all\u2019Activity)\n2. Riproduci il bug / scenario da studiare\n3. Snapshot manuale nei momenti chiave (es. appena prima/dopo il crash)\n4. Arresta\n5. Esporta → scegli Telegram per condividere il file</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+    <string name="sysinfo_restart_action">Riavvia</string>
+    <string name="sysinfo_restart_started">Riavvio in corso…</string>
+    <string name="sysinfo_restart_failed">Riavvio non riuscito</string>
 </resources>

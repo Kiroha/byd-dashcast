@@ -29,9 +29,6 @@
     <string name="status_dashboard_byd">Proyeksiya tayyor — ilova tanlang</string>
     <string name="status_dashboard_app">Asboblar paneli: %1$s</string>
     <string name="toast_app_incompatible">%1$s: oʻrnatilmagan yoki bir nechta displey bilan mos emas</string>
-    <string name="toast_cluster_unavailable">Klaster xizmati mavjud emas</string>
-    <string name="dialog_cluster_not_active">Klaster proyeksiyasi faol emas. Hozir faollashtirilsinmi?</string>
-    <string name="dialog_activate_now">Faollashtirish</string>
     <string name="toast_app_already_cluster">Ilova allaqachon klasterda</string>
     <string name="toast_restore_failed">Tiklab boʻlmadi: %1$s</string>
     <string name="toast_origin_failed">Asl klasterni tiklab boʻlmadi: %1$s</string>
@@ -149,12 +146,9 @@
     <string name="main_cluster_status_subtitle">Boshlash uchun proyeksiyani yoqing</string>
     <string name="main_preview_section">Jonli ko\'rish</string>
     <string name="main_btn_full_preview">Toʻliq ekran oynasi</string>
-    <string name="main_btn_capture">Olish</string>
-    <string name="main_btn_reconnect">Proyeksiyani boshlash</string>
     <string name="main_btn_stop_mirror">Proyeksiyani toʻxtatish</string>
     <string name="main_section_favorites">SEVIMLILAR</string>
     <string name="main_section_all_apps">Barcha ilovalar</string>
-    <string name="main_capture_coming_soon">Tez kunda</string>
     <string name="sheet_auto_launch">Ishga tushishda avtomatik ochish</string>
     <string name="sheet_add_favorite">Saralanganlarga qoʻshish</string>
     <string name="sheet_remove_favorite">Saralanganlardan olib tashlash</string>
@@ -362,4 +356,7 @@
     <string name="diag_sniffer_doc_content">• Boshlang‘ich sarlavha: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: to‘liq logcat threadtime + events buferi (filtrsiz, hech narsa o‘tkazib yuborilmaydi)\n• Har 10 s da avto-suratlar: displays, SurfaceFlinger, BYD/xdja/qt/cluster jarayonlari\n• Qo‘lda olingan surat: dumpsys window + broadcasts tarixini qo‘shadi\n• Davomiylik: yozuv Activity aylanishi/yo‘q qilinishidan omon qoladi (setsid jarayoni)</string>
     <string name="diag_sniffer_doc_workflow">1. Boshlash → yozish fonda ishlaydi (setsid, Activity dan omon qoladi)\n2. Bug / o‘rganilayotgan stsenariyni takrorlash\n3. Asosiy paytlarda qo‘lda surat (mas., qulashdan oldin/keyin)\n4. To‘xtatish\n5. Eksport → faylni ulashish uchun Telegram tanlash</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+    <string name="sysinfo_restart_action">Qayta ishga tushir</string>
+    <string name="sysinfo_restart_started">Qayta ishga tushirilmoqda…</string>
+    <string name="sysinfo_restart_failed">Qayta ishga tushirish muvaffaqiyatsiz</string>
 </resources>
