@@ -357,4 +357,6 @@
     <string name="sysinfo_restart_action">Riavvia</string>
     <string name="sysinfo_restart_started">Riavvio in corso…</string>
     <string name="sysinfo_restart_failed">Riavvio non riuscito</string>
+    <string name="sysinfo_svc_projection">Proiezione</string>
+    <string name="sysinfo_svc_projection_sub">tocca: 30→6s→16→6s→0</string>
 </resources>

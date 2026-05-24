@@ -357,4 +357,6 @@
     <string name="sysinfo_restart_action">Перезапустить</string>
     <string name="sysinfo_restart_started">Перезапуск…</string>
     <string name="sysinfo_restart_failed">Сбой перезапуска</string>
+    <string name="sysinfo_svc_projection">Проекция</string>
+    <string name="sysinfo_svc_projection_sub">нажми: 30→6с→16→6с→0</string>
 </resources>

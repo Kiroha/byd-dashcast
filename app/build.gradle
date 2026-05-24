@@ -60,8 +60,8 @@ android {
         //     resolves cleanly. Behaviour is identical for the user.
         //   - #17 (broadcast IBinder signature permission) verified already
         //     fully in place since LOT 2 / 1.2.30 — no additional work needed.
-        versionCode 274
-        versionName "1.2.78"
+        versionCode 275
+        versionName "1.2.79"
     }
 
     buildTypes {

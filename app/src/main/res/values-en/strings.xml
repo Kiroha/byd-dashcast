@@ -363,4 +363,6 @@
     <string name="sysinfo_restart_action">Restart</string>
     <string name="sysinfo_restart_started">Restarting…</string>
     <string name="sysinfo_restart_failed">Restart failed</string>
+    <string name="sysinfo_svc_projection">Projection</string>
+    <string name="sysinfo_svc_projection_sub">tap: 30→6s→16→6s→0</string>
 </resources>

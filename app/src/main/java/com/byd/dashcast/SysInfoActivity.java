@@ -800,6 +800,61 @@ public class SysInfoActivity extends AppCompatActivity {
         }
     }
 
+    /** v1.2.78 — manual recovery: always replays sendInfo(30) → 6s → sendInfo(16) → 6s →
+     *  sendInfo(0) regardless of the current projection state. Useful when Qt is in an
+     *  inconsistent state and the warm/fast path detection missed the bus. */
+    private void replayProjectionSlowPath() {
+        Toast.makeText(this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+        AppLogger.log("SysInfoActivity", "Projection slow-path replay: 30→6s→16→6s→0");
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        AdbLocalClient.sendInfo(this, 1000, 30, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.log("SysInfoActivity", "replay cmd=30 OK: " + out);
+                h.postDelayed(new Runnable() { @Override public void run() {
+                    AdbLocalClient.sendInfo(SysInfoActivity.this, 1000, 16, "", new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out2) {
+                            AppLogger.log("SysInfoActivity", "replay cmd=16 OK: " + out2);
+                            h.postDelayed(new Runnable() { @Override public void run() {
+                                AdbLocalClient.sendInfo(SysInfoActivity.this, 1000, 0, "", new AdbLocalClient.Callback() {
+                                    @Override public void onSuccess(String out3) {
+                                        AppLogger.log("SysInfoActivity", "replay cmd=0 OK: " + out3);
+                                        // Sync the projection-mode flag: the manual replay just put Qt back
+                                        // into projection, so the next activate() can take the true fast path.
+                                        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionActive();
+                                        runOnUiThread(new Runnable() { @Override public void run() {
+                                            if (!mDestroyed) populateServicesList();
+                                        }});
+                                    }
+                                    @Override public void onError(String err) {
+                                        AppLogger.w("SysInfoActivity", "replay cmd=0 ERR: " + err);
+                                        runOnUiThread(new Runnable() { @Override public void run() {
+                                            if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                                    R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                                        }});
+                                    }
+                                });
+                            }}, 6000L);
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w("SysInfoActivity", "replay cmd=16 ERR: " + err);
+                            runOnUiThread(new Runnable() { @Override public void run() {
+                                if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                        R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            }});
+                        }
+                    });
+                }}, 6000L);
+            }
+            @Override public void onError(String err) {
+                AppLogger.w("SysInfoActivity", "replay cmd=30 ERR: " + err);
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                            R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                }});
+            }
+        });
+    }
+
     private void populateServicesList() {
         android.widget.LinearLayout container = findViewById(R.id.ll_services_list);
         if (container == null) return;
@@ -874,6 +929,19 @@ public class SysInfoActivity extends AppCompatActivity {
             }}, "sysinfo-pidof").start();
         }
 
+        // Projection state (v1.2.78) — reflects ClusterManager.sQtInProjectionMode, which is
+        // independent of the VirtualDisplay lifecycle. Tap always replays the slow path
+        // sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(0) regardless of current state,
+        // as a manual recovery for cases where the warm/fast path missed Qt's state.
+        final boolean projOn = com.byd.dashcast.dashboard.ClusterManager.isQtInProjectionMode();
+        addServiceRow(inf, container, getString(R.string.sysinfo_svc_projection),
+                getString(R.string.sysinfo_svc_projection_sub),
+                projOn, false,
+                new Runnable() { @Override public void run() {
+                    replayProjectionSlowPath();
+                }},
+                true /* alwaysClickable */);
+
         // ADB local — real probe via Dadb (executeShellWithResult). Port 5555 may be
         // open but the ADB handshake/auth still failing → only an actual shell call
         // proves AdbLocalClient is truly connected.
@@ -905,6 +973,16 @@ public class SysInfoActivity extends AppCompatActivity {
                                android.widget.LinearLayout container,
                                String name, String sub, boolean running, boolean useConnBadge,
                                final Runnable onRestart) {
+        return addServiceRow(inf, container, name, sub, running, useConnBadge, onRestart,
+                false /* alwaysClickable */);
+    }
+
+    /** v1.2.78 — overload allowing the leading icon to be clickable even when running
+     *  (used by the Projection row where the action is "force replay" regardless of state). */
+    private View addServiceRow(android.view.LayoutInflater inf,
+                               android.widget.LinearLayout container,
+                               String name, String sub, boolean running, boolean useConnBadge,
+                               final Runnable onRestart, boolean alwaysClickable) {
         View row = inf.inflate(R.layout.row_sysinfo, container, false);
         ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
         ((TextView) row.findViewById(R.id.row_headline)).setText(name);
@@ -914,7 +992,7 @@ public class SysInfoActivity extends AppCompatActivity {
         // v1.2.76 — restart affordance: tap the play-circle leading icon when stopped.
         View leading = row.findViewById(R.id.row_leading);
         if (leading != null) {
-            if (!running && onRestart != null) {
+            if ((alwaysClickable || !running) && onRestart != null) {
                 leading.setClickable(true);
                 leading.setFocusable(true);
                 leading.setContentDescription(getString(R.string.sysinfo_restart_action));
