@@ -984,6 +984,85 @@ public class SysInfoActivity extends AppCompatActivity {
                         }});
                     }
                 });
+
+        // v1.2.35 — DL5-only: surface the global `force_resizable_activities`
+        // developer-option setting and allow toggling it. Past DashCast builds
+        // (v1.2.32 – v1.2.34) set it to 1 to make non-resizable navigation apps
+        // honor freeform bounds on the cluster, but never reset it, which made
+        // BYD head-unit apps (e.g. 360° camera) wrongly split-screen capable.
+        // ClusterService.onCreate() now resets it back to 0 on DL5; this row
+        // lets the user confirm the current value and toggle it manually.
+        // DL2/3/4 don't show this row.
+        if (AdbLocalClient.isDiLink5Safe(this)) {
+            final View frRow = addServiceRow(inf, container,
+                    getString(R.string.sysinfo_svc_force_resizable),
+                    getString(R.string.sysinfo_svc_force_resizable_checking),
+                    false /* probed asynchronously */, false,
+                    new Runnable() { @Override public void run() {
+                        toggleForceResizable();
+                    }},
+                    true /* alwaysClickable */);
+            probeForceResizable(frRow);
+        }
+    }
+
+    /** v1.2.35 — DL5 only. Reads `settings global force_resizable_activities`
+     *  and updates the given row to reflect the current value. */
+    private void probeForceResizable(final View row) {
+        AdbLocalClient.executeShellWithResult(this,
+                "settings get global force_resizable_activities",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        final String val = out == null ? "" : out.trim();
+                        final boolean on = "1".equals(val);
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || row == null) return;
+                            String shown = (val.isEmpty() || "null".equals(val)) ? "0" : val;
+                            String sub = getString(R.string.sysinfo_svc_force_resizable_sub,
+                                    shown);
+                            setServiceRowState(row, on, false, sub);
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || row == null) return;
+                            setServiceRowState(row, false, false,
+                                    getString(R.string.sysinfo_svc_adb_unreachable));
+                        }});
+                    }
+                });
+    }
+
+    /** v1.2.35 — DL5 only. Reads the current value, writes the opposite, then
+     *  refreshes the whole services list to confirm the new state. */
+    private void toggleForceResizable() {
+        if (!AdbLocalClient.isDiLink5Safe(this)) return;
+        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started,
+                Toast.LENGTH_SHORT).show();
+        AdbLocalClient.executeShellWithResult(this,
+                "v=$(settings get global force_resizable_activities); "
+                + "if [ \"$v\" = \"1\" ]; then "
+                + "  settings put global force_resizable_activities 0 2>&1; echo SET=0; "
+                + "else "
+                + "  settings put global force_resizable_activities 1 2>&1; echo SET=1; "
+                + "fi",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i("SysInfoActivity",
+                                "force_resizable_activities toggle → " + out.trim());
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (!mDestroyed) populateServicesList();
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e("SysInfoActivity",
+                                "force_resizable_activities toggle ERROR: " + err);
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                    R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                        }});
+                    }
+                });
     }
 
     /** Adds one service row; returns the row view so the caller can later toggle state.
