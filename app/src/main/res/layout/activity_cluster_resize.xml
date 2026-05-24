@@ -4,6 +4,7 @@
   Material 3 styling, 8 handles, presets row, large tactile buttons.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -26,6 +27,40 @@
             android:id="@+id/resize_frame"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
+
+        <!-- v1.2.84 — floating Close button (top-end) so the Activity stays
+             open after pressing Validate, until the user explicitly closes. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_close"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/resize_btn_close"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:icon="@android:drawable/ic_menu_close_clear_cancel"/>
+            xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+        <!-- v1.2.84 — Live preview checkbox (top-start). Off by default;
+             toggling on triggers a confirmation popup warning about flashes
+             on the cluster screen. -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/resize_sw_live"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="@color/md_surface_container"
+            android:textColor="@color/md_on_surface"
+            android:text="@string/resize_live_label"/>
     </FrameLayout>
 
     <com.google.android.material.divider.MaterialDivider

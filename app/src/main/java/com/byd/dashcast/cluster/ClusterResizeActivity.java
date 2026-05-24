@@ -2,6 +2,8 @@ package com.byd.dashcast.cluster;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.display.DisplayManager;
 import android.os.Bundle;
@@ -23,6 +25,8 @@ import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.beta.BetaProxyClient;
 import com.byd.dashcast.dashboard.ClusterMirrorManager;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 /**
  * v1.2.71 — Fullscreen editor that lets the user position/resize a fission-cluster
@@ -61,11 +65,22 @@ public class ClusterResizeActivity extends Activity
 
     private static final int APPLY_THROTTLE_MS = 60;
 
+    /** v1.2.84 — persisted across launches so the user only sees the warning once
+     *  per activation request (they re-confirm if they previously disabled it). */
+    private static final String PREFS_NAME = "dashcast";
+    private static final String PREF_LIVE_MODE = "cluster_resize_live_mode";
+
     private TextureView        mTexture;
     private ResizeFrameView    mFrame;
     private TextView           mCoords;
     private Button             mCancel;
     private Button             mOk;
+    private Button             mClose;
+    private MaterialSwitch     mSwLive;
+    /** v1.2.84 — when false (default), drag/preset/release does NOT push to the
+     *  cluster; only Valider / Annuler commit. When true, every frame change is
+     *  applied live (legacy behaviour) — guarded by a confirmation popup. */
+    private boolean            mLiveMode = false;
     private String  mPkg;
     private int     mDisplayId = 1;
     private int[]   mInitRect;     // [l,t,r,b]
@@ -102,6 +117,8 @@ public class ClusterResizeActivity extends Activity
         mCoords  = findViewById(R.id.resize_coords);
         mCancel  = findViewById(R.id.resize_btn_cancel);
         mOk      = findViewById(R.id.resize_btn_ok);
+        mClose   = findViewById(R.id.resize_btn_close);
+        mSwLive  = findViewById(R.id.resize_sw_live);
 
         ClusterMirrorManager.unlockHiddenApis();
         mMirror = new ClusterMirrorManager();
@@ -132,17 +149,55 @@ public class ClusterResizeActivity extends Activity
 
         mTexture.setSurfaceTextureListener(this);
 
+        // v1.2.84 — restore live-mode preference (default OFF). The switch reflects
+        // the stored value but does NOT trigger the warning popup on initial bind;
+        // the popup only fires on a fresh user toggle from OFF → ON.
+        final SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        mLiveMode = prefs.getBoolean(PREF_LIVE_MODE, false);
+        mSwLive.setChecked(mLiveMode);
+        mSwLive.setOnCheckedChangeListener((btn, checked) -> {
+            if (checked && !mLiveMode) {
+                // OFF → ON requested: confirm with a popup that warns about
+                // flashes / artefacts on the cluster screen.
+                new MaterialAlertDialogBuilder(ClusterResizeActivity.this)
+                        .setTitle(R.string.resize_live_warn_title)
+                        .setMessage(R.string.resize_live_warn_msg)
+                        .setPositiveButton(R.string.resize_live_warn_ok, (d, w) -> {
+                            mLiveMode = true;
+                            prefs.edit().putBoolean(PREF_LIVE_MODE, true).apply();
+                            AppLogger.i(TAG, "live mode ON (user confirmed)");
+                        })
+                        .setNegativeButton(android.R.string.cancel, (d, w) ->
+                                mSwLive.setChecked(false))
+                        .setOnCancelListener(d -> mSwLive.setChecked(false))
+                        .show();
+            } else if (!checked) {
+                mLiveMode = false;
+                prefs.edit().putBoolean(PREF_LIVE_MODE, false).apply();
+                AppLogger.i(TAG, "live mode OFF");
+            }
+        });
+
         mCancel.setOnClickListener(v -> {
-            // Revert to the initial rectangle as a final commit, then exit.
+            // Annuler: revert to the initial rectangle visually + commit it, then exit.
             int[] r = mInitRect;
+            mFrame.setFrame(r[0], r[1], r[2], r[3]);
+            updateCoordsLabel(r[0], r[1], r[2], r[3]);
             scheduleApply(r[0], r[1], r[2], r[3], /*commit*/ true);
             finish();
         });
-        mOk.setOnClickListener(v -> finish());
+        mOk.setOnClickListener(v -> {
+            // v1.2.84 — Valider applies the current frame to the cluster but does NOT
+            // close the activity, so the user can keep adjusting. To leave, use the
+            // floating Close button (top-end) or Annuler (revert + close).
+            Rect rc = mFrame.getFrame();
+            scheduleApply(rc.left, rc.top, rc.right, rc.bottom, /*commit*/ true);
+        });
+        mClose.setOnClickListener(v -> finish());
 
         AppLogger.d(TAG, "onCreate pkg=" + mPkg + " display=" + mDisplayId
                 + " init=[" + mInitRect[0] + "," + mInitRect[1] + ","
-                + mInitRect[2] + "," + mInitRect[3] + "]");
+                + mInitRect[2] + "," + mInitRect[3] + "] liveMode=" + mLiveMode);
     }
 
     @Override
@@ -156,7 +211,11 @@ public class ClusterResizeActivity extends Activity
     private void applyPreset(int l, int t, int r, int b) {
         mFrame.setFrame(l, t, r, b);
         updateCoordsLabel(l, t, r, b);
-        scheduleApply(l, t, r, b, /*commit*/ true);
+        // v1.2.84 — only push to the cluster when live mode is on; otherwise the
+        // user explicitly validates via the Valider button.
+        if (mLiveMode) {
+            scheduleApply(l, t, r, b, /*commit*/ true);
+        }
     }
 
     // ── Mirror plumbing ────────────────────────────────────────────────────
@@ -217,7 +276,12 @@ public class ClusterResizeActivity extends Activity
     @Override
     public void onFrameChanged(int l, int t, int r, int b, boolean commit) {
         updateCoordsLabel(l, t, r, b);
-        scheduleApply(l, t, r, b, commit);
+        // v1.2.84 — by default the frame moves silently; only push to the cluster
+        // when the user opted into live mode. Without live mode the user must press
+        // Valider to commit the rectangle.
+        if (mLiveMode) {
+            scheduleApply(l, t, r, b, commit);
+        }
     }
 
     private void updateCoordsLabel(int l, int t, int r, int b) {

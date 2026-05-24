@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Izquierda ½</string>
     <string name="resize_preset_right">Derecha ½</string>
     <string name="resize_preset_center">Centro 60 %</string>
+    <string name="resize_btn_close">Cerrar</string>
+    <string name="resize_live_label">Vista previa en vivo</string>
+    <string name="resize_live_warn_title">¿Activar la vista previa en vivo?</string>
+    <string name="resize_live_warn_msg">La vista previa en vivo aplica cada movimiento al clúster en tiempo real. Esto puede provocar destellos y artefactos visuales en la pantalla del clúster mientras ajustas. ¿Continuar?</string>
+    <string name="resize_live_warn_ok">Activar</string>
     <string name="sheet_force_stop">Forzar detención</string>
     <string name="main_cluster_status_off">Proyección desactivada</string>
     <string name="main_btn_exit_fullscreen">Salir de pantalla completa</string>

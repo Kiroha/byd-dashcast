@@ -160,6 +160,11 @@
     <string name="resize_preset_left">يسار ½</string>
     <string name="resize_preset_right">يمين ½</string>
     <string name="resize_preset_center">الوسط 60 %</string>
+    <string name="resize_btn_close">إغلاق</string>
+    <string name="resize_live_label">معاينة مباشرة</string>
+    <string name="resize_live_warn_title">تفعيل المعاينة المباشرة؟</string>
+    <string name="resize_live_warn_msg">تطبق المعاينة المباشرة كل حركة على الكتلة في الوقت الفعلي. قد يسبب ذلك ومضات وتشوهات بصرية على شاشة الكتلة أثناء التعديل. هل تريد المتابعة؟</string>
+    <string name="resize_live_warn_ok">تفعيل</string>
     <string name="sheet_force_stop">إيقاف قسري</string>
     <string name="main_cluster_status_off">العرض متوقف</string>
     <string name="main_btn_exit_fullscreen">الخروج من ملء الشاشة</string>

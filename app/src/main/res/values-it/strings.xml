@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Sinistra ½</string>
     <string name="resize_preset_right">Destra ½</string>
     <string name="resize_preset_center">Centro 60 %</string>
+    <string name="resize_btn_close">Chiudi</string>
+    <string name="resize_live_label">Anteprima live</string>
+    <string name="resize_live_warn_title">Attivare l\'anteprima live?</string>
+    <string name="resize_live_warn_msg">L\'anteprima live applica ogni movimento al cluster in tempo reale. Ciò può causare lampi e artefatti visivi sullo schermo del cluster durante la regolazione. Continuare?</string>
+    <string name="resize_live_warn_ok">Attiva</string>
     <string name="sheet_force_stop">Forza arresto</string>
     <string name="main_cluster_status_off">Proiezione disattivata</string>
     <string name="main_btn_exit_fullscreen">Esci da schermo intero</string>

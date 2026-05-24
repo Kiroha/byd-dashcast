@@ -160,6 +160,11 @@
     <string name="resize_preset_left">Сол ½</string>
     <string name="resize_preset_right">Оң ½</string>
     <string name="resize_preset_center">Орта 60 %</string>
+    <string name="resize_btn_close">Жабу</string>
+    <string name="resize_live_label">Тікелей алдын ала қарау</string>
+    <string name="resize_live_warn_title">Тікелей алдын ала қарауды қосу керек пе?</string>
+    <string name="resize_live_warn_msg">Тікелей алдын ала қарау әрбір қозғалысты кластерге нақты уақытта қолданады. Бұл реттеу кезінде кластер экранында жыпылықтау мен визуалды артефактілер тудыруы мүмкін. Жалғастырамыз ба?</string>
+    <string name="resize_live_warn_ok">Қосу</string>
     <string name="sheet_force_stop">Күштеп тоқтату</string>
     <string name="main_cluster_status_off">Проекция өшірулі</string>
     <string name="main_btn_exit_fullscreen">Толық экраннан шығу</string>
