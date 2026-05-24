@@ -129,6 +129,8 @@
     <string name="settings_reconnect_popup_support">Ripristina se disconnesso inaspettatamente</string>
     <string name="settings_quick_stop">Arresto rapido (senza ripristinare il cluster originale)</string>
     <string name="settings_quick_stop_support">Invia solo sendInfo 18 + 0, senza ridimensionamento</string>
+    <string name="settings_auto_start_on_launch">Avvia la proiezione all\'apertura dell\'app</string>
+    <string name="settings_auto_start_on_launch_support">Attiva il cluster automaticamente — un tap in meno</string>
     <string name="settings_category_filters_support">Mostra i chip nel menu app</string>
     <string name="settings_section_about">Informazioni</string>
     <string name="settings_about_version_label">Versione</string>

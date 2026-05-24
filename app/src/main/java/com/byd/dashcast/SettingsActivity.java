@@ -62,6 +62,13 @@ public class SettingsActivity extends AppCompatActivity {
     // true            = quick stop: only sendInfo(18) + sendInfo(0), no size
     //                   reconfiguration of the original cluster.
     public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
+    // ── Auto-start projection on app launch ────────────────────────────────────
+    // true (default) = activateCluster() is invoked automatically when MainActivity
+    //                  starts and ClusterService is not already running. Saves one
+    //                  tap on the typical "open app → project" flow.
+    // false           = legacy behaviour: user must press "Start projection".
+    public static final String PREF_AUTO_START_ON_LAUNCH   = "auto_start_on_launch";
+    public static final boolean DEFAULT_AUTO_START_ON_LAUNCH = true;
     // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
     public static final String PREF_RECENT_APPS = "recent_cluster_apps";
     // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
@@ -87,6 +94,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
     private CompoundButton cbQuickStop;
+    private CompoundButton cbAutoStartOnLaunch;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
     private CompoundButton swDilink5Mode;
@@ -215,6 +223,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
         cbQuickStop      = findViewById(R.id.cb_quick_stop);
+        cbAutoStartOnLaunch = findViewById(R.id.cb_auto_start_on_launch);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
@@ -265,6 +274,11 @@ public class SettingsActivity extends AppCompatActivity {
         // with size from Settings; when enabled, Stop only sends sendInfo 18 + 0).
         boolean quickStop = prefs.getBoolean(PREF_QUICK_STOP, false);
         cbQuickStop.setChecked(quickStop);
+
+        // Auto-start projection on app launch (default: enabled — saves one tap)
+        boolean autoStartLaunch = prefs.getBoolean(
+                PREF_AUTO_START_ON_LAUNCH, DEFAULT_AUTO_START_ON_LAUNCH);
+        cbAutoStartOnLaunch.setChecked(autoStartLaunch);
 
         // Beta Engine toggles (default OFF — restart required after change)
         cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
@@ -408,6 +422,12 @@ public class SettingsActivity extends AppCompatActivity {
         cbQuickStop.setOnCheckedChangeListener((buttonView, isChecked) -> {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_QUICK_STOP, isChecked).apply();
+        });
+
+        // Auto-start on launch checkbox
+        cbAutoStartOnLaunch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_AUTO_START_ON_LAUNCH, isChecked).apply();
         });
 
         // Beta Engine — both toggles require app restart to take effect

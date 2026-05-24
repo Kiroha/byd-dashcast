@@ -129,6 +129,8 @@
     <string name="settings_reconnect_popup_support">Beklenmedik bağlantı kesilirse geri yükle</string>
     <string name="settings_quick_stop">Hızlı durdurma (orijinal küme geri yüklenmez)</string>
     <string name="settings_quick_stop_support">Yalnızca sendInfo 18 + 0 gönderir, boyut değiştirmez</string>
+    <string name="settings_auto_start_on_launch">Uygulama açıldığında projeksiyonu başlat</string>
+    <string name="settings_auto_start_on_launch_support">Kümeyi otomatik etkinleştirir — bir dokunuş tasarrufu</string>
     <string name="settings_category_filters_support">Uygulama menüsünde çipleri göster</string>
     <string name="settings_section_about">Hakkında</string>
     <string name="settings_about_version_label">Sürüm</string>

@@ -129,6 +129,8 @@
     <string name="settings_reconnect_popup_support">Bei unerwarteter Trennung wiederherstellen</string>
     <string name="settings_quick_stop">Schnellstopp (ohne Wiederherstellung des Original-Clusters)</string>
     <string name="settings_quick_stop_support">Sendet nur sendInfo 18 + 0, ohne Größenänderung</string>
+    <string name="settings_auto_start_on_launch">Projektion beim App-Start aktivieren</string>
+    <string name="settings_auto_start_on_launch_support">Aktiviert das Cluster automatisch — ein Tipp weniger</string>
     <string name="settings_category_filters_support">Chips im Apps-Menü anzeigen</string>
     <string name="settings_section_about">Über</string>
     <string name="settings_about_version_label">Version</string>
