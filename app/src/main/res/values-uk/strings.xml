@@ -31,9 +31,6 @@
     <string name="status_dashboard_byd">Проекція готова — оберіть застосунок</string>
     <string name="status_dashboard_app">Панель приладів: %1$s</string>
     <string name="toast_app_incompatible">%1$s: не встановлено або несумісне з кількома дисплеями</string>
-    <string name="toast_cluster_unavailable">Служба кластера недоступна</string>
-    <string name="dialog_cluster_not_active">Проєкцію на приладову панель не активовано. Активувати зараз?</string>
-    <string name="dialog_activate_now">Активувати</string>
     <string name="toast_app_already_cluster">Програма вже на кластері</string>
     <string name="toast_restore_failed">Не вдалося відновити: %1$s</string>
     <string name="toast_origin_failed">Не вдалося відновити штатний кластер: %1$s</string>
@@ -149,12 +146,9 @@
     <string name="main_cluster_status_subtitle">Активуйте проекцію, щоб почати</string>
     <string name="main_preview_section">Перегляд</string>
     <string name="main_btn_full_preview">Повноекранне віддзеркалення</string>
-    <string name="main_btn_capture">Знімок</string>
-    <string name="main_btn_reconnect">Запустити проекцію</string>
     <string name="main_btn_stop_mirror">Зупинити проекцію</string>
     <string name="main_section_favorites">ОБРАНЕ</string>
     <string name="main_section_all_apps">Усі додатки</string>
-    <string name="main_capture_coming_soon">Незабаром</string>
     <string name="sheet_auto_launch">Автозапуск при старті</string>
     <string name="sheet_add_favorite">Додати в обране</string>
     <string name="sheet_remove_favorite">Видалити з обраного</string>
@@ -362,4 +356,7 @@
     <string name="diag_sniffer_doc_content">• Початковий заголовок: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: повний logcat threadtime + буфер events (без фільтра, нічого не втрачено)\n• Авто-знімки кожні 10 с: displays, SurfaceFlinger, процеси BYD/xdja/qt/cluster\n• Ручний знімок: додає dumpsys window + історію broadcasts\n• Стійкість: запис переживає обертання/знищення Activity (процес setsid)</string>
     <string name="diag_sniffer_doc_workflow">1. Запустити → запис іде у фоні (setsid, переживає Activity)\n2. Відтворити баг / сценарій, що вивчається\n3. Ручний знімок у ключові моменти (напр., саме перед/після краху)\n4. Зупинити\n5. Експортувати → обрати Telegram для надсилання файлу</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+    <string name="sysinfo_restart_action">Перезапустити</string>
+    <string name="sysinfo_restart_started">Перезапуск…</string>
+    <string name="sysinfo_restart_failed">Помилка перезапуску</string>
 </resources>

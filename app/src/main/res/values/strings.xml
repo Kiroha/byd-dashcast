@@ -32,9 +32,6 @@
     <string name="status_dashboard_byd">Projection prête — choisissez une application</string>
     <string name="status_dashboard_app">Dashboard : %1$s</string>
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
-    <string name="toast_cluster_unavailable">Service cluster indisponible</string>
-    <string name="dialog_cluster_not_active">La projection cluster n\'est pas activée. Voulez-vous l\'activer maintenant ?</string>
-    <string name="dialog_activate_now">Activer</string>
     <string name="toast_app_already_cluster">App déjà sur le cluster</string>
     <string name="toast_restore_failed">Échec restauration : %1$s</string>
     <string name="toast_origin_failed">Échec restauration cluster d\'origine : %1$s</string>
@@ -191,12 +188,9 @@
     <string name="main_cluster_status_subtitle">Activez la projection pour démarrer</string>
     <string name="main_preview_section">Aperçu temps réel</string>
     <string name="main_btn_full_preview">Miroir plein écran</string>
-    <string name="main_btn_capture">Capturer</string>
-    <string name="main_btn_reconnect">Activer la projection</string>
     <string name="main_btn_stop_mirror">Arrêter la projection</string>
     <string name="main_section_favorites">FAVORIS</string>
     <string name="main_section_all_apps">Toutes les applications</string>
-    <string name="main_capture_coming_soon">Capture bientôt disponible</string>
     <string name="sheet_auto_launch">Lancement automatique au démarrage</string>
     <string name="sheet_add_favorite">Ajouter aux favoris</string>
     <string name="sheet_remove_favorite">Retirer des favoris</string>
@@ -407,4 +401,7 @@
     <string name="diag_cluster_poc_chooser_title">Partager rapport Cluster</string>
     <string name="diag_cluster_poc_toast_no_report">Aucun rapport. Clique d\'abord « Lister displays ».</string>
     <string name="diag_cluster_poc_status_idle">Prêt. Clique « Lister » pour voir les displays, puis « Lancer sur fission » pour démarrer la cible. Ensuite manipule les sliders X/Y/W/H et appuie « Appliquer rect » (ou active « Auto »).</string>
+    <string name="sysinfo_restart_action">Redémarrer</string>
+    <string name="sysinfo_restart_started">Redémarrage…</string>
+    <string name="sysinfo_restart_failed">Échec du redémarrage</string>
 </resources>

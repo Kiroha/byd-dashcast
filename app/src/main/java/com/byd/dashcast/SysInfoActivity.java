@@ -815,13 +815,52 @@ public class SysInfoActivity extends AppCompatActivity {
         } else {
             clusterSub = getString(R.string.sysinfo_svc_stopped);
         }
-        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false);
+        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false,
+                clusterRunning ? null : new Runnable() { @Override public void run() {
+                    // v1.2.76 — tap on the leading icon when stopped: restart the service
+                    // (foreground), then refresh the panel after a short settle delay so the
+                    // user sees the new state without leaving the screen.
+                    try {
+                        android.content.Intent i = new android.content.Intent(SysInfoActivity.this, ClusterService.class);
+                        startForegroundService(i);
+                        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                        AppLogger.w("SysInfoActivity", "ClusterService restart failed: " + t.getMessage());
+                    }
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() { @Override public void run() {
+                        if (!mDestroyed) populateServicesList();
+                    }}, 1500L);
+                }});
 
         // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
         final View mirrorRow = addServiceRow(inf, container, "MirrorDaemon",
                 clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub)
                                : getString(R.string.sysinfo_svc_stopped),
-                clusterRunning, false);
+                clusterRunning, false,
+                clusterRunning ? null : new Runnable() { @Override public void run() {
+                    // v1.2.76 — MirrorDaemon restart: BetaProxyClient.connect() triggers the
+                    // full ADB bootstrap (re-spawn app_process64 under uid 2000) when the
+                    // daemon process is dead. Run off the UI thread because connect() does I/O.
+                    Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() { @Override public void run() {
+                        final boolean ok;
+                        try {
+                            ok = com.byd.dashcast.beta.BetaProxyClient.connect(getApplicationContext());
+                        } catch (Throwable t) {
+                            AppLogger.w("SysInfoActivity", "MirrorDaemon restart failed: " + t.getMessage());
+                            runOnUiThread(new Runnable() { @Override public void run() {
+                                if (!mDestroyed) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            }});
+                            return;
+                        }
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed) return;
+                            if (!ok) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            populateServicesList();
+                        }});
+                    }}, "sysinfo-mirror-restart").start();
+                }});
         if (clusterRunning && mirrorRow != null) {
             // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
             new Thread(new Runnable() { @Override public void run() {
@@ -840,7 +879,7 @@ public class SysInfoActivity extends AppCompatActivity {
         // proves AdbLocalClient is truly connected.
         final View adbRow = addServiceRow(inf, container, "AdbLocalClient",
                 getString(R.string.sysinfo_svc_adb_unreachable),
-                false, true /* useConnBadge */);
+                false, true /* useConnBadge */, null /* no manual restart, runs by need */);
         AdbLocalClient.executeShellWithResult(this, "echo ok",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String report) {
@@ -859,16 +898,36 @@ public class SysInfoActivity extends AppCompatActivity {
                 });
     }
 
-    /** Adds one service row; returns the row view so the caller can later toggle state. */
+    /** Adds one service row; returns the row view so the caller can later toggle state.
+     *  When {@code onRestart} is non-null AND the service is not running, the leading
+     *  icon becomes clickable to trigger {@code onRestart} (v1.2.76). */
     private View addServiceRow(android.view.LayoutInflater inf,
                                android.widget.LinearLayout container,
-                               String name, String sub, boolean running, boolean useConnBadge) {
+                               String name, String sub, boolean running, boolean useConnBadge,
+                               final Runnable onRestart) {
         View row = inf.inflate(R.layout.row_sysinfo, container, false);
         ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
         ((TextView) row.findViewById(R.id.row_headline)).setText(name);
         // Tag the row so setServiceRowState() knows which badge variant to use.
         row.setTag(R.id.row_badge, useConnBadge ? Boolean.TRUE : Boolean.FALSE);
         setServiceRowState(row, running, useConnBadge, sub);
+        // v1.2.76 — restart affordance: tap the play-circle leading icon when stopped.
+        View leading = row.findViewById(R.id.row_leading);
+        if (leading != null) {
+            if (!running && onRestart != null) {
+                leading.setClickable(true);
+                leading.setFocusable(true);
+                leading.setContentDescription(getString(R.string.sysinfo_restart_action));
+                leading.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) { onRestart.run(); }
+                });
+            } else {
+                leading.setClickable(false);
+                leading.setFocusable(false);
+                leading.setOnClickListener(null);
+                leading.setContentDescription(null);
+            }
+        }
         container.addView(row);
         return row;
     }
