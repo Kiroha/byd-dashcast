@@ -291,6 +291,12 @@ public class ResizeFrameView extends View {
      *
      * <p>The system caps the total excluded area to 200dp per edge; we keep
      * each rect well under that. API 29+ only (our minSdk is 29).
+     *
+     * <p>v1.2.85 — also reserves a 200dp strip along every screen edge so the
+     * full-frame (cluster spans the whole canvas) case is editable. Without
+     * this, edge-swipe gestures (back from L/R sides, home/recents from
+     * bottom, notifications from top) consume the touch long before the
+     * resize handle gets it, making fullscreen resize practically impossible.
      */
     private void updateGestureExclusion() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return;
@@ -307,10 +313,20 @@ public class ResizeFrameView extends View {
                 {(l + r) / 2, t}, {(l + r) / 2, b},               // top/bot mid
                 {l, (t + b) / 2}, {r, (t + b) / 2}                // left/right mid
         };
-        List<Rect> rects = new ArrayList<>(centers.length);
+        // Cap each strip at 200dp (Android's hard limit per edge; anything
+        // beyond is silently ignored). We use 198dp for a tiny safety margin.
+        int strip = (int) dp(198);
+        int W = getWidth(), H = getHeight();
+        List<Rect> rects = new ArrayList<>(centers.length + 4);
         for (int[] c : centers) {
             rects.add(new Rect(c[0] - pad, c[1] - pad, c[0] + pad, c[1] + pad));
         }
+        // Full-edge strips (in addition to the per-handle pads) so edge swipes
+        // never steal the touch when the frame is at the screen border.
+        rects.add(new Rect(0,            0,            strip,        H));            // left
+        rects.add(new Rect(W - strip,    0,            W,            H));            // right
+        rects.add(new Rect(0,            H - strip,    W,            H));            // bottom
+        rects.add(new Rect(0,            0,            W,            strip));        // top
         try {
             setSystemGestureExclusionRects(rects);
         } catch (Throwable ignored) {

@@ -251,10 +251,12 @@ public class MainActivity extends AppCompatActivity
             if (mServiceBound && mClusterService != null) {
                 mClusterService.getInputForwarder().setDaemonBinder(mDaemonBinder);
             }
-            // Start the mirror if the surface is available
+            // Start the mirror if the surface is available.
+            // v1.2.85 — proxy on frameMirror (the actual TextureView container)
+            // because panelClusterControl is now only shown in fullscreen mode.
             if (mMirrorSurface != null && mMirrorSurface.isValid()
-                    && panelClusterControl != null
-                    && panelClusterControl.getVisibility() == View.VISIBLE) {
+                    && frameMirror != null
+                    && frameMirror.getVisibility() == View.VISIBLE) {
                 attemptStartMirrorWithCurrentHolder();
             }
         }
@@ -820,10 +822,12 @@ public class MainActivity extends AppCompatActivity
             } catch (Throwable t) {
                 AppLogger.w(TAG, "onStart: status re-sync failed: " + t.getMessage());
             }
-            // If an app was active and the panel visible, restart the mirror.
+            // If an app was active and the mirror is shown, restart it.
+            // v1.2.85 — was: check panelClusterControl visibility (now
+            // fullscreen-only). frameMirror is the actual TextureView host.
             if (mCurrentDashboardApp != null
-                    && panelClusterControl != null
-                    && panelClusterControl.getVisibility() == View.VISIBLE) {
+                    && frameMirror != null
+                    && frameMirror.getVisibility() == View.VISIBLE) {
                 attemptStartMirrorWithCurrentHolder();
             }
             // Ensure btn_show_mirror and floating button visibility are correct
@@ -930,8 +934,9 @@ public class MainActivity extends AppCompatActivity
                     }
                 }
 
-                // If the panel is visible (app already active), start/reconfigure the mirror
-                if (panelClusterControl.getVisibility() == View.VISIBLE) {
+                // If the mirror is shown (app already active), start/reconfigure it.
+                // v1.2.85 — was panelClusterControl (now fullscreen-only).
+                if (frameMirror != null && frameMirror.getVisibility() == View.VISIBLE) {
                     attemptStartMirrorWithCurrentHolder();
                 }
 
@@ -1468,10 +1473,11 @@ public class MainActivity extends AppCompatActivity
                                 if (mServiceBound && mClusterService != null) {
                                     mClusterService.getInputForwarder().setDaemonBinder(binder);
                                 }
-                        // Restart the mirror if panel is visible
+                        // Restart the mirror if it is currently shown.
+                        // v1.2.85 — was panelClusterControl (now fullscreen-only).
                         if (mCurrentDashboardApp != null
-                                        && panelClusterControl != null
-                                        && panelClusterControl.getVisibility() == View.VISIBLE) {
+                                        && frameMirror != null
+                                        && frameMirror.getVisibility() == View.VISIBLE) {
                                     attemptStartMirrorWithCurrentHolder();
                                 }
                             }
@@ -1700,9 +1706,13 @@ public class MainActivity extends AppCompatActivity
     private void showMirrorView() {
         // v0.9.7 — apps pane stays visible at all times (M3 split layout). The old
         // visibility toggles on llAppListSection/rvApps are intentionally no-ops now.
+        // v1.2.85 — panelClusterControl is no longer shown together with the
+        // preview card. The controls (Ajuster / ↺ / Split / ⌨) are mirror-only
+        // actions and used to clutter the apps page; they are now revealed
+        // exclusively from enterFullscreenMirror() and hidden again on exit.
         frameMirror.setVisibility(View.VISIBLE);
-        panelClusterControl.setVisibility(View.VISIBLE);
-        // Always restore the controls panel when mirror is shown
+        // Pre-arm the inner content so it is expanded the next time the panel
+        // becomes visible (i.e. when entering fullscreen mirror).
         if (panelControlsContent != null) {
             panelControlsContent.setVisibility(View.VISIBLE);
             if (btnPanelToggle != null) btnPanelToggle.setText("\u25bc");
@@ -2391,6 +2401,13 @@ public class MainActivity extends AppCompatActivity
         setStatusDot(DOT_COLOR_OFF);
         if (btnShowMirror != null) btnShowMirror.setVisibility(View.GONE);
         FloatingRemoteButton.hide();
+        // v1.2.85 — also hide the cluster control card (Ajuster / ↺ / Split / ⌨).
+        // It is meaningless when no app is being projected and the visual
+        // remnants (small icons + collapse toggle) confused users when the
+        // OFF state was reached via a path that skipped showAppList().
+        if (panelClusterControl != null) {
+            panelClusterControl.setVisibility(View.GONE);
+        }
     }
 
     // ============================================================
@@ -2496,6 +2513,9 @@ public class MainActivity extends AppCompatActivity
 
         if (btnExitFullscreen != null) btnExitFullscreen.setVisibility(View.VISIBLE);
 
+        // v1.2.85 — cluster control card is fullscreen-only now: reveal it here.
+        if (panelClusterControl != null) panelClusterControl.setVisibility(View.VISIBLE);
+
         // v0.9.79 — reparent panelClusterControl from the inner LinearLayout to the root
         // FrameLayout (aligned bottom) so that expanding the "Ajuster" sub-panel doesn't
         // shrink the card (and therefore the orange inset overlay) underneath it.
@@ -2600,6 +2620,9 @@ public class MainActivity extends AppCompatActivity
             mPanelOriginalIndex  = -1;
             mPanelOriginalLp     = null;
         }
+
+        // v1.2.85 — hide the cluster control card on exit (fullscreen-only).
+        if (panelClusterControl != null) panelClusterControl.setVisibility(View.GONE);
 
         try {
             getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
