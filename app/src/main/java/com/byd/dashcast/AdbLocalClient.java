@@ -541,6 +541,11 @@ public class AdbLocalClient {
     public static void restoreBydOnCluster(final Context context,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // v1.2.78 — invalidate ClusterManager's fast-path flag NOW (synchronously, before
+        // the async dispatch). Qt will return to native mode as soon as sendInfo(18)
+        // lands; the VirtualDisplay persists, so subsequent activate() calls must
+        // take the warm path (30→6s→16) instead of the true fast path.
+        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "Restoring BYD cluster"
@@ -636,6 +641,8 @@ public class AdbLocalClient {
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // v1.2.78 — see restoreBydOnCluster() above for rationale.
+        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
