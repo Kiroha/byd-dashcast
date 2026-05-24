@@ -174,6 +174,8 @@
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_sniffer"
                 tools:ignore="HardcodedText"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_cluster_dl5"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -220,10 +222,15 @@
                 android:id="@+id/panel_adas"
                 layout="@layout/include_diag_adas"/>
 
-            <!-- Cluster overlay POC panel (v1.2.34) -->
+            <!-- Cluster overlay POC panel (v1.2.34) — DL3 cluster move/resize tool -->
             <include
                 android:id="@+id/panel_cluster_poc"
                 layout="@layout/include_diag_cluster_poc"/>
+
+            <!-- Cluster DL5 recon panel (v1.2.37) — capability probing for DiLink 5 cluster -->
+            <include
+                android:id="@+id/panel_cluster_dl5"
+                layout="@layout/include_diag_cluster_dl5"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include

@@ -263,7 +263,22 @@
     <string name="beta_restart_title">Restart required</string>
     <string name="beta_restart_message">This change will take effect on the next DashCast launch. You can keep using the app normally in the meantime.</string>
 
-    <string name="diag_tab_cluster">Cluster</string>
+    <string name="diag_tab_cluster">Cluster DL3</string>
+    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
+
+    <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
+    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
+    <string name="diag_dl5_cluster_header_subtitle">Non-destructive probe: detects shell commands, compat flags and services available for cluster resize on DiLink 5.</string>
+    <string name="diag_dl5_cluster_run_all">Run recon</string>
+    <string name="diag_dl5_cluster_copy_report">Copy report</string>
+    <string name="diag_dl5_cluster_send_telegram">Send via Telegram</string>
+    <string name="diag_dl5_cluster_counters_idle">Idle — no probe run yet</string>
+    <string name="diag_dl5_cluster_pill_unknown">Platform: unknown</string>
+    <string name="diag_dl5_cluster_pill_dl5">Platform: DiLink 5</string>
+    <string name="diag_dl5_cluster_pill_other">Platform: other</string>
+    <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
+    <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
+    <string name="diag_dl5_cluster_toast_telegram_missing">Telegram not installed — opening share chooser.</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">Local ADB</string>
     <string name="diag_tab_system">System</string>
