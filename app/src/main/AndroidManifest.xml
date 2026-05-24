@@ -34,6 +34,20 @@
          Signature permission: granted when our cert == platform cert (the case here with platform.keystore) -->
     <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER"/>
 
+    <!-- v1.2.37 — Hotspot / tether eligibility (DL3 hidden-API attempt).
+         These are all signature|privileged on AOSP 10. Granted only if our
+         APK is signed with the platform key AND (on some OEMs) installed in
+         /system/priv-app. HotspotActivity probes the actual grant state via
+         PackageManager.checkPermission at runtime. Network state perms below
+         are "normal" and auto-granted at install time. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <uses-permission android:name="android.permission.OVERRIDE_WIFI_CONFIG"/>
+    <uses-permission android:name="android.permission.TETHER_PRIVILEGED"/>
+
     <!-- Body / Vehicle (COMMON = mandatory at runtime before getInstance) -->
     <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_COMMON"/>
     <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_GET"/>
@@ -179,6 +193,15 @@
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
+
+        <!-- v1.2.36 — AOSP hotspot launcher (DL3 only — nav rail entry is
+             runtime-gated by Platform.isDiLink3()). Activity is exported=false. -->
+        <activity
+            android:name=".HotspotActivity"
+            android:label="Hotspot AOSP"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"/>
 
         <!-- User-facing settings (overscan tuning, cluster type) -->
         <activity

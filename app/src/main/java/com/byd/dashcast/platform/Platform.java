@@ -157,6 +157,16 @@ public final class Platform {
         return autoDiLink2;
     }
 
+    /**
+     * Effective DiLink 3 mode — there is no user override for DL3 (it is the default /
+     * fallback platform). Returns true when no other generation has been auto-detected
+     * and the user has not forced DL5 on. Useful to gate DL3-only UI affordances
+     * (e.g. the AOSP hotspot launcher in v1.2.36) without touching DL2/4/5 paths.
+     */
+    public boolean isDiLink3(Context ctx) {
+        return !isDiLink2(ctx) && !isDiLink4(ctx) && !isDiLink5(ctx);
+    }
+
     // ── Effective state (auto + user override) ────────────────────────────────
 
     /**

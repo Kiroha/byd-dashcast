@@ -1,0 +1,525 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1.2.44 — Hotspot screen, landscape 2-col redesign matching the mockup.
+  Left column  : hero card (status, update badge, TetherFi actions)
+  Right column : stacked side cards (clients + live stats, watchdog, autostart)
+  Locked to landscape via AndroidManifest screenOrientation.
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/md_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ─── Top bar ─── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@color/md_surface_container_low"
+            android:paddingStart="12dp"
+            android:paddingEnd="20dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_back"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:icon="@drawable/ic_arrow_forward"
+                app:iconTint="@color/md_on_surface"
+                android:rotation="180"
+                android:contentDescription="@string/hotspot_back"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/hotspot_title"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/md_on_surface"/>
+        </LinearLayout>
+
+        <!-- ─── 2-col body ─── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="24dp">
+
+            <!-- ════════ LEFT : hero card ════════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_weight="1.4"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                app:cardBackgroundColor="@color/md_surface_container"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <!-- Hero icon + title -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="6dp">
+
+                        <FrameLayout
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            android:background="@drawable/bg_hero_icon">
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_wifi_tethering"
+                                android:tint="@color/md_on_primary_container"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginStart="16dp">
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/hotspot_hero_title"
+                                android:textSize="22sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_surface"/>
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/hotspot_hero_subtitle"
+                                android:textSize="13sp"
+                                android:textColor="@color/md_on_surface_variant"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Friendly explanation -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/hotspot_intro"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2dp"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:layout_marginTop="14dp"
+                        android:layout_marginBottom="18dp"/>
+
+                    <!-- Status pill -->
+                    <TextView
+                        android:id="@+id/tv_tf_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/hotspot_tf_status_unknown"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:padding="14dp"
+                        android:background="@color/md_surface_container_high"
+                        android:gravity="center"
+                        android:layout_marginBottom="12dp"/>
+
+                    <!-- Update badge (hidden until update detected) -->
+                    <TextView
+                        android:id="@+id/tv_tf_update"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:padding="12dp"
+                        android:textColor="#FFFFDDB7"
+                        android:background="#FF5C3A00"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
+
+                    <!-- Primary actions row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="10dp">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tf_start"
+                            style="@style/Widget.Material3.Button.UnelevatedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="2"
+                            android:layout_height="56dp"
+                            android:layout_marginEnd="6dp"
+                            android:text="@string/hotspot_tf_start"
+                            android:textSize="15sp"
+                            app:icon="@drawable/ic_play"
+                            app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tf_stop"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="56dp"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/hotspot_tf_stop"
+                            android:textSize="15sp"/>
+                    </LinearLayout>
+
+                    <!-- Secondary actions row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tf_toggle"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="48dp"
+                            android:layout_marginEnd="6dp"
+                            android:text="@string/hotspot_tf_toggle"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tf_open"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/hotspot_tf_open"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ════════ RIGHT : stacked side cards ════════ -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- ── Clients + live stats ── -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/md_surface_container_low"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="10dp">
+
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_side_icon">
+                                <ImageView
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_devices"
+                                    android:tint="@color/md_primary"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/hotspot_clients_title"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_surface"/>
+
+                            <TextView
+                                android:id="@+id/tv_clients_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_primary_container"
+                                android:background="@drawable/bg_count_pill"
+                                android:paddingStart="10dp"
+                                android:paddingEnd="10dp"
+                                android:paddingTop="2dp"
+                                android:paddingBottom="2dp"/>
+                        </LinearLayout>
+
+                        <!-- Clients list container — populated at runtime -->
+                        <LinearLayout
+                            android:id="@+id/ll_clients_list"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"/>
+
+                        <TextView
+                            android:id="@+id/tv_clients_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hotspot_clients_empty"
+                            android:textSize="12sp"
+                            android:textStyle="italic"
+                            android:textColor="@color/md_outline"
+                            android:gravity="center"
+                            android:padding="14dp"/>
+
+                        <!-- 3 mini stats row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:gravity="center"
+                                android:background="@color/md_surface_container"
+                                android:padding="10dp"
+                                android:layout_marginEnd="4dp">
+                                <TextView
+                                    android:id="@+id/tv_stat_uptime"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:fontFamily="monospace"
+                                    android:textColor="@color/md_on_surface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/hotspot_stat_uptime"
+                                    android:textSize="10sp"
+                                    android:textColor="@color/md_on_surface_variant"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:gravity="center"
+                                android:background="@color/md_surface_container"
+                                android:padding="10dp"
+                                android:layout_marginStart="4dp"
+                                android:layout_marginEnd="4dp">
+                                <TextView
+                                    android:id="@+id/tv_stat_rx"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:fontFamily="monospace"
+                                    android:textColor="@color/md_on_surface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/hotspot_stat_rx"
+                                    android:textSize="10sp"
+                                    android:textColor="@color/md_on_surface_variant"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:gravity="center"
+                                android:background="@color/md_surface_container"
+                                android:padding="10dp"
+                                android:layout_marginStart="4dp">
+                                <TextView
+                                    android:id="@+id/tv_stat_tx"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:fontFamily="monospace"
+                                    android:textColor="@color/md_on_surface"/>
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/hotspot_stat_tx"
+                                    android:textSize="10sp"
+                                    android:textColor="@color/md_on_surface_variant"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ── Watchdog ── -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:cardBackgroundColor="@color/md_surface_container_low"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_side_icon">
+                                <ImageView
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_monitor_heart"
+                                    android:tint="@color/md_primary"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/hotspot_watchdog_title"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_surface"/>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_watchdog"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hotspot_watchdog_hint"
+                            android:textSize="12sp"
+                            android:textColor="@color/md_on_surface_variant"
+                            android:layout_marginTop="6dp"
+                            android:layout_marginBottom="10dp"/>
+
+                        <TextView
+                            android:id="@+id/tv_watchdog_status"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hotspot_watchdog_idle"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/md_on_surface_variant"
+                            android:padding="10dp"
+                            android:background="@color/md_surface_container_high"/>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ── Autostart at vehicle boot ── -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:cardBackgroundColor="@color/md_surface_container_low"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_side_icon">
+                                <ImageView
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_restart_alt"
+                                    android:tint="@color/md_primary"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/hotspot_autostart_boot_title"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/md_on_surface"/>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_autostart_boot"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hotspot_autostart_boot_hint"
+                            android:textSize="12sp"
+                            android:textColor="@color/md_on_surface_variant"
+                            android:layout_marginTop="6dp"/>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

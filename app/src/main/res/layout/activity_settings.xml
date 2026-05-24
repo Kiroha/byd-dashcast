@@ -600,6 +600,33 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <!-- v1.2.42 — Carte SIM personnelle : conditionne le bouton Hotspot du navrail -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_sim_card"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_use_own_sim"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_use_own_sim_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_use_own_sim"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
                         <!-- v1.2.77 — Le démarrage auto de la projection est désormais
                              toujours actif (plus de toggle Settings : ouvrir DashCast = vouloir projeter). -->
 
