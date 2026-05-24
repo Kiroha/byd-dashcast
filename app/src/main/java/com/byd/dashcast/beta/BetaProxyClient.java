@@ -170,6 +170,18 @@ public final class BetaProxyClient {
     }
 
     /**
+     * v1.2.71 — Exposes the cached daemon binder so callers (e.g.
+     * {@code ClusterResizeActivity}) can pass it to
+     * {@code ClusterMirrorManager.startMirrorViaDaemon()} without binding
+     * to {@code ClusterService}. Returns {@code null} if the daemon is not
+     * currently connected.
+     */
+    public static IBinder getDaemonBinder() {
+        IBinder b = sBinder;
+        return (b != null && b.isBinderAlive()) ? b : null;
+    }
+
+    /**
      * Ensure the daemon is reachable. If a binder is already cached and live,
      * returns immediately. Otherwise: (1) registers a receiver if not done yet;
      * (2) bootstraps a daemon via {@link AdbLocalClient}; (3) waits up to

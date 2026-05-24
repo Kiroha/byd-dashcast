@@ -156,6 +156,10 @@
     <string name="sheet_remove_favorite">Quitar de favoritos</string>
     <string name="sheet_to_main">Enviar a la pantalla principal</string>
     <string name="sheet_to_cluster">Enviar al cuadro</string>
+    <string name="sheet_resize_move">Cambiar tamaño y mover</string>
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">Cancelar</string>
+    <string name="resize_btn_ok">Confirmar</string>
     <string name="sheet_force_stop">Forzar detención</string>
     <string name="main_cluster_status_off">Proyección desactivada</string>
     <string name="main_btn_exit_fullscreen">Salir de pantalla completa</string>

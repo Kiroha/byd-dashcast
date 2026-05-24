@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1.2.71 — Cluster resize editor (option B minimal).
+  Material 3 styling aligned with the rest of the app: surface containers,
+  M3 buttons (text + filled), and on-surface text colors so the screen
+  follows day/night theming automatically.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/md_background">
+
+    <FrameLayout
+        android:id="@+id/resize_canvas"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/md_surface_container_lowest">
+
+        <TextureView
+            android:id="@+id/resize_texture"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <com.byd.dashcast.cluster.ResizeFrameView
+            android:id="@+id/resize_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </FrameLayout>
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:background="@color/md_surface_container">
+
+        <TextView
+            android:id="@+id/resize_coords"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/md_on_surface"
+            android:textSize="15sp"
+            android:fontFamily="monospace"
+            tools:ignore="UnusedAttribute"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_cancel"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="@string/resize_btn_cancel"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_ok"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/resize_btn_ok"/>
+    </LinearLayout>
+</LinearLayout>

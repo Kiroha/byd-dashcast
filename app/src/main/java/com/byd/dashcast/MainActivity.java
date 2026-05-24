@@ -1070,6 +1070,7 @@ public class MainActivity extends AppCompatActivity
         TextView  lblFav     = v.findViewById(R.id.sheet_lbl_favorite);
         View      rowToMain  = v.findViewById(R.id.sheet_action_to_main);
         View      rowToClus  = v.findViewById(R.id.sheet_action_to_cluster);
+        View      rowResize  = v.findViewById(R.id.sheet_action_resize);
         View      rowKill    = v.findViewById(R.id.sheet_action_kill);
 
         icon.setImageDrawable(app.icon);
@@ -1100,6 +1101,7 @@ public class MainActivity extends AppCompatActivity
                 && app.packageName.equals(mAdapter.getMainPackage());
         rowToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
         rowToClus.setVisibility(isOnMain || (!isActive && !isOnMain) ? View.VISIBLE : View.GONE);
+        rowResize.setVisibility(isActive ? View.VISIBLE : View.GONE);
         rowKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
 
         rowToMain.setOnClickListener(new View.OnClickListener() {
@@ -1111,6 +1113,20 @@ public class MainActivity extends AppCompatActivity
         rowToClus.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
                 onSendToDashboard(app);
+                dialog.dismiss();
+            }
+        });
+        rowResize.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                int displayId = mClusterService != null ? mClusterService.getDisplayId() : 1;
+                if (displayId < 0) displayId = 1; // Seal EU fission fallback
+                Intent it = new Intent(MainActivity.this,
+                        com.byd.dashcast.cluster.ClusterResizeActivity.class);
+                it.putExtra(com.byd.dashcast.cluster.ClusterResizeActivity.EXTRA_PACKAGE,
+                        app.packageName);
+                it.putExtra(com.byd.dashcast.cluster.ClusterResizeActivity.EXTRA_DISPLAY_ID,
+                        displayId);
+                startActivity(it);
                 dialog.dismiss();
             }
         });
