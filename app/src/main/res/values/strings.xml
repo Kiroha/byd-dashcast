@@ -200,7 +200,13 @@
     <string name="sheet_remove_favorite">Retirer des favoris</string>
     <string name="sheet_to_main">Envoyer vers l\'écran principal</string>
     <string name="sheet_to_cluster">Envoyer vers le cluster</string>
+    <string name="sheet_resize_move">Redimensionner &amp; déplacer</string>
     <string name="sheet_force_stop">Forcer l\'arrêt</string>
+
+    <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">Annuler</string>
+    <string name="resize_btn_ok">Valider</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
     <!-- v0.9.81 — Diag M3 cards -->

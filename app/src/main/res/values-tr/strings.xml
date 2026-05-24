@@ -158,6 +158,10 @@
     <string name="sheet_remove_favorite">Favorilerden çıkar</string>
     <string name="sheet_to_main">Ana ekrana gönder</string>
     <string name="sheet_to_cluster">Cluster\'a gönder</string>
+    <string name="sheet_resize_move">Yeniden boyutlandır ve taşı</string>
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">İptal</string>
+    <string name="resize_btn_ok">Onayla</string>
     <string name="sheet_force_stop">Durmaya zorla</string>
     <string name="main_cluster_status_off">Yansıtma kapalı</string>
     <string name="main_btn_exit_fullscreen">Tam ekrandan çık</string>

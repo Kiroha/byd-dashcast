@@ -158,6 +158,14 @@
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
 
+        <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
+        <activity
+            android:name=".cluster.ClusterResizeActivity"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@style/AppTheme.NoActionBar"/>
+
         <!-- Full system report screen -->
         <activity
             android:name=".SysInfoActivity"
