@@ -367,4 +367,39 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · мәні %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · тексеру…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Fission тесті</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Деструктивті нақты тест: Yandex Maps-ты fission экранында іске қосады, өлшемін мәжбүрлеп өзгертеді, негізгі экранға қайтарады, содан кейін тазалайды. Тек DiLink 5 үшін, негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission тесті — деструктивті</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Бұл сериал:
+
+• Yandex Maps-та FORCE_RESIZE_APP compat-ты қосады
+• Yandex Maps-ты мәжбүрлеп тоқтатады
+• Оны fission экранында (id ≠ 0) freeform режимінде іске қосады
+• Тапсырманы өлшемін өзгертуді тексереді
+• Жылжытуды растау үшін негізгі экранға (id 0) қайтарады
+• Yandex-ті мәжбүрлеп тоқтатып, compat-ты қалпына келтіреді (тазалау)
+
+Негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.
+Жалғастыру керек пе?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Тестті іске қосу</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">BYD APK экспорты</string>
+    <string name="diag_export_apk_header_title">BYD APK экспорты</string>
+    <string name="diag_export_apk_header_subtitle">Орнатылған BYD / XDJA / DiLink / cluster пакеттерін тізімдейді, таңдалған APK-ны шығарып, Telegram арқылы жібереді.</string>
+    <string name="diag_export_apk_refresh">Жаңарту</string>
+    <string name="diag_export_apk_counters_idle">Дайын — сканерлеу үшін «Жаңарту» басыңыз.</string>
+    <string name="diag_export_apk_counters_scanning">Сканерлеу…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK табылды • дискіде %2$s</string>
+    <string name="diag_export_apk_hint">APK қолданба кэшіне көшіріледі, Telegram арқылы жіберіледі, содан кейін 5 минуттан кейін автоматты түрде жойылады. Көлік жадында ештеңе сақталмайды.</string>
+    <string name="diag_export_apk_btn_export">Экспорт</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK жіберілді: %1$s</string>
+    <string name="diag_export_apk_chooser_title">%1$s APK жіберу</string>
+    <string name="diag_export_apk_err_fmt">APK экспорты сәтсіз: %1$s</string>
+    <string name="diag_export_apk_err_no_source">Бұл пакет үшін APK жолы табылмады.</string>
 </resources>

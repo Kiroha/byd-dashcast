@@ -367,4 +367,39 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · القيمة %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · جارٍ التحقق…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">اختبار Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">اختبار مباشر مدمر: يشغل Yandex Maps على شاشة الـ fission، ويفرض تغيير الحجم، ثم يعيده إلى الشاشة الرئيسية، ثم ينظف. DiLink 5 فقط، لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">اختبار Fission — مدمر</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">ستقوم هذه المجموعة بـ:
+
+• تفعيل FORCE_RESIZE_APP على Yandex Maps
+• إيقاف Yandex Maps قسريًا
+• تشغيله على شاشة الـ fission (id ≠ 0) في وضع freeform
+• اختبار تغيير حجم المهمة
+• إعادته إلى الشاشة الرئيسية (id 0) للتحقق من النقل
+• إيقاف Yandex قسريًا ثم إعادة تعيين compat (تنظيف)
+
+لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).
+متابعة؟</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">تشغيل الاختبار</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">اختبار Fission مخصص لـ DiLink 5 فقط.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">تصدير APK من BYD</string>
+    <string name="diag_export_apk_header_title">تصدير APK من BYD</string>
+    <string name="diag_export_apk_header_subtitle">يسرد حزم BYD / XDJA / DiLink / cluster المثبتة، ويستخرج التطبيق المحدد ويُرسله عبر تيليجرام.</string>
+    <string name="diag_export_apk_refresh">تحديث</string>
+    <string name="diag_export_apk_counters_idle">جاهز — اضغط تحديث للفحص.</string>
+    <string name="diag_export_apk_counters_scanning">جاري الفحص…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK مكتشف • %2$s على القرص</string>
+    <string name="diag_export_apk_hint">يُنسخ ملف APK إلى ذاكرة التخزين المؤقتة للتطبيق، ثم يُشارك عبر تيليجرام، ثم يُحذف تلقائيًا بعد 5 دقائق. لا شيء يبقى محفوظًا في ذاكرة السيارة.</string>
+    <string name="diag_export_apk_btn_export">تصدير</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">تم إرسال APK: %1$s</string>
+    <string name="diag_export_apk_chooser_title">إرسال APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">فشل تصدير APK: %1$s</string>
+    <string name="diag_export_apk_err_no_source">لم يُعثر على مسار APK لهذه الحزمة.</string>
 </resources>

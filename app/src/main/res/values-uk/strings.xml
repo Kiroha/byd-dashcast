@@ -367,4 +367,39 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · значення %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · перевірка…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Тест Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Деструктивний живий тест: запускає Yandex Maps на екрані fission, примусово змінює розмір, повертає на головний екран, потім очищає. Лише DiLink 5, жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Тест Fission — деструктивний</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ця серія:
+
+• Увімкне compat FORCE_RESIZE_APP для Yandex Maps
+• Примусово зупинить Yandex Maps
+• Запустить його на екрані fission (id ≠ 0) у режимі freeform
+• Перевірить зміну розміру завдання
+• Поверне його на головний екран (id 0) для перевірки переміщення
+• Примусово зупинить Yandex і скине compat (очищення)
+
+Жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).
+Продовжити?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустити тест</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission лише для DiLink 5.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">Експорт APK BYD</string>
+    <string name="diag_export_apk_header_title">Експорт APK BYD</string>
+    <string name="diag_export_apk_header_subtitle">Перелічує встановлені пакети BYD / XDJA / DiLink / cluster, витягує вибраний APK і надсилає через Telegram.</string>
+    <string name="diag_export_apk_refresh">Оновити</string>
+    <string name="diag_export_apk_counters_idle">Готово — натисніть «Оновити» для сканування.</string>
+    <string name="diag_export_apk_counters_scanning">Сканування…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK знайдено • %2$s на диску</string>
+    <string name="diag_export_apk_hint">APK копіюється в кеш застосунку, передається в Telegram, а потім автоматично видаляється через 5 хвилин. У пам\'яті автомобіля нічого не залишається.</string>
+    <string name="diag_export_apk_btn_export">Експорт</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK надіслано: %1$s</string>
+    <string name="diag_export_apk_chooser_title">Надіслати APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">Помилка експорту APK: %1$s</string>
+    <string name="diag_export_apk_err_no_source">Шлях APK не знайдено для цього пакета.</string>
 </resources>

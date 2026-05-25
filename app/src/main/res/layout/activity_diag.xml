@@ -176,6 +176,8 @@
                 tools:ignore="HardcodedText"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_cluster_dl5"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_export_apk"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -231,6 +233,11 @@
             <include
                 android:id="@+id/panel_cluster_dl5"
                 layout="@layout/include_diag_cluster_dl5"/>
+
+            <!-- Export BYD APK panel (v1.2.42) — list every BYD package + pull/share its APK -->
+            <include
+                android:id="@+id/panel_export_apk"
+                layout="@layout/include_diag_export_apk"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include

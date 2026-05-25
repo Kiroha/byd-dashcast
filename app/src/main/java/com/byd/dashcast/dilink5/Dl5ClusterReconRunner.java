@@ -100,19 +100,22 @@ public final class Dl5ClusterReconRunner {
                 "Display manager verbs (typically lock-rotation, set-brightness, etc — useful baseline)."));
 
         // ── Compat framework (the FORCE_RESIZE_APP hypothesis) ───────────
-        // v1.2.38: revised after DL5 field log proved the AOSP shell on this
-        // ROM exposes only `enable|disable|reset` (no `get` verb). We use
-        // `am compat list <pkg>` for read-back instead.
+        // v1.2.41: R14-R16 rewritten after the v1.2.40 report proved
+        // `am compat list <pkg>` is misinterpreted on this ROM (the first arg
+        // is treated as a change ID, not a package). The proper per-package
+        // override read-back is via `dumpsys platform_compat`. R17 grep BRE
+        // (`\|`) is replaced with `-E` because BusyBox grep on DL5 does not
+        // expand the BRE alternation.
         list.add(new DiLink5TestRunner.TestDef("R13", "am compat help",
                 "`am compat enable` with no further args triggers AOSP's usage hint. Confirms the verb surface (enable|disable|reset|reset-all|list) without mutating anything."));
-        list.add(new DiLink5TestRunner.TestDef("R14", "am compat list <self>",
-                "`am compat list com.byd.dashcast` — AOSP read-back syntax. Lists every change ID (numeric or symbolic) with its current state for our own package."));
-        list.add(new DiLink5TestRunner.TestDef("R15", "am compat list ru.yandex.yandexmaps",
-                "Same read-back against Yandex Maps — the actual target of the FORCE_RESIZE_APP fix."));
-        list.add(new DiLink5TestRunner.TestDef("R16", "am compat list com.waze",
-                "Same read-back against Waze."));
+        list.add(new DiLink5TestRunner.TestDef("R14", "am compat verb surface",
+                "`am compat 2>&1 | head -20` — clean usage dump (no stack trace), enumerates every supported verb on this ROM."));
+        list.add(new DiLink5TestRunner.TestDef("R15", "platform_compat package overrides",
+                "`dumpsys platform_compat 2>&1 | sed -n '/PackageOverrides:/,/^$/p' | head -60` — lists every currently-set per-package compat override on the device."));
+        list.add(new DiLink5TestRunner.TestDef("R16", "compat status for our test packages",
+                "`dumpsys platform_compat 2>&1 | grep -E 'ru\\.yandex\\.yandexmaps|com\\.waze|com\\.byd\\.dashcast' | head -20` — verifies our Fission test targets have no pre-existing override that could skew the test result."));
         list.add(new DiLink5TestRunner.TestDef("R17", "platform_compat metadata for 174042936",
-                "v1.2.40: read-only `dumpsys platform_compat | grep -B1 -A1 '174042936|FORCE_RESIZE_APP'` — surfaces the registered metadata of change ID 174042936 without any mutation. Prior R17 (`am compat reset`) was killing the DashCast process mid-suite (Android 11+ restarts the target app on every compat-override change), losing the in-memory recon report."));
+                "`dumpsys platform_compat 2>&1 | grep -E -B1 -A1 '174042936|FORCE_RESIZE_APP' | head -30` — read-only metadata of change ID 174042936. v1.2.41: switched from BRE `\\|` to ERE `-E` because BusyBox grep on DL5 does not honor the BRE alternation."));
         list.add(new DiLink5TestRunner.TestDef("R18", "appcompat dumpsys filter",
                 "`dumpsys platform_compat | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20` — confirms the compat changes are registered in the platform compat service."));
 
@@ -208,18 +211,17 @@ public final class Dl5ClusterReconRunner {
             case "R11": shellCapture(ctx, r, "cmd window 2>&1 | head -60", null, null); return;
             case "R12": shellCapture(ctx, r, "cmd display 2>&1 | head -40", null, null); return;
             case "R13": shellCapture(ctx, r, "am compat enable 2>&1 | head -40", "enable", null); return;
-            case "R14": shellCapture(ctx, r, "am compat list " + ctx.getPackageName() + " 2>&1 | head -80", null, null); return;
-            case "R15": shellCapture(ctx, r, "am compat list ru.yandex.yandexmaps 2>&1 | head -80", null, null); return;
-            case "R16": shellCapture(ctx, r, "am compat list com.waze 2>&1 | head -80", null, null); return;
+            case "R14": shellCapture(ctx, r, "am compat 2>&1 | head -20", null, null); return;
+            case "R15": shellCapture(ctx, r,
+                    "dumpsys platform_compat 2>&1 | sed -n '/PackageOverrides:/,/^$/p' | head -60", null, null); return;
+            case "R16": shellCapture(ctx, r,
+                    "dumpsys platform_compat 2>&1 | grep -E 'ru\\.yandex\\.yandexmaps|com\\.waze|com\\.byd\\.dashcast' | head -20", null, null); return;
             case "R17": shellCapture(ctx, r,
-                    // v1.2.40 fix: was `am compat reset 174042936 <ourPackage>` —
-                    // changing compat overrides on Android 11+ forces a process
-                    // restart of the target package, so we killed ourselves
-                    // mid-suite and lost every result. Replaced with a read-only
-                    // dumpsys probe that surfaces the registered metadata of
-                    // change ID 174042936 (FORCE_RESIZE_APP) without mutating
-                    // anything. Zero process kill, zero side effect.
-                    "dumpsys platform_compat 2>&1 | grep -B1 -A1 '174042936\\|FORCE_RESIZE_APP' | head -30",
+                    // v1.2.41: switched BRE `\|` to ERE `-E` because BusyBox
+                    // grep on the DL5 ROM does not honor BRE alternation
+                    // (v1.2.40 returned 0 lines while R18 same pattern with
+                    // -E matched correctly).
+                    "dumpsys platform_compat 2>&1 | grep -E -B1 -A1 '174042936|FORCE_RESIZE_APP' | head -30",
                     null, null); return;
             case "R18": shellCapture(ctx, r, "dumpsys platform_compat 2>&1 | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20", null, null); return;
             case "R19": shellCapture(ctx, r, "settings get global force_resizable_activities 2>&1", null, null); return;
@@ -444,6 +446,468 @@ public final class Dl5ClusterReconRunner {
         sb.append("Build.FINGERPRINT=").append(Build.FINGERPRINT).append('\n');
         sb.append("SDK_INT=").append(Build.VERSION.SDK_INT).append('\n');
         sb.append("\n");
+        int pass = 0, warn = 0, fail = 0, skip = 0;
+        for (DiLink5TestRunner.TestResult r : results) {
+            switch (r.status) {
+                case PASS: pass++; break;
+                case WARN: warn++; break;
+                case FAIL: fail++; break;
+                case SKIPPED: skip++; break;
+                default: break;
+            }
+        }
+        sb.append("Summary: ").append(pass).append(" PASS / ")
+          .append(warn).append(" WARN / ")
+          .append(fail).append(" FAIL / ")
+          .append(skip).append(" SKIPPED\n\n");
+        for (DiLink5TestRunner.TestResult r : results) {
+            sb.append("──────────────────────────────────\n");
+            sb.append('[').append(r.def.id).append("] ").append(r.def.title)
+              .append("  →  ").append(r.status)
+              .append(" (").append(r.elapsedMs).append(" ms)\n");
+            if (r.message != null && !r.message.isEmpty()) {
+                sb.append("msg: ").append(r.message).append('\n');
+            }
+            if (r.detail != null && !r.detail.isEmpty()) {
+                sb.append(r.detail).append('\n');
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Fission live test battery (v1.2.41) — DiLink 5 ONLY.
+    //
+    // GOAL: prove the resize + move pipeline works on a fission display by
+    // pushing Yandex Maps to a fission screen, applying the FORCE_RESIZE_APP
+    // compat override, resizing the task, then cleaning up.
+    //
+    // STRICT RULES:
+    //   1. DL5 only — the catalog refuses to run when Platform.isAutoDetectedDiLink5()
+    //      is false. Every other platform sees a single SKIPPED row.
+    //   2. NEVER touch display 0 (the head unit screen). If the only display
+    //      visible to us is 0, the entire suite SKIPs F03..F10.
+    //   3. Target is hard-coded to ru.yandex.yandexmaps. If Yandex Maps is
+    //      not installed, F02..F10 SKIP cleanly.
+    //   4. We always run F09 (force-stop Yandex) and F10 (compat reset) as
+    //      cleanup, even on a failure of an earlier step, so the device is
+    //      left in a clean state between runs.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** Hard-coded Fission test target. */
+    private static final String FISSION_TARGET_PKG = "ru.yandex.yandexmaps";
+    /** Numeric ID of the FORCE_RESIZE_APP compat change. */
+    private static final String FORCE_RESIZE_APP_ID = "174042936";
+
+    /** Mutable state shared between F-tests within a single run. */
+    private static final class FissionState {
+        int  fissionDisplayId = -1;
+        int  yandexTaskId     = -1;
+        boolean overrideEnabled = false;
+        boolean abortFromHere   = false;
+    }
+
+    public static List<DiLink5TestRunner.TestDef> fissionCatalog() {
+        List<DiLink5TestRunner.TestDef> list = new ArrayList<>();
+        list.add(new DiLink5TestRunner.TestDef("F01", "Detect fission display (id ≠ 0)",
+                "Walk DisplayManager.getDisplays() for the lowest non-zero id with a fission/xdja/cluster name. STRICT: id=0 is excluded; if none found, the whole F-tier SKIPs."));
+        list.add(new DiLink5TestRunner.TestDef("F02", "Yandex Maps installed?",
+                "PackageManager.getPackageInfo(ru.yandex.yandexmaps). SKIPs F03..F10 if absent."));
+        list.add(new DiLink5TestRunner.TestDef("F03", "Enable FORCE_RESIZE_APP on Yandex Maps",
+                "am compat enable 174042936 ru.yandex.yandexmaps — forces ATM to treat the activity as resizeable regardless of its manifest resizeMode."));
+        list.add(new DiLink5TestRunner.TestDef("F04", "Force-stop Yandex Maps (pre-launch)",
+                "am force-stop ru.yandex.yandexmaps — the new compat override only takes effect on the next Application.onCreate, so we must kill the existing process first."));
+        list.add(new DiLink5TestRunner.TestDef("F05", "Launch Yandex Maps on fission display",
+                "am start --display N --windowingMode 5 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p ru.yandex.yandexmaps. N is the fission id detected in F01."));
+        list.add(new DiLink5TestRunner.TestDef("F06", "Verify task on fission + freeform",
+                "Wait ~3 s, dumpsys activity activities, scan for ru.yandex.yandexmaps task, confirm displayId=N and (freeform | windowingMode=5). Captures taskId for F07/F08."));
+        list.add(new DiLink5TestRunner.TestDef("F07", "Resize task on fission",
+                "cmd activity task resize <taskId> 100 80 1820 640 — apply a 100×80 inset rectangle inside the 1920×720 fission framebuffer."));
+        list.add(new DiLink5TestRunner.TestDef("F08", "Verify new bounds",
+                "Wait ~2 s, dumpsys activity activities | grep mBounds — confirm mBounds reflects the rectangle from F07."));
+        list.add(new DiLink5TestRunner.TestDef("F09", "Move task back to main display (id=0)",
+                "am start --display 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p ru.yandex.yandexmaps — reparents the Yandex task onto display 0 (the main screen). No resize / no size mutation on display 0: this is the exact same intent the system fires when the user taps Yandex Maps on the head unit."));
+        list.add(new DiLink5TestRunner.TestDef("F10", "Verify task on main display (id=0)",
+                "Wait ~2 s, dumpsys activity activities, scan for ru.yandex.yandexmaps task, confirm displayId=0. Validates the move pipeline end-to-end (fission → main)."));
+        list.add(new DiLink5TestRunner.TestDef("F11", "Cleanup: force-stop Yandex",
+                "am force-stop ru.yandex.yandexmaps — leaves the device empty of Yandex Maps state, ready for a fresh run on another fission display."));
+        list.add(new DiLink5TestRunner.TestDef("F12", "Cleanup: reset FORCE_RESIZE_APP override",
+                "am compat reset 174042936 ru.yandex.yandexmaps — restores Yandex Maps to its declared resize behaviour, leaves zero state behind."));
+        return list;
+    }
+
+    public static List<DiLink5TestRunner.TestResult> emptyFissionResults() {
+        List<DiLink5TestRunner.TestResult> out = new ArrayList<>();
+        for (DiLink5TestRunner.TestDef def : fissionCatalog()) {
+            DiLink5TestRunner.TestResult r = new DiLink5TestRunner.TestResult(def);
+            r.status = DiLink5TestRunner.Status.PENDING;
+            out.add(r);
+        }
+        return out;
+    }
+
+    /** Async fission run — listener called on UI thread. */
+    public static void runFission(Context ctx, Listener listener) {
+        final Context appCtx = ctx.getApplicationContext();
+        final List<DiLink5TestRunner.TestResult> results = emptyFissionResults();
+        EXEC.execute(() -> {
+            UI.post(() -> listener.onSuiteStarted(results));
+            final FissionState st = new FissionState();
+            // Hard gate: refuse to run on anything but DL5.
+            if (!Platform.get().isAutoDetectedDiLink5()) {
+                for (int i = 0; i < results.size(); i++) {
+                    DiLink5TestRunner.TestResult r = results.get(i);
+                    r.status = DiLink5TestRunner.Status.SKIPPED;
+                    r.message = "DL5 only — current platform: "
+                            + (Platform.get().describeMode(appCtx));
+                    final int idx = i;
+                    UI.post(() -> listener.onTestUpdated(idx, r));
+                }
+                UI.post(() -> listener.onSuiteFinished(results));
+                return;
+            }
+            for (int i = 0; i < results.size(); i++) {
+                final int idx = i;
+                final DiLink5TestRunner.TestResult r = results.get(i);
+                r.status = DiLink5TestRunner.Status.RUNNING;
+                UI.post(() -> listener.onTestUpdated(idx, r));
+                long t0 = SystemClock.elapsedRealtime();
+                try {
+                    runFissionOne(appCtx, r, st);
+                } catch (Throwable th) {
+                    r.status = DiLink5TestRunner.Status.FAIL;
+                    r.message = "exception";
+                    r.detail  = th.getClass().getSimpleName() + ": " + th.getMessage();
+                }
+                r.elapsedMs = SystemClock.elapsedRealtime() - t0;
+                UI.post(() -> listener.onTestUpdated(idx, r));
+            }
+            UI.post(() -> listener.onSuiteFinished(results));
+        });
+    }
+
+    private static void runFissionOne(Context ctx, DiLink5TestRunner.TestResult r,
+                                      FissionState st) {
+        switch (r.def.id) {
+            case "F01": fissionDetectDisplay(ctx, r, st); return;
+            case "F02": fissionCheckYandexInstalled(ctx, r, st); return;
+            case "F03": fissionEnableOverride(ctx, r, st); return;
+            case "F04": fissionForceStop(ctx, r, st, "pre-launch"); return;
+            case "F05": fissionLaunch(ctx, r, st); return;
+            case "F06": fissionVerifyOnFission(ctx, r, st); return;
+            case "F07": fissionResizeTask(ctx, r, st); return;
+            case "F08": fissionVerifyBounds(ctx, r, st); return;
+            case "F09": fissionMoveToMainDisplay(ctx, r, st); return;
+            case "F10": fissionVerifyOnMainDisplay(ctx, r, st); return;
+            case "F11": fissionForceStop(ctx, r, st, "cleanup"); return;
+            case "F12": fissionResetOverride(ctx, r, st); return;
+            default:
+                r.status = DiLink5TestRunner.Status.SKIPPED;
+                r.message = "no impl";
+        }
+    }
+
+    // ── Fission per-step implementations ────────────────────────────────────
+
+    private static boolean isFissionName(String name) {
+        if (name == null) return false;
+        String n = name.toLowerCase();
+        return n.contains("fission") || n.contains("xdja") || n.contains("cluster");
+    }
+
+    private static void fissionDetectDisplay(Context ctx, DiLink5TestRunner.TestResult r,
+                                             FissionState st) {
+        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
+        if (dm == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "no DisplayManager";
+            st.abortFromHere = true;
+            return;
+        }
+        Display[] all = dm.getDisplays();
+        StringBuilder sb = new StringBuilder("DisplayManager.getDisplays():\n");
+        int picked = -1;
+        for (Display d : all) {
+            sb.append("  id=").append(d.getDisplayId())
+              .append(" name=").append(d.getName()).append('\n');
+            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue; // STRICT: skip id=0
+            if (picked >= 0) continue;
+            if (isFissionName(d.getName())) picked = d.getDisplayId();
+        }
+        // Fallback: lowest non-zero id even if name doesn't match (e.g. hidden Id=2).
+        if (picked < 0) {
+            for (Display d : all) {
+                if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
+                picked = d.getDisplayId();
+                break;
+            }
+        }
+        r.detail = sb.toString();
+        if (picked <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no non-zero display available — F-tier aborted";
+            st.abortFromHere = true;
+            return;
+        }
+        st.fissionDisplayId = picked;
+        r.status = DiLink5TestRunner.Status.PASS;
+        r.message = "fission displayId=" + picked;
+    }
+
+    private static void fissionCheckYandexInstalled(Context ctx, DiLink5TestRunner.TestResult r,
+                                                    FissionState st) {
+        if (st.abortFromHere) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted by F01";
+            return;
+        }
+        try {
+            ctx.getPackageManager().getPackageInfo(FISSION_TARGET_PKG, 0);
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = FISSION_TARGET_PKG + " installed";
+        } catch (Exception e) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = FISSION_TARGET_PKG + " not installed — F03..F10 skipped";
+            st.abortFromHere = true;
+        }
+    }
+
+    private static void fissionEnableOverride(Context ctx, DiLink5TestRunner.TestResult r,
+                                              FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        String cmd = "am compat enable " + FORCE_RESIZE_APP_ID + " " + FISSION_TARGET_PKG + " 2>&1";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        if (out != null && out.toLowerCase().contains("enabled")) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "override enabled";
+            st.overrideEnabled = true;
+        } else if (out != null && !out.toLowerCase().contains("error")
+                && !out.toLowerCase().contains("exception")) {
+            // Some ROMs emit no acknowledgement on success.
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "no error";
+            st.overrideEnabled = true;
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "no positive ack — see detail";
+        }
+    }
+
+    private static void fissionForceStop(Context ctx, DiLink5TestRunner.TestResult r,
+                                         FissionState st, String tag) {
+        // Cleanup steps run even when an earlier step aborted, so we don't gate.
+        String cmd = "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        r.status = DiLink5TestRunner.Status.PASS;
+        r.message = tag + " force-stop sent";
+    }
+
+    private static void fissionLaunch(Context ctx, DiLink5TestRunner.TestResult r,
+                                      FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.fissionDisplayId <= 0) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "no fission display id";
+            st.abortFromHere = true;
+            return;
+        }
+        String cmd = "am start --display " + st.fissionDisplayId
+                + " --windowingMode 5"
+                + " -a android.intent.action.MAIN"
+                + " -c android.intent.category.LAUNCHER"
+                + " -p " + FISSION_TARGET_PKG + " 2>&1";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        if (out != null && (out.contains("Starting:") || out.contains("Status: ok"))) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "launch issued on display " + st.fissionDisplayId;
+        } else if (out != null && out.toLowerCase().contains("error")) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "launch error";
+            st.abortFromHere = true;
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "ambiguous launch output";
+        }
+    }
+
+    private static void fissionVerifyOnFission(Context ctx, DiLink5TestRunner.TestResult r,
+                                               FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        String dump = shellSync(ctx,
+                "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
+              + " | grep -E '" + FISSION_TARGET_PKG.replace(".", "\\.")
+              + "|displayId=|mWindowingMode=|Task=Task|mBounds=Rect' | head -80");
+        r.detail = "$ dumpsys activity activities (filtered)\n\n"
+                + (dump == null ? "<no output>" : dump);
+        if (dump == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "dumpsys failed";
+            return;
+        }
+        // Extract first taskId on a line that mentions yandex.
+        int taskId = -1;
+        for (String line : dump.split("\n")) {
+            if (!line.contains(FISSION_TARGET_PKG)) continue;
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("#(\\d+)").matcher(line);
+            if (m.find()) { try { taskId = Integer.parseInt(m.group(1)); break; }
+                            catch (NumberFormatException ignored) {} }
+        }
+        st.yandexTaskId = taskId;
+        boolean onFission = dump.contains("displayId=" + st.fissionDisplayId);
+        boolean freeform  = dump.contains("mWindowingMode=freeform")
+                         || dump.contains("windowingMode=5");
+        if (taskId > 0 && onFission && freeform) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "taskId=" + taskId + " on display " + st.fissionDisplayId + " in freeform";
+        } else if (taskId > 0 && onFission) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "taskId=" + taskId + " on display " + st.fissionDisplayId
+                      + " but windowing mode unclear";
+        } else {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "task not found on fission display "
+                      + st.fissionDisplayId + " (taskId=" + taskId + ")";
+        }
+    }
+
+    private static void fissionResizeTask(Context ctx, DiLink5TestRunner.TestResult r,
+                                          FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.yandexTaskId <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no taskId from F06";
+            return;
+        }
+        // Fission frame is 1920×720 → apply a 100×80 inset rectangle.
+        String cmd = "cmd activity task resize " + st.yandexTaskId
+                + " 100 80 1820 640 2>&1 ; echo __exit=$?";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        if (out != null && out.contains("__exit=0")) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "resize exit=0";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "non-zero exit or unclear";
+        }
+    }
+
+    private static void fissionVerifyBounds(Context ctx, DiLink5TestRunner.TestResult r,
+                                            FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.yandexTaskId <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no taskId from F06";
+            return;
+        }
+        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        String dump = shellSync(ctx,
+                "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
+              + " | grep -E '#" + st.yandexTaskId + " |mBounds=Rect|mWindowingMode=' | head -30");
+        r.detail = "$ dumpsys activity activities (taskId=" + st.yandexTaskId + ")\n\n"
+                + (dump == null ? "<no output>" : dump);
+        if (dump == null) { r.status = DiLink5TestRunner.Status.FAIL; r.message = "dumpsys failed"; return; }
+        boolean hit = dump.contains("Rect(100, 80")
+                   || dump.contains("Rect(100,80")
+                   || (dump.contains("100") && dump.contains("1820"));
+        if (hit) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "new bounds visible";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "bounds not confirmed — see detail";
+        }
+    }
+
+    private static void fissionMoveToMainDisplay(Context ctx, DiLink5TestRunner.TestResult r,
+                                                 FissionState st) {
+        // Cleanup-adjacent step: even if F03..F08 aborted, attempting the move
+        // back to display 0 is safe — it's the same intent the system fires
+        // when the user taps the app on the head unit, no resize / no size
+        // mutation on display 0.
+        // RULE: we only ever LAUNCH on display 0 here; we never run any
+        // resize, set-density, set-bounds or wm command against display 0.
+        String cmd = "am start --display 0"
+                + " -a android.intent.action.MAIN"
+                + " -c android.intent.category.LAUNCHER"
+                + " -p " + FISSION_TARGET_PKG + " 2>&1";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        if (out != null && (out.contains("Starting:") || out.contains("Status: ok"))) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "move-to-display-0 issued";
+        } else if (out != null && out.toLowerCase().contains("error")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "move error — see detail";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "ambiguous move output";
+        }
+    }
+
+    private static void fissionVerifyOnMainDisplay(Context ctx, DiLink5TestRunner.TestResult r,
+                                                   FissionState st) {
+        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        String dump = shellSync(ctx,
+                "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
+              + " | grep -E '" + FISSION_TARGET_PKG.replace(".", "\\.")
+              + "|displayId=|Task=Task' | head -60");
+        r.detail = "$ dumpsys activity activities (filtered, post-move)\n\n"
+                + (dump == null ? "<no output>" : dump);
+        if (dump == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "dumpsys failed";
+            return;
+        }
+        boolean onMain = dump.contains("displayId=0");
+        boolean stillHasYandex = dump.contains(FISSION_TARGET_PKG);
+        if (onMain && stillHasYandex) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "task moved to display 0";
+        } else if (stillHasYandex) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "task present but displayId=0 not confirmed";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "task not found post-move — see detail";
+        }
+    }
+
+    private static void fissionResetOverride(Context ctx, DiLink5TestRunner.TestResult r,
+                                             FissionState st) {
+        // Cleanup runs unconditionally.
+        if (!st.overrideEnabled) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no override to reset";
+            return;
+        }
+        String cmd = "am compat reset " + FORCE_RESIZE_APP_ID + " " + FISSION_TARGET_PKG + " 2>&1";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        r.status = DiLink5TestRunner.Status.PASS;
+        r.message = "reset sent";
+    }
+
+    /** Render a fission-tier text report. */
+    public static String renderFissionReport(List<DiLink5TestRunner.TestResult> results) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("════════════════════════════════════\n");
+        sb.append("DashCast — DL5 Fission Live Tests\n");
+        sb.append("════════════════════════════════════\n");
+        sb.append("Build.MODEL=").append(Build.MODEL).append('\n');
+        sb.append("Build.FINGERPRINT=").append(Build.FINGERPRINT).append('\n');
+        sb.append("Target=").append(FISSION_TARGET_PKG).append('\n');
+        sb.append("ChangeId=").append(FORCE_RESIZE_APP_ID).append(" (FORCE_RESIZE_APP)\n\n");
         int pass = 0, warn = 0, fail = 0, skip = 0;
         for (DiLink5TestRunner.TestResult r : results) {
             switch (r.status) {

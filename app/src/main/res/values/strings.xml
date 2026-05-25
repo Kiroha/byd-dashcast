@@ -298,6 +298,23 @@
     <string name="diag_tab_cluster">Cluster DL3</string>
     <string name="diag_tab_cluster_dl5">Cluster DL5</string>
     <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_export_apk">Export APK BYD</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_export_apk_header_title">Export APK BYD</string>
+    <string name="diag_export_apk_header_subtitle">Liste les APK BYD / XDJA / DiLink / cluster installés, extrait celui de ton choix et l’envoie via Telegram.</string>
+    <string name="diag_export_apk_refresh">Rafraîchir</string>
+    <string name="diag_export_apk_counters_idle">Prêt — appuie sur Rafraîchir pour scanner.</string>
+    <string name="diag_export_apk_counters_scanning">Scan en cours…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK détectés • %2$s sur disque</string>
+    <string name="diag_export_apk_hint">L\'APK est copié dans le cache de l\'app, partagé à Telegram, puis effacé automatiquement après 5 minutes. Rien n\'est conservé sur le stockage de la voiture.</string>
+    <string name="diag_export_apk_btn_export">Exporter</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK envoyé : %1$s</string>
+    <string name="diag_export_apk_chooser_title">Envoyer l\'APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">Échec export APK : %1$s</string>
+    <string name="diag_export_apk_err_no_source">Chemin APK introuvable pour ce package.</string>
 
     <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
     <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
@@ -312,6 +329,14 @@
     <string name="diag_dl5_cluster_toast_report_copied">Rapport copié dans le presse-papier (%1$d entrées)</string>
     <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
     <string name="diag_dl5_cluster_toast_telegram_missing">Telegram non installé — ouverture du sélecteur de partage.</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Test live destructif : lance Yandex Maps sur l’écran fission, force-resize, le ramène sur l’écran principal, puis nettoie. DiLink 5 uniquement, aucune commande de resize sur l’écran principal (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructif</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Cette suite va :\n\n• Activer le compat FORCE_RESIZE_APP sur Yandex Maps\n• Force-stop Yandex Maps\n• Le lancer sur l’écran fission (id ≠ 0) en windowingMode freeform\n• Tester un resize de la tâche\n• Le ramener sur l’écran principal (id 0) pour valider le move\n• Force-stop Yandex puis reset du compat (nettoyage)\n\nAucune commande de resize n’est envoyée sur l’écran principal (id 0).\nContinuer ?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
     <string name="diag_tab_adb_local">ADB local</string>
     <string name="diag_tab_system">Système</string>
     <string name="diag_tab_stress">Stress test</string>

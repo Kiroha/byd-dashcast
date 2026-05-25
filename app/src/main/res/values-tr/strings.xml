@@ -367,4 +367,39 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · değer %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · kontrol…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Fission Testi</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Yıkıcı canlı test: Yandex Maps\'ı fission ekranında başlatır, yeniden boyutlandırmayı zorlar, ana ekrana geri taşır, sonra temizler. Yalnızca DiLink 5, ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission Testi — yıkıcı</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Bu seri:
+
+• Yandex Maps üzerinde FORCE_RESIZE_APP compat\'i etkinleştirecek
+• Yandex Maps\'ı zorla durduracak
+• Onu fission ekranında (id ≠ 0) freeform modunda başlatacak
+• Görev yeniden boyutlandırmayı test edecek
+• Taşımayı doğrulamak için onu ana ekrana (id 0) geri taşıyacak
+• Yandex\'i zorla durduracak ve compat\'i sıfırlayacak (temizlik)
+
+Ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.
+Devam edilsin mi?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Testi çalıştır</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission Testi yalnızca DiLink 5 içindir.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">BYD APK dışa aktar</string>
+    <string name="diag_export_apk_header_title">BYD APK dışa aktar</string>
+    <string name="diag_export_apk_header_subtitle">Yüklü BYD / XDJA / DiLink / cluster paketlerini listeler, seçilen APK\'yı çıkarır ve Telegram üzerinden gönderir.</string>
+    <string name="diag_export_apk_refresh">Yenile</string>
+    <string name="diag_export_apk_counters_idle">Hazır — taramak için Yenile\'ye dokun.</string>
+    <string name="diag_export_apk_counters_scanning">Taranıyor…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK bulundu • diskte %2$s</string>
+    <string name="diag_export_apk_hint">APK uygulama önbelleğine kopyalanır, Telegram ile paylaşılır ve ardından 5 dakika sonra otomatik olarak silinir. Aracın belleğinde hiçbir şey kalmaz.</string>
+    <string name="diag_export_apk_btn_export">Dışa aktar</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK gönderildi: %1$s</string>
+    <string name="diag_export_apk_chooser_title">%1$s APK\'yı gönder</string>
+    <string name="diag_export_apk_err_fmt">APK dışa aktarımı başarısız: %1$s</string>
+    <string name="diag_export_apk_err_no_source">Bu paket için APK yolu bulunamadı.</string>
 </resources>

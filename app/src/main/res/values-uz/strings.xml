@@ -367,4 +367,39 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · qiymat %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · tekshiruv…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Fission testi</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Buzg\'uvchi jonli test: Yandex Maps-ni fission ekranida ishga tushiradi, o\'lchamini majburiy o\'zgartiradi, asosiy ekranga qaytaradi, so\'ngra tozalaydi. Faqat DiLink 5, asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission testi — buzg\'uvchi</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ushbu seriya:
+
+• Yandex Maps-da FORCE_RESIZE_APP compat-ni yoqadi
+• Yandex Maps-ni majburiy to\'xtatadi
+• Uni fission ekranida (id ≠ 0) freeform rejimida ishga tushiradi
+• Vazifa o\'lchamini o\'zgartirishni sinab ko\'radi
+• Ko\'chirishni tasdiqlash uchun uni asosiy ekranga (id 0) qaytaradi
+• Yandex-ni majburiy to\'xtatadi va compat-ni qayta tiklaydi (tozalash)
+
+Asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.
+Davom etilsinmi?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Testni ishga tushirish</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">BYD APK eksporti</string>
+    <string name="diag_export_apk_header_title">BYD APK eksporti</string>
+    <string name="diag_export_apk_header_subtitle">O\'rnatilgan BYD / XDJA / DiLink / cluster paketlarini ko\'rsatadi, tanlangan APK\'ni ajratib oladi va Telegram orqali yuboradi.</string>
+    <string name="diag_export_apk_refresh">Yangilash</string>
+    <string name="diag_export_apk_counters_idle">Tayyor — skanlash uchun Yangilash tugmasini bosing.</string>
+    <string name="diag_export_apk_counters_scanning">Skanlanmoqda…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK topildi • diskda %2$s</string>
+    <string name="diag_export_apk_hint">APK ilova keshiga ko\'chiriladi, Telegram orqali ulashiladi va 5 daqiqadan keyin avtomatik o\'chiriladi. Avtomobil xotirasida hech narsa qolmaydi.</string>
+    <string name="diag_export_apk_btn_export">Eksport</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK yuborildi: %1$s</string>
+    <string name="diag_export_apk_chooser_title">%1$s APK\'ni yuborish</string>
+    <string name="diag_export_apk_err_fmt">APK eksporti muvaffaqiyatsiz: %1$s</string>
+    <string name="diag_export_apk_err_no_source">Ushbu paket uchun APK yo\'li topilmadi.</string>
 </resources>
