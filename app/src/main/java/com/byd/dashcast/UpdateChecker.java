@@ -170,8 +170,15 @@ public class UpdateChecker {
     static boolean isNewer(String latest, String currentName, int currentCode) {
         int latestBuild = extractBuild(latest);     // -1 if no "-buildN" suffix
         String latestBase = stripSuffix(latest);    // "1.1.9-build170" → "1.1.9"
+        // v1.2.38 fix: also strip the suffix from currentName, otherwise the
+        // last numeric segment of e.g. "1.2.37-beta" becomes 0 (parseInt fails
+        // on "37-beta") and the comparison against latest base "1.2.37" wrongly
+        // reports the latest as newer than itself. Symptom v1.2.37-beta: the
+        // OTA banner re-proposes installing v1.2.37-beta on top of v1.2.37-beta
+        // in a loop. See log/byd_report_20260525_105105.log feedback.
+        String currentBase = stripSuffix(currentName);
         int[] l = parseVer(latestBase);
-        int[] c = parseVer(currentName);
+        int[] c = parseVer(currentBase);
         for (int i = 0; i < Math.max(l.length, c.length); i++) {
             int lv = i < l.length ? l[i] : 0;
             int cv = i < c.length ? c[i] : 0;
