@@ -111,8 +111,8 @@ public final class Dl5ClusterReconRunner {
                 "Same read-back against Yandex Maps — the actual target of the FORCE_RESIZE_APP fix."));
         list.add(new DiLink5TestRunner.TestDef("R16", "am compat list com.waze",
                 "Same read-back against Waze."));
-        list.add(new DiLink5TestRunner.TestDef("R17", "am compat reset 174042936 self (dry probe)",
-                "`am compat reset 174042936 com.byd.dashcast` — reset has no effect when no override was set, but confirms the change ID is resolvable (PASS = no error message)."));
+        list.add(new DiLink5TestRunner.TestDef("R17", "platform_compat metadata for 174042936",
+                "v1.2.40: read-only `dumpsys platform_compat | grep -B1 -A1 '174042936|FORCE_RESIZE_APP'` — surfaces the registered metadata of change ID 174042936 without any mutation. Prior R17 (`am compat reset`) was killing the DashCast process mid-suite (Android 11+ restarts the target app on every compat-override change), losing the in-memory recon report."));
         list.add(new DiLink5TestRunner.TestDef("R18", "appcompat dumpsys filter",
                 "`dumpsys platform_compat | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20` — confirms the compat changes are registered in the platform compat service."));
 
@@ -211,7 +211,16 @@ public final class Dl5ClusterReconRunner {
             case "R14": shellCapture(ctx, r, "am compat list " + ctx.getPackageName() + " 2>&1 | head -80", null, null); return;
             case "R15": shellCapture(ctx, r, "am compat list ru.yandex.yandexmaps 2>&1 | head -80", null, null); return;
             case "R16": shellCapture(ctx, r, "am compat list com.waze 2>&1 | head -80", null, null); return;
-            case "R17": shellCapture(ctx, r, "am compat reset 174042936 " + ctx.getPackageName() + " 2>&1", null, null); return;
+            case "R17": shellCapture(ctx, r,
+                    // v1.2.40 fix: was `am compat reset 174042936 <ourPackage>` —
+                    // changing compat overrides on Android 11+ forces a process
+                    // restart of the target package, so we killed ourselves
+                    // mid-suite and lost every result. Replaced with a read-only
+                    // dumpsys probe that surfaces the registered metadata of
+                    // change ID 174042936 (FORCE_RESIZE_APP) without mutating
+                    // anything. Zero process kill, zero side effect.
+                    "dumpsys platform_compat 2>&1 | grep -B1 -A1 '174042936\\|FORCE_RESIZE_APP' | head -30",
+                    null, null); return;
             case "R18": shellCapture(ctx, r, "dumpsys platform_compat 2>&1 | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20", null, null); return;
             case "R19": shellCapture(ctx, r, "settings get global force_resizable_activities 2>&1", null, null); return;
             case "R20": shellCapture(ctx, r,
