@@ -186,12 +186,9 @@ public class DiagActivity extends AppCompatActivity {
         bindClusterDl5Panel();
         bindExportApkPanel();
         bindVoicePanel();
-        prepareTestRows();
-        prepareDl5TestRows();
-        prepareDl2TestRows();
-        prepareDl4TestRows();
-        prepareMirrorTestRows();
-        prepareClusterDl5TestRows();
+        // v1.2.46 — prepare*TestRows() are now lazy : each catalog's ~10–42 row
+        // inflations are deferred to the first showPanelForTab(thatTab) call,
+        // shaving ~400–800 ms off the DiagActivity onCreate path on DL3/DL5.
         updateStatusPills();
         restoreSnifferState();
         // Default tab: DiLink 2 when auto-detected as DL2 (build 192), DiLink 5 when DL5,
@@ -310,6 +307,15 @@ public class DiagActivity extends AppCompatActivity {
         panelClusterDl5.setVisibility(isClusterDl5 ? View.VISIBLE : View.GONE);
         panelExportApk.setVisibility(isExportApk ? View.VISIBLE : View.GONE);
         panelVoice.setVisibility(isVoice ? View.VISIBLE : View.GONE);
+        // v1.2.46 — lazy row preparation : inflate only the catalog actually
+        // about to be displayed. Each helper is a no-op once already prepared,
+        // so subsequent tab switches are free.
+        if (isBeta)       prepareTestRowsIfNeeded();
+        if (isDl5)        prepareDl5TestRowsIfNeeded();
+        if (isDl2)        prepareDl2TestRowsIfNeeded();
+        if (isDl4)        prepareDl4TestRowsIfNeeded();
+        if (isMirror)     prepareMirrorTestRowsIfNeeded();
+        if (isClusterDl5) prepareClusterDl5TestRowsIfNeeded();
         if (isExportApk) refreshExportApkListIfNeeded();
         if (isVoice)     onVoicePanelEntered();
         panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice) ? View.GONE : View.VISIBLE);
@@ -339,6 +345,13 @@ public class DiagActivity extends AppCompatActivity {
         btnRunAll.setOnClickListener(v -> runAllTests());
         btnCopyReport.setOnClickListener(v -> copyReport());
         btnCopyReport.setEnabled(false);
+    }
+
+    /** v1.2.46 — lazy : inflate the Beta catalog rows on first panel show. */
+    private void prepareTestRowsIfNeeded() {
+        if (betaRowsPrepared) return;
+        betaRowsPrepared = true;
+        prepareTestRows();
     }
 
     private void prepareTestRows() {
@@ -551,6 +564,13 @@ public class DiagActivity extends AppCompatActivity {
         }
     }
 
+    /** v1.2.46 — lazy : inflate the DL5 catalog rows on first panel show. */
+    private void prepareDl5TestRowsIfNeeded() {
+        if (dl5RowsPrepared) return;
+        dl5RowsPrepared = true;
+        prepareDl5TestRows();
+    }
+
     private void bindDl5Row(View row, DiLink5TestRunner.TestResult r) {
         TextView status = row.findViewById(R.id.tv_test_status);
         TextView id     = row.findViewById(R.id.tv_test_id);
@@ -684,6 +704,13 @@ public class DiagActivity extends AppCompatActivity {
     private void prepareClusterDl5TestRows() {
         prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.catalog());
         dl5ClusterShowingFission = false;
+    }
+
+    /** v1.2.46 — lazy : inflate the DL5 Cluster recon rows on first panel show. */
+    private void prepareClusterDl5TestRowsIfNeeded() {
+        if (clusterDl5RowsPrepared) return;
+        clusterDl5RowsPrepared = true;
+        prepareClusterDl5TestRows();
     }
 
     /** v1.2.41 — shared row builder for either the R-recon or the F-fission catalog. */
@@ -859,6 +886,13 @@ public class DiagActivity extends AppCompatActivity {
         btnDl2CopyReport.setEnabled(false);
     }
 
+    /** v1.2.46 — lazy : inflate the DL2 catalog rows on first panel show. */
+    private void prepareDl2TestRowsIfNeeded() {
+        if (dl2RowsPrepared) return;
+        dl2RowsPrepared = true;
+        prepareDl2TestRows();
+    }
+
     private void prepareDl2TestRows() {
         dl2RowViews.clear();
         dl2LastResults.clear();
@@ -986,6 +1020,13 @@ public class DiagActivity extends AppCompatActivity {
         btnDl4RunAll.setOnClickListener(v -> runDl4AllTests());
         btnDl4CopyReport.setOnClickListener(v -> copyDl4Report());
         btnDl4CopyReport.setEnabled(false);
+    }
+
+    /** v1.2.46 — lazy : inflate the DL4 catalog rows on first panel show. */
+    private void prepareDl4TestRowsIfNeeded() {
+        if (dl4RowsPrepared) return;
+        dl4RowsPrepared = true;
+        prepareDl4TestRows();
     }
 
     private void prepareDl4TestRows() {
@@ -1126,6 +1167,13 @@ public class DiagActivity extends AppCompatActivity {
         btnMirrorRunAll.setOnClickListener(v -> runMirrorAllTests());
         btnMirrorSendLog.setOnClickListener(v -> sendMirrorLog());
         btnMirrorSendLog.setEnabled(false);
+    }
+
+    /** v1.2.46 — lazy : inflate the Mirror catalog rows on first panel show. */
+    private void prepareMirrorTestRowsIfNeeded() {
+        if (mirrorRowsPrepared) return;
+        mirrorRowsPrepared = true;
+        prepareMirrorTestRows();
     }
 
     private void prepareMirrorTestRows() {
@@ -1982,6 +2030,17 @@ public class DiagActivity extends AppCompatActivity {
     private LinearLayout llExportApkList;
     private boolean      exportApkInitialised = false;
     private final Handler exportApkCleanupHandler = new Handler(Looper.getMainLooper());
+
+    // v1.2.46 — lazy test-row preparation flags. Each panel's row catalog
+    // (~10–42 inflations × ~6 findViewById per row) is now built only when the
+    // panel is first shown, instead of all 6 catalogs at onCreate. Cuts the
+    // DiagActivity cold-start from ~400–800 ms down to one catalog's worth.
+    private boolean betaRowsPrepared       = false;
+    private boolean dl5RowsPrepared        = false;
+    private boolean dl2RowsPrepared        = false;
+    private boolean dl4RowsPrepared        = false;
+    private boolean mirrorRowsPrepared     = false;
+    private boolean clusterDl5RowsPrepared = false;
 
     private static final class ExportApkEntry {
         final String pkg;
