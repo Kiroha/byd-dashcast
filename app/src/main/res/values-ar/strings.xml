@@ -127,6 +127,8 @@
     <string name="settings_quick_stop">إيقاف سريع (بدون استعادة العنقود الأصلي)</string>
     <string name="settings_quick_stop_support">يرسل فقط sendInfo 18 + 0 دون تغيير الحجم</string>
     <string name="settings_category_filters_support">إظهار الرقاقات في قائمة التطبيقات</string>
+    <string name="settings_compact_apps_panel">الوضع المضغوط (قائمة التطبيقات الضيقة)</string>
+    <string name="settings_compact_apps_panel_support">يحرر مساحة لمعاينة الكلاستر — عمودان بدلًا من 5</string>
     <string name="settings_section_about">حول</string>
     <string name="settings_about_version_label">الإصدار</string>
     <string name="settings_check_update_title">البحث عن تحديثات</string>

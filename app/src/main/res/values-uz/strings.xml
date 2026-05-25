@@ -127,6 +127,8 @@
     <string name="settings_quick_stop">Tezkor toʻxtatish (asl klasterni tiklamasdan)</string>
     <string name="settings_quick_stop_support">Faqat sendInfo 18 + 0 yuboradi, oʻlchamni oʻzgartirmaydi</string>
     <string name="settings_category_filters_support">Ilovalar menyusida chiplarni koʻrsatish</string>
+    <string name="settings_compact_apps_panel">Ixcham rejim (ilovalar ro\'yxati tor)</string>
+    <string name="settings_compact_apps_panel_support">Klaster oldindan ko\'rinishi uchun joy bo\'shatadi — 5 o\'rniga 2 ustun</string>
     <string name="settings_section_about">Haqida</string>
     <string name="settings_about_version_label">Versiya</string>
     <string name="settings_check_update_title">Yangilanishlarni tekshirish</string>

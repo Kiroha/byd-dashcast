@@ -81,8 +81,24 @@ android {
         //   - Connected-clients list now uses 3 data sources (dumpsys wifip2p +
         //     /proc/net/arp + `ip neigh`), falling back to ARP-on-peer-interface
         //     when dumpsys doesn't populate a client list (BYD ROM variant).
-        versionCode 302
-        versionName "1.2.44-beta"
+        // v1.2.45-beta (build 303) — Main "Compact apps panel" mode.
+        //   - New Settings toggle "Mode compact (liste apps étroite)" (default
+        //     OFF, historical 5-col layout preserved → zero regression for
+        //     users who don't enable it). Pref: PREF_COMPACT_APPS_PANEL.
+        //   - When ON: the left apps column on MainActivity is narrowed
+        //     (layout_weight 1.4 → 0.6) and switched from a 5-column to a
+        //     2-column grid, freeing significant horizontal+vertical space for
+        //     the cluster preview pane on the right.
+        //   - Filter chips row (when enabled via its own pref) is force-hidden
+        //     in compact mode because the chip row no longer fits in a 2-icon
+        //     column. Toggling compact OFF restores the chips per their pref.
+        //   - Live apply: MainActivity.applyCompactAppsPanelMode() is called
+        //     from onResume(), so the layout switches as soon as the user
+        //     leaves SettingsActivity. No activity restart required.
+        //   - toggleViewMode() (list↔grid button in the search bar) also
+        //     honours the compact spanCount on grid re-creation.
+        versionCode 303
+        versionName "1.2.45-beta"
     }
 
     buildTypes {
