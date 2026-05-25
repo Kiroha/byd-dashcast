@@ -97,8 +97,25 @@ android {
         //     leaves SettingsActivity. No activity restart required.
         //   - toggleViewMode() (list↔grid button in the search bar) also
         //     honours the compact spanCount on grid re-creation.
-        versionCode 303
-        versionName "1.2.45-beta"
+        // v1.2.46-beta (build 304) — Diag cold-start perf : lazy test rows.
+        //   - DiagActivity.onCreate() was eagerly inflating the test row
+        //     catalogs of all 6 diag panels (Beta 28 + DL5 31 + DL5 Cluster 42
+        //     + DL2 40 + DL4 40 + Mirror 10 = 191 rows × ~6 findViewById each),
+        //     costing ~400-800 ms of UI-thread time at activity launch even
+        //     though only one panel is visible at a time. User reported the
+        //     Diagnostic page felt slow to open.
+        //   - Fix : each prepare<X>TestRows() now sits behind a lightweight
+        //     IfNeeded() guard (one boolean flag per panel) and is called
+        //     lazily from showPanelForTab() the first time that panel becomes
+        //     visible. Subsequent tab switches are free. Matches the existing
+        //     pattern already used for the Export APK and Voice panels.
+        //   - Zero behavioural change : same rows, same bindings, same Run-All
+        //     pipeline ; only the inflation moment changes (onCreate → first
+        //     showPanelForTab for that tab). The default tab is selected at
+        //     the end of onCreate, so its rows are still ready before the
+        //     first frame is drawn.
+        versionCode 304
+        versionName "1.2.46-beta"
     }
 
     buildTypes {
