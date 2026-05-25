@@ -323,6 +323,15 @@
     <string name="diag_voice_notif_title">DashCast — écoute micro (PoC)</string>
     <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
 
+    <!-- Diag — Voice wake-word card (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Activer</string>
+    <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Modèle : hey_jarvis_v0.1 (placeholder pour « Ok DashCast »)</string>
+    <string name="diag_voice_wakeword_last_fmt">Dernière détection : —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Dernière détection : %1$s (score %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime indisponible — %1$s</string>
+
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_export_apk_header_title">Export APK BYD</string>
     <string name="diag_export_apk_header_subtitle">Liste les APK BYD / XDJA / DiLink / cluster installés, extrait celui de ton choix et l’envoie via Telegram.</string>

@@ -195,8 +195,45 @@ android {
         //   Scope strictly limited to the F-tier extractor (one method
         //   replaced, two call sites updated). F-flow, R-tier, popup logic,
         //   i18n strings, and version-independent infra all untouched.
-        versionCode 307
-        versionName "1.2.49-beta"
+        // v1.2.50-beta (build 308) — Voice tab PoC step 2/3 : wake-word
+        //   placeholder via openWakeWord ONNX Runtime.
+        //   Scope strictly limited to the Diag "Voice" tab. Adds:
+        //     - 3 ONNX assets under app/src/main/assets/voice/wakeword/
+        //       (melspectrogram.onnx 1.0 MB, embedding_model.onnx 1.3 MB,
+        //       hey_jarvis_v0.1.onnx 1.2 MB — openWakeWord release v0.5.1).
+        //       hey_jarvis is a placeholder for the future "Ok DashCast"
+        //       custom model — it validates the ONNX pipeline (melspec →
+        //       embedding → wake) end-to-end on real BYD hardware.
+        //     - New package com.byd.dashcast.voice.wakeword.WakeWordEngine
+        //       wrapping the ONNX Runtime sessions on its own worker thread.
+        //     - VoiceService gets a tiny non-invasive hook : a static
+        //       volatile SampleConsumer field — null in prod, set only when
+        //       the Diag Voice "Wake word" switch is toggled ON. Capture
+        //       loop unchanged when the field is null → zero regression.
+        //     - New ONNX Runtime dependency
+        //       com.microsoft.onnxruntime:onnxruntime-android:1.17.1 +
+        //       global ndk.abiFilters [arm64-v8a, armeabi-v7a] to constrain
+        //       native .so to the only ABIs DiLink ever runs on. Estimated
+        //       APK delta : ~12 MB (3.5 MB ONNX assets + ~8 MB native libs).
+        //     - Diag Voice tab grows a new "Wake word" MaterialCardView
+        //       (switch, score gauge, last-detection timestamp, model id).
+        //       Switch defaults OFF — engine is initialised lazily so that
+        //       users who never open the wake-word card pay zero cost.
+        //     - try/catch wraps every ONNX call ; on init failure the panel
+        //       shows "ONNX Runtime non disponible" and the toggle resets.
+        //   Strictly no edits to MainActivity / ClusterMirrorManager /
+        //   MirrorTestRunner / fission tiers / Settings / production launch
+        //   paths. The wake-word work runs entirely in com.byd.dashcast.
+        //   voice.wakeword.* + a 5-line static hook in VoiceService.
+        versionCode 308
+        versionName "1.2.50-beta"
+
+        // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
+        // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
+        // those two ABIs to keep the APK from ballooning to 60 MB.
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
     }
 
     buildTypes {
@@ -257,4 +294,13 @@ dependencies {
     // v1.2.43-beta — used by the voice PoC (VoiceService → DiagActivity).
     // In-process broadcast only, no system-wide IPC, no extra permissions.
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+
+    // v1.2.50-beta — ONNX Runtime for openWakeWord wake-word detection.
+    // Scope strictly limited to the Diag Voice tab (com.byd.dashcast.voice.wakeword.*).
+    // The library ships native .so for several ABIs; we restrict to arm64+armv7
+    // (the only ABIs DiLink 3/4/5 ever run on) via android.defaultConfig.ndk.abiFilters
+    // to keep the APK growth under control. The runtime is initialised lazily —
+    // production paths never reach this code unless the user toggles the wake-word
+    // switch in the Diagnostic tab.
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
 }

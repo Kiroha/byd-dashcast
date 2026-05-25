@@ -430,4 +430,13 @@ Continuare?</string>
     <string name="diag_voice_notif_title">DashCast — microfono in ascolto (PoC)</string>
     <string name="diag_voice_notif_text">Livello audio analizzato localmente, nulla viene registrato.</string>
 
+    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Parola di attivazione (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Attiva</string>
+    <string name="diag_voice_wakeword_score_label">Punteggio sigmoide (soglia 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Modello: hey_jarvis_v0.1 (segnaposto per «Ok DashCast»)</string>
+    <string name="diag_voice_wakeword_last_fmt">Ultimo rilevamento: —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Ultimo rilevamento: %1$s (punteggio %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime non disponibile — %1$s</string>
+
 </resources>
