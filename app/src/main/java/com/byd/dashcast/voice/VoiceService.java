@@ -95,6 +95,27 @@ public final class VoiceService extends Service {
     private static volatile boolean sIsRunning;
     public  static boolean isRunning() { return sIsRunning; }
 
+    // ─── v1.2.50-beta wake-word hook ───────────────────────────────────────
+    //
+    // The Diag "Wake word" switch installs an in-process consumer that the
+    // capture loop pushes raw PCM frames to. Null in production : when the
+    // user never toggles the switch, this field stays null and the capture
+    // loop's hot path is unchanged versus v1.2.43.
+
+    /** Receives raw 16 kHz mono PCM 16-bit frames as they come out of AudioRecord. */
+    public interface SampleConsumer {
+        /** Called on the voice-capture thread. {@code n} is the number of valid samples in {@code pcm}. */
+        void onFrame(short[] pcm, int n);
+    }
+
+    private static volatile SampleConsumer sSampleConsumer;
+
+    /** Installs (or removes, with {@code null}) the wake-word PCM consumer. */
+    public static void setSampleConsumer(SampleConsumer c) { sSampleConsumer = c; }
+
+    /** Returns the currently installed consumer (or null). */
+    public static SampleConsumer getSampleConsumer() { return sSampleConsumer; }
+
     // ─── Service lifecycle ─────────────────────────────────────────────────
 
     @Override public IBinder onBind(Intent intent) { return null; }
@@ -190,6 +211,16 @@ public final class VoiceService extends Service {
                 sumSq += (long) s * (long) s;
             }
             int rms = (int) Math.sqrt((double) sumSq / (double) read);
+
+            // v1.2.50 wake-word hook : forward the raw frame to the engine
+            // if one is currently installed. Null = production behaviour =
+            // zero overhead. try/catch keeps a misbehaving consumer from
+            // killing the capture loop.
+            SampleConsumer c = sSampleConsumer;
+            if (c != null) {
+                try { c.onFrame(frame, read); }
+                catch (Throwable t) { AppLogger.w(TAG, "SampleConsumer threw: " + t); }
+            }
 
             long now = SystemClock.elapsedRealtime();
             if (now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {

@@ -209,6 +209,13 @@ public class DiagActivity extends AppCompatActivity {
         mDestroyed = true;
         try { exportApkCleanupHandler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         try { unregisterVoiceReceiver(); } catch (Throwable ignore) {}
+        try {
+            if (voiceWakeWordEngine != null) {
+                VoiceService.setSampleConsumer(null);
+                voiceWakeWordEngine.stop();
+                voiceWakeWordEngine = null;
+            }
+        } catch (Throwable ignore) {}
         super.onDestroy();
     }
 
@@ -2318,6 +2325,13 @@ public class DiagActivity extends AppCompatActivity {
     private boolean        voiceReceiverRegistered;
     private boolean        voicePanelBound;
 
+    // v1.2.50-beta wake-word card
+    private com.google.android.material.materialswitch.MaterialSwitch swVoiceWakeword;
+    private ProgressBar    pbVoiceWwScore;
+    private TextView       tvVoiceWwLast;
+    private TextView       tvVoiceWwModel;
+    private com.byd.dashcast.voice.wakeword.WakeWordEngine voiceWakeWordEngine;
+
     private final BroadcastReceiver voiceReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context ctx, Intent intent) {
@@ -2337,6 +2351,8 @@ public class DiagActivity extends AppCompatActivity {
                 int state = intent.getIntExtra(VoiceService.EXTRA_STATE, 0);
                 String reason = intent.getStringExtra(VoiceService.EXTRA_REASON);
                 applyVoiceState(state, reason);
+            } else if (com.byd.dashcast.voice.wakeword.WakeWordEngine.ACTION_WAKEWORD.equals(action)) {
+                onWakeWordBroadcast(intent);
             }
         }
     };
@@ -2354,6 +2370,17 @@ public class DiagActivity extends AppCompatActivity {
             tvVoiceSampleRate.setText(getString(R.string.diag_voice_sample_rate_fmt, VoiceService.SAMPLE_RATE_HZ));
         }
         if (btnVoiceToggle != null) btnVoiceToggle.setOnClickListener(v -> onVoiceToggleClicked());
+
+        // v1.2.50 wake-word card.
+        swVoiceWakeword  = panelVoice.findViewById(R.id.sw_voice_wakeword);
+        pbVoiceWwScore   = panelVoice.findViewById(R.id.pb_voice_ww_score);
+        tvVoiceWwLast    = panelVoice.findViewById(R.id.tv_voice_ww_last);
+        tvVoiceWwModel   = panelVoice.findViewById(R.id.tv_voice_ww_model);
+        if (swVoiceWakeword != null) {
+            swVoiceWakeword.setChecked(voiceWakeWordEngine != null);
+            swVoiceWakeword.setOnCheckedChangeListener((bv, checked) -> onWakeWordToggle(checked));
+        }
+
         // Reflect current state in case the service is already running (e.g. orientation change).
         applyVoiceState(VoiceService.isRunning() ? VoiceService.STATE_STARTED : VoiceService.STATE_STOPPED, null);
         voicePanelBound = true;
@@ -2370,6 +2397,7 @@ public class DiagActivity extends AppCompatActivity {
         IntentFilter f = new IntentFilter();
         f.addAction(VoiceService.ACTION_LEVEL);
         f.addAction(VoiceService.ACTION_STATE);
+        f.addAction(com.byd.dashcast.voice.wakeword.WakeWordEngine.ACTION_WAKEWORD);
         LocalBroadcastManager.getInstance(this).registerReceiver(voiceReceiver, f);
         voiceReceiverRegistered = true;
     }
@@ -2433,6 +2461,66 @@ public class DiagActivity extends AppCompatActivity {
         long mm = s / 60L;
         long ss = s % 60L;
         return String.format(java.util.Locale.US, "%02d:%02d", mm, ss);
+    }
+
+    // ─── v1.2.50 wake-word ──────────────────────────────────────────────────────────────
+
+    private void onWakeWordToggle(boolean enabled) {
+        if (enabled) {
+            if (voiceWakeWordEngine != null) return;
+            try {
+                voiceWakeWordEngine = new com.byd.dashcast.voice.wakeword.WakeWordEngine(this);
+                VoiceService.setSampleConsumer(voiceWakeWordEngine);
+                voiceWakeWordEngine.start();
+            } catch (Throwable t) {
+                AppLogger.e("DiagVoice", "WakeWord init failed: " + t);
+                voiceWakeWordEngine = null;
+                VoiceService.setSampleConsumer(null);
+                if (swVoiceWakeword != null) swVoiceWakeword.setChecked(false);
+                if (tvVoiceWwModel != null) {
+                    tvVoiceWwModel.setText(getString(R.string.diag_voice_wakeword_unavailable,
+                            t.getClass().getSimpleName()));
+                }
+            }
+        } else {
+            VoiceService.setSampleConsumer(null);
+            if (voiceWakeWordEngine != null) {
+                voiceWakeWordEngine.stop();
+                voiceWakeWordEngine = null;
+            }
+            if (pbVoiceWwScore != null) pbVoiceWwScore.setProgress(0);
+        }
+    }
+
+    private void onWakeWordBroadcast(Intent intent) {
+        if (!voicePanelBound) return;
+        boolean unavailable = intent.getBooleanExtra(
+                com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_UNAVAILABLE, false);
+        if (unavailable) {
+            String reason = intent.getStringExtra(
+                    com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_REASON);
+            if (tvVoiceWwModel != null) {
+                tvVoiceWwModel.setText(getString(R.string.diag_voice_wakeword_unavailable,
+                        reason == null ? "?" : reason));
+            }
+            if (swVoiceWakeword != null) swVoiceWakeword.setChecked(false);
+            return;
+        }
+        float score = intent.getFloatExtra(
+                com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_SCORE, 0f);
+        long lastMs = intent.getLongExtra(
+                com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_LAST_MS, 0L);
+        if (pbVoiceWwScore != null) {
+            int p = Math.max(0, Math.min(1000, (int) (score * 1000f)));
+            pbVoiceWwScore.setProgress(p);
+        }
+        if (tvVoiceWwLast != null && lastMs > 0L) {
+            // Convert elapsedRealtime delta into wall-clock HH:mm:ss.
+            long wall = System.currentTimeMillis() - (android.os.SystemClock.elapsedRealtime() - lastMs);
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
+            String when = sdf.format(new java.util.Date(wall));
+            tvVoiceWwLast.setText(getString(R.string.diag_voice_wakeword_last_at_fmt, when, score));
+        }
     }
 
     @Override

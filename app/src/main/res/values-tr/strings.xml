@@ -430,4 +430,13 @@ Devam edilsin mi?</string>
     <string name="diag_voice_notif_title">DashCast — mikrofon dinleniyor (PoC)</string>
     <string name="diag_voice_notif_text">Ses seviyesi yerel olarak analiz ediliyor, hiçbir şey kaydedilmiyor.</string>
 
+    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Etkinleştir</string>
+    <string name="diag_voice_wakeword_score_label">Sigmoid puanı (eşik 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (“Ok DashCast” için yer tutucu)</string>
+    <string name="diag_voice_wakeword_last_fmt">Son algılama: —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Son algılama: %1$s (puan %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime kullanılamıyor — %1$s</string>
+
 </resources>

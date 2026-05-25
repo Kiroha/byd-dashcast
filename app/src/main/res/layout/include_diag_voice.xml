@@ -195,6 +195,87 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Wake-word card (v1.2.50-beta) -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardBackgroundColor="@color/md_surface_container"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/diag_voice_wakeword_card_title"
+                        android:textColor="@color/md_on_surface"
+                        android:textSize="14sp"
+                        android:textStyle="bold"/>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/sw_voice_wakeword"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:text="@string/diag_voice_wakeword_switch"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_voice_ww_model"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/diag_voice_wakeword_model_fmt"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/diag_voice_wakeword_score_label"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"/>
+
+                <ProgressBar
+                    android:id="@+id/pb_voice_ww_score"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="14dp"
+                    android:layout_marginTop="2dp"
+                    android:max="1000"
+                    android:progress="0"
+                    android:progressTint="@color/md_primary"
+                    android:progressBackgroundTint="@color/md_surface_container_high"/>
+
+                <TextView
+                    android:id="@+id/tv_voice_ww_last"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/diag_voice_wakeword_last_fmt"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Hint card -->
         <TextView
             android:layout_width="match_parent"

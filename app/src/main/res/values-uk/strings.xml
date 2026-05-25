@@ -430,4 +430,13 @@
     <string name="diag_voice_notif_title">DashCast — прослуховування мікрофона (PoC)</string>
     <string name="diag_voice_notif_text">Рівень аудіо аналізується локально, нічого не записується.</string>
 
+    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Ключове слово (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Увімкнути</string>
+    <string name="diag_voice_wakeword_score_label">Sigmoid-оцінка (поріг 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Модель: hey_jarvis_v0.1 (замінник для «Ok DashCast»)</string>
+    <string name="diag_voice_wakeword_last_fmt">Останнє виявлення: —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Останнє виявлення: %1$s (оцінка %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime недоступний — %1$s</string>
+
 </resources>
