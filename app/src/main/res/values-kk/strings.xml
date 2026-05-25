@@ -402,4 +402,26 @@
     <string name="diag_export_apk_chooser_title">%1$s APK жіберу</string>
     <string name="diag_export_apk_err_fmt">APK экспорты сәтсіз: %1$s</string>
     <string name="diag_export_apk_err_no_source">Бұл пакет үшін APK жолы табылмады.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Дауыс (alpha)</string>
+    <string name="diag_voice_header_title">Дауыспен басқару — аудио-тізбек PoC</string>
+    <string name="diag_voice_header_subtitle">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
+    <string name="diag_voice_btn_start">Тыңдауды бастау</string>
+    <string name="diag_voice_btn_stop">Тоқтату</string>
+    <string name="diag_voice_state_idle">Қызмет тоқтатылған</string>
+    <string name="diag_voice_state_running">Тыңдалуда…</string>
+    <string name="diag_voice_state_error_fmt">Қате: %1$s</string>
+    <string name="diag_voice_perm_denied">Микрофонға рұқсат берілмеген — PoC-ты іске қосу үшін жүйе параметрлерінде беріңіз.</string>
+    <string name="diag_voice_meter_label">Нақты уақыттағы VU-метр</string>
+    <string name="diag_voice_meter_rms">RMS (орташа деңгей)</string>
+    <string name="diag_voice_meter_peak">Лездік шың</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • шың %2$d • clip %3$d • кадр %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Бұл PoC foreground қызметін ашады, ол микрофонды 16 kHz mono 16-bit оқиды және аудио деңгейін жергілікті көрсетеді. Ештеңе жазылмайды, жіберілмейді немесе талданбайды. «Ok DashCast» оятатын сөзі v1.2.44 нұсқасында (openWakeWord), сөз тану v1.2.45 нұсқасында (Vosk) қосылады.</string>
+    <string name="diag_voice_sample_rate_fmt">Дискретизация: %1$d Hz mono 16-bit • көзі VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — микрофон тыңдауда (PoC)</string>
+    <string name="diag_voice_notif_text">Аудио деңгейі жергілікті талданады, ештеңе жазылмайды.</string>
+
 </resources>

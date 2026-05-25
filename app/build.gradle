@@ -60,8 +60,18 @@ android {
         //     resolves cleanly. Behaviour is identical for the user.
         //   - #17 (broadcast IBinder signature permission) verified already
         //     fully in place since LOT 2 / 1.2.30 — no additional work needed.
-        versionCode 300
-        versionName "1.2.42-beta"
+        // v1.2.43-beta (build 301) — Voice tab PoC step 1/3.
+        //   - New Diagnostic tab "Voice (alpha)" — fully isolated in
+        //     com.byd.dashcast.voice.*. Zero touch to production code paths.
+        //   - VoiceService foreground service: AudioRecord 16 kHz mono 16-bit,
+        //     computes RMS / peak / clip counters every ~50 ms, broadcasts
+        //     them via LocalBroadcastManager. NO machine learning yet — this
+        //     step validates the audio chain (mic permission, FG service,
+        //     AudioRecord device-level wiring) on DL3/DL4/DL5 before adding
+        //     the openWakeWord + Vosk dependencies in v1.2.44 / v1.2.45.
+        //   - APK delta: ~20 KB (one service class + layout + strings).
+        versionCode 301
+        versionName "1.2.43-beta"
     }
 
     buildTypes {
@@ -118,4 +128,8 @@ dependencies {
 
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:1.2.7'
+
+    // v1.2.43-beta — used by the voice PoC (VoiceService → DiagActivity).
+    // In-process broadcast only, no system-wide IPC, no extra permissions.
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
 }

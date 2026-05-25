@@ -178,6 +178,8 @@
                 android:text="@string/diag_tab_cluster_dl5"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_export_apk"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_voice"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -238,6 +240,11 @@
             <include
                 android:id="@+id/panel_export_apk"
                 layout="@layout/include_diag_export_apk"/>
+
+            <!-- Voice PoC panel (v1.2.43) — isolated audio-chain validation, no ML yet -->
+            <include
+                android:id="@+id/panel_voice"
+                layout="@layout/include_diag_voice"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include

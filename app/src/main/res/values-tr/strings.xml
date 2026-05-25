@@ -402,4 +402,26 @@ Devam edilsin mi?</string>
     <string name="diag_export_apk_chooser_title">%1$s APK\'yı gönder</string>
     <string name="diag_export_apk_err_fmt">APK dışa aktarımı başarısız: %1$s</string>
     <string name="diag_export_apk_err_no_source">Bu paket için APK yolu bulunamadı.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Ses (alpha)</string>
+    <string name="diag_voice_header_title">Sesli kontrol — ses zinciri PoC</string>
+    <string name="diag_voice_header_subtitle">Adım 1/3: mikrofonun bu platformda uygulamaya ulaştığını doğrular. Henüz hiçbir ML modeli yüklenmedi.</string>
+    <string name="diag_voice_btn_start">Dinlemeyi başlat</string>
+    <string name="diag_voice_btn_stop">Durdur</string>
+    <string name="diag_voice_state_idle">Servis durdu</string>
+    <string name="diag_voice_state_running">Dinleniyor…</string>
+    <string name="diag_voice_state_error_fmt">Hata: %1$s</string>
+    <string name="diag_voice_perm_denied">Mikrofon izni reddedildi — PoC’yi etkinleştirmek için sistem ayarlarından izin verin.</string>
+    <string name="diag_voice_meter_label">Canlı VU-metre</string>
+    <string name="diag_voice_meter_rms">RMS (ortalama seviye)</string>
+    <string name="diag_voice_meter_peak">Anlık tepe</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • tepe %2$d • clip %3$d • kare %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Bu PoC, mikrofonu 16 kHz mono 16-bit okuyan bir foreground servis başlatır ve ses seviyesini yerel olarak gösterir. Hiçbir veri kaydedilmez, iletilmez veya analiz edilmez. “Ok DashCast” uyandırma kelimesi v1.2.44’te (openWakeWord), konuşma tanıma v1.2.45’te (Vosk) eklenecek.</string>
+    <string name="diag_voice_sample_rate_fmt">Örnekleme: %1$d Hz mono 16-bit • kaynak VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — mikrofon dinleniyor (PoC)</string>
+    <string name="diag_voice_notif_text">Ses seviyesi yerel olarak analiz ediliyor, hiçbir şey kaydedilmiyor.</string>
+
 </resources>

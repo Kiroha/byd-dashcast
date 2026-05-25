@@ -1,8 +1,11 @@
 package com.byd.dashcast;
 
+import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
@@ -27,11 +30,15 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.byd.dashcast.beta.BetaConfig;
 import com.byd.dashcast.beta.BetaTestRunner;
@@ -43,6 +50,7 @@ import com.byd.dashcast.dilink5.Dl5ClusterReconRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
 import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
+import com.byd.dashcast.voice.VoiceService;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
@@ -78,6 +86,7 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_SNIFFER     = 10;
     private static final int TAB_CLUSTER_DL5 = 11;
     private static final int TAB_EXPORT_APK  = 12;
+    private static final int TAB_VOICE       = 13;
 
     private TabLayout    tabs;
     private View         panelBeta;
@@ -90,8 +99,9 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelClusterPoc;
     private View         panelClusterDl5;
     private View         panelExportApk;
+    private View         panelVoice;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 13; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk
+    private static final int TAB_COUNT = 14; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk,voice
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -175,6 +185,7 @@ public class DiagActivity extends AppCompatActivity {
         bindClusterPocPanel();
         bindClusterDl5Panel();
         bindExportApkPanel();
+        bindVoicePanel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
@@ -200,6 +211,7 @@ public class DiagActivity extends AppCompatActivity {
     protected void onDestroy() {
         mDestroyed = true;
         try { exportApkCleanupHandler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
+        try { unregisterVoiceReceiver(); } catch (Throwable ignore) {}
         super.onDestroy();
     }
 
@@ -232,6 +244,7 @@ public class DiagActivity extends AppCompatActivity {
         panelClusterPoc = findViewById(R.id.panel_cluster_poc);
         panelClusterDl5 = findViewById(R.id.panel_cluster_dl5);
         panelExportApk  = findViewById(R.id.panel_export_apk);
+        panelVoice      = findViewById(R.id.panel_voice);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -283,6 +296,7 @@ public class DiagActivity extends AppCompatActivity {
         boolean isClusterPoc = position == TAB_CLUSTER;
         boolean isClusterDl5 = position == TAB_CLUSTER_DL5;
         boolean isExportApk  = position == TAB_EXPORT_APK;
+        boolean isVoice      = position == TAB_VOICE;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -293,9 +307,11 @@ public class DiagActivity extends AppCompatActivity {
         panelClusterPoc.setVisibility(isClusterPoc ? View.VISIBLE : View.GONE);
         panelClusterDl5.setVisibility(isClusterDl5 ? View.VISIBLE : View.GONE);
         panelExportApk.setVisibility(isExportApk ? View.VISIBLE : View.GONE);
+        panelVoice.setVisibility(isVoice ? View.VISIBLE : View.GONE);
         if (isExportApk) refreshExportApkListIfNeeded();
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk) {
+        if (isVoice)     onVoicePanelEntered();
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -2207,5 +2223,151 @@ public class DiagActivity extends AppCompatActivity {
         if (kb < 1024) return String.format(java.util.Locale.US, "%.1f KB", kb);
         double mb = kb / 1024.0;
         return String.format(java.util.Locale.US, "%.1f MB", mb);
+    }
+
+    // ─── Voice PoC panel (v1.2.43-beta, ML-free chain validator) ───────────
+
+    /** Permission request code for RECORD_AUDIO, scoped to the Voice tab. */
+    private static final int RC_VOICE_RECORD_AUDIO = 0x7AC0;
+
+    private TextView       tvVoiceStatePill;
+    private TextView       tvVoiceSampleRate;
+    private TextView       tvVoiceRunTime;
+    private TextView       tvVoiceStats;
+    private ProgressBar    pbVoiceRms;
+    private ProgressBar    pbVoicePeak;
+    private MaterialButton btnVoiceToggle;
+    private boolean        voiceReceiverRegistered;
+    private boolean        voicePanelBound;
+
+    private final BroadcastReceiver voiceReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent intent) {
+            if (intent == null) return;
+            String action = intent.getAction();
+            if (VoiceService.ACTION_LEVEL.equals(action)) {
+                int rms   = intent.getIntExtra(VoiceService.EXTRA_RMS, 0);
+                int peak  = intent.getIntExtra(VoiceService.EXTRA_PEAK, 0);
+                long clip = intent.getLongExtra(VoiceService.EXTRA_CLIP, 0L);
+                long fr   = intent.getLongExtra(VoiceService.EXTRA_FRAMES, 0L);
+                long ms   = intent.getLongExtra(VoiceService.EXTRA_RUN_MS, 0L);
+                if (pbVoiceRms != null)   pbVoiceRms.setProgress(rms);
+                if (pbVoicePeak != null)  pbVoicePeak.setProgress(peak);
+                if (tvVoiceStats != null) tvVoiceStats.setText(getString(R.string.diag_voice_stats_fmt, rms, peak, clip, fr));
+                if (tvVoiceRunTime != null) tvVoiceRunTime.setText(formatVoiceRunTime(ms));
+            } else if (VoiceService.ACTION_STATE.equals(action)) {
+                int state = intent.getIntExtra(VoiceService.EXTRA_STATE, 0);
+                String reason = intent.getStringExtra(VoiceService.EXTRA_REASON);
+                applyVoiceState(state, reason);
+            }
+        }
+    };
+
+    private void bindVoicePanel() {
+        if (panelVoice == null) return;
+        tvVoiceStatePill  = panelVoice.findViewById(R.id.tv_voice_state_pill);
+        tvVoiceSampleRate = panelVoice.findViewById(R.id.tv_voice_sample_rate);
+        tvVoiceRunTime    = panelVoice.findViewById(R.id.tv_voice_run_time);
+        tvVoiceStats      = panelVoice.findViewById(R.id.tv_voice_stats);
+        pbVoiceRms        = panelVoice.findViewById(R.id.pb_voice_rms);
+        pbVoicePeak       = panelVoice.findViewById(R.id.pb_voice_peak);
+        btnVoiceToggle    = panelVoice.findViewById(R.id.btn_voice_toggle);
+        if (tvVoiceSampleRate != null) {
+            tvVoiceSampleRate.setText(getString(R.string.diag_voice_sample_rate_fmt, VoiceService.SAMPLE_RATE_HZ));
+        }
+        if (btnVoiceToggle != null) btnVoiceToggle.setOnClickListener(v -> onVoiceToggleClicked());
+        // Reflect current state in case the service is already running (e.g. orientation change).
+        applyVoiceState(VoiceService.isRunning() ? VoiceService.STATE_STARTED : VoiceService.STATE_STOPPED, null);
+        voicePanelBound = true;
+    }
+
+    /** Called when the user navigates to the Voice tab; lazy-registers the local broadcast receiver. */
+    private void onVoicePanelEntered() {
+        registerVoiceReceiverIfNeeded();
+        applyVoiceState(VoiceService.isRunning() ? VoiceService.STATE_STARTED : VoiceService.STATE_STOPPED, null);
+    }
+
+    private void registerVoiceReceiverIfNeeded() {
+        if (voiceReceiverRegistered) return;
+        IntentFilter f = new IntentFilter();
+        f.addAction(VoiceService.ACTION_LEVEL);
+        f.addAction(VoiceService.ACTION_STATE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(voiceReceiver, f);
+        voiceReceiverRegistered = true;
+    }
+
+    private void unregisterVoiceReceiver() {
+        if (!voiceReceiverRegistered) return;
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(voiceReceiver);
+        voiceReceiverRegistered = false;
+    }
+
+    private void onVoiceToggleClicked() {
+        if (VoiceService.isRunning()) {
+            VoiceService.stop(this);
+            applyVoiceState(VoiceService.STATE_STOPPED, null);
+            return;
+        }
+        // Need RECORD_AUDIO at runtime on API 23+ (always true on DL3/4/5).
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO}, RC_VOICE_RECORD_AUDIO);
+            return;
+        }
+        startVoiceService();
+    }
+
+    private void startVoiceService() {
+        registerVoiceReceiverIfNeeded();
+        VoiceService.start(this);
+        // Service will broadcast STATE_STARTED → we update the UI from the receiver.
+    }
+
+    private void applyVoiceState(int state, String reason) {
+        if (!voicePanelBound) return;
+        switch (state) {
+            case VoiceService.STATE_STARTED:
+                if (tvVoiceStatePill != null) tvVoiceStatePill.setText(getString(R.string.diag_voice_state_running));
+                if (btnVoiceToggle != null)   btnVoiceToggle.setText(getString(R.string.diag_voice_btn_stop));
+                break;
+            case VoiceService.STATE_ERROR:
+                String msg = (reason == null || reason.isEmpty()) ? "?" : reason;
+                if (tvVoiceStatePill != null) tvVoiceStatePill.setText(getString(R.string.diag_voice_state_error_fmt, msg));
+                if (btnVoiceToggle != null)   btnVoiceToggle.setText(getString(R.string.diag_voice_btn_start));
+                if (pbVoiceRms != null)       pbVoiceRms.setProgress(0);
+                if (pbVoicePeak != null)      pbVoicePeak.setProgress(0);
+                break;
+            case VoiceService.STATE_STOPPED:
+            default:
+                if (tvVoiceStatePill != null) tvVoiceStatePill.setText(getString(R.string.diag_voice_state_idle));
+                if (btnVoiceToggle != null)   btnVoiceToggle.setText(getString(R.string.diag_voice_btn_start));
+                if (pbVoiceRms != null)       pbVoiceRms.setProgress(0);
+                if (pbVoicePeak != null)      pbVoicePeak.setProgress(0);
+                if (tvVoiceStats != null)     tvVoiceStats.setText(getString(R.string.diag_voice_stats_idle));
+                if (tvVoiceRunTime != null)   tvVoiceRunTime.setText(getString(R.string.diag_voice_stats_idle));
+                break;
+        }
+    }
+
+    private static String formatVoiceRunTime(long ms) {
+        long s  = ms / 1000L;
+        long mm = s / 60L;
+        long ss = s % 60L;
+        return String.format(java.util.Locale.US, "%02d:%02d", mm, ss);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != RC_VOICE_RECORD_AUDIO) return;
+        boolean granted = grantResults != null && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (granted) {
+            startVoiceService();
+        } else {
+            Toast.makeText(getApplicationContext(),
+                    R.string.diag_voice_perm_denied, Toast.LENGTH_LONG).show();
+        }
     }
 }
