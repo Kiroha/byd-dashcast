@@ -387,6 +387,10 @@
 Продовжити?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустити тест</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission лише для DiLink 5.</string>
+    <string name="diag_dl5_fission_prompt_title">Перевірка кластера</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Чи видно Yandex Maps на екрані кластера?\n\n(тест екрана %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Так</string>
+    <string name="diag_dl5_fission_prompt_no">Ні</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">Експорт APK BYD</string>

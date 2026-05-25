@@ -816,6 +816,23 @@ public class DiagActivity extends AppCompatActivity {
                 btnDl5ClusterSendTelegram.setEnabled(true);
                 updateClusterDl5Counters();
             }
+            // v1.2.48 — interactive Yes/No prompt for the fission runner.
+            // Called on the UI thread; the runner thread blocks until the
+            // callback is invoked (or its 180 s safety timeout elapses, in
+            // which case the result is recorded as NO).
+            @Override public void onPromptYesNo(String title, String message,
+                                                java.util.function.Consumer<Boolean> callback) {
+                if (mDestroyed) { callback.accept(false); return; }
+                new androidx.appcompat.app.AlertDialog.Builder(DiagActivity.this)
+                        .setTitle(title)
+                        .setMessage(message)
+                        .setCancelable(false)
+                        .setPositiveButton(R.string.diag_dl5_fission_prompt_yes,
+                                (d, w) -> callback.accept(true))
+                        .setNegativeButton(R.string.diag_dl5_fission_prompt_no,
+                                (d, w) -> callback.accept(false))
+                        .show();
+            }
         });
     }
 

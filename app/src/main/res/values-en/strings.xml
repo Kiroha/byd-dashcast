@@ -327,6 +327,10 @@
     <string name="diag_dl5_cluster_test_fission_confirm_msg">This suite will:\n\n• Enable FORCE_RESIZE_APP compat on Yandex Maps\n• Force-stop Yandex Maps\n• Launch it on the fission display (id ≠ 0) in freeform windowingMode\n• Test a task resize\n• Move it back to the main display (id 0) to validate the move pipeline\n• Force-stop Yandex then reset the compat (cleanup)\n\nNo resize command is ever sent against the main display (id 0).\nContinue?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Run the test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission is DiLink 5 only.</string>
+    <string name="diag_dl5_fission_prompt_title">Cluster verification</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Is Yandex Maps visible on the cluster screen?\n\n(testing display %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Yes</string>
+    <string name="diag_dl5_fission_prompt_no">No</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">Local ADB</string>
     <string name="diag_tab_system">System</string>

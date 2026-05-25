@@ -387,6 +387,10 @@ Ningún comando de redimensionado se envía nunca a la pantalla principal (id 0)
 ¿Continuar?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Ejecutar el test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission reservado a DiLink 5.</string>
+    <string name="diag_dl5_fission_prompt_title">Verificación del clúster</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">¿Yandex Maps es visible en la pantalla del clúster?\n\n(probando pantalla %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Sí</string>
+    <string name="diag_dl5_fission_prompt_no">No</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">Exportar APK BYD</string>

@@ -137,8 +137,44 @@ android {
         //     - F08 scopes `mBounds=Rect` extraction to the specific
         //       `#<taskId} ` block with `grep -A 25`.
         //   No behavioural change outside the F-tier diagnostic battery.
-        versionCode 305
-        versionName "1.2.47-beta"
+        // v1.2.48-beta (build 306) — DL5 Fission interactive multi-display probe.
+        //   Second field test (run 20260525_144058) still scored 9 PASS / 2 WARN
+        //   / 1 FAIL because:
+        //     - The awk parser of v1.2.47 matched the FIRST `A=…yandexmaps`
+        //       occurrence in dumpsys, which is in the flat task list BEFORE
+        //       any `displayId=…` line → DISP= came out empty, F06 FAIL +
+        //       F10 WARN (false negatives — Yandex actually was on display 3).
+        //     - Tasks launched on fission displays end up `mode=fullscreen`
+        //       even with `--windowingMode 5` because the display itself
+        //       declares `mDisplayWindowingMode=fullscreen`; the later
+        //       `cmd activity task resize` is therefore a silent no-op.
+        //     - Dumpsys-based "which display is the cluster?" guesswork is
+        //       fragile on a 4-display ROM.
+        //   v1.2.48 rewrites the F-tier as an INTERACTIVE probe:
+        //     - F01 opens the cluster projection itself
+        //       (`service call auto_container 2 i32 1000 i32 16 s16 ""`) so
+        //       fission displays become routable.
+        //     - F04/F06/F08 force-stop + launch Yandex on candidate displays
+        //       2, 3, 4 in turn.
+        //     - F05/F07/F09 are localized Yes/No popups asking the user
+        //       "Is Yandex Maps visible on the cluster screen?". The runner
+        //       blocks on a CountDownLatch (180 s safety timeout). YES marks
+        //       that display as the cluster and skips the remaining probes;
+        //       NO moves Yandex back to display 0 + force-stops so the next
+        //       candidate launches from a clean slate.
+        //     - F10 sets the task to freeform (`cmd activity
+        //       set-task-windowing-mode <tid> 5`) ON the confirmed display,
+        //       working around the display-level fullscreen lock.
+        //     - F11/F12 resize + verify bounds; F13 moves back to display 0;
+        //       F14/F15/F16 clean up (force-stop, reset compat, close
+        //       projection if F01 opened it).
+        //   New i18n keys × 12 locales (~50 strings, idempotent script-style
+        //   batch edit). DiagActivity adds an `onPromptYesNo` AlertDialog
+        //   override on the existing fission Listener — non-DL5 platforms
+        //   and the R-tier listener are untouched (default method = NO).
+        //   Scope strictly limited to the F-tier diagnostic battery.
+        versionCode 306
+        versionName "1.2.48-beta"
     }
 
     buildTypes {

@@ -387,6 +387,10 @@ Kein Resize-Befehl wird jemals an den Hauptbildschirm (id 0) gesendet.
 Fortfahren?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Test starten</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission-Test ist nur für DiLink 5.</string>
+    <string name="diag_dl5_fission_prompt_title">Cluster-Überprüfung</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Ist Yandex Maps auf dem Cluster-Display sichtbar?\n\n(Test Display %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Ja</string>
+    <string name="diag_dl5_fission_prompt_no">Nein</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">BYD APK exportieren</string>

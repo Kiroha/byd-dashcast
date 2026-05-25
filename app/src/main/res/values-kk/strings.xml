@@ -387,6 +387,10 @@
 Жалғастыру керек пе?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Тестті іске қосу</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
+    <string name="diag_dl5_fission_prompt_title">Кластерді тексеру</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Maps кластер экранында көрінеді ме?\n\n(%1$d экранын сынау)</string>
+    <string name="diag_dl5_fission_prompt_yes">Иә</string>
+    <string name="diag_dl5_fission_prompt_no">Жоқ</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">BYD APK экспорты</string>
