@@ -100,18 +100,21 @@ public final class Dl5ClusterReconRunner {
                 "Display manager verbs (typically lock-rotation, set-brightness, etc — useful baseline)."));
 
         // ── Compat framework (the FORCE_RESIZE_APP hypothesis) ───────────
-        list.add(new DiLink5TestRunner.TestDef("R13", "am compat --help",
-                "Confirms the compat framework shell surface is present on this ROM."));
-        list.add(new DiLink5TestRunner.TestDef("R14", "am compat list (first 60)",
-                "All compat changes visible from shell — search for FORCE_RESIZE_APP / OVERRIDE_MIN_ASPECT_RATIO / NEVER_SANDBOX_DISPLAY_APIS."));
-        list.add(new DiLink5TestRunner.TestDef("R15", "am compat get FORCE_RESIZE_APP self",
-                "By-name lookup against our own package — confirms the symbolic name resolves."));
-        list.add(new DiLink5TestRunner.TestDef("R16", "am compat get 174042936 self",
-                "Numeric ID lookup (more robust on ROMs that strip change names)."));
-        list.add(new DiLink5TestRunner.TestDef("R17", "am compat get NEVER_SANDBOX_DISPLAY_APIS self",
-                "Related: prevents the display sandbox for non-resizable apps."));
-        list.add(new DiLink5TestRunner.TestDef("R18", "am compat get OVERRIDE_MIN_ASPECT_RATIO self",
-                "Related: aspect-ratio compat shim, relevant for cluster geometry."));
+        // v1.2.38: revised after DL5 field log proved the AOSP shell on this
+        // ROM exposes only `enable|disable|reset` (no `get` verb). We use
+        // `am compat list <pkg>` for read-back instead.
+        list.add(new DiLink5TestRunner.TestDef("R13", "am compat help",
+                "`am compat enable` with no further args triggers AOSP's usage hint. Confirms the verb surface (enable|disable|reset|reset-all|list) without mutating anything."));
+        list.add(new DiLink5TestRunner.TestDef("R14", "am compat list <self>",
+                "`am compat list com.byd.dashcast` — AOSP read-back syntax. Lists every change ID (numeric or symbolic) with its current state for our own package."));
+        list.add(new DiLink5TestRunner.TestDef("R15", "am compat list ru.yandex.yandexmaps",
+                "Same read-back against Yandex Maps — the actual target of the FORCE_RESIZE_APP fix."));
+        list.add(new DiLink5TestRunner.TestDef("R16", "am compat list com.waze",
+                "Same read-back against Waze."));
+        list.add(new DiLink5TestRunner.TestDef("R17", "am compat reset 174042936 self (dry probe)",
+                "`am compat reset 174042936 com.byd.dashcast` — reset has no effect when no override was set, but confirms the change ID is resolvable (PASS = no error message)."));
+        list.add(new DiLink5TestRunner.TestDef("R18", "appcompat dumpsys filter",
+                "`dumpsys platform_compat | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20` — confirms the compat changes are registered in the platform compat service."));
 
         // ── Global settings + dumpsys snapshots ──────────────────────────
         list.add(new DiLink5TestRunner.TestDef("R19", "force_resizable_activities current",
@@ -123,7 +126,7 @@ public final class Dl5ClusterReconRunner {
         list.add(new DiLink5TestRunner.TestDef("R22", "dumpsys display keyword",
                 "dumpsys display | grep -E 'Display Id|UniqueId|Owner|Name|fission|xdja|cluster|PRESENTATION'."));
         list.add(new DiLink5TestRunner.TestDef("R23", "Active root tasks",
-                "dumpsys activity activities | grep -E 'Stack|RootTask|displayId|mWindowingMode' | head -30."));
+                "dumpsys activity activities | sed -n '/Display #/,/Display #/p' | grep -E '#[0-9]+ |Task=Task|mBounds=|mWindowingMode|displayId=' | grep -v mGlobalConfig | head -30. Stanza-bound to avoid the mGlobalConfig noise."));
 
         // ── Window manager geometry per display ──────────────────────────
         list.add(new DiLink5TestRunner.TestDef("R24", "wm size + wm density (default)",
@@ -132,12 +135,15 @@ public final class Dl5ClusterReconRunner {
                 "Per-display geometry of the cluster display, if found in R02."));
 
         // ── Per-app probing (cluster targets) ────────────────────────────
-        list.add(new DiLink5TestRunner.TestDef("R26", "Yandex Maps probe",
-                "pm dump ru.yandex.yandexmaps | grep -E 'resizeable|maxAspectRatio|launchMode' — only if installed."));
-        list.add(new DiLink5TestRunner.TestDef("R27", "Google Maps probe",
-                "pm dump com.google.android.apps.maps | grep -E 'resizeable|maxAspectRatio|launchMode'."));
-        list.add(new DiLink5TestRunner.TestDef("R28", "Waze probe",
-                "pm dump com.waze | grep -E 'resizeable|maxAspectRatio|launchMode'."));
+        // v1.2.38: target the ACTIVITY-level `resizeableActivity` attribute,
+        // not the `<supports-screens>` resizeable (false positive on apps that
+        // declare large/xlarge screen support but still ban activity resize).
+        list.add(new DiLink5TestRunner.TestDef("R26", "Yandex Maps activity flags",
+                "pm dump ru.yandex.yandexmaps | grep -E 'resizeMode|resizeableActivity|maxAspectRatio|launchMode|targetSdk' | head -10 — actual activity-level resize flags."));
+        list.add(new DiLink5TestRunner.TestDef("R27", "Google Maps activity flags",
+                "Same for Google Maps when installed."));
+        list.add(new DiLink5TestRunner.TestDef("R28", "Waze activity flags",
+                "Same for Waze."));
 
         // ── Services + system surface ────────────────────────────────────
         list.add(new DiLink5TestRunner.TestDef("R29", "service list (cluster-relevant)",
@@ -189,9 +195,9 @@ public final class Dl5ClusterReconRunner {
 
     private static void runOne(Context ctx, DiLink5TestRunner.TestResult r) {
         switch (r.def.id) {
-            case "R01": probePlatform(r); return;
+            case "R01": probePlatform(ctx, r); return;
             case "R02": probeDisplays(ctx, r); return;
-            case "R03": shellCapture(ctx, r, "id -u && id -un && uname -a", "uid=2000", "shell"); return;
+            case "R03": shellCapture(ctx, r, "id -u && id -un && uname -a", "2000", "shell"); return;
             case "R04": shellCapture(ctx, r, "getenforce ; id -Z", "Enforcing", null); return;
             case "R05": probeClusterApps(ctx, r); return;
             case "R06": shellCapture(ctx, r, "am 2>&1 | head -80", null, null); return;
@@ -201,12 +207,12 @@ public final class Dl5ClusterReconRunner {
             case "R10": shellCapture(ctx, r, "wm 2>&1 | head -60", "size", "density"); return;
             case "R11": shellCapture(ctx, r, "cmd window 2>&1 | head -60", null, null); return;
             case "R12": shellCapture(ctx, r, "cmd display 2>&1 | head -40", null, null); return;
-            case "R13": shellCapture(ctx, r, "am compat 2>&1 | head -40", "enable", "disable"); return;
-            case "R14": shellCapture(ctx, r, "am compat list 2>&1 | head -60", "FORCE_RESIZE_APP", null); return;
-            case "R15": shellCapture(ctx, r, "am compat get FORCE_RESIZE_APP " + ctx.getPackageName() + " 2>&1", null, null); return;
-            case "R16": shellCapture(ctx, r, "am compat get 174042936 " + ctx.getPackageName() + " 2>&1", null, null); return;
-            case "R17": shellCapture(ctx, r, "am compat get NEVER_SANDBOX_DISPLAY_APIS " + ctx.getPackageName() + " 2>&1", null, null); return;
-            case "R18": shellCapture(ctx, r, "am compat get OVERRIDE_MIN_ASPECT_RATIO " + ctx.getPackageName() + " 2>&1", null, null); return;
+            case "R13": shellCapture(ctx, r, "am compat enable 2>&1 | head -40", "enable", null); return;
+            case "R14": shellCapture(ctx, r, "am compat list " + ctx.getPackageName() + " 2>&1 | head -80", null, null); return;
+            case "R15": shellCapture(ctx, r, "am compat list ru.yandex.yandexmaps 2>&1 | head -80", null, null); return;
+            case "R16": shellCapture(ctx, r, "am compat list com.waze 2>&1 | head -80", null, null); return;
+            case "R17": shellCapture(ctx, r, "am compat reset 174042936 " + ctx.getPackageName() + " 2>&1", null, null); return;
+            case "R18": shellCapture(ctx, r, "dumpsys platform_compat 2>&1 | grep -E 'FORCE_RESIZE_APP|OVERRIDE_MIN_ASPECT_RATIO|NEVER_SANDBOX_DISPLAY_APIS' | head -20", null, null); return;
             case "R19": shellCapture(ctx, r, "settings get global force_resizable_activities 2>&1", null, null); return;
             case "R20": shellCapture(ctx, r,
                     "settings list global 2>&1 | grep -E 'resizable|freeform|multi|sandbox|ignore_orientation' | head -30", null, null); return;
@@ -215,7 +221,7 @@ public final class Dl5ClusterReconRunner {
             case "R22": shellCapture(ctx, r,
                     "dumpsys display 2>&1 | grep -E 'Display Id|UniqueId|Owner|Name|fission|xdja|cluster|PRESENTATION' | head -40", null, null); return;
             case "R23": shellCapture(ctx, r,
-                    "dumpsys activity activities 2>&1 | grep -E 'Stack|RootTask|displayId|mWindowingMode' | head -30", null, null); return;
+                    "dumpsys activity activities 2>&1 | grep -v mGlobalConfig | grep -E '^  Display #|Task=Task|mBounds=Rect|mWindowingMode=|displayId=' | head -40", null, null); return;
             case "R24": shellCapture(ctx, r, "wm size 2>&1 ; wm density 2>&1", null, null); return;
             case "R25": probeClusterDisplayGeometry(ctx, r); return;
             case "R26": probePerApp(ctx, r, "ru.yandex.yandexmaps"); return;
@@ -231,13 +237,18 @@ public final class Dl5ClusterReconRunner {
         }
     }
 
-    private static void probePlatform(DiLink5TestRunner.TestResult r) {
+    private static void probePlatform(Context ctx, DiLink5TestRunner.TestResult r) {
         StringBuilder sb = new StringBuilder();
         sb.append("Build.MODEL=").append(Build.MODEL).append('\n');
         sb.append("Build.PRODUCT=").append(Build.PRODUCT).append('\n');
         sb.append("Build.FINGERPRINT=").append(Build.FINGERPRINT).append('\n');
         sb.append("SDK_INT=").append(Build.VERSION.SDK_INT).append('\n');
-        sb.append("Platform.detected=").append(Platform.get().describeMode(null));
+        // v1.2.38 fix: describeMode(null) NPEs on getApplicationContext().
+        try {
+            sb.append("Platform.detected=").append(Platform.get().describeMode(ctx));
+        } catch (Throwable th) {
+            sb.append("Platform.detected=<exception: ").append(th.getMessage()).append('>');
+        }
         r.detail = sb.toString();
         boolean dl5 = Platform.get().isAutoDetectedDiLink5();
         r.status  = dl5 ? DiLink5TestRunner.Status.PASS : DiLink5TestRunner.Status.WARN;
@@ -245,32 +256,51 @@ public final class Dl5ClusterReconRunner {
                           "non-DL5 (API " + Build.VERSION.SDK_INT + ")";
     }
 
+    /**
+     * Display enumeration that combines DisplayManager (app-uid visible) with a
+     * dumpsys-based fallback that surfaces displays hidden by the framework
+     * (notably the physical cluster display id=2 on DL5, which is owned by
+     * containerservice and never returned by DisplayManager.getDisplays()).
+     */
     private static void probeDisplays(Context ctx, DiLink5TestRunner.TestResult r) {
-        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
-        if (dm == null) { r.status = DiLink5TestRunner.Status.FAIL; r.message = "no DisplayManager"; return; }
-        Display[] all = dm.getDisplays();
         StringBuilder sb = new StringBuilder();
-        int cluster = -1;
+        // 1) DisplayManager view (what the app uid sees).
+        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
+        Display[] all = dm == null ? new Display[0] : dm.getDisplays();
+        sb.append("DisplayManager.getDisplays(): ").append(all.length).append(" display(s)\n");
         for (Display d : all) {
-            sb.append("id=").append(d.getDisplayId())
+            sb.append("  id=").append(d.getDisplayId())
               .append(" name=").append(d.getName())
               .append(" state=").append(d.getState())
-              .append(" flags=").append(Integer.toHexString(d.getFlags()))
+              .append(" flags=0x").append(Integer.toHexString(d.getFlags()))
               .append('\n');
+        }
+        // 2) dumpsys display — catches hidden physical displays (id=2 on DL5).
+        String dump = shellSync(ctx,
+                "dumpsys display 2>&1 | grep -E '  Display Id=|DisplayDeviceInfo\\{' | head -40");
+        sb.append("\ndumpsys display:\n").append(dump == null ? "<no output>" : dump);
+        // 3) Cluster id heuristic: prefer the FIRST DisplayManager non-default
+        // display whose name matches fission/xdja/cluster/virtual. If none, try
+        // to parse a Display Id from the dumpsys output that's != 0.
+        int cluster = -1;
+        for (Display d : all) {
+            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
             String name = d.getName() == null ? "" : d.getName().toLowerCase();
-            if (d.getDisplayId() != Display.DEFAULT_DISPLAY
-                    && (name.contains("fission") || name.contains("xdja")
-                        || name.contains("cluster") || name.contains("virtual"))) {
+            if (name.contains("fission") || name.contains("xdja")
+                    || name.contains("cluster") || name.contains("virtual")) {
                 cluster = d.getDisplayId();
+                break; // first wins, not last
             }
         }
         r.detail = sb.toString().trim();
         if (cluster >= 0) {
             r.status = DiLink5TestRunner.Status.PASS;
-            r.message = "cluster displayId=" + cluster + " (" + all.length + " total)";
+            r.message = "cluster displayId=" + cluster + " (" + all.length
+                    + " via DisplayManager, +dumpsys for hidden ids)";
         } else {
             r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "no cluster display found among " + all.length;
+            r.message = "no cluster display among " + all.length
+                    + " — see dumpsys output for hidden ids";
         }
     }
 
@@ -282,26 +312,38 @@ public final class Dl5ClusterReconRunner {
         shellCapture(ctx, r, cmd.toString(), "INSTALLED", null);
     }
 
+    /**
+     * Per-display geometry. v1.2.38: we don't trust DisplayManager alone on DL5
+     * because the hardware cluster display is hidden from app uid (only the
+     * containerservice-owned virtual proxies id=3/4 are exposed). We parse the
+     * full `dumpsys display` output for `Display Id=N` entries and probe `wm
+     * size -d N` for every non-default id found.
+     */
     private static void probeClusterDisplayGeometry(Context ctx, DiLink5TestRunner.TestResult r) {
-        DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
-        int cluster = -1;
-        if (dm != null) {
-            for (Display d : dm.getDisplays()) {
-                String name = d.getName() == null ? "" : d.getName().toLowerCase();
-                if (d.getDisplayId() != Display.DEFAULT_DISPLAY
-                        && (name.contains("fission") || name.contains("xdja")
-                            || name.contains("cluster") || name.contains("virtual"))) {
-                    cluster = d.getDisplayId(); break;
-                }
-            }
-        }
-        if (cluster < 0) {
-            r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "cluster display not detected (R02)";
+        String idList = shellSync(ctx,
+                "dumpsys display 2>&1 | grep -oE '  Display Id=[0-9]+' | grep -oE '[0-9]+' | sort -u | tr '\\n' ' '");
+        if (idList == null || idList.trim().isEmpty()) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "no Display Id parsed from dumpsys";
             return;
         }
-        shellCapture(ctx, r,
-                "wm size -d " + cluster + " 2>&1 ; wm density -d " + cluster + " 2>&1", null, null);
+        String[] ids = idList.trim().split("\\s+");
+        StringBuilder cmd = new StringBuilder();
+        for (String id : ids) {
+            if ("0".equals(id)) continue; // default already done in R24
+            cmd.append("echo '--- display ").append(id).append(" ---' ; ")
+               .append("wm size -d ").append(id).append(" 2>&1 ; ")
+               .append("wm density -d ").append(id).append(" 2>&1 ; ");
+        }
+        if (cmd.length() == 0) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "only default display visible (ids=" + idList.trim() + ")";
+            return;
+        }
+        shellCapture(ctx, r, cmd.toString(), null, null);
+        if (r.status == DiLink5TestRunner.Status.PASS) {
+            r.message = "probed ids: " + idList.trim();
+        }
     }
 
     private static void probePerApp(Context ctx, DiLink5TestRunner.TestResult r, String pkg) {
@@ -312,9 +354,26 @@ public final class Dl5ClusterReconRunner {
             r.message = pkg + " not installed";
             return;
         }
+        // v1.2.38: target the activity-level resize flags (resizeMode,
+        // resizeableActivity) instead of the manifest-level <supports-screens>.
         shellCapture(ctx, r,
-                "pm dump " + pkg + " 2>&1 | grep -E 'resizeable|maxAspectRatio|launchMode|targetSdk' | head -10",
+                "pm dump " + pkg + " 2>&1 | grep -E 'resizeMode|resizeableActivity|maxAspectRatio|launchMode|targetSdk' | head -10",
                 null, null);
+    }
+
+    /** Synchronous shell helper used by sub-probes. Returns stdout (or null on error/timeout). */
+    private static String shellSync(Context ctx, String cmd) {
+        final AtomicReference<String> out = new AtomicReference<>(null);
+        final AtomicReference<String> err = new AtomicReference<>(null);
+        final Object lock = new Object();
+        AdbLocalClient.executeShellWithResult(ctx, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String s) { out.set(s == null ? "" : s); synchronized (lock) { lock.notifyAll(); } }
+            @Override public void onError(String e)   { err.set(e == null ? "?" : e); synchronized (lock) { lock.notifyAll(); } }
+        });
+        synchronized (lock) {
+            try { lock.wait(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        }
+        return err.get() != null ? null : out.get();
     }
 
     /**
