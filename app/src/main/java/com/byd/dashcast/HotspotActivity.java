@@ -117,8 +117,12 @@ public class HotspotActivity extends AppCompatActivity {
     // and snapshot a baseline at first observed UP probe so the displayed
     // Rx/Tx reflects "this hotspot session" only (resets when service goes
     // DOWN). Uptime is measured locally from the same DOWN→UP edge.
-    private static final long STATS_PERIOD_MS = 5_000L;
-    private final Handler statsHandler = new Handler(Looper.getMainLooper());
+    // v1.2.44 fix : the heavy probe runs every 5s (ADB dumpsys), but the
+    // uptime chrono ticks every 1s independently for a fluid display.
+    private static final long STATS_PERIOD_MS  = 5_000L;
+    private static final long UPTIME_TICK_MS   = 1_000L;
+    private final Handler statsHandler  = new Handler(Looper.getMainLooper());
+    private final Handler uptimeHandler = new Handler(Looper.getMainLooper());
     private int  tfUid           = -1;
     private long upStartElapsed  = -1L;
     private long rxBaseline      = -1L;
@@ -193,6 +197,25 @@ public class HotspotActivity extends AppCompatActivity {
                 catch (Throwable t) { /* ignore */ }
             }
         });
+
+        // v1.2.44 — wire the navrail items so the Hotspot screen is consistent
+        // with Diag / Sysinfo / Log / Settings (Hotspot itself is the active one).
+        wireHotspotNavRail();
+    }
+
+    private void wireHotspotNavRail() {
+        View navLogo     = findViewById(R.id.iv_nav_logo_hot);
+        View navApps     = findViewById(R.id.nav_apps_hot);
+        View navSettings = findViewById(R.id.nav_settings_hot);
+        View navDiag     = findViewById(R.id.nav_diag_hot);
+        View navSysinfo  = findViewById(R.id.nav_sysinfo_hot);
+        View navLog      = findViewById(R.id.nav_log_hot);
+        if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        if (navApps != null)     navApps.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        if (navSettings != null) navSettings.setOnClickListener(v -> { startActivity(new Intent(this, SettingsActivity.class)); finish(); });
+        if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new Intent(this, DiagActivity.class)); finish(); });
+        if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
+        if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new Intent(this, LogActivity.class)); finish(); });
     }
 
     @Override
@@ -211,12 +234,17 @@ public class HotspotActivity extends AppCompatActivity {
         // cheap: TrafficStats is a /proc read for one UID).
         statsHandler.removeCallbacks(statsTick);
         statsHandler.post(statsTick);
+        // v1.2.44 — independent 1Hz uptime ticker so the chrono visibly ticks
+        // every second instead of only every STATS_PERIOD_MS (5s).
+        uptimeHandler.removeCallbacks(uptimeTick);
+        uptimeHandler.post(uptimeTick);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         statsHandler.removeCallbacks(statsTick);
+        uptimeHandler.removeCallbacks(uptimeTick);
     }
 
     private void checkForTetherFiUpdate() {
@@ -488,6 +516,24 @@ public class HotspotActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * v1.2.44 — 1Hz uptime chrono. Updates only {@link #tvStatUptime} so the
+     * user sees the seconds visibly tick by, without firing an ADB probe.
+     */
+    private final Runnable uptimeTick = new Runnable() {
+        @Override public void run() {
+            if (tvStatUptime != null) {
+                if (upStartElapsed > 0) {
+                    long up = SystemClock.elapsedRealtime() - upStartElapsed;
+                    tvStatUptime.setText(formatUptime(up));
+                } else {
+                    tvStatUptime.setText("—");
+                }
+            }
+            uptimeHandler.postDelayed(this, UPTIME_TICK_MS);
+        }
+    };
+
     private void refreshStats() {
         if (tvStatUptime == null) return;
         if (upStartElapsed < 0) {
@@ -559,11 +605,16 @@ public class HotspotActivity extends AppCompatActivity {
     }
 
     private void refreshClients() {
-        // Combine both reads in one ADB roundtrip; use a sentinel separator.
+        // v1.2.44 — combine three reads in one ADB roundtrip; use sentinel
+        // separators. `ip neigh show` is included as a third source because
+        // some recent Android kernels surface neighbours there but not in
+        // /proc/net/arp. We always use the union of what we find.
         final String cmd =
                 "dumpsys wifip2p 2>/dev/null; " +
                 "echo '===ARP==='; " +
-                "cat /proc/net/arp 2>/dev/null";
+                "cat /proc/net/arp 2>/dev/null; " +
+                "echo '===NEIGH==='; " +
+                "ip neigh show 2>/dev/null";
         AdbLocalClient.executeShellWithResult(this, cmd,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
@@ -579,24 +630,55 @@ public class HotspotActivity extends AppCompatActivity {
     /** Visible for parser unit testing — pure function, no Android deps. */
     static List<HClient> parseClients(String adbOut) {
         if (adbOut == null) return new ArrayList<>();
-        final int sep = adbOut.indexOf("===ARP===");
-        final String dumpsys = sep > 0 ? adbOut.substring(0, sep) : adbOut;
-        final String arp     = sep > 0 ? adbOut.substring(sep)    : "";
+        final int sepArp   = adbOut.indexOf("===ARP===");
+        final int sepNeigh = adbOut.indexOf("===NEIGH===");
+        final String dumpsys = sepArp > 0 ? adbOut.substring(0, sepArp) : adbOut;
+        final String arp;
+        final String neigh;
+        if (sepArp > 0 && sepNeigh > sepArp) {
+            arp   = adbOut.substring(sepArp, sepNeigh);
+            neigh = adbOut.substring(sepNeigh);
+        } else if (sepArp > 0) {
+            arp   = adbOut.substring(sepArp);
+            neigh = "";
+        } else {
+            arp   = "";
+            neigh = "";
+        }
 
         // Build MAC → IP map from /proc/net/arp. Format:
         //   IP address       HW type     Flags       HW address            Mask     Device
         //   192.168.49.2     0x1         0x2         aa:bb:cc:dd:ee:ff     *        p2p-wlan0-0
+        // v1.2.44 — also tag entries that sit on a p2p* / ap* / wlan*ap interface,
+        // because those MACs are the *authoritative* list of connected hotspot
+        // peers (dumpsys wifip2p does not always populate a client list on every
+        // BYD ROM, see the empty-clients bug report).
         final Map<String, String> mac2ip = new HashMap<>();
+        final LinkedHashMap<String, String> arpPeers = new LinkedHashMap<>();
         for (String line : arp.split("\\r?\\n")) {
             String[] cols = line.trim().split("\\s+");
-            if (cols.length < 4) continue;
-            String ip  = cols[0];
-            String mac = cols[3];
+            if (cols.length < 6) continue;
+            String ip    = cols[0];
+            String flags = cols[2];
+            String mac   = cols[3];
+            String dev   = cols[5];
             if (!P_MAC.matcher(mac).matches()) continue;
             if ("00:00:00:00:00:00".equalsIgnoreCase(mac)) continue;
-            // Only keep entries that look like an IPv4.
             if (!ip.matches("\\d{1,3}(?:\\.\\d{1,3}){3}")) continue;
-            mac2ip.put(mac.toLowerCase(Locale.US), ip);
+            String mlow = mac.toLowerCase(Locale.US);
+            mac2ip.put(mlow, ip);
+            // Flags 0x0 == incomplete entry (no reply yet); 0x2 = complete (connected).
+            boolean reachable = !"0x0".equalsIgnoreCase(flags);
+            String dlow = dev == null ? "" : dev.toLowerCase(Locale.US);
+            boolean onPeerInterface = dlow.startsWith("p2p-")
+                    || dlow.startsWith("p2p")
+                    || dlow.startsWith("ap")
+                    || dlow.contains("ap0")
+                    || dlow.contains("softap")
+                    || dlow.endsWith("-ap");
+            if (reachable && onPeerInterface) {
+                arpPeers.put(mlow, ip);
+            }
         }
 
         // Walk the dumpsys output looking for the WifiP2pGroup that belongs to
@@ -639,6 +721,41 @@ public class HotspotActivity extends AppCompatActivity {
                         mac2ip.get(mac)));
                 pendingName = null;
             }
+        }
+
+        // v1.2.44 — ARP-on-peer-interface fallback. Add any MAC that is
+        // demonstrably reachable on a p2p*/ap* interface but was missed by
+        // the dumpsys parsing above. This is the authoritative source: if a
+        // device has an IP on our tether interface, it IS a connected client.
+        for (Map.Entry<String, String> e : arpPeers.entrySet()) {
+            String mac = e.getKey();
+            if (byMac.containsKey(mac)) continue;
+            byMac.put(mac, new HClient(mac, null, e.getValue()));
+        }
+
+        // v1.2.44 — `ip neigh show` fallback. Format:
+        //   192.168.49.2 dev p2p-wlan0-0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
+        // Pick up STALE/DELAY/PROBE/REACHABLE on a peer interface; skip FAILED.
+        for (String line : neigh.split("\\r?\\n")) {
+            String low = line.toLowerCase(Locale.US);
+            if (low.isEmpty() || low.startsWith("==")) continue;
+            if (low.contains(" failed") || low.contains(" incomplete")) continue;
+            int devIdx = low.indexOf(" dev ");
+            if (devIdx < 0) continue;
+            String afterDev = low.substring(devIdx + 5).trim();
+            String dev = afterDev.split("\\s+", 2)[0];
+            boolean onPeerInterface = dev.startsWith("p2p-") || dev.startsWith("p2p")
+                    || dev.startsWith("ap") || dev.contains("ap0")
+                    || dev.contains("softap") || dev.endsWith("-ap");
+            if (!onPeerInterface) continue;
+            Matcher mm = P_MAC.matcher(line);
+            if (!mm.find()) continue;
+            String mac = mm.group(1).toLowerCase(Locale.US);
+            if ("00:00:00:00:00:00".equalsIgnoreCase(mac)) continue;
+            if (byMac.containsKey(mac)) continue;
+            String ip = line.trim().split("\\s+", 2)[0];
+            if (!ip.matches("\\d{1,3}(?:\\.\\d{1,3}){3}")) ip = null;
+            byMac.put(mac, new HClient(mac, null, ip));
         }
         return new ArrayList<>(byMac.values());
     }

@@ -70,8 +70,19 @@ android {
         //     AudioRecord device-level wiring) on DL3/DL4/DL5 before adding
         //     the openWakeWord + Vosk dependencies in v1.2.44 / v1.2.45.
         //   - APK delta: ~20 KB (one service class + layout + strings).
-        versionCode 301
-        versionName "1.2.43-beta"
+        // v1.2.44-beta (build 302) — Hotspot UX consistency + clients fix.
+        //   - Navrail "Hotspot" entry now appears on every secondary screen
+        //     (Diag, Sysinfo, Log, Settings), runtime-gated to DL3 + use_own_sim
+        //     just like the existing Main one. New helper NavRailHotspot.apply()
+        //     so the wiring is DRY across 5 activities.
+        //   - HotspotActivity itself gets the standard navrail on the left
+        //     (Hotspot = active), matching the other secondary screens.
+        //   - Uptime chrono now ticks every 1 s (was 5 s, looked frozen).
+        //   - Connected-clients list now uses 3 data sources (dumpsys wifip2p +
+        //     /proc/net/arp + `ip neigh`), falling back to ARP-on-peer-interface
+        //     when dumpsys doesn't populate a client list (BYD ROM variant).
+        versionCode 302
+        versionName "1.2.44-beta"
     }
 
     buildTypes {
