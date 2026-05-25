@@ -63,6 +63,11 @@ public class SettingsActivity extends AppCompatActivity {
     //                   reconfiguration of the original cluster.
     public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
     public static final String PREF_USE_OWN_SIM           = "use_own_sim";
+    // v1.2.45 — Compact apps panel : narrows the left apps column to 2 icons
+    // wide so the cluster preview gets more space. Default = false (5 columns,
+    // historical behaviour). Applied live by MainActivity on every onResume,
+    // no activity restart needed.
+    public static final String PREF_COMPACT_APPS_PANEL    = "compact_apps_panel";
     // v1.2.43 — Hotspot integration prefs (set from HotspotActivity, read at boot)
     public static final String PREF_HOTSPOT_AUTOSTART_BOOT = "hotspot_autostart_boot";
     public static final String PREF_HOTSPOT_WATCHDOG       = "hotspot_watchdog_enabled";
@@ -96,6 +101,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbReconnectPopup;
     private CompoundButton cbQuickStop;
     private CompoundButton cbUseOwnSim;
+    private CompoundButton cbCompactAppsPanel;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
     private CompoundButton swDilink5Mode;
@@ -227,6 +233,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
         cbQuickStop      = findViewById(R.id.cb_quick_stop);
         cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
+        cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
@@ -283,6 +290,11 @@ public class SettingsActivity extends AppCompatActivity {
         // DL3 head-unit, they may want to tether their data via TetherFi.
         boolean useOwnSim = prefs.getBoolean(PREF_USE_OWN_SIM, false);
         cbUseOwnSim.setChecked(useOwnSim);
+
+        // v1.2.45 — Compact apps panel toggle (default OFF, historical layout)
+        if (cbCompactAppsPanel != null) {
+            cbCompactAppsPanel.setChecked(prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false));
+        }
         cbQuickStop.setChecked(quickStop);
 
         // Beta Engine toggles (default OFF — restart required after change)
@@ -435,6 +447,17 @@ public class SettingsActivity extends AppCompatActivity {
                     .putBoolean(PREF_USE_OWN_SIM, isChecked).apply();
             AppLogger.i("SettingsActivity", "use_own_sim=" + isChecked);
         });
+
+        // v1.2.45 — Compact apps panel checkbox. Re-evaluated by MainActivity
+        // on every onResume so the change applies as soon as the user returns
+        // to the home screen (no activity restart needed).
+        if (cbCompactAppsPanel != null) {
+            cbCompactAppsPanel.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putBoolean(PREF_COMPACT_APPS_PANEL, isChecked).apply();
+                AppLogger.i("SettingsActivity", "compact_apps_panel=" + isChecked);
+            });
+        }
 
         // Beta Engine — both toggles require app restart to take effect
         cbBetaProxyDaemon.setOnCheckedChangeListener((b, isChecked) -> {

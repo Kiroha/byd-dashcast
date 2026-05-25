@@ -127,6 +127,8 @@
     <string name="settings_quick_stop">Швидка зупинка (без відновлення вихідного кластера)</string>
     <string name="settings_quick_stop_support">Лише відправляє sendInfo 18 + 0, без зміни розміру</string>
     <string name="settings_category_filters_support">Показувати чипи в меню додатків</string>
+    <string name="settings_compact_apps_panel">Компактний режим (вузький список застосунків)</string>
+    <string name="settings_compact_apps_panel_support">Звільняє місце для попереднього перегляду кластера — 2 стовпці замість 5</string>
     <string name="settings_section_about">Про застосунок</string>
     <string name="settings_about_version_label">Версія</string>
     <string name="settings_check_update_title">Перевірити оновлення</string>

@@ -169,6 +169,8 @@
     <string name="settings_quick_stop">Arrêt rapide (sans restaurer le cluster d\'origine)</string>
     <string name="settings_quick_stop_support">Envoie seulement sendInfo 18 + 0, sans changer la taille</string>
     <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
+    <string name="settings_compact_apps_panel">Mode compact (liste apps étroite)</string>
+    <string name="settings_compact_apps_panel_support">Libère de l\'espace pour le preview cluster — 2 colonnes au lieu de 5</string>
     <string name="settings_section_about">À propos</string>
     <string name="settings_about_version_label">Version</string>
     <string name="settings_check_update_title">Rechercher une mise à jour</string>

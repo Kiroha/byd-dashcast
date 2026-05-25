@@ -127,6 +127,8 @@
     <string name="settings_quick_stop">Хуткі стоп (без аднаўлення зыходнага кластара)</string>
     <string name="settings_quick_stop_support">Адпраўляе толькі sendInfo 18 + 0, без змены памеру</string>
     <string name="settings_category_filters_support">Паказваць чыпы ў меню праграм</string>
+    <string name="settings_compact_apps_panel">Кампактны рэжым (вузкі спіс прыкладанняў)</string>
+    <string name="settings_compact_apps_panel_support">Вызваляе месца для папярэдняга прагляду кластара — 2 слупкі замест 5</string>
     <string name="settings_section_about">Пра праграму</string>
     <string name="settings_about_version_label">Версія</string>
     <string name="settings_check_update_title">Праверыць абнаўленні</string>

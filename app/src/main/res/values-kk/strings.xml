@@ -127,6 +127,8 @@
     <string name="settings_quick_stop">Жылдам тоқтату (бастапқы кластерді қалпына келтірмей)</string>
     <string name="settings_quick_stop_support">Тек sendInfo 18 + 0 жібереді, өлшемді өзгертпейді</string>
     <string name="settings_category_filters_support">Қолданбалар мәзірінде чиптерді көрсету</string>
+    <string name="settings_compact_apps_panel">Ықшам режим (қолданбалар тізімі тар)</string>
+    <string name="settings_compact_apps_panel_support">Кластер алдын ала қарауы үшін орын босатады — 5 орнына 2 баған</string>
     <string name="settings_section_about">Туралы</string>
     <string name="settings_about_version_label">Нұсқа</string>
     <string name="settings_check_update_title">Жаңартуларды тексеру</string>
