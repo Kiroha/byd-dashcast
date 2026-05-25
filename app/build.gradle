@@ -173,8 +173,30 @@ android {
         //   override on the existing fission Listener — non-DL5 platforms
         //   and the R-tier listener are untouched (default method = NO).
         //   Scope strictly limited to the F-tier diagnostic battery.
-        versionCode 306
-        versionName "1.2.48-beta"
+        // v1.2.49-beta (build 307) — DL5 Fission task-id extraction hardening.
+        //   Third field test (run 20260525_152233) scored 11 PASS / 1 WARN /
+        //   0 FAIL / 4 SKIPPED. The interactive popup flow worked perfectly:
+        //   user said NO on display 2 (hidden), YES on display 3 → cluster
+        //   confirmed. But the v1.2.48 awk extraction (`extractYandexTaskId
+        //   OnDisplay`) still returned -1, so F10 WARNed and F11/F12 were
+        //   SKIPPED — the resize actually never ran.
+        //   Root cause: the awk pattern `(mPreferredTopFocusableRootTask|
+        //   mLastFocusedRootTask)=Task\{…A=…yandexmaps\}` does not match the
+        //   actual `dumpsys activity activities` layout on this 4-display
+        //   DiLink5 ROM. Rather than keep chasing ROM-specific awk syntax,
+        //   v1.2.49 drops the per-display scoping entirely: since we
+        //   force-stop Yandex before every candidate launch, exactly ONE
+        //   Yandex task exists at the moment we ask. So a global match for
+        //   `Task{…yandexmaps…}` (with `taskId=N…yandexmaps` as fallback)
+        //   suffices. The new extractor also retries 4× with 0/250/500/1000
+        //   ms backoff (covers late task registration) and dumps the raw
+        //   filtered dumpsys output into r.detail so any future regression
+        //   is debuggable from the report alone — no need for adb access.
+        //   Scope strictly limited to the F-tier extractor (one method
+        //   replaced, two call sites updated). F-flow, R-tier, popup logic,
+        //   i18n strings, and version-independent infra all untouched.
+        versionCode 307
+        versionName "1.2.49-beta"
     }
 
     buildTypes {

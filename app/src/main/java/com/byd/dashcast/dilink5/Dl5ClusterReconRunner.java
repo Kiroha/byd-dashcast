@@ -862,9 +862,11 @@ public final class Dl5ClusterReconRunner {
         if (yes) {
             st.confirmedClusterDisplay = displayId;
             // Best-effort: extract the Yandex task id for the resize step.
-            int tid = extractYandexTaskIdOnDisplay(ctx, displayId);
+            StringBuilder dbg = new StringBuilder();
+            int tid = extractYandexTaskId(ctx, dbg);
             st.yandexTaskIdOnCluster = tid;
-            dt.append("extracted taskId on display ").append(displayId).append(" = ").append(tid).append('\n');
+            dt.append("extracted taskId = ").append(tid).append('\n');
+            dt.append("\n--- task lookup debug ---\n").append(dbg);
             r.detail = dt.toString();
             r.status = DiLink5TestRunner.Status.PASS;
             r.message = "user confirmed cluster on display " + displayId
@@ -889,38 +891,52 @@ public final class Dl5ClusterReconRunner {
     }
 
     /**
-     * v1.2.48 — awk-scoped extraction of the Yandex task id on a given
-     * display id. Scopes the match to per-display indicator lines
-     * (mPreferredTopFocusableRootTask / mLastFocusedRootTask) that appear
-     * INSIDE a {@code displayId=N} block, avoiding the false-positive of
-     * the flat task list at the top of the dump.
+     * v1.2.49 — robust extraction of the (only) currently-alive Yandex
+     * task id. Since we force-stop Yandex before every candidate launch,
+     * exactly one Yandex task exists at the time we ask. We therefore no
+     * longer need to scope the match by displayId (which depended on a
+     * ROM-specific dump layout). We retry a few times with backoff because
+     * the task may not be fully registered immediately after the user's
+     * YES tap. The raw filtered dumpsys output is returned via the
+     * {@code debugOut} sink for the caller to attach to its report.
      */
-    private static int extractYandexTaskIdOnDisplay(Context ctx, int targetDisplayId) {
-        String pkgRe = FISSION_TARGET_PKG.replace(".", "\\\\.");
-        String awk =
-                "/displayId=[0-9]+/ { d=$0; sub(/.*displayId=/,\"\",d); sub(/[^0-9].*/,\"\",d); inDisp=d }"
-              + " inDisp != \"\" && /(mPreferredTopFocusableRootTask|mLastFocusedRootTask)=Task\\\\{[^}]*A=[0-9]+:" + pkgRe + "/ {"
-              + "   print \"DISP=\" inDisp; print \"TASK=\" $0; exit"
-              + " }";
-        String out = shellSync(ctx,
-                "dumpsys activity activities 2>&1 | awk '" + awk + "'");
-        if (out == null) return -1;
-        String taskLine = null;
-        int parsedDisp = -1;
-        for (String line : out.split("\n")) {
-            if (line.startsWith("DISP=")) {
-                try { parsedDisp = Integer.parseInt(line.substring(5).trim()); }
-                catch (NumberFormatException ignored) {}
-            } else if (line.startsWith("TASK=")) {
-                taskLine = line.substring(5);
+    private static int extractYandexTaskId(Context ctx, StringBuilder debugOut) {
+        final int[] delaysMs = { 0, 250, 500, 1000 };
+        java.util.regex.Pattern pTask =
+                java.util.regex.Pattern.compile("Task\\{[^}]*ru\\.yandex\\.yandexmaps[^}]*\\}");
+        java.util.regex.Pattern pId = java.util.regex.Pattern.compile("#(\\d+)");
+        java.util.regex.Pattern pAltId =
+                java.util.regex.Pattern.compile("taskId=(\\d+)[^\\n]*ru\\.yandex\\.yandexmaps");
+        for (int attempt = 0; attempt < delaysMs.length; attempt++) {
+            if (delaysMs[attempt] > 0) {
+                try { Thread.sleep(delaysMs[attempt]); }
+                catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
-        }
-        if (parsedDisp != targetDisplayId || taskLine == null) return -1;
-        java.util.regex.Matcher m =
-                java.util.regex.Pattern.compile("#(\\d+)").matcher(taskLine);
-        if (m.find()) {
-            try { return Integer.parseInt(m.group(1)); }
-            catch (NumberFormatException ignored) {}
+            // Filter dumpsys down to the few lines that mention yandexmaps
+            // so the debug capture stays small.
+            String out = shellSync(ctx,
+                    "dumpsys activity activities 2>&1 | grep -nE 'Task\\{|taskId=|yandexmaps' | grep -i yandex | head -20");
+            if (debugOut != null) {
+                debugOut.append("attempt #").append(attempt + 1)
+                        .append(" (after ").append(delaysMs[attempt]).append(" ms):\n");
+                debugOut.append(out == null || out.isEmpty() ? "  <no yandex lines>\n" : out + "\n");
+            }
+            if (out == null || out.isEmpty()) continue;
+            // First try the Task{... yandexmaps ...} pattern.
+            java.util.regex.Matcher mt = pTask.matcher(out);
+            if (mt.find()) {
+                java.util.regex.Matcher mid = pId.matcher(mt.group());
+                if (mid.find()) {
+                    try { return Integer.parseInt(mid.group(1)); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+            // Fallback: taskId=NNN ... yandexmaps on the same line.
+            java.util.regex.Matcher ma = pAltId.matcher(out);
+            if (ma.find()) {
+                try { return Integer.parseInt(ma.group(1)); }
+                catch (NumberFormatException ignored) {}
+            }
         }
         return -1;
     }
@@ -944,8 +960,11 @@ public final class Dl5ClusterReconRunner {
         if (st.yandexTaskIdOnCluster <= 0) {
             // Retry extraction now (the task may have been registered after
             // the prompt resolved).
-            st.yandexTaskIdOnCluster =
-                    extractYandexTaskIdOnDisplay(ctx, st.confirmedClusterDisplay);
+            StringBuilder dbg = new StringBuilder();
+            st.yandexTaskIdOnCluster = extractYandexTaskId(ctx, dbg);
+            if (st.yandexTaskIdOnCluster <= 0) {
+                r.detail = "--- task lookup debug ---\n" + dbg;
+            }
         }
         if (st.yandexTaskIdOnCluster <= 0) {
             r.status = DiLink5TestRunner.Status.WARN;
