@@ -103,6 +103,27 @@
             android:layout_marginTop="2dp"/>
 
         <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+
+        <!-- v1.2.44 — Hotspot (DL3 + use_own_sim runtime-gated, wired by NavRailHotspot.apply) -->
+        <LinearLayout
+            android:id="@+id/nav_hotspot_diag"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            android:clickable="true" android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_wifi_tethering"
+                android:padding="10dp"
+                android:contentDescription="@string/main_nav_hotspot"/>
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/main_nav_hotspot"
+                android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- ============= Main area ============= -->

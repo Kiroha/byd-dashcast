@@ -127,6 +127,8 @@ public class LogActivity extends AppCompatActivity {
         if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new Intent(this, DiagActivity.class)); finish(); });
         if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
         if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        // v1.2.44 — Hotspot navrail entry (DL3 + use_own_sim runtime-gated)
+        NavRailHotspot.apply(this, R.id.nav_hotspot_log, true);
     }
 
     @Override

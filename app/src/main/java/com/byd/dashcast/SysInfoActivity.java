@@ -638,6 +638,8 @@ public class SysInfoActivity extends AppCompatActivity {
         if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
         if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
         if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        // v1.2.44 — Hotspot navrail entry (DL3 + use_own_sim runtime-gated)
+        NavRailHotspot.apply(this, R.id.nav_hotspot_sys, true);
     }
 
     private void populateOverviewTiles() {
