@@ -77,6 +77,7 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_MIRROR      = 9;
     private static final int TAB_SNIFFER     = 10;
     private static final int TAB_CLUSTER_DL5 = 11;
+    private static final int TAB_EXPORT_APK  = 12;
 
     private TabLayout    tabs;
     private View         panelBeta;
@@ -88,8 +89,9 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelAdas;
     private View         panelClusterPoc;
     private View         panelClusterDl5;
+    private View         panelExportApk;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 12; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5
+    private static final int TAB_COUNT = 13; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -119,9 +121,13 @@ public class DiagActivity extends AppCompatActivity {
     private MaterialButton btnDl5ClusterRunAll;
     private MaterialButton btnDl5ClusterCopyReport;
     private MaterialButton btnDl5ClusterSendTelegram;
+    private MaterialButton btnDl5ClusterTestFission;   // v1.2.41 — live Fission test (DL5 only)
+    private LinearLayout   llDl5ClusterFissionRow;     // v1.2.41 — DL5-only gated container
     private LinearLayout   llDl5ClusterTestList;
     private final List<View> dl5ClusterRowViews = new ArrayList<>();
     private final List<com.byd.dashcast.dilink5.DiLink5TestRunner.TestResult> dl5ClusterLastResults = new ArrayList<>();
+    /** v1.2.41 — whether the currently-displayed rows are F-tests (true) or R-tests (false). */
+    private boolean dl5ClusterShowingFission = false;
 
     // DiLink 2 panel views (build 185 — recon-only)
     private TextView       tvDl2HeaderSubtitle;
@@ -168,6 +174,7 @@ public class DiagActivity extends AppCompatActivity {
         bindAdasPanel();
         bindClusterPocPanel();
         bindClusterDl5Panel();
+        bindExportApkPanel();
         prepareTestRows();
         prepareDl5TestRows();
         prepareDl2TestRows();
@@ -192,6 +199,7 @@ public class DiagActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         mDestroyed = true;
+        try { exportApkCleanupHandler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         super.onDestroy();
     }
 
@@ -223,6 +231,7 @@ public class DiagActivity extends AppCompatActivity {
         panelAdas       = findViewById(R.id.panel_adas);
         panelClusterPoc = findViewById(R.id.panel_cluster_poc);
         panelClusterDl5 = findViewById(R.id.panel_cluster_dl5);
+        panelExportApk  = findViewById(R.id.panel_export_apk);
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -273,6 +282,7 @@ public class DiagActivity extends AppCompatActivity {
         boolean isAdas       = position == TAB_ADAS;
         boolean isClusterPoc = position == TAB_CLUSTER;
         boolean isClusterDl5 = position == TAB_CLUSTER_DL5;
+        boolean isExportApk  = position == TAB_EXPORT_APK;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -282,8 +292,10 @@ public class DiagActivity extends AppCompatActivity {
         panelAdas.setVisibility(isAdas ? View.VISIBLE : View.GONE);
         panelClusterPoc.setVisibility(isClusterPoc ? View.VISIBLE : View.GONE);
         panelClusterDl5.setVisibility(isClusterDl5 ? View.VISIBLE : View.GONE);
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5) {
+        panelExportApk.setVisibility(isExportApk ? View.VISIBLE : View.GONE);
+        if (isExportApk) refreshExportApkListIfNeeded();
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -627,6 +639,8 @@ public class DiagActivity extends AppCompatActivity {
         btnDl5ClusterRunAll       = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_run_all);
         btnDl5ClusterCopyReport   = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_copy_report);
         btnDl5ClusterSendTelegram = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_send_telegram);
+        btnDl5ClusterTestFission  = panelClusterDl5.findViewById(R.id.btn_dl5_cluster_test_fission);
+        llDl5ClusterFissionRow    = panelClusterDl5.findViewById(R.id.ll_dl5_cluster_fission_row);
         llDl5ClusterTestList      = panelClusterDl5.findViewById(R.id.ll_dl5_cluster_test_list);
 
         boolean dl5 = Platform.get().isAutoDetectedDiLink5();
@@ -636,19 +650,31 @@ public class DiagActivity extends AppCompatActivity {
         else                                      pillRes = R.string.diag_dl5_cluster_pill_unknown;
         tvDl5ClusterPill.setText(pillRes);
 
+        // Fission live test row is DL5-only — HARD RULE: never offer the
+        // destructive test on DL2/3/4 (compat-override semantics + display
+        // topology differ).
+        llDl5ClusterFissionRow.setVisibility(dl5 ? View.VISIBLE : View.GONE);
+
         btnDl5ClusterRunAll.setOnClickListener(v -> runClusterDl5AllTests());
         btnDl5ClusterCopyReport.setOnClickListener(v -> copyClusterDl5Report());
         btnDl5ClusterSendTelegram.setOnClickListener(v -> sendClusterDl5ToTelegram());
+        btnDl5ClusterTestFission.setOnClickListener(v -> confirmAndRunClusterDl5FissionTests());
         btnDl5ClusterCopyReport.setEnabled(false);
         btnDl5ClusterSendTelegram.setEnabled(false);
     }
 
     private void prepareClusterDl5TestRows() {
+        prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.catalog());
+        dl5ClusterShowingFission = false;
+    }
+
+    /** v1.2.41 — shared row builder for either the R-recon or the F-fission catalog. */
+    private void prepareClusterDl5TestRowsFor(List<DiLink5TestRunner.TestDef> defs) {
         dl5ClusterRowViews.clear();
         dl5ClusterLastResults.clear();
         llDl5ClusterTestList.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (DiLink5TestRunner.TestDef def : Dl5ClusterReconRunner.catalog()) {
+        for (DiLink5TestRunner.TestDef def : defs) {
             View row = inflater.inflate(R.layout.item_beta_test, llDl5ClusterTestList, false);
             DiLink5TestRunner.TestResult r = new DiLink5TestRunner.TestResult(def);
             r.status = DiLink5TestRunner.Status.PENDING;
@@ -660,7 +686,12 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void runClusterDl5AllTests() {
+        // Re-prime the list with the R-recon catalog (in case the user just
+        // ran a Fission test before).
+        prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.catalog());
+        dl5ClusterShowingFission = false;
         btnDl5ClusterRunAll.setEnabled(false);
+        if (btnDl5ClusterTestFission != null) btnDl5ClusterTestFission.setEnabled(false);
         btnDl5ClusterCopyReport.setEnabled(false);
         btnDl5ClusterSendTelegram.setEnabled(false);
         Dl5ClusterReconRunner.runAll(this, new Dl5ClusterReconRunner.Listener() {
@@ -681,6 +712,61 @@ public class DiagActivity extends AppCompatActivity {
             @Override public void onSuiteFinished(List<DiLink5TestRunner.TestResult> results) {
                 if (mDestroyed) return;
                 btnDl5ClusterRunAll.setEnabled(true);
+                if (btnDl5ClusterTestFission != null) btnDl5ClusterTestFission.setEnabled(true);
+                btnDl5ClusterCopyReport.setEnabled(true);
+                btnDl5ClusterSendTelegram.setEnabled(true);
+                updateClusterDl5Counters();
+            }
+        });
+    }
+
+    // ─── v1.2.41 — Fission live test battery (DL5 only) ──────────────────────
+
+    private void confirmAndRunClusterDl5FissionTests() {
+        // HARD RULE: DL5 only. The button is hidden on other platforms but
+        // double-check here in case of layout overrides.
+        if (!Platform.get().isAutoDetectedDiLink5()) {
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_only_dl5,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.diag_dl5_cluster_test_fission_confirm_title)
+                .setMessage(R.string.diag_dl5_cluster_test_fission_confirm_msg)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.diag_dl5_cluster_test_fission_confirm_ok,
+                        (d, w) -> runClusterDl5FissionTests())
+                .show();
+    }
+
+    private void runClusterDl5FissionTests() {
+        // Replace row list with the F-catalog and flip the renderer flag so
+        // Copy / Telegram use renderFissionReport.
+        prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.fissionCatalog());
+        dl5ClusterShowingFission = true;
+        btnDl5ClusterRunAll.setEnabled(false);
+        btnDl5ClusterTestFission.setEnabled(false);
+        btnDl5ClusterCopyReport.setEnabled(false);
+        btnDl5ClusterSendTelegram.setEnabled(false);
+        Dl5ClusterReconRunner.runFission(this, new Dl5ClusterReconRunner.Listener() {
+            @Override public void onSuiteStarted(List<DiLink5TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                dl5ClusterLastResults.clear();
+                dl5ClusterLastResults.addAll(results);
+                for (int i = 0; i < results.size() && i < dl5ClusterRowViews.size(); i++) {
+                    bindDl5Row(dl5ClusterRowViews.get(i), results.get(i));
+                }
+                tvDl5ClusterCounters.setText(getString(R.string.diag_beta_counters_running));
+            }
+            @Override public void onTestUpdated(int index, DiLink5TestRunner.TestResult result) {
+                if (mDestroyed) return;
+                if (index < dl5ClusterRowViews.size()) bindDl5Row(dl5ClusterRowViews.get(index), result);
+                updateClusterDl5Counters();
+            }
+            @Override public void onSuiteFinished(List<DiLink5TestRunner.TestResult> results) {
+                if (mDestroyed) return;
+                btnDl5ClusterRunAll.setEnabled(true);
+                btnDl5ClusterTestFission.setEnabled(true);
                 btnDl5ClusterCopyReport.setEnabled(true);
                 btnDl5ClusterSendTelegram.setEnabled(true);
                 updateClusterDl5Counters();
@@ -707,8 +793,10 @@ public class DiagActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
             return;
         }
-        String report = Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
-        AppLogger.i("DiagActivity", "DL5 Cluster recon report:\n" + report);
+        String report = dl5ClusterShowingFission
+                ? Dl5ClusterReconRunner.renderFissionReport(dl5ClusterLastResults)
+                : Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
+        AppLogger.i("DiagActivity", "DL5 Cluster report:\n" + report);
         AppLogger.shareWithReport(this, report);
         Toast.makeText(this,
                 getString(R.string.diag_dl5_cluster_toast_report_copied, dl5ClusterLastResults.size()),
@@ -720,8 +808,10 @@ public class DiagActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
             return;
         }
-        String report = Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
-        AppLogger.i("DiagActivity", "DL5 Cluster recon report (Telegram):\n" + report);
+        String report = dl5ClusterShowingFission
+                ? Dl5ClusterReconRunner.renderFissionReport(dl5ClusterLastResults)
+                : Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
+        AppLogger.i("DiagActivity", "DL5 Cluster report (Telegram):\n" + report);
         AppLogger.shareReportToTelegram(this, report);
     }
 
@@ -1855,5 +1945,267 @@ public class DiagActivity extends AppCompatActivity {
                     : "[restart] ❌ Échec du bootstrap. Voir logcat.";
             safeRunOnUiThread(() -> status.setText(msg));
         }, "daemon-restart").start();
+    }
+
+    // ─── v1.2.42 — Export BYD APK panel ──────────────────────────────────────
+
+    /** Cache subdirectory where APKs are copied before being shared. Auto-wiped. */
+    private static final String EXPORT_APK_SUBDIR = "exported_apks";
+    /** Auto-deletion delay after we hand the file over to Telegram. */
+    private static final long EXPORT_APK_AUTO_DELETE_MS = 5L * 60L * 1000L;
+    /** Package-name prefixes / substrings that qualify as « BYD » for export. */
+    private static final String[] EXPORT_APK_NEEDLES = new String[] {
+            "com.byd.", "com.xdja.", "com.dilink.",
+            "cluster", "automotive", "fission", "projection", "dilink"
+    };
+
+    private TextView     tvExportApkCounters;
+    private MaterialButton btnExportApkRefresh;
+    private LinearLayout llExportApkList;
+    private boolean      exportApkInitialised = false;
+    private final Handler exportApkCleanupHandler = new Handler(Looper.getMainLooper());
+
+    private static final class ExportApkEntry {
+        final String pkg;
+        final String versionName;
+        final long   versionCode;
+        final String sourceDir;
+        final long   sizeBytes;
+        ExportApkEntry(String pkg, String vn, long vc, String src, long size) {
+            this.pkg = pkg; this.versionName = vn; this.versionCode = vc;
+            this.sourceDir = src; this.sizeBytes = size;
+        }
+    }
+
+    private void bindExportApkPanel() {
+        tvExportApkCounters = panelExportApk.findViewById(R.id.tv_export_apk_counters);
+        btnExportApkRefresh = panelExportApk.findViewById(R.id.btn_export_apk_refresh);
+        llExportApkList     = panelExportApk.findViewById(R.id.ll_export_apk_list);
+        btnExportApkRefresh.setOnClickListener(v -> {
+            wipeExportApkCacheDir();
+            refreshExportApkList();
+        });
+        // Eager wipe at activity creation so we never carry over a previously
+        // exported APK between launches.
+        wipeExportApkCacheDir();
+    }
+
+    private void refreshExportApkListIfNeeded() {
+        if (exportApkInitialised) return;
+        refreshExportApkList();
+    }
+
+    private void refreshExportApkList() {
+        exportApkInitialised = true;
+        llExportApkList.removeAllViews();
+        tvExportApkCounters.setText(R.string.diag_export_apk_counters_scanning);
+
+        new Thread(() -> {
+            List<ExportApkEntry> entries = scanBydPackages();
+            safeRunOnUiThread(() -> {
+                llExportApkList.removeAllViews();
+                LayoutInflater inflater = LayoutInflater.from(this);
+                long totalBytes = 0;
+                for (ExportApkEntry e : entries) {
+                    totalBytes += Math.max(0, e.sizeBytes);
+                    View row = inflater.inflate(R.layout.row_export_apk, llExportApkList, false);
+                    TextView tvPkg     = row.findViewById(R.id.tv_export_apk_pkg);
+                    TextView tvVersion = row.findViewById(R.id.tv_export_apk_version);
+                    TextView tvSize    = row.findViewById(R.id.tv_export_apk_size);
+                    TextView tvPath    = row.findViewById(R.id.tv_export_apk_path);
+                    MaterialButton btn = row.findViewById(R.id.btn_export_apk_row);
+                    tvPkg.setText(e.pkg);
+                    tvVersion.setText(getString(R.string.diag_export_apk_version_fmt,
+                            e.versionName, e.versionCode));
+                    tvSize.setText(formatBytes(e.sizeBytes));
+                    tvPath.setText(e.sourceDir != null ? e.sourceDir : "-");
+                    btn.setOnClickListener(v -> onExportApkClicked(e, btn));
+                    llExportApkList.addView(row);
+                }
+                tvExportApkCounters.setText(getString(
+                        R.string.diag_export_apk_counters_fmt,
+                        entries.size(), formatBytes(totalBytes)));
+            });
+        }, "export-apk-scan").start();
+    }
+
+    private List<ExportApkEntry> scanBydPackages() {
+        List<ExportApkEntry> out = new ArrayList<>();
+        try {
+            PackageManager pm = getPackageManager();
+            List<android.content.pm.PackageInfo> all = pm.getInstalledPackages(0);
+            for (android.content.pm.PackageInfo pi : all) {
+                if (pi == null || pi.packageName == null) continue;
+                String low = pi.packageName.toLowerCase();
+                boolean match = false;
+                for (String n : EXPORT_APK_NEEDLES) {
+                    if (low.contains(n)) { match = true; break; }
+                }
+                if (!match) continue;
+                String vn = pi.versionName != null ? pi.versionName : "?";
+                long vc = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+                String src = pi.applicationInfo != null ? pi.applicationInfo.sourceDir : null;
+                long size = 0;
+                if (src != null) {
+                    try { size = new java.io.File(src).length(); } catch (Throwable ignore) {}
+                }
+                out.add(new ExportApkEntry(pi.packageName, vn, vc, src, size));
+            }
+            Collections.sort(out, new Comparator<ExportApkEntry>() {
+                @Override public int compare(ExportApkEntry a, ExportApkEntry b) {
+                    return a.pkg.compareTo(b.pkg);
+                }
+            });
+        } catch (Throwable t) {
+            AppLogger.w("DiagActivity", "scanBydPackages failed: " + t);
+        }
+        return out;
+    }
+
+    private void onExportApkClicked(ExportApkEntry e, MaterialButton btn) {
+        if (e.sourceDir == null || e.sourceDir.isEmpty()) {
+            Toast.makeText(this, R.string.diag_export_apk_err_no_source, Toast.LENGTH_LONG).show();
+            return;
+        }
+        btn.setEnabled(false);
+        btn.setText(R.string.diag_export_apk_btn_exporting);
+        new Thread(() -> {
+            java.io.File copied = null;
+            String err = null;
+            try {
+                java.io.File srcFile = new java.io.File(e.sourceDir);
+                if (!srcFile.exists() || !srcFile.canRead()) {
+                    err = "APK unreadable: " + e.sourceDir;
+                } else {
+                    java.io.File outDir = exportApkCacheDir();
+                    if (outDir == null) {
+                        err = "No cache dir";
+                    } else {
+                        String safeName = e.pkg + "-v" + sanitiseVer(e.versionName)
+                                + "-" + e.versionCode + ".apk";
+                        copied = new java.io.File(outDir, safeName);
+                        copyFile(srcFile, copied);
+                    }
+                }
+            } catch (Throwable t) {
+                err = t.getMessage();
+                AppLogger.w("DiagActivity", "Export APK copy failed: " + t);
+            }
+            final java.io.File finalCopied = copied;
+            final String finalErr = err;
+            safeRunOnUiThread(() -> {
+                btn.setEnabled(true);
+                btn.setText(R.string.diag_export_apk_btn_export);
+                if (finalErr != null || finalCopied == null) {
+                    Toast.makeText(this,
+                            getString(R.string.diag_export_apk_err_fmt, String.valueOf(finalErr)),
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                shareApkToTelegram(finalCopied, e.pkg);
+                scheduleExportApkDelete(finalCopied);
+            });
+        }, "export-apk-" + e.pkg).start();
+    }
+
+    private void shareApkToTelegram(java.io.File apk, String pkg) {
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", apk);
+            String[] tgPkgs = new String[] {
+                    "org.telegram.messenger", "org.telegram.messenger.web",
+                    "org.telegram.plus", "nekox.messenger", "org.thunderdog.challegram"
+            };
+            String hit = null;
+            PackageManager pm = getPackageManager();
+            for (String p : tgPkgs) {
+                try { pm.getPackageInfo(p, 0); hit = p; break; }
+                catch (PackageManager.NameNotFoundException ignore) {}
+            }
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("application/vnd.android.package-archive");
+            send.putExtra(Intent.EXTRA_SUBJECT, "DashCast — APK export: " + pkg);
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            send.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (hit != null) {
+                send.setPackage(hit);
+                try {
+                    startActivity(send);
+                    Toast.makeText(this,
+                            getString(R.string.diag_export_apk_sent_fmt, pkg),
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                } catch (Throwable t) {
+                    AppLogger.w("DiagActivity", "Direct Telegram intent failed, falling back: " + t);
+                    send.setPackage(null);
+                }
+            }
+            startActivity(Intent.createChooser(send,
+                    getString(R.string.diag_export_apk_chooser_title, pkg)));
+        } catch (Throwable t) {
+            AppLogger.w("DiagActivity", "shareApkToTelegram failed: " + t);
+            Toast.makeText(this,
+                    getString(R.string.diag_export_apk_err_fmt, String.valueOf(t.getMessage())),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void scheduleExportApkDelete(java.io.File f) {
+        // Auto-wipe the cached APK so the car never keeps the file long-term.
+        // Delay leaves Telegram enough time to upload before we yank it.
+        exportApkCleanupHandler.postDelayed(() -> {
+            try {
+                if (f.exists() && f.delete()) {
+                    AppLogger.i("DiagActivity", "Export APK auto-deleted: " + f.getName());
+                }
+            } catch (Throwable ignore) {}
+        }, EXPORT_APK_AUTO_DELETE_MS);
+    }
+
+    private java.io.File exportApkCacheDir() {
+        java.io.File ext = getExternalFilesDir(null);
+        java.io.File base = ext != null ? ext : getCacheDir();
+        if (base == null) return null;
+        java.io.File dir = new java.io.File(base, EXPORT_APK_SUBDIR);
+        if (!dir.exists() && !dir.mkdirs()) return null;
+        return dir;
+    }
+
+    private void wipeExportApkCacheDir() {
+        try {
+            java.io.File dir = exportApkCacheDir();
+            if (dir == null || !dir.isDirectory()) return;
+            java.io.File[] files = dir.listFiles();
+            if (files == null) return;
+            for (java.io.File f : files) {
+                if (f.isFile()) { //noinspection ResultOfMethodCallIgnored
+                    f.delete();
+                }
+            }
+        } catch (Throwable ignore) {}
+    }
+
+    private static void copyFile(java.io.File src, java.io.File dst) throws java.io.IOException {
+        try (java.io.FileInputStream in  = new java.io.FileInputStream(src);
+             java.io.FileOutputStream out = new java.io.FileOutputStream(dst)) {
+            byte[] buf = new byte[64 * 1024];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        }
+    }
+
+    private static String sanitiseVer(String v) {
+        if (v == null) return "0";
+        return v.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private static String formatBytes(long b) {
+        if (b <= 0) return "-";
+        if (b < 1024) return b + " B";
+        double kb = b / 1024.0;
+        if (kb < 1024) return String.format(java.util.Locale.US, "%.1f KB", kb);
+        double mb = kb / 1024.0;
+        return String.format(java.util.Locale.US, "%.1f MB", mb);
     }
 }

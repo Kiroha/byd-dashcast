@@ -96,7 +96,7 @@
                         android:text="@string/diag_dl5_cluster_counters_idle"/>
                 </LinearLayout>
 
-                <!-- Action row -->
+                <!-- Action row 1 — recon -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -124,6 +124,35 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
                         android:text="@string/diag_dl5_cluster_send_telegram"/>
+                </LinearLayout>
+
+                <!-- Action row 2 — live Fission test (DL5 only) -->
+                <LinearLayout
+                    android:id="@+id/ll_dl5_cluster_fission_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="14dp"
+                    android:visibility="gone">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_dl5_cluster_test_fission"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_dl5_cluster_test_fission"
+                        app:icon="@drawable/ic_science"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="@color/md_tertiary"
+                        android:textColor="@color/md_on_tertiary"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/diag_dl5_cluster_test_fission_hint"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="@color/md_on_surface_variant"/>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

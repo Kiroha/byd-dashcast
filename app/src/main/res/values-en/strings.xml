@@ -265,6 +265,23 @@
 
     <string name="diag_tab_cluster">Cluster DL3</string>
     <string name="diag_tab_cluster_dl5">Cluster DL5</string>
+    <string name="diag_tab_export_apk">Export BYD APK</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_export_apk_header_title">Export BYD APK</string>
+    <string name="diag_export_apk_header_subtitle">Lists installed BYD / XDJA / DiLink / cluster APKs, extracts the one you choose and ships it via Telegram.</string>
+    <string name="diag_export_apk_refresh">Refresh</string>
+    <string name="diag_export_apk_counters_idle">Idle — tap Refresh to scan.</string>
+    <string name="diag_export_apk_counters_scanning">Scanning…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK detected • %2$s on disk</string>
+    <string name="diag_export_apk_hint">The APK is copied to the app cache, shared with Telegram, then auto-deleted after 5 minutes. Nothing is kept on the car\'s storage.</string>
+    <string name="diag_export_apk_btn_export">Export</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK sent: %1$s</string>
+    <string name="diag_export_apk_chooser_title">Send APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">APK export failed: %1$s</string>
+    <string name="diag_export_apk_err_no_source">APK path not found for this package.</string>
 
     <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
     <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
@@ -279,6 +296,14 @@
     <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
     <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
     <string name="diag_dl5_cluster_toast_telegram_missing">Telegram not installed — opening share chooser.</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Destructive live test: launches Yandex Maps on the fission display, forces a resize, moves it back to the main display, then cleans up. DiLink 5 only, no resize command ever sent to the main display (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructive</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">This suite will:\n\n• Enable FORCE_RESIZE_APP compat on Yandex Maps\n• Force-stop Yandex Maps\n• Launch it on the fission display (id ≠ 0) in freeform windowingMode\n• Test a task resize\n• Move it back to the main display (id 0) to validate the move pipeline\n• Force-stop Yandex then reset the compat (cleanup)\n\nNo resize command is ever sent against the main display (id 0).\nContinue?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Run the test</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission is DiLink 5 only.</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">Local ADB</string>
     <string name="diag_tab_system">System</string>
