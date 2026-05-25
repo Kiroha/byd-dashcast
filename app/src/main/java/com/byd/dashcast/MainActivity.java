@@ -746,8 +746,13 @@ public class MainActivity extends AppCompatActivity
         View navHotspot = findViewById(R.id.nav_hotspot);
         if (navHotspot == null) return;
         boolean isDl3 = com.byd.dashcast.platform.Platform.get().isDiLink3(this);
+        // v1.2.38 fix: default is now TRUE so the navrail entry appears on DL3
+        // out of the box. Previous default (false) made the icon invisible until
+        // the user discovered the "I use my own SIM" toggle in Settings, which
+        // was reported as a missing-icon bug. Users without a personal SIM can
+        // still hide it via the same Settings toggle.
         boolean useOwnSim = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, false);
+                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, true);
         if (isDl3 && useOwnSim) {
             navHotspot.setVisibility(View.VISIBLE);
             navHotspot.setOnClickListener(new View.OnClickListener() {
@@ -882,13 +887,14 @@ public class MainActivity extends AppCompatActivity
                 tvDashboardStatus.setText(getString(R.string.status_starting_cluster));
                 Intent svcIntent = new Intent(this, ClusterService.class);
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
-            } else {
-                // v1.2.77 — auto-start projection: always on. Opening DashCast means
-                // wanting to project. Saves one tap on the "open app → Start projection" flow.
-                // Previously gated by PREF_AUTO_START_ON_LAUNCH (removed in v1.2.77).
-                AppLogger.i(TAG, "Auto-start projection on launch");
-                activateCluster();
             }
+            // v1.2.38: do NOT auto-activate projection on launch anymore. User
+            // feedback: opening DashCast just to browse the app grid should not
+            // wake the cluster surface. Auto-activation is preserved on the app
+            // launch path — see onSendToDashboard() which already calls
+            // activateCluster() (slow path) when mClusterService==null or
+            // getDisplayId()<=0, and the fast path replays the tapped app
+            // through mPendingAppAfterActivation once the service is up.
         }
         startStatePoll();
     }
