@@ -402,4 +402,26 @@
     <string name="diag_export_apk_chooser_title">Отправить APK %1$s</string>
     <string name="diag_export_apk_err_fmt">Ошибка экспорта APK: %1$s</string>
     <string name="diag_export_apk_err_no_source">Путь APK не найден для этого пакета.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Голос (alpha)</string>
+    <string name="diag_voice_header_title">Голосовое управление — PoC аудио-цепочки</string>
+    <string name="diag_voice_header_subtitle">Шаг 1/3: проверяет, что микрофон доступен приложению на этой платформе. ML-модель ещё не загружена.</string>
+    <string name="diag_voice_btn_start">Начать прослушивание</string>
+    <string name="diag_voice_btn_stop">Остановить</string>
+    <string name="diag_voice_state_idle">Сервис остановлен</string>
+    <string name="diag_voice_state_running">Слушаю…</string>
+    <string name="diag_voice_state_error_fmt">Ошибка: %1$s</string>
+    <string name="diag_voice_perm_denied">Доступ к микрофону запрещён — разрешите в настройках системы, чтобы запустить PoC.</string>
+    <string name="diag_voice_meter_label">VU-метр в реальном времени</string>
+    <string name="diag_voice_meter_rms">RMS (средний уровень)</string>
+    <string name="diag_voice_meter_peak">Мгновенный пик</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • пик %2$d • clip %3$d • кадры %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Этот PoC запускает foreground-сервис, который читает микрофон на 16 kHz mono 16-bit и показывает уровень аудио локально. Ничего не записывается, не передаётся и не анализируется. Слово активации «Ok DashCast» появится в v1.2.44 (openWakeWord), распознавание речи в v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Частота дискретизации: %1$d Hz mono 16-bit • источник VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — прослушивание микрофона (PoC)</string>
+    <string name="diag_voice_notif_text">Уровень аудио анализируется локально, ничего не записывается.</string>
+
 </resources>

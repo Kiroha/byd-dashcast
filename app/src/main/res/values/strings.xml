@@ -299,6 +299,27 @@
     <string name="diag_tab_cluster_dl5">Cluster DL5</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_export_apk">Export APK BYD</string>
+    <string name="diag_tab_voice">Voice (alpha)</string>
+
+    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
+    <string name="diag_voice_header_title">Pilotage vocal — PoC chaîne audio</string>
+    <string name="diag_voice_header_subtitle">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
+    <string name="diag_voice_btn_start">Démarrer l’écoute</string>
+    <string name="diag_voice_btn_stop">Arrêter</string>
+    <string name="diag_voice_state_idle">Service arrêté</string>
+    <string name="diag_voice_state_running">En écoute…</string>
+    <string name="diag_voice_state_error_fmt">Erreur : %1$s</string>
+    <string name="diag_voice_perm_denied">Permission micro refusée — active-la dans les paramètres système pour activer le PoC.</string>
+    <string name="diag_voice_meter_label">VU-mètre temps réel</string>
+    <string name="diag_voice_meter_rms">RMS (niveau moyen)</string>
+    <string name="diag_voice_meter_peak">Pic instantané</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • pic %2$d • clip %3$d • frames %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Ce PoC ouvre un service foreground qui lit le micro à 16 kHz mono 16-bit et affiche le niveau audio en local. Aucune donnée n’est enregistrée, transmise ou analysée. Le wake word « Ok DashCast » sera ajouté en v1.2.44 (openWakeWord), la reconnaissance vocale en v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Échantillonnage : %1$d Hz mono 16-bit • source VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — écoute micro (PoC)</string>
+    <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_export_apk_header_title">Export APK BYD</string>

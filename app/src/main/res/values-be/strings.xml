@@ -402,4 +402,26 @@
     <string name="diag_export_apk_chooser_title">Адправіць APK %1$s</string>
     <string name="diag_export_apk_err_fmt">Памылка экспарту APK: %1$s</string>
     <string name="diag_export_apk_err_no_source">Шлях APK не знойдзены для гэтага пакета.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Голас (alpha)</string>
+    <string name="diag_voice_header_title">Галасавы кантроль — PoC аўдыё-ланцуга</string>
+    <string name="diag_voice_header_subtitle">Крок 1/3: правярае, што мікрафон даступны для прыкладання на гэтай платформе. ML мадэль яшчэ не загружаная.</string>
+    <string name="diag_voice_btn_start">Пачаць праслухоўванне</string>
+    <string name="diag_voice_btn_stop">Спыніць</string>
+    <string name="diag_voice_state_idle">Сэрвіс спынены</string>
+    <string name="diag_voice_state_running">Слухае…</string>
+    <string name="diag_voice_state_error_fmt">Памылка: %1$s</string>
+    <string name="diag_voice_perm_denied">Доступ да мікрафона забаронены — дазволь у наладах сістэмы каб уключыць PoC.</string>
+    <string name="diag_voice_meter_label">VU-метр у рэальным часе</string>
+    <string name="diag_voice_meter_rms">RMS (сярэдні ўзровень)</string>
+    <string name="diag_voice_meter_peak">Імгненны пік</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • пік %2$d • clip %3$d • кадры %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Гэты PoC адкрывае foreground-сэрвіс, які чытае мікрафон на 16 kHz mono 16-bit і паказвае ўзровень аўдыё лакальна. Нічога не запісваецца, не перадаецца і не аналізуецца. Слова актывацыі «Ok DashCast» з’явіцца ў v1.2.44 (openWakeWord), распазнаванне мовы ў v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Частата дыскрэтызацыі: %1$d Hz mono 16-bit • крыніца VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — праслухоўванне мікрафона (PoC)</string>
+    <string name="diag_voice_notif_text">Узровень аўдыё аналізуецца лакальна, нічога не запісваецца.</string>
+
 </resources>

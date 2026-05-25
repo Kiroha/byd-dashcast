@@ -402,4 +402,26 @@ Davom etilsinmi?</string>
     <string name="diag_export_apk_chooser_title">%1$s APK\'ni yuborish</string>
     <string name="diag_export_apk_err_fmt">APK eksporti muvaffaqiyatsiz: %1$s</string>
     <string name="diag_export_apk_err_no_source">Ushbu paket uchun APK yo\'li topilmadi.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Ovoz (alpha)</string>
+    <string name="diag_voice_header_title">Ovozli boshqaruv — audio-zanjir PoC</string>
+    <string name="diag_voice_header_subtitle">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
+    <string name="diag_voice_btn_start">Tinglashni boshlash</string>
+    <string name="diag_voice_btn_stop">To‘xtatish</string>
+    <string name="diag_voice_state_idle">Xizmat to‘xtatilgan</string>
+    <string name="diag_voice_state_running">Tinglanyapti…</string>
+    <string name="diag_voice_state_error_fmt">Xato: %1$s</string>
+    <string name="diag_voice_perm_denied">Mikrofonga ruxsat rad etildi — PoC ni yoqish uchun tizim sozlamalaridan ruxsat bering.</string>
+    <string name="diag_voice_meter_label">Real vaqtli VU-metr</string>
+    <string name="diag_voice_meter_rms">RMS (o‘rtacha daraja)</string>
+    <string name="diag_voice_meter_peak">Daqiqaviy cho‘qqi</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • cho‘qqi %2$d • clip %3$d • kadrlar %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Bu PoC mikrofon 16 kHz mono 16-bit o‘qiydigan foreground xizmatni ochadi va audio darajasini lokal ko‘rsatadi. Hech narsa yozilmaydi, uzatilmaydi yoki tahlil qilinmaydi. «Ok DashCast» uyg‘otish so‘zi v1.2.44 (openWakeWord) da, nutqni tanib olish v1.2.45 (Vosk) da qo‘shiladi.</string>
+    <string name="diag_voice_sample_rate_fmt">Diskretlash chastotasi: %1$d Hz mono 16-bit • manba VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — mikrofon tinglanyapti (PoC)</string>
+    <string name="diag_voice_notif_text">Audio darajasi lokal tahlil qilinadi, hech narsa yozilmaydi.</string>
+
 </resources>

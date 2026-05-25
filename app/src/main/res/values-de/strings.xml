@@ -402,4 +402,26 @@ Fortfahren?</string>
     <string name="diag_export_apk_chooser_title">APK %1$s senden</string>
     <string name="diag_export_apk_err_fmt">APK-Export fehlgeschlagen: %1$s</string>
     <string name="diag_export_apk_err_no_source">APK-Pfad für dieses Paket nicht gefunden.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Sprache (Alpha)</string>
+    <string name="diag_voice_header_title">Sprachsteuerung — Audio-Chain-PoC</string>
+    <string name="diag_voice_header_subtitle">Schritt 1/3: prüft, ob das Mikrofon auf dieser Plattform die App erreicht. Es wird noch kein ML-Modell geladen.</string>
+    <string name="diag_voice_btn_start">Zuhören starten</string>
+    <string name="diag_voice_btn_stop">Stoppen</string>
+    <string name="diag_voice_state_idle">Dienst gestoppt</string>
+    <string name="diag_voice_state_running">Höre zu…</string>
+    <string name="diag_voice_state_error_fmt">Fehler: %1$s</string>
+    <string name="diag_voice_perm_denied">Mikrofon-Berechtigung verweigert — in den Systemeinstellungen erteilen, um den PoC zu aktivieren.</string>
+    <string name="diag_voice_meter_label">Live-VU-Meter</string>
+    <string name="diag_voice_meter_rms">RMS (Mittelwert)</string>
+    <string name="diag_voice_meter_peak">Sofortiger Peak</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • Peak %2$d • Clip %3$d • Frames %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Dieser PoC startet einen Foreground-Dienst, der das Mikrofon mit 16 kHz mono 16-bit liest und den Pegel lokal anzeigt. Nichts wird aufgezeichnet, übertragen oder analysiert. Das Aktivierungswort „Ok DashCast“ kommt in v1.2.44 (openWakeWord), die Spracherkennung in v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Abtastrate: %1$d Hz mono 16-bit • Quelle VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — Mikrofon hört (PoC)</string>
+    <string name="diag_voice_notif_text">Audiopegel wird lokal analysiert, nichts wird aufgezeichnet.</string>
+
 </resources>

@@ -402,4 +402,26 @@ Ningún comando de redimensionado se envía nunca a la pantalla principal (id 0)
     <string name="diag_export_apk_chooser_title">Enviar APK %1$s</string>
     <string name="diag_export_apk_err_fmt">Fallo al exportar APK: %1$s</string>
     <string name="diag_export_apk_err_no_source">Ruta del APK no encontrada para este paquete.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Voz (alpha)</string>
+    <string name="diag_voice_header_title">Control por voz — PoC cadena de audio</string>
+    <string name="diag_voice_header_subtitle">Paso 1/3: verifica que el micrófono llega a la app en esta plataforma. Aún no se carga ningún modelo de ML.</string>
+    <string name="diag_voice_btn_start">Comenzar a escuchar</string>
+    <string name="diag_voice_btn_stop">Detener</string>
+    <string name="diag_voice_state_idle">Servicio detenido</string>
+    <string name="diag_voice_state_running">Escuchando…</string>
+    <string name="diag_voice_state_error_fmt">Error: %1$s</string>
+    <string name="diag_voice_perm_denied">Permiso de micrófono denegado — actívalo en los ajustes del sistema para habilitar el PoC.</string>
+    <string name="diag_voice_meter_label">Vumetro en vivo</string>
+    <string name="diag_voice_meter_rms">RMS (nivel medio)</string>
+    <string name="diag_voice_meter_peak">Pico instantáneo</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • pico %2$d • clip %3$d • fotogramas %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Este PoC abre un servicio foreground que lee el micrófono a 16 kHz mono 16-bit y muestra el nivel de audio localmente. No se graba, transmite ni analiza nada. La palabra de activación «Ok DashCast» se añadirá en v1.2.44 (openWakeWord), el reconocimiento de voz en v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Frecuencia de muestreo: %1$d Hz mono 16-bit • fuente VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — micrófono activo (PoC)</string>
+    <string name="diag_voice_notif_text">Nivel de audio analizado localmente, no se graba nada.</string>
+
 </resources>

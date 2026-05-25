@@ -402,4 +402,26 @@
     <string name="diag_export_apk_chooser_title">إرسال APK %1$s</string>
     <string name="diag_export_apk_err_fmt">فشل تصدير APK: %1$s</string>
     <string name="diag_export_apk_err_no_source">لم يُعثر على مسار APK لهذه الحزمة.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">صوت (تجريبي)</string>
+    <string name="diag_voice_header_title">التحكم الصوتي — اختبار سلسلة الصوت</string>
+    <string name="diag_voice_header_subtitle">الخطوة 1/3: التحقق من وصول الميكروفون إلى التطبيق على هذا الجهاز. لم يتم تحميل أي نموذج ML بعد.</string>
+    <string name="diag_voice_btn_start">بدء الاستماع</string>
+    <string name="diag_voice_btn_stop">إيقاف</string>
+    <string name="diag_voice_state_idle">الخدمة متوقفة</string>
+    <string name="diag_voice_state_running">جارٍ الاستماع…</string>
+    <string name="diag_voice_state_error_fmt">خطأ: %1$s</string>
+    <string name="diag_voice_perm_denied">تم رفض إذن الميكروفون — فعّله من إعدادات النظام لتشغيل الاختبار.</string>
+    <string name="diag_voice_meter_label">مقياس VU مباشر</string>
+    <string name="diag_voice_meter_rms">RMS (المستوى المتوسط)</string>
+    <string name="diag_voice_meter_peak">الذروة الفورية</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • ذروة %2$d • قص %3$d • إطارات %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">يفتح هذا الاختبار خدمة foreground تقرأ الميكروفون بـ 16 kHz mono 16-bit وتعرض مستوى الصوت محليًا. لا يتم تسجيل أو إرسال أو تحليل أي بيانات. ستتم إضافة كلمة التنبيه «Ok DashCast» في v1.2.44 (openWakeWord)، والتعرّف على الكلام في v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">معدل العينة: %1$d Hz mono 16-bit • المصدر VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — اختبار الصوت</string>
+    <string name="diag_voice_notif_title">DashCast — استماع الميكروفون (PoC)</string>
+    <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
+
 </resources>
