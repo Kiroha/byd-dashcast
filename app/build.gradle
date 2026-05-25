@@ -114,8 +114,31 @@ android {
         //     showPanelForTab for that tab). The default tab is selected at
         //     the end of onCreate, so its rows are still ready before the
         //     first frame is drawn.
-        versionCode 304
-        versionName "1.2.46-beta"
+        // v1.2.47-beta (build 305) — DL5 Fission runner fixes after field run.
+        //   Field test on a real DL5 (run 20260525_142241) revealed that the
+        //   F-tier scored "10 PASS / 2 WARN" but two of the PASS were false
+        //   positives:
+        //     - F05 / F09 launched Yandex with `-a MAIN -c LAUNCHER -p pkg`.
+        //       `am start` returned "Error: Activity not started, unable to
+        //       resolve Intent" yet still exited 0, so the runner marked PASS.
+        //     - F10 verified "displayId=0 anywhere in dump" → always true on
+        //       any device (display 0 is the main screen).
+        //   Plus F06/F08 used grep filters too broad to scope to the Yandex
+        //   task block, hitting parent tasks' bounds/mode instead.
+        //   Fixes (zero scope creep — runner-only, no UI):
+        //     - F02 now also resolves the launch ComponentName via
+        //       PackageManager.getLaunchIntentForPackage(); aborts F03..F10
+        //       if no launcher activity exists.
+        //     - F05 / F09 use `am start ... -n <pkg/.Activity>` (resolved in
+        //       F02). "unable to resolve" output is now a FAIL.
+        //     - F06 / F10 use awk to find the displayId that immediately
+        //       precedes the Yandex task in the dumpsys hierarchy (real
+        //       per-task displayId, not a substring sweep).
+        //     - F08 scopes `mBounds=Rect` extraction to the specific
+        //       `#<taskId} ` block with `grep -A 25`.
+        //   No behavioural change outside the F-tier diagnostic battery.
+        versionCode 305
+        versionName "1.2.47-beta"
     }
 
     buildTypes {
