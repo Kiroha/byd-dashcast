@@ -48,6 +48,16 @@ public final class Dl5ClusterReconRunner {
         void onSuiteStarted(List<DiLink5TestRunner.TestResult> results);
         void onTestUpdated(int index, DiLink5TestRunner.TestResult result);
         void onSuiteFinished(List<DiLink5TestRunner.TestResult> results);
+        /**
+         * v1.2.48 — interactive Yes/No prompt requested by the runner thread.
+         * Implementations should show a modal dialog and invoke {@code callback}
+         * with the user's choice. Default = NO (so any pre-v1.2.48 listener
+         * keeps working without changes).
+         */
+        default void onPromptYesNo(String title, String message,
+                                   java.util.function.Consumer<Boolean> callback) {
+            callback.accept(false);
+        }
     }
 
     private static final ExecutorService EXEC = Executors.newSingleThreadExecutor(r -> {
@@ -502,44 +512,79 @@ public final class Dl5ClusterReconRunner {
 
     /** Mutable state shared between F-tests within a single run. */
     private static final class FissionState {
-        int  fissionDisplayId = -1;
-        int  yandexTaskId     = -1;
-        boolean overrideEnabled = false;
         boolean abortFromHere   = false;
+        boolean overrideEnabled = false;
         /** Resolved launcher component for {@link #FISSION_TARGET_PKG}, e.g.
-         *  "ru.yandex.yandexmaps/.SplashScreen". Filled by F02; F05/F09
-         *  use `am start -n <targetActivity>` instead of the generic
-         *  `-a MAIN -c LAUNCHER -p pkg` intent that failed to resolve on
-         *  the field DL5 (run 20260525_142241). v1.2.47-beta. */
-        String targetActivity = null;
+         *  "ru.yandex.yandexmaps/.SplashScreen". Filled by F02. */
+        String  targetActivity  = null;
+        /** v1.2.48 — set by F01 when the cluster projection was opened by
+         *  this run. F16 only sends the close sequence if true, so we don't
+         *  tear down a projection the user had started manually. */
+        boolean projectionOpenedByUs = false;
+        /** v1.2.48 — the display id the user confirmed as the cluster screen
+         *  (2, 3 or 4). -1 = no confirmation yet. */
+        int confirmedClusterDisplay = -1;
+        /** v1.2.48 — taskId of Yandex Maps as last extracted on the confirmed
+         *  cluster display, used by F10/F11/F12. */
+        int yandexTaskIdOnCluster = -1;
+        /** v1.2.48 — last display id where Yandex was successfully launched
+         *  (used by the corresponding prompt step to gate its execution). */
+        int lastLaunchedDisplay = -1;
     }
+
+    /** Candidate cluster display ids tried in order by the F-tier (v1.2.48). */
+    private static final int[] FISSION_CANDIDATE_DISPLAYS = { 2, 3, 4 };
 
     public static List<DiLink5TestRunner.TestDef> fissionCatalog() {
         List<DiLink5TestRunner.TestDef> list = new ArrayList<>();
-        list.add(new DiLink5TestRunner.TestDef("F01", "Detect fission display (id ≠ 0)",
-                "Walk DisplayManager.getDisplays() for the lowest non-zero id with a fission/xdja/cluster name. STRICT: id=0 is excluded; if none found, the whole F-tier SKIPs."));
-        list.add(new DiLink5TestRunner.TestDef("F02", "Yandex Maps installed + launcher resolved?",
-                "PackageManager.getPackageInfo(ru.yandex.yandexmaps) + getLaunchIntentForPackage to resolve the actual launcher activity (e.g. ru.yandex.yandexmaps/.SplashScreen). SKIPs F03..F10 if absent or unresolvable. v1.2.47: added resolution to fix F05/F09 'unable to resolve Intent' field failures."));
-        list.add(new DiLink5TestRunner.TestDef("F03", "Enable FORCE_RESIZE_APP on Yandex Maps",
+        list.add(new DiLink5TestRunner.TestDef("F01",
+                "Activate DL5 projection (cluster mirror)",
+                "service call auto_container 2 i32 1000 i32 16 s16 \"\" — opens the BYD cluster projection so fission displays (id 2/3/4) become routable. Required before any cluster-targeted am start can be observed."));
+        list.add(new DiLink5TestRunner.TestDef("F02",
+                "Yandex Maps installed + launcher resolved?",
+                "PackageManager.getPackageInfo(ru.yandex.yandexmaps) + getLaunchIntentForPackage to resolve the actual launcher activity (e.g. ru.yandex.yandexmaps/.SplashScreen). SKIPs the rest of the suite if absent or unresolvable."));
+        list.add(new DiLink5TestRunner.TestDef("F03",
+                "Enable FORCE_RESIZE_APP on Yandex Maps",
                 "am compat enable 174042936 ru.yandex.yandexmaps — forces ATM to treat the activity as resizeable regardless of its manifest resizeMode."));
-        list.add(new DiLink5TestRunner.TestDef("F04", "Force-stop Yandex Maps (pre-launch)",
-                "am force-stop ru.yandex.yandexmaps — the new compat override only takes effect on the next Application.onCreate, so we must kill the existing process first."));
-        list.add(new DiLink5TestRunner.TestDef("F05", "Launch Yandex Maps on fission display",
-                "am start --display N --windowingMode 5 -n <pkg/.Activity> — uses the launcher component resolved in F02 instead of the generic action/category filter (which failed to resolve on field DL5). N is the fission id detected in F01."));
-        list.add(new DiLink5TestRunner.TestDef("F06", "Verify task on fission + freeform",
-                "Wait ~3 s, dumpsys activity activities, scan for ru.yandex.yandexmaps task, confirm displayId=N and (freeform | windowingMode=5). Captures taskId for F07/F08."));
-        list.add(new DiLink5TestRunner.TestDef("F07", "Resize task on fission",
-                "cmd activity task resize <taskId> 100 80 1820 640 — apply a 100×80 inset rectangle inside the 1920×720 fission framebuffer."));
-        list.add(new DiLink5TestRunner.TestDef("F08", "Verify new bounds",
-                "Wait ~2 s, dumpsys activity activities | grep mBounds — confirm mBounds reflects the rectangle from F07."));
-        list.add(new DiLink5TestRunner.TestDef("F09", "Move task back to main display (id=0)",
-                "am start --display 0 -n <pkg/.Activity> — reparents the Yandex task onto display 0 (the main screen) using the launcher component resolved in F02. No resize / no size mutation on display 0."));
-        list.add(new DiLink5TestRunner.TestDef("F10", "Verify task on main display (id=0)",
-                "Wait ~2 s, dumpsys activity activities, scan for ru.yandex.yandexmaps task, confirm displayId=0. Validates the move pipeline end-to-end (fission → main)."));
-        list.add(new DiLink5TestRunner.TestDef("F11", "Cleanup: force-stop Yandex",
-                "am force-stop ru.yandex.yandexmaps — leaves the device empty of Yandex Maps state, ready for a fresh run on another fission display."));
-        list.add(new DiLink5TestRunner.TestDef("F12", "Cleanup: reset FORCE_RESIZE_APP override",
-                "am compat reset 174042936 ru.yandex.yandexmaps — restores Yandex Maps to its declared resize behaviour, leaves zero state behind."));
+        list.add(new DiLink5TestRunner.TestDef("F04",
+                "Display 2 — force-stop + launch Yandex",
+                "am force-stop + am start --display 2 --windowingMode 5 -n <component>."));
+        list.add(new DiLink5TestRunner.TestDef("F05",
+                "Display 2 — user confirms visible on cluster?",
+                "Interactive Yes/No prompt. YES → mark display 2 as cluster, skip F06..F09. NO → move Yandex back to display 0 + force-stop, then proceed to display 3."));
+        list.add(new DiLink5TestRunner.TestDef("F06",
+                "Display 3 — force-stop + launch Yandex",
+                "SKIPPED if user already confirmed display 2."));
+        list.add(new DiLink5TestRunner.TestDef("F07",
+                "Display 3 — user confirms visible on cluster?",
+                "SKIPPED if previous display was confirmed. NO → move back + force-stop, try display 4."));
+        list.add(new DiLink5TestRunner.TestDef("F08",
+                "Display 4 — force-stop + launch Yandex",
+                "SKIPPED if user already confirmed display 2 or 3."));
+        list.add(new DiLink5TestRunner.TestDef("F09",
+                "Display 4 — user confirms visible on cluster?",
+                "SKIPPED if previous display was confirmed. NO → no cluster display identified, resize tests F10..F12 will SKIP."));
+        list.add(new DiLink5TestRunner.TestDef("F10",
+                "Set task windowing mode = freeform on cluster display",
+                "cmd activity set-task-windowing-mode <taskId> 5 — required because fission displays declare mDisplayWindowingMode=fullscreen and tasks land in fullscreen even with --windowingMode 5 at launch."));
+        list.add(new DiLink5TestRunner.TestDef("F11",
+                "Resize task on confirmed cluster display",
+                "cmd activity task resize <taskId> 100 80 1820 640. SKIPPED if no display was confirmed by the user."));
+        list.add(new DiLink5TestRunner.TestDef("F12",
+                "Verify new bounds",
+                "Wait ~2 s, dumpsys activity activities scoped to the Yandex task — confirm mBounds reflects the rectangle from F11."));
+        list.add(new DiLink5TestRunner.TestDef("F13",
+                "Move Yandex back to display 0",
+                "am start --display 0 -n <component> — reparents the task onto the head unit. No resize / no size mutation on display 0."));
+        list.add(new DiLink5TestRunner.TestDef("F14",
+                "Cleanup: force-stop Yandex",
+                "am force-stop ru.yandex.yandexmaps — leaves zero state behind."));
+        list.add(new DiLink5TestRunner.TestDef("F15",
+                "Cleanup: reset FORCE_RESIZE_APP override",
+                "am compat reset 174042936 ru.yandex.yandexmaps — restores Yandex Maps to its declared resize behaviour."));
+        list.add(new DiLink5TestRunner.TestDef("F16",
+                "Cleanup: close DL5 projection (if opened by F01)",
+                "service call auto_container 2 i32 1000 i32 18 + i32 0 — restores Qt video stream. SKIPPED if F01 did not open the projection in this run."));
         return list;
     }
 
@@ -580,7 +625,7 @@ public final class Dl5ClusterReconRunner {
                 UI.post(() -> listener.onTestUpdated(idx, r));
                 long t0 = SystemClock.elapsedRealtime();
                 try {
-                    runFissionOne(appCtx, r, st);
+                    runFissionOne(appCtx, r, st, listener);
                 } catch (Throwable th) {
                     r.status = DiLink5TestRunner.Status.FAIL;
                     r.message = "exception";
@@ -594,20 +639,24 @@ public final class Dl5ClusterReconRunner {
     }
 
     private static void runFissionOne(Context ctx, DiLink5TestRunner.TestResult r,
-                                      FissionState st) {
+                                      FissionState st, Listener listener) {
         switch (r.def.id) {
-            case "F01": fissionDetectDisplay(ctx, r, st); return;
+            case "F01": fissionActivateProjection(ctx, r, st); return;
             case "F02": fissionCheckYandexInstalled(ctx, r, st); return;
             case "F03": fissionEnableOverride(ctx, r, st); return;
-            case "F04": fissionForceStop(ctx, r, st, "pre-launch"); return;
-            case "F05": fissionLaunch(ctx, r, st); return;
-            case "F06": fissionVerifyOnFission(ctx, r, st); return;
-            case "F07": fissionResizeTask(ctx, r, st); return;
-            case "F08": fissionVerifyBounds(ctx, r, st); return;
-            case "F09": fissionMoveToMainDisplay(ctx, r, st); return;
-            case "F10": fissionVerifyOnMainDisplay(ctx, r, st); return;
-            case "F11": fissionForceStop(ctx, r, st, "cleanup"); return;
-            case "F12": fissionResetOverride(ctx, r, st); return;
+            case "F04": fissionAttemptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[0]); return;
+            case "F05": fissionPromptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[0], listener); return;
+            case "F06": fissionAttemptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[1]); return;
+            case "F07": fissionPromptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[1], listener); return;
+            case "F08": fissionAttemptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[2]); return;
+            case "F09": fissionPromptDisplay(ctx, r, st, FISSION_CANDIDATE_DISPLAYS[2], listener); return;
+            case "F10": fissionSetFreeformOnCluster(ctx, r, st); return;
+            case "F11": fissionResizeOnCluster(ctx, r, st); return;
+            case "F12": fissionVerifyBoundsOnCluster(ctx, r, st); return;
+            case "F13": fissionMoveBackToMain(ctx, r, st); return;
+            case "F14": fissionForceStop(ctx, r, st, "cleanup"); return;
+            case "F15": fissionResetOverride(ctx, r, st); return;
+            case "F16": fissionCloseProjection(ctx, r, st); return;
             default:
                 r.status = DiLink5TestRunner.Status.SKIPPED;
                 r.message = "no impl";
@@ -616,76 +665,53 @@ public final class Dl5ClusterReconRunner {
 
     // ── Fission per-step implementations ────────────────────────────────────
 
-    private static boolean isFissionName(String name) {
-        if (name == null) return false;
-        String n = name.toLowerCase();
-        return n.contains("fission") || n.contains("xdja") || n.contains("cluster");
-    }
-
-    private static void fissionDetectDisplay(Context ctx, DiLink5TestRunner.TestResult r,
-                                             FissionState st) {
+    /** F01 — open the BYD cluster projection so fission displays become routable. */
+    private static void fissionActivateProjection(Context ctx, DiLink5TestRunner.TestResult r,
+                                                  FissionState st) {
+        String cmd = "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1";
+        String out = shellSync(ctx, cmd);
+        StringBuilder dt = new StringBuilder();
+        dt.append("$ ").append(cmd).append("\n\n").append(out == null ? "<no output>" : out);
+        // Also snapshot DisplayManager for diagnostic — fission displays may
+        // or may not be visible to apps depending on the platform build.
         DisplayManager dm = (DisplayManager) ctx.getSystemService(Context.DISPLAY_SERVICE);
-        if (dm == null) {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "no DisplayManager";
-            st.abortFromHere = true;
-            return;
-        }
-        Display[] all = dm.getDisplays();
-        StringBuilder sb = new StringBuilder("DisplayManager.getDisplays():\n");
-        int picked = -1;
-        for (Display d : all) {
-            sb.append("  id=").append(d.getDisplayId())
-              .append(" name=").append(d.getName()).append('\n');
-            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue; // STRICT: skip id=0
-            if (picked >= 0) continue;
-            if (isFissionName(d.getName())) picked = d.getDisplayId();
-        }
-        // Fallback: lowest non-zero id even if name doesn't match (e.g. hidden Id=2).
-        if (picked < 0) {
-            for (Display d : all) {
-                if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
-                picked = d.getDisplayId();
-                break;
+        if (dm != null) {
+            dt.append("\n\nDisplayManager.getDisplays():\n");
+            for (Display d : dm.getDisplays()) {
+                dt.append("  id=").append(d.getDisplayId())
+                  .append(" name=").append(d.getName()).append('\n');
             }
         }
-        r.detail = sb.toString();
-        if (picked <= 0) {
-            r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "no non-zero display available — F-tier aborted";
-            st.abortFromHere = true;
-            return;
-        }
-        st.fissionDisplayId = picked;
+        dt.append("\n(candidate displays to probe: ")
+          .append(Arrays.toString(FISSION_CANDIDATE_DISPLAYS)).append(")");
+        r.detail = dt.toString();
+        st.projectionOpenedByUs = true;
         r.status = DiLink5TestRunner.Status.PASS;
-        r.message = "fission displayId=" + picked;
+        r.message = "projection open requested (sendInfo 16)";
+        // Give compositor a moment to wire the fission displays before F04.
+        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
 
     private static void fissionCheckYandexInstalled(Context ctx, DiLink5TestRunner.TestResult r,
                                                     FissionState st) {
         if (st.abortFromHere) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "aborted by F01";
+            r.message = "aborted earlier";
             return;
         }
         try {
             ctx.getPackageManager().getPackageInfo(FISSION_TARGET_PKG, 0);
         } catch (Exception e) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = FISSION_TARGET_PKG + " not installed — F03..F10 skipped";
+            r.message = FISSION_TARGET_PKG + " not installed — F03..F16 skipped";
             st.abortFromHere = true;
             return;
         }
-        // v1.2.47: also resolve the actual launcher activity. Without this,
-        // F05/F09 fall back to the generic -a MAIN -c LAUNCHER -p pkg intent
-        // which `am start` failed to resolve on the field DL5 (the launcher
-        // activity does not match that exact action/category combo on this
-        // ROM build of Yandex Maps).
         android.content.Intent launchIntent =
                 ctx.getPackageManager().getLaunchIntentForPackage(FISSION_TARGET_PKG);
         if (launchIntent == null || launchIntent.getComponent() == null) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = FISSION_TARGET_PKG + " installed but no launcher activity — F03..F10 skipped";
+            r.message = FISSION_TARGET_PKG + " installed but no launcher activity — F03..F16 skipped";
             st.abortFromHere = true;
             return;
         }
@@ -707,7 +733,6 @@ public final class Dl5ClusterReconRunner {
             st.overrideEnabled = true;
         } else if (out != null && !out.toLowerCase().contains("error")
                 && !out.toLowerCase().contains("exception")) {
-            // Some ROMs emit no acknowledgement on success.
             r.status = DiLink5TestRunner.Status.PASS;
             r.message = "no error";
             st.overrideEnabled = true;
@@ -719,7 +744,6 @@ public final class Dl5ClusterReconRunner {
 
     private static void fissionForceStop(Context ctx, DiLink5TestRunner.TestResult r,
                                          FissionState st, String tag) {
-        // Cleanup steps run even when an earlier step aborted, so we don't gate.
         String cmd = "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
@@ -727,184 +751,273 @@ public final class Dl5ClusterReconRunner {
         r.message = tag + " force-stop sent";
     }
 
-    private static void fissionLaunch(Context ctx, DiLink5TestRunner.TestResult r,
-                                      FissionState st) {
+    /**
+     * v1.2.48 — F04/F06/F08. Force-stop Yandex then launch it on the given
+     * fission candidate display. SKIPs cleanly if (a) earlier abort, (b) a
+     * previous candidate was already confirmed by the user, (c) F02 didn't
+     * resolve a launcher component.
+     */
+    private static void fissionAttemptDisplay(Context ctx, DiLink5TestRunner.TestResult r,
+                                              FissionState st, int displayId) {
         if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "aborted earlier"; return; }
-        if (st.fissionDisplayId <= 0) {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "no fission display id";
-            st.abortFromHere = true;
+        if (st.confirmedClusterDisplay > 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "display " + st.confirmedClusterDisplay + " already confirmed as cluster";
             return;
         }
         if (st.targetActivity == null) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "no resolved launcher (F02)";
-            st.abortFromHere = true;
             return;
         }
-        // v1.2.47: -n <component> instead of -a/-c/-p. `am start` returns
-        // exit 0 even when it can't resolve the intent, so we must also
-        // detect "unable to resolve" in stdout and mark FAIL.
-        String cmd = "am start --display " + st.fissionDisplayId
+        StringBuilder dt = new StringBuilder();
+        // Force-stop so the FORCE_RESIZE_APP override picks up on next launch.
+        String fsCmd = "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__";
+        String fsOut = shellSync(ctx, fsCmd);
+        dt.append("$ ").append(fsCmd).append("\n").append(fsOut == null ? "<no output>" : fsOut).append("\n\n");
+        try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        // Launch on the candidate display, request freeform.
+        String launchCmd = "am start --display " + displayId
                 + " --windowingMode 5"
                 + " -n " + st.targetActivity + " 2>&1";
-        String out = shellSync(ctx, cmd);
-        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
-        if (out != null && out.toLowerCase().contains("unable to resolve")) {
+        String launchOut = shellSync(ctx, launchCmd);
+        dt.append("$ ").append(launchCmd).append("\n").append(launchOut == null ? "<no output>" : launchOut);
+        r.detail = dt.toString();
+        String lo = launchOut == null ? "" : launchOut.toLowerCase();
+        if (lo.contains("unable to resolve")) {
             r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "unable to resolve intent";
-            st.abortFromHere = true;
-        } else if (out != null && (out.contains("Starting:") || out.contains("Status: ok"))
-                && !out.toLowerCase().contains("error")) {
+            r.message = "unable to resolve intent on display " + displayId;
+        } else if (lo.contains("does not exist") || lo.contains("invalid display")
+                || lo.contains("no display")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "display " + displayId + " not accessible on this platform";
+        } else if (launchOut != null && (launchOut.contains("Starting:")
+                || launchOut.contains("Status: ok")
+                || launchOut.contains("delivered to top"))) {
             r.status = DiLink5TestRunner.Status.PASS;
-            r.message = "launch issued on display " + st.fissionDisplayId;
-        } else if (out != null && out.toLowerCase().contains("error")) {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "launch error";
-            st.abortFromHere = true;
+            r.message = "Yandex launched on display " + displayId;
+            st.lastLaunchedDisplay = displayId;
+            // Let the activity settle before the user looks at the cluster.
+            try { Thread.sleep(2500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        } else if (lo.contains("error")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "launch error on display " + displayId + " — see detail";
         } else {
             r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "ambiguous launch output";
+            r.message = "ambiguous launch output on display " + displayId;
+            // Still try the prompt — the activity may have started anyway.
+            st.lastLaunchedDisplay = displayId;
+            try { Thread.sleep(2500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
     }
 
-    private static void fissionVerifyOnFission(Context ctx, DiLink5TestRunner.TestResult r,
+    /**
+     * v1.2.48 — F05/F07/F09. Synchronous user prompt: "Is Yandex visible on
+     * the cluster screen?". YES → record this display as the cluster. NO →
+     * move Yandex back to display 0 + force-stop so the next candidate
+     * launches from a clean slate.
+     */
+    private static void fissionPromptDisplay(Context ctx, DiLink5TestRunner.TestResult r,
+                                             FissionState st, int displayId, Listener listener) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.confirmedClusterDisplay > 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "display " + st.confirmedClusterDisplay + " already confirmed";
+            return;
+        }
+        if (st.lastLaunchedDisplay != displayId) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "launch on display " + displayId + " did not succeed — no prompt";
+            return;
+        }
+        String title = ctx.getString(
+                com.byd.dashcast.R.string.diag_dl5_fission_prompt_title);
+        String msg = ctx.getString(
+                com.byd.dashcast.R.string.diag_dl5_fission_prompt_msg_fmt, displayId);
+        final java.util.concurrent.CountDownLatch latch =
+                new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicBoolean answer =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        UI.post(() -> listener.onPromptYesNo(title, msg, ans -> {
+            answer.set(ans != null && ans);
+            latch.countDown();
+        }));
+        boolean timedOut = false;
+        try {
+            if (!latch.await(180, java.util.concurrent.TimeUnit.SECONDS)) timedOut = true;
+        } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        boolean yes = answer.get();
+        StringBuilder dt = new StringBuilder();
+        dt.append("prompt title : ").append(title).append('\n');
+        dt.append("prompt msg   : ").append(msg).append('\n');
+        dt.append("user answer  : ").append(timedOut ? "TIMEOUT" : (yes ? "YES" : "NO")).append('\n');
+        if (timedOut) {
+            r.detail = dt.toString();
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "user prompt timed out (180 s) on display " + displayId;
+            return;
+        }
+        if (yes) {
+            st.confirmedClusterDisplay = displayId;
+            // Best-effort: extract the Yandex task id for the resize step.
+            int tid = extractYandexTaskIdOnDisplay(ctx, displayId);
+            st.yandexTaskIdOnCluster = tid;
+            dt.append("extracted taskId on display ").append(displayId).append(" = ").append(tid).append('\n');
+            r.detail = dt.toString();
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "user confirmed cluster on display " + displayId
+                    + (tid > 0 ? " (taskId=" + tid + ")" : " (taskId not extracted)");
+        } else {
+            // Move Yandex back to display 0 + force-stop so the next candidate
+            // launches from a clean slate.
+            String mb = shellSync(ctx, "am start --display 0 -n " + st.targetActivity + " 2>&1");
+            dt.append("\n$ am start --display 0 -n ").append(st.targetActivity).append('\n')
+              .append(mb == null ? "<no output>" : mb).append('\n');
+            try { Thread.sleep(1200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            String fs = shellSync(ctx, "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__");
+            dt.append("\n$ am force-stop ").append(FISSION_TARGET_PKG).append('\n')
+              .append(fs == null ? "<no output>" : fs).append('\n');
+            try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            r.detail = dt.toString();
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "user said NO — display " + displayId + " is not the cluster";
+            // Reset so the next attempt can run its own launch.
+            st.lastLaunchedDisplay = -1;
+        }
+    }
+
+    /**
+     * v1.2.48 — awk-scoped extraction of the Yandex task id on a given
+     * display id. Scopes the match to per-display indicator lines
+     * (mPreferredTopFocusableRootTask / mLastFocusedRootTask) that appear
+     * INSIDE a {@code displayId=N} block, avoiding the false-positive of
+     * the flat task list at the top of the dump.
+     */
+    private static int extractYandexTaskIdOnDisplay(Context ctx, int targetDisplayId) {
+        String pkgRe = FISSION_TARGET_PKG.replace(".", "\\\\.");
+        String awk =
+                "/displayId=[0-9]+/ { d=$0; sub(/.*displayId=/,\"\",d); sub(/[^0-9].*/,\"\",d); inDisp=d }"
+              + " inDisp != \"\" && /(mPreferredTopFocusableRootTask|mLastFocusedRootTask)=Task\\\\{[^}]*A=[0-9]+:" + pkgRe + "/ {"
+              + "   print \"DISP=\" inDisp; print \"TASK=\" $0; exit"
+              + " }";
+        String out = shellSync(ctx,
+                "dumpsys activity activities 2>&1 | awk '" + awk + "'");
+        if (out == null) return -1;
+        String taskLine = null;
+        int parsedDisp = -1;
+        for (String line : out.split("\n")) {
+            if (line.startsWith("DISP=")) {
+                try { parsedDisp = Integer.parseInt(line.substring(5).trim()); }
+                catch (NumberFormatException ignored) {}
+            } else if (line.startsWith("TASK=")) {
+                taskLine = line.substring(5);
+            }
+        }
+        if (parsedDisp != targetDisplayId || taskLine == null) return -1;
+        java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("#(\\d+)").matcher(taskLine);
+        if (m.find()) {
+            try { return Integer.parseInt(m.group(1)); }
+            catch (NumberFormatException ignored) {}
+        }
+        return -1;
+    }
+
+    /**
+     * v1.2.48 — F10. Set windowing mode = freeform (5) on the Yandex task
+     * on the confirmed cluster display. Required because fission displays
+     * declare mDisplayWindowingMode=fullscreen, so tasks land in fullscreen
+     * even when launched with --windowingMode 5; in fullscreen mode the
+     * later `cmd activity task resize` is silently a no-op.
+     */
+    private static void fissionSetFreeformOnCluster(Context ctx, DiLink5TestRunner.TestResult r,
+                                                    FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.confirmedClusterDisplay <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no cluster display confirmed by user";
+            return;
+        }
+        if (st.yandexTaskIdOnCluster <= 0) {
+            // Retry extraction now (the task may have been registered after
+            // the prompt resolved).
+            st.yandexTaskIdOnCluster =
+                    extractYandexTaskIdOnDisplay(ctx, st.confirmedClusterDisplay);
+        }
+        if (st.yandexTaskIdOnCluster <= 0) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "no taskId extracted for confirmed display "
+                    + st.confirmedClusterDisplay;
+            return;
+        }
+        String cmd = "cmd activity set-task-windowing-mode "
+                + st.yandexTaskIdOnCluster + " 5 2>&1 ; echo __exit=$?";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        String lo = out == null ? "" : out.toLowerCase();
+        if (out != null && out.contains("__exit=0")) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "windowing mode set to freeform (taskId="
+                    + st.yandexTaskIdOnCluster + ")";
+            try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        } else if (lo.contains("unknown command") || lo.contains("invalid")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "set-task-windowing-mode not supported on this ROM";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "non-zero exit or unclear — see detail";
+        }
+    }
+
+    /** v1.2.48 — F11. Resize the Yandex task on the confirmed cluster display. */
+    private static void fissionResizeOnCluster(Context ctx, DiLink5TestRunner.TestResult r,
                                                FissionState st) {
         if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "aborted earlier"; return; }
-        try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        // v1.2.47: two-pass dump.
-        //  1) human-readable filtered dump for the report detail block.
-        //  2) awk pass to extract the displayId that immediately precedes
-        //     the Yandex task line in the dumpsys hierarchy + the task
-        //     line itself (which carries both the taskId and the mode=
-        //     attribute). Previous version's `dump.contains("displayId=N")`
-        //     matched ANY task on display N — false positives possible.
-        String dump = shellSync(ctx,
-                "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
-              + " | grep -E '" + FISSION_TARGET_PKG.replace(".", "\\.")
-              + "|displayId=|mWindowingMode=|Task=Task|mBounds=Rect' | head -80");
-        String parsed = shellSync(ctx,
-                "dumpsys activity activities 2>&1 | awk '"
-              + "/displayId=[0-9]+/ { d=$0; sub(/.*displayId=/,\"\",d); sub(/[^0-9].*/,\"\",d); last=d }"
-              + " /A=[0-9]+:" + FISSION_TARGET_PKG.replace(".", "\\.") + "/ {"
-              + "   print \"DISP=\" last;"
-              + "   print \"TASK=\" $0;"
-              + "   exit"
-              + " }'");
-        r.detail = "$ dumpsys activity activities (filtered)\n\n"
-                + (dump == null ? "<no output>" : dump)
-                + "\n\n--- parsed ---\n"
-                + (parsed == null ? "<no parsed>" : parsed);
-        if (dump == null) {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "dumpsys failed";
-            return;
-        }
-        // Parse "DISP=<n>\nTASK=<line>"
-        int parsedDisplayId = -1;
-        String taskLine = null;
-        if (parsed != null) {
-            for (String line : parsed.split("\n")) {
-                if (line.startsWith("DISP=")) {
-                    try { parsedDisplayId = Integer.parseInt(line.substring(5).trim()); }
-                    catch (NumberFormatException ignored) {}
-                } else if (line.startsWith("TASK=")) {
-                    taskLine = line.substring(5);
-                }
-            }
-        }
-        // Extract taskId from the task line (preferred) or fall back to the
-        // older heuristic across the filtered dump.
-        int taskId = -1;
-        if (taskLine != null) {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("#(\\d+)").matcher(taskLine);
-            if (m.find()) { try { taskId = Integer.parseInt(m.group(1)); } catch (NumberFormatException ignored) {} }
-        }
-        if (taskId < 0) {
-            for (String line : dump.split("\n")) {
-                if (!line.contains(FISSION_TARGET_PKG)) continue;
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("#(\\d+)").matcher(line);
-                if (m.find()) { try { taskId = Integer.parseInt(m.group(1)); break; }
-                                catch (NumberFormatException ignored) {} }
-            }
-        }
-        st.yandexTaskId = taskId;
-        boolean onFission = (parsedDisplayId == st.fissionDisplayId);
-        boolean freeform = false;
-        if (taskLine != null) {
-            freeform = taskLine.contains("mode=freeform") || taskLine.contains("windowingMode=5");
-        }
-        if (taskId > 0 && onFission && freeform) {
-            r.status = DiLink5TestRunner.Status.PASS;
-            r.message = "taskId=" + taskId + " on display " + st.fissionDisplayId + " in freeform";
-        } else if (taskId > 0 && onFission) {
-            r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "taskId=" + taskId + " on display " + st.fissionDisplayId
-                      + " but windowing mode=" + (taskLine != null
-                          ? extractTaskMode(taskLine) : "unknown");
-        } else {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "task not found on fission display "
-                      + st.fissionDisplayId + " (taskId=" + taskId
-                      + ", parsedDisplayId=" + parsedDisplayId + ")";
-        }
-    }
-
-    /** Pull `mode=<x>` from a dumpsys Task{...} line, default "?". */
-    private static String extractTaskMode(String taskLine) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("mode=([a-zA-Z0-9_]+)").matcher(taskLine);
-        return m.find() ? m.group(1) : "?";
-    }
-
-    private static void fissionResizeTask(Context ctx, DiLink5TestRunner.TestResult r,
-                                          FissionState st) {
-        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "aborted earlier"; return; }
-        if (st.yandexTaskId <= 0) {
+        if (st.confirmedClusterDisplay <= 0) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "no taskId from F06";
+            r.message = "no cluster display confirmed";
             return;
         }
-        // Fission frame is 1920×720 → apply a 100×80 inset rectangle.
-        String cmd = "cmd activity task resize " + st.yandexTaskId
+        if (st.yandexTaskIdOnCluster <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no taskId (F10)";
+            return;
+        }
+        String cmd = "cmd activity task resize " + st.yandexTaskIdOnCluster
                 + " 100 80 1820 640 2>&1 ; echo __exit=$?";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         if (out != null && out.contains("__exit=0")) {
             r.status = DiLink5TestRunner.Status.PASS;
-            r.message = "resize exit=0";
+            r.message = "resize exit=0 on display " + st.confirmedClusterDisplay;
         } else {
             r.status = DiLink5TestRunner.Status.WARN;
             r.message = "non-zero exit or unclear";
         }
     }
 
-    private static void fissionVerifyBounds(Context ctx, DiLink5TestRunner.TestResult r,
-                                            FissionState st) {
+    /** v1.2.48 — F12. Verify the new bounds reflect the resize from F11. */
+    private static void fissionVerifyBoundsOnCluster(Context ctx, DiLink5TestRunner.TestResult r,
+                                                     FissionState st) {
         if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "aborted earlier"; return; }
-        if (st.yandexTaskId <= 0) {
+        if (st.yandexTaskIdOnCluster <= 0) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = "no taskId from F06";
+            r.message = "no taskId from F10";
             return;
         }
         try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        // v1.2.47: scope `mBounds=Rect` extraction to the 25 lines that
-        // follow the Yandex task line (#<taskId} ) instead of the whole
-        // dump, which used to pick up split-screen bounds from unrelated
-        // tasks. Pattern `#<id>[^0-9]` avoids #1499 matching #149.
         String dump = shellSync(ctx,
                 "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
-              + " | grep -A 25 -E '#" + st.yandexTaskId + "[^0-9]'"
+              + " | grep -A 25 -E '#" + st.yandexTaskIdOnCluster + "[^0-9]'"
               + " | grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=' | head -20");
-        r.detail = "$ dumpsys activity activities (taskId=" + st.yandexTaskId + ", -A 25 scope)\n\n"
+        r.detail = "$ dumpsys activity activities (taskId=" + st.yandexTaskIdOnCluster + ", -A 25 scope)\n\n"
                 + (dump == null ? "<no output>" : dump);
         if (dump == null) { r.status = DiLink5TestRunner.Status.FAIL; r.message = "dumpsys failed"; return; }
-        // Require BOTH 100 (x/y origin) AND 1820 (right edge) in the same
-        // mBounds line. Looser checks accept the same numbers from unrelated
-        // configs.
         boolean hit = false;
         for (String line : dump.split("\n")) {
             if (!line.contains("mBounds=Rect")) continue;
@@ -916,20 +1029,13 @@ public final class Dl5ClusterReconRunner {
             r.message = "new bounds visible";
         } else {
             r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "bounds not confirmed — task likely not visible/relayouted";
+            r.message = "bounds not confirmed — see detail";
         }
     }
 
-    private static void fissionMoveToMainDisplay(Context ctx, DiLink5TestRunner.TestResult r,
-                                                 FissionState st) {
-        // Cleanup-adjacent step: even if F03..F08 aborted, attempting the move
-        // back to display 0 is safe — it's the same intent the system fires
-        // when the user taps the app on the head unit, no resize / no size
-        // mutation on display 0.
-        // RULE: we only ever LAUNCH on display 0 here; we never run any
-        // resize, set-density, set-bounds or wm command against display 0.
-        // v1.2.47: use -n <component> resolved in F02 instead of generic
-        // -a MAIN -c LAUNCHER -p pkg (which failed to resolve on field DL5).
+    /** v1.2.48 — F13. Move Yandex back to display 0. No size mutation on id=0. */
+    private static void fissionMoveBackToMain(Context ctx, DiLink5TestRunner.TestResult r,
+                                              FissionState st) {
         if (st.targetActivity == null) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "no resolved launcher (F02)";
@@ -938,14 +1044,15 @@ public final class Dl5ClusterReconRunner {
         String cmd = "am start --display 0 -n " + st.targetActivity + " 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
-        if (out != null && out.toLowerCase().contains("unable to resolve")) {
+        String lo = out == null ? "" : out.toLowerCase();
+        if (lo.contains("unable to resolve")) {
             r.status = DiLink5TestRunner.Status.WARN;
             r.message = "unable to resolve intent";
         } else if (out != null && (out.contains("Starting:") || out.contains("Status: ok"))
-                && !out.toLowerCase().contains("error")) {
+                && !lo.contains("error")) {
             r.status = DiLink5TestRunner.Status.PASS;
             r.message = "move-to-display-0 issued";
-        } else if (out != null && out.toLowerCase().contains("error")) {
+        } else if (lo.contains("error")) {
             r.status = DiLink5TestRunner.Status.WARN;
             r.message = "move error — see detail";
         } else {
@@ -954,60 +1061,8 @@ public final class Dl5ClusterReconRunner {
         }
     }
 
-    private static void fissionVerifyOnMainDisplay(Context ctx, DiLink5TestRunner.TestResult r,
-                                                   FissionState st) {
-        try { Thread.sleep(2000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        // v1.2.47: extract the displayId that immediately precedes the
-        // Yandex task line via awk, instead of `dump.contains("displayId=0")`
-        // which was always true (display 0 is the main screen).
-        String dump = shellSync(ctx,
-                "dumpsys activity activities 2>&1 | grep -v mGlobalConfig"
-              + " | grep -E '" + FISSION_TARGET_PKG.replace(".", "\\.")
-              + "|displayId=|Task=Task' | head -60");
-        String parsed = shellSync(ctx,
-                "dumpsys activity activities 2>&1 | awk '"
-              + "/displayId=[0-9]+/ { d=$0; sub(/.*displayId=/,\"\",d); sub(/[^0-9].*/,\"\",d); last=d }"
-              + " /A=[0-9]+:" + FISSION_TARGET_PKG.replace(".", "\\.") + "/ {"
-              + "   print \"DISP=\" last;"
-              + "   exit"
-              + " }'");
-        r.detail = "$ dumpsys activity activities (filtered, post-move)\n\n"
-                + (dump == null ? "<no output>" : dump)
-                + "\n\n--- parsed ---\n"
-                + (parsed == null ? "<no parsed>" : parsed);
-        if (dump == null) {
-            r.status = DiLink5TestRunner.Status.FAIL;
-            r.message = "dumpsys failed";
-            return;
-        }
-        int parsedDisplayId = -1;
-        if (parsed != null) {
-            for (String line : parsed.split("\n")) {
-                if (line.startsWith("DISP=")) {
-                    try { parsedDisplayId = Integer.parseInt(line.substring(5).trim()); }
-                    catch (NumberFormatException ignored) {}
-                }
-            }
-        }
-        boolean stillHasYandex = dump.contains(FISSION_TARGET_PKG);
-        if (parsedDisplayId == 0 && stillHasYandex) {
-            r.status = DiLink5TestRunner.Status.PASS;
-            r.message = "task moved to display 0";
-        } else if (stillHasYandex && parsedDisplayId >= 0) {
-            r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "task still on display " + parsedDisplayId + " (move not effective)";
-        } else if (stillHasYandex) {
-            r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "task present but displayId not parsed";
-        } else {
-            r.status = DiLink5TestRunner.Status.WARN;
-            r.message = "task not found post-move — see detail";
-        }
-    }
-
     private static void fissionResetOverride(Context ctx, DiLink5TestRunner.TestResult r,
                                              FissionState st) {
-        // Cleanup runs unconditionally.
         if (!st.overrideEnabled) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "no override to reset";
@@ -1018,6 +1073,24 @@ public final class Dl5ClusterReconRunner {
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         r.status = DiLink5TestRunner.Status.PASS;
         r.message = "reset sent";
+    }
+
+    /** v1.2.48 — F16. Close the cluster projection if F01 opened it. */
+    private static void fissionCloseProjection(Context ctx, DiLink5TestRunner.TestResult r,
+                                               FissionState st) {
+        if (!st.projectionOpenedByUs) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "projection not opened by this run";
+            return;
+        }
+        String cmd =
+                "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
+              + "sleep 1 ; "
+              + "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
+        r.status = DiLink5TestRunner.Status.PASS;
+        r.message = "close + restore sent (sendInfo 18 + 0)";
     }
 
     /** Render a fission-tier text report. */

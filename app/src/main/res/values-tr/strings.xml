@@ -387,6 +387,10 @@ Ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.
 Devam edilsin mi?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Testi çalıştır</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission Testi yalnızca DiLink 5 içindir.</string>
+    <string name="diag_dl5_fission_prompt_title">Cluster doğrulama</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Haritalar cluster ekranında görünüyor mu?\n\n(ekran %1$d testi)</string>
+    <string name="diag_dl5_fission_prompt_yes">Evet</string>
+    <string name="diag_dl5_fission_prompt_no">Hayır</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">BYD APK dışa aktar</string>

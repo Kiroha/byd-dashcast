@@ -360,6 +360,11 @@
     <string name="diag_dl5_cluster_test_fission_confirm_msg">Cette suite va :\n\n• Activer le compat FORCE_RESIZE_APP sur Yandex Maps\n• Force-stop Yandex Maps\n• Le lancer sur l’écran fission (id ≠ 0) en windowingMode freeform\n• Tester un resize de la tâche\n• Le ramener sur l’écran principal (id 0) pour valider le move\n• Force-stop Yandex puis reset du compat (nettoyage)\n\nAucune commande de resize n’est envoyée sur l’écran principal (id 0).\nContinuer ?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
+    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
+    <string name="diag_dl5_fission_prompt_title">Vérification cluster</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Maps est-il visible sur l\'écran cluster ?\n\n(test sur le display %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Oui</string>
+    <string name="diag_dl5_fission_prompt_no">Non</string>
     <string name="diag_tab_adb_local">ADB local</string>
     <string name="diag_tab_system">Système</string>
     <string name="diag_tab_stress">Stress test</string>

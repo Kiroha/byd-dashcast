@@ -387,6 +387,10 @@ Asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.
 Davom etilsinmi?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Testni ishga tushirish</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
+    <string name="diag_dl5_fission_prompt_title">Klaster tekshiruvi</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Maps klaster ekranida ko\'rinadimi?\n\n(displey %1$d sinovi)</string>
+    <string name="diag_dl5_fission_prompt_yes">Ha</string>
+    <string name="diag_dl5_fission_prompt_no">Yo\'q</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">BYD APK eksporti</string>

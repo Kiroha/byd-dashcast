@@ -387,6 +387,10 @@
 Продолжить?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустить тест</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission только для DiLink 5.</string>
+    <string name="diag_dl5_fission_prompt_title">Проверка кластера</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Яндекс Карты видны на экране кластера?\n\n(тест дисплея %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Да</string>
+    <string name="diag_dl5_fission_prompt_no">Нет</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">Экспорт APK BYD</string>

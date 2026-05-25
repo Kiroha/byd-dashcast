@@ -387,6 +387,10 @@
 متابعة؟</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">تشغيل الاختبار</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">اختبار Fission مخصص لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_fission_prompt_title">التحقق من شاشة العنقود</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">هل تطبيق خرائط Yandex مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %1$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">نعم</string>
+    <string name="diag_dl5_fission_prompt_no">لا</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
     <string name="diag_tab_export_apk">تصدير APK من BYD</string>
