@@ -232,6 +232,9 @@ public class MainActivity extends AppCompatActivity
     // SF is the PRODUCER of this surface (setDisplaySurface) → TextureView renders.
     private Surface      mMirrorSurface;
 
+    // Grace period check for state poll
+    private long         mLastLaunchTime = 0;
+
     // Shared handler for state-poll runnables (was also used by the screenshot
     // mirror fallback removed in 1.2.29 — kept for startStatePoll/stopStatePoll).
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
@@ -610,6 +613,21 @@ public class MainActivity extends AppCompatActivity
         clusterMirror.setOpaque(true);  // No alpha blending overhead
         clusterMirror.setLayerType(View.LAYER_TYPE_HARDWARE, null); // Force hardware layer
 
+        // Ensure that once the TextureView is measured (size > 0), we auto-trigger the mirror
+        // to avoid black screens due to measuring race conditions under cold starts.
+        clusterMirror.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                int w = right - left;
+                int h = bottom - top;
+                if (w > 0 && h > 0) {
+                    AppLogger.d(TAG, "clusterMirror layed out: " + w + "x" + h + " -> invoking attemptStartMirror");
+                    attemptStartMirrorWithCurrentHolder();
+                }
+            }
+        });
+
         // TextureView.SurfaceTextureListener: starts/stops the mirror when the SurfaceTexture is available.
         // Surface(SurfaceTexture) → SF is the PRODUCER, TextureView renders each frame produced by SF.
         clusterMirror.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -851,6 +869,7 @@ public class MainActivity extends AppCompatActivity
         mClusterService.moveTaskToDisplay(pkgName, displayId, new ClusterService.LaunchCallback() {
             @Override public void onResult(boolean launched) {
                 if (launched) {
+                    mLastLaunchTime = System.currentTimeMillis(); // set grace period on quick-switch launch
                     mCurrentDashboardPkg = pkgName;
                     mSessionClusterPackages.add(pkgName);
                     persistSessionClusterPackages();
@@ -1026,6 +1045,7 @@ public class MainActivity extends AppCompatActivity
                     if (_pkg != null) {
                         mCurrentDashboardPkg = _pkg;
                         mCurrentDashboardApp = _name;
+                        mLastLaunchTime = System.currentTimeMillis(); // set grace period on restore
                         mAdapter.setCurrentPackage(_pkg);
                         updateFavoritesIndicators();
                         updateDashboardStatus(_name);
@@ -1346,6 +1366,7 @@ public class MainActivity extends AppCompatActivity
                     new ClusterService.LaunchCallback() {
                 @Override public void onResult(boolean launched) {
                     if (launched) {
+                        mLastLaunchTime = System.currentTimeMillis(); // set grace period on split launch
                         mSecondDashboardApp = appName;
                         mSecondDashboardPkg = pkgName;
                         mSessionClusterPackages.add(pkgName);
@@ -1372,6 +1393,7 @@ public class MainActivity extends AppCompatActivity
                 AppLogger.log(TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId
                         + " " + (launched ? "OK" : "FAILED"));
                 if (launched) {
+                    mLastLaunchTime = System.currentTimeMillis(); // set grace period on normal launch
                     // Track usage: stop timer for previous app, start for new one
                     trackUsageStop(mCurrentDashboardPkg);
                     mCurrentDashboardApp = appName;
@@ -1709,6 +1731,12 @@ public class MainActivity extends AppCompatActivity
     private void reconcileDisplayState() {
         final String clusterPkg = mCurrentDashboardPkg;
         if (clusterPkg == null) return;
+
+        // Grace period of 8 seconds to allow the app process to launch and register in pidof
+        if (System.currentTimeMillis() - mLastLaunchTime < 8000) {
+            AppLogger.d(TAG, "state-poll: skipping pidof check during launch grace period for " + clusterPkg);
+            return;
+        }
 
         ShellGateway.execShellWithResult(this, "pidof " + clusterPkg,
                 new AdbLocalClient.Callback() {
