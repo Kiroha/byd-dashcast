@@ -38,6 +38,7 @@ public final class Platform {
     public static final String OV_FORCE_OFF = "FORCE_OFF";
 
     private static volatile Platform INSTANCE;
+    private static volatile Boolean sCachedIsDiLink5 = null;
 
     private final String  rawProductName;   // ro.product.name
     private final String  rawModel;          // Build.MODEL
@@ -185,10 +186,19 @@ public final class Platform {
         // attempt at the non-existent snake_case binder. This guard absorbs the
         // mistake transparently so misconfigured Settings cannot break DL4 cars.
         if (autoDiLink4) return false;
+        Boolean cached = sCachedIsDiLink5;
+        if (cached != null) return cached;
         String ov = readOverride(ctx);
-        if (OV_FORCE_ON.equals(ov))  return true;
-        if (OV_FORCE_OFF.equals(ov)) return false;
-        return autoDiLink5;
+        boolean val;
+        if (OV_FORCE_ON.equals(ov)) {
+            val = true;
+        } else if (OV_FORCE_OFF.equals(ov)) {
+            val = false;
+        } else {
+            val = autoDiLink5;
+        }
+        sCachedIsDiLink5 = val;
+        return val;
     }
 
     /** Short summary used for diagnostics ("AUTO=on", "FORCED off", …). */
@@ -212,6 +222,7 @@ public final class Platform {
         if (!OV_AUTO.equals(value) && !OV_FORCE_ON.equals(value) && !OV_FORCE_OFF.equals(value)) {
             value = OV_AUTO;
         }
+        sCachedIsDiLink5 = null;
         prefs(ctx).edit().putString(PREF_DILINK5_OVERRIDE, value).apply();
     }
 

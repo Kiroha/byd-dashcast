@@ -791,6 +791,9 @@ public final class BetaProxyClient {
      * Register the dynamic {@link BroadcastReceiver} once per app process.
      * Uses the application context so the lifetime is tied to the process,
      * not to any short-lived Activity that happens to call us first.
+     * Note: The lack of an unregisterReceiver call is process-scoped intentional (P2-1)
+     * as the dynamic receiver is registered once on the application context and persists
+     * for the entire lifetime of the process. Gated by sReceiver null check.
      */
     private static void ensureReceiverRegistered(Context ctx) {
         if (sReceiver != null) return;
