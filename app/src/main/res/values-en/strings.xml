@@ -489,4 +489,30 @@
     <string name="sysinfo_svc_force_resizable">Force Resizable</string>
     <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · value %1$s</string>
     <string name="sysinfo_svc_force_resizable_checking">DL5 · checking…</string>
+
+    <!-- Cluster POC Diagnostics (v1.2.30) -->
+    <string name="diag_cluster_poc_title">Cluster Move/Resize — Fission display</string>
+    <string name="diag_cluster_poc_subtitle">Interactive control of an app (Waze, Maps, …) on the trusted xdja « fission_* » display as done by WindowManagement / Dilink5 Dashboard. Local VD is abandoned: we piggyback on the system display (uid 1000) to avoid the « secondary screen » toast and the rebound on display 0.</string>
+    <string name="diag_cluster_poc_btn_enumerate">📋 Enumerate displays</string>
+    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
+    <string name="diag_cluster_poc_btn_share">📤 Share report</string>
+    <string name="diag_cluster_poc_section_app">Target</string>
+    <string name="diag_cluster_poc_label_pkg">package:</string>
+    <string name="diag_cluster_poc_btn_launch">▶ Launch on fission</string>
+    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
+    <string name="diag_cluster_poc_section_rect">Position &amp; size (px of fission display)</string>
+    <string name="diag_cluster_poc_slider_x">X (left)</string>
+    <string name="diag_cluster_poc_slider_y">Y (top)</string>
+    <string name="diag_cluster_poc_slider_w">W (width)</string>
+    <string name="diag_cluster_poc_slider_h">H (height)</string>
+    <string name="diag_cluster_poc_btn_apply">✅ Apply rect</string>
+    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
+    <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
+    <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
+    <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+
+    <!-- Auto-aligned fallback strings (v1.2.51) -->
+    <string name="ota_version_label">DashCast %1$s</string>
+    <string name="ota_progress_unknown">…</string>
+    <string name="ota_progress_percent">%1$d %%</string>
 </resources>
