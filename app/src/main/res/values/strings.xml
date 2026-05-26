@@ -117,11 +117,6 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Clavier</string>
     <string name="keyboard_bridge_title">Clavier déporté</string>
-    <string name="keyboard_bridge_hint">Tapez ici : chaque caractère est envoyé au champ actif du cluster.</string>
-    <string name="keyboard_bridge_input_hint">Saisir du texte…</string>
-    <string name="keyboard_bridge_btn_enter">Entrée</string>
-    <string name="keyboard_bridge_btn_back">Retour</string>
-    <string name="keyboard_bridge_btn_close">Fermer</string>
     <!-- v1.2.9 — Onboarding banner (DL5 only) + accessibility service strings -->
     <string name="a11y_ime_watcher_label">Clavier auto cluster (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Affiche le clavier déporté quand vous touchez un champ texte du cluster.</string>
@@ -282,8 +277,6 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
-    <string name="diag_placeholder_title">Page Diag en cours de refonte</string>
-    <string name="diag_placeholder_subtitle">Les tests précédents ont été supprimés. De nouveaux outils diagnostiques arriveront ici prochainement.</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <!-- Settings -->
@@ -360,7 +353,6 @@
     <string name="diag_dl5_cluster_pill_other">Plateforme : autre</string>
     <string name="diag_dl5_cluster_toast_report_copied">Rapport copié dans le presse-papier (%1$d entrées)</string>
     <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
-    <string name="diag_dl5_cluster_toast_telegram_missing">Telegram non installé — ouverture du sélecteur de partage.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Test Fission</string>
@@ -376,7 +368,6 @@
     <string name="diag_dl5_fission_prompt_no">Non</string>
     <string name="diag_tab_adb_local">ADB local</string>
     <string name="diag_tab_system">Système</string>
-    <string name="diag_tab_stress">Stress test</string>
     <string name="diag_tab_adas">ADAS</string>
     <string name="diag_tab_beta_engine">Beta Engine</string>
 
@@ -396,7 +387,6 @@
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
     <string name="diag_beta_run_all">Lancer tous</string>
     <string name="diag_beta_copy_report">Envoyer (.log)</string>
-    <string name="diag_beta_report_copied">Rapport copié dans le presse-papier</string>
 
     <!-- ═══════════════ DiLink 5 — Diagnostic dédié (v1.1.0-beta2) ═══════════════ -->
     <string name="diag_tab_dilink5">DiLink 5</string>

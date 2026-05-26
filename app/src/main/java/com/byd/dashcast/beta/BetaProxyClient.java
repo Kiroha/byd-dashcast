@@ -813,7 +813,11 @@ public final class BetaProxyClient {
                 // dispatched its broadcast after the kill. Storing the dead ref would
                 // mask the LIVE binder we either already have or are still waiting for
                 // (root cause of A5/A6 ✗ in v1.1.6).
-                if (!bp.binder.pingBinder()) {
+                // P3-1: use isBinderAlive() (local cache check) instead of
+                // pingBinder() (Binder round-trip) — coherent with sBinder check
+                // below at L825. A dead binder will still be rejected because
+                // sDeath would have invalidated the cache.
+                if (!bp.binder.isBinderAlive()) {
                     AppLogger.d(TAG, "ignoring stale PROXY_CONNECTED (binder already dead)");
                     return;
                 }
@@ -835,9 +839,9 @@ public final class BetaProxyClient {
                     sBinder = bp.binder;
                     // Hook the new binder so a future death immediately clears
                     // our cached reference (P2). Best-effort: if linkToDeath
-                    // fails (binder already dead between pingBinder above and
-                    // here — vanishingly unlikely), isBinderAlive() on the next
-                    // call still gives the right answer.
+                    // fails (binder already dead between isBinderAlive above
+                    // and here — vanishingly unlikely), isBinderAlive() on
+                    // the next call still gives the right answer.
                     try { sBinder.linkToDeath(sDeath, 0); }
                     catch (RemoteException re) {
                         AppLogger.w(TAG, "linkToDeath failed: " + re.getMessage());

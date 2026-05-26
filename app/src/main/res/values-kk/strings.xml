@@ -211,8 +211,6 @@
     <string name="log_btn_save_cd">Сақтау</string>
     <string name="log_save_failed">Журналды сақтау сәтсіз</string>
     <string name="log_saved_toast">Журнал сақталды: %1$s</string>
-    <string name="diag_placeholder_title">Diag беті қайта құрылуда</string>
-    <string name="diag_placeholder_subtitle">Алдыңғы тесттер жойылды. Жаңа диагностика құралдары жақын арада қосылады.</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <string name="settings_section_beta_engine">Эксперименттік қозғалтқыш (бета)</string>
@@ -227,7 +225,6 @@
     <string name="diag_tab_display">Дисплей</string>
     <string name="diag_tab_adb_local">Жергілікті ADB</string>
     <string name="diag_tab_system">Жүйе</string>
-    <string name="diag_tab_stress">Стресс-тест</string>
     <string name="diag_tab_beta_engine">Beta Engine</string>
     <string name="diag_coming_soon_title">Жақында</string>
     <string name="diag_coming_soon_subtitle">Бұл бөлім келесі нұсқада іске асырылады. Ағымдағы тестілер үшін «Beta Engine» қойындысын қараңыз.</string>
@@ -242,7 +239,6 @@
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
     <string name="diag_beta_run_all">Барлығын іске қосу</string>
     <string name="diag_beta_copy_report">Жіберу (.log)</string>
-    <string name="diag_beta_report_copied">Есеп алмасу буферіне көшірілді</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
     <string name="diag_tab_dilink5">DiLink 5</string>
@@ -275,11 +271,6 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Пернетақта</string>
     <string name="keyboard_bridge_title">Қашықтан пернетақта</string>
-    <string name="keyboard_bridge_hint">Осында теріңіз: әрбір таңба аспаптар тақтасының белсенді өрісіне жіберіледі.</string>
-    <string name="keyboard_bridge_input_hint">Мәтін енгізіңіз…</string>
-    <string name="keyboard_bridge_btn_enter">Енгізу</string>
-    <string name="keyboard_bridge_btn_back">Артқа</string>
-    <string name="keyboard_bridge_btn_close">Жабу</string>
     <string name="diag_tab_adas">ADAS</string>
     <string name="diag_tab_dilink2">DiLink 2</string>
     <string name="diag_tab_mirror">Mirror</string>
@@ -493,7 +484,6 @@
     <string name="diag_dl5_cluster_pill_other">Platform: other</string>
     <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
     <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
-    <string name="diag_dl5_cluster_toast_telegram_missing">Telegram not installed — opening share chooser.</string>
     <string name="diag_cluster_poc_title">Cluster Move/Resize — Fission display</string>
     <string name="diag_cluster_poc_subtitle">Interactive control of an app (Waze, Maps, …) on the trusted xdja « fission_* » display as done by WindowManagement / Dilink5 Dashboard. Local VD is abandoned: we piggyback on the system display (uid 1000) to avoid the « secondary screen » toast and the rebound on display 0.</string>
     <string name="diag_cluster_poc_btn_enumerate">📋 Enumerate displays</string>

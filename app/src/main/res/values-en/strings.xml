@@ -252,8 +252,6 @@
     <string name="log_btn_save_cd">Save</string>
     <string name="log_save_failed">Failed to save the journal</string>
     <string name="log_saved_toast">Journal saved: %1$s</string>
-    <string name="diag_placeholder_title">Diag page is being rebuilt</string>
-    <string name="diag_placeholder_subtitle">The previous tests have been removed. New diagnostic tools will land here shortly.</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <string name="settings_section_beta_engine">Experimental engine (beta)</string>
@@ -327,7 +325,6 @@
     <string name="diag_dl5_cluster_pill_other">Platform: other</string>
     <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
     <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
-    <string name="diag_dl5_cluster_toast_telegram_missing">Telegram not installed — opening share chooser.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Test Fission</string>
@@ -343,7 +340,6 @@
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">Local ADB</string>
     <string name="diag_tab_system">System</string>
-    <string name="diag_tab_stress">Stress test</string>
     <string name="diag_tab_beta_engine">Beta Engine</string>
 
     <string name="diag_coming_soon_title">Coming soon</string>
@@ -360,7 +356,6 @@
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
     <string name="diag_beta_run_all">Run all</string>
     <string name="diag_beta_copy_report">Send (.log)</string>
-    <string name="diag_beta_report_copied">Report copied to clipboard</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
     <string name="diag_tab_dilink5">DiLink 5</string>
@@ -395,11 +390,6 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Keyboard</string>
     <string name="keyboard_bridge_title">Bridged keyboard</string>
-    <string name="keyboard_bridge_hint">Type here: each character is sent to the active field on the cluster.</string>
-    <string name="keyboard_bridge_input_hint">Enter text…</string>
-    <string name="keyboard_bridge_btn_enter">Enter</string>
-    <string name="keyboard_bridge_btn_back">Back</string>
-    <string name="keyboard_bridge_btn_close">Close</string>
     <string name="diag_tab_adas">ADAS</string>
     <string name="diag_tab_dilink2">DiLink 2</string>
     <string name="diag_tab_mirror">Mirror</string>
