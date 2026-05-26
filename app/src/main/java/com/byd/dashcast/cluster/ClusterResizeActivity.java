@@ -87,6 +87,7 @@ public class ClusterResizeActivity extends Activity
 
     private ClusterMirrorManager mMirror;
     private boolean              mMirrorStarted = false;
+    private Surface              mActiveSurface = null;
 
     private final Handler mUi = new Handler(Looper.getMainLooper());
     private final Object  mApplyLock = new Object();
@@ -203,6 +204,7 @@ public class ClusterResizeActivity extends Activity
     @Override
     protected void onDestroy() {
         if (mFrame != null) mFrame.clearGestureExclusion();
+        try { mUi.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         stopMirrorSafely();
         super.onDestroy();
     }
@@ -226,19 +228,19 @@ public class ClusterResizeActivity extends Activity
         Display clusterDisplay = null;
         DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         if (dm != null) clusterDisplay = dm.getDisplay(mDisplayId);
-        Surface surface = new Surface(st);
+        mActiveSurface = new Surface(st);
         boolean ok = false;
         IBinder daemon = BetaProxyClient.getDaemonBinder();
         if (daemon != null) {
             try {
-                ok = mMirror.startMirrorViaDaemon(this, daemon, clusterDisplay, surface, w, h);
+                ok = mMirror.startMirrorViaDaemon(this, daemon, clusterDisplay, mActiveSurface, w, h);
             } catch (Throwable t) {
                 AppLogger.w(TAG, "startMirrorViaDaemon threw: " + t.getMessage());
             }
         }
         if (!ok) {
             try {
-                ok = mMirror.startMirror(this, clusterDisplay, surface, w, h);
+                ok = mMirror.startMirror(this, clusterDisplay, mActiveSurface, w, h);
             } catch (Throwable t) {
                 AppLogger.w(TAG, "startMirror threw: " + t.getMessage());
             }
@@ -260,15 +262,24 @@ public class ClusterResizeActivity extends Activity
     public void onSurfaceTextureUpdated(SurfaceTexture st) { /* no-op */ }
 
     private void stopMirrorSafely() {
-        if (!mMirrorStarted || mMirror == null) return;
-        IBinder daemon = BetaProxyClient.getDaemonBinder();
-        try {
-            if (daemon != null) mMirror.stopMirrorViaDaemon(daemon);
-            else                mMirror.stopMirror();
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "stopMirror threw: " + t.getMessage());
+        if (mMirrorStarted && mMirror != null) {
+            IBinder daemon = BetaProxyClient.getDaemonBinder();
+            try {
+                if (daemon != null) mMirror.stopMirrorViaDaemon(daemon);
+                else                mMirror.stopMirror();
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "stopMirror threw: " + t.getMessage());
+            }
+            mMirrorStarted = false;
         }
-        mMirrorStarted = false;
+        if (mActiveSurface != null) {
+            try {
+                mActiveSurface.release();
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "release active surface threw: " + t.getMessage());
+            }
+            mActiveSurface = null;
+        }
     }
 
     // ── Frame callbacks (touch) ────────────────────────────────────────────

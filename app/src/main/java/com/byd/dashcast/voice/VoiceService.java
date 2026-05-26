@@ -90,6 +90,7 @@ public final class VoiceService extends Service {
     private volatile boolean mRunning;
     private Thread           mCaptureThread;
     private AudioRecord      mRecord;
+    private volatile boolean mErrorSignaled;
 
     /** Singleton "is running" probe used by the UI to render the correct button. */
     private static volatile boolean sIsRunning;
@@ -140,6 +141,7 @@ public final class VoiceService extends Service {
     // ─── Capture loop ──────────────────────────────────────────────────────
 
     private void startCapture() {
+        mErrorSignaled = false;
         final int channel = AudioFormat.CHANNEL_IN_MONO;
         final int format  = AudioFormat.ENCODING_PCM_16BIT;
         final int minBuf  = AudioRecord.getMinBufferSize(SAMPLE_RATE_HZ, channel, format);
@@ -240,16 +242,18 @@ public final class VoiceService extends Service {
     private void stopCapture() {
         mRunning = false;
         sIsRunning = false;
+        if (mRecord != null) {
+            try { mRecord.stop(); } catch (Throwable ignore) {}
+            safeReleaseRecord();
+        }
         Thread t = mCaptureThread;
         if (t != null) {
             try { t.join(500L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
             mCaptureThread = null;
         }
-        if (mRecord != null) {
-            try { mRecord.stop(); } catch (Throwable ignore) {}
-            safeReleaseRecord();
+        if (!mErrorSignaled) {
+            broadcastState(STATE_STOPPED, null);
         }
-        broadcastState(STATE_STOPPED, null);
     }
 
     private void safeReleaseRecord() {
@@ -268,6 +272,7 @@ public final class VoiceService extends Service {
 
     private void broadcastError(String reason) {
         AppLogger.e(TAG, "Capture error: " + reason);
+        mErrorSignaled = true;
         broadcastState(STATE_ERROR, reason);
         sIsRunning = false;
         mRunning = false;
