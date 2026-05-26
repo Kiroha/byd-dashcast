@@ -124,9 +124,10 @@ public class AdbLocalClient {
      */
     public static void executeShell(final Context context, final String command) {
         if (blockDiLink2Resize(context, command)) return;
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
+                try (Dadb dadb = connect(appCtx)) {
                     AdbShellResponse r = dadb.shell(command);
                     AppLogger.d(TAG, "executeShell: " + command + " -> " + r.getAllOutput().trim());
                 } catch (Exception e) {
@@ -145,8 +146,9 @@ public class AdbLocalClient {
                     "blocked on DiLink 2: no cluster display (would shrink main screen)");
             return;
         }
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
+            try (Dadb dadb = connect(appCtx)) {
                 String output = dadb.shell(command).getAllOutput().trim();
                 AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
                 if (callback != null) callback.onSuccess(output);
@@ -437,10 +439,11 @@ public class AdbLocalClient {
      * if you need to update the UI after success.
      */
     public static void grantOverlayPermission(final Context context, final Callback callback) {
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    String cmd = "appops set " + context.getPackageName()
+                try (Dadb dadb = connect(appCtx)) {
+                    String cmd = "appops set " + appCtx.getPackageName()
                             + " SYSTEM_ALERT_WINDOW allow";
                     AdbShellResponse r = dadb.shell(cmd + " 2>&1");
                     AppLogger.i(TAG, "grantOverlayPermission → " + cmd

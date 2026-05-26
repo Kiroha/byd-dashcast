@@ -972,6 +972,9 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
+        if (mClusterService != null) {
+            try { mClusterService.setListener(null); } catch (Throwable ignore) {}
+        }
         super.onDestroy();
         AppLogger.lifecycle(getClass().getSimpleName(), "onDestroy");
         // Cancel all pending runnables (state-poll + any anonymous lambdas posted via
@@ -1006,6 +1009,7 @@ public class MainActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (isFinishing() || isDestroyed()) return;
                 cancelActivateTimeout();
                 final boolean wasManual = mWasManualActivation;
                 mWasManualActivation = false;

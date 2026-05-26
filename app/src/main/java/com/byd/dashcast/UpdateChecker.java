@@ -304,9 +304,11 @@ public class UpdateChecker {
                 PackageInstaller.SessionParams.MODE_FULL_INSTALL);
         params.setAppPackageName(context.getPackageName());
 
-        int sessionId = installer.createSession(params);
-        PackageInstaller.Session session = installer.openSession(sessionId);
+        int sessionId = -1;
+        PackageInstaller.Session session = null;
         try {
+            sessionId = installer.createSession(params);
+            session = installer.openSession(sessionId);
             try (OutputStream out = session.openWrite("update", 0, apkFile.length());
                  FileInputStream in = new FileInputStream(apkFile)) {
                 byte[] buf = new byte[8192];
@@ -327,7 +329,11 @@ public class UpdateChecker {
             session.commit(pi.getIntentSender());
             AppLogger.i(TAG, "PackageInstaller session committed, id=" + sessionId);
         } catch (Exception e) {
-            session.abandon();
+            if (session != null) {
+                try { session.abandon(); } catch (Throwable ignore) {}
+            } else if (sessionId != -1) {
+                try { installer.abandonSession(sessionId); } catch (Throwable ignore) {}
+            }
             throw e;
         }
     }

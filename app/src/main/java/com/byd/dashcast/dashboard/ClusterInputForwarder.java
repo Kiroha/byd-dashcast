@@ -194,11 +194,13 @@ public class ClusterInputForwarder {
 
             // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
             if (mDaemonBinder != null) {
-                MotionEvent ev = MotionEvent.obtain(
-                        mTouchDownTime, now, action, n, mProps, mCoords,
-                        0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-                Parcel data = Parcel.obtain();
+                MotionEvent ev = null;
+                Parcel data = null;
                 try {
+                    ev = MotionEvent.obtain(
+                            mTouchDownTime, now, action, n, mProps, mCoords,
+                            0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                    data = Parcel.obtain();
                     data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
                     data.writeParcelable(ev, 0);
                     mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
@@ -206,18 +208,19 @@ public class ClusterInputForwarder {
                 } catch (Exception e) {
                     AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
                 } finally {
-                    data.recycle();
-                    ev.recycle();
+                    if (data != null) data.recycle();
+                    if (ev != null) ev.recycle();
                 }
                 return;
             }
 
             if (!mAvailable) return;
 
-            MotionEvent ev = MotionEvent.obtain(
-                    mTouchDownTime, now, action, n, mProps, mCoords,
-                    0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+            MotionEvent ev = null;
             try {
+                ev = MotionEvent.obtain(
+                        mTouchDownTime, now, action, n, mProps, mCoords,
+                        0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
                 // setDisplayId is a @hide API — using the Method cached in the constructor
                 if (mSetDisplayIdMethod != null) {
                     try {
@@ -231,7 +234,7 @@ public class ClusterInputForwarder {
                 AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
                         + " ptrs=" + n + " disp=" + mClusterDisplayId, e);
             } finally {
-                ev.recycle();
+                if (ev != null) ev.recycle();
             }
 
             if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {

@@ -254,6 +254,7 @@ public class HotspotActivity extends AppCompatActivity {
         }
         TetherFiUpdateChecker.check(this, new TetherFiUpdateChecker.Callback() {
             @Override public void onResult(TetherFiUpdateChecker.Result r) {
+                if (isFinishing() || isDestroyed()) return;
                 if (tvUpdate == null) return;
                 if (r.isUpdateAvailable()) {
                     tvUpdate.setText(getString(
@@ -270,6 +271,7 @@ public class HotspotActivity extends AppCompatActivity {
                 // "Ouvrir TetherFi" or "Installer TetherFi" if they really want
                 // the latest. We log so the issue is visible in the journal.
                 AppLogger.w(TAG, "TetherFi update check failed: " + message);
+                if (isFinishing() || isDestroyed()) return;
                 if (tvUpdate != null) tvUpdate.setVisibility(View.GONE);
             }
         });
@@ -278,6 +280,10 @@ public class HotspotActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         stopWatchdog(false);
+        try {
+            statsHandler.removeCallbacksAndMessages(null);
+            uptimeHandler.removeCallbacksAndMessages(null);
+        } catch (Throwable ignore) {}
         super.onDestroy();
     }
 
