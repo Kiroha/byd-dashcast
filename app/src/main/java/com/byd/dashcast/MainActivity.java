@@ -1045,7 +1045,13 @@ public class MainActivity extends AppCompatActivity
                     if (_pkg != null) {
                         mCurrentDashboardPkg = _pkg;
                         mCurrentDashboardApp = _name;
-                        mLastLaunchTime = System.currentTimeMillis(); // set grace period on restore
+                        // NB: ne PAS armer mLastLaunchTime ici. Ce chemin est une
+                        // restauration depuis les prefs après recreate d'Activity ;
+                        // le « launch » réel est potentiellement très ancien et le
+                        // process peut avoir été tué pendant que DashCast était en
+                        // background. La grace period n'a de sens qu'autour d'un
+                        // am start fraîchement dispatché (cf. les 3 sites de
+                        // launch dans onSendToDashboard / quickSwitchToApp).
                         mAdapter.setCurrentPackage(_pkg);
                         updateFavoritesIndicators();
                         updateDashboardStatus(_name);
