@@ -221,6 +221,7 @@
     <!-- v1.2.44 — Clients + live stats card -->
     <string name="hotspot_clients_title">Clients connectés</string>
     <string name="hotspot_clients_empty">Aucun client connecté</string>
+    <string name="hotspot_client_default_name">Appareil %1$s</string>
     <string name="hotspot_stat_uptime">Uptime</string>
     <string name="hotspot_stat_rx">Reçus</string>
     <string name="hotspot_stat_tx">Envoyés</string>

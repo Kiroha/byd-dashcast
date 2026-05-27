@@ -817,10 +817,13 @@ public class HotspotActivity extends AppCompatActivity {
         return row;
     }
 
-    private static String friendlyMacName(String mac) {
-        // "aa:bb:cc:dd:ee:ff" → "Appareil ee:ff"
-        if (mac == null || mac.length() < 5) return "Appareil";
-        return "Appareil " + mac.substring(mac.length() - 5);
+    private String friendlyMacName(String mac) {
+        // v1.2.56-beta — i18n via R.string.hotspot_client_default_name.
+        // "aa:bb:cc:dd:ee:ff" → "Appareil ee:ff" / "Device ee:ff" / …
+        String suffix = (mac != null && mac.length() >= 5)
+                ? mac.substring(mac.length() - 5)
+                : "";
+        return getString(R.string.hotspot_client_default_name, suffix);
     }
 
     private int dp(int v) {
