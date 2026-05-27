@@ -22,13 +22,19 @@ public class BootReceiver extends BroadcastReceiver {
 
         // We need to keep the process alive across multiple async tasks that
         // can run in parallel: (a) Phase 5 daemon pre-warm (~1.9 s connect()),
-        // (b) display-affinity cleanup when auto-start is OFF.
+        // (b) display-affinity cleanup when auto-start is OFF,
+        // (c) TetherFi hotspot auto-start (postDelayed 8 s).
         // PendingResult.finish() may only be called once, so we coordinate via
         // a shared atomic counter that triggers finish on the last completion.
+        // The counter is initialised to 1 as a sentinel so that fast bg tasks
+        // can't drive it to 0 before this method has finished scheduling every
+        // pending job (race that would cause result.finish() to be called twice
+        // when a slower job, like the 8 s-delayed TetherFi runnable, completes
+        // later). The sentinel is released at the very end of onReceive.
         final Context appCtx = context.getApplicationContext();
         final PendingResult result = goAsync();
         final java.util.concurrent.atomic.AtomicInteger pending =
-                new java.util.concurrent.atomic.AtomicInteger(0);
+                new java.util.concurrent.atomic.AtomicInteger(1);
         final Runnable releaseOne = () -> {
             if (pending.decrementAndGet() == 0) result.finish();
         };
@@ -124,7 +130,8 @@ public class BootReceiver extends BroadcastReceiver {
             }
         }
 
-        // If nothing was scheduled (no auto-start, no pre-warm), release immediately.
-        if (pending.get() == 0) result.finish();
+        // Release the sentinel: all scheduling is now done. If every bg task
+        // already completed (pending == 1 sentinel only), this triggers finish.
+        releaseOne.run();
     }
 }
