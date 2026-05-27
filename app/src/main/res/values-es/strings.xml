@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Test en vivo destructivo: lanza Yandex Maps en la pantalla fission, fuerza un redimensionado, lo devuelve a la pantalla principal y limpia. Solo DiLink 5, ningún comando de redimensionado se envía nunca a la pantalla principal (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Test en vivo destructivo: lanza la app elegida en la pantalla fission, fuerza un redimensionado, la devuelve a la pantalla principal y limpia. Solo DiLink 5, ningún comando de redimensionado se envía nunca a la pantalla principal (id 0).</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructivo</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Esta serie:
-
-• Activará el compat FORCE_RESIZE_APP en Yandex Maps
-• Detendrá forzosamente Yandex Maps
-• Lo lanzará en la pantalla fission (id ≠ 0) en modo freeform
-• Probará un redimensionado de la tarea
-• Lo devolverá a la pantalla principal (id 0) para validar el movimiento
-• Detendrá forzosamente Yandex y reseteará el compat (limpieza)
-
-Ningún comando de redimensionado se envía nunca a la pantalla principal (id 0).
-¿Continuar?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Objetivo: %1$s\n\nEsta serie:\n\n• Activará el compat FORCE_RESIZE_APP en la app\n• Detendrá forzosamente la app\n• La lanzará en la pantalla fission (id ≠ 0) en modo freeform\n• Probará un redimensionado de la tarea\n• La devolverá a la pantalla principal (id 0) para validar el movimiento\n• Detendrá forzosamente la app y reseteará el compat (limpieza)\n\nNingún comando de redimensionado se envía nunca a la pantalla principal (id 0).\n¿Continuar?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Ejecutar el test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission reservado a DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Elegir la app a probar</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">No se encontraron apps lanzables.</string>
     <string name="diag_dl5_fission_prompt_title">Verificación del clúster</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">¿Yandex Maps es visible en la pantalla del clúster?\n\n(probando pantalla %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">¿%1$s es visible en la pantalla del clúster?\n\n(probando pantalla %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Sí</string>
     <string name="diag_dl5_fission_prompt_no">No</string>
 

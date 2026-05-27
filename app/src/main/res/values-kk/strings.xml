@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Fission тесті</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивті нақты тест: Yandex Maps-ты fission экранында іске қосады, өлшемін мәжбүрлеп өзгертеді, негізгі экранға қайтарады, содан кейін тазалайды. Тек DiLink 5 үшін, негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Деструктивті нақты тест: таңдалған қолданбаны fission экранында іске қосады, өлшемін мәжбүрлеп өзгертеді, негізгі экранға қайтарады, содан кейін тазалайды. Тек DiLink 5 үшін, негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Fission тесті — деструктивті</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Бұл сериал:
-
-• Yandex Maps-та FORCE_RESIZE_APP compat-ты қосады
-• Yandex Maps-ты мәжбүрлеп тоқтатады
-• Оны fission экранында (id ≠ 0) freeform режимінде іске қосады
-• Тапсырманы өлшемін өзгертуді тексереді
-• Жылжытуды растау үшін негізгі экранға (id 0) қайтарады
-• Yandex-ті мәжбүрлеп тоқтатып, compat-ты қалпына келтіреді (тазалау)
-
-Негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.
-Жалғастыру керек пе?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Мақсат: %1$s\n\nБұл сериал:\n\n• Қолданбада FORCE_RESIZE_APP compat-ты қосады\n• Қолданбаны мәжбүрлеп тоқтатады\n• Оны fission экранында (id ≠ 0) freeform режимінде іске қосады\n• Тапсырманы өлшемін өзгертуді тексереді\n• Жылжытуды растау үшін негізгі экранға (id 0) қайтарады\n• Қолданбаны мәжбүрлеп тоқтатып, compat-ты қалпына келтіреді (тазалау)\n\nНегізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.\nЖалғастыру керек пе?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Тестті іске қосу</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Сынайтын қолданбаны таңдау</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
     <string name="diag_dl5_fission_prompt_title">Кластерді тексеру</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Maps кластер экранында көрінеді ме?\n\n(%1$d экранын сынау)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s кластер экранында көрінеді ме?\n\n(%2$d экранын сынау)</string>
     <string name="diag_dl5_fission_prompt_yes">Иә</string>
     <string name="diag_dl5_fission_prompt_no">Жоқ</string>
 

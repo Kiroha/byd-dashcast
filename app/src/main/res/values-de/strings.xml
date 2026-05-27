@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Fission-Test</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Destruktiver Live-Test: startet Yandex Maps auf dem Fission-Display, erzwingt einen Resize, verschiebt es zurück auf den Hauptbildschirm und räumt auf. Nur DiLink 5, kein Resize-Befehl wird jemals an den Hauptbildschirm (id 0) gesendet.</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Destruktiver Live-Test: startet die gewählte App auf dem Fission-Display, erzwingt einen Resize, verschiebt sie zurück auf den Hauptbildschirm und räumt auf. Nur DiLink 5, kein Resize-Befehl wird jemals an den Hauptbildschirm (id 0) gesendet.</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Fission-Test — destruktiv</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Diese Testreihe wird:
-
-• FORCE_RESIZE_APP-Compat auf Yandex Maps aktivieren
-• Yandex Maps zwangsweise stoppen
-• Es auf dem Fission-Display (id ≠ 0) im freeform-Modus starten
-• Einen Task-Resize testen
-• Es zurück auf den Hauptbildschirm (id 0) verschieben, um den Move zu validieren
-• Yandex zwangsweise stoppen und compat zurücksetzen (Aufräumen)
-
-Kein Resize-Befehl wird jemals an den Hauptbildschirm (id 0) gesendet.
-Fortfahren?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ziel: %1$s\n\nDiese Testreihe wird:\n\n• FORCE_RESIZE_APP-Compat auf die App aktivieren\n• Die App zwangsweise stoppen\n• Sie auf dem Fission-Display (id ≠ 0) im freeform-Modus starten\n• Einen Task-Resize testen\n• Sie zurück auf den Hauptbildschirm (id 0) verschieben, um den Move zu validieren\n• Die App zwangsweise stoppen und compat zurücksetzen (Aufräumen)\n\nKein Resize-Befehl wird jemals an den Hauptbildschirm (id 0) gesendet.\nFortfahren?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Test starten</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission-Test ist nur für DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">App zum Testen auswählen</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Keine startbaren Apps gefunden.</string>
     <string name="diag_dl5_fission_prompt_title">Cluster-Überprüfung</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Ist Yandex Maps auf dem Cluster-Display sichtbar?\n\n(Test Display %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Ist %1$s auf dem Cluster-Display sichtbar?\n\n(Test Display %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Ja</string>
     <string name="diag_dl5_fission_prompt_no">Nein</string>
 

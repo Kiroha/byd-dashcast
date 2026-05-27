@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Тест Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивний живий тест: запускає Yandex Maps на екрані fission, примусово змінює розмір, повертає на головний екран, потім очищає. Лише DiLink 5, жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Деструктивний живий тест: запускає вибраний застосунок на екрані fission, примусово змінює розмір, повертає на головний екран, потім очищає. Лише DiLink 5, жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Тест Fission — деструктивний</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ця серія:
-
-• Увімкне compat FORCE_RESIZE_APP для Yandex Maps
-• Примусово зупинить Yandex Maps
-• Запустить його на екрані fission (id ≠ 0) у режимі freeform
-• Перевірить зміну розміру завдання
-• Поверне його на головний екран (id 0) для перевірки переміщення
-• Примусово зупинить Yandex і скине compat (очищення)
-
-Жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).
-Продовжити?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ціль: %1$s\n\nЦя серія:\n\n• Увімкне compat FORCE_RESIZE_APP для застосунку\n• Примусово зупинить застосунок\n• Запустить його на екрані fission (id ≠ 0) у режимі freeform\n• Перевірить зміну розміру завдання\n• Поверне його на головний екран (id 0) для перевірки переміщення\n• Примусово зупинить застосунок і скине compat (очищення)\n\nЖодна команда зміни розміру ніколи не надсилається на головний екран (id 0).\nПродовжити?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустити тест</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission лише для DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Виберіть застосунок для тесту</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Запускні застосунки не знайдено.</string>
     <string name="diag_dl5_fission_prompt_title">Перевірка кластера</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Чи видно Yandex Maps на екрані кластера?\n\n(тест екрана %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s видно на екрані кластера?\n\n(тест екрана %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Так</string>
     <string name="diag_dl5_fission_prompt_no">Ні</string>
 

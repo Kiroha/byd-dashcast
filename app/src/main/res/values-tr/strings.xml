@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Fission Testi</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Yıkıcı canlı test: Yandex Maps\'ı fission ekranında başlatır, yeniden boyutlandırmayı zorlar, ana ekrana geri taşır, sonra temizler. Yalnızca DiLink 5, ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Yıkıcı canlı test: seçilen uygulamayı fission ekranında başlatır, yeniden boyutlandırmayı zorlar, ana ekrana geri taşır, sonra temizler. Yalnızca DiLink 5, ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Fission Testi — yıkıcı</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Bu seri:
-
-• Yandex Maps üzerinde FORCE_RESIZE_APP compat\'i etkinleştirecek
-• Yandex Maps\'ı zorla durduracak
-• Onu fission ekranında (id ≠ 0) freeform modunda başlatacak
-• Görev yeniden boyutlandırmayı test edecek
-• Taşımayı doğrulamak için onu ana ekrana (id 0) geri taşıyacak
-• Yandex\'i zorla durduracak ve compat\'i sıfırlayacak (temizlik)
-
-Ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.
-Devam edilsin mi?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Hedef: %1$s\n\nBu seri:\n\n• Uygulamada FORCE_RESIZE_APP compat\'i etkinleştirecek\n• Uygulamayı zorla durduracak\n• Onu fission ekranında (id ≠ 0) freeform modunda başlatacak\n• Görev yeniden boyutlandırmayı test edecek\n• Taşımayı doğrulamak için onu ana ekrana (id 0) geri taşıyacak\n• Uygulamayı zorla durduracak ve compat\'i sıfırlayacak (temizlik)\n\nAna ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.\nDevam edilsin mi?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Testi çalıştır</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission Testi yalnızca DiLink 5 içindir.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Test edilecek uygulamayı seç</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
     <string name="diag_dl5_fission_prompt_title">Cluster doğrulama</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Haritalar cluster ekranında görünüyor mu?\n\n(ekran %1$d testi)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s cluster ekranında görünüyor mu?\n\n(ekran %2$d testi)</string>
     <string name="diag_dl5_fission_prompt_yes">Evet</string>
     <string name="diag_dl5_fission_prompt_no">Hayır</string>
 
