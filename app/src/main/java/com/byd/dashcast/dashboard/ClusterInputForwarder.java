@@ -192,53 +192,58 @@ public class ClusterInputForwarder {
                 c.size = 1.0f;
             }
 
-            // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
-            if (mDaemonBinder != null) {
+            try {
+                // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
+                if (mDaemonBinder != null) {
+                    MotionEvent ev = null;
+                    Parcel data = null;
+                    try {
+                        ev = MotionEvent.obtain(
+                                mTouchDownTime, now, action, n, mProps, mCoords,
+                                0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                        data = Parcel.obtain();
+                        data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                        data.writeParcelable(ev, 0);
+                        mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
+                                data, null, android.os.IBinder.FLAG_ONEWAY);
+                    } catch (Exception e) {
+                        AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+                    } finally {
+                        if (data != null) data.recycle();
+                        if (ev != null) ev.recycle();
+                    }
+                    return;
+                }
+
+                if (!mAvailable) return;
+
                 MotionEvent ev = null;
-                Parcel data = null;
                 try {
                     ev = MotionEvent.obtain(
                             mTouchDownTime, now, action, n, mProps, mCoords,
                             0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-                    data = Parcel.obtain();
-                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
-                    data.writeParcelable(ev, 0);
-                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
-                            data, null, android.os.IBinder.FLAG_ONEWAY);
+                    // setDisplayId is a @hide API — using the Method cached in the constructor
+                    if (mSetDisplayIdMethod != null) {
+                        try {
+                            mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
+                        } catch (Exception e) {
+                            AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
+                        }
+                    }
+                    mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
                 } catch (Exception e) {
-                    AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+                    AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
+                            + " ptrs=" + n + " disp=" + mClusterDisplayId, e);
                 } finally {
-                    if (data != null) data.recycle();
                     if (ev != null) ev.recycle();
                 }
-                return;
-            }
-
-            if (!mAvailable) return;
-
-            MotionEvent ev = null;
-            try {
-                ev = MotionEvent.obtain(
-                        mTouchDownTime, now, action, n, mProps, mCoords,
-                        0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-                // setDisplayId is a @hide API — using the Method cached in the constructor
-                if (mSetDisplayIdMethod != null) {
-                    try {
-                        mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
-                    } catch (Exception e) {
-                        AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
-                    }
-                }
-                mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
-                        + " ptrs=" + n + " disp=" + mClusterDisplayId, e);
             } finally {
-                if (ev != null) ev.recycle();
-            }
-
-            if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
-                mTouchDownTime = 0L;
+                // Audit batch 1 — applies to both daemon and direct paths so
+                // mTouchDownTime never carries over between gestures (was
+                // previously skipped on the daemon-return early-out).
+                if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                    mTouchDownTime = 0L;
+                }
             }
         }
     }
