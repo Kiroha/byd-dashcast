@@ -507,31 +507,53 @@ public class DiagActivity extends AppCompatActivity {
         btnDl5CopyReport.setEnabled(false);
     }
 
+    /**
+     * v1.2.57 — runs the launchable-app enumeration on a background thread
+     * because {@code queryIntentActivities + ResolveInfo.loadLabel(pm)} for
+     * 50–150 installed apps blocks the UI thread for 80–300 ms on DL3/DL5
+     * and was previously executed eagerly in {@code onCreate} via
+     * {@link #bindDl5Panel()}. The Run-all button is disabled while the scan
+     * is in flight so D8 can never be SKIPPED by a race with an empty
+     * {@link #dl5SelectedPkg}.
+     */
     private void populateLaunchableApps() {
         dl5Apps.clear();
-        PackageManager pm = getPackageManager();
-        Intent main = new Intent(Intent.ACTION_MAIN, null);
-        main.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> resolves;
-        try {
-            resolves = pm.queryIntentActivities(main, 0);
-        } catch (Throwable t) {
-            resolves = Collections.emptyList();
-            AppLogger.w("DiagActivity", "queryIntentActivities failed: " + t.getMessage());
-        }
-        for (ResolveInfo ri : resolves) {
-            if (ri == null || ri.activityInfo == null) continue;
-            String pkg = ri.activityInfo.packageName;
-            if (pkg == null || pkg.equals(getPackageName())) continue;
-            CharSequence label = ri.loadLabel(pm);
-            String lbl = (label != null && label.length() > 0) ? label.toString() : pkg;
-            dl5Apps.add(new LaunchableApp(lbl, pkg));
-        }
-        Collections.sort(dl5Apps, new Comparator<LaunchableApp>() {
-            @Override public int compare(LaunchableApp a, LaunchableApp b) {
-                return a.label.compareToIgnoreCase(b.label);
+        btnDl5RunAll.setEnabled(false);
+        final PackageManager pm = getPackageManager();
+        final String selfPkg    = getPackageName();
+        new Thread(() -> {
+            final List<LaunchableApp> scanned = new ArrayList<>();
+            Intent main = new Intent(Intent.ACTION_MAIN, null);
+            main.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> resolves;
+            try {
+                resolves = pm.queryIntentActivities(main, 0);
+            } catch (Throwable t) {
+                resolves = Collections.emptyList();
+                AppLogger.w("DiagActivity", "queryIntentActivities failed: " + t.getMessage());
             }
-        });
+            for (ResolveInfo ri : resolves) {
+                if (ri == null || ri.activityInfo == null) continue;
+                String pkg = ri.activityInfo.packageName;
+                if (pkg == null || pkg.equals(selfPkg)) continue;
+                CharSequence label = ri.loadLabel(pm);
+                String lbl = (label != null && label.length() > 0) ? label.toString() : pkg;
+                scanned.add(new LaunchableApp(lbl, pkg));
+            }
+            Collections.sort(scanned, new Comparator<LaunchableApp>() {
+                @Override public int compare(LaunchableApp a, LaunchableApp b) {
+                    return a.label.compareToIgnoreCase(b.label);
+                }
+            });
+            safeRunOnUiThread(() -> applyLaunchableApps(scanned));
+        }, "dl5-apps-scan").start();
+    }
+
+    /** v1.2.57 — UI-thread tail of {@link #populateLaunchableApps()}. */
+    private void applyLaunchableApps(List<LaunchableApp> scanned) {
+        if (mDestroyed) return;
+        dl5Apps.clear();
+        dl5Apps.addAll(scanned);
         ArrayAdapter<LaunchableApp> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, dl5Apps);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -553,6 +575,7 @@ public class DiagActivity extends AppCompatActivity {
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { dl5SelectedPkg = null; }
         });
+        btnDl5RunAll.setEnabled(true);
     }
 
     private void prepareDl5TestRows() {
