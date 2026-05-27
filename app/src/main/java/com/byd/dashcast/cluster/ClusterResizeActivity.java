@@ -108,7 +108,7 @@ public class ClusterResizeActivity extends Activity
         mDisplayId = it.getIntExtra(EXTRA_DISPLAY_ID, 1);
         mInitRect  = it.getIntArrayExtra(EXTRA_INIT_LTRB);
         if (mPkg == null || mPkg.isEmpty()) {
-            Toast.makeText(this, "Aucun package", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.resize_no_package, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }

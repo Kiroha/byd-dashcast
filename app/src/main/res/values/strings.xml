@@ -257,6 +257,7 @@
     <string name="resize_live_warn_title">Activer l\'aperçu live ?</string>
     <string name="resize_live_warn_msg">L\'aperçu live applique chaque déplacement au cluster en temps réel. Cela peut provoquer des flashs et des artefacts visuels sur l\'écran cluster pendant la manipulation. Continuer ?</string>
     <string name="resize_live_warn_ok">Activer</string>
+    <string name="resize_no_package">Aucun package</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
     <!-- v0.9.81 — Diag M3 cards -->
