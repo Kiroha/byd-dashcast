@@ -296,8 +296,9 @@ public class MirrorDaemon {
             Log.i(TAG, "setupMirror : tx.apply() OK");
 
             // 4. Post-setup verification via dumpsys SurfaceFlinger
+            Process p = null;
             try {
-                Process p = Runtime.getRuntime().exec(
+                p = Runtime.getRuntime().exec(
                         new String[]{"sh", "-c",
                                 "dumpsys SurfaceFlinger 2>/dev/null"
                                 + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
@@ -307,6 +308,10 @@ public class MirrorDaemon {
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line).append('\n');
                 }
+                // Audit batch 1 — also close stderr/stdin so the Process doesn't
+                // keep file descriptors open until GC (previously leaked one FD per setupMirror).
+                try { p.getErrorStream().close(); } catch (Exception ignored) { }
+                try { p.getOutputStream().close(); } catch (Exception ignored) { }
                 p.waitFor();
                 Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
                 out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
@@ -314,6 +319,8 @@ public class MirrorDaemon {
             } catch (Exception e) {
                 Log.d(TAG, "SF dump read failed: " + e.getMessage());
                 out("setupMirror SF dump read failed: " + e.getMessage());
+            } finally {
+                if (p != null) { try { p.destroy(); } catch (Exception ignored) { } }
             }
 
             Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
