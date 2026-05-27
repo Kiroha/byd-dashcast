@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Fission testi</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Buzg\'uvchi jonli test: Yandex Maps-ni fission ekranida ishga tushiradi, o\'lchamini majburiy o\'zgartiradi, asosiy ekranga qaytaradi, so\'ngra tozalaydi. Faqat DiLink 5, asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Buzg\'uvchi jonli test: tanlangan ilovani fission ekranida ishga tushiradi, o\'lchamini majburiy o\'zgartiradi, asosiy ekranga qaytaradi, so\'ngra tozalaydi. Faqat DiLink 5, asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Fission testi — buzg\'uvchi</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ushbu seriya:
-
-• Yandex Maps-da FORCE_RESIZE_APP compat-ni yoqadi
-• Yandex Maps-ni majburiy to\'xtatadi
-• Uni fission ekranida (id ≠ 0) freeform rejimida ishga tushiradi
-• Vazifa o\'lchamini o\'zgartirishni sinab ko\'radi
-• Ko\'chirishni tasdiqlash uchun uni asosiy ekranga (id 0) qaytaradi
-• Yandex-ni majburiy to\'xtatadi va compat-ni qayta tiklaydi (tozalash)
-
-Asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.
-Davom etilsinmi?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Maqsad: %1$s\n\nUshbu seriya:\n\n• Ilovada FORCE_RESIZE_APP compat-ni yoqadi\n• Ilovani majburiy to\'xtatadi\n• Uni fission ekranida (id ≠ 0) freeform rejimida ishga tushiradi\n• Vazifa o\'lchamini o\'zgartirishni sinab ko\'radi\n• Ko\'chirishni tasdiqlash uchun uni asosiy ekranga (id 0) qaytaradi\n• Ilovani majburiy to\'xtatadi va compat-ni qayta tiklaydi (tozalash)\n\nAsosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.\nDavom etilsinmi?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Testni ishga tushirish</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Sinov uchun ilovani tanlang</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
     <string name="diag_dl5_fission_prompt_title">Klaster tekshiruvi</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Yandex Maps klaster ekranida ko\'rinadimi?\n\n(displey %1$d sinovi)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s klaster ekranida ko\'rinadimi?\n\n(displey %2$d sinovi)</string>
     <string name="diag_dl5_fission_prompt_yes">Ha</string>
     <string name="diag_dl5_fission_prompt_no">Yo\'q</string>
 

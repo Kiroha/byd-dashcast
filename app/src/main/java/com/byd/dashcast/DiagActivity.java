@@ -782,16 +782,78 @@ public class DiagActivity extends AppCompatActivity {
                     Toast.LENGTH_LONG).show();
             return;
         }
+        // v1.2.56 — let the user pick which app to target instead of the
+        // hard-coded Yandex Maps fallback that skipped F03..F13 for everyone
+        // who didn't have that exact package installed.
+        pickFissionTargetThenConfirm();
+    }
+
+    /**
+     * v1.2.56 — enumerate launchable apps, show a single-choice picker,
+     * then chain into the confirm dialog with the chosen package.
+     */
+    private void pickFissionTargetThenConfirm() {
+        android.content.pm.PackageManager pm = getPackageManager();
+        android.content.Intent main = new android.content.Intent(android.content.Intent.ACTION_MAIN);
+        main.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> infos = pm.queryIntentActivities(main, 0);
+        if (infos == null || infos.isEmpty()) {
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_pick_empty,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        // Dedupe by package + skip our own apk so the user never targets
+        // DashCast itself for a destructive resize cycle.
+        String selfPkg = getPackageName();
+        java.util.Map<String, String> pkgToLabel = new java.util.LinkedHashMap<>();
+        for (android.content.pm.ResolveInfo ri : infos) {
+            if (ri == null || ri.activityInfo == null) continue;
+            String pkg = ri.activityInfo.packageName;
+            if (pkg == null || pkg.equals(selfPkg)) continue;
+            if (pkgToLabel.containsKey(pkg)) continue;
+            CharSequence label = ri.loadLabel(pm);
+            pkgToLabel.put(pkg, label == null ? pkg : label.toString());
+        }
+        if (pkgToLabel.isEmpty()) {
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_pick_empty,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        // Sort alphabetically by label (case-insensitive) for findability.
+        java.util.List<java.util.Map.Entry<String, String>> sorted =
+                new java.util.ArrayList<>(pkgToLabel.entrySet());
+        java.util.Collections.sort(sorted, (a, b) ->
+                a.getValue().compareToIgnoreCase(b.getValue()));
+        final String[] pkgs   = new String[sorted.size()];
+        final String[] labels = new String[sorted.size()];
+        for (int i = 0; i < sorted.size(); i++) {
+            pkgs[i]   = sorted.get(i).getKey();
+            labels[i] = sorted.get(i).getValue() + "  —  " + sorted.get(i).getKey();
+        }
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.diag_dl5_cluster_test_fission_confirm_title)
-                .setMessage(R.string.diag_dl5_cluster_test_fission_confirm_msg)
+                .setTitle(R.string.diag_dl5_cluster_test_fission_pick_title)
+                .setItems(labels, (d, which) -> {
+                    if (which < 0 || which >= pkgs.length) return;
+                    confirmFissionRun(pkgs[which], sorted.get(which).getValue());
+                })
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.diag_dl5_cluster_test_fission_confirm_ok,
-                        (d, w) -> runClusterDl5FissionTests())
                 .show();
     }
 
-    private void runClusterDl5FissionTests() {
+    /** v1.2.56 — second-step confirm dialog showing the chosen target. */
+    private void confirmFissionRun(String targetPkg, String targetLabel) {
+        String displayName = targetLabel + " (" + targetPkg + ")";
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.diag_dl5_cluster_test_fission_confirm_title)
+                .setMessage(getString(R.string.diag_dl5_cluster_test_fission_confirm_msg,
+                        displayName))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.diag_dl5_cluster_test_fission_confirm_ok,
+                        (d, w) -> runClusterDl5FissionTests(targetPkg, targetLabel))
+                .show();
+    }
+
+    private void runClusterDl5FissionTests(String targetPkg, String targetLabel) {
         // Replace row list with the F-catalog and flip the renderer flag so
         // Copy / Telegram use renderFissionReport.
         prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.fissionCatalog());
@@ -800,7 +862,7 @@ public class DiagActivity extends AppCompatActivity {
         btnDl5ClusterTestFission.setEnabled(false);
         btnDl5ClusterCopyReport.setEnabled(false);
         btnDl5ClusterSendTelegram.setEnabled(false);
-        Dl5ClusterReconRunner.runFission(this, new Dl5ClusterReconRunner.Listener() {
+        Dl5ClusterReconRunner.runFission(this, targetPkg, targetLabel, new Dl5ClusterReconRunner.Listener() {
             @Override public void onSuiteStarted(List<DiLink5TestRunner.TestResult> results) {
                 if (mDestroyed) return;
                 dl5ClusterLastResults.clear();

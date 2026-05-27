@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">اختبار Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">اختبار مباشر مدمر: يشغل Yandex Maps على شاشة الـ fission، ويفرض تغيير الحجم، ثم يعيده إلى الشاشة الرئيسية، ثم ينظف. DiLink 5 فقط، لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_hint">اختبار مباشر مدمر: يشغل التطبيق المختار على شاشة الـ fission، ويفرض تغيير الحجم، ثم يعيده إلى الشاشة الرئيسية، ثم ينظف. DiLink 5 فقط، لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">اختبار Fission — مدمر</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">ستقوم هذه المجموعة بـ:
-
-• تفعيل FORCE_RESIZE_APP على Yandex Maps
-• إيقاف Yandex Maps قسريًا
-• تشغيله على شاشة الـ fission (id ≠ 0) في وضع freeform
-• اختبار تغيير حجم المهمة
-• إعادته إلى الشاشة الرئيسية (id 0) للتحقق من النقل
-• إيقاف Yandex قسريًا ثم إعادة تعيين compat (تنظيف)
-
-لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).
-متابعة؟</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">الهدف: %1$s\n\nستقوم هذه المجموعة بـ:\n\n• تفعيل FORCE_RESIZE_APP على التطبيق\n• إيقاف التطبيق قسريًا\n• تشغيله على شاشة الـ fission (id ≠ 0) في وضع freeform\n• اختبار تغيير حجم المهمة\n• إعادته إلى الشاشة الرئيسية (id 0) للتحقق من النقل\n• إيقاف التطبيق قسريًا ثم إعادة تعيين compat (تنظيف)\n\nلا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).\nمتابعة؟</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">تشغيل الاختبار</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">اختبار Fission مخصص لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">اختر التطبيق للاختبار</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
     <string name="diag_dl5_fission_prompt_title">التحقق من شاشة العنقود</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">هل تطبيق خرائط Yandex مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">هل %1$s مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">نعم</string>
     <string name="diag_dl5_fission_prompt_no">لا</string>
 

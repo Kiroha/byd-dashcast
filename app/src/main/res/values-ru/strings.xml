@@ -370,23 +370,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Тест Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивный live-тест: запускает Yandex Maps на экране fission, принудительно меняет размер, возвращает на главный экран, затем выполняет очистку. Только DiLink 5, ни одна команда изменения размера никогда не отправляется на главный экран (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Деструктивный live-тест: запускает выбранное приложение на экране fission, принудительно меняет размер, возвращает на главный экран, затем выполняет очистку. Только DiLink 5, ни одна команда изменения размера никогда не отправляется на главный экран (id 0).</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Тест Fission — деструктивный</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Эта серия:
-
-• Включит compat FORCE_RESIZE_APP для Yandex Maps
-• Принудительно остановит Yandex Maps
-• Запустит его на экране fission (id ≠ 0) в режиме freeform
-• Проверит изменение размера задачи
-• Вернёт его на главный экран (id 0) для проверки перемещения
-• Принудительно остановит Yandex и сбросит compat (очистка)
-
-Ни одна команда изменения размера никогда не отправляется на главный экран (id 0).
-Продолжить?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Цель: %1$s\n\nЭта серия:\n\n• Включит compat FORCE_RESIZE_APP для приложения\n• Принудительно остановит приложение\n• Запустит его на экране fission (id ≠ 0) в режиме freeform\n• Проверит изменение размера задачи\n• Вернёт его на главный экран (id 0) для проверки перемещения\n• Принудительно остановит приложение и сбросит compat (очистка)\n\nНи одна команда изменения размера никогда не отправляется на главный экран (id 0).\nПродолжить?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустить тест</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission только для DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Выберите приложение для теста</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Запускаемые приложения не найдены.</string>
     <string name="diag_dl5_fission_prompt_title">Проверка кластера</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Яндекс Карты видны на экране кластера?\n\n(тест дисплея %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s видно на экране кластера?\n\n(тест дисплея %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Да</string>
     <string name="diag_dl5_fission_prompt_no">Нет</string>
 

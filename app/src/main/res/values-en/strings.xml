@@ -335,13 +335,15 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Destructive live test: launches Yandex Maps on the fission display, forces a resize, moves it back to the main display, then cleans up. DiLink 5 only, no resize command ever sent to the main display (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Destructive live test: launches the chosen app on the fission display, forces a resize, moves it back to the main display, then cleans up. DiLink 5 only, no resize command ever sent to the main display (id 0).</string>
     <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructive</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">This suite will:\n\n• Enable FORCE_RESIZE_APP compat on Yandex Maps\n• Force-stop Yandex Maps\n• Launch it on the fission display (id ≠ 0) in freeform windowingMode\n• Test a task resize\n• Move it back to the main display (id 0) to validate the move pipeline\n• Force-stop Yandex then reset the compat (cleanup)\n\nNo resize command is ever sent against the main display (id 0).\nContinue?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Target: %1$s\n\nThis suite will:\n\n• Enable FORCE_RESIZE_APP compat on the app\n• Force-stop the app\n• Launch it on the fission display (id ≠ 0) in freeform windowingMode\n• Test a task resize\n• Move it back to the main display (id 0) to validate the move pipeline\n• Force-stop the app then reset the compat (cleanup)\n\nNo resize command is ever sent against the main display (id 0).\nContinue?</string>
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Run the test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission is DiLink 5 only.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Choose app to test</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">No launchable apps found.</string>
     <string name="diag_dl5_fission_prompt_title">Cluster verification</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">Is Yandex Maps visible on the cluster screen?\n\n(testing display %1$d)</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">Is %1$s visible on the cluster screen?\n\n(testing display %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Yes</string>
     <string name="diag_dl5_fission_prompt_no">No</string>
     <string name="diag_tab_display">Display</string>

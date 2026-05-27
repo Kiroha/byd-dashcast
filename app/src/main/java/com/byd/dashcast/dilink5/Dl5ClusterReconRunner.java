@@ -505,16 +505,31 @@ public final class Dl5ClusterReconRunner {
     //      left in a clean state between runs.
     // ═══════════════════════════════════════════════════════════════════════
 
-    /** Hard-coded Fission test target. */
-    private static final String FISSION_TARGET_PKG = "ru.yandex.yandexmaps";
+    /**
+     * v1.2.41 default Fission test target. Kept as fallback for the legacy
+     * {@link #runFission(Context, Listener)} overload; v1.2.56+ callers should
+     * pass an explicit package via {@link #runFission(Context, String, Listener)}.
+     */
+    private static final String DEFAULT_FISSION_TARGET_PKG = "ru.yandex.yandexmaps";
     /** Numeric ID of the FORCE_RESIZE_APP compat change. */
     private static final String FORCE_RESIZE_APP_ID = "174042936";
+
+    /**
+     * v1.2.56 — remembered for {@link #renderFissionReport(java.util.List)}.
+     * Updated by {@link #runFission(Context, String, Listener)}. Default value
+     * preserves the v1.2.41 wording for any caller still using the no-target overload.
+     */
+    private static volatile String sLastFissionTarget = DEFAULT_FISSION_TARGET_PKG;
 
     /** Mutable state shared between F-tests within a single run. */
     private static final class FissionState {
         boolean abortFromHere   = false;
         boolean overrideEnabled = false;
-        /** Resolved launcher component for {@link #FISSION_TARGET_PKG}, e.g.
+        /** v1.2.56 — package the user picked for this run. */
+        String  targetPkg       = DEFAULT_FISSION_TARGET_PKG;
+        /** v1.2.56 — human-readable label of {@link #targetPkg} (defaults to pkg). */
+        String  targetLabel     = DEFAULT_FISSION_TARGET_PKG;
+        /** Resolved launcher component for {@link #targetPkg}, e.g.
          *  "ru.yandex.yandexmaps/.SplashScreen". Filled by F02. */
         String  targetActivity  = null;
         /** v1.2.48 — set by F01 when the cluster projection was opened by
@@ -541,25 +556,25 @@ public final class Dl5ClusterReconRunner {
                 "Activate DL5 projection (cluster mirror)",
                 "service call auto_container 2 i32 1000 i32 16 s16 \"\" — opens the BYD cluster projection so fission displays (id 2/3/4) become routable. Required before any cluster-targeted am start can be observed."));
         list.add(new DiLink5TestRunner.TestDef("F02",
-                "Yandex Maps installed + launcher resolved?",
-                "PackageManager.getPackageInfo(ru.yandex.yandexmaps) + getLaunchIntentForPackage to resolve the actual launcher activity (e.g. ru.yandex.yandexmaps/.SplashScreen). SKIPs the rest of the suite if absent or unresolvable."));
+                "Target app installed + launcher resolved?",
+                "PackageManager.getPackageInfo(<targetPkg>) + getLaunchIntentForPackage to resolve the actual launcher activity. SKIPs the rest of the suite if absent or unresolvable."));
         list.add(new DiLink5TestRunner.TestDef("F03",
-                "Enable FORCE_RESIZE_APP on Yandex Maps",
-                "am compat enable 174042936 ru.yandex.yandexmaps — forces ATM to treat the activity as resizeable regardless of its manifest resizeMode."));
+                "Enable FORCE_RESIZE_APP on target app",
+                "am compat enable 174042936 <targetPkg> — forces ATM to treat the activity as resizeable regardless of its manifest resizeMode."));
         list.add(new DiLink5TestRunner.TestDef("F04",
-                "Display 2 — force-stop + launch Yandex",
+                "Display 2 — force-stop + launch target",
                 "am force-stop + am start --display 2 --windowingMode 5 -n <component>."));
         list.add(new DiLink5TestRunner.TestDef("F05",
                 "Display 2 — user confirms visible on cluster?",
-                "Interactive Yes/No prompt. YES → mark display 2 as cluster, skip F06..F09. NO → move Yandex back to display 0 + force-stop, then proceed to display 3."));
+                "Interactive Yes/No prompt. YES → mark display 2 as cluster, skip F06..F09. NO → move target back to display 0 + force-stop, then proceed to display 3."));
         list.add(new DiLink5TestRunner.TestDef("F06",
-                "Display 3 — force-stop + launch Yandex",
+                "Display 3 — force-stop + launch target",
                 "SKIPPED if user already confirmed display 2."));
         list.add(new DiLink5TestRunner.TestDef("F07",
                 "Display 3 — user confirms visible on cluster?",
                 "SKIPPED if previous display was confirmed. NO → move back + force-stop, try display 4."));
         list.add(new DiLink5TestRunner.TestDef("F08",
-                "Display 4 — force-stop + launch Yandex",
+                "Display 4 — force-stop + launch target",
                 "SKIPPED if user already confirmed display 2 or 3."));
         list.add(new DiLink5TestRunner.TestDef("F09",
                 "Display 4 — user confirms visible on cluster?",
@@ -574,14 +589,14 @@ public final class Dl5ClusterReconRunner {
                 "Verify new bounds",
                 "Wait ~2 s, dumpsys activity activities scoped to the Yandex task — confirm mBounds reflects the rectangle from F11."));
         list.add(new DiLink5TestRunner.TestDef("F13",
-                "Move Yandex back to display 0",
+                "Move target back to display 0",
                 "am start --display 0 -n <component> — reparents the task onto the head unit. No resize / no size mutation on display 0."));
         list.add(new DiLink5TestRunner.TestDef("F14",
-                "Cleanup: force-stop Yandex",
-                "am force-stop ru.yandex.yandexmaps — leaves zero state behind."));
+                "Cleanup: force-stop target app",
+                "am force-stop <targetPkg> — leaves zero state behind."));
         list.add(new DiLink5TestRunner.TestDef("F15",
                 "Cleanup: reset FORCE_RESIZE_APP override",
-                "am compat reset 174042936 ru.yandex.yandexmaps — restores Yandex Maps to its declared resize behaviour."));
+                "am compat reset 174042936 <targetPkg> — restores the target app to its declared resize behaviour."));
         list.add(new DiLink5TestRunner.TestDef("F16",
                 "Cleanup: close DL5 projection (if opened by F01)",
                 "service call auto_container 2 i32 1000 i32 18 + i32 0 — restores Qt video stream. SKIPPED if F01 did not open the projection in this run."));
@@ -598,13 +613,37 @@ public final class Dl5ClusterReconRunner {
         return out;
     }
 
-    /** Async fission run — listener called on UI thread. */
+    /** Async fission run — listener called on UI thread. Uses the v1.2.41 default target (Yandex Maps). */
     public static void runFission(Context ctx, Listener listener) {
+        runFission(ctx, DEFAULT_FISSION_TARGET_PKG, DEFAULT_FISSION_TARGET_PKG, listener);
+    }
+
+    /**
+     * v1.2.56 — async fission run against an explicit target package picked
+     * by the user. {@code targetPkg} must be a launchable app; if null or
+     * blank, falls back to {@link #DEFAULT_FISSION_TARGET_PKG}.
+     */
+    public static void runFission(Context ctx, String targetPkg, Listener listener) {
+        runFission(ctx, targetPkg, targetPkg, listener);
+    }
+
+    /**
+     * v1.2.56 — async fission run with explicit package + human-readable label.
+     */
+    public static void runFission(Context ctx, String targetPkg, String targetLabel,
+                                  Listener listener) {
+        final String finalTarget = (targetPkg == null || targetPkg.trim().isEmpty())
+                ? DEFAULT_FISSION_TARGET_PKG : targetPkg.trim();
+        final String finalLabel = (targetLabel == null || targetLabel.trim().isEmpty())
+                ? finalTarget : targetLabel.trim();
+        sLastFissionTarget = finalTarget;
         final Context appCtx = ctx.getApplicationContext();
         final List<DiLink5TestRunner.TestResult> results = emptyFissionResults();
         EXEC.execute(() -> {
             UI.post(() -> listener.onSuiteStarted(results));
             final FissionState st = new FissionState();
+            st.targetPkg = finalTarget;
+            st.targetLabel = finalLabel;
             // Hard gate: refuse to run on anything but DL5.
             if (!Platform.get().isAutoDetectedDiLink5()) {
                 for (int i = 0; i < results.size(); i++) {
@@ -700,31 +739,31 @@ public final class Dl5ClusterReconRunner {
             return;
         }
         try {
-            ctx.getPackageManager().getPackageInfo(FISSION_TARGET_PKG, 0);
+            ctx.getPackageManager().getPackageInfo(st.targetPkg, 0);
         } catch (Exception e) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = FISSION_TARGET_PKG + " not installed — F03..F16 skipped";
+            r.message = st.targetPkg + " not installed — F03..F16 skipped";
             st.abortFromHere = true;
             return;
         }
         android.content.Intent launchIntent =
-                ctx.getPackageManager().getLaunchIntentForPackage(FISSION_TARGET_PKG);
+                ctx.getPackageManager().getLaunchIntentForPackage(st.targetPkg);
         if (launchIntent == null || launchIntent.getComponent() == null) {
             r.status = DiLink5TestRunner.Status.SKIPPED;
-            r.message = FISSION_TARGET_PKG + " installed but no launcher activity — F03..F16 skipped";
+            r.message = st.targetPkg + " installed but no launcher activity — F03..F16 skipped";
             st.abortFromHere = true;
             return;
         }
         st.targetActivity = launchIntent.getComponent().flattenToShortString();
         r.status = DiLink5TestRunner.Status.PASS;
-        r.message = FISSION_TARGET_PKG + " installed, launcher=" + st.targetActivity;
+        r.message = st.targetPkg + " installed, launcher=" + st.targetActivity;
     }
 
     private static void fissionEnableOverride(Context ctx, DiLink5TestRunner.TestResult r,
                                               FissionState st) {
         if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "aborted earlier"; return; }
-        String cmd = "am compat enable " + FORCE_RESIZE_APP_ID + " " + FISSION_TARGET_PKG + " 2>&1";
+        String cmd = "am compat enable " + FORCE_RESIZE_APP_ID + " " + st.targetPkg + " 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         if (out != null && out.toLowerCase().contains("enabled")) {
@@ -744,7 +783,7 @@ public final class Dl5ClusterReconRunner {
 
     private static void fissionForceStop(Context ctx, DiLink5TestRunner.TestResult r,
                                          FissionState st, String tag) {
-        String cmd = "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__";
+        String cmd = "am force-stop " + st.targetPkg + " 2>&1 ; echo __done__";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         r.status = DiLink5TestRunner.Status.PASS;
@@ -773,7 +812,7 @@ public final class Dl5ClusterReconRunner {
         }
         StringBuilder dt = new StringBuilder();
         // Force-stop so the FORCE_RESIZE_APP override picks up on next launch.
-        String fsCmd = "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__";
+        String fsCmd = "am force-stop " + st.targetPkg + " 2>&1 ; echo __done__";
         String fsOut = shellSync(ctx, fsCmd);
         dt.append("$ ").append(fsCmd).append("\n").append(fsOut == null ? "<no output>" : fsOut).append("\n\n");
         try { Thread.sleep(800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -835,7 +874,8 @@ public final class Dl5ClusterReconRunner {
         String title = ctx.getString(
                 com.byd.dashcast.R.string.diag_dl5_fission_prompt_title);
         String msg = ctx.getString(
-                com.byd.dashcast.R.string.diag_dl5_fission_prompt_msg_fmt, displayId);
+                com.byd.dashcast.R.string.diag_dl5_fission_prompt_msg_fmt,
+                st.targetLabel, displayId);
         final java.util.concurrent.CountDownLatch latch =
                 new java.util.concurrent.CountDownLatch(1);
         final java.util.concurrent.atomic.AtomicBoolean answer =
@@ -861,9 +901,9 @@ public final class Dl5ClusterReconRunner {
         }
         if (yes) {
             st.confirmedClusterDisplay = displayId;
-            // Best-effort: extract the Yandex task id for the resize step.
+            // Best-effort: extract the target task id for the resize step.
             StringBuilder dbg = new StringBuilder();
-            int tid = extractYandexTaskId(ctx, dbg);
+            int tid = extractYandexTaskId(ctx, st.targetPkg, dbg);
             st.yandexTaskIdOnCluster = tid;
             dt.append("extracted taskId = ").append(tid).append('\n');
             dt.append("\n--- task lookup debug ---\n").append(dbg);
@@ -878,8 +918,8 @@ public final class Dl5ClusterReconRunner {
             dt.append("\n$ am start --display 0 -n ").append(st.targetActivity).append('\n')
               .append(mb == null ? "<no output>" : mb).append('\n');
             try { Thread.sleep(1200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            String fs = shellSync(ctx, "am force-stop " + FISSION_TARGET_PKG + " 2>&1 ; echo __done__");
-            dt.append("\n$ am force-stop ").append(FISSION_TARGET_PKG).append('\n')
+            String fs = shellSync(ctx, "am force-stop " + st.targetPkg + " 2>&1 ; echo __done__");
+            dt.append("\n$ am force-stop ").append(st.targetPkg).append('\n')
               .append(fs == null ? "<no output>" : fs).append('\n');
             try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             r.detail = dt.toString();
@@ -900,26 +940,35 @@ public final class Dl5ClusterReconRunner {
      * YES tap. The raw filtered dumpsys output is returned via the
      * {@code debugOut} sink for the caller to attach to its report.
      */
-    private static int extractYandexTaskId(Context ctx, StringBuilder debugOut) {
+    private static int extractYandexTaskId(Context ctx, String targetPkg, StringBuilder debugOut) {
         final int[] delaysMs = { 0, 250, 500, 1000 };
+        String escaped = java.util.regex.Pattern.quote(targetPkg);
+        // Use a simple, shell-safe filter token (last 2 dot-segments) for the
+        // first grep; the precise regex match happens client-side via pTask/pAltId.
+        String[] parts = targetPkg.split("\\.");
+        String shellTok = parts.length >= 2
+                ? parts[parts.length - 2] + "\\." + parts[parts.length - 1]
+                : targetPkg;
         java.util.regex.Pattern pTask =
-                java.util.regex.Pattern.compile("Task\\{[^}]*ru\\.yandex\\.yandexmaps[^}]*\\}");
+                java.util.regex.Pattern.compile("Task\\{[^}]*" + escaped + "[^}]*\\}");
         java.util.regex.Pattern pId = java.util.regex.Pattern.compile("#(\\d+)");
         java.util.regex.Pattern pAltId =
-                java.util.regex.Pattern.compile("taskId=(\\d+)[^\\n]*ru\\.yandex\\.yandexmaps");
+                java.util.regex.Pattern.compile("taskId=(\\d+)[^\\n]*" + escaped);
         for (int attempt = 0; attempt < delaysMs.length; attempt++) {
             if (delaysMs[attempt] > 0) {
                 try { Thread.sleep(delaysMs[attempt]); }
                 catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
-            // Filter dumpsys down to the few lines that mention yandexmaps
+            // Filter dumpsys down to the few lines that mention the target pkg
             // so the debug capture stays small.
             String out = shellSync(ctx,
-                    "dumpsys activity activities 2>&1 | grep -nE 'Task\\{|taskId=|yandexmaps' | grep -i yandex | head -20");
+                    "dumpsys activity activities 2>&1 | grep -nE 'Task\\{|taskId=|" + shellTok
+                            + "' | grep -E '" + shellTok + "' | head -20");
             if (debugOut != null) {
                 debugOut.append("attempt #").append(attempt + 1)
                         .append(" (after ").append(delaysMs[attempt]).append(" ms):\n");
-                debugOut.append(out == null || out.isEmpty() ? "  <no yandex lines>\n" : out + "\n");
+                debugOut.append(out == null || out.isEmpty()
+                        ? "  <no " + targetPkg + " lines>\n" : out + "\n");
             }
             if (out == null || out.isEmpty()) continue;
             // First try the Task{... yandexmaps ...} pattern.
@@ -931,7 +980,7 @@ public final class Dl5ClusterReconRunner {
                     catch (NumberFormatException ignored) {}
                 }
             }
-            // Fallback: taskId=NNN ... yandexmaps on the same line.
+            // Fallback: taskId=NNN ... <targetPkg> on the same line.
             java.util.regex.Matcher ma = pAltId.matcher(out);
             if (ma.find()) {
                 try { return Integer.parseInt(ma.group(1)); }
@@ -961,7 +1010,7 @@ public final class Dl5ClusterReconRunner {
             // Retry extraction now (the task may have been registered after
             // the prompt resolved).
             StringBuilder dbg = new StringBuilder();
-            st.yandexTaskIdOnCluster = extractYandexTaskId(ctx, dbg);
+            st.yandexTaskIdOnCluster = extractYandexTaskId(ctx, st.targetPkg, dbg);
             if (st.yandexTaskIdOnCluster <= 0) {
                 r.detail = "--- task lookup debug ---\n" + dbg;
             }
@@ -1087,7 +1136,7 @@ public final class Dl5ClusterReconRunner {
             r.message = "no override to reset";
             return;
         }
-        String cmd = "am compat reset " + FORCE_RESIZE_APP_ID + " " + FISSION_TARGET_PKG + " 2>&1";
+        String cmd = "am compat reset " + FORCE_RESIZE_APP_ID + " " + st.targetPkg + " 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         r.status = DiLink5TestRunner.Status.PASS;
@@ -1120,7 +1169,7 @@ public final class Dl5ClusterReconRunner {
         sb.append("════════════════════════════════════\n");
         sb.append("Build.MODEL=").append(Build.MODEL).append('\n');
         sb.append("Build.FINGERPRINT=").append(Build.FINGERPRINT).append('\n');
-        sb.append("Target=").append(FISSION_TARGET_PKG).append('\n');
+        sb.append("Target=").append(sLastFissionTarget).append('\n');
         sb.append("ChangeId=").append(FORCE_RESIZE_APP_ID).append(" (FORCE_RESIZE_APP)\n\n");
         int pass = 0, warn = 0, fail = 0, skip = 0;
         for (DiLink5TestRunner.TestResult r : results) {
