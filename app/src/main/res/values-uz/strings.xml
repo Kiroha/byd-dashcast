@@ -122,6 +122,7 @@
     <string name="usage_title">Klasterda foydalanish vaqti</string>
     <string name="usage_empty">Foydalanish maʻlumoti yoʻq</string>
     <string name="usage_reset">Tiklash</string>
+    <string name="toast_usage_stats_reset">Foydalanish statistikasi tozalandi</string>
 
     <!-- Settings page (M3 redesign) -->
     <string name="settings_cluster_88_desc">Standart sozlama — tavsiya etiladi</string>

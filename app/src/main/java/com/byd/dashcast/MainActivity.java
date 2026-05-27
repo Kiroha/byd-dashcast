@@ -291,6 +291,11 @@ public class MainActivity extends AppCompatActivity
         // Safety-net: if projection auto-start is disabled, move any leftover
         // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
         SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        // Auto-launch (cf. PREF_AUTO_LAUNCH_PKG / onSetAutoLaunch / onClusterDisplayConnected).
+        // The pending package is consumed at most once per Activity instance, in the cluster-connect
+        // callback. Setting it here ensures that if the user previously marked an app as auto-launch,
+        // it is sent to the cluster as soon as the dashboard display becomes available.
+        mPendingAutoLaunchPkg = bootPrefs.getString(PREF_AUTO_LAUNCH_PKG, null);
         if (!bootPrefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false)) {
             // Defensive: cleanup uses IActivityTaskManager binder reflection per package.
             // With a non-trivial persisted set, calling on the main thread during onCreate
@@ -3445,7 +3450,7 @@ public class MainActivity extends AppCompatActivity
                         if (key.startsWith("usage_ms_")) editor.remove(key);
                     }
                     editor.apply();
-                    Toast.makeText(getApplicationContext(), "✓", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), getString(R.string.toast_usage_stats_reset), Toast.LENGTH_SHORT).show();
                 })
                 .show();
     }
