@@ -36,7 +36,10 @@ public class ClusterMirrorManager {
 
     // ── SurfaceControl mirror token ───────────────────────────────────────────────
     private IBinder mMirrorDisplayToken = null;
-    private Surface mMirrorSurface      = null;
+    // Audit batch 2 — removed dead field mMirrorSurface (was assigned in
+    // startMirror/startMirrorViaDaemon and nulled in stopPreview/destroyMirrorToken
+    // but never read anywhere). The Surface lifecycle is owned by MainActivity
+    // (TextureView's SurfaceTexture), we never needed our own reference.
 
     private boolean mMirrorActive = false;
     // v1.2.55-beta — tracks which path established the active mirror. When the
@@ -193,7 +196,6 @@ public class ClusterMirrorManager {
             setDisplayProjection.invoke(tx, mMirrorDisplayToken, 0, srcRect, destRect);
             tx.apply();
 
-            mMirrorSurface = targetSurface;
             mMirrorActive  = true;
             mMirrorViaDaemon = false;
             AppLogger.i(TAG, "SurfaceControl mirror ✓ layerStack=" + layerStack
@@ -272,7 +274,6 @@ public class ClusterMirrorManager {
             reply.readException();
             boolean daemonOk = reply.readInt() == 1;
             if (daemonOk) {
-                mMirrorSurface = targetSurface;
                 mMirrorActive  = true;
                 mMirrorViaDaemon = true;
                 AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
@@ -314,7 +315,6 @@ public class ClusterMirrorManager {
         }
         mMirrorActive  = false;
         mMirrorViaDaemon = false;
-        mMirrorSurface = null;
         AppLogger.i(TAG, "stopMirrorViaDaemon done (sync)");
     }
 
@@ -381,7 +381,6 @@ public class ClusterMirrorManager {
                 AppLogger.w(TAG, "destroyDisplay via reflection failed: " + e.getMessage());
             }
             mMirrorDisplayToken = null;
-            mMirrorSurface = null;
         }
     }
 
