@@ -632,8 +632,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
+        moveTaskToDisplayInternal(packageName, targetDisplayId, callback, false);
+    }
+
+    /**
+     * v1.2.55-beta — enforce display placement WITHOUT falling back to a fresh
+     * launch. Used to repair the case where a normal launch (with
+     * ActivityOptions.launchDisplayId) spawned the app's process but the system
+     * placed the task on display 0 instead of the target cluster display —
+     * observed on Waze first-tap from a cold app process (field report after
+     * v1.2.54). Shares the move + setTaskWindowingMode(FREEFORM) + resizeTask
+     * post-move sequence with {@link #moveTaskToDisplay} so apps with per-app
+     * insets (auto-applied by MainActivity.autoApplyInsetsIfNeeded at T+500 ms)
+     * keep their cluster bounds when the move happens at T+2500 ms. Silent
+     * no-op when the task is not yet registered (the user can re-tap) and
+     * skipped for {@code PKG_FORCE_FRESH_LAUNCH} packages since their normal
+     * launch path is "fresh launch only" by design.
+     */
+    public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
+        moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
+    }
+
+    private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
+                                            final LaunchCallback callback,
+                                            final boolean enforceOnly) {
         // ── Ghost-nav workaround: always fresh-launch TeleNav instead of moving ──
         if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
+            if (enforceOnly) {
+                AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch package "
+                        + packageName);
+                return;
+            }
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName
                     + " (ghost-nav workaround)");
             fallbackLaunch(packageName, targetDisplayId, callback);
@@ -645,6 +674,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 try {
                     int taskId = findRunningTaskId(packageName);
                     if (taskId == -1) {
+                        if (enforceOnly) {
+                            AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for "
+                                    + packageName + " (skip, no fallback launch)");
+                            return;
+                        }
                         AppLogger.w(TAG, "moveTaskToDisplay: no running task for "
                                 + packageName + " → fallback launch");
                         fallbackLaunch(packageName, targetDisplayId, callback);
@@ -657,8 +691,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     Class<?> iAtmClass = iatm.getClass();
                     iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
                             .invoke(iatm, taskId, targetDisplayId);
-                    AppLogger.i(TAG, "moveTaskToDisplay taskId=" + taskId
-                            + " → display=" + targetDisplayId + " OK");
+                    AppLogger.i(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                            + " taskId=" + taskId + " → display=" + targetDisplayId + " OK");
 
                     if (targetDisplayId > 0) {
                         Thread.sleep(300); // let WM settle after the display move
@@ -700,12 +734,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     });
 
                 } catch (Exception e) {
-                    AppLogger.e(TAG, "moveTaskToDisplay error", e);
+                    AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                            + " error", e);
                     if (mDestroyed) return;
+                    if (enforceOnly) return; // never re-launch in enforce mode
                     fallbackLaunch(packageName, targetDisplayId, callback);
                 }
             }
-        }, "move-task-thread").start();
+        }, enforceOnly ? "enforce-task-display" : "move-task-thread").start();
     }
 
     private void fallbackLaunch(final String packageName, final int targetDisplayId,
@@ -721,44 +757,6 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 }
             }
         });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * v1.2.55-beta — enforce display placement WITHOUT falling back to a fresh
-     * launch. Used to repair the case where a normal launch (with
-     * ActivityOptions.launchDisplayId) spawned the app's process but the system
-     * placed the task on display 0 instead of the target cluster display —
-     * observed on Waze first-tap from a cold app process (field report after
-     * v1.2.54). Looks up the running task via {@link #findRunningTaskId}; if
-     * found and not already on {@code targetDisplayId}, issues a direct
-     * IActivityTaskManager.moveTaskToDisplay reflection call. Silent no-op if
-     * the task is not found (the user can re-tap).
-     */
-    public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
-        if (packageName == null || targetDisplayId <= 0) return;
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    int taskId = findRunningTaskId(packageName);
-                    if (taskId == -1) {
-                        AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName
-                                + " (skip, no fallback launch)");
-                        return;
-                    }
-                    Class<?> atmClass  = Class.forName("android.app.ActivityTaskManager");
-                    Object   iatm      = atmClass.getMethod("getService").invoke(null);
-                    Class<?> iAtmClass = iatm.getClass();
-                    iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
-                            .invoke(iatm, taskId, targetDisplayId);
-                    AppLogger.i(TAG, "enforceTaskOnDisplay taskId=" + taskId
-                            + " → display=" + targetDisplayId + " OK");
-                } catch (Throwable t) {
-                    AppLogger.w(TAG, "enforceTaskOnDisplay error: " + t.getMessage());
-                }
-            }
-        }, "enforce-task-display").start();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
