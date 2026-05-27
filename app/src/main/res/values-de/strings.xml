@@ -174,6 +174,7 @@
     <string name="resize_live_warn_title">Live-Vorschau aktivieren?</string>
     <string name="resize_live_warn_msg">Die Live-Vorschau wendet jede Bewegung in Echtzeit auf das Cluster an. Dies kann während der Bedienung zu Blitzen und visuellen Artefakten auf dem Cluster-Bildschirm führen. Fortfahren?</string>
     <string name="resize_live_warn_ok">Aktivieren</string>
+    <string name="resize_no_package">Kein Paket</string>
     <string name="sheet_force_stop">Beenden erzwingen</string>
     <string name="main_cluster_status_off">Projektion aus</string>
     <string name="main_btn_exit_fullscreen">Vollbild verlassen</string>
