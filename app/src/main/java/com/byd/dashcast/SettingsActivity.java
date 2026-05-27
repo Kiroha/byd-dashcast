@@ -295,7 +295,6 @@ public class SettingsActivity extends AppCompatActivity {
         if (cbCompactAppsPanel != null) {
             cbCompactAppsPanel.setChecked(prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false));
         }
-        cbQuickStop.setChecked(quickStop);
 
         // Beta Engine toggles (default OFF — restart required after change)
         cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
