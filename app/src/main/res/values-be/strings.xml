@@ -84,6 +84,12 @@
     <string name="ota_downloading">Загрузка…</string>
     <string name="notif_remote_channel_name">Кнопка люстэрка кластара</string>
     <string name="notif_remote_content">📺 Люстэрка кластара актыўнае</string>
+    <string name="notif_cluster_channel_name">Праекцыя кластара</string>
+    <string name="notif_cluster_channel_desc">Падтрымлівае адлюстраванне на кластары BYD</string>
+    <string name="notif_cluster_initializing">Кластар: ініцыялізацыя…</string>
+    <string name="notif_cluster_active">Кластар актыўны — экран %1$d</string>
+    <string name="notif_cluster_stopped">Кластар: спынены</string>
+    <string name="notif_cluster_disconnected">Кластар: адлучаны</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКаманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Рэжым сеткі</string>
     <string name="menu_view_list">📋 Рэжым спісу</string>

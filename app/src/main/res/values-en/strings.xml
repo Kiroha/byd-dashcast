@@ -85,6 +85,12 @@
     <string name="ota_downloading">Downloading…</string>
     <string name="notif_remote_channel_name">Cluster mirror button</string>
     <string name="notif_remote_content">📺 Cluster mirror active</string>
+    <string name="notif_cluster_channel_name">Cluster projection</string>
+    <string name="notif_cluster_channel_desc">Maintains the display on the BYD cluster</string>
+    <string name="notif_cluster_initializing">Cluster: initializing…</string>
+    <string name="notif_cluster_active">Cluster active — display %1$d</string>
+    <string name="notif_cluster_stopped">Cluster: stopped</string>
+    <string name="notif_cluster_disconnected">Cluster: disconnected</string>
     <string name="sysinfo_file_saved">\n\nFile: %1$s\nADB command: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Grid Mode</string>
     <string name="menu_view_list">📋 List Mode</string>

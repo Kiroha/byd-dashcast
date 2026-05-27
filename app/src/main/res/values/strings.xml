@@ -105,6 +105,12 @@
     <string name="menu_view_list">📋 Mode Liste</string>
     <string name="notif_remote_channel_name">Bouton miroir cluster</string>
     <string name="notif_remote_content">📺 Miroir cluster actif</string>
+    <string name="notif_cluster_channel_name">Projection cluster</string>
+    <string name="notif_cluster_channel_desc">Maintient l\'affichage sur le cluster BYD</string>
+    <string name="notif_cluster_initializing">Cluster : initialisation…</string>
+    <string name="notif_cluster_active">Cluster actif — écran %1$d</string>
+    <string name="notif_cluster_stopped">Cluster : arrêté</string>
+    <string name="notif_cluster_disconnected">Cluster : déconnecté</string>
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>

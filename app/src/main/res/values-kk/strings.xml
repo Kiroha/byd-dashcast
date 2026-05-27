@@ -84,6 +84,12 @@
     <string name="ota_downloading">Жүктелуде…</string>
     <string name="notif_remote_channel_name">Кластер айнасының батырмасы</string>
     <string name="notif_remote_content">📺 Кластер айнасы белсенді</string>
+    <string name="notif_cluster_channel_name">Кластер проекциясы</string>
+    <string name="notif_cluster_channel_desc">BYD кластерінде дисплейді қолдайды</string>
+    <string name="notif_cluster_initializing">Кластер: инициализация…</string>
+    <string name="notif_cluster_active">Кластер белсенді — экран %1$d</string>
+    <string name="notif_cluster_stopped">Кластер: тоқтатылды</string>
+    <string name="notif_cluster_disconnected">Кластер: ажыратылды</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Тор режимі</string>
     <string name="menu_view_list">📋 Тізім режимі</string>
