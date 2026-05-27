@@ -123,6 +123,7 @@
     <string name="usage_title">Cluster usage time</string>
     <string name="usage_empty">No usage data</string>
     <string name="usage_reset">Reset</string>
+    <string name="toast_usage_stats_reset">Usage statistics cleared</string>
 
     <!-- Settings page (M3 redesign) -->
     <string name="settings_cluster_88_desc">Default configuration — recommended</string>
