@@ -326,20 +326,30 @@ public class MainActivity extends AppCompatActivity
         }
         try {
             // Tag file lives on tmpfs (/data/local/tmp) and disappears at boot,
-            // so a present tag without a foreground sniffer session means an
-            // orphan from a previous run. We unconditionally tear down: if the
-            // user wants sniffer running they can re-start it from the panel.
-            com.byd.dashcast.beta.ShellGateway.execShell(this,
-                "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
-              + "  rm -f /data/local/tmp/.re_sniffer_run;"
-              + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
-              + "    while IFS= read -r pid; do"
-              + "      [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
-              + "    done < /data/local/tmp/.re_sniffer_pids;"
-              + "    rm -f /data/local/tmp/.re_sniffer_pids;"
-              + "  fi;"
-              + "  pkill -f BYD_RE_Sniffer_ 2>/dev/null; true;"
-              + "fi");
+            // so a present tag without a recorded session in DiagActivity's prefs
+            // means an orphan from a previous run (e.g. the user force-stopped
+            // DashCast while a sniffer capture was running — the setsid-detached
+            // logcat processes survived). We gate on the *absence* of the saved
+            // sniffer path so we never clobber a legitimate session that simply
+            // happens to coexist with MainActivity being (re)created. The
+            // pref-name pair below is intentionally hard-coded — pulling them
+            // via reflection from DiagActivity would force-load that Activity's
+            // class graph at app start, which we want to avoid.
+            String savedSnifferPath = getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
+                    .getString("re_sniffer_file_path", null);
+            if (savedSnifferPath == null) {
+                com.byd.dashcast.beta.ShellGateway.execShell(this,
+                    "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
+                  + "  rm -f /data/local/tmp/.re_sniffer_run;"
+                  + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
+                  + "    while IFS= read -r pid; do"
+                  + "      [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
+                  + "    done < /data/local/tmp/.re_sniffer_pids;"
+                  + "    rm -f /data/local/tmp/.re_sniffer_pids;"
+                  + "  fi;"
+                  + "  pkill -f BYD_RE_Sniffer_ 2>/dev/null; true;"
+                  + "fi");
+            }
         } catch (Throwable t) {
             AppLogger.w(TAG, "orphan-sniffer cleanup failed: " + t.getMessage());
         }
