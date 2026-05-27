@@ -2468,6 +2468,25 @@ public class DiagActivity extends AppCompatActivity {
     private void onWakeWordToggle(boolean enabled) {
         if (enabled) {
             if (voiceWakeWordEngine != null) return;
+            // v1.2.55-beta — wake-word ("Hey Jarvis") was a silent no-op when
+            // the user flipped this switch without first hitting "Démarrer"
+            // on the voice panel: the engine ran, but no AudioRecord was
+            // feeding it (VoiceService not started → no SampleConsumer
+            // callbacks). Auto-start the capture pipeline so toggling the
+            // switch is sufficient.
+            if (!VoiceService.isRunning()) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    // Request RECORD_AUDIO; user will need to re-toggle after
+                    // grant (onRequestPermissionsResult starts VoiceService
+                    // only, not the engine).
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.RECORD_AUDIO}, RC_VOICE_RECORD_AUDIO);
+                    if (swVoiceWakeword != null) swVoiceWakeword.setChecked(false);
+                    return;
+                }
+                startVoiceService();
+            }
             try {
                 voiceWakeWordEngine = new com.byd.dashcast.voice.wakeword.WakeWordEngine(this);
                 VoiceService.setSampleConsumer(voiceWakeWordEngine);
