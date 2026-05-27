@@ -84,6 +84,12 @@
     <string name="ota_downloading">Download…</string>
     <string name="notif_remote_channel_name">Pulsante specchio cluster</string>
     <string name="notif_remote_content">📺 Specchio cluster attivo</string>
+    <string name="notif_cluster_channel_name">Proiezione cluster</string>
+    <string name="notif_cluster_channel_desc">Mantiene la visualizzazione sul cluster BYD</string>
+    <string name="notif_cluster_initializing">Cluster: inizializzazione…</string>
+    <string name="notif_cluster_active">Cluster attivo — display %1$d</string>
+    <string name="notif_cluster_stopped">Cluster: arrestato</string>
+    <string name="notif_cluster_disconnected">Cluster: disconnesso</string>
     <string name="sysinfo_file_saved">\n\nFile: %1$s\nComando ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Modalità Griglia</string>
     <string name="menu_view_list">📋 Modalità Lista</string>

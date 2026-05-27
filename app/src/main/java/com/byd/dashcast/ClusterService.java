@@ -99,7 +99,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AdbLocalClient.startMirrorDaemon(this);
         
         createNotificationChannel();
-        startForeground(NOTIF_ID, buildNotification("Cluster: initializing…"));
+        startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_cluster_initializing)));
         AppLogger.log(TAG, "ClusterService created — starting native projection");
         mProjectionActive = true;
         // v1.2.35 — one-shot cleanup of v1.2.32..v1.2.34 side effect on DiLink 5.
@@ -1090,7 +1090,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: stopped");
+        updateNotification(getString(R.string.notif_cluster_stopped));
         stopSelf();
     }
 
@@ -1103,7 +1103,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Update the forwarder with the real dimensions and ID of the display
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
-        updateNotification("Cluster active — display " + displayId);
+        updateNotification(getString(R.string.notif_cluster_active, displayId));
 
         // Apply display-level insets via wm overscan so all apps launched on this display
         // stay within the safe area [INSET_H, INSET_V, 1920-INSET_H, 720-INSET_V].
@@ -1137,7 +1137,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDashboardDisplayDisconnected() {
         AppLogger.log(TAG, "Cluster display disconnected");
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: disconnected");
+        updateNotification(getString(R.string.notif_cluster_disconnected));
         if (mListener != null) {
             mListener.onClusterDisplayDisconnected();
         }
@@ -1148,9 +1148,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "Cluster projection",
+                getString(R.string.notif_cluster_channel_name),
                 NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Maintains display on the BYD cluster");
+        channel.setDescription(getString(R.string.notif_cluster_channel_desc));
         channel.setShowBadge(false);
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) nm.createNotificationChannel(channel);
@@ -1163,7 +1163,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("BYD App")
+                .setContentTitle(getString(R.string.app_name))
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
                 .setContentIntent(pi)

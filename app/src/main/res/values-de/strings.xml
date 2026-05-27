@@ -84,6 +84,12 @@
     <string name="ota_downloading">Wird geladen…</string>
     <string name="notif_remote_channel_name">Cluster-Spiegel-Schaltfläche</string>
     <string name="notif_remote_content">📺 Cluster-Spiegel aktiv</string>
+    <string name="notif_cluster_channel_name">Cluster-Projektion</string>
+    <string name="notif_cluster_channel_desc">Hält die Anzeige auf dem BYD-Cluster aufrecht</string>
+    <string name="notif_cluster_initializing">Cluster: Initialisierung…</string>
+    <string name="notif_cluster_active">Cluster aktiv — Display %1$d</string>
+    <string name="notif_cluster_stopped">Cluster: angehalten</string>
+    <string name="notif_cluster_disconnected">Cluster: getrennt</string>
     <string name="sysinfo_file_saved">\n\nDatei: %1$s\nADB-Befehl: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Rastermodus</string>
     <string name="menu_view_list">📋 Listenmodus</string>
