@@ -466,6 +466,7 @@
     <string name="hotspot_tf_update_available">🆕 TetherFi update: v%1$d → v%2$d (tap to download)</string>
     <string name="hotspot_clients_title">Connected clients</string>
     <string name="hotspot_clients_empty">No connected clients</string>
+    <string name="hotspot_client_default_name">Құрылғы %1$s</string>
     <string name="hotspot_stat_uptime">Uptime</string>
     <string name="hotspot_stat_rx">Received</string>
     <string name="hotspot_stat_tx">Sent</string>
