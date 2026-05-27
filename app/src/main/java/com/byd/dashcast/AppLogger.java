@@ -445,4 +445,53 @@ public class AppLogger {
         Log.i("AppLogger", "cleanupFiles: " + deleted + " file(s) deleted");
         return deleted;
     }
+
+    /**
+     * v1.2.55-beta — caps the on-disk accumulation of generated files by
+     * keeping only the {@code keepPerPrefix} most recent entries per prefix
+     * (byd_log_, byd_report_, BYD_RE_Sniffer_). Symptom that motivated this :
+     * after several testing sessions across days, the app's external dir grew
+     * to 1.08 GB because every share-log / share-report / sniffer run wrote
+     * a fresh timestamped file and nothing rotated. Designed to be called
+     * from MainActivity.onCreate so the rotation runs on every cold start
+     * without UI intervention. Silent; logs the deletion count via Log.i.
+     *
+     * @param keepPerPrefix maximum number of files to retain per prefix (must be ≥ 1)
+     * @return number of files deleted across all prefixes
+     */
+    public static int pruneOldFiles(Context context, int keepPerPrefix) {
+        if (context == null || keepPerPrefix < 1) return 0;
+        final String[] prefixes = { "byd_log_", "byd_report_", "BYD_RE_Sniffer_" };
+        int deleted = 0;
+        File[] dirs = new File[] {
+                context.getExternalFilesDir(null),
+                context.getFilesDir()
+        };
+        for (File dir : dirs) {
+            if (dir == null || !dir.exists()) continue;
+            File[] entries = dir.listFiles();
+            if (entries == null) continue;
+            for (String prefix : prefixes) {
+                java.util.ArrayList<File> matches = new java.util.ArrayList<>();
+                for (File f : entries) {
+                    if (f != null && f.isFile() && f.getName().startsWith(prefix)) {
+                        matches.add(f);
+                    }
+                }
+                if (matches.size() <= keepPerPrefix) continue;
+                // Sort most-recent first (descending lastModified).
+                java.util.Collections.sort(matches, new java.util.Comparator<File>() {
+                    @Override public int compare(File a, File b) {
+                        return Long.compare(b.lastModified(), a.lastModified());
+                    }
+                });
+                for (int i = keepPerPrefix; i < matches.size(); i++) {
+                    if (matches.get(i).delete()) deleted++;
+                }
+            }
+        }
+        if (deleted > 0) Log.i("AppLogger", "pruneOldFiles: " + deleted
+                + " file(s) deleted (keep " + keepPerPrefix + "/prefix)");
+        return deleted;
+    }
 }

@@ -39,6 +39,12 @@ public class ClusterMirrorManager {
     private Surface mMirrorSurface      = null;
 
     private boolean mMirrorActive = false;
+    // v1.2.55-beta — tracks which path established the active mirror. When the
+    // daemon Binder becomes available AFTER a direct-path mirror was put in
+    // place, MainActivity uses this flag to detect the stale state and
+    // restart via the daemon (which is the only path that actually streams
+    // frames on DL3/DL5 because the app process lacks ACCESS_SURFACE_FLINGER).
+    private boolean mMirrorViaDaemon = false;
     private int     mClusterW = 1920;
     private int     mClusterH = 720;   // Confirmed: fission_bg_xdjaVirtualSurface 1920×720 (dumpsys window 03/05/2026)
 
@@ -53,6 +59,8 @@ public class ClusterMirrorManager {
     public int     getClusterWidth()           { return mClusterW; }
     public int     getClusterHeight()          { return mClusterH; }
     public boolean isMirrorActive()            { return mMirrorActive; }
+    /** True iff the active mirror was established through the system-uid daemon path. */
+    public boolean isMirrorViaDaemon()         { return mMirrorActive && mMirrorViaDaemon; }
 
     /** Returns the horizontal letterbox offset (pixels) used in the last setDisplayProjection call. */
     public int   getProjOffsetX() { return mProjOffsetX; }
@@ -187,6 +195,7 @@ public class ClusterMirrorManager {
 
             mMirrorSurface = targetSurface;
             mMirrorActive  = true;
+            mMirrorViaDaemon = false;
             AppLogger.i(TAG, "SurfaceControl mirror ✓ layerStack=" + layerStack
                     + " src=" + mClusterW + "×" + mClusterH
                     + " dest=" + drawW + "×" + drawH + " offset=(" + offsetX + "," + offsetY + ")");
@@ -265,6 +274,7 @@ public class ClusterMirrorManager {
             if (daemonOk) {
                 mMirrorSurface = targetSurface;
                 mMirrorActive  = true;
+                mMirrorViaDaemon = true;
                 AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
                         + " " + mClusterW + "×" + mClusterH + " displayId=" + clusterDisplayId);
             } else {
@@ -303,6 +313,7 @@ public class ClusterMirrorManager {
             reply.recycle();
         }
         mMirrorActive  = false;
+        mMirrorViaDaemon = false;
         mMirrorSurface = null;
         AppLogger.i(TAG, "stopMirrorViaDaemon done (sync)");
     }
@@ -376,6 +387,7 @@ public class ClusterMirrorManager {
 
     private void stopPreview() {
         mMirrorActive = false;
+        mMirrorViaDaemon = false;
         mProjScale = 0f;  // Reset: signals "not yet set" to touch mapping
         destroyMirrorToken();
     }

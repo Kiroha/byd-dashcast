@@ -726,6 +726,44 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
+     * v1.2.55-beta — enforce display placement WITHOUT falling back to a fresh
+     * launch. Used to repair the case where a normal launch (with
+     * ActivityOptions.launchDisplayId) spawned the app's process but the system
+     * placed the task on display 0 instead of the target cluster display —
+     * observed on Waze first-tap from a cold app process (field report after
+     * v1.2.54). Looks up the running task via {@link #findRunningTaskId}; if
+     * found and not already on {@code targetDisplayId}, issues a direct
+     * IActivityTaskManager.moveTaskToDisplay reflection call. Silent no-op if
+     * the task is not found (the user can re-tap).
+     */
+    public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
+        if (packageName == null || targetDisplayId <= 0) return;
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    int taskId = findRunningTaskId(packageName);
+                    if (taskId == -1) {
+                        AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName
+                                + " (skip, no fallback launch)");
+                        return;
+                    }
+                    Class<?> atmClass  = Class.forName("android.app.ActivityTaskManager");
+                    Object   iatm      = atmClass.getMethod("getService").invoke(null);
+                    Class<?> iAtmClass = iatm.getClass();
+                    iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
+                            .invoke(iatm, taskId, targetDisplayId);
+                    AppLogger.i(TAG, "enforceTaskOnDisplay taskId=" + taskId
+                            + " → display=" + targetDisplayId + " OK");
+                } catch (Throwable t) {
+                    AppLogger.w(TAG, "enforceTaskOnDisplay error: " + t.getMessage());
+                }
+            }
+        }, "enforce-task-display").start();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
      * Launches an app on the cluster.
      * Activation sequence:
      *   1. sendInfo(1000, 30) — Seal EU screen size (CONFIRMED 16/04/2026)
