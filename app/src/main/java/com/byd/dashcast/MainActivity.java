@@ -2177,13 +2177,52 @@ public class MainActivity extends AppCompatActivity
     /**
      * Signals to MainActivity that an app was launched on the cluster → show the mirror.
      * Called from onSendToDashboard after a successful launch.
+     *
+     * v1.2.82 — applies the same stop+delayed-rebind recipe as
+     * enter/exitFullscreenMirror(). Without this the existing mirror token
+     * (created with the OLD cluster displayId / layerStack, e.g. when the
+     * cluster was just (re)activated and the previous displayId was -1 or a
+     * stale value) keeps writing into our Surface but with a wrong layerStack
+     * → black preview. The user-visible workaround was to toggle fullscreen
+     * or to leave/return to the app (both already do this restart). Now any
+     * launch triggers the rebind automatically.
      */
     private void startClusterMirror() {
         AppLogger.d(TAG, "startClusterMirror app=" + mCurrentDashboardApp);
         showMirrorView();
         frameMirror.setAlpha(0f);
         frameMirror.animate().alpha(1f).setDuration(150).start();
-        attemptStartMirrorWithCurrentHolder();
+        // Tear down before rebind so attemptStartMirror() doesn't short-circuit
+        // on isMirrorActive() with a stale token.
+        stopClusterMirror();
+        if (clusterMirror != null) {
+            clusterMirror.postDelayed(new Runnable() {
+                @Override public void run() {
+                    try {
+                        SurfaceTexture st = clusterMirror.getSurfaceTexture();
+                        int w = clusterMirror.getWidth();
+                        int h = clusterMirror.getHeight();
+                        if (st == null || w <= 0 || h <= 0) {
+                            AppLogger.w(TAG, "startClusterMirror restart: surface/size missing"
+                                    + " (w=" + w + " h=" + h + ")");
+                            // Last-resort: still try with whatever surface we have.
+                            attemptStartMirrorWithCurrentHolder();
+                            return;
+                        }
+                        st.setDefaultBufferSize(w, h);
+                        if (mMirrorSurface != null) {
+                            mMirrorSurface.release();
+                            mMirrorSurface = null;
+                        }
+                        mMirrorSurface = new Surface(st);
+                        AppLogger.i(TAG, "startClusterMirror rebind: " + w + "×" + h);
+                        attemptStartMirrorWithCurrentHolder();
+                    } catch (Throwable t) {
+                        AppLogger.w(TAG, "startClusterMirror rebind failed: " + t.getMessage());
+                    }
+                }
+            }, 250);
+        }
     }
 
     /** Stops the SurfaceControl mirror and hides the panel. */
@@ -2957,7 +2996,7 @@ public class MainActivity extends AppCompatActivity
         if (cardClusterPreview != null) {
             LinearLayout.LayoutParams clp = (LinearLayout.LayoutParams) cardClusterPreview.getLayoutParams();
             clp.height = (mSavedPreviewHeightPx > 0) ? mSavedPreviewHeightPx
-                    : (int) (200 * getResources().getDisplayMetrics().density);
+                    : (int) (320 * getResources().getDisplayMetrics().density);
             clp.weight = mSavedPreviewWeight;
             cardClusterPreview.setLayoutParams(clp);
         }

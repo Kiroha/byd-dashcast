@@ -225,8 +225,8 @@ android {
         //   MirrorTestRunner / fission tiers / Settings / production launch
         //   paths. The wake-word work runs entirely in com.byd.dashcast.
         //   voice.wakeword.* + a 5-line static hook in VoiceService.
-        versionCode 341
-        versionName "1.2.81-beta"
+        versionCode 342
+        versionName "1.2.82-beta"
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
