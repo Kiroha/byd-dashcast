@@ -210,6 +210,16 @@ public final class BetaProxyClient {
     private static long sLastReconnectAttemptMs;
     /** Cooldown window for {@link #attemptReconnect()}. See field doc above. */
     private static final long RECONNECT_COOLDOWN_MS = 10_000L;
+    /**
+     * v1.2.78 — Couche 4: adaptive backoff steps in ms. The cooldown gate
+     * picks {@code BACKOFF_MS[min(sBackoffStep, last)]} instead of the flat
+     * {@link #RECONNECT_COOLDOWN_MS}. {@code sBackoffStep} is reset to 0 on
+     * every successful {@link #connect(Context)} and bumped on every failed
+     * one. ERR_NO_APK forces an immediate retry by zeroing the timestamp
+     * (the APK race is transient — the next post-OTA scan completes in <1s).
+     */
+    private static final long[] BACKOFF_MS = { 1_000L, 2_000L, 4_000L, 8_000L, 10_000L };
+    private static int sBackoffStep = 0;
 
     /**
      * Death recipient that clears {@link #sBinder} as soon as the kernel
@@ -230,6 +240,10 @@ public final class BetaProxyClient {
                 sDaemonUid = -1;
                 sDaemonPid = -1;
                 sDaemonVer = null;
+                // v1.2.78 — Couche 4: count the zombie. Best-effort: sAppCtx
+                // may still be null if no connect() has ever succeeded, in
+                // which case BetaProxyMetrics is a no-op.
+                BetaProxyMetrics.inc(sAppCtx, BetaProxyMetrics.K_BINDER_ZOMBIES);
             }
         }
     };
@@ -297,6 +311,27 @@ public final class BetaProxyClient {
         String bootMsg = bootstrap(ctx);
         AppLogger.d(TAG, "bootstrap result: " + bootMsg);
 
+        // v1.2.78 — Couche 4: metric instrumentation + ERR_NO_APK fast-path.
+        // The bootstrap script returns one of:
+        //   "REBROADCAST <pid>"  → live daemon, trigger file touched
+        //   <nothing>            → cold spawn launched (app_process detached)
+        //   "ERR_NO_APK"         → PM has not indexed our APK yet (post-OTA race)
+        //   "ERR ..."            → ADB transport error
+        // The actual success/fail will be decided by the latch below, but the
+        // bootstrap-side outcome tells us WHY we are about to wait.
+        String upper = bootMsg == null ? "" : bootMsg.trim();
+        if (upper.startsWith("REBROADCAST")) {
+            BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_REBROADCASTS);
+        } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
+            BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_NO_APK);
+            // Force the next attemptReconnect to bypass cooldown — the PM
+            // race window is sub-second and a 1s+ wait wastes UX.
+            synchronized (LOCK) {
+                sLastReconnectAttemptMs = 0L;
+                sBackoffStep = 0;
+            }
+        }
+
         // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
         // arrives on the main thread, onReceive() tries to take LOCK to set
         // sBinder, and would block until our await() times out. v1.1.7 hit
@@ -323,6 +358,12 @@ public final class BetaProxyClient {
                 AppLogger.w(TAG, "no live binder after " + BROADCAST_WAIT_MS
                         + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
                 sBinder = null;
+                // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
+                if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
+                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_TIMEOUT);
+                } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
+                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_OTHER);
+                }
                 return false;
             }
             handshake();
@@ -330,6 +371,14 @@ public final class BetaProxyClient {
             if (ok) {
                 AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
                         + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
+                // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
+                // counted above and we shouldn't double-count it as a cold one).
+                if (!upper.startsWith("REBROADCAST")) {
+                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_COLD_SPAWNS);
+                }
+                // v1.2.78 — reset backoff on success so the next failure starts
+                // at step 0 (1s) instead of inheriting the previous run's state.
+                sBackoffStep = 0;
             }
             return ok;
         }
@@ -903,15 +952,30 @@ public final class BetaProxyClient {
         }
         long now = SystemClock.elapsedRealtime();
         synchronized (LOCK) {
-            if (now - sLastReconnectAttemptMs < RECONNECT_COOLDOWN_MS) {
+            // v1.2.78 — Couche 4: adaptive cooldown (1s→2s→4s→8s→10s).
+            int step = Math.min(sBackoffStep, BACKOFF_MS.length - 1);
+            long cooldown = BACKOFF_MS[step];
+            if (now - sLastReconnectAttemptMs < cooldown) {
                 AppLogger.d(TAG, "attemptReconnect skipped (cooldown, "
-                        + (now - sLastReconnectAttemptMs) + "ms since last)");
+                        + (now - sLastReconnectAttemptMs) + "ms < " + cooldown
+                        + "ms, step=" + step + ")");
                 return false;
             }
             sLastReconnectAttemptMs = now;
         }
-        AppLogger.i(TAG, "attemptReconnect: bootstrapping daemon (cooldown gate passed)");
-        return connect(ctx);
+        AppLogger.i(TAG, "attemptReconnect: bootstrapping daemon (cooldown gate passed, step="
+                + sBackoffStep + ")");
+        boolean ok = connect(ctx);
+        // v1.2.78 — Couche 4: reset/bump backoff based on outcome. connect()
+        // already does the reset on success, but we set it here too so
+        // attemptReconnect remains internally consistent if connect() returns
+        // success via a fast path that didn't go through the bump site.
+        if (ok) {
+            sBackoffStep = 0;
+        } else {
+            sBackoffStep = Math.min(sBackoffStep + 1, BACKOFF_MS.length - 1);
+        }
+        return ok;
     }
 
     /**
