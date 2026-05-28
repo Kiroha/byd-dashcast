@@ -87,18 +87,19 @@ public final class BetaProxyClient {
      * </ul>
      */
     private static final String BOOTSTRAP_CMD =
-            // ── flock guard ─────────────────────────────────────────────────
-            // exec 9>… opens an FD; flock -n 9 takes a non-blocking lock on it;
-            // if another bootstrap is already running, we exit quickly with a
-            // clear marker. The 10 s cooldown should make this rare but it's
-            // a cheap second line of defence against bootstrap-storms.
-            "exec 9>" + DAEMON_LOCK + "; "
-            + "if ! flock -n 9 2>/dev/null; then echo ALREADY_BOOTSTRAPPING; exit 0; fi; "
-            // ── PID-file fast path ──────────────────────────────────────────
-            // If a known-good daemon is alive, just ask it to re-broadcast.
-            // Skips the entire app_process+systemMain+broadcast roundtrip
-            // (~5–8 s cold, ~0.5–1 s warm) — drops it to ~50 ms.
-            + "PIDF=" + DAEMON_PID + "; TRIG=" + DAEMON_TRIGGER + "; "
+            // ── PID-file fast path (BEFORE the flock) ──────────────────────
+            // v1.2.65 hotfix: must NOT be gated by flock. The running daemon
+            // (if any) used to inherit FD 9 from the setsid spawn and held
+            // the lock for its entire lifetime — every subsequent bootstrap
+            // call then returned ALREADY_BOOTSTRAPPING and the fast path
+            // never executed. Old daemons in the field (1.2.63 / 1.2.64)
+            // still hold that FD until killed/rebooted, so we MUST be able
+            // to reach the rebroadcast trigger even with the lock held.
+            // The fast path is purely a PID-file read + a trigger-file
+            // write; concurrent invocations coalesce (multiple touches on
+            // the same trigger file produce a single rebroadcast burst in
+            // the FileObserver inside the daemon), so no locking is needed.
+            "PIDF=" + DAEMON_PID + "; TRIG=" + DAEMON_TRIGGER + "; "
             + "if [ -f \"$PIDF\" ]; then "
             +   "P=$(cat \"$PIDF\" 2>/dev/null); "
             +   "if [ -n \"$P\" ] && [ -d \"/proc/$P\" ]; then "
@@ -109,7 +110,12 @@ public final class BetaProxyClient {
             +     "fi; "
             +   "fi; "
             + "fi; "
-            // ── full bootstrap ──────────────────────────────────────────────
+            // ── flock guard (bootstrap path only) ──────────────────────────
+            // Reaches here only when no live daemon exists; serializes two
+            // concurrent cold-start attempts.
+            + "exec 9>" + DAEMON_LOCK + "; "
+            + "if ! flock -n 9 2>/dev/null; then echo ALREADY_BOOTSTRAPPING; exit 0; fi; "
+            // ── full bootstrap ─────────────────────────────────────────────
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
             + "LOG=" + DAEMON_LOG + "; "
@@ -126,12 +132,17 @@ public final class BetaProxyClient {
             +   "echo \"[boot] stale_killed=${STALE:-none}\"; "
             +   "ls -la \"$APK\" 2>&1; "
             +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
+            // v1.2.65 hotfix: `9>&-` after the inner shell closes FD 9 in
+            // the setsid'd child BEFORE exec, so the daemon does NOT inherit
+            // the flock. Without this, every future bootstrap call would see
+            // the lock held by the daemon itself and exit ALREADY_BOOTSTRAPPING
+            // forever, breaking auto-recovery + the fast path entirely.
             // Outer double-quotes so $APK expands BEFORE setsid hands the string to sh.
             + "setsid sh -c \"CLASSPATH='$APK' exec /system/bin/app_process64"
             +     " -Xnoimage-dex2oat /system/bin"
             +     " --nice-name=dashcast_proxy"
             +     " " + DAEMON_MAIN
-            +     " </dev/null >>'$LOG' 2>&1\" & "
+            +     " </dev/null >>'$LOG' 2>&1\" 9>&- & "
             + "echo OK $APK";
 
     /** Fetched after a connect() failure to surface the daemon's first error line(s). */
