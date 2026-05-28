@@ -363,6 +363,28 @@ public class SysInfoActivity extends AppCompatActivity {
             section(sb, "9. BETA PROXY METRICS");
             sb.append(com.byd.dashcast.beta.BetaProxyMetrics.snapshot(this)).append('\n');
 
+            // v1.2.81 — per-app cluster DPI overrides currently configured.
+            section(sb, "10. CLUSTER DPI OVERRIDES");
+            java.util.Map<String, Integer> dpiMap =
+                    com.byd.dashcast.cluster.ClusterDpiPrefs.snapshot(this);
+            if (dpiMap.isEmpty()) {
+                sb.append("(none)\n");
+            } else {
+                for (java.util.Map.Entry<String, Integer> e : dpiMap.entrySet()) {
+                    sb.append(String.format("%-50s = %d dpi\n", e.getKey(), e.getValue()));
+                }
+            }
+            java.util.Map<Integer, Integer> cache =
+                    com.byd.dashcast.cluster.ClusterDpiManager.cacheSnapshot();
+            if (!cache.isEmpty()) {
+                sb.append("\nApplied right now:\n");
+                for (java.util.Map.Entry<Integer, Integer> e : cache.entrySet()) {
+                    sb.append(String.format("  display %d → %d dpi\n",
+                            e.getKey(), e.getValue()));
+                }
+            }
+            sb.append('\n');
+
             sb.append("\n=== END OF REPORT ===\n");
             return sb.toString();
     }

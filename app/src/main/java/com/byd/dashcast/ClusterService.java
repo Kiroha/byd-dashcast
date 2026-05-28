@@ -166,6 +166,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // launchOnDashboard (postDelayed 2s) could post a callback
         // on a destroyed service (NPE / ADB thread leak).
         mMainHandler.removeCallbacksAndMessages(null);
+        // v1.2.81 — safety net: ensure the cluster display is back to default
+        // DPI even if stopProjectionNoAdb() was bypassed (e.g. process killed).
+        try {
+            com.byd.dashcast.cluster.ClusterDpiManager.restore(
+                    this, mDisplayHelper.getKnownClusterDisplayId());
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+        }
         // release() = preview + cluster overlay (stopMirror() only releases the preview)
         mMirrorManager.release();
         if (mProjectionActive) {
@@ -824,6 +832,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     }
                 }
 
+                // v1.2.81 — apply per-app DPI override BEFORE am start so the
+                // app reads the new density at process boot. Guarded by
+                // displayId > 0 inside the manager (NEVER touches display 0).
+                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
+                        ClusterService.this, packageName, displayId);
+
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
@@ -892,6 +906,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         AppLogger.w(TAG, "cleanFissionStacks(WithBounds) failed: " + ce.getMessage());
                     }
                 }
+                // v1.2.81 — same per-app DPI apply on the split-bounds path.
+                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
+                        ClusterService.this, packageName, displayId);
                 try {
                     android.content.Intent launchIntent =
                             getPackageManager().getLaunchIntentForPackage(packageName);
@@ -1111,6 +1128,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AppLogger.log(TAG, "stopProjectionNoAdb requested (ADB already sent)");
         if (!AdbLocalClient.isDiLink5Safe(this)) {
             ShellGateway.execShell(this, "wm overscan reset -d 1");
+        }
+        // v1.2.81 — restore default DPI on the cluster display before tearing
+        // down. Guarded by displayId > 0 inside the manager.
+        try {
+            com.byd.dashcast.cluster.ClusterDpiManager.restore(
+                    this, mDisplayHelper.getKnownClusterDisplayId());
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "DPI restore (stopProjectionNoAdb) failed: " + t.getMessage());
         }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
