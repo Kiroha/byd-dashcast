@@ -1804,6 +1804,8 @@ public class DiagActivity extends AppCompatActivity {
         View btnWatchdogStatus = panelClusterPoc.findViewById(R.id.btn_cluster_poc_watchdog_status);
         // v1.2.63 Phase A step 3 — fast rebroadcast (PID-file + trigger-file) test.
         View btnTestRebroadcast = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_rebroadcast);
+        // v1.2.64 — export daemon log /data/local/tmp/dashcast_proxy.log via Telegram.
+        View btnExportDaemonLog = panelClusterPoc.findViewById(R.id.btn_cluster_poc_export_daemon_log);
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
@@ -1840,6 +1842,7 @@ public class DiagActivity extends AppCompatActivity {
         if (btnTestStorm    != null) btnTestStorm.setOnClickListener(v -> testProxyAntiStorm(status));
         if (btnWatchdogStatus != null) btnWatchdogStatus.setOnClickListener(v -> showWatchdogStatus(status));
         if (btnTestRebroadcast != null) btnTestRebroadcast.setOnClickListener(v -> testProxyRebroadcast(status));
+        if (btnExportDaemonLog != null) btnExportDaemonLog.setOnClickListener(v -> exportDaemonLog(status));
     }
 
     private void enumerateDisplaysForPoc(TextView status) {
@@ -2345,6 +2348,88 @@ public class DiagActivity extends AppCompatActivity {
                         }
                     });
         }, "diag-rebroadcast-test").start();
+    }
+
+    /**
+     * v1.2.64 — pull the daemon's stdout/stderr capture
+     * ({@code /data/local/tmp/dashcast_proxy.log}) into the app cache and hand
+     * it to Telegram via the FileProvider chooser. Works even when the daemon
+     * is dead, because the read goes through {@link AdbLocalClient} (uid=2000
+     * shell, which owns the file). Also appends a small header with the
+     * current PID file + trigger file state so a teardown report is
+     * self-contained.
+     */
+    private void exportDaemonLog(TextView status) {
+        if (status == null) return;
+        status.setText("[export-log] Lecture /data/local/tmp/dashcast_proxy.log…");
+        // Concatenate a tiny state header + the log itself. Bounded to the
+        // last ~200 KB so the share intent never chokes Telegram.
+        final String shellCmd =
+                "echo \"=== state $(date) ===\"; "
+                + "echo \"pid_file: $(cat /data/local/tmp/dashcast_proxy.pid 2>/dev/null || echo MISSING)\"; "
+                + "echo \"lock_file: $(ls -la /data/local/tmp/dashcast_proxy.lock 2>/dev/null || echo MISSING)\"; "
+                + "echo \"trigger_file: $(ls -la /data/local/tmp/dashcast_proxy.trigger 2>/dev/null || echo MISSING)\"; "
+                + "ALIVE=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' || echo NONE); "
+                + "echo \"alive_procs: $ALIVE\"; "
+                + "echo \"=== log tail (last 200 KB) ===\"; "
+                + "tail -c 204800 /data/local/tmp/dashcast_proxy.log 2>/dev/null || echo \"(no log file)\"";
+        AdbLocalClient.executeShellWithResult(this, shellCmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String content) {
+                writeAndShareDaemonLog(status, content == null ? "(empty)" : content);
+            }
+            @Override public void onError(String error) {
+                // Best-effort: even if the shell channel itself errored, hand
+                // the user whatever stderr text we got so they can still
+                // forward something useful.
+                writeAndShareDaemonLog(status,
+                        "(adb shell error: " + error + ")\n");
+            }
+        });
+    }
+
+    /** Helper for {@link #exportDaemonLog(TextView)} — writes the captured
+     *  text to the app cache and fires the Telegram chooser. UI-thread safe. */
+    private void writeAndShareDaemonLog(TextView status, String content) {
+        java.io.File out;
+        try {
+            java.io.File dir = new java.io.File(getCacheDir(), "daemon_logs");
+            if (!dir.exists() && !dir.mkdirs()) {
+                safeRunOnUiThread(() -> status.setText("[export-log] ❌ mkdir cache failed"));
+                return;
+            }
+            String stamp = new java.text.SimpleDateFormat(
+                    "yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date());
+            out = new java.io.File(dir, "dashcast_proxy_" + stamp + ".log");
+            try (java.io.FileWriter w = new java.io.FileWriter(out)) {
+                w.write(content);
+            }
+        } catch (Exception e) {
+            AppLogger.e("ClusterPoc", "exportDaemonLog write failed", e);
+            safeRunOnUiThread(() -> status.setText("[export-log] ❌ write: " + e.getMessage()));
+            return;
+        }
+        final java.io.File fileFinal = out;
+        safeRunOnUiThread(() -> {
+            try {
+                android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                        this, getPackageName() + ".fileprovider", fileFinal);
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_STREAM, uri);
+                share.putExtra(Intent.EXTRA_SUBJECT, fileFinal.getName());
+                share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                share.setClipData(android.content.ClipData.newRawUri("", uri));
+                Intent chooser = Intent.createChooser(share,
+                        getString(R.string.diag_cluster_poc_chooser_title));
+                chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(chooser);
+                status.setText("[export-log] ✅ " + fileFinal.getName()
+                        + " (" + fileFinal.length() + " B) → Telegram");
+            } catch (Exception e) {
+                AppLogger.e("ClusterPoc", "exportDaemonLog share failed", e);
+                status.setText("[export-log] ❌ share: " + e.getMessage());
+            }
+        });
     }
 
     // ─── v1.2.42 — Export BYD APK panel ──────────────────────────────────────
