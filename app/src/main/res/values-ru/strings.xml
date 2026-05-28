@@ -504,4 +504,8 @@
     <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
     <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
     <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+    <string name="proxy_keeper_channel_name">Прокси-демон</string>
+    <string name="proxy_keeper_channel_desc">Поддерживает прокси-демон в фоне</string>
+    <string name="proxy_keeper_notif_title">DashCast — прокси активен</string>
+    <string name="proxy_keeper_notif_text">Проверка демона каждые 10 с</string>
 </resources>

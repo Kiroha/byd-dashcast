@@ -516,4 +516,8 @@
     <string name="ota_version_label">DashCast %1$s</string>
     <string name="ota_progress_unknown">…</string>
     <string name="ota_progress_percent">%1$d %%</string>
+    <string name="proxy_keeper_channel_name">Proxy daemon</string>
+    <string name="proxy_keeper_channel_desc">Keeps the proxy daemon available in background</string>
+    <string name="proxy_keeper_notif_title">DashCast — proxy active</string>
+    <string name="proxy_keeper_notif_text">Daemon checked every 10 s</string>
 </resources>

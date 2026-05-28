@@ -33,5 +33,15 @@ public class DashCastApp extends Application {
         // proxy daemon. Idempotent, gated on BetaConfig.isProxyDaemonEnabled,
         // zero overhead while daemon is healthy.
         com.byd.dashcast.beta.ProxyWatchdog.install(this);
+
+        // v1.2.73-beta — Phase A step 4, Couche 2: always-on foreground
+        // service that monitors the daemon every 10 s, regardless of
+        // whether any activity is in the foreground. The service itself
+        // checks the BetaConfig flag at every heartbeat, so users who
+        // haven't opted in see no extra notification (the service starts
+        // but the heartbeat early-returns).
+        if (com.byd.dashcast.beta.BetaConfig.isProxyDaemonEnabled(this)) {
+            com.byd.dashcast.beta.ProxyKeeperService.ensureRunning(this);
+        }
     }
 }
