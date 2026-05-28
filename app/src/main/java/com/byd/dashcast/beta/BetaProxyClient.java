@@ -103,8 +103,11 @@ public final class BetaProxyClient {
             + "if [ -f \"$PIDF\" ]; then "
             +   "P=$(cat \"$PIDF\" 2>/dev/null); "
             +   "if [ -n \"$P\" ] && [ -d \"/proc/$P\" ]; then "
-            +     "N=$(cat /proc/$P/comm 2>/dev/null); "
-            +     "if [ \"$N\" = \"dashcast_proxy\" ]; then "
+            // v1.2.66 hotfix: use /proc/$P/cmdline (argv0, set by --nice-name)
+            // instead of /proc/$P/comm (thread name, kept as "main" by the JVM
+            // regardless of --nice-name → fast-path NEVER matched in v1.2.65).
+            // -a treats cmdline (NUL-separated) as text; -q for silent.
+            +     "if grep -aq dashcast_proxy /proc/$P/cmdline 2>/dev/null; then "
             +       "echo trigger > \"$TRIG\" 2>/dev/null; "
             +       "echo \"REBROADCAST $P\"; exit 0; "
             +     "fi; "
