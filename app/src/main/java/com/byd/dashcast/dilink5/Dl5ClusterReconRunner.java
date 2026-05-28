@@ -588,6 +588,30 @@ public final class Dl5ClusterReconRunner {
         list.add(new DiLink5TestRunner.TestDef("F12",
                 "Verify new bounds",
                 "Wait ~2 s, dumpsys activity activities scoped to the Yandex task — confirm mBounds reflects the rectangle from F11."));
+        // ── v1.2.59 — DL5 real-resize exploration probes (run between F12 and the
+        //    F13 move-back so the projection + cluster task are still alive).
+        //    Pure recon: each probe captures shell output for analysis, and the
+        //    only one that mutates state (F12B) is followed by F12B's own re-resize
+        //    + re-dump so the user can see if the mutation unlocked anything.
+        list.add(new DiLink5TestRunner.TestDef("F12A",
+                "Inventory — verbs available on this ROM",
+                "Dump `cmd activity` + `cmd activity task` + `cmd window` verb surface. "
+              + "Authoritative list of what survived the DL5 ROM strip; tells us exactly "
+              + "which `cmd activity` subverbs (set-task-windowing-mode, task resize, …) "
+              + "and `cmd window` subverbs are usable as resize building blocks."));
+        list.add(new DiLink5TestRunner.TestDef("F12B",
+                "Display windowing mode → freeform + retry resize",
+                "`cmd window set-display-windowing-mode <displayId> freeform` on the confirmed "
+              + "cluster display. The DL5 fission display declares mDisplayWindowingMode=fullscreen "
+              + "which makes every task land fullscreen and silently ignores `task resize`; "
+              + "if this verb is honoured, a follow-up resize + dumpsys should now show the new "
+              + "bounds. Auto-reverts to fullscreen at the end so the cluster face stays unbroken."));
+        list.add(new DiLink5TestRunner.TestDef("F12C",
+                "Launch-time bounds — relaunch with --activity-launch-bounds",
+                "Re-launch target with `am start --display <id> --windowingMode 5 --activity-launch-bounds "
+              + "100,80,1820,640 -n <component>` then dumpsys. If launch-time bounds are honoured where "
+              + "post-launch resize is no-op, we have a real resize path: relaunch the activity at the "
+              + "new rect instead of mutating an existing task."));
         list.add(new DiLink5TestRunner.TestDef("F13",
                 "Move target back to display 0",
                 "am start --display 0 -n <component> — reparents the task onto the head unit. No resize / no size mutation on display 0."));
@@ -692,6 +716,9 @@ public final class Dl5ClusterReconRunner {
             case "F10": fissionSetFreeformOnCluster(ctx, r, st); return;
             case "F11": fissionResizeOnCluster(ctx, r, st); return;
             case "F12": fissionVerifyBoundsOnCluster(ctx, r, st); return;
+            case "F12A": fissionProbeVerbInventory(ctx, r, st); return;
+            case "F12B": fissionProbeDisplayFreeform(ctx, r, st); return;
+            case "F12C": fissionProbeLaunchTimeBounds(ctx, r, st); return;
             case "F13": fissionMoveBackToMain(ctx, r, st); return;
             case "F14": fissionForceStop(ctx, r, st, "cleanup"); return;
             case "F15": fissionResetOverride(ctx, r, st); return;
@@ -1099,6 +1126,184 @@ public final class Dl5ClusterReconRunner {
             r.status = DiLink5TestRunner.Status.WARN;
             r.message = "bounds not confirmed — see detail";
         }
+    }
+
+    // ─── v1.2.59 — DL5 real-resize exploration probes (between F12 and F13) ───
+
+    /**
+     * F12A — verb-surface inventory. Dumps every available subverb under
+     * {@code cmd activity} / {@code cmd activity task} / {@code cmd window}.
+     * Pure read-only. Lets us see authoritatively what survived the DL5 ROM
+     * strip without guessing per-verb.
+     */
+    private static void fissionProbeVerbInventory(Context ctx, DiLink5TestRunner.TestResult r,
+                                                  FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        String cmd =
+                "echo '===== cmd activity =====' ; "
+              + "cmd activity 2>&1 ; echo __exit_cmd_activity=$? ; "
+              + "echo ; echo '===== cmd activity task =====' ; "
+              + "cmd activity task 2>&1 ; echo __exit_cmd_activity_task=$? ; "
+              + "echo ; echo '===== cmd window =====' ; "
+              + "cmd window 2>&1 ; echo __exit_cmd_window=$? ; "
+              + "echo ; echo '===== am help (subset) =====' ; "
+              + "am help 2>&1 | grep -E '^( |am )(start|task|stack|compat|set-)' | head -30";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ verb inventory probe\n\n" + (out == null ? "<no output>" : out);
+        if (out == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "shell unavailable"; return;
+        }
+        boolean activityResize = out.contains("task resize");
+        boolean activitySetMode = out.contains("set-task-windowing-mode");
+        boolean windowSetDisp   = out.contains("set-display-windowing-mode")
+                               || out.contains("displayWindowingMode");
+        StringBuilder msg = new StringBuilder();
+        msg.append("am task resize=").append(activityResize ? "Y" : "N");
+        msg.append(", set-task-windowing-mode=").append(activitySetMode ? "Y" : "N");
+        msg.append(", cmd window set-display-windowing-mode=").append(windowSetDisp ? "Y" : "N");
+        r.message = msg.toString();
+        r.status = DiLink5TestRunner.Status.PASS;
+    }
+
+    /**
+     * F12B — flip the cluster display itself into freeform windowing mode then
+     * retry the resize on the existing task. The DL5 fission display declares
+     * {@code mDisplayWindowingMode=fullscreen}, which is the documented cause of
+     * the silent {@code task resize} no-op. Auto-reverts to fullscreen at the
+     * end so the user-confirmed cluster face is left exactly as F12 saw it.
+     */
+    private static void fissionProbeDisplayFreeform(Context ctx, DiLink5TestRunner.TestResult r,
+                                                    FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.confirmedClusterDisplay <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no cluster display confirmed"; return;
+        }
+        if (st.yandexTaskIdOnCluster <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no taskId (from F10)"; return;
+        }
+        int displayId = st.confirmedClusterDisplay;
+        int taskId    = st.yandexTaskIdOnCluster;
+        String cmd =
+                "echo '--- step 1: set-display-windowing-mode freeform ---' ; "
+              + "cmd window set-display-windowing-mode " + displayId + " freeform 2>&1 ; "
+              + "echo __exit_set=$? ; "
+              + "sleep 1 ; "
+              + "echo ; echo '--- step 2: retry cmd activity task resize ---' ; "
+              + "cmd activity task resize " + taskId + " 100 80 1820 640 2>&1 ; "
+              + "echo __exit_resize=$? ; "
+              + "sleep 2 ; "
+              + "echo ; echo '--- step 3: dumpsys bounds for task ' " + taskId + " ' ---' ; "
+              + "dumpsys activity activities 2>&1 | grep -A 25 -E '#" + taskId + "[^0-9]' "
+              + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=' | head -20 ; "
+              + "echo ; echo '--- step 4: REVERT display to fullscreen ---' ; "
+              + "cmd window set-display-windowing-mode " + displayId + " fullscreen 2>&1 ; "
+              + "echo __exit_revert=$?";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ display-freeform-then-resize probe (displayId=" + displayId
+                + ", taskId=" + taskId + ")\n\n" + (out == null ? "<no output>" : out);
+        if (out == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "shell unavailable"; return;
+        }
+        String lo = out.toLowerCase();
+        if (lo.contains("unknown command") && lo.contains("set-display-windowing-mode")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "set-display-windowing-mode not supported on this ROM";
+            return;
+        }
+        boolean newBounds = false;
+        for (String line : out.split("\n")) {
+            if (!line.contains("mBounds=Rect")) continue;
+            if ((line.contains("(100, 80") || line.contains("(100,80"))
+                    && line.contains("1820")) { newBounds = true; break; }
+        }
+        if (newBounds) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "BREAKTHROUGH — display freeform unlocked task resize";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "display freeform set, but task bounds still unchanged";
+        }
+    }
+
+    /**
+     * F12C — relaunch the target with {@code --activity-launch-bounds}. If
+     * launch-time bounds are honoured on DL5 where post-launch resize is no-op,
+     * we have a real resize path: tear down + relaunch the activity at the new
+     * rect instead of mutating an existing task.
+     *
+     * <p>Strictly scoped: launches at 100,80,1820,640 on the same confirmed
+     * cluster display; F14 force-stop cleanup will take care of teardown.
+     */
+    private static void fissionProbeLaunchTimeBounds(Context ctx, DiLink5TestRunner.TestResult r,
+                                                     FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.confirmedClusterDisplay <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no cluster display confirmed"; return;
+        }
+        if (st.targetActivity == null) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no resolved launcher (F02)"; return;
+        }
+        int displayId = st.confirmedClusterDisplay;
+        String cmd =
+                "echo '--- step 1: force-stop ---' ; "
+              + "am force-stop " + st.targetPkg + " 2>&1 ; echo __exit_fs=$? ; "
+              + "sleep 1 ; "
+              + "echo ; echo '--- step 2: am start with --activity-launch-bounds ---' ; "
+              + "am start --display " + displayId + " --windowingMode 5 "
+              + "--activity-launch-bounds 100,80,1820,640 -n " + st.targetActivity
+              + " 2>&1 ; echo __exit_start=$? ; "
+              + "sleep 3 ; "
+              + "echo ; echo '--- step 3: dumpsys bounds for newly-launched task ---' ; "
+              + "dumpsys activity activities 2>&1 "
+              + "| grep -E '#[0-9]+ |mBounds=Rect|mWindowingMode=|mAppBounds=' "
+              + "| grep -B1 -A4 -E '" + tokenForPkg(st.targetPkg) + "' | head -40";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ launch-time-bounds probe (displayId=" + displayId + ")\n\n"
+                + (out == null ? "<no output>" : out);
+        if (out == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "shell unavailable"; return;
+        }
+        String lo = out.toLowerCase();
+        if (lo.contains("unknown option") && lo.contains("activity-launch-bounds")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "--activity-launch-bounds not supported on this ROM";
+            return;
+        }
+        boolean newBounds = false;
+        for (String line : out.split("\n")) {
+            if (!line.contains("mBounds=Rect")) continue;
+            if ((line.contains("(100, 80") || line.contains("(100,80"))
+                    && line.contains("1820")) { newBounds = true; break; }
+        }
+        if (newBounds) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "BREAKTHROUGH — launch-time bounds honoured on cluster display";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "launch succeeded but task bounds still fullscreen";
+        }
+    }
+
+    /**
+     * Busybox-safe grep token for a package: last two dot-segments alternated.
+     * e.g. {@code ru.yandex.yandexnavi} → {@code yandexnavi|yandex}. Mirrors the
+     * trick used by {@code extractYandexTaskId}.
+     */
+    private static String tokenForPkg(String pkg) {
+        if (pkg == null || pkg.isEmpty()) return ".";
+        String[] parts = pkg.split("\\.");
+        if (parts.length <= 1) return pkg;
+        return parts[parts.length - 1] + "|" + parts[parts.length - 2];
     }
 
     /** v1.2.48 — F13. Move Yandex back to display 0. No size mutation on id=0. */
