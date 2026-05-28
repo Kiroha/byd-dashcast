@@ -3,12 +3,15 @@ package com.byd.dashcast.beta.proxy;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.FileObserver;
 import android.os.Looper;
 import android.os.Parcel;
 import android.os.Process;
 import android.os.RemoteException;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 
@@ -58,11 +61,27 @@ public final class ProxyDaemonMain {
     /** Protocol version reported by {@link #TXN_WHOAMI}. Bump on any wire-incompatible change.
      *  v3 (build 235): adds {@link #TXN_CREATE_VIRTUAL_DISPLAY} and
      *  {@link #TXN_RELEASE_VIRTUAL_DISPLAY} (Phase 5a — cluster mini-mode POC).
+     *  v7 (v1.2.63-beta, Phase A step 3): adds the PID-file + trigger-file
+     *  rebroadcast plumbing (the wire protocol itself is unchanged, but the
+     *  app uses {@code PROTOCOL_VERSION >= 7} to decide whether to attempt
+     *  the fast-rebroadcast path during bootstrap).
      *  Purely additive — old clients keep working unchanged. */
-    public static final String PROTOCOL_VERSION = "6";
+    public static final String PROTOCOL_VERSION = "7";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
+
+    /** PID file written at startup, removed at shutdown via the JVM hook.
+     *  Used by the bootstrap script's fast path to detect a surviving daemon
+     *  after app restart (setsid'd daemon outlives the app process) and ask
+     *  for a binder rebroadcast instead of paying the ~1 s app_process cost. */
+    private static final String PID_FILE = "/data/local/tmp/dashcast_proxy.pid";
+
+    /** Trigger file watched via {@link FileObserver} by the running daemon.
+     *  The bootstrap script (running as uid 2000 shell) touches this file to
+     *  ask the daemon to re-emit {@link #ACTION_PROXY_CONNECTED} so a freshly
+     *  restarted app gets the binder without restarting the daemon. */
+    private static final String TRIGGER_FILE = "/data/local/tmp/dashcast_proxy.trigger";
 
     /** Transaction: no args → {@code long} (epoch ms). */
     public static final int TXN_PING   = android.os.IBinder.FIRST_CALL_TRANSACTION;        // 1
@@ -117,14 +136,25 @@ public final class ProxyDaemonMain {
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
     private static volatile Context sSystemContext;
 
+    /** Strong reference to the trigger {@link FileObserver}, kept alive for the
+     *  lifetime of the daemon. {@code FileObserver} is delivered via a
+     *  background thread internal to Android — no explicit Looper needed. */
+    private static volatile FileObserver sTriggerObserver;
+
+    /** Cached binder + intent re-used by {@link #emitBroadcast()} so a USR-1-
+     *  style rebroadcast does not need to rebuild any state. */
+    private static volatile ProxyBinder sBinder;
+
     private ProxyDaemonMain() {}
 
     public static void main(String[] args) {
         try {
             renameProcess();
+            writePidFile();
+            installPidShutdownHook();
             Looper.prepareMainLooper();
 
-            ProxyBinder binder = new ProxyBinder();
+            sBinder = new ProxyBinder();
             log("binder ready uid=" + Process.myUid()
                     + " pid=" + Process.myPid()
                     + " ver=" + PROTOCOL_VERSION);
@@ -137,21 +167,86 @@ public final class ProxyDaemonMain {
             }
             sSystemContext = systemContext;
 
-            Intent intent = new Intent(ACTION_PROXY_CONNECTED)
-                    .setPackage(TARGET_PKG)
-                    .putExtra(EXTRA_BINDER, new BinderParcelable(binder))
-                    // FLAG_INCLUDE_STOPPED_PACKAGES so the app receives the broadcast
-                    // even right after a force-stop — important for the bootstrap flow
-                    // where the receiver was just dynamically registered.
-                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-            systemContext.sendBroadcast(intent);
-            log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
+            emitBroadcast();
+            installTriggerObserver();
 
             Looper.loop();
         } catch (Throwable t) {
             log("FATAL: " + t);
             t.printStackTrace();
             System.exit(1);
+        }
+    }
+
+    /** Build and send the {@link #ACTION_PROXY_CONNECTED} broadcast. Idempotent —
+     *  may be invoked any number of times after the initial startup, every call
+     *  re-emits the binder so a freshly registered receiver in a restarted app
+     *  picks it up without a daemon respawn. */
+    private static void emitBroadcast() {
+        Context ctx = sSystemContext;
+        ProxyBinder binder = sBinder;
+        if (ctx == null || binder == null) {
+            log("emitBroadcast skipped: context or binder missing");
+            return;
+        }
+        Intent intent = new Intent(ACTION_PROXY_CONNECTED)
+                .setPackage(TARGET_PKG)
+                .putExtra(EXTRA_BINDER, new BinderParcelable(binder))
+                // FLAG_INCLUDE_STOPPED_PACKAGES so the app receives the broadcast
+                // even right after a force-stop — important for the bootstrap flow
+                // where the receiver was just dynamically registered.
+                .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+        ctx.sendBroadcast(intent);
+        log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
+    }
+
+    /** Best-effort write {@link Process#myPid()} to {@link #PID_FILE} so the
+     *  bootstrap script's fast path can detect us. Silent on failure: the
+     *  daemon still runs, the bootstrap script just falls back to its
+     *  {@code ps -A | grep} heuristic. */
+    private static void writePidFile() {
+        try (FileOutputStream fos = new FileOutputStream(PID_FILE)) {
+            fos.write(Integer.toString(Process.myPid()).getBytes());
+        } catch (Throwable t) {
+            log("writePidFile failed: " + t);
+        }
+    }
+
+    /** Remove the PID file on JVM shutdown. Pure best-effort — a SIGKILL'd
+     *  daemon will leave a stale file behind, which the bootstrap script
+     *  detects via {@code /proc/$PID/comm} sanity check. */
+    private static void installPidShutdownHook() {
+        try {
+            Runtime.getRuntime().addShutdownHook(new Thread("pid-cleanup") {
+                @Override public void run() {
+                    try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
+                    try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
+                }
+            });
+        } catch (Throwable ignore) {
+            // shutdown hooks may be disallowed in some app_process contexts —
+            // not fatal, stale file is recoverable.
+        }
+    }
+
+    /** Watch {@link #TRIGGER_FILE} for CREATE/MODIFY events. The bootstrap
+     *  script touches that file to ask us to re-broadcast the binder — used
+     *  when the app process restarts but our daemon survived (setsid). */
+    private static void installTriggerObserver() {
+        try {
+            // Ensure the file exists so the observer can watch it.
+            try { new File(TRIGGER_FILE).createNewFile(); } catch (Throwable ignore) {}
+            sTriggerObserver = new FileObserver(TRIGGER_FILE,
+                    FileObserver.MODIFY | FileObserver.CREATE | FileObserver.CLOSE_WRITE) {
+                @Override public void onEvent(int event, String path) {
+                    log("rebroadcast trigger received (event=" + event + ")");
+                    emitBroadcast();
+                }
+            };
+            sTriggerObserver.startWatching();
+            log("trigger observer armed on " + TRIGGER_FILE);
+        } catch (Throwable t) {
+            log("installTriggerObserver failed: " + t);
         }
     }
 
