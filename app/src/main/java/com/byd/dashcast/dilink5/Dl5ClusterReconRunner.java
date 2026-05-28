@@ -612,6 +612,16 @@ public final class Dl5ClusterReconRunner {
               + "100,80,1820,640 -n <component>` then dumpsys. If launch-time bounds are honoured where "
               + "post-launch resize is no-op, we have a real resize path: relaunch the activity at the "
               + "new rect instead of mutating an existing task."));
+        // v1.2.71 — one more shell-only avenue (DIAG must stay on AdbLocalClient,
+        // not the daemon), motivated by the F12A inventory in
+        // log/byd_report_20260528_172327.log: DL5 strips most shell verbs but
+        // keeps `cmd activity task resizeable`.
+        list.add(new DiLink5TestRunner.TestDef("F12E",
+                "Shell — task resizeable 2 then retry resize",
+                "F12A inventory shows `cmd activity task resizeable <TASK_ID> [0|1|2|3]` is still "
+              + "available on DL5. Sets resizeable mode = 2 (resizeable) on the task, then retries "
+              + "`cmd activity task resize`. Tests the hypothesis that F11's silent no-op was caused "
+              + "by the task being in resizeable mode 0 (unresizeable) at runtime."));
         list.add(new DiLink5TestRunner.TestDef("F13",
                 "Move target back to display 0",
                 "am start --display 0 -n <component> — reparents the task onto the head unit. No resize / no size mutation on display 0."));
@@ -719,6 +729,7 @@ public final class Dl5ClusterReconRunner {
             case "F12A": fissionProbeVerbInventory(ctx, r, st); return;
             case "F12B": fissionProbeDisplayFreeform(ctx, r, st); return;
             case "F12C": fissionProbeLaunchTimeBounds(ctx, r, st); return;
+            case "F12E": fissionProbeTaskResizeableShell(ctx, r, st); return;
             case "F13": fissionMoveBackToMain(ctx, r, st); return;
             case "F14": fissionForceStop(ctx, r, st, "cleanup"); return;
             case "F15": fissionResetOverride(ctx, r, st); return;
@@ -1304,6 +1315,67 @@ public final class Dl5ClusterReconRunner {
         String[] parts = pkg.split("\\.");
         if (parts.length <= 1) return pkg;
         return parts[parts.length - 1] + "|" + parts[parts.length - 2];
+    }
+
+    // ─── v1.2.71 — shell-resizeable probe (AdbLocalClient only — DIAG rule) ───
+    // F12D (DL3-style reflection via daemon) intentionally removed: the
+    // DIAG battery must stay 100% on AdbLocalClient. The daemon path is
+    // production-only and not exercised from this diagnostic surface.
+
+    /**
+     * F12E — shell-side {@code cmd activity task resizeable <taskId> 2} then
+     * retry {@code cmd activity task resize}. F12A confirmed the
+     * {@code resizeable} subverb is still in the DL5 binary. Tests the
+     * hypothesis that F11's silent no-op was caused by the task being in
+     * resizeable mode 0 at runtime.
+     */
+    private static void fissionProbeTaskResizeableShell(Context ctx,
+                                                        DiLink5TestRunner.TestResult r,
+                                                        FissionState st) {
+        if (st.abortFromHere) { r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "aborted earlier"; return; }
+        if (st.yandexTaskIdOnCluster <= 0) {
+            r.status = DiLink5TestRunner.Status.SKIPPED;
+            r.message = "no taskId (from F10)"; return;
+        }
+        int taskId = st.yandexTaskIdOnCluster;
+        String cmd =
+                "echo '--- step 1: cmd activity task resizeable ' " + taskId + " ' 2 ---' ; "
+              + "cmd activity task resizeable " + taskId + " 2 2>&1 ; echo __exit_set=$? ; "
+              + "sleep 1 ; "
+              + "echo ; echo '--- step 2: retry cmd activity task resize ---' ; "
+              + "cmd activity task resize " + taskId + " 100 80 1820 640 2>&1 ; "
+              + "echo __exit_resize=$? ; "
+              + "sleep 2 ; "
+              + "echo ; echo '--- step 3: dumpsys bounds for task ' " + taskId + " ' ---' ; "
+              + "dumpsys activity activities 2>&1 | grep -A 25 -E '#" + taskId + "[^0-9]'"
+              + " | grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=' | head -20";
+        String out = shellSync(ctx, cmd);
+        r.detail = "$ task-resizeable-then-resize probe (taskId=" + taskId + ")\n\n"
+                + (out == null ? "<no output>" : out);
+        if (out == null) {
+            r.status = DiLink5TestRunner.Status.FAIL;
+            r.message = "shell unavailable"; return;
+        }
+        String lo = out.toLowerCase();
+        if (lo.contains("unknown command") && lo.contains("resizeable")) {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "task resizeable subverb not supported on this ROM";
+            return;
+        }
+        boolean newBounds = false;
+        for (String line : out.split("\n")) {
+            if (!line.contains("mBounds=Rect")) continue;
+            if ((line.contains("(100, 80") || line.contains("(100,80"))
+                    && line.contains("1820")) { newBounds = true; break; }
+        }
+        if (newBounds) {
+            r.status = DiLink5TestRunner.Status.PASS;
+            r.message = "BREAKTHROUGH — task resizeable=2 unlocked shell resize";
+        } else {
+            r.status = DiLink5TestRunner.Status.WARN;
+            r.message = "resizeable set but task bounds still unchanged";
+        }
     }
 
     /** v1.2.48 — F13. Move Yandex back to display 0. No size mutation on id=0. */
