@@ -110,21 +110,21 @@ public final class BetaProxyClient {
             +   "echo trigger > \"$TRIG\" 2>/dev/null; "
             +   "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
             + "fi; "
-            // ── flock guard (bootstrap path only) ──────────────────────────
-            // v1.2.68 hotfix: `flock` is part of util-linux and is NOT
-            // present in toybox; DiLink 3 ships without it. When the
-            // binary is missing, `! flock ...` evaluates to TRUE on every
-            // call → every bootstrap returned ALREADY_BOOTSTRAPPING, the
-            // daemon was NEVER spawned, the ps fast-path never matched,
-            // and the app was stuck forever. Gate the flock on its
-            // availability; when missing we just skip the lock — the
-            // stale-kill below already prevents duplicate daemons.
-            + "HAS_FLOCK=0; command -v flock >/dev/null 2>&1 && HAS_FLOCK=1; "
-            + "if [ \"$HAS_FLOCK\" = \"1\" ]; then "
-            +   "exec 9>" + DAEMON_LOCK + "; "
-            +   "if ! flock -n 9 2>/dev/null; then echo \"ALREADY_BOOTSTRAPPING ps=$PS_OUT\"; exit 0; fi; "
-            + "fi; "
-            + "echo \"[diag] no_alive ps_lines=$(echo \\\"$PS_OUT\\\" | wc -l) has_flock=$HAS_FLOCK\" >&2; "
+            // ── flock guard ── REMOVED in v1.2.69 ──────────────────────────
+            // v1.2.68 tried to gate the flock on its availability, but
+            // field logs still show ALREADY_BOOTSTRAPPING with an empty
+            // ps output — meaning either flock is present-but-broken on
+            // DiLink 3, or `exec 9>file` itself fails silently for some
+            // reason. After 6 hotfixes, just drop the flock entirely.
+            // Race protection is already provided by:
+            //   - the 10s RECONNECT_COOLDOWN_MS in attemptReconnect
+            //   - the stale-kill below (which kills any duplicate)
+            //   - the ps fast-path above (which short-circuits when a
+            //     daemon is already alive)
+            // Worst case: two near-simultaneous bootstraps spawn two
+            // daemons; the second one's stale-kill terminates the first
+            // and only one survives. Acceptable.
+            + "echo \"[diag] no_alive ps_empty\" >&2; "
             // ── full bootstrap ─────────────────────────────────────────────
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
@@ -142,15 +142,11 @@ public final class BetaProxyClient {
             +   "echo \"[boot] stale_killed=${STALE:-none}\"; "
             +   "ls -la \"$APK\" 2>&1; "
             +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
-            // v1.2.65 hotfix kept: `9>&-` closes FD 9 in the setsid'd child
-            // BEFORE exec, so the new daemon does NOT inherit the flock and
-            // future bootstraps can take it cleanly.
-            // Outer double-quotes so $APK expands BEFORE setsid hands the string to sh.
             + "setsid sh -c \"CLASSPATH='$APK' exec /system/bin/app_process64"
             +     " -Xnoimage-dex2oat /system/bin"
             +     " --nice-name=dashcast_proxy"
             +     " " + DAEMON_MAIN
-            +     " </dev/null >>'$LOG' 2>&1\" 9>&- & "
+            +     " </dev/null >>'$LOG' 2>&1\" & "
             + "echo OK $APK";
 
     /** Fetched after a connect() failure to surface the daemon's first error line(s). */
