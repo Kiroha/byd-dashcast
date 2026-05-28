@@ -143,6 +143,16 @@
                     android:text="🐕 Watchdog status"
                     tools:ignore="HardcodedText"/>
 
+                <!-- ── Row 1d (v1.2.63) : Phase A step 3 — fast rebroadcast test. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_test_rebroadcast"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="📡 Test rebroadcast (fast-path)"
+                    tools:ignore="HardcodedText"/>
+
                 <!-- ── Section : app under test ──────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"

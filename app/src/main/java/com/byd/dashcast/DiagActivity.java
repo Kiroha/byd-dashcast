@@ -1802,6 +1802,8 @@ public class DiagActivity extends AppCompatActivity {
         View btnTestStorm     = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_storm);
         // v1.2.62 Phase A step 2 — foreground watchdog status button.
         View btnWatchdogStatus = panelClusterPoc.findViewById(R.id.btn_cluster_poc_watchdog_status);
+        // v1.2.63 Phase A step 3 — fast rebroadcast (PID-file + trigger-file) test.
+        View btnTestRebroadcast = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_rebroadcast);
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
@@ -1837,6 +1839,7 @@ public class DiagActivity extends AppCompatActivity {
         if (btnTestRecovery != null) btnTestRecovery.setOnClickListener(v -> testProxyAutoRecovery(status));
         if (btnTestStorm    != null) btnTestStorm.setOnClickListener(v -> testProxyAntiStorm(status));
         if (btnWatchdogStatus != null) btnWatchdogStatus.setOnClickListener(v -> showWatchdogStatus(status));
+        if (btnTestRebroadcast != null) btnTestRebroadcast.setOnClickListener(v -> testProxyRebroadcast(status));
     }
 
     private void enumerateDisplaysForPoc(TextView status) {
@@ -2289,6 +2292,59 @@ public class DiagActivity extends AppCompatActivity {
                 + "\n  lastSeenAlive=" + age
                 + "\n  → Astuce: 💀 Kill, attendre 30 s, refaire "
                 + "Watchdog status — le pid doit avoir changé tout seul.");
+    }
+
+    /**
+     * v1.2.63 — Phase A step 3 : exercises the bootstrap script's PID-file
+     * fast path. If the daemon is alive, the script must return
+     * {@code REBROADCAST <pid>} in tens of milliseconds (vs. ~1 s for a full
+     * {@code app_process} respawn). The daemon-side {@code FileObserver}
+     * then re-emits {@link com.byd.dashcast.beta.proxy.ProxyDaemonMain#ACTION_PROXY_CONNECTED}.
+     * Does NOT touch the binder the app currently holds — purely validates
+     * the shell-level plumbing.
+     */
+    private void testProxyRebroadcast(TextView status) {
+        if (status == null) return;
+        final int pid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        if (pid <= 0) {
+            status.setText("[rebroadcast] ⚠ daemon non connecté — connecte d'abord (Recovery/Storm).");
+            return;
+        }
+        status.setText("[rebroadcast] PID=" + pid + " → bootstrap fast-path probe…");
+        // Inline reproduction of the BetaProxyClient fast-path branch — same
+        // file names + identity check. Returns REBROADCAST <pid> when the
+        // daemon is alive, OK <apk> otherwise. Run in a worker thread so the
+        // shell roundtrip never blocks the UI.
+        new Thread(() -> {
+            final long t0 = System.currentTimeMillis();
+            AdbLocalClient.executeShellWithResult(this,
+                    "PIDF=/data/local/tmp/dashcast_proxy.pid; "
+                            + "TRIG=/data/local/tmp/dashcast_proxy.trigger; "
+                            + "P=$(cat \"$PIDF\" 2>/dev/null); "
+                            + "if [ -z \"$P\" ]; then echo NO_PID_FILE; exit 0; fi; "
+                            + "N=$(cat /proc/$P/comm 2>/dev/null); "
+                            + "if [ \"$N\" != \"dashcast_proxy\" ]; then "
+                            + "  echo \"STALE pid=$P comm=$N\"; exit 0; "
+                            + "fi; "
+                            + "echo trigger > \"$TRIG\" && echo \"REBROADCAST $P\" || echo \"TRIGGER_FAILED $P\"",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String r) {
+                            long elapsed = System.currentTimeMillis() - t0;
+                            final String trimmed = r == null ? "" : r.trim();
+                            final boolean fast = trimmed.startsWith("REBROADCAST");
+                            safeRunOnUiThread(() -> status.setText(
+                                    "[rebroadcast] " + (fast ? "✅" : "⚠")
+                                            + " elapsed=" + elapsed + " ms\n"
+                                            + "shell: " + trimmed + "\n"
+                                            + "Attendu : « REBROADCAST " + pid + " » en < 200 ms.\n"
+                                            + "→ Vérifie /data/local/tmp/dashcast_proxy.log "
+                                            + "pour la ligne « rebroadcast trigger received »."));
+                        }
+                        @Override public void onError(String e) {
+                            safeRunOnUiThread(() -> status.setText("[rebroadcast] ❌ shell: " + e));
+                        }
+                    });
+        }, "diag-rebroadcast-test").start();
     }
 
     // ─── v1.2.42 — Export BYD APK panel ──────────────────────────────────────

@@ -53,6 +53,13 @@ public final class BetaProxyClient {
     /** Path of the daemon's stdout/stderr capture on the device (overwritten each bootstrap). */
     private static final String DAEMON_LOG = "/data/local/tmp/dashcast_proxy.log";
 
+    /** PID file written by the daemon at startup (v1.2.63-beta, Phase A step 3). */
+    private static final String DAEMON_PID = "/data/local/tmp/dashcast_proxy.pid";
+    /** Trigger file watched by the daemon to ask for a binder rebroadcast. */
+    private static final String DAEMON_TRIGGER = "/data/local/tmp/dashcast_proxy.trigger";
+    /** Bootstrap-script lock file — flock'd to serialize concurrent bootstraps. */
+    private static final String DAEMON_LOCK = "/data/local/tmp/dashcast_proxy.lock";
+
     /**
      * Bootstrap script run via local ADB. Mirrors the proven {@code MirrorDaemon}
      * recipe and preserves every hard-won fix from 1.1.3–1.1.5:
@@ -64,9 +71,46 @@ public final class BetaProxyClient {
      *       heuristic below ({@code ps -A | grep '[d]ashcast_proxy'}) keeps working;</li>
      *   <li>stdout/stderr redirected to {@link #DAEMON_LOG} for cold-start diag.</li>
      * </ul>
+     *
+     * <p>v1.2.63-beta (Phase A step 3) additions, applied before the legacy
+     * recipe so both old and new daemons keep working:
+     * <ul>
+     *   <li>{@code flock -n} on {@link #DAEMON_LOCK} — atomic w.r.t. any other
+     *       bootstrap invocation, so two concurrent app calls can never race.
+     *       Belt-and-suspenders on top of the 10 s Java-side cooldown.</li>
+     *   <li>PID-file fast path: if {@link #DAEMON_PID} points to a live process
+     *       named {@code dashcast_proxy}, just {@code touch} the trigger file
+     *       (watched via {@code FileObserver} inside the daemon) and exit with
+     *       {@code REBROADCAST <pid>}. The daemon re-emits its binder in
+     *       milliseconds — no {@code app_process} restart needed, no 1 s
+     *       penalty after an app process restart.</li>
+     * </ul>
      */
     private static final String BOOTSTRAP_CMD =
-            "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
+            // ── flock guard ─────────────────────────────────────────────────
+            // exec 9>… opens an FD; flock -n 9 takes a non-blocking lock on it;
+            // if another bootstrap is already running, we exit quickly with a
+            // clear marker. The 10 s cooldown should make this rare but it's
+            // a cheap second line of defence against bootstrap-storms.
+            "exec 9>" + DAEMON_LOCK + "; "
+            + "if ! flock -n 9 2>/dev/null; then echo ALREADY_BOOTSTRAPPING; exit 0; fi; "
+            // ── PID-file fast path ──────────────────────────────────────────
+            // If a known-good daemon is alive, just ask it to re-broadcast.
+            // Skips the entire app_process+systemMain+broadcast roundtrip
+            // (~5–8 s cold, ~0.5–1 s warm) — drops it to ~50 ms.
+            + "PIDF=" + DAEMON_PID + "; TRIG=" + DAEMON_TRIGGER + "; "
+            + "if [ -f \"$PIDF\" ]; then "
+            +   "P=$(cat \"$PIDF\" 2>/dev/null); "
+            +   "if [ -n \"$P\" ] && [ -d \"/proc/$P\" ]; then "
+            +     "N=$(cat /proc/$P/comm 2>/dev/null); "
+            +     "if [ \"$N\" = \"dashcast_proxy\" ]; then "
+            +       "echo trigger > \"$TRIG\" 2>/dev/null; "
+            +       "echo \"REBROADCAST $P\"; exit 0; "
+            +     "fi; "
+            +   "fi; "
+            + "fi; "
+            // ── full bootstrap ──────────────────────────────────────────────
+            + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
             + "LOG=" + DAEMON_LOG + "; "
             // Kill any stale daemon from a previous session (it survives app shutdown
