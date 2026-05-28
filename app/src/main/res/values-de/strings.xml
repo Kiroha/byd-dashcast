@@ -16,6 +16,7 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="status_disconnected">Dashboard: nicht verbunden</string>
     <string name="btn_origin_cluster">Original-Dashboard wiederherstellen</string>
     <string name="mirror_placeholder">Aktive Anzeige auf Cluster ✓</string>

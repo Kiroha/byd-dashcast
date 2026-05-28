@@ -236,6 +236,22 @@
 
                 </LinearLayout>
 
+                <!-- Row 5: PL -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_pl"
+                        style="@style/Widget.DashCast.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/btn_lang_pl"/>
+
+                </LinearLayout>
+
                 <!-- "Continue without changing" — keeps current locale, marks setup done -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_continue_without_change"
