@@ -1794,9 +1794,12 @@ public class DiagActivity extends AppCompatActivity {
         View btnShare   = panelClusterPoc.findViewById(R.id.btn_cluster_poc_share);
         View btnLaunch  = panelClusterPoc.findViewById(R.id.btn_cluster_poc_launch);
         View btnStop    = panelClusterPoc.findViewById(R.id.btn_cluster_poc_stop);
-        View btnApply   = panelClusterPoc.findViewById(R.id.btn_cluster_poc_apply);
-        final com.google.android.material.button.MaterialButton btnAuto =
+        View btnApply   = panelClusterPoc.findViewById(R.id.btn_cluster_poc_apply);        final com.google.android.material.button.MaterialButton btnAuto =
                 panelClusterPoc.findViewById(R.id.btn_cluster_poc_auto_apply);
+        // v1.2.58 Phase A step 1 — auto-recovery in-car validation buttons.
+        View btnKillDaemon    = panelClusterPoc.findViewById(R.id.btn_cluster_poc_kill_daemon);
+        View btnTestRecovery  = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_recovery);
+        View btnTestStorm     = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_storm);
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
@@ -1828,6 +1831,9 @@ public class DiagActivity extends AppCompatActivity {
         if (btnLaunch  != null) btnLaunch.setOnClickListener(v -> launchOnFission(status, etPkg, sbW, sbH));
         if (btnStop    != null) btnStop.setOnClickListener(v -> stopTargetPkg(status, etPkg));
         if (btnApply   != null) btnApply.setOnClickListener(v -> applyMoveResize(status, etPkg, sbX, sbY, sbW, sbH));
+        if (btnKillDaemon   != null) btnKillDaemon.setOnClickListener(v -> killProxyDaemonForTest(status));
+        if (btnTestRecovery != null) btnTestRecovery.setOnClickListener(v -> testProxyAutoRecovery(status));
+        if (btnTestStorm    != null) btnTestStorm.setOnClickListener(v -> testProxyAntiStorm(status));
     }
 
     private void enumerateDisplaysForPoc(TextView status) {
@@ -2120,6 +2126,141 @@ public class DiagActivity extends AppCompatActivity {
                     : "[restart] ❌ Échec du bootstrap. Voir logcat.";
             safeRunOnUiThread(() -> status.setText(msg));
         }, "daemon-restart").start();
+    }
+
+    // ─── v1.2.58 — Phase A step 1 in-car validation (no ADB required) ────────
+    //
+    // Three test verbs validating the daemon auto-recovery wired into the
+    // typed verbs of BetaProxyClient (callWithRetry + attemptReconnect +
+    // 10 s cooldown anti-storm). Buttons live in the Cluster POC panel because
+    // that's where the proxy daemon is already explicitly surfaced (Restart
+    // button), keeping all daemon controls together.
+    //
+    // Kill is done via dadb (AdbLocalClient) — never via BetaProxyClient.runShell
+    // — because that wrapped verb would auto-recover *during* the kill, racing
+    // against the kill itself.
+
+    /** SIGKILL the daemon and report new connection state. Subsequent normal
+     *  diag actions (Lister, Lancer, Apply…) should auto-bootstrap silently. */
+    private void killProxyDaemonForTest(TextView status) {
+        if (status == null) return;
+        final int oldPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        status.setText("[kill] envoi SIGKILL au daemon (pid=" + oldPid + ")…");
+        AdbLocalClient.executeShellWithResult(this,
+                "pgrep -f dashcast_proxy | xargs -r kill -9 ; "
+                        + "sleep 0.3 ; pgrep -f dashcast_proxy || echo DEAD",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String report) {
+                        final String tail = report == null ? "" : report.trim();
+                        // Give DeathRecipient a beat to fire and clear sBinder.
+                        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                        final boolean still = com.byd.dashcast.beta.BetaProxyClient.isConnected();
+                        safeRunOnUiThread(() -> status.setText(
+                                "[kill] ✅ shell OK (" + tail + ")\n"
+                                + "isConnected=" + still + " — relance n'importe quelle action "
+                                + "pour déclencher l'auto-recovery."));
+                    }
+                    @Override public void onError(String error) {
+                        safeRunOnUiThread(() -> status.setText("[kill] ❌ " + error));
+                    }
+                });
+    }
+
+    /**
+     * Kill the daemon, then immediately fire a benign typed verb
+     * ({@code getPidsByPackage}) which goes through the wrapped retry path.
+     * Reports old PID, new PID, total latency and PROTOCOL_VERSION — the
+     * golden-path validation for Phase A step 1.
+     */
+    private void testProxyAutoRecovery(TextView status) {
+        if (status == null) return;
+        final int oldPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        status.setText("[recovery] kill pid=" + oldPid + " → probe verb (peut prendre 5–8 s)…");
+        AdbLocalClient.executeShellWithResult(this,
+                "pgrep -f dashcast_proxy | xargs -r kill -9 ; "
+                        + "sleep 0.3 ; pgrep -f dashcast_proxy || echo DEAD",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String killReport) {
+                        new Thread(() -> {
+                            long t0 = System.currentTimeMillis();
+                            String verbResult;
+                            boolean ok = false;
+                            try {
+                                // Wrapped verb — exercises callWithRetry + attemptReconnect.
+                                String pids = com.byd.dashcast.beta.BetaProxyClient
+                                        .getPidsByPackage("com.byd.dashcast");
+                                ok = true;
+                                verbResult = "pids=\"" + pids + "\"";
+                            } catch (Throwable t) {
+                                verbResult = "❌ " + t.getClass().getSimpleName()
+                                        + ": " + t.getMessage();
+                            }
+                            long elapsed = System.currentTimeMillis() - t0;
+                            final int newPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+                            final String ver = com.byd.dashcast.beta.BetaProxyClient.getProtocolVersion();
+                            final boolean okFinal = ok;
+                            final String verbResultFinal = verbResult;
+                            safeRunOnUiThread(() -> status.setText(
+                                    "[recovery] " + (okFinal ? "✅" : "❌")
+                                    + " oldPid=" + oldPid + " newPid=" + newPid
+                                    + " proto=" + ver + "\n"
+                                    + "elapsed=" + elapsed + " ms\n"
+                                    + verbResultFinal + "\n"
+                                    + "kill: " + (killReport == null ? "" : killReport.trim())));
+                        }, "diag-recovery-test").start();
+                    }
+                    @Override public void onError(String error) {
+                        safeRunOnUiThread(() -> status.setText("[recovery] ❌ kill: " + error));
+                    }
+                });
+    }
+
+    /**
+     * Anti-storm validation: kill the daemon, then in a tight loop perform
+     * (kill → probe) ×3 with no inter-cycle delay. Expected outcome with the
+     * 10 s cooldown gate: cycle 1 reconnects (~5–8 s), cycles 2 and 3 hit the
+     * cooldown skip → their probe call throws "not connected" → caller-side
+     * legacy fallback would normally take over. Demonstrates the gate is
+     * preventing bootstrap cascades.
+     */
+    private void testProxyAntiStorm(TextView status) {
+        if (status == null) return;
+        status.setText("[storm] 3 cycles kill→probe enchaînés…");
+        new Thread(() -> {
+            StringBuilder out = new StringBuilder("[storm] résultats :\n");
+            for (int i = 1; i <= 3; i++) {
+                // Kill synchronously from this background thread.
+                try {
+                    java.util.concurrent.CountDownLatch killLatch = new java.util.concurrent.CountDownLatch(1);
+                    AdbLocalClient.executeShellWithResult(this,
+                            "pgrep -f dashcast_proxy | xargs -r kill -9",
+                            new AdbLocalClient.Callback() {
+                                @Override public void onSuccess(String r) { killLatch.countDown(); }
+                                @Override public void onError(String e)   { killLatch.countDown(); }
+                            });
+                    killLatch.await(3, java.util.concurrent.TimeUnit.SECONDS);
+                    // Tiny pause to let DeathRecipient fire.
+                    Thread.sleep(200);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                long t0 = System.currentTimeMillis();
+                String result;
+                try {
+                    com.byd.dashcast.beta.BetaProxyClient.getPidsByPackage("com.byd.dashcast");
+                    result = "✅ probe OK (reconnect)";
+                } catch (Throwable t) {
+                    result = "⏸ probe blocked (" + t.getMessage() + ")";
+                }
+                long elapsed = System.currentTimeMillis() - t0;
+                out.append("  cycle ").append(i).append(": ")
+                   .append(result).append(" — ").append(elapsed).append(" ms\n");
+            }
+            out.append("Attendu : cycle 1 ✅ (5–8 s), cycles 2/3 ⏸ (cooldown 10 s).");
+            final String finalOut = out.toString();
+            safeRunOnUiThread(() -> status.setText(finalOut));
+        }, "diag-storm-test").start();
     }
 
     // ─── v1.2.42 — Export BYD APK panel ──────────────────────────────────────

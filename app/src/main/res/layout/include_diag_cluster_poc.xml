@@ -11,6 +11,7 @@
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -83,6 +84,53 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:text="@string/diag_cluster_poc_btn_share"/>
+                </LinearLayout>
+
+                <!-- ── Row 1b (v1.2.58) : Phase A step 1 — auto-recovery test buttons.
+                     Mirrors the in-car test plan in the v1.2.58-beta release notes
+                     so the user can validate without ADB:
+                       • Kill daemon       → simulate crash, observe `attemptReconnect`
+                                            on the next normal action.
+                       • Test recovery     → kill + immediate typed-verb probe,
+                                            reports old/new PID + latency.
+                       • Anti-storm test   → kill ×3 in <1s, expects 1 reconnect
+                                            then 2 cooldown skips.
+                     Buttons are power-user only → hardcoded text per the
+                     DiagActivity convention. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_kill_daemon"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="💀 Kill daemon"
+                        tools:ignore="HardcodedText"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_test_recovery"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="🩺 Test recovery"
+                        tools:ignore="HardcodedText"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_test_storm"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="🌪 Anti-storm test"
+                        tools:ignore="HardcodedText"/>
                 </LinearLayout>
 
                 <!-- ── Section : app under test ──────────────────────── -->
