@@ -1115,7 +1115,21 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification(getString(R.string.notif_cluster_stopped));
+        // v1.2.77 — drop the FG notification entirely instead of pushing an
+        // ongoing "Cluster : arrêté" that the user cannot swipe away. The
+        // service is about to stopSelf() so there is no reason to keep any
+        // notification at all.
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "stopForeground failed: " + t.getMessage());
+        }
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm != null) nm.cancel(NOTIF_ID);
         stopSelf();
     }
 
