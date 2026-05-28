@@ -16,6 +16,7 @@ import com.byd.dashcast.dashboard.ClusterInputForwarder;
 import com.byd.dashcast.dashboard.ClusterMirrorManager;
 import com.byd.dashcast.dashboard.DashboardDisplayHelper;
 import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * ClusterService — Foreground Service that maintains projection on the cluster
@@ -49,6 +50,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      *  InputForwarder without binding the service themselves. */
     private static volatile ClusterService sInstance = null;
     public static ClusterService getInstance() { return sInstance; }
+
+    // v1.2.59-beta — one-shot log gate so we don't spam the buffer when the
+    // resize SeekBar fires 30+ events per second on a ROM where resize is a
+    // ROM-level no-op (DL5). Reset on process restart.
+    private static boolean sResizeUnsupportedLogged = false;
 
     // Overscan inset values are stored in SharedPreferences and editable via SettingsActivity.
     // Defaults: H=80 (left/right), V=50 (top/bottom). Read at each use so changes apply live.
@@ -205,6 +211,25 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             // should fix it; log here so a residual failure is visible in field logs.
             AppLogger.w(TAG, "resizeActiveTask: taskId<=0 for pkg=" + packageName
                     + " — cannot resize (lookup via AM + daemon dumpsys both failed)");
+            return;
+        }
+        // v1.2.59-beta — DL5 ROM-level guard.
+        // The DL5 fission test report (byd_report_20260528_081206.log F10/F11/F12)
+        // proved that on BYD DiLink 5.0 / Android 12 build SKQ1.230128.001 the
+        // `cmd activity set-task-windowing-mode` verb is stripped from the ROM
+        // and `cmd activity task resize` returns exit=0 with zero visible effect.
+        // Running the cascade anyway only spams the log; abort here once we
+        // have the platform's confirmation. The probe (Platform.primeClusterResize
+        // Probe) runs at app start, so by the time the user touches the SeekBar
+        // the answer is cached. On DL2/DL3/DL4 isClusterTaskResizeSupported()
+        // always returns true → no behavioural change.
+        if (!Platform.get().isClusterTaskResizeSupported(this)) {
+            if (!sResizeUnsupportedLogged) {
+                sResizeUnsupportedLogged = true;
+                AppLogger.w(TAG, "resizeActiveTask skipped: cluster task resize is not "
+                        + "supported on this ROM (cmd activity set-task-windowing-mode "
+                        + "stripped). See doc_api/DL5_CLUSTER_RESIZE_LIMITATION.md.");
+            }
             return;
         }
         // HARD GUARD — never resize anything if no cluster display is connected.

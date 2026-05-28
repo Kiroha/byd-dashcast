@@ -570,6 +570,22 @@ public class MainActivity extends AppCompatActivity
         tvResizeW = (TextView) findViewById(R.id.tv_resize_w_val);
         tvResizeH = (TextView) findViewById(R.id.tv_resize_h_val);
         btnResizeApply = (Button) findViewById(R.id.btn_resize_apply);
+        // v1.2.59-beta — DL5 ROM-level guard.
+        // The DL5 fission test report (byd_report_20260528_081206.log F10/F11/F12)
+        // proved cluster task resize is a silent no-op on BYD DiLink 5.0
+        // (cmd activity set-task-windowing-mode stripped, cmd activity task resize
+        // returns exit=0 with no visible effect). Hide the entire resize affordance
+        // on devices where the probe confirmed the verb is unreachable, instead of
+        // exposing a broken UI. DL2/DL3/DL4 keep the existing UI unchanged.
+        // The probe is primed at app startup (DashCastApp.onCreate → Platform.
+        // primeClusterResizeProbe) so this read is non-blocking. See
+        // doc_api/DL5_CLUSTER_RESIZE_LIMITATION.md for the rationale.
+        if (!com.byd.dashcast.platform.Platform.get().isClusterTaskResizeSupported(this)) {
+            if (btnToggleResize != null) btnToggleResize.setVisibility(View.GONE);
+            if (panelResize != null) panelResize.setVisibility(View.GONE);
+            AppLogger.i(TAG, "Resize UI hidden: cluster task resize is not supported on this ROM "
+                    + "(DL5 set-task-windowing-mode stripped — see DL5_CLUSTER_RESIZE_LIMITATION.md)");
+        }
         if (btnToggleResize != null) {
             btnToggleResize.setOnClickListener(new View.OnClickListener() {
                 @Override

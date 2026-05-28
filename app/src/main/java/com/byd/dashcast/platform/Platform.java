@@ -37,8 +37,23 @@ public final class Platform {
     public static final String OV_FORCE_ON  = "FORCE_ON";
     public static final String OV_FORCE_OFF = "FORCE_OFF";
 
+    /**
+     * Sticky capability probe — does {@code cmd activity set-task-windowing-mode}
+     * exist on this ROM? Set to "yes" / "no" after the first probe, never re-probed
+     * unless the user wipes the SharedPreferences. Introduced v1.2.59-beta after
+     * the DL5 fission test report (byd_report_20260528_081206.log) confirmed F10
+     * returns {@code "Unknown command: set-task-windowing-mode"} on BYD DiLink 5.0
+     * (Android 12, build SKQ1.230128.001) and that the AOSP fallback
+     * {@code cmd activity task resize} returns exit=0 with zero visible effect on
+     * the fission Presentation VirtualDisplay (F11/F12). On DL2/DL3/DL4 we do
+     * not probe — those platforms use a different resize path (wm overscan on
+     * DL3 / overlay on DL2 / no-op on DL4).
+     */
+    public static final String PREF_CLUSTER_RESIZE_SUPPORTED = "platform_cluster_resize_supported";
+
     private static volatile Platform INSTANCE;
     private static volatile Boolean sCachedIsDiLink5 = null;
+    private static volatile Boolean sCachedClusterResizeSupported = null;
 
     private final String  rawProductName;   // ro.product.name
     private final String  rawModel;          // Build.MODEL
@@ -234,6 +249,110 @@ public final class Platform {
     private static SharedPreferences prefs(Context ctx) {
         return ctx.getApplicationContext()
                   .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    // ── Cluster-resize capability probe (DL5 only) ────────────────────────────
+
+    /**
+     * Returns {@code true} unless this device is DiLink 5 AND we have confirmed
+     * (via {@code cmd activity set-task-windowing-mode}) that the resize verbs
+     * are stripped from the {@code cmd activity} binary on this ROM.
+     *
+     * <p>Non-DL5 platforms always return {@code true}: they use a different
+     * resize path ({@code wm overscan} on DL3) and are not affected. On DL5 the
+     * value is cached process-wide (volatile) and across cold starts (sticky
+     * SharedPreferences). The probe is cheap (single {@code sh -c}, &lt; 200 ms)
+     * but the result is invariant for a given ROM, so we never re-probe unless
+     * the user wipes the prefs file.
+     *
+     * <p><b>Threading:</b> the probe forks a shell — never call from the UI
+     * thread on a cold cache. {@link #primeClusterResizeProbe(Context)} runs
+     * it on a worker at app startup so subsequent UI reads return the cached
+     * value immediately.
+     */
+    public boolean isClusterTaskResizeSupported(Context ctx) {
+        if (!isDiLink5(ctx)) return true;
+        Boolean cached = sCachedClusterResizeSupported;
+        if (cached != null) return cached.booleanValue();
+        // Sticky pref takes precedence over a fresh probe (consistent across cold starts).
+        String sticky = prefs(ctx).getString(PREF_CLUSTER_RESIZE_SUPPORTED, null);
+        if ("yes".equals(sticky)) { sCachedClusterResizeSupported = Boolean.TRUE; return true; }
+        if ("no".equals(sticky))  { sCachedClusterResizeSupported = Boolean.FALSE; return false; }
+        boolean supported = probeSetTaskWindowingMode();
+        sCachedClusterResizeSupported = Boolean.valueOf(supported);
+        prefs(ctx).edit().putString(PREF_CLUSTER_RESIZE_SUPPORTED, supported ? "yes" : "no").apply();
+        return supported;
+    }
+
+    /**
+     * Background-prime the cluster-resize probe so UI reads never block on shell
+     * I/O. Safe to call multiple times — no-op once the cache is populated.
+     */
+    public void primeClusterResizeProbe(final Context ctx) {
+        if (!isDiLink5(ctx)) return;
+        if (sCachedClusterResizeSupported != null) return;
+        if (prefs(ctx).contains(PREF_CLUSTER_RESIZE_SUPPORTED)) {
+            // Force a one-shot read to populate the volatile cache.
+            isClusterTaskResizeSupported(ctx);
+            return;
+        }
+        final Context app = ctx.getApplicationContext();
+        Thread t = new Thread(new Runnable() {
+            @Override public void run() { isClusterTaskResizeSupported(app); }
+        }, "platform-resize-probe");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Returns true if {@code cmd activity set-task-windowing-mode} is reachable.
+     * False if the binary prints {@code Unknown command:} or exits non-zero with
+     * a known stripped-verb pattern. Any unexpected outcome (timeout, exec
+     * failure) is treated as {@code true} so we never disable resize on a
+     * device the probe couldn't characterise.
+     */
+    private static boolean probeSetTaskWindowingMode() {
+        Process p = null;
+        try {
+            // No taskId arg — we only care whether the verb itself is known.
+            // The command will fail with "Bad arg" or similar on a healthy ROM
+            // (which is exactly what we want — verb known ⇒ supported).
+            p = Runtime.getRuntime().exec(new String[]{
+                "sh", "-c",
+                "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?"
+            });
+            final Process proc = p;
+            final StringBuilder out = new StringBuilder();
+            Thread r = new Thread(new Runnable() {
+                @Override public void run() {
+                    byte[] buf = new byte[1024];
+                    try (java.io.InputStream is = proc.getInputStream()) {
+                        int n;
+                        while ((n = is.read(buf)) > 0) {
+                            out.append(new String(buf, 0, n));
+                        }
+                    } catch (Throwable ignore) {}
+                }
+            }, "platform-probe-reader");
+            r.setDaemon(true);
+            r.start();
+            boolean finished = p.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (!finished) {
+                try { p.destroyForcibly(); } catch (Throwable ignore) {}
+                return true;  // timeout → assume supported, don't downgrade UX
+            }
+            r.join(200);
+            String s = out.toString();
+            if (s.contains("Unknown command")) return false;
+            // exit=255 with "Unknown command" wording is the canonical strip
+            // signature on AOSP. Plain exit=255 without the wording could also
+            // mean "missing args" on a healthy ROM, so we don't fail on it.
+            return true;
+        } catch (Throwable t) {
+            return true;
+        } finally {
+            if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
+        }
     }
 
     // ── SystemProperties.get() via reflection (no compile-time dep) ──────────

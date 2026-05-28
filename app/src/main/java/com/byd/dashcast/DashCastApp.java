@@ -23,5 +23,10 @@ public class DashCastApp extends Application {
                 + " api="     + p.androidApi()
                 + " autoDiLink5=" + p.isAutoDetectedDiLink5()
                 + " effectiveDiLink5=" + p.isDiLink5(this));
+        // Prime the DL5 cluster-resize capability probe off the main thread so
+        // the UI (MainActivity resize button) and ClusterService.resizeActiveTask
+        // can read the cached result synchronously without forking a shell on
+        // the hot path. No-op on DL2/DL3/DL4. See doc_api/DL5_CLUSTER_RESIZE_LIMITATION.md.
+        p.primeClusterResizeProbe(this);
     }
 }
