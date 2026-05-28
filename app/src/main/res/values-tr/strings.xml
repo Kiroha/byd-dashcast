@@ -16,6 +16,7 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="status_disconnected">Gösterge paneli: bağlı değil</string>
     <string name="btn_origin_cluster">Orijinal Dashboard\'u geri yükle</string>
     <string name="mirror_placeholder">Kümede aktif ekran ✓</string>

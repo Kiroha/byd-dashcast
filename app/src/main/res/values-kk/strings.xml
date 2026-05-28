@@ -70,6 +70,7 @@
     <string name="ota_dialog_title">Жаңарту қол жетімді</string>
     <string name="ota_up_to_date">DashCast жаңартылған</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Реттеу</string>
     <string name="label_width_inset">Ені бойынша шегініс</string>

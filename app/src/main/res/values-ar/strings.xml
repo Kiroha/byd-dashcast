@@ -13,6 +13,7 @@
     <string name="btn_lang_ru">🇷🇺  Русский</string>
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="status_disconnected">اللوحة: غير متصلة</string>
     <string name="btn_origin_cluster">استعادة اللوحة الأصلية</string>
     <string name="mirror_placeholder">الشاشة النشطة على لوحة العدادات ✓</string>
