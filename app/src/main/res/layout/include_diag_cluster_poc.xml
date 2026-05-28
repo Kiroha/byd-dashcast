@@ -153,6 +153,16 @@
                     android:text="📡 Test rebroadcast (fast-path)"
                     tools:ignore="HardcodedText"/>
 
+                <!-- ── Row 1e (v1.2.64) : Phase A — export daemon log via Telegram. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_export_daemon_log"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="📥 Export daemon log (Telegram)"
+                    tools:ignore="HardcodedText"/>
+
                 <!-- ── Section : app under test ──────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
