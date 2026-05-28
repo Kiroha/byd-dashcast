@@ -70,6 +70,7 @@
     <string name="ota_dialog_title">Yangilanish mavjud</string>
     <string name="ota_up_to_date">DashCast yangilangan</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Moslash</string>
     <string name="label_width_inset">Kenglik bo\'shlig\'i</string>

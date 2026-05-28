@@ -70,6 +70,7 @@
     <string name="ota_dialog_title">Даступна абнаўленне</string>
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Наладзіць</string>
     <string name="label_width_inset">Водступ шырыні</string>

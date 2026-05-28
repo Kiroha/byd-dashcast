@@ -19,6 +19,7 @@
     <string name="mirror_placeholder">Активне зображення на кластері ✓</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
+    <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_cluster_split">⬛⬛ Розділити</string>
     <string name="cluster_control_title">Керування кластером</string>
     <string name="cluster_control_hide">Сховати ▼</string>
