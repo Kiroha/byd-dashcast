@@ -508,4 +508,11 @@
     <string name="proxy_keeper_channel_desc">Поддерживает прокси-демон в фоне</string>
     <string name="proxy_keeper_notif_title">DashCast — прокси активен</string>
     <string name="proxy_keeper_notif_text">Проверка демона каждые 10 с</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Перезагрузить</string>
+    <string name="sysinfo_reboot_title">Перезагрузить планшет?</string>
+    <string name="sysinfo_reboot_message">Система будет выключена и перезапущена. Все запущенные приложения будут закрыты.</string>
+    <string name="sysinfo_reboot_confirm">Перезагрузить</string>
+    <string name="sysinfo_reboot_toast">Перезагрузка…</string>
+    <string name="sysinfo_reboot_failed">Не удалось перезагрузить. Проверьте, что локальный ADB включён.</string>
 </resources>

@@ -508,4 +508,11 @@
     <string name="proxy_keeper_channel_desc">Mantiene el daemon proxy disponible en segundo plano</string>
     <string name="proxy_keeper_notif_title">DashCast — proxy activo</string>
     <string name="proxy_keeper_notif_text">Daemon comprobado cada 10 s</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Reiniciar</string>
+    <string name="sysinfo_reboot_title">¿Reiniciar la tableta?</string>
+    <string name="sysinfo_reboot_message">El sistema se apagará y reiniciará. Todas las apps en ejecución se cerrarán.</string>
+    <string name="sysinfo_reboot_confirm">Reiniciar</string>
+    <string name="sysinfo_reboot_toast">Reiniciando…</string>
+    <string name="sysinfo_reboot_failed">Error al reiniciar. Verifica que ADB local esté activo.</string>
 </resources>

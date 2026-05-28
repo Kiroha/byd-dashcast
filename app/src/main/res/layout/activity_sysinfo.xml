@@ -180,6 +180,16 @@
                     android:enabled="false"/>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_reboot"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/sysinfo_btn_reboot"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_restart_alt"/>
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_generate"
                     style="@style/Widget.Material3.Button"
                     android:layout_width="wrap_content"

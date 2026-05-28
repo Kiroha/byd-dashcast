@@ -508,4 +508,11 @@
     <string name="proxy_keeper_channel_desc">Proksi demonini fonda mavjud saqlaydi</string>
     <string name="proxy_keeper_notif_title">DashCast — proksi faol</string>
     <string name="proxy_keeper_notif_text">Demon har 10 soniyada tekshiriladi</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Qayta yoqish</string>
+    <string name="sysinfo_reboot_title">Planshet qayta yoqilsinmi?</string>
+    <string name="sysinfo_reboot_message">Tizim oʻchirilib qayta yoqiladi. Barcha ishlayotgan ilovalar yopiladi.</string>
+    <string name="sysinfo_reboot_confirm">Qayta yoqish</string>
+    <string name="sysinfo_reboot_toast">Qayta yoqilmoqda…</string>
+    <string name="sysinfo_reboot_failed">Qayta yoqish muvaffaqiyatsiz. Mahalliy ADB yoniqligini tekshiring.</string>
 </resources>

@@ -269,6 +269,13 @@
     <string name="sysinfo_btn_save">Sauver</string>
     <string name="sysinfo_btn_share">Partager</string>
     <string name="sysinfo_btn_regen">Régénérer</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Redémarrer</string>
+    <string name="sysinfo_reboot_title">Redémarrer la tablette ?</string>
+    <string name="sysinfo_reboot_message">Le système va s\'arrêter et redémarrer. Toutes les apps en cours seront fermées.</string>
+    <string name="sysinfo_reboot_confirm">Redémarrer</string>
+    <string name="sysinfo_reboot_toast">Redémarrage en cours…</string>
+    <string name="sysinfo_reboot_failed">Échec du redémarrage. Vérifie que l\'ADB local est actif.</string>
     <string name="sysinfo_section_overview">Vue d\'ensemble</string>
     <string name="sysinfo_section_displays">Affichages détectés</string>
     <string name="sysinfo_section_services">Services</string>
