@@ -72,6 +72,9 @@ public class FloatingRemoteButton extends Service {
                 if (i != null && i.mFloatView != null && sShouldBeVisible) {
                     i.mFloatView.setVisibility(View.VISIBLE);
                     i.triggerDimTimer();
+                    // v1.2.74 — re-promote to foreground so the notification
+                    // reappears in sync with the badge visibility.
+                    i.promoteForeground();
                 }
             });
         }
@@ -80,7 +83,11 @@ public class FloatingRemoteButton extends Service {
     public static void hide() {
         sShouldBeVisible = false;
         FloatingRemoteButton inst = sInstance;
-        if (inst == null || inst.mFloatView == null) return;
+        if (inst == null) return;
+        // v1.2.74 — drop the FG notification too: badge invisible should not
+        // leave a “Miroir cluster actif” notification dangling.
+        inst.demoteForeground();
+        if (inst.mFloatView == null) return;
         inst.mFloatView.post(() -> {
             FloatingRemoteButton i = sInstance;
             if (i != null && i.mFloatView != null) {
@@ -93,6 +100,8 @@ public class FloatingRemoteButton extends Service {
     private WindowManager mWindowManager;
     private View          mFloatView;
     private boolean       mGrantAttempted = false;
+    // v1.2.74 — track FG status so we can toggle the notification along with the badge.
+    private boolean       mIsForeground = false;
     // 1.2.30 \u2014 tracked so onDestroy() can dismiss the overlay dialog and avoid a
     // leaked TYPE_APPLICATION_OVERLAY window when the service tears down.
     private android.app.AlertDialog mQuickSwitchDialog;
@@ -343,6 +352,50 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                 .build();
 
         startForeground(NOTIF_ID, notif);
+        mIsForeground = true;
+        // v1.2.74 — if the service is started before any projection is active,
+        // the badge is hidden (sShouldBeVisible == false). In that case we must
+        // not leave the notification dangling. Drop FG status immediately.
+        if (!sShouldBeVisible) {
+            demoteForeground();
+        }
+    }
+
+    /** v1.2.74 — re-promote to foreground when the badge becomes visible again. */
+    private void promoteForeground() {
+        if (mIsForeground) return;
+        try {
+            Intent tapIntent = new Intent(this, MainActivity.class);
+            tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            PendingIntent pi = PendingIntent.getActivity(
+                    this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
+            Notification notif = new Notification.Builder(this, CHANNEL)
+                    .setSmallIcon(android.R.drawable.ic_menu_view)
+                    .setContentTitle("DashCast")
+                    .setContentText(getString(R.string.notif_remote_content))
+                    .setContentIntent(pi)
+                    .setOngoing(true)
+                    .build();
+            startForeground(NOTIF_ID, notif);
+            mIsForeground = true;
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "promoteForeground failed: " + t.getMessage());
+        }
+    }
+
+    /** v1.2.74 — drop FG status + remove notification when the badge is hidden. */
+    private void demoteForeground() {
+        if (!mIsForeground) return;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+            mIsForeground = false;
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "demoteForeground failed: " + t.getMessage());
+        }
     }
 }
 
