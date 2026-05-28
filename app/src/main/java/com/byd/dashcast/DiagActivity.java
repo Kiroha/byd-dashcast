@@ -2919,16 +2919,39 @@ public class DiagActivity extends AppCompatActivity {
                 com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_SCORE, 0f);
         long lastMs = intent.getLongExtra(
                 com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_LAST_MS, 0L);
+        // v1.2.80-beta — surface the live score + rolling 30s peak so the
+        // user can tell whether the model reacts at all when shouting
+        // "Hey Jarvis" (the detection threshold sits at 0.3 since v1.2.80,
+        // but field reports showed scores stuck below 0.05 in noisy car
+        // cabins — we want that visible without scraping the Logs tab).
+        float peak = intent.getFloatExtra(
+                com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_PEAK_SCORE, 0f);
+        long peakAge = intent.getLongExtra(
+                com.byd.dashcast.voice.wakeword.WakeWordEngine.EXTRA_WW_PEAK_AGE_MS, -1L);
         if (pbVoiceWwScore != null) {
             int p = Math.max(0, Math.min(1000, (int) (score * 1000f)));
             pbVoiceWwScore.setProgress(p);
         }
-        if (tvVoiceWwLast != null && lastMs > 0L) {
-            // Convert elapsedRealtime delta into wall-clock HH:mm:ss.
-            long wall = System.currentTimeMillis() - (android.os.SystemClock.elapsedRealtime() - lastMs);
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
-            String when = sdf.format(new java.util.Date(wall));
-            tvVoiceWwLast.setText(getString(R.string.diag_voice_wakeword_last_at_fmt, when, score));
+        if (tvVoiceWwLast != null) {
+            // Power-user diag surface — DiagActivity convention permits
+            // hardcoded technical strings (see /memories/build-checklist.md
+            // i18n exception for Diag/SysInfo).
+            String diag;
+            if (lastMs > 0L) {
+                long wall = System.currentTimeMillis() - (android.os.SystemClock.elapsedRealtime() - lastMs);
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
+                diag = String.format(java.util.Locale.US,
+                        "score=%.3f · peak30s=%.3f · last=%s",
+                        score, peak, sdf.format(new java.util.Date(wall)));
+            } else if (peakAge >= 0L) {
+                diag = String.format(java.util.Locale.US,
+                        "score=%.3f · peak30s=%.3f (il y a %ds) · seuil=0.30",
+                        score, peak, peakAge / 1000L);
+            } else {
+                diag = String.format(java.util.Locale.US,
+                        "score=%.3f · en attente · seuil=0.30", score);
+            }
+            tvVoiceWwLast.setText(diag);
         }
     }
 

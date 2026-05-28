@@ -77,6 +77,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     public static final String EXTRA_WW_UNAVAILABLE  = "ww_unavailable";
     /** Optional human-readable failure reason. */
     public static final String EXTRA_WW_REASON       = "ww_reason";
+    /** v1.2.80 — rolling peak score over the last {@link #PEAK_WINDOW_MS}. */
+    public static final String EXTRA_WW_PEAK_SCORE   = "ww_peak_score";
+    /** v1.2.80 — age in ms of that peak (0 = right now). */
+    public static final String EXTRA_WW_PEAK_AGE_MS  = "ww_peak_age_ms";
 
     // ─── Pipeline parameters ───────────────────────────────────────────────
 
@@ -98,11 +102,23 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     /** Number of embedding frames consumed by the wake word head. */
     private static final int WAKE_WINDOW = 16;
 
-    /** Sigmoid threshold above which we consider the wake word "detected". */
-    private static final float DETECT_THRESHOLD = 0.5f;
+    /** Sigmoid threshold above which we consider the wake word "detected".
+     *  v1.2.80 — lowered 0.5 → 0.3 after field reports of the user shouting
+     *  "Hey Jarvis" without ever crossing the 0.5 bar. The hey_jarvis_v0.1
+     *  model is sensitive enough that 0.3 still avoids most ambient false
+     *  positives in a car cabin (validated against engine + HVAC noise). */
+    private static final float DETECT_THRESHOLD = 0.3f;
 
     /** Minimum interval between two emitted detections. */
     private static final long DETECT_COOLDOWN_MS = 1500L;
+
+    /** v1.2.80 — rolling window for the diag "peak score" surfaced to the
+     *  UI / Logs. 30 s is short enough to react to user voice tests but long
+     *  enough to catch a single attempt the user made 10 s ago. */
+    private static final long PEAK_WINDOW_MS = 30_000L;
+
+    /** v1.2.80 — interval between two diag log lines in AppLogger. */
+    private static final long DIAG_LOG_INTERVAL_MS = 5_000L;
 
     /** Asset paths inside {@code app/src/main/assets/}. */
     private static final String ASSET_MEL  = "voice/wakeword/melspectrogram.onnx";
@@ -137,6 +153,9 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     private volatile boolean mUnavailable;
     private volatile long mLastDetectMs = 0L;
     private volatile float mLastScore   = 0f;
+    // v1.2.80 — rolling peak over PEAK_WINDOW_MS for diag visibility.
+    private volatile float mPeakScore   = 0f;
+    private volatile long  mPeakAtMs    = 0L;
 
     public WakeWordEngine(Context ctx) {
         this.mAppCtx = ctx.getApplicationContext();
@@ -206,10 +225,12 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
             failOnnxInit(t);
             return;
         }
-        AppLogger.i(TAG, "Worker started — " + MODEL_LABEL);
+        AppLogger.i(TAG, "Worker started — " + MODEL_LABEL + " (threshold=" + DETECT_THRESHOLD + ")");
 
         final float[] audioWindow = new float[AUDIO_BUFFER_LEN];
         long lastEvalAt = 0L;
+        long lastDiagLogAt = 0L;
+        float diagMaxSinceLog = 0f;
 
         while (mAlive) {
             long now = SystemClock.elapsedRealtime();
@@ -236,14 +257,33 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
             try {
                 float score = runOneEval(audioWindow, n);
                 mLastScore = score;
+                long evalNow = SystemClock.elapsedRealtime();
+                // v1.2.80 — rolling 30s peak. Decays naturally: if the
+                // current peak is older than PEAK_WINDOW_MS or the new
+                // score is higher, replace it.
+                if (score > mPeakScore || (evalNow - mPeakAtMs) > PEAK_WINDOW_MS) {
+                    mPeakScore = score;
+                    mPeakAtMs  = evalNow;
+                }
+                if (score > diagMaxSinceLog) diagMaxSinceLog = score;
                 boolean detected = false;
                 if (score >= DETECT_THRESHOLD &&
-                    (SystemClock.elapsedRealtime() - mLastDetectMs) >= DETECT_COOLDOWN_MS) {
-                    mLastDetectMs = SystemClock.elapsedRealtime();
+                    (evalNow - mLastDetectMs) >= DETECT_COOLDOWN_MS) {
+                    mLastDetectMs = evalNow;
                     detected = true;
                     AppLogger.i(TAG, "Wake word DETECTED — score=" + score + " label=" + MODEL_LABEL);
                 }
                 broadcastScore(score, detected);
+                // v1.2.80 — surface a periodic diag line so the user can
+                // see in the Logs tab whether the engine reacts at all,
+                // even when no detection ever crosses the threshold.
+                if (evalNow - lastDiagLogAt >= DIAG_LOG_INTERVAL_MS) {
+                    AppLogger.d(TAG, String.format(java.util.Locale.US,
+                            "diag: score=%.3f max5s=%.3f peak30s=%.3f thr=%.2f",
+                            score, diagMaxSinceLog, mPeakScore, DETECT_THRESHOLD));
+                    lastDiagLogAt = evalNow;
+                    diagMaxSinceLog = 0f;
+                }
             } catch (Throwable t) {
                 AppLogger.w(TAG, "Eval failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 // Single eval failures should not flip the engine to unavailable —
@@ -389,6 +429,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         i.putExtra(EXTRA_WW_SCORE,   score);
         i.putExtra(EXTRA_WW_LAST_MS, mLastDetectMs);
         i.putExtra(EXTRA_WW_LABEL,   MODEL_LABEL);
+        // v1.2.80 — extra diag payload for the UI peak indicator.
+        i.putExtra(EXTRA_WW_PEAK_SCORE,  mPeakScore);
+        i.putExtra(EXTRA_WW_PEAK_AGE_MS, mPeakAtMs == 0L ? -1L
+                : (SystemClock.elapsedRealtime() - mPeakAtMs));
         LocalBroadcastManager.getInstance(mAppCtx).sendBroadcast(i);
         // Detection beep / haptic etc. is the UI's responsibility — keep the
         // engine side-effect-free beyond the broadcast.
