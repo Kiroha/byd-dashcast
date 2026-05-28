@@ -261,13 +261,18 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Auto-Boot Overscan restoration -->
+        <!-- Auto-Boot Overscan restoration + v1.2.75 proxy daemon revive on OTA -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true"
             android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <!-- v1.2.75 — Couche 1: revive proxy daemon + KeeperService immediately
+                 after the app self-updates, without waiting for the user to open it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

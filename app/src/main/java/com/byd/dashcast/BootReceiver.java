@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 
 import com.byd.dashcast.beta.BetaConfig;
 import com.byd.dashcast.beta.BetaProxyClient;
+import com.byd.dashcast.beta.ProxyKeeperService;
 
 public class BootReceiver extends BroadcastReceiver {
 
@@ -14,7 +15,25 @@ public class BootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (!Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
+        final String action = intent.getAction();
+        if (action == null) return;
+
+        // v1.2.75 — Couche 1: also wake up on package replacement (OTA update
+        // of DashCast itself). Cold-spawning the daemon and the KeeperService
+        // right away avoids the “daemon dead until user opens the app” window.
+        final boolean isBoot = Intent.ACTION_BOOT_COMPLETED.equals(action);
+        final boolean isReplace = Intent.ACTION_MY_PACKAGE_REPLACED.equals(action);
+        if (!isBoot && !isReplace) return;
+
+        // v1.2.75 — Couche 1: start the always-on FG keeper as early as
+        // possible. ensureRunning() is idempotent and gated on isProxyDaemonEnabled,
+        // so this is a no-op when the user hasn't opted in.
+        try {
+            ProxyKeeperService.ensureRunning(context.getApplicationContext());
+        } catch (Throwable t) {
+            AppLogger.w("BootReceiver",
+                    "ProxyKeeperService.ensureRunning failed: " + t.getMessage());
+        }
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
