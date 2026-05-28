@@ -107,6 +107,17 @@ public class SysInfoActivity extends AppCompatActivity {
             }
         });
 
+        // v1.2.76 — Reboot button: clean tablet reboot via ADB-shell `reboot`
+        // (uid=2000 has the perm), so the user doesn't have to long-press the
+        // volume button for 10 s. Behind a confirmation dialog because it
+        // tears down the whole car HMI.
+        Button btnReboot = (Button) findViewById(R.id.btn_reboot);
+        if (btnReboot != null) {
+            btnReboot.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { confirmAndReboot(); }
+            });
+        }
+
         // ─── v0.9.82 — M3 redesign wiring ───
         wireSysInfoNavRail();
         populateOverviewTiles();
@@ -1174,5 +1185,39 @@ public class SysInfoActivity extends AppCompatActivity {
             // ActivityManager.getRunningServices() returns only own-process services since API 26.
         }
         return false;
+    }
+
+    /**
+     * v1.2.76 — Clean tablet reboot triggered from the System panel header.
+     * Shows a confirmation dialog (the action tears down the whole car HMI),
+     * then dispatches `reboot` via AdbLocalClient. The `reboot` binary is
+     * allowed for uid=2000 (shell) on DiLink and triggers a normal Android
+     * shutdown sequence instead of the hardware long-press combo.
+     */
+    private void confirmAndReboot() {
+        try {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.sysinfo_reboot_title)
+                    .setMessage(R.string.sysinfo_reboot_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.sysinfo_reboot_confirm,
+                            (d, w) -> doReboot())
+                    .show();
+        } catch (Throwable t) {
+            // Fall back to immediate reboot if the dialog can't be shown
+            // (rare — would mean the activity is finishing).
+            doReboot();
+        }
+    }
+
+    private void doReboot() {
+        Toast.makeText(this, R.string.sysinfo_reboot_toast, Toast.LENGTH_SHORT).show();
+        AppLogger.i("SysInfoActivity", "User-initiated reboot via SysInfo panel");
+        try {
+            AdbLocalClient.executeShell(getApplicationContext(), "reboot");
+        } catch (Throwable t) {
+            AppLogger.e("SysInfoActivity", "reboot dispatch failed: " + t.getMessage());
+            Toast.makeText(this, R.string.sysinfo_reboot_failed, Toast.LENGTH_LONG).show();
+        }
     }
 }

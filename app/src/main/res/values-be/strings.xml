@@ -508,4 +508,11 @@
     <string name="proxy_keeper_channel_desc">Падтрымлівае проксі-дэман у фоне</string>
     <string name="proxy_keeper_notif_title">DashCast — проксі актыўны</string>
     <string name="proxy_keeper_notif_text">Праверка дэмана кожныя 10 с</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Перазагрузіць</string>
+    <string name="sysinfo_reboot_title">Перазагрузіць планшэт?</string>
+    <string name="sysinfo_reboot_message">Сістэма выключыцца і перазапусціцца. Усе запушчаныя праграмы будуць закрыты.</string>
+    <string name="sysinfo_reboot_confirm">Перазагрузіць</string>
+    <string name="sysinfo_reboot_toast">Перазагрузка…</string>
+    <string name="sysinfo_reboot_failed">Не ўдалося перазагрузіць. Праверце, што лакальны ADB уключаны.</string>
 </resources>

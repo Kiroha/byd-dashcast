@@ -508,4 +508,11 @@
     <string name="proxy_keeper_channel_desc">Hält den Proxy-Daemon im Hintergrund verfügbar</string>
     <string name="proxy_keeper_notif_title">DashCast — Proxy aktiv</string>
     <string name="proxy_keeper_notif_text">Daemon alle 10 s geprüft</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Neu starten</string>
+    <string name="sysinfo_reboot_title">Tablet neu starten?</string>
+    <string name="sysinfo_reboot_message">Das System wird heruntergefahren und neu gestartet. Alle laufenden Apps werden geschlossen.</string>
+    <string name="sysinfo_reboot_confirm">Neu starten</string>
+    <string name="sysinfo_reboot_toast">Neustart läuft…</string>
+    <string name="sysinfo_reboot_failed">Neustart fehlgeschlagen. Prüfe, ob lokales ADB aktiv ist.</string>
 </resources>
