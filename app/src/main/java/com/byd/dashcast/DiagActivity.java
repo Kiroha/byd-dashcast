@@ -2325,9 +2325,8 @@ public class DiagActivity extends AppCompatActivity {
                             + "TRIG=/data/local/tmp/dashcast_proxy.trigger; "
                             + "P=$(cat \"$PIDF\" 2>/dev/null); "
                             + "if [ -z \"$P\" ]; then echo NO_PID_FILE; exit 0; fi; "
-                            + "N=$(cat /proc/$P/comm 2>/dev/null); "
-                            + "if [ \"$N\" != \"dashcast_proxy\" ]; then "
-                            + "  echo \"STALE pid=$P comm=$N\"; exit 0; "
+                            + "if ! grep -aq dashcast_proxy /proc/$P/cmdline 2>/dev/null; then "
+                            + "  echo \"STALE pid=$P\"; exit 0; "
                             + "fi; "
                             + "echo trigger > \"$TRIG\" && echo \"REBROADCAST $P\" || echo \"TRIGGER_FAILED $P\"",
                     new AdbLocalClient.Callback() {
