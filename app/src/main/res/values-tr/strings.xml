@@ -504,4 +504,8 @@
     <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
     <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
     <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+    <string name="proxy_keeper_channel_name">Proxy daemon</string>
+    <string name="proxy_keeper_channel_desc">Proxy daemon\'ı arka planda kullanılabilir tutar</string>
+    <string name="proxy_keeper_notif_title">DashCast — proxy aktif</string>
+    <string name="proxy_keeper_notif_text">Daemon her 10 saniyede kontrol edilir</string>
 </resources>

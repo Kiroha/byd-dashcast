@@ -222,6 +222,15 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
+        <!-- v1.2.73-beta — Phase A Step 4 Couche 2: keeps the BetaProxy
+             daemon alive 24/7 even when no DashCast activity is in the
+             foreground. Heartbeat 10s, START_STICKY, low-importance silent
+             notification (required by Android for FG services). -->
+        <service
+            android:name=".beta.ProxyKeeperService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
+
         <!-- Overlay service: quick-return icon to the streaming view -->
         <service
             android:name=".FloatingRemoteButton"

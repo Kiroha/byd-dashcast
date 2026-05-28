@@ -111,6 +111,10 @@
     <string name="notif_cluster_active">Cluster actif — écran %1$d</string>
     <string name="notif_cluster_stopped">Cluster : arrêté</string>
     <string name="notif_cluster_disconnected">Cluster : déconnecté</string>
+    <string name="proxy_keeper_channel_name">Daemon proxy</string>
+    <string name="proxy_keeper_channel_desc">Maintient le daemon proxy disponible en arrière-plan</string>
+    <string name="proxy_keeper_notif_title">DashCast — proxy actif</string>
+    <string name="proxy_keeper_notif_text">Daemon surveillé toutes les 10 s</string>
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>
