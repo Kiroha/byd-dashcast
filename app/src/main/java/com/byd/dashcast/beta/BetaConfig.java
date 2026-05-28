@@ -36,7 +36,13 @@ public final class BetaConfig {
     private static final String PREFS_NAME = "byd_app_prefs"; // same file as SettingsActivity.PREFS_NAME
 
     public static final String  PREF_USE_PROXY_DAEMON   = "beta_use_proxy_daemon";
-    public static final boolean DEFAULT_USE_PROXY_DAEMON = false;
+    // v1.2.79 — Phase C basculement : le proxy daemon devient le chemin par
+    // défaut. Phase A (couches 1-4) a verrouillé sa disponibilité 24/7
+    // (BOOT/REPLACE triggers + KeeperService FG + daemon hardening + cooldown
+    // adaptatif + métriques). Les utilisateurs existants gardent leur choix
+    // explicite via SharedPreferences ; seuls les nouveaux installs (et ceux
+    // n'ayant jamais touché le toggle) basculent.
+    public static final boolean DEFAULT_USE_PROXY_DAEMON = true;
 
     public static final String  PREF_USE_SYSTEM_CONTEXT   = "beta_use_system_context";
     public static final boolean DEFAULT_USE_SYSTEM_CONTEXT = false;
