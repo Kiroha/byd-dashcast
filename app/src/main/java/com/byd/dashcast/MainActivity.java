@@ -2982,9 +2982,9 @@ public class MainActivity extends AppCompatActivity
         stopClusterMirror();
 
         if (vNavRail != null)         vNavRail.setVisibility(View.VISIBLE);
-        if (vTopBar != null)          vTopBar.setVisibility(View.VISIBLE);
+        // v1.2.83 — vTopBar (Dashboard title) and cardHeroStatus (cluster state card)
+        // are hidden permanently in the layout; do NOT restore them on fullscreen exit.
         if (llAppListSection != null) llAppListSection.setVisibility(View.VISIBLE);
-        if (cardHeroStatus != null)   cardHeroStatus.setVisibility(View.VISIBLE);
         if (tvPreviewSection != null) tvPreviewSection.setVisibility(View.VISIBLE);
         if (gridMainActions != null)  gridMainActions.setVisibility(View.VISIBLE);
 
