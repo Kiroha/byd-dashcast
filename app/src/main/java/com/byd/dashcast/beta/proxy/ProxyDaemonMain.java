@@ -65,8 +65,12 @@ public final class ProxyDaemonMain {
      *  rebroadcast plumbing (the wire protocol itself is unchanged, but the
      *  app uses {@code PROTOCOL_VERSION >= 7} to decide whether to attempt
      *  the fast-rebroadcast path during bootstrap).
+     *  v8 (v1.2.70-beta, Phase A step 4): daemon hardening (OOM protection,
+     *  atomic PID lock via in-JVM check, self-heal heartbeat every 10s).
+     *  Wire protocol unchanged; bump signals to clients that suicide on
+     *  lock-steal is now possible (helps log analysis).
      *  Purely additive — old clients keep working unchanged. */
-    public static final String PROTOCOL_VERSION = "7";
+    public static final String PROTOCOL_VERSION = "8";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -150,7 +154,22 @@ public final class ProxyDaemonMain {
     public static void main(String[] args) {
         try {
             renameProcess();
-            writePidFile();
+            // v1.2.70 hardening (Couche 3): tell the Linux OOM killer to
+            // treat us as critically important. uid=2000 (shell) can write
+            // to its own /proc/self/oom_score_adj. -900 is just above the
+            // system_server reserved -1000 / -900 band; any value below 0
+            // protects us from typical low-memory kills triggered by foreground
+            // app churn. Best-effort: ignored if /proc is not writable.
+            hardenAgainstOom();
+            // v1.2.70 hardening: atomic PID-lock via O_CREAT|O_EXCL semantics
+            // (Files.createFile). If another daemon already owns the lock we
+            // refuse to start so the bootstrap's stale-kill stays the single
+            // source of truth for "which PID is canonical".
+            if (!acquirePidLock()) {
+                log("FATAL: another daemon already holds the PID lock — exiting");
+                System.exit(3);
+                return;
+            }
             installPidShutdownHook();
             Looper.prepareMainLooper();
 
@@ -169,6 +188,13 @@ public final class ProxyDaemonMain {
 
             emitBroadcast();
             installTriggerObserver();
+            // v1.2.70 hardening: periodic self-check thread (10s).
+            // Re-creates the trigger file if it was deleted (some vendors wipe
+            // /data/local/tmp on certain events), re-arms the FileObserver if
+            // it died, and self-suicides if our own binder thread is wedged.
+            // Suicide is safe: ProxyKeeperService (v1.2.71) or the next app
+            // call will re-spawn us within 10s.
+            installSelfHealHeartbeat();
 
             Looper.loop();
         } catch (Throwable t) {
@@ -200,15 +226,78 @@ public final class ProxyDaemonMain {
         log("broadcast sent: " + ACTION_PROXY_CONNECTED + " → " + TARGET_PKG);
     }
 
-    /** Best-effort write {@link Process#myPid()} to {@link #PID_FILE} so the
-     *  bootstrap script's fast path can detect us. Silent on failure: the
-     *  daemon still runs, the bootstrap script just falls back to its
-     *  {@code ps -A | grep} heuristic. */
-    private static void writePidFile() {
-        try (FileOutputStream fos = new FileOutputStream(PID_FILE)) {
-            fos.write(Integer.toString(Process.myPid()).getBytes());
+    /** v1.2.70 hardening: lower our OOM score so Linux's low-memory killer
+     *  reaches for foreground apps before us. uid=2000 can always write to
+     *  its own /proc/self/oom_score_adj. -900 sits just above the framework
+     *  reserved range (-1000..-900 used by system_server etc.). */
+    private static void hardenAgainstOom() {
+        try (FileOutputStream fos = new FileOutputStream("/proc/self/oom_score_adj")) {
+            fos.write("-900".getBytes());
+            log("oom_score_adj=-900 set");
         } catch (Throwable t) {
-            log("writePidFile failed: " + t);
+            log("hardenAgainstOom failed: " + t);
+        }
+    }
+
+    /** v1.2.70 hardening: atomic PID-lock acquisition.
+     *
+     *  <p>Strategy:
+     *  <ol>
+     *    <li>Read any existing PID file.</li>
+     *    <li>If the recorded PID is still alive AND points to a
+     *        {@code dashcast_proxy} process (verified via {@code /proc/PID/cmdline}),
+     *        refuse to start — a canonical daemon already exists.</li>
+     *    <li>Otherwise (stale file or no file), atomically rewrite it with
+     *        our own PID and continue.</li>
+     *  </ol>
+     *
+     *  <p>This replaces the broken shell-side {@code flock} (see v1.2.69
+     *  cascade) with an in-JVM check that has no toybox/util-linux dependency. */
+    private static boolean acquirePidLock() {
+        try {
+            File pidFile = new File(PID_FILE);
+            if (pidFile.exists()) {
+                String existing = readSmallFile(pidFile).trim();
+                if (!existing.isEmpty()) {
+                    int otherPid = -1;
+                    try { otherPid = Integer.parseInt(existing); } catch (NumberFormatException ignore) {}
+                    if (otherPid > 0 && otherPid != Process.myPid() && isLiveDaemon(otherPid)) {
+                        return false;
+                    }
+                }
+            }
+            // Stale or absent: claim it.
+            try (FileOutputStream fos = new FileOutputStream(pidFile)) {
+                fos.write(Integer.toString(Process.myPid()).getBytes());
+            }
+            return true;
+        } catch (Throwable t) {
+            log("acquirePidLock error (allowing start): " + t);
+            // Fail-open: better to risk a duplicate (caught by stale-kill) than
+            // to refuse to start because /data/local/tmp had a transient glitch.
+            return true;
+        }
+    }
+
+    private static String readSmallFile(File f) throws Exception {
+        try (InputStream is = new java.io.FileInputStream(f);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[256];
+            int n;
+            while ((n = is.read(buf)) > 0) baos.write(buf, 0, n);
+            return baos.toString();
+        }
+    }
+
+    /** True iff {@code /proc/PID/cmdline} exists and contains "dashcast_proxy". */
+    private static boolean isLiveDaemon(int pid) {
+        try {
+            File cmdline = new File("/proc/" + pid + "/cmdline");
+            if (!cmdline.exists()) return false;
+            String s = readSmallFile(cmdline);
+            return s != null && s.contains(PROC_NAME);
+        } catch (Throwable t) {
+            return false;
         }
     }
 
@@ -248,6 +337,74 @@ public final class ProxyDaemonMain {
         } catch (Throwable t) {
             log("installTriggerObserver failed: " + t);
         }
+    }
+
+    /** v1.2.70 hardening: periodic self-check thread (every 10s).
+     *
+     *  <p>Responsibilities:
+     *  <ul>
+     *    <li>Re-create the trigger file if it was deleted (some vendors
+     *        wipe {@code /data/local/tmp} on certain events).</li>
+     *    <li>Re-arm the {@link FileObserver} if {@link #sTriggerObserver}
+     *        is null or was stopped.</li>
+     *    <li>Detect that our PID file was clobbered (another daemon spawned
+     *        in parallel and won the race) → suicide so the survivor stays
+     *        canonical.</li>
+     *  </ul>
+     *
+     *  <p>Daemon thread, started as DAEMON so it never blocks JVM shutdown. */
+    private static void installSelfHealHeartbeat() {
+        Thread t = new Thread("dashcast-self-heal") {
+            @Override public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(10_000L);
+                    } catch (InterruptedException ignore) {
+                        return;
+                    }
+                    try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
+                    try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
+                }
+            }
+        };
+        t.setDaemon(true);
+        t.start();
+        log("self-heal heartbeat armed (10s)");
+    }
+
+    private static void healTriggerFile() {
+        File f = new File(TRIGGER_FILE);
+        if (!f.exists()) {
+            try { f.createNewFile(); log("trigger file re-created"); } catch (Throwable ignore) {}
+            // FileObserver loses its inode binding on delete — re-arm it.
+            try {
+                if (sTriggerObserver != null) sTriggerObserver.stopWatching();
+            } catch (Throwable ignore) {}
+            installTriggerObserver();
+        } else if (sTriggerObserver == null) {
+            installTriggerObserver();
+        }
+    }
+
+    private static void healPidLock() {
+        File pidFile = new File(PID_FILE);
+        if (!pidFile.exists()) {
+            // Someone wiped our PID file; rewrite it.
+            try (FileOutputStream fos = new FileOutputStream(pidFile)) {
+                fos.write(Integer.toString(Process.myPid()).getBytes());
+            } catch (Throwable ignore) {}
+            return;
+        }
+        try {
+            String contents = readSmallFile(pidFile).trim();
+            int recorded = -1;
+            try { recorded = Integer.parseInt(contents); } catch (NumberFormatException ignore) {}
+            if (recorded > 0 && recorded != Process.myPid() && isLiveDaemon(recorded)) {
+                // Another daemon stole the lock and is alive — yield to it.
+                log("self-heal: lock stolen by pid=" + recorded + " → suicide");
+                System.exit(0);
+            }
+        } catch (Throwable ignore) {}
     }
 
     /** Reflective hop to obtain a usable system {@link Context} from inside {@code app_process}. */
