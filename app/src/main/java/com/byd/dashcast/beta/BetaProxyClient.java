@@ -104,16 +104,27 @@ public final class BetaProxyClient {
             // Concurrent touches on the trigger file coalesce inside the
             // FileObserver, so no locking is needed for the fast path.
             "TRIG=" + DAEMON_TRIGGER + "; "
-            + "ALIVE_PID=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}' | head -n1); "
+            + "PS_OUT=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy'); "
+            + "ALIVE_PID=$(echo \"$PS_OUT\" | awk '{print $2}' | head -n1); "
             + "if [ -n \"$ALIVE_PID\" ]; then "
             +   "echo trigger > \"$TRIG\" 2>/dev/null; "
             +   "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
             + "fi; "
             // ── flock guard (bootstrap path only) ──────────────────────────
-            // Reaches here only when no live daemon exists; serializes two
-            // concurrent cold-start attempts.
-            + "exec 9>" + DAEMON_LOCK + "; "
-            + "if ! flock -n 9 2>/dev/null; then echo ALREADY_BOOTSTRAPPING; exit 0; fi; "
+            // v1.2.68 hotfix: `flock` is part of util-linux and is NOT
+            // present in toybox; DiLink 3 ships without it. When the
+            // binary is missing, `! flock ...` evaluates to TRUE on every
+            // call → every bootstrap returned ALREADY_BOOTSTRAPPING, the
+            // daemon was NEVER spawned, the ps fast-path never matched,
+            // and the app was stuck forever. Gate the flock on its
+            // availability; when missing we just skip the lock — the
+            // stale-kill below already prevents duplicate daemons.
+            + "HAS_FLOCK=0; command -v flock >/dev/null 2>&1 && HAS_FLOCK=1; "
+            + "if [ \"$HAS_FLOCK\" = \"1\" ]; then "
+            +   "exec 9>" + DAEMON_LOCK + "; "
+            +   "if ! flock -n 9 2>/dev/null; then echo \"ALREADY_BOOTSTRAPPING ps=$PS_OUT\"; exit 0; fi; "
+            + "fi; "
+            + "echo \"[diag] no_alive ps_lines=$(echo \\\"$PS_OUT\\\" | wc -l) has_flock=$HAS_FLOCK\" >&2; "
             // ── full bootstrap ─────────────────────────────────────────────
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
