@@ -1800,6 +1800,8 @@ public class DiagActivity extends AppCompatActivity {
         View btnKillDaemon    = panelClusterPoc.findViewById(R.id.btn_cluster_poc_kill_daemon);
         View btnTestRecovery  = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_recovery);
         View btnTestStorm     = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_storm);
+        // v1.2.62 Phase A step 2 — foreground watchdog status button.
+        View btnWatchdogStatus = panelClusterPoc.findViewById(R.id.btn_cluster_poc_watchdog_status);
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
@@ -1834,6 +1836,7 @@ public class DiagActivity extends AppCompatActivity {
         if (btnKillDaemon   != null) btnKillDaemon.setOnClickListener(v -> killProxyDaemonForTest(status));
         if (btnTestRecovery != null) btnTestRecovery.setOnClickListener(v -> testProxyAutoRecovery(status));
         if (btnTestStorm    != null) btnTestStorm.setOnClickListener(v -> testProxyAntiStorm(status));
+        if (btnWatchdogStatus != null) btnWatchdogStatus.setOnClickListener(v -> showWatchdogStatus(status));
     }
 
     private void enumerateDisplaysForPoc(TextView status) {
@@ -2261,6 +2264,31 @@ public class DiagActivity extends AppCompatActivity {
             final String finalOut = out.toString();
             safeRunOnUiThread(() -> status.setText(finalOut));
         }, "diag-storm-test").start();
+    }
+
+    /**
+     * v1.2.62 — Phase A step 2 : show the foreground liveness watchdog state.
+     * Reports install state, foreground activity count, daemon connection,
+     * and age of the last « binder seen alive » observation.
+     */
+    private void showWatchdogStatus(TextView status) {
+        if (status == null) return;
+        boolean installed = com.byd.dashcast.beta.ProxyWatchdog.isInstalled();
+        int fg            = com.byd.dashcast.beta.ProxyWatchdog.getForegroundCount();
+        long ageMs        = com.byd.dashcast.beta.ProxyWatchdog.getMsSinceLastSeenAlive();
+        boolean connected = com.byd.dashcast.beta.BetaProxyClient.isConnected();
+        int pid           = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        boolean proxyOn   = com.byd.dashcast.beta.BetaConfig.isProxyDaemonEnabled(this);
+        String age = ageMs < 0 ? "jamais observé" : (ageMs + " ms");
+        status.setText("[watchdog]"
+                + " installed=" + installed
+                + " foreground=" + fg
+                + "\n  proxyEnabled=" + proxyOn
+                + " connected=" + connected
+                + " pid=" + pid
+                + "\n  lastSeenAlive=" + age
+                + "\n  → Astuce: 💀 Kill, attendre 30 s, refaire "
+                + "Watchdog status — le pid doit avoir changé tout seul.");
     }
 
     // ─── v1.2.42 — Export BYD APK panel ──────────────────────────────────────
