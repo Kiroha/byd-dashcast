@@ -357,6 +357,12 @@ public class SysInfoActivity extends AppCompatActivity {
             // Recent events at the very end (mockup-faithful colored block).
             appendRecentEvents(sb, 5);
 
+            // v1.2.78 — Couche 4: BetaProxy persistent recovery metrics. Useful
+            // to spot long-term drift (binder zombies, fails_no_apk spikes…)
+            // without having to scrape the LogActivity buffer.
+            section(sb, "9. BETA PROXY METRICS");
+            sb.append(com.byd.dashcast.beta.BetaProxyMetrics.snapshot(this)).append('\n');
+
             sb.append("\n=== END OF REPORT ===\n");
             return sb.toString();
     }
