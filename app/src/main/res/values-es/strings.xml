@@ -515,4 +515,13 @@
     <string name="sysinfo_reboot_confirm">Reiniciar</string>
     <string name="sysinfo_reboot_toast">Reiniciando…</string>
     <string name="sysinfo_reboot_failed">Error al reiniciar. Verifica que ADB local esté activo.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Densidad de pantalla</string>
+    <string name="sheet_dpi_value_default">Predet.</string>
+    <string name="dpi_dialog_title">DPI cluster — %1$s</string>
+    <string name="dpi_default">Predeterminado del sistema</string>
+    <string name="dpi_custom">Personalizado…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Se aplicará en el próximo inicio</string>
 </resources>

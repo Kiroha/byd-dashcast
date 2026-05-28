@@ -1290,6 +1290,8 @@ public class MainActivity extends AppCompatActivity
         View      rowToMain  = v.findViewById(R.id.sheet_action_to_main);
         View      rowToClus  = v.findViewById(R.id.sheet_action_to_cluster);
         View      rowResize  = v.findViewById(R.id.sheet_action_resize);
+        View      rowDpi     = v.findViewById(R.id.sheet_action_dpi);
+        TextView  tvDpiVal   = v.findViewById(R.id.sheet_dpi_value);
         View      rowKill    = v.findViewById(R.id.sheet_action_kill);
 
         icon.setImageDrawable(app.icon);
@@ -1349,6 +1351,21 @@ public class MainActivity extends AppCompatActivity
                 dialog.dismiss();
             }
         });
+
+        // v1.2.81 — per-app cluster DPI override. Always visible; the dialog
+        // is read-only of the current display, applies on next launch.
+        final int curDpi = com.byd.dashcast.cluster.ClusterDpiPrefs.getDpi(this, app.packageName);
+        if (curDpi > 0) {
+            tvDpiVal.setText(getString(R.string.sheet_dpi_value_fmt, curDpi));
+        } else {
+            tvDpiVal.setText(R.string.sheet_dpi_value_default);
+        }
+        rowDpi.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                dialog.dismiss();
+                showClusterDpiDialog(app);
+            }
+        });
         rowKill.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
                 onKillApp(app);
@@ -1365,6 +1382,111 @@ public class MainActivity extends AppCompatActivity
         } catch (Throwable t) {
             AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
         }
+    }
+
+    // v1.2.81 — Cluster per-app DPI override picker.
+    // Presets cover the common cluster-friendly densities (Waze, Netflix,
+    // dashboards built for phones/tablets); "Custom" accepts 96..480 dpi.
+    // The override is applied at the next launch on the cluster display
+    // (ClusterDpiManager.applyForLaunch) — never on display 0 (head unit).
+    @android.annotation.SuppressLint("InflateParams")
+    private void showClusterDpiDialog(final com.byd.dashcast.model.AppInfo app) {
+        if (app == null || app.packageName == null || isFinishing() || isDestroyed()) return;
+
+        final int[] presets = { 120, 160, 200, 240, 280, 320 };
+        final int current = com.byd.dashcast.cluster.ClusterDpiPrefs.getDpi(this, app.packageName);
+
+        // Build entries: "Default" + presets + "Custom…"
+        final String[] labels = new String[presets.length + 2];
+        labels[0] = getString(R.string.dpi_default);
+        for (int i = 0; i < presets.length; i++) {
+            labels[i + 1] = getString(R.string.dpi_value_fmt, presets[i]);
+        }
+        labels[labels.length - 1] = getString(R.string.dpi_custom);
+
+        // Pre-select current
+        int checked = 0; // default
+        if (current > 0) {
+            checked = labels.length - 1; // custom by default
+            for (int i = 0; i < presets.length; i++) {
+                if (presets[i] == current) {
+                    checked = i + 1;
+                    break;
+                }
+            }
+        }
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.dpi_dialog_title, app.appName))
+                .setSingleChoiceItems(labels, checked, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int which) {
+                        if (which == 0) {
+                            // Default — clear override
+                            com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
+                                    MainActivity.this, app.packageName, 0);
+                            d.dismiss();
+                            android.widget.Toast.makeText(MainActivity.this,
+                                    R.string.dpi_applied_next_launch,
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                        } else if (which == labels.length - 1) {
+                            d.dismiss();
+                            showClusterDpiCustomDialog(app, current);
+                        } else {
+                            int dpi = presets[which - 1];
+                            com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
+                                    MainActivity.this, app.packageName, dpi);
+                            d.dismiss();
+                            android.widget.Toast.makeText(MainActivity.this,
+                                    R.string.dpi_applied_next_launch,
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    @android.annotation.SuppressLint("InflateParams")
+    private void showClusterDpiCustomDialog(final com.byd.dashcast.model.AppInfo app,
+                                            final int prefill) {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setHint(getString(R.string.dpi_custom_hint,
+                com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI,
+                com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI));
+        if (prefill > 0) input.setText(String.valueOf(prefill));
+
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout wrap = new android.widget.FrameLayout(this);
+        wrap.setPadding(pad, pad / 2, pad, 0);
+        wrap.addView(input);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.dpi_custom)
+                .setView(wrap)
+                .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int w) {
+                        int dpi;
+                        try { dpi = Integer.parseInt(input.getText().toString().trim()); }
+                        catch (NumberFormatException e) { dpi = 0; }
+                        if (dpi < com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI
+                                || dpi > com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI) {
+                            android.widget.Toast.makeText(MainActivity.this,
+                                    getString(R.string.dpi_custom_hint,
+                                            com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI,
+                                            com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI),
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
+                                MainActivity.this, app.packageName, dpi);
+                        android.widget.Toast.makeText(MainActivity.this,
+                                R.string.dpi_applied_next_launch,
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     @Override

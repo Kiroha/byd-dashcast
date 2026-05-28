@@ -527,4 +527,13 @@
     <string name="sysinfo_reboot_confirm">Reboot</string>
     <string name="sysinfo_reboot_toast">Rebooting…</string>
     <string name="sysinfo_reboot_failed">Reboot failed. Check that local ADB is enabled.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Display density</string>
+    <string name="sheet_dpi_value_default">Default</string>
+    <string name="dpi_dialog_title">Cluster DPI — %1$s</string>
+    <string name="dpi_default">System default</string>
+    <string name="dpi_custom">Custom…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Will be applied on next launch</string>
 </resources>

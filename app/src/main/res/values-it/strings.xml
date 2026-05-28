@@ -515,4 +515,13 @@
     <string name="sysinfo_reboot_confirm">Riavvia</string>
     <string name="sysinfo_reboot_toast">Riavvio in corso…</string>
     <string name="sysinfo_reboot_failed">Riavvio non riuscito. Verifica che ADB locale sia attivo.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Densità schermo</string>
+    <string name="sheet_dpi_value_default">Predef.</string>
+    <string name="dpi_dialog_title">DPI cluster — %1$s</string>
+    <string name="dpi_default">Predefinito di sistema</string>
+    <string name="dpi_custom">Personalizzato…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Verrà applicato al prossimo avvio</string>
 </resources>

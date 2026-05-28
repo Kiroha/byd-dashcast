@@ -515,4 +515,13 @@
     <string name="sysinfo_reboot_confirm">Перезавантажити</string>
     <string name="sysinfo_reboot_toast">Перезавантаження…</string>
     <string name="sysinfo_reboot_failed">Не вдалося перезавантажити. Перевірте, що локальний ADB увімкнено.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Щільність екрана</string>
+    <string name="sheet_dpi_value_default">Типове</string>
+    <string name="dpi_dialog_title">DPI кластера — %1$s</string>
+    <string name="dpi_default">Системне типове</string>
+    <string name="dpi_custom">Своє значення…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Буде застосовано під час наступного запуску</string>
 </resources>
