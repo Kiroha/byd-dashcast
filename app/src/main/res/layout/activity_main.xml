@@ -274,26 +274,15 @@
         android:paddingBottom="12dp">
 
         <!-- ────── TOP BAR ────── -->
+        <!-- v1.2.83 — Dashboard title removed (eats vertical space, redundant with
+             nav rail). Kept as gone view so MainActivity.vTopBar references stay
+             valid. -->
         <LinearLayout
             android:id="@+id/ll_top_bar"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="0dp"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="@string/main_title_dashboard"
-                android:textColor="@color/md_on_surface"
-                android:textSize="26sp"
-                android:textStyle="bold"/>
-
-            <!-- v0.9.80: clock + overflow ⋮ removed too. Long-press the nav rail
-                 logo to open the overflow menu (Language / Updates / Stats / etc.). -->
-
-        </LinearLayout>
+            android:visibility="gone"/>
 
         <!-- v1.2.9 — DL5-only onboarding banner for the auto keyboard a11y service.
              Hidden by default; MainActivity reveals it on DL5 when the service is
@@ -389,28 +378,29 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- LEFT PANE: apps                         -->
             <!-- ═══════════════════════════════════════ -->
+            <!-- v1.2.83 — fixed width ~ 2 icons wide so the right pane (live
+                 preview) reclaims as much horizontal space as possible. -->
             <LinearLayout
                 android:id="@+id/ll_app_list_section"
-                android:layout_width="0dp"
-                android:layout_weight="1.4"
+                android:layout_width="180dp"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:layout_marginEnd="20dp">
+                android:layout_marginEnd="12dp">
 
                 <!-- Search bar (rounded, M3 surface container high) -->
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="48dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="@drawable/bg_search_bar"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="8dp">
+                    android:paddingStart="12dp"
+                    android:paddingEnd="4dp">
 
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginEnd="12dp"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
                         android:layout_gravity="center_vertical"
                         android:scaleType="fitCenter"
                         android:tint="@color/md_on_surface_variant"
@@ -430,14 +420,14 @@
                         android:singleLine="true"
                         android:textColor="@color/md_on_surface"
                         android:textColorHint="@color/md_on_surface_variant"
-                        android:textSize="15sp"/>
+                        android:textSize="13sp"/>
 
                     <Button
                         android:id="@+id/btn_view_toggle"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:text="⊞"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:padding="0dp"
                         android:backgroundTint="@android:color/transparent"
                         android:textColor="@color/md_on_surface_variant"
@@ -581,10 +571,15 @@
                     android:orientation="vertical">
 
                     <!-- ────── Hero status card ────── -->
+                    <!-- v1.2.83 — Card hidden (redundant: cluster state is already
+                     obvious from the live preview content + nav rail "System" tab).
+                     Inner views (view_status_dot, tv_dashboard_status) are kept in
+                     the tree so MainActivity references stay valid. -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/card_hero_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:visibility="gone"
                         app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
                         app:cardBackgroundColor="@color/md_secondary_container"
@@ -646,7 +641,7 @@
                         android:id="@+id/tv_preview_section"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
+                        android:layout_marginTop="0dp"
                         android:layout_marginBottom="8dp"
                         android:text="@string/main_preview_section"
                         android:textAllCaps="true"
