@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="8dp"
+    android:padding="4dp"
     android:clickable="true"
     android:focusable="true"
     android:background="?android:attr/selectableItemBackground">
@@ -18,9 +18,22 @@
     <ImageView
         android:contentDescription="@null"
         android:id="@+id/iv_app_icon"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
                 android:scaleType="fitCenter"/>
+
+        <TextView
+            android:id="@+id/badge_auto_launch"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_auto_launch_badge"
+            android:contentDescription="@string/app_state_auto"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="@color/pure_white"
+            android:textSize="9sp"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/tv_btn_shortcuts"
@@ -75,17 +88,6 @@
         android:gravity="center"
         android:layout_marginTop="4dp">
         
-        <CheckBox
-            android:id="@+id/cb_auto_launch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_state_auto"
-            android:textSize="10sp"
-            android:layout_marginEnd="4dp"
-            android:buttonTint="#FFC107"
-            android:textColor="@color/auto_launch_text"
-            android:visibility="gone"/>
-
         <Button
             android:id="@+id/btn_to_main"
             android:layout_width="wrap_content"

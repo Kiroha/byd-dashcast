@@ -34,20 +34,44 @@ public class ClusterInputForwarder {
     private static final String TAG = "ClusterInputForwarder";
     private static final int INJECT_INPUT_EVENT_MODE_ASYNC = 0;
 
-    private int mClusterWidth      = 1920;
-    private int mClusterHeight     = 720;  // Confirmed: cluster VirtualDisplay is 1920×720 (dumpsys window 03/05/2026)
-    private int mClusterDisplayId  = 1;   // Cluster display ID (routing for API 29)
+    // 1.2.29 — volatile: setClusterDisplay()/setDaemonBinder() run on the main
+    // thread, but injectTouchAt*/injectKey() can be invoked from the touch
+    // dispatcher thread on DL5 (multi-display routing) at 60-120 events/s.
+    // Without volatile, a stale read (esp. mDaemonBinder == null after a fresh
+    // set) silently drops events to the local path with no INJECT_EVENTS perm.
+    private volatile int mClusterWidth      = 1920;
+    private volatile int mClusterHeight     = 720;  // Confirmed: cluster VirtualDisplay is 1920×720 (dumpsys window 03/05/2026)
+    private volatile int mClusterDisplayId  = 1;   // Cluster display ID (routing for API 29)
 
     /** MirrorDaemon Binder — if non-null, events are routed through uid=2000. */
-    private IBinder mDaemonBinder = null;
+    private volatile IBinder mDaemonBinder = null;
 
     private Object mInputManager;
     private Method mInjectMethod;
-    private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event
+    private Method mSetDisplayIdMethod = null; // cached to avoid reflection on every event (MotionEvent)
+    private Method mSetDisplayIdKeyMethod = null; // v1.2.11 — KeyEvent.setDisplayId (route keys to cluster display)
     private boolean mAvailable = false;
-    private long mTouchDownTime = 0L;
+    private volatile long mTouchDownTime = 0L;
+
+    // 1.2.31 — pre-allocated pointer arrays reused across touch events.
+    // Constraint: passed to MotionEvent.obtain(...) which only reads the first
+    // `pointerCount` entries (AOSP nativeInitialize copies the data → safe to
+    // reuse the arrays). Cap at MAX_POINTERS=16 (= Android InputDispatcher max).
+    // Access serialised via mTouchInjectLock since cluster touch can be driven
+    // by the UI thread (mirror onTouch) AND by Beta diagnostic probes on worker
+    // threads.
+    private static final int MAX_POINTERS = 16;
+    private final Object mTouchInjectLock = new Object();
+    private final MotionEvent.PointerProperties[] mProps  = new MotionEvent.PointerProperties[MAX_POINTERS];
+    private final MotionEvent.PointerCoords[]     mCoords = new MotionEvent.PointerCoords[MAX_POINTERS];
 
     public ClusterInputForwarder(Context context) {
+        // 1.2.31 — pre-fill the pointer scratch arrays so injectTouchAtMulti
+        // never has to allocate during a touch burst.
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            mProps[i]  = new MotionEvent.PointerProperties();
+            mCoords[i] = new MotionEvent.PointerCoords();
+        }
         try {
             // InputManager.getInstance() is a @hide method since API 16
             Class<?> imClass = Class.forName("android.hardware.input.InputManager");
@@ -68,6 +92,13 @@ public class ClusterInputForwarder {
             } catch (Exception ignored) {
                 // @hide API not available on this ROM — injection without displayId
             }
+            // v1.2.11 — same for KeyEvent so injected keys reach the cluster display
+            // (otherwise they target the globally focused window on display 0 →
+            // our own KeyboardBridgeActivity swallows them, cluster app gets nothing).
+            try {
+                mSetDisplayIdKeyMethod = KeyEvent.class.getDeclaredMethod("setDisplayId", int.class);
+                mSetDisplayIdKeyMethod.setAccessible(true);
+            } catch (Exception ignored) { /* not available on this ROM */ }
 
             mAvailable = true;
             AppLogger.i(TAG, "InputManager injection: available");
@@ -130,77 +161,90 @@ public class ClusterInputForwarder {
                                     final int actionMasked,
                                     final int actionIndex,
                                     final int pointerCount) {
-        if (actionMasked == MotionEvent.ACTION_DOWN || mTouchDownTime == 0L) {
-            mTouchDownTime = SystemClock.uptimeMillis();
-        }
-        long now = SystemClock.uptimeMillis();
-        int safeActionIndex = Math.max(0, Math.min(actionIndex, pointerCount - 1));
-        int action;
-        if (actionMasked == MotionEvent.ACTION_POINTER_DOWN
-                || actionMasked == MotionEvent.ACTION_POINTER_UP) {
-            action = actionMasked | (safeActionIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
-        } else {
-            action = actionMasked;
-        }
-
-        MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[pointerCount];
-        MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[pointerCount];
-        for (int i = 0; i < pointerCount; i++) {
-            props[i] = new MotionEvent.PointerProperties();
-            props[i].id = pointerIds[i];
-            props[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
-
-            coords[i] = new MotionEvent.PointerCoords();
-            coords[i].x = clusterXs[i];
-            coords[i].y = clusterYs[i];
-            coords[i].pressure = 1.0f;
-            coords[i].size = 1.0f;
-        }
-
-        // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
-        if (mDaemonBinder != null) {
-            MotionEvent ev = MotionEvent.obtain(
-                    mTouchDownTime, now, action, pointerCount, props, coords,
-                    0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-            Parcel data = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
-                data.writeParcelable(ev, 0);
-                mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
-                        data, null, android.os.IBinder.FLAG_ONEWAY);
-            } catch (Exception e) {
-                AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
-            } finally {
-                data.recycle();
-                ev.recycle();
+        // 1.2.31 — reuse pre-allocated mProps / mCoords. Cap pointerCount at
+        // MAX_POINTERS so a malformed caller can never overrun the scratch arrays.
+        final int n = Math.min(pointerCount, MAX_POINTERS);
+        synchronized (mTouchInjectLock) {
+            if (actionMasked == MotionEvent.ACTION_DOWN || mTouchDownTime == 0L) {
+                mTouchDownTime = SystemClock.uptimeMillis();
             }
-            return;
-        }
+            long now = SystemClock.uptimeMillis();
+            int safeActionIndex = Math.max(0, Math.min(actionIndex, n - 1));
+            int action;
+            if (actionMasked == MotionEvent.ACTION_POINTER_DOWN
+                    || actionMasked == MotionEvent.ACTION_POINTER_UP) {
+                action = actionMasked | (safeActionIndex << MotionEvent.ACTION_POINTER_INDEX_SHIFT);
+            } else {
+                action = actionMasked;
+            }
 
-        if (!mAvailable) return;
+            for (int i = 0; i < n; i++) {
+                MotionEvent.PointerProperties p = mProps[i];
+                p.clear();
+                p.id = pointerIds[i];
+                p.toolType = MotionEvent.TOOL_TYPE_FINGER;
 
-        MotionEvent ev = MotionEvent.obtain(
-                mTouchDownTime, now, action, pointerCount, props, coords,
-                0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-        try {
-            // setDisplayId is a @hide API — using the Method cached in the constructor
-            if (mSetDisplayIdMethod != null) {
+                MotionEvent.PointerCoords c = mCoords[i];
+                c.clear();
+                c.x = clusterXs[i];
+                c.y = clusterYs[i];
+                c.pressure = 1.0f;
+                c.size = 1.0f;
+            }
+
+            try {
+                // Preferred path: daemon uid=2000 (INJECT_EVENTS guaranteed)
+                if (mDaemonBinder != null) {
+                    MotionEvent ev = null;
+                    Parcel data = null;
+                    try {
+                        ev = MotionEvent.obtain(
+                                mTouchDownTime, now, action, n, mProps, mCoords,
+                                0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                        data = Parcel.obtain();
+                        data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                        data.writeParcelable(ev, 0);
+                        mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_MOTION,
+                                data, null, android.os.IBinder.FLAG_ONEWAY);
+                    } catch (Exception e) {
+                        AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
+                    } finally {
+                        if (data != null) data.recycle();
+                        if (ev != null) ev.recycle();
+                    }
+                    return;
+                }
+
+                if (!mAvailable) return;
+
+                MotionEvent ev = null;
                 try {
-                    mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
+                    ev = MotionEvent.obtain(
+                            mTouchDownTime, now, action, n, mProps, mCoords,
+                            0, 0, 1.0f, 1.0f, -1, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+                    // setDisplayId is a @hide API — using the Method cached in the constructor
+                    if (mSetDisplayIdMethod != null) {
+                        try {
+                            mSetDisplayIdMethod.invoke(ev, mClusterDisplayId);
+                        } catch (Exception e) {
+                            AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
+                        }
+                    }
+                    mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
                 } catch (Exception e) {
-                    AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.getMessage());
+                    AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
+                            + " ptrs=" + n + " disp=" + mClusterDisplayId, e);
+                } finally {
+                    if (ev != null) ev.recycle();
+                }
+            } finally {
+                // Audit batch 1 — applies to both daemon and direct paths so
+                // mTouchDownTime never carries over between gestures (was
+                // previously skipped on the daemon-return early-out).
+                if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
+                    mTouchDownTime = 0L;
                 }
             }
-            mInjectMethod.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC);
-        } catch (Exception e) {
-            AppLogger.e(TAG, "injectTouchAtMulti failed action=" + actionMasked
-                    + " ptrs=" + pointerCount + " disp=" + mClusterDisplayId, e);
-        } finally {
-            ev.recycle();
-        }
-
-        if (actionMasked == MotionEvent.ACTION_UP || actionMasked == MotionEvent.ACTION_CANCEL) {
-            mTouchDownTime = 0L;
         }
     }
 
@@ -237,10 +281,60 @@ public class ClusterInputForwarder {
         try {
             KeyEvent down = new KeyEvent(now, now,     KeyEvent.ACTION_DOWN, keyCode, 0);
             KeyEvent up   = new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0);
+            // 1.2.30 — mirror the injectKeyEvent() direct path: route to the
+            // cluster display so the cluster-side focused window receives the
+            // key (BACK/HOME used to go to display 0 on the no-daemon path).
+            if (mSetDisplayIdKeyMethod != null) {
+                try {
+                    mSetDisplayIdKeyMethod.invoke(down, mClusterDisplayId);
+                    mSetDisplayIdKeyMethod.invoke(up,   mClusterDisplayId);
+                } catch (Exception ignored) { /* inject anyway */ }
+            }
             mInjectMethod.invoke(mInputManager, down, INJECT_INPUT_EVENT_MODE_ASYNC);
             mInjectMethod.invoke(mInputManager, up,   INJECT_INPUT_EVENT_MODE_ASYNC);
         } catch (Exception e) {
             AppLogger.e(TAG, "Key inject failed", e);
+        }
+    }
+
+    /**
+     * Injects a fully-formed KeyEvent (with meta state, scan code, source, etc.).
+     * Used by KeyboardBridgeActivity to forward typed characters produced by
+     * {@link android.view.KeyCharacterMap#getEvents(char[])} (which includes
+     * SHIFT/ALT for uppercase and symbols).
+     *
+     * @since v1.2.8
+     */
+    public void injectKeyEvent(KeyEvent kev) {
+        if (kev == null) return;
+        // Preferred path: daemon uid=2000
+        if (mDaemonBinder != null) {
+            try {
+                Parcel data = Parcel.obtain();
+                try {
+                    data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                    data.writeParcelable(kev, 0);
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                            data, null, android.os.IBinder.FLAG_ONEWAY);
+                } finally {
+                    data.recycle();
+                }
+            } catch (Exception e) {
+                AppLogger.e(TAG, "injectKeyEvent via daemon failed", e);
+            }
+            return;
+        }
+        if (!mAvailable) return;
+        try {
+            // v1.2.11 — route to the cluster display so the cluster-side focused
+            // window receives the key (not our own EditText on display 0).
+            if (mSetDisplayIdKeyMethod != null) {
+                try { mSetDisplayIdKeyMethod.invoke(kev, mClusterDisplayId); }
+                catch (Exception ignored) { /* inject anyway */ }
+            }
+            mInjectMethod.invoke(mInputManager, kev, INJECT_INPUT_EVENT_MODE_ASYNC);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "injectKeyEvent direct failed", e);
         }
     }
 

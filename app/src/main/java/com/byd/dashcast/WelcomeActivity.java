@@ -72,6 +72,10 @@ public class WelcomeActivity extends AppCompatActivity {
 
     private void setLanguageButton(int buttonId, final String lang) {
         Button button = (Button) findViewById(buttonId);
+        // 1.2.30 — defensive null-check: a future layout variant (values-en/, values-ar/,
+        // or any per-locale res qualifier) could omit one of the language buttons,
+        // and findViewById would silently return null → NPE on setOnClickListener.
+        if (button == null) return;
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

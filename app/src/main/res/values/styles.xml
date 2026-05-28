@@ -47,6 +47,26 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <!--
+        v1.2.16 — KeyboardBridge theme. Must be *floating* so that
+        Window.setLayout(wPx,hPx) + Gravity.BOTTOM|END are honoured;
+        Theme.Translucent.NoTitleBar (used up to v1.2.15) is translucent
+        but NOT floating, so the window was forced full-screen, the
+        EditText was measured 330×0 px and IMM rejected it with
+        "is not served". A Dialog-derived theme has windowIsFloating=true
+        which lets the window actually be 220×48 dp pinned bottom-right.
+    -->
+    <style name="KeyboardBridgeTheme" parent="@android:style/Theme.DeviceDefault.Dialog">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- ===== v0.9.82 — SysInfo M3 redesign ===== -->
     <style name="SysInfoSectionHead">
         <item name="android:layout_width">match_parent</item>

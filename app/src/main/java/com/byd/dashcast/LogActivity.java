@@ -127,6 +127,8 @@ public class LogActivity extends AppCompatActivity {
         if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new Intent(this, DiagActivity.class)); finish(); });
         if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
         if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new Intent(this, MainActivity.class)); finish(); });
+        // v1.2.44 — Hotspot navrail entry (DL3 + use_own_sim runtime-gated)
+        NavRailHotspot.apply(this, R.id.nav_hotspot_log, true);
     }
 
     @Override
@@ -203,16 +205,14 @@ public class LogActivity extends AppCompatActivity {
         mLastEntryCount = entries.size();
         mLastFilterKey  = filterKey;
 
-        // Counts per level (from full buffer, ignoring text filter)
-        int cAll = entries.size(), cInfo = 0, cWarn = 0, cErr = 0;
-        for (AppLogger.Entry e : entries) {
-            switch (e.level) {
-                case INFO:  cInfo++; break;
-                case WARN:  cWarn++; break;
-                case ERROR: cErr++;  break;
-                default: break;
-            }
-        }
+        // 1.2.31 — counts per level (full buffer, ignoring text filter) read
+        // from incremental counters maintained in AppLogger → no more O(N)
+        // walk at 2 Hz just for the chip totals.
+        int[] cnts = AppLogger.getCountByLevel();
+        int cAll  = entries.size();
+        int cInfo = cnts[AppLogger.Level.INFO.ordinal()];
+        int cWarn = cnts[AppLogger.Level.WARN.ordinal()];
+        int cErr  = cnts[AppLogger.Level.ERROR.ordinal()];
         mChipAll.setText(getString(R.string.log_chip_all, cAll));
         mChipInfo.setText(getString(R.string.log_chip_info, cInfo));
         mChipWarn.setText(getString(R.string.log_chip_warn, cWarn));

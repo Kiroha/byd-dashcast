@@ -183,6 +183,74 @@
             android:textColor="@color/md_on_surface"/>
     </LinearLayout>
 
+    <!-- v1.2.71 — Action: Resize & move (only shown when app is on the cluster) -->
+    <LinearLayout
+        android:id="@+id/sheet_action_resize"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_aspect_ratio"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_on_surface"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_resize_move"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+    </LinearLayout>
+
+    <!-- v1.2.81 — Action: Cluster DPI override (per-app, cluster display only) -->
+    <LinearLayout
+        android:id="@+id/sheet_action_dpi"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_aspect_ratio"
+            android:layout_marginEnd="20dp"
+            android:tint="@color/md_on_surface"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="@string/sheet_cluster_dpi"
+            android:textSize="15sp"
+            android:textColor="@color/md_on_surface"/>
+
+        <TextView
+            android:id="@+id/sheet_dpi_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="@color/md_on_surface_variant"
+            tools:ignore="HardcodedText"
+            android:text=""/>
+    </LinearLayout>
+
     <!-- Action: Force stop -->
     <LinearLayout
         android:id="@+id/sheet_action_kill"

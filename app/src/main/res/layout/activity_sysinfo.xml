@@ -111,6 +111,23 @@
             </LinearLayout>
 
             <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+
+            <!-- v1.2.44 — Hotspot (DL3 + use_own_sim runtime-gated, wired by NavRailHotspot.apply) -->
+            <LinearLayout
+                android:id="@+id/nav_hotspot_sys"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingTop="6dp" android:paddingBottom="6dp"
+                android:visibility="gone"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground">
+                <ImageView android:layout_width="56dp" android:layout_height="32dp" android:padding="4dp"
+                    android:scaleType="fitCenter" android:tint="@color/md_on_surface_variant"
+                    android:src="@drawable/ic_wifi_tethering" android:contentDescription="@string/main_nav_hotspot"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="@string/main_nav_hotspot"
+                    android:textSize="11sp" android:textColor="@color/md_on_surface_variant"/>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ════ MAIN AREA ════ -->
@@ -161,6 +178,16 @@
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_share"
                     android:enabled="false"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_reboot"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/sysinfo_btn_reboot"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_restart_alt"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_generate"

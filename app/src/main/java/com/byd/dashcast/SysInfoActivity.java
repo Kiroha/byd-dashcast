@@ -107,6 +107,17 @@ public class SysInfoActivity extends AppCompatActivity {
             }
         });
 
+        // v1.2.76 — Reboot button: clean tablet reboot via ADB-shell `reboot`
+        // (uid=2000 has the perm), so the user doesn't have to long-press the
+        // volume button for 10 s. Behind a confirmation dialog because it
+        // tears down the whole car HMI.
+        Button btnReboot = (Button) findViewById(R.id.btn_reboot);
+        if (btnReboot != null) {
+            btnReboot.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { confirmAndReboot(); }
+            });
+        }
+
         // ─── v0.9.82 — M3 redesign wiring ───
         wireSysInfoNavRail();
         populateOverviewTiles();
@@ -346,6 +357,34 @@ public class SysInfoActivity extends AppCompatActivity {
             // Recent events at the very end (mockup-faithful colored block).
             appendRecentEvents(sb, 5);
 
+            // v1.2.78 — Couche 4: BetaProxy persistent recovery metrics. Useful
+            // to spot long-term drift (binder zombies, fails_no_apk spikes…)
+            // without having to scrape the LogActivity buffer.
+            section(sb, "9. BETA PROXY METRICS");
+            sb.append(com.byd.dashcast.beta.BetaProxyMetrics.snapshot(this)).append('\n');
+
+            // v1.2.81 — per-app cluster DPI overrides currently configured.
+            section(sb, "10. CLUSTER DPI OVERRIDES");
+            java.util.Map<String, Integer> dpiMap =
+                    com.byd.dashcast.cluster.ClusterDpiPrefs.snapshot(this);
+            if (dpiMap.isEmpty()) {
+                sb.append("(none)\n");
+            } else {
+                for (java.util.Map.Entry<String, Integer> e : dpiMap.entrySet()) {
+                    sb.append(String.format("%-50s = %d dpi\n", e.getKey(), e.getValue()));
+                }
+            }
+            java.util.Map<Integer, Integer> cache =
+                    com.byd.dashcast.cluster.ClusterDpiManager.cacheSnapshot();
+            if (!cache.isEmpty()) {
+                sb.append("\nApplied right now:\n");
+                for (java.util.Map.Entry<Integer, Integer> e : cache.entrySet()) {
+                    sb.append(String.format("  display %d → %d dpi\n",
+                            e.getKey(), e.getValue()));
+                }
+            }
+            sb.append('\n');
+
             sb.append("\n=== END OF REPORT ===\n");
             return sb.toString();
     }
@@ -357,7 +396,7 @@ public class SysInfoActivity extends AppCompatActivity {
     private void saveReport() {
         if (mReport == null) return;
 
-        String filename = "byd_report_"
+        final String filename = "byd_report_"
                 + SDF_FILE_STAMP.get().format(new Date())
                 + ".txt";
 
@@ -370,21 +409,38 @@ public class SysInfoActivity extends AppCompatActivity {
         }
         if (!outDir.exists()) outDir.mkdirs();
 
-        File outFile = new File(outDir, filename);
-        try (FileWriter fw = new FileWriter(outFile)) {
-            fw.write(mReport.toString());
-        } catch (IOException e) {
-            Toast.makeText(this, getString(R.string.toast_write_error, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        Toast.makeText(this,
-                getString(R.string.toast_report_saved, outFile.getAbsolutePath()),
-                Toast.LENGTH_LONG).show();
-
-        // Display the path in the report itself
-        tvReport.append(getString(R.string.sysinfo_file_saved, outFile.getAbsolutePath()));
+        final File outFile = new File(outDir, filename);
+        final String payload = mReport.toString();
+        // 1.2.30 — file write moved off the UI thread (StrictMode disk write +
+        // potential ANR if /sdcard is slow on DL2/DL5).
+        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "sysinfo-save");
+            t.setDaemon(true);
+            return t;
+        }).submit(new Runnable() { @Override public void run() {
+            String error = null;
+            try (FileWriter fw = new FileWriter(outFile)) {
+                fw.write(payload);
+            } catch (IOException e) {
+                error = e.getMessage();
+            }
+            final String err = error;
+            runOnUiThread(new Runnable() { @Override public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                if (err != null) {
+                    Toast.makeText(SysInfoActivity.this,
+                            getString(R.string.toast_write_error, err),
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Toast.makeText(SysInfoActivity.this,
+                        getString(R.string.toast_report_saved, outFile.getAbsolutePath()),
+                        Toast.LENGTH_LONG).show();
+                if (tvReport != null) {
+                    tvReport.append(getString(R.string.sysinfo_file_saved, outFile.getAbsolutePath()));
+                }
+            }});
+        }});
     }
 
     // =========================================================================
@@ -409,20 +465,31 @@ public class SysInfoActivity extends AppCompatActivity {
         int cOk   = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_ok);
         int cWarn = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_warn);
         int cErr  = androidx.core.content.ContextCompat.getColor(this, R.color.md_status_err);
-        applyRegex(ssb, "═══ [^═]+ ═══",                       cPrim, true);
-        applyRegex(ssb, "\\b(GRANTED|OPEN|RUN|CONN|YES)\\b",   cOk,   true);
-        applyRegex(ssb, "✓",                                    cOk,   true);
-        applyRegex(ssb, "\\b(DENIED|closed|OFF|NO)\\b",        cWarn, true);
-        applyRegex(ssb, "✗",                                    cWarn, true);
-        applyRegex(ssb, "\\[I\\]",                              cOk,   true);
-        applyRegex(ssb, "\\[W\\]",                              cWarn, true);
-        applyRegex(ssb, "\\[E\\]",                              cErr,  true);
+        applyPattern(ssb, P_SECTION,  cPrim, true);
+        applyPattern(ssb, P_OK_WORDS, cOk,   true);
+        applyPattern(ssb, P_OK_TICK,  cOk,   true);
+        applyPattern(ssb, P_WARN_WORDS, cWarn, true);
+        applyPattern(ssb, P_WARN_CROSS, cWarn, true);
+        applyPattern(ssb, P_TAG_I,    cOk,   true);
+        applyPattern(ssb, P_TAG_W,    cWarn, true);
+        applyPattern(ssb, P_TAG_E,    cErr,  true);
         return ssb;
     }
 
-    private static void applyRegex(android.text.SpannableStringBuilder ssb,
-                                   String regex, int color, boolean bold) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile(regex).matcher(ssb);
+    // 1.2.30 — patterns pre-compiled once; previously Pattern.compile() ran 8x
+    // on every refresh of the report TextView (auto-refresh = perceptible jank).
+    private static final java.util.regex.Pattern P_SECTION    = java.util.regex.Pattern.compile("═══ [^═]+ ═══");
+    private static final java.util.regex.Pattern P_OK_WORDS   = java.util.regex.Pattern.compile("\\b(GRANTED|OPEN|RUN|CONN|YES)\\b");
+    private static final java.util.regex.Pattern P_OK_TICK    = java.util.regex.Pattern.compile("✓");
+    private static final java.util.regex.Pattern P_WARN_WORDS = java.util.regex.Pattern.compile("\\b(DENIED|closed|OFF|NO)\\b");
+    private static final java.util.regex.Pattern P_WARN_CROSS = java.util.regex.Pattern.compile("✗");
+    private static final java.util.regex.Pattern P_TAG_I      = java.util.regex.Pattern.compile("\\[I\\]");
+    private static final java.util.regex.Pattern P_TAG_W      = java.util.regex.Pattern.compile("\\[W\\]");
+    private static final java.util.regex.Pattern P_TAG_E      = java.util.regex.Pattern.compile("\\[E\\]");
+
+    private static void applyPattern(android.text.SpannableStringBuilder ssb,
+                                     java.util.regex.Pattern p, int color, boolean bold) {
+        java.util.regex.Matcher m = p.matcher(ssb);
         while (m.find()) {
             ssb.setSpan(new android.text.style.ForegroundColorSpan(color),
                     m.start(), m.end(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -610,6 +677,8 @@ public class SysInfoActivity extends AppCompatActivity {
         if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new android.content.Intent(this, DiagActivity.class)); finish(); });
         if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
         if (navLogo != null)     navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        // v1.2.44 — Hotspot navrail entry (DL3 + use_own_sim runtime-gated)
+        NavRailHotspot.apply(this, R.id.nav_hotspot_sys, true);
     }
 
     private void populateOverviewTiles() {
@@ -772,6 +841,81 @@ public class SysInfoActivity extends AppCompatActivity {
         }
     }
 
+    /** v1.2.78 — manual recovery: always replays sendInfo(30) → 3s → sendInfo(16) → 3s →
+     *  sendInfo(0) regardless of the current projection state. Useful when Qt is in an
+     *  inconsistent state and the warm/fast path detection missed the bus. */
+    private void replayProjectionSlowPath() {
+        Toast.makeText(this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+        AppLogger.log("SysInfoActivity", "Projection slow-path replay: 30→3s→16→3s→0");
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        AdbLocalClient.sendInfo(this, 1000, 30, "", new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.log("SysInfoActivity", "replay cmd=30 OK: " + out);
+                h.postDelayed(new Runnable() { @Override public void run() {
+                    AdbLocalClient.sendInfo(SysInfoActivity.this, 1000, 16, "", new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out2) {
+                            AppLogger.log("SysInfoActivity", "replay cmd=16 OK: " + out2);
+                            h.postDelayed(new Runnable() { @Override public void run() {
+                                AdbLocalClient.sendInfo(SysInfoActivity.this, 1000, 0, "", new AdbLocalClient.Callback() {
+                                    @Override public void onSuccess(String out3) {
+                                        AppLogger.log("SysInfoActivity", "replay cmd=0 OK: " + out3);
+                                        // Sync the projection-mode flag: the manual replay just put Qt back
+                                        // into projection, so the next activate() can take the true fast path.
+                                        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionActive();
+                                        // v1.2.82 — re-init ClusterService so its DashboardLauncher
+                                        // re-discovers the cluster display. Without this, after a prior
+                                        // stopProjectionNoAdb() the launcher kept displayId=-1 and any
+                                        // subsequent moveTaskToDisplay → SecurityException launchDisplayId=-2.
+                                        // ClusterManager.activateClusterDisplay() will take the true fast
+                                        // path (VD already up + flag now true) → instant onClusterDisplayConnected
+                                        // → mLauncher.setDashboardDisplayId(realId).
+                                        try {
+                                            ClusterService inst = ClusterService.getInstance();
+                                            if (inst != null) {
+                                                inst.restartProjection();
+                                            } else {
+                                                android.content.Intent svc = new android.content.Intent(
+                                                        SysInfoActivity.this, ClusterService.class);
+                                                startForegroundService(svc);
+                                            }
+                                        } catch (Throwable t) {
+                                            AppLogger.w("SysInfoActivity",
+                                                    "replay: ClusterService re-init failed: " + t.getMessage());
+                                        }
+                                        runOnUiThread(new Runnable() { @Override public void run() {
+                                            if (!mDestroyed) populateServicesList();
+                                        }});
+                                    }
+                                    @Override public void onError(String err) {
+                                        AppLogger.w("SysInfoActivity", "replay cmd=0 ERR: " + err);
+                                        runOnUiThread(new Runnable() { @Override public void run() {
+                                            if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                                    R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                                        }});
+                                    }
+                                });
+                            }}, 3000L);
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w("SysInfoActivity", "replay cmd=16 ERR: " + err);
+                            runOnUiThread(new Runnable() { @Override public void run() {
+                                if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                        R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            }});
+                        }
+                    });
+                }}, 3000L);
+            }
+            @Override public void onError(String err) {
+                AppLogger.w("SysInfoActivity", "replay cmd=30 ERR: " + err);
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                            R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                }});
+            }
+        });
+    }
+
     private void populateServicesList() {
         android.widget.LinearLayout container = findViewById(R.id.ll_services_list);
         if (container == null) return;
@@ -787,13 +931,52 @@ public class SysInfoActivity extends AppCompatActivity {
         } else {
             clusterSub = getString(R.string.sysinfo_svc_stopped);
         }
-        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false);
+        addServiceRow(inf, container, "ClusterService", clusterSub, clusterRunning, false,
+                clusterRunning ? null : new Runnable() { @Override public void run() {
+                    // v1.2.76 — tap on the leading icon when stopped: restart the service
+                    // (foreground), then refresh the panel after a short settle delay so the
+                    // user sees the new state without leaving the screen.
+                    try {
+                        android.content.Intent i = new android.content.Intent(SysInfoActivity.this, ClusterService.class);
+                        startForegroundService(i);
+                        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                        AppLogger.w("SysInfoActivity", "ClusterService restart failed: " + t.getMessage());
+                    }
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() { @Override public void run() {
+                        if (!mDestroyed) populateServicesList();
+                    }}, 1500L);
+                }});
 
         // MirrorDaemon — separate process started via ADB (uid=2000); pid via pgrep.
         final View mirrorRow = addServiceRow(inf, container, "MirrorDaemon",
                 clusterRunning ? getString(R.string.sysinfo_svc_mirror_sub)
                                : getString(R.string.sysinfo_svc_stopped),
-                clusterRunning, false);
+                clusterRunning, false,
+                clusterRunning ? null : new Runnable() { @Override public void run() {
+                    // v1.2.76 — MirrorDaemon restart: BetaProxyClient.connect() triggers the
+                    // full ADB bootstrap (re-spawn app_process64 under uid 2000) when the
+                    // daemon process is dead. Run off the UI thread because connect() does I/O.
+                    Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() { @Override public void run() {
+                        final boolean ok;
+                        try {
+                            ok = com.byd.dashcast.beta.BetaProxyClient.connect(getApplicationContext());
+                        } catch (Throwable t) {
+                            AppLogger.w("SysInfoActivity", "MirrorDaemon restart failed: " + t.getMessage());
+                            runOnUiThread(new Runnable() { @Override public void run() {
+                                if (!mDestroyed) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            }});
+                            return;
+                        }
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed) return;
+                            if (!ok) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            populateServicesList();
+                        }});
+                    }}, "sysinfo-mirror-restart").start();
+                }});
         if (clusterRunning && mirrorRow != null) {
             // Run pgrep off the main thread to avoid StrictMode disk/exec on UI.
             new Thread(new Runnable() { @Override public void run() {
@@ -807,12 +990,25 @@ public class SysInfoActivity extends AppCompatActivity {
             }}, "sysinfo-pidof").start();
         }
 
+        // Projection state (v1.2.78) — reflects ClusterManager.sQtInProjectionMode, which is
+        // independent of the VirtualDisplay lifecycle. Tap always replays the slow path
+        // sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(0) regardless of current state,
+        // as a manual recovery for cases where the warm/fast path missed Qt's state.
+        final boolean projOn = com.byd.dashcast.dashboard.ClusterManager.isQtInProjectionMode();
+        addServiceRow(inf, container, getString(R.string.sysinfo_svc_projection),
+                getString(R.string.sysinfo_svc_projection_sub),
+                projOn, false,
+                new Runnable() { @Override public void run() {
+                    replayProjectionSlowPath();
+                }},
+                true /* alwaysClickable */);
+
         // ADB local — real probe via Dadb (executeShellWithResult). Port 5555 may be
         // open but the ADB handshake/auth still failing → only an actual shell call
         // proves AdbLocalClient is truly connected.
         final View adbRow = addServiceRow(inf, container, "AdbLocalClient",
                 getString(R.string.sysinfo_svc_adb_unreachable),
-                false, true /* useConnBadge */);
+                false, true /* useConnBadge */, null /* no manual restart, runs by need */);
         AdbLocalClient.executeShellWithResult(this, "echo ok",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String report) {
@@ -829,18 +1025,127 @@ public class SysInfoActivity extends AppCompatActivity {
                         }});
                     }
                 });
+
+        // v1.2.35 — DL5-only: surface the global `force_resizable_activities`
+        // developer-option setting and allow toggling it. Past DashCast builds
+        // (v1.2.32 – v1.2.34) set it to 1 to make non-resizable navigation apps
+        // honor freeform bounds on the cluster, but never reset it, which made
+        // BYD head-unit apps (e.g. 360° camera) wrongly split-screen capable.
+        // ClusterService.onCreate() now resets it back to 0 on DL5; this row
+        // lets the user confirm the current value and toggle it manually.
+        // DL2/3/4 don't show this row.
+        if (AdbLocalClient.isDiLink5Safe(this)) {
+            final View frRow = addServiceRow(inf, container,
+                    getString(R.string.sysinfo_svc_force_resizable),
+                    getString(R.string.sysinfo_svc_force_resizable_checking),
+                    false /* probed asynchronously */, false,
+                    new Runnable() { @Override public void run() {
+                        toggleForceResizable();
+                    }},
+                    true /* alwaysClickable */);
+            probeForceResizable(frRow);
+        }
     }
 
-    /** Adds one service row; returns the row view so the caller can later toggle state. */
+    /** v1.2.35 — DL5 only. Reads `settings global force_resizable_activities`
+     *  and updates the given row to reflect the current value. */
+    private void probeForceResizable(final View row) {
+        AdbLocalClient.executeShellWithResult(this,
+                "settings get global force_resizable_activities",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        final String val = out == null ? "" : out.trim();
+                        final boolean on = "1".equals(val);
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || row == null) return;
+                            String shown = (val.isEmpty() || "null".equals(val)) ? "0" : val;
+                            String sub = getString(R.string.sysinfo_svc_force_resizable_sub,
+                                    shown);
+                            setServiceRowState(row, on, false, sub);
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed || row == null) return;
+                            setServiceRowState(row, false, false,
+                                    getString(R.string.sysinfo_svc_adb_unreachable));
+                        }});
+                    }
+                });
+    }
+
+    /** v1.2.35 — DL5 only. Reads the current value, writes the opposite, then
+     *  refreshes the whole services list to confirm the new state. */
+    private void toggleForceResizable() {
+        if (!AdbLocalClient.isDiLink5Safe(this)) return;
+        Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started,
+                Toast.LENGTH_SHORT).show();
+        AdbLocalClient.executeShellWithResult(this,
+                "v=$(settings get global force_resizable_activities); "
+                + "if [ \"$v\" = \"1\" ]; then "
+                + "  settings put global force_resizable_activities 0 2>&1; echo SET=0; "
+                + "else "
+                + "  settings put global force_resizable_activities 1 2>&1; echo SET=1; "
+                + "fi",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i("SysInfoActivity",
+                                "force_resizable_activities toggle → " + out.trim());
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (!mDestroyed) populateServicesList();
+                        }});
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e("SysInfoActivity",
+                                "force_resizable_activities toggle ERROR: " + err);
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (!mDestroyed) Toast.makeText(SysInfoActivity.this,
+                                    R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                        }});
+                    }
+                });
+    }
+
+    /** Adds one service row; returns the row view so the caller can later toggle state.
+     *  When {@code onRestart} is non-null AND the service is not running, the leading
+     *  icon becomes clickable to trigger {@code onRestart} (v1.2.76). */
     private View addServiceRow(android.view.LayoutInflater inf,
                                android.widget.LinearLayout container,
-                               String name, String sub, boolean running, boolean useConnBadge) {
+                               String name, String sub, boolean running, boolean useConnBadge,
+                               final Runnable onRestart) {
+        return addServiceRow(inf, container, name, sub, running, useConnBadge, onRestart,
+                false /* alwaysClickable */);
+    }
+
+    /** v1.2.78 — overload allowing the leading icon to be clickable even when running
+     *  (used by the Projection row where the action is "force replay" regardless of state). */
+    private View addServiceRow(android.view.LayoutInflater inf,
+                               android.widget.LinearLayout container,
+                               String name, String sub, boolean running, boolean useConnBadge,
+                               final Runnable onRestart, boolean alwaysClickable) {
         View row = inf.inflate(R.layout.row_sysinfo, container, false);
         ((android.widget.ImageView) row.findViewById(R.id.row_icon)).setImageResource(R.drawable.ic_play_circle);
         ((TextView) row.findViewById(R.id.row_headline)).setText(name);
         // Tag the row so setServiceRowState() knows which badge variant to use.
         row.setTag(R.id.row_badge, useConnBadge ? Boolean.TRUE : Boolean.FALSE);
         setServiceRowState(row, running, useConnBadge, sub);
+        // v1.2.76 — restart affordance: tap the play-circle leading icon when stopped.
+        View leading = row.findViewById(R.id.row_leading);
+        if (leading != null) {
+            if ((alwaysClickable || !running) && onRestart != null) {
+                leading.setClickable(true);
+                leading.setFocusable(true);
+                leading.setContentDescription(getString(R.string.sysinfo_restart_action));
+                leading.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) { onRestart.run(); }
+                });
+            } else {
+                leading.setClickable(false);
+                leading.setFocusable(false);
+                leading.setOnClickListener(null);
+                leading.setContentDescription(null);
+            }
+        }
         container.addView(row);
         return row;
     }
@@ -877,7 +1182,12 @@ public class SysInfoActivity extends AppCompatActivity {
                     new java.io.InputStreamReader(p.getInputStream()));
             String line = br.readLine();
             br.close();
-            p.waitFor();
+            // 1.2.30 — bounded waitFor: on MTK DL2 ROMs without pgrep, the
+            // child may hang in I/O wait forever. Cap at 2s + destroyForcibly.
+            if (!p.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                p.destroyForcibly();
+                return -1;
+            }
             if (line != null && !line.trim().isEmpty()) {
                 return Integer.parseInt(line.trim());
             }
@@ -903,5 +1213,39 @@ public class SysInfoActivity extends AppCompatActivity {
             // ActivityManager.getRunningServices() returns only own-process services since API 26.
         }
         return false;
+    }
+
+    /**
+     * v1.2.76 — Clean tablet reboot triggered from the System panel header.
+     * Shows a confirmation dialog (the action tears down the whole car HMI),
+     * then dispatches `reboot` via AdbLocalClient. The `reboot` binary is
+     * allowed for uid=2000 (shell) on DiLink and triggers a normal Android
+     * shutdown sequence instead of the hardware long-press combo.
+     */
+    private void confirmAndReboot() {
+        try {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.sysinfo_reboot_title)
+                    .setMessage(R.string.sysinfo_reboot_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.sysinfo_reboot_confirm,
+                            (d, w) -> doReboot())
+                    .show();
+        } catch (Throwable t) {
+            // Fall back to immediate reboot if the dialog can't be shown
+            // (rare — would mean the activity is finishing).
+            doReboot();
+        }
+    }
+
+    private void doReboot() {
+        Toast.makeText(this, R.string.sysinfo_reboot_toast, Toast.LENGTH_SHORT).show();
+        AppLogger.i("SysInfoActivity", "User-initiated reboot via SysInfo panel");
+        try {
+            AdbLocalClient.executeShell(getApplicationContext(), "reboot");
+        } catch (Throwable t) {
+            AppLogger.e("SysInfoActivity", "reboot dispatch failed: " + t.getMessage());
+            Toast.makeText(this, R.string.sysinfo_reboot_failed, Toast.LENGTH_LONG).show();
+        }
     }
 }

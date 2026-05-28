@@ -2,8 +2,10 @@ package com.byd.dashcast;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Display;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +15,10 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
+
+import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * User-facing settings screen.
@@ -50,6 +56,25 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
     public static final String PREF_RECONNECT_POPUP       = "reconnect_popup_enabled";
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
+    // ── Stop Projection behaviour ───────────────────────────────────────────────
+    // false (default) = Stop button restores the origin cluster with the size
+    //                   selected in Settings (sendInfo 29/30/31 + 18 + 0).
+    // true            = quick stop: only sendInfo(18) + sendInfo(0), no size
+    //                   reconfiguration of the original cluster.
+    public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
+    public static final String PREF_USE_OWN_SIM           = "use_own_sim";
+    // v1.2.45 — Compact apps panel : narrows the left apps column to 2 icons
+    // wide so the cluster preview gets more space. Default = false (5 columns,
+    // historical behaviour). Applied live by MainActivity on every onResume,
+    // no activity restart needed.
+    public static final String PREF_COMPACT_APPS_PANEL    = "compact_apps_panel";
+    // v1.2.43 — Hotspot integration prefs (set from HotspotActivity, read at boot)
+    public static final String PREF_HOTSPOT_AUTOSTART_BOOT = "hotspot_autostart_boot";
+    public static final String PREF_HOTSPOT_WATCHDOG       = "hotspot_watchdog_enabled";
+    // ── Auto-start projection on app launch ────────────────────────────────────
+    // v1.2.77 — always on: activateCluster() is invoked automatically when
+    // MainActivity starts and ClusterService is not already running. Saves one
+    // tap on the typical "open app → project" flow. No user-facing toggle.
     // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
     public static final String PREF_RECENT_APPS = "recent_cluster_apps";
     // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
@@ -64,6 +89,8 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnApply;
     private Button      btnReset;
     private TextView    tvResult;
+    private View        tvOverscanSectionTitle;
+    private View        cardOverscan;
     // Note: fields below are typed as CompoundButton so the layout can use either
     // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
@@ -72,6 +99,13 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbBootAutoStart;
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
+    private CompoundButton cbQuickStop;
+    private CompoundButton cbUseOwnSim;
+    private CompoundButton cbCompactAppsPanel;
+    private CompoundButton cbBetaProxyDaemon;
+    private CompoundButton cbBetaSystemContext;
+    private CompoundButton swDilink5Mode;
+    private TextView tvBetaDilink5Support;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -93,6 +127,7 @@ public class SettingsActivity extends AppCompatActivity {
         loadPreferences();
         wireListeners();
         wireSettingsNavRail();
+        applyDiLink2OverscanGuard();
 
         // Mockup top-bar Apply button: mirrors the in-card Apply action.
         View btnApplyTop = findViewById(R.id.btn_apply_top);
@@ -136,7 +171,7 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(intent);
         } catch (Exception e) {
             android.widget.Toast.makeText(this,
-                    "Aucun navigateur disponible pour ouvrir " + url,
+                    getString(R.string.settings_no_browser_fmt, url),
                     android.widget.Toast.LENGTH_LONG).show();
         }
     }
@@ -169,6 +204,8 @@ public class SettingsActivity extends AppCompatActivity {
         if (navSysinfo != null) navSysinfo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, SysInfoActivity.class)); finish(); });
         if (navLog != null)     navLog.setOnClickListener(v -> { startActivity(new android.content.Intent(this, LogActivity.class)); finish(); });
         if (navLogo != null)    navLogo.setOnClickListener(v -> { startActivity(new android.content.Intent(this, MainActivity.class)); finish(); });
+        // v1.2.44 — Hotspot navrail entry (DL3 + use_own_sim runtime-gated)
+        NavRailHotspot.apply(this, R.id.nav_hotspot_set, true);
     }
 
     private void bindViews() {
@@ -180,6 +217,8 @@ public class SettingsActivity extends AppCompatActivity {
         btnApply      = findViewById(R.id.btn_apply_overscan);
         btnReset      = findViewById(R.id.btn_reset_overscan);
         tvResult      = findViewById(R.id.tv_overscan_result);
+        tvOverscanSectionTitle = findViewById(R.id.tv_overscan_section_title);
+        cardOverscan  = findViewById(R.id.card_overscan);
         cbPrerelease  = findViewById(R.id.cb_prerelease);
         cbVisualMode  = findViewById(R.id.cb_visual_mode);
         cbBootAutoStart = findViewById(R.id.cb_boot_auto_start);
@@ -192,6 +231,13 @@ public class SettingsActivity extends AppCompatActivity {
         flSafeZone    = findViewById(R.id.fl_safe_zone);
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
+        cbQuickStop      = findViewById(R.id.cb_quick_stop);
+        cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
+        cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
+        cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
+        cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
+        swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
+        tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
     }
 
     private void loadPreferences() {
@@ -233,6 +279,39 @@ public class SettingsActivity extends AppCompatActivity {
         // Reconnect popup toggle (default: disabled — users find it intrusive)
         boolean reconnectPopup = prefs.getBoolean(PREF_RECONNECT_POPUP, false);
         cbReconnectPopup.setChecked(reconnectPopup);
+
+        // Quick stop toggle (default: disabled — Stop button restores origin cluster
+        // with size from Settings; when enabled, Stop only sends sendInfo 18 + 0).
+        boolean quickStop = prefs.getBoolean(PREF_QUICK_STOP, false);
+        cbQuickStop.setChecked(quickStop);
+
+        // Use-own-SIM toggle (default: disabled). Controls visibility of the
+        // Hotspot navrail entry. When the user uses a personal SIM card on a
+        // DL3 head-unit, they may want to tether their data via TetherFi.
+        boolean useOwnSim = prefs.getBoolean(PREF_USE_OWN_SIM, false);
+        cbUseOwnSim.setChecked(useOwnSim);
+
+        // v1.2.45 — Compact apps panel toggle (default OFF, historical layout)
+        if (cbCompactAppsPanel != null) {
+            cbCompactAppsPanel.setChecked(prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false));
+        }
+
+        // Beta Engine toggles (default OFF — restart required after change)
+        cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
+        cbBetaSystemContext.setChecked(BetaConfig.isSystemContextEnabled(this));
+
+        // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
+        // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
+        // the initial position mirrors the auto-detect result.
+        com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
+        swDilink5Mode.setChecked(p.isDiLink5(this));
+        if (tvBetaDilink5Support != null) {
+            String prod = p.rawProductName();
+            if (prod == null || prod.isEmpty()) prod = "?";
+            tvBetaDilink5Support.setText(getString(
+                    R.string.settings_dilink5_mode_support_fmt,
+                    prod, p.androidApi(), p.describeMode(this)));
+        }
     }
 
     private void wireListeners() {
@@ -354,6 +433,68 @@ public class SettingsActivity extends AppCompatActivity {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
         });
+
+        // Quick stop checkbox
+        cbQuickStop.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_QUICK_STOP, isChecked).apply();
+        });
+
+        // Use-own-SIM checkbox — toggles visibility of the Hotspot navrail entry
+        cbUseOwnSim.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean(PREF_USE_OWN_SIM, isChecked).apply();
+            AppLogger.i("SettingsActivity", "use_own_sim=" + isChecked);
+        });
+
+        // v1.2.45 — Compact apps panel checkbox. Re-evaluated by MainActivity
+        // on every onResume so the change applies as soon as the user returns
+        // to the home screen (no activity restart needed).
+        if (cbCompactAppsPanel != null) {
+            cbCompactAppsPanel.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                        .putBoolean(PREF_COMPACT_APPS_PANEL, isChecked).apply();
+                AppLogger.i("SettingsActivity", "compact_apps_panel=" + isChecked);
+            });
+        }
+
+        // Beta Engine — both toggles require app restart to take effect
+        cbBetaProxyDaemon.setOnCheckedChangeListener((b, isChecked) -> {
+            BetaConfig.setProxyDaemonEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "beta_proxy_daemon=" + isChecked);
+            showRestartRequiredDialog();
+        });
+        cbBetaSystemContext.setOnCheckedChangeListener((b, isChecked) -> {
+            BetaConfig.setSystemContextEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "beta_system_context=" + isChecked);
+            showRestartRequiredDialog();
+        });
+        swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {
+            com.byd.dashcast.platform.Platform.setForcedBoolean(this, isChecked);
+            AppLogger.i("SettingsActivity", "dilink5_mode override=" + isChecked);
+            if (tvBetaDilink5Support != null) {
+                com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
+                String prod = p.rawProductName();
+                if (prod == null || prod.isEmpty()) prod = "?";
+                tvBetaDilink5Support.setText(getString(
+                        R.string.settings_dilink5_mode_support_fmt,
+                        prod, p.androidApi(), p.describeMode(this)));
+            }
+            showRestartRequiredDialog();
+        });
+    }
+
+    /**
+     * Beta Engine toggles take effect on next launch — show a non-blocking
+     * dialog so the user knows their change isn't live yet.
+     */
+    private void showRestartRequiredDialog() {
+        if (mDestroyed || isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.beta_restart_title)
+                .setMessage(R.string.beta_restart_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private void updateVisualModeState(boolean visual) {
@@ -385,7 +526,12 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     /**
-     * Sends "wm overscan H,V,H,V -d 1" to the cluster display (display id=1 on BYD Seal EU).
+     * Sends "wm overscan H,V,H,V -d <clusterId>" to the cluster display.
+     * The cluster display id is resolved dynamically via {@link #resolveClusterDisplayId()}
+     * (was hardcoded {@code -d 1} until build 189). If no cluster is detected
+     * (e.g. DL2 without secondary display), the call is aborted with a user-visible
+     * error — critical to prevent the BYD MTK ROM from silently applying the
+     * overscan to display 0 (the main screen), as reported in the field on 22/05/2026.
      * The result is shown in tvResult.
      */
     private void applyOverscan() {
@@ -393,7 +539,28 @@ public class SettingsActivity extends AppCompatActivity {
         final int v = sbInsetV.getProgress();
         saveInsets(h, v);
 
-        final String cmd = "wm overscan " + h + "," + v + "," + h + "," + v + " -d 1";
+        // DL2 HARD GUARD — never reach a wm command on DL2 even if the card
+        // somehow got displayed (defence in depth on top of applyDiLink2OverscanGuard
+        // and AdbLocalClient.blockDiLink2Resize). The MTK ROM silently falls back
+        // to display 0 on missing -d N → shrinks the main screen.
+        if (Platform.get().isDiLink2(this)) {
+            tvResult.setVisibility(View.VISIBLE);
+            tvResult.setText(R.string.settings_warn_dl2_no_margins);
+            AppLogger.w("SettingsActivity",
+                    "applyOverscan aborted: DL2 platform (no cluster display)");
+            return;
+        }
+
+        final int clusterId = resolveClusterDisplayId();
+        if (clusterId < 0) {
+            tvResult.setVisibility(View.VISIBLE);
+            tvResult.setText(R.string.settings_warn_no_cluster);
+            AppLogger.w("SettingsActivity",
+                    "applyOverscan aborted: no cluster display found (h=" + h + " v=" + v + ")");
+            return;
+        }
+
+        final String cmd = "wm overscan " + h + "," + v + "," + h + "," + v + " -d " + clusterId;
         AppLogger.i("SettingsActivity", "applyOverscan → " + cmd);
 
         AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
@@ -412,11 +579,72 @@ public class SettingsActivity extends AppCompatActivity {
                     @Override public void run() {
                         if (mDestroyed) return;
                         tvResult.setVisibility(View.VISIBLE);
-                        tvResult.setText("❌ " + error.trim());
+                        tvResult.setText(getString(R.string.settings_error_prefix_fmt, error.trim()));
                         AppLogger.e("SettingsActivity", "overscan error: " + error);
                     }
                 });
             }
         });
+    }
+
+    /**
+     * Resolves the cluster display id dynamically.
+     *
+     * <p>Returns the id of the first non-default display reported by
+     * {@link DisplayManager} (PRESENTATION category first, then any non-default).
+     * Returns {@code -1} when no cluster display is present (typically DL2,
+     * which has only display 0). This guard is critical: on DL2 the previous
+     * hardcoded {@code -d 1} was silently applied to display 0 by the BYD MTK
+     * ROM, shrinking the main screen (field report 22/05/2026 — user changed
+     * margins to 80/50 in Settings and the main screen got smaller).
+     */
+    private int resolveClusterDisplayId() {
+        try {
+            DisplayManager dm = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+            if (dm == null) return -1;
+            Display[] presentations = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+            if (presentations != null) {
+                for (Display d : presentations) {
+                    if (d.getDisplayId() != Display.DEFAULT_DISPLAY) return d.getDisplayId();
+                }
+            }
+            Display[] all = dm.getDisplays();
+            if (all != null) {
+                for (Display d : all) {
+                    if (d.getDisplayId() != Display.DEFAULT_DISPLAY) return d.getDisplayId();
+                }
+            }
+        } catch (Throwable t) {
+            AppLogger.w("SettingsActivity", "resolveClusterDisplayId failed: " + t.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * Hides the overscan margins section on DL2 (alps / k65v1 / API 28) because the
+     * platform has no cluster display — the previous hardcoded {@code wm overscan -d 1}
+     * was silently applied to display 0 by the MTK ROM, shrinking the main screen.
+     * Also hides on any device where no secondary display is detected at activity
+     * launch (defensive — covers DL3/DL5 in a state where the cluster is not connected).
+     */
+    private void applyDiLink2OverscanGuard() {
+        boolean hide = false;
+        String reason = null;
+        try {
+            if (Platform.get().isDiLink2(this)) {
+                hide = true;
+                reason = "DL2 platform detected (alps/k65v1) — no cluster display";
+            } else if (resolveClusterDisplayId() < 0) {
+                hide = true;
+                reason = "no secondary display present at launch";
+            }
+        } catch (Throwable t) {
+            AppLogger.w("SettingsActivity", "applyDiLink2OverscanGuard probe failed: " + t.getMessage());
+        }
+        if (hide) {
+            if (tvOverscanSectionTitle != null) tvOverscanSectionTitle.setVisibility(View.GONE);
+            if (cardOverscan != null)           cardOverscan.setVisibility(View.GONE);
+            AppLogger.i("SettingsActivity", "Overscan section hidden: " + reason);
+        }
     }
 }

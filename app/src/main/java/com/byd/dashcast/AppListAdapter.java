@@ -7,7 +7,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 
@@ -286,7 +285,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             if (holder.btnToMain != null) holder.btnToMain.setVisibility(View.GONE);
             if (holder.btnToCluster != null) holder.btnToCluster.setVisibility(View.GONE);
             if (holder.btnKill != null) holder.btnKill.setVisibility(View.GONE);
-            if (holder.cbAutoLaunch != null) holder.cbAutoLaunch.setVisibility(View.GONE);
+
             if (holder.tvCategory != null) holder.tvCategory.setVisibility(View.GONE);
         } else {
             if (holder.btnToMain != null) {
@@ -309,19 +308,10 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             holder.itemView.setForeground(null);
         }
 
-        if (holder.cbAutoLaunch != null) {
-            // v0.9.72 \u2014 only show the inline auto-launch checkbox in list mode.
-            holder.cbAutoLaunch.setVisibility(mIsGridMode ? View.GONE : View.VISIBLE);
-            holder.cbAutoLaunch.setOnCheckedChangeListener(null); // prevent false triggers
-            holder.cbAutoLaunch.setChecked(app.isAutoLaunch);
-            holder.cbAutoLaunch.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(android.widget.CompoundButton buttonView, boolean isChecked) {
-                    if (mListener != null) {
-                        mListener.onSetAutoLaunch(app, isChecked);
-                    }
-                }
-            });
+        // Auto-launch badge on the app icon (list + grid). The toggle itself
+        // lives in the long-press bottom sheet (onShowActions → swAuto).
+        if (holder.badgeAutoLaunch != null) {
+            holder.badgeAutoLaunch.setVisibility(app.isAutoLaunch ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -350,7 +340,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final Button    btnToMain;
         final Button    btnToCluster;
         final Button    btnKill;
-        final CheckBox  cbAutoLaunch;
+        final TextView  badgeAutoLaunch;
 
         ViewHolder(View itemView, final OnSendToDashboardListener listener, final AppListAdapter adapter) {
             super(itemView);
@@ -363,7 +353,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             btnToMain           = (Button)    itemView.findViewById(R.id.btn_to_main);
             btnToCluster        = (Button)    itemView.findViewById(R.id.btn_to_cluster);
             btnKill             = (Button)    itemView.findViewById(R.id.btn_kill_app);
-            cbAutoLaunch        = (CheckBox)  itemView.findViewById(R.id.cb_auto_launch);
+            badgeAutoLaunch     = (TextView)  itemView.findViewById(R.id.badge_auto_launch);
 
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override

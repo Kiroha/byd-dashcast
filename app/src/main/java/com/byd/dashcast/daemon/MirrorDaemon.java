@@ -47,11 +47,15 @@ public class MirrorDaemon {
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
     private static volatile int     sClusterDisplayId = 2;
+    /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
+    private static volatile boolean sMotionFirstLogged = false;
+    private static volatile boolean sKeyFirstLogged    = false;
 
     // InputManager (init une seule fois, lu depuis les threads Binder → volatile)
     private static volatile Object  sInputManager    = null;
     private static volatile Method  sInjectMethod    = null;
     private static volatile Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
+    private static volatile Method  sSetDisplayIdKey = null;  // KeyEvent.setDisplayId    — may be null (v1.2.11)
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -223,8 +227,16 @@ public class MirrorDaemon {
     private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
                                        int viewW, int viewH, Surface surface) {
         stopMirror();
+        // v1.2.7 — reset per-session first-event trace so M7 captures the next injection chain.
+        sMotionFirstLogged = false;
+        sKeyFirstLogged    = false;
+        out("setupMirror BEGIN layerStack=" + layerStack
+                + " cluster=" + clusterW + "x" + clusterH
+                + " view=" + viewW + "x" + viewH
+                + " surface=" + (surface == null ? "null" : ("valid=" + surface.isValid())));
         if (surface == null || !surface.isValid()) {
             Log.e(TAG, "setupMirror : surface invalide");
+            out("setupMirror FAIL surface invalide");
             return false;
         }
         try {
@@ -237,9 +249,11 @@ public class MirrorDaemon {
             sMirrorToken = (IBinder) createDisplay.invoke(null, "byd_myapp_mirror", false);
             if (sMirrorToken == null) {
                 Log.e(TAG, "setupMirror : createDisplay → null");
+                out("setupMirror FAIL createDisplay returned null (DL5 SurfaceControl quirk?)");
                 return false;
             }
             Log.i(TAG, "setupMirror : createDisplay token=" + sMirrorToken);
+            out("setupMirror createDisplay OK token=" + sMirrorToken);
 
             // 2. Letterbox projection (preserved ratio)
             float scale = Math.min((float) viewW / clusterW, (float) viewH / clusterH);
@@ -282,8 +296,9 @@ public class MirrorDaemon {
             Log.i(TAG, "setupMirror : tx.apply() OK");
 
             // 4. Post-setup verification via dumpsys SurfaceFlinger
+            Process p = null;
             try {
-                Process p = Runtime.getRuntime().exec(
+                p = Runtime.getRuntime().exec(
                         new String[]{"sh", "-c",
                                 "dumpsys SurfaceFlinger 2>/dev/null"
                                 + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
@@ -293,19 +308,31 @@ public class MirrorDaemon {
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line).append('\n');
                 }
+                // Audit batch 1 — also close stderr/stdin so the Process doesn't
+                // keep file descriptors open until GC (previously leaked one FD per setupMirror).
+                try { p.getErrorStream().close(); } catch (Exception ignored) { }
+                try { p.getOutputStream().close(); } catch (Exception ignored) { }
                 p.waitFor();
                 Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
+                out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
+                        + (sb.length() == 0 ? "(empty — token NOT in SurfaceFlinger!)" : sb.toString().trim()));
             } catch (Exception e) {
                 Log.d(TAG, "SF dump read failed: " + e.getMessage());
+                out("setupMirror SF dump read failed: " + e.getMessage());
+            } finally {
+                if (p != null) { try { p.destroy(); } catch (Exception ignored) { } }
             }
 
             Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
                     + " dst=" + drawW + "×" + drawH + " offset=(" + offX + "," + offY + ")");
+            out("setupMirror DONE ok=true layerStack=" + layerStack
+                    + " dst=" + drawW + "x" + drawH + " off=(" + offX + "," + offY + ")");
             return true;
 
         } catch (Exception e) {
             Log.e(TAG, "setupMirror failed", e);
+            out("setupMirror EXCEPTION: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             // If createDisplay succeeded but a later reflection step threw, the
             // SurfaceFlinger display token must be released — otherwise it leaks
             // for the lifetime of the daemon process. stopMirror() handles the
@@ -333,21 +360,54 @@ public class MirrorDaemon {
     // ── Input injection ───────────────────────────────────────────────────────
 
     private static void injectMotion(MotionEvent ev) {
-        if (ev == null || sInputManager == null) return;
+        if (ev == null || sInputManager == null) {
+            if (!sMotionFirstLogged) {
+                sMotionFirstLogged = true;
+                out("injectMotion FAIL pre-check: ev=" + (ev != null) + " im=" + (sInputManager != null));
+            }
+            return;
+        }
         try {
             if (sSetDisplayId != null) sSetDisplayId.invoke(ev, sClusterDisplayId);
-            sInjectMethod.invoke(sInputManager, ev, 0 /* ASYNC */);
+            Object r = sInjectMethod.invoke(sInputManager, ev, 0 /* ASYNC */);
+            if (!sMotionFirstLogged) {
+                sMotionFirstLogged = true;
+                out("injectMotion FIRST OK displayId=" + sClusterDisplayId
+                        + " setDisplayIdAvail=" + (sSetDisplayId != null)
+                        + " action=" + ev.getActionMasked()
+                        + " x=" + (int) ev.getX() + " y=" + (int) ev.getY()
+                        + " ret=" + r);
+            }
         } catch (Exception e) {
             Log.w(TAG, "injectMotion failed: " + e.getMessage());
+            out("injectMotion EXCEPTION displayId=" + sClusterDisplayId
+                    + " action=" + ev.getActionMasked() + " err=" + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
         }
     }
 
     private static void injectKey(KeyEvent kev) {
         if (kev == null || sInputManager == null) return;
         try {
+            // v1.2.11 — route the KeyEvent to the cluster display, same as MotionEvent.
+            // Without this, keys go to the globally focused window (= our own
+            // KeyboardBridgeActivity on display 0) and never reach the cluster
+            // app. Mirrors the touch-injection displayId pattern.
+            if (sSetDisplayIdKey != null) {
+                try { sSetDisplayIdKey.invoke(kev, sClusterDisplayId); }
+                catch (Exception ignored) { /* fall through, inject anyway */ }
+            }
             sInjectMethod.invoke(sInputManager, kev, 0 /* ASYNC */);
+            if (!sKeyFirstLogged) {
+                sKeyFirstLogged = true;
+                out("injectKey FIRST OK displayId=" + sClusterDisplayId
+                        + " setDisplayIdAvail=" + (sSetDisplayIdKey != null)
+                        + " keyCode=" + kev.getKeyCode() + " action=" + kev.getAction());
+            }
         } catch (Exception e) {
             Log.w(TAG, "injectKey failed: " + e.getMessage());
+            out("injectKey EXCEPTION keyCode=" + kev.getKeyCode() + " err=" + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
         }
     }
 
@@ -364,6 +424,10 @@ public class MirrorDaemon {
                 sSetDisplayId = MotionEvent.class.getDeclaredMethod("setDisplayId", int.class);
                 sSetDisplayId.setAccessible(true);
             } catch (Exception ignored) { /* ROM sans setDisplayId */ }
+            try {
+                sSetDisplayIdKey = KeyEvent.class.getDeclaredMethod("setDisplayId", int.class);
+                sSetDisplayIdKey.setAccessible(true);
+            } catch (Exception ignored) { /* ROM sans KeyEvent.setDisplayId */ }
             Log.i(TAG, "InputManager init OK");
         } catch (Exception e) {
             Log.e(TAG, "initInputManager failed", e);
@@ -372,12 +436,19 @@ public class MirrorDaemon {
 
     // ── Broadcast helpers ─────────────────────────────────────────────────────
 
+    // 1.2.30 — custom signature permission tag used as the receiverPermission on
+    // the ACTION_DAEMON_READY broadcast. Only apps signed with the same cert as
+    // this APK (= our own app) hold the permission and can receive the binder.
+    // The fallback ServiceManager.getService("byd_mirror_daemon") path still
+    // works for ROMs where receiverPermission filtering misbehaves.
+    public static final String PERM_DAEMON_READY = "com.byd.dashcast.permission.DAEMON_READY";
+
     private static void broadcastBinder(Context context, IBinder binder) {
         Bundle extras = new Bundle();
         extras.putBinder("daemon_binder", binder);
         Intent intent = new Intent(ACTION_DAEMON_READY);
         intent.putExtras(extras);
-        context.sendBroadcast(intent);
+        context.sendBroadcast(intent, PERM_DAEMON_READY);
     }
 
     // ── Hidden API unlock ─────────────────────────────────────────────────────
