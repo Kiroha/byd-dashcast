@@ -28,5 +28,10 @@ public class DashCastApp extends Application {
         // can read the cached result synchronously without forking a shell on
         // the hot path. No-op on DL2/DL3/DL4. See doc_api/DL5_CLUSTER_RESIZE_LIMITATION.md.
         p.primeClusterResizeProbe(this);
+
+        // v1.2.62-beta — Phase A step 2: foreground liveness ping for the
+        // proxy daemon. Idempotent, gated on BetaConfig.isProxyDaemonEnabled,
+        // zero overhead while daemon is healthy.
+        com.byd.dashcast.beta.ProxyWatchdog.install(this);
     }
 }

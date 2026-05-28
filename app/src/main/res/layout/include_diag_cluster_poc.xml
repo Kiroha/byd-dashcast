@@ -133,6 +133,16 @@
                         tools:ignore="HardcodedText"/>
                 </LinearLayout>
 
+                <!-- ── Row 1c (v1.2.62) : Phase A step 2 — watchdog status. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_watchdog_status"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="🐕 Watchdog status"
+                    tools:ignore="HardcodedText"/>
+
                 <!-- ── Section : app under test ──────────────────────── -->
                 <TextView
                     android:layout_width="wrap_content"
