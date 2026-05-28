@@ -66,11 +66,52 @@ public class ClusterManager {
     public static final int CMD_SCREEN_SIZE_SEAL_EU  = 30; // 切换到12.3寸屏 — BYD Seal EU (CONFIRMED 16/04/2026)
     public static final int CMD_DI40_MODE            = 35; // Di4.0 mode — triggers VirtualDisplay creation (CONFIRMED 03/05/2026)
     // Timeout waiting for VirtualDisplay after full sendInfo(30→16→35) sequence.
-    // Sequence: 2s delay + 6s (30→16) + 6s (16→35) + ~280ms creation = ~14.3s → 18s total with margin.
+    // Sequence: 2s delay + 3s (30→16) + 3s (16→35) + ~280ms creation = ~8.3s → 12s total with margin.
     // 🚨 VirtualDisplay does NOT exist at boot on Seal EU (confirmed by logcat 03/05/2026).
-    private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 18000;
+    private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 12000;
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // v1.2.78 — Qt projection state tracker.
+    //
+    // After sendInfo(18) (stop projection), the cluster VirtualDisplay (id=1)
+    // PERSISTS but Qt switches back to its native cluster rendering. Detecting
+    // "fast path" based on the mere existence of the VirtualDisplay is therefore
+    // wrong: on the next activation the code would skip the proper 30 → delay → 16
+    // sequence and Qt would never re-enter projection mode (no black rectangle,
+    // no surface handover — user-visible symptom).
+    //
+    // We track our own best-effort view of Qt's state:
+    //   true  → we successfully drove a sendInfo(30)→sendInfo(16) sequence and
+    //           no subsequent stop has been requested. Re-binding our app to
+    //           the existing display is enough; no need to re-issue 30/16.
+    //   false → unknown / Qt is in native mode (default at app start, or after
+    //           any restoreOriginCluster / restoreBydOnCluster). Even when the
+    //           VirtualDisplay still exists from a previous session we MUST
+    //           replay 30 → 3s → 16 to put Qt back into projection.
+    //
+    // Volatile because notifyProjection*() may be called from any thread
+    // (AdbLocalClient callbacks).
+    private static volatile boolean sQtInProjectionMode = false;
+
+    /** Hooked by AdbLocalClient at the entry of restoreBydOnCluster() and
+     *  restoreOriginCluster() (both of which dispatch sendInfo(18)). */
+    public static void notifyProjectionStopped() {
+        sQtInProjectionMode = false;
+    }
+
+    /** Called after a successful activation sequence so the next activate() can take
+     *  the true fast path (instant reconnect to the already-projecting Qt). Public so
+     *  manual recovery actions (SysInfo replay button, v1.2.78) can sync the flag
+     *  after a hand-rolled sendInfo(30→16) sequence. */
+    public static void notifyProjectionActive() {
+        sQtInProjectionMode = true;
+    }
+
+    public static boolean isQtInProjectionMode() {
+        return sQtInProjectionMode;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -102,43 +143,105 @@ public class ClusterManager {
      *
      *   🚨 The VirtualDisplay does NOT exist at boot. It is created by the sequence below.
      *
-     *   Fast path (VD already present from a previous session):
-     *     sendInfo(30) → 6s → sendInfo(16) → onDisplayReady immediately
+     *   True fast path (VD present AND sQtInProjectionMode == true):
+     *     instant onDisplayReady — Qt is already projecting, just reconnect.
+     *     (v1.2.78 — added flag check; "VD present" alone is not sufficient
+     *      because the VirtualDisplay persists across sendInfo(18) stops while
+     *      Qt switches back to native rendering.)
+     *
+     *   Warm path (VD present AND sQtInProjectionMode == false):
+     *     sendInfo(30) → 3s → sendInfo(16) → onDisplayReady
+     *     (v1.2.78 — must replay the full handover when Qt is in native mode
+     *      even if a stale VirtualDisplay from a previous session exists.
+     *      The previous 800ms shortcut was too short to wake Qt out of native
+     *      mode, manifesting as "no black rectangle, no projection".)
      *
      *   Slow path (VD not yet created):
-     *     sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35)
+     *     sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35)
      *     → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
      *     → VirtualDisplay "fission_bg_xdjaVirtualSurface" id=1 appears in ~280ms
      *     → DisplayListener / polling fires → onDisplayReady()
      *
-     *   Timeout: 18s (2s init + 6s + 6s + margin)
+     *   Timeout: 12s (2s init + 3s + 3s + margin)
      *
      * The callback is called on the main thread.
      *
      * Details: doc_api/VIRTUALDISPLAY_CREATION_MECHANISM.md
      */
     public void activateClusterDisplay(final DisplayReadyCallback callback) {
+        // 1.2.29 — defensive cancel() at entry: on retry, the previous slow-path
+        // DisplayListener was only stored in mActiveDisplayListener — re-entering
+        // registered a new one without unregistering the old, leaking listeners
+        // and triggering double launches on the cluster.
+        cancel();
+
         final DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
+
+        // DiLink 5.0 short-circuit: PRESENTATION displays #3/#4 (XDJAScreenProjection_0/1)
+        // exist persistently. The full DL3 sequence (30→16→35) is replaced by a single
+        // sendInfo(16) on auto_container — confirmed by D12/D31 PASS (log 22/05/2026).
+        // sendInfo(30) targets an empty slot on DL5, and sendInfo(35) is DL3-specific.
+        if (isDiLink5Safe()) {
+            AppLogger.i(TAG, "DL5 activation path: sendInfo(16) only on auto_container");
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "DL5 activation ADB(cmd=16): " + out);
+                        mHandler.postDelayed(new Runnable() {
+                            @Override public void run() { resolveDl5Display(dm, callback); }
+                        }, 500);
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: " + err);
+                        // Still attempt to resolve a display — they may be already up.
+                        mHandler.postDelayed(new Runnable() {
+                            @Override public void run() { resolveDl5Display(dm, callback); }
+                        }, 500);
+                    }
+                });
+            return;
+        }
 
         // 1. First check if the cluster VirtualDisplay is already present (DISPLAY_CATEGORY_PRESENTATION)
         //    AutoDisplayService creates it at BOOT → available immediately without waiting.
         Display found = findClusterDisplay(dm);
+        if (found != null && sQtInProjectionMode) {
+            // True fast path: VD is up AND we already drove Qt into projection mode
+            // earlier in this app lifetime. No need to resend 30/16; just hand the
+            // existing display back to the caller. Typical case: MainActivity is
+            // re-opened while ClusterService keeps running, or split-screen second
+            // launch happens while the first launch is still on the cluster.
+            AppLogger.i(TAG, "VD already present AND Qt still projecting — instant reconnect (id="
+                    + found.getDisplayId() + ")");
+            final Display displayFound = found;
+            mHandler.post(new Runnable() {
+                @Override public void run() {
+                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
+                }
+            });
+            return;
+        }
         if (found != null) {
-            // Fast path: VirtualDisplay already present (previous session, not destroyed yet).
-            // Send 30→6s→16 to put Qt back in projection mode. VD already exists → immediate callback.
-            AppLogger.i(TAG, "VirtualDisplay already present: id=" + found.getDisplayId()
-                    + " name=" + found.getName() + " — fast path (30→6s→16)");
+            // Warm path: VD persisted from a previous session (or boot) but Qt has
+            // returned to native mode (after a stop, or at first launch since boot).
+            // We MUST replay sendInfo(30) → 3s → sendInfo(16) to put Qt back into
+            // projection. The 3s delay matches the slow-path 30→16 transition;
+            // 800ms is NOT enough when Qt is coming out of native mode (the user-
+            // reported "no black rectangle" symptom is exactly this race).
+            AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
+                    + " but Qt in native mode — warm path (30→3s→16)");
             final Display displayFound = found;
             AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String out) {
-                        AppLogger.i(TAG, "fast path ADB(cmd=30): " + out);
+                        AppLogger.i(TAG, "warm path ADB(cmd=30): " + out);
                         mHandler.postDelayed(new Runnable() {
                             @Override public void run() {
                                 AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String out2) {
-                                            AppLogger.i(TAG, "fast path ADB(cmd=16): " + out2);
+                                            AppLogger.i(TAG, "warm path ADB(cmd=16): " + out2);
+                                            notifyProjectionActive();
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -146,7 +249,10 @@ public class ClusterManager {
                                             });
                                         }
                                         @Override public void onError(String err) {
-                                            AppLogger.e(TAG, "fast path ADB(cmd=16) ERROR: " + err);
+                                            AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: " + err);
+                                            // We still report the display back — caller logic handles
+                                            // post-activation discovery; flag stays false so the next
+                                            // explicit activate() will retry the warm path.
                                             mHandler.post(new Runnable() {
                                                 @Override public void run() {
                                                     callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -155,14 +261,15 @@ public class ClusterManager {
                                         }
                                     });
                             }
-                        }, 6000);
+                        }, 3000);
                     }
                     @Override public void onError(String err) {
-                        AppLogger.e(TAG, "fast path ADB(cmd=30) ERROR: " + err);
+                        AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
                         AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                             new AdbLocalClient.Callback() {
                                 @Override public void onSuccess(String out2) {
-                                    AppLogger.i(TAG, "fast path ADB(cmd=16) fallback: " + out2);
+                                    AppLogger.i(TAG, "warm path ADB(cmd=16) fallback: " + out2);
+                                    notifyProjectionActive();
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -170,7 +277,7 @@ public class ClusterManager {
                                     });
                                 }
                                 @Override public void onError(String err2) {
-                                    AppLogger.e(TAG, "fast path ADB(cmd=16) fallback ERROR: " + err2);
+                                    AppLogger.e(TAG, "warm path ADB(cmd=16) fallback ERROR: " + err2);
                                     mHandler.post(new Runnable() {
                                         @Override public void run() {
                                             callback.onDisplayReady(displayFound, displayFound.getDisplayId());
@@ -183,12 +290,12 @@ public class ClusterManager {
             return;
         }
 
-        // Display not found immediately — send full sequence 30→6s→16→6s→35 to create the VirtualDisplay.
+        // Display not found immediately — send full sequence 30→3s→16→3s→35 to create the VirtualDisplay.
         // sendInfo(35) = Di4.0 mode → Qt calls getQtProjectionDispInfoNative() → AutoDisplayService.createVirtualDisplay()
         // VirtualDisplay appears ~280ms after sendInfo(35). DisplayListener + polling will detect it.
-        AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→6s→16→6s→35) + polling");
+        AppLogger.w(TAG, "VirtualDisplay not found — sending full sequence (30→3s→16→3s→35) + polling");
 
-        // Timeout: sequence 30→6s→16→6s→35 + ~280ms creation = ~14.3s → 18s with margin.
+        // Timeout: sequence 30→3s→16→3s→35 + ~280ms creation = ~8.3s → 12s with margin.
         final long timeoutMs = CLUSTER_DISPLAY_TIMEOUT_MS;
 
         // Do not start AppStartManagement in foreground: it briefly opens a visible BYD app.
@@ -210,6 +317,7 @@ public class ClusterManager {
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
                     AppLogger.i(TAG, "VirtualDisplay cluster detected: id=" + displayId);
+                    notifyProjectionActive();
                     callback.onDisplayReady(d, displayId);
                 }
             }
@@ -256,6 +364,7 @@ public class ClusterManager {
                     mActiveDisplayListener = null;
                     mActiveDisplayManager  = null;
                     AppLogger.i(TAG, "VirtualDisplay found by polling: id=" + found.getDisplayId());
+                    notifyProjectionActive();
                     callback.onDisplayReady(found, found.getDisplayId());
                 } else {
                     scheduleDisplayPoll(dm, listenerHolder, callback, pollCount, POLL_INTERVAL_MS);
@@ -267,7 +376,7 @@ public class ClusterManager {
     // ── Activation sequence sendInfo(30 → 16) ──────────────────────────────
 
     /**
-     * Full activation sequence: sendInfo(30) → 6s → sendInfo(16) → 6s → sendInfo(35).
+     * Full activation sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35).
      * Confirmed sequence from logcat (03/05/2026, BYD Seal EU):
      *   sendInfo(35) triggers Qt JNI → AutoDisplayService.createVirtualDisplay() → VD appears ~280ms later.
      * The DisplayReadyCallback is NOT called here: the DisplayListener / polling handles it.
@@ -291,7 +400,7 @@ public class ClusterManager {
                                                         @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                                     });
                                             }
-                                        }, 6000);
+                                        }, 3000);
                                     }
                                     @Override public void onError(String err) {
                                         AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: " + err);
@@ -304,15 +413,15 @@ public class ClusterManager {
                                                         @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                                     });
                                             }
-                                        }, 6000);
+                                        }, 3000);
                                     }
                                 });
                         }
-                    }, 6000);
+                    }, 3000);
                 }
                 @Override public void onError(String err) {
                     AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: " + err);
-                    // On cmd=30 error: still send 16 → 6s → 35
+                    // On cmd=30 error: still send 16 → 3s → 35
                     AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
                         new AdbLocalClient.Callback() {
                             @Override public void onSuccess(String out2) {
@@ -325,7 +434,7 @@ public class ClusterManager {
                                                 @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
                                             });
                                     }
-                                }, 6000);
+                                }, 3000);
                             }
                             @Override public void onError(String err2) { AppLogger.e(TAG, "activation ADB(cmd=16) ERROR after err30: " + err2); }
                         });
@@ -367,6 +476,52 @@ public class ClusterManager {
     private boolean isClusterDisplay(Display d) {
         // A display is considered cluster if it is not the primary display (id=0)
         return d != null && d.getDisplayId() != 0;
+    }
+
+    // ── DiLink 5.0 helpers ─────────────────────────────────────────────────
+
+    private boolean isDiLink5Safe() {
+        try {
+            return com.byd.dashcast.platform.Platform.get().isDiLink5(mContext);
+        } catch (Throwable ignore) { return false; }
+    }
+
+    /**
+     * DL5: pick the first PRESENTATION display (typically id=3 — XDJAScreenProjection_0)
+     * and notify. Falls back to any non-default display, then to a short polling window
+     * if nothing is up yet (sendInfo(16) is sometimes asynchronous).
+     */
+    private void resolveDl5Display(final DisplayManager dm, final DisplayReadyCallback callback) {
+        Display d = findClusterDisplay(dm);
+        if (d != null) {
+            AppLogger.i(TAG, "DL5 cluster display ready: id=" + d.getDisplayId()
+                    + " name=" + d.getName());
+            final Display target = d;
+            notifyProjectionActive();
+            mHandler.post(new Runnable() {
+                @Override public void run() {
+                    callback.onDisplayReady(target, target.getDisplayId());
+                }
+            });
+            return;
+        }
+        // Brief polling window (up to 3 s) — should never trigger on DL5 in practice.
+        final long deadline = android.os.SystemClock.uptimeMillis() + 3000;
+        mHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                Display dd = findClusterDisplay(dm);
+                if (dd != null) {
+                    AppLogger.i(TAG, "DL5 cluster display (late) id=" + dd.getDisplayId());
+                    notifyProjectionActive();
+                    callback.onDisplayReady(dd, dd.getDisplayId());
+                } else if (android.os.SystemClock.uptimeMillis() < deadline) {
+                    mHandler.postDelayed(this, 250);
+                } else {
+                    AppLogger.w(TAG, "DL5 cluster display not found after 3s — timeout");
+                    callback.onDisplayTimeout();
+                }
+            }
+        }, 250);
     }
 
     // ── Cancellation ──────────────────────────────────────────────────────────

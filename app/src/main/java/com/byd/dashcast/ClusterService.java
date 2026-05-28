@@ -1,5 +1,6 @@
 package com.byd.dashcast;
 
+import com.byd.dashcast.beta.ShellGateway;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -15,6 +16,7 @@ import com.byd.dashcast.dashboard.ClusterInputForwarder;
 import com.byd.dashcast.dashboard.ClusterMirrorManager;
 import com.byd.dashcast.dashboard.DashboardDisplayHelper;
 import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * ClusterService — Foreground Service that maintains projection on the cluster
@@ -39,7 +41,20 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private static final String TAG = "ClusterService";
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int NOTIF_ID = 1;
-    public static boolean sIsRunning = false;
+    // LOT 4 — volatile: written on main thread (onCreate/onDestroy) and read from
+    // worker threads (auto-resize-thread in MainActivity.autoApplyInsetsIfNeeded,
+    // BetaProxyClient connect path). Without volatile, the worker could observe a
+    // stale `false` after the service started and bail out incorrectly.
+    public static volatile boolean sIsRunning = false;
+    /** v1.2.8 — exposed so satellite activities (KeyboardBridgeActivity) can reach the
+     *  InputForwarder without binding the service themselves. */
+    private static volatile ClusterService sInstance = null;
+    public static ClusterService getInstance() { return sInstance; }
+
+    // v1.2.59-beta — one-shot log gate so we don't spam the buffer when the
+    // resize SeekBar fires 30+ events per second on a ROM where resize is a
+    // ROM-level no-op (DL5). Reset on process restart.
+    private static boolean sResizeUnsupportedLogged = false;
 
     // Overscan inset values are stored in SharedPreferences and editable via SettingsActivity.
     // Defaults: H=80 (left/right), V=50 (top/bottom). Read at each use so changes apply live.
@@ -79,6 +94,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onCreate() {
         super.onCreate();
         sIsRunning = true;
+        sInstance  = this;
         mDisplayHelper  = new DashboardDisplayHelper(this, this);
         mLauncher       = new DashboardLauncher(this);
         mMirrorManager  = new ClusterMirrorManager();
@@ -89,9 +105,30 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         AdbLocalClient.startMirrorDaemon(this);
         
         createNotificationChannel();
-        startForeground(NOTIF_ID, buildNotification("Cluster: initializing…"));
+        startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_cluster_initializing)));
         AppLogger.log(TAG, "ClusterService created — starting native projection");
         mProjectionActive = true;
+        // v1.2.35 — one-shot cleanup of v1.2.32..v1.2.34 side effect on DiLink 5.
+        // Those builds set `force_resizable_activities=1` globally on every
+        // DL5 cluster launch and never reset it, which made BYD head-unit
+        // apps (e.g. 360° camera) wrongly split-screen capable. We now read
+        // it back and force it to 0 on DL5 only, so any user who installed
+        // 1.2.32..1.2.34 is healed the next time they open DashCast. DL2/3/4
+        // never set this flag and are not touched.
+        if (AdbLocalClient.isDiLink5Safe(this)) {
+            final String check = "v=$(settings get global force_resizable_activities); "
+                    + "if [ \"$v\" = \"1\" ]; then "
+                    + "settings put global force_resizable_activities 0 2>&1; "
+                    + "echo RESET; else echo OK=$v; fi";
+            AdbLocalClient.executeShellWithResult(this, check, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "DL5 force_resizable_activities cleanup → " + out.trim());
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "DL5 force_resizable_activities cleanup ERROR: " + err);
+                }
+            });
+        }
         // Signature + permissions diagnostics — debug only (opens an ADB connection).
         if (BuildConfig.DEBUG) {
             AdbLocalClient.dumpSignatureAndPermissions(this);
@@ -122,12 +159,21 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDestroy() {
         super.onDestroy();
         sIsRunning = false;
+        if (sInstance == this) sInstance = null;
         mDestroyed = true;
         mListener = null;
         // Cancel all pending Runnables on mMainHandler BEFORE release():
         // launchOnDashboard (postDelayed 2s) could post a callback
         // on a destroyed service (NPE / ADB thread leak).
         mMainHandler.removeCallbacksAndMessages(null);
+        // v1.2.81 — safety net: ensure the cluster display is back to default
+        // DPI even if stopProjectionNoAdb() was bypassed (e.g. process killed).
+        try {
+            com.byd.dashcast.cluster.ClusterDpiManager.restore(
+                    this, mDisplayHelper.getKnownClusterDisplayId());
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "DPI restore (onDestroy) failed: " + t.getMessage());
+        }
         // release() = preview + cluster overlay (stopMirror() only releases the preview)
         mMirrorManager.release();
         if (mProjectionActive) {
@@ -166,7 +212,44 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     
     public void resizeActiveTask(int taskId, String packageName) {
-        if (taskId <= 0) return;
+        if (taskId <= 0) {
+            // v1.2.13 — was silent return; the real cause is almost always that
+            // ActivityManager.getRunningTasks() returned only the caller's own task
+            // (API 21+ restriction). The dumpsys-based fallback in findRunningTaskId
+            // should fix it; log here so a residual failure is visible in field logs.
+            AppLogger.w(TAG, "resizeActiveTask: taskId<=0 for pkg=" + packageName
+                    + " — cannot resize (lookup via AM + daemon dumpsys both failed)");
+            return;
+        }
+        // v1.2.59-beta — DL5 ROM-level guard.
+        // The DL5 fission test report (byd_report_20260528_081206.log F10/F11/F12)
+        // proved that on BYD DiLink 5.0 / Android 12 build SKQ1.230128.001 the
+        // `cmd activity set-task-windowing-mode` verb is stripped from the ROM
+        // and `cmd activity task resize` returns exit=0 with zero visible effect.
+        // Running the cascade anyway only spams the log; abort here once we
+        // have the platform's confirmation. The probe (Platform.primeClusterResize
+        // Probe) runs at app start, so by the time the user touches the SeekBar
+        // the answer is cached. On DL2/DL3/DL4 isClusterTaskResizeSupported()
+        // always returns true → no behavioural change.
+        if (!Platform.get().isClusterTaskResizeSupported(this)) {
+            if (!sResizeUnsupportedLogged) {
+                sResizeUnsupportedLogged = true;
+                AppLogger.w(TAG, "resizeActiveTask skipped: cluster task resize is not "
+                        + "supported on this ROM (cmd activity set-task-windowing-mode "
+                        + "stripped). See doc_api/DL5_CLUSTER_RESIZE_LIMITATION.md.");
+            }
+            return;
+        }
+        // HARD GUARD — never resize anything if no cluster display is connected.
+        // resizeTask() applies bounds in the task's current display coordinates; if
+        // the task happens to be on display 0 (head unit) because the cluster move
+        // failed earlier, we would shrink the main UI. Abort instead.
+        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
+        if (clusterId <= 0) {
+            AppLogger.w(TAG, "resizeActiveTask aborted: no cluster display connected (taskId="
+                    + taskId + " pkg=" + packageName + ")");
+            return;
+        }
         try {
             Class<?> iAtmClass = Class.forName("android.app.IActivityTaskManager");
             Object iatm;
@@ -178,14 +261,200 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
             int insetH = getInsetH(packageName);
             int insetV = getInsetV(packageName);
+            // v1.2.30 — DL5 framebuffer-space fix.
+            // The task lives on display 3 (XDJA fission VirtualDisplay), whose
+            // framebuffer reports 1920×1080 via getRealSize() — NOT the 1920×720
+            // of the physical cluster face (display 2). Qt scales 1080→720
+            // before compositing onto the dalle. resizeTask() applies bounds
+            // in the task's own display coordinate space, so bounds must be
+            // expressed in display 3 dimensions, otherwise we shrink the task
+            // to a tiny rectangle inside a 1920×1080 buffer (visible in field
+            // log BYD_RE_Sniffer_20260523_184727.txt as resize bounds capped
+            // at 445 against a 1080-tall framebuffer).
+            int cw = 1920, ch = 720;
+            try {
+                android.hardware.display.DisplayManager dm =
+                        (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
+                android.view.Display d = (dm != null) ? dm.getDisplay(clusterId) : null;
+                if (d != null) {
+                    android.graphics.Point sz = new android.graphics.Point();
+                    d.getRealSize(sz);
+                    if (sz.x > 0) cw = sz.x;
+                    if (sz.y > 0) ch = sz.y;
+                }
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "resizeActiveTask: getRealSize(" + clusterId
+                        + ") failed → falling back to InputForwarder dims: " + t.getMessage());
+                if (mInputForwarder != null) {
+                    int fw = mInputForwarder.getClusterWidth();
+                    int fh = mInputForwarder.getClusterHeight();
+                    if (fw > 0) cw = fw;
+                    if (fh > 0) ch = fh;
+                }
+            }
             android.graphics.Rect bounds = new android.graphics.Rect(
-                    insetH, insetV, 1920 - insetH, 720 - insetV);
+                    insetH, insetV, cw - insetH, ch - insetV);
             
-            iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
-                    .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
-            AppLogger.i(TAG, "resizeActiveTask " + packageName + " " + bounds + " OK");
+            // v1.2.16 — try the 3-arg signature first (Android 11/12),
+            // then the 2-arg signature (older / vendor variants). If both
+            // throw, surface the *real* cause: InvocationTargetException
+            // hides it behind getCause(), and getMessage() on the wrapper
+            // is null (exact symptom seen in v1.2.15 field log:
+            // "resizeActiveTask failed: null").
+            Throwable lastError = null;
+            boolean done = false;
+            try {
+                iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class, int.class)
+                        .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
+                done = true;
+            } catch (java.lang.reflect.InvocationTargetException ite) {
+                lastError = ite.getTargetException() != null ? ite.getTargetException() : ite;
+            } catch (NoSuchMethodException nsme) {
+                lastError = nsme;
+            } catch (Throwable t) {
+                lastError = t;
+            }
+            if (!done) {
+                try {
+                    iAtmClass.getMethod("resizeTask", int.class, android.graphics.Rect.class)
+                            .invoke(iatm, taskId, bounds);
+                    done = true;
+                    lastError = null;
+                } catch (java.lang.reflect.InvocationTargetException ite) {
+                    lastError = ite.getTargetException() != null ? ite.getTargetException() : ite;
+                } catch (NoSuchMethodException nsme) {
+                    /* keep first error */
+                } catch (Throwable t) {
+                    if (lastError == null) lastError = t;
+                }
+            }
+            if (done) {
+                AppLogger.i(TAG, "resizeActiveTask " + packageName + " " + bounds
+                        + " (cw=" + cw + " ch=" + ch + " clusterDisplay=" + clusterId + ") OK");
+            } else {
+                String detail = (lastError == null) ? "unknown"
+                        : lastError.getClass().getSimpleName()
+                                + ": " + lastError.getMessage();
+                AppLogger.w(TAG, "resizeActiveTask reflection failed: " + detail
+                        + " — falling back to shell `am task resize` (taskId=" + taskId
+                        + " pkg=" + packageName + " bounds=" + bounds + ")");
+                // v1.2.17 — Field log proved the reflection path hits
+                // SecurityException because resizeTask() requires
+                // android.permission.MANAGE_ACTIVITY_TASKS, which is
+                // signature|privileged and unreachable for normal apps.
+                // The shell-side `am task resize <id> <l> <t> <r> <b>` runs
+                // in shell uid context via AdbLocalClient (same pipe that
+                // already executes `wm overscan` successfully) and bypasses
+                // the app-level perm check.
+                //
+                // v1.2.18 — Field log BYD_RE_Sniffer_20260523_161033.txt showed
+                // `am task resize` returning empty stdout (apparent success) but
+                // no visible effect on the cluster — on AOSP API 30+ the `am`
+                // verb was rewritten and `am task resize` is often a silent
+                // no-op. Capture exit code + stderr and, if the first attempt
+                // doesn't look successful, chain a `cmd activity task resize`
+                // attempt (modern equivalent).
+                //
+                // v1.2.26 — Field log BYD_RE_Sniffer_20260523_172007.txt (DL5)
+                // confirms `am task resize` returns "exit=0" deterministically
+                // on DL5 (API 32) with zero visible effect on the cluster face
+                // (XDJA fission Presentation VirtualDisplay). The exit=0
+                // ⇒ looksOk=true shortcut therefore swallows every resize on
+                // DL5 and the `cmd activity task resize` fallback is never
+                // attempted. Fix: on DL5, skip `am task` altogether and shell
+                // straight to `cmd activity task resize` (the AOSP API 30+
+                // verb). On DL3 (API 29) keep the legacy chain.
+                final int rTaskId = taskId;
+                final String rPkg = packageName;
+                final android.graphics.Rect rBounds = bounds;
+                final String coords = rTaskId + " " + rBounds.left + " " + rBounds.top
+                        + " " + rBounds.right + " " + rBounds.bottom;
+                final String amCmd  = "am task resize " + coords + " 2>&1; echo \"exit=$?\"";
+                final String cmdAct = "cmd activity task resize " + coords + " 2>&1; echo \"exit=$?\"";
+                if (AdbLocalClient.isDiLink5Safe(this)) {
+                    AppLogger.i(TAG, "resizeActiveTask DL5: dispatching `cmd activity task resize` "
+                            + "(skipping `am task resize` — known silent no-op on API 30+) taskId="
+                            + rTaskId + " pkg=" + rPkg + " bounds=" + rBounds
+                            + " (cluster framebuffer " + cw + "x" + ch + ")");
+                    AdbLocalClient.executeShellWithResult(this, cmdAct, new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
+                                    + (out == null ? "" : out.trim()) + "\"");
+                            // v1.2.30 — verification probe.
+                            // Field log BYD_RE_Sniffer_20260523_184727.txt showed
+                            // `cmd activity task resize` returning exit=0 with zero
+                            // visible effect (cause: task launched in FULLSCREEN
+                            // mode by `am start --display N`, no FREEFORM flag).
+                            // Now that startActivityViaShell() launches with
+                            // --windowingMode 5, dumpsys the activity to confirm
+                            // the windowing mode AND that the post-resize bounds
+                            // were actually accepted by ATM.
+                            //
+                            // v1.2.32 — verify probe refined.
+                            // The previous probe spammed mGlobalConfig dumps (one
+                            // per Configuration carrier in the activities tree)
+                            // and head -20 truncated before reaching the actual
+                            // task #N stanza. Use awk to extract precisely the
+                            // task's own stanza (between "TaskRecord{...#N}" and
+                            // the next TaskRecord or the end of the section)
+                            // and trim to the only two fields that matter:
+                            // mWindowingMode= and mBounds= inside that stanza.
+                            final String verify =
+                                    "dumpsys activity activities 2>/dev/null"
+                                  + " | awk '/Task=Task\\{[^}]*#" + rTaskId + "[ }]/,"
+                                  +       "/Task=Task\\{[^}]*#[0-9]+[ }]/'"
+                                  + " | grep -E 'mBounds|WindowingMode|displayId|resizeMode|#" + rTaskId + " '"
+                                  + " | head -25";
+                            AdbLocalClient.executeShellWithResult(ClusterService.this, verify,
+                                    new AdbLocalClient.Callback() {
+                                        @Override public void onSuccess(String dump) {
+                                            String d = (dump == null) ? "" : dump.trim();
+                                            AppLogger.i(TAG, "resizeActiveTask VERIFY taskId="
+                                                    + rTaskId + " pkg=" + rPkg + " →\n" + d);
+                                        }
+                                        @Override public void onError(String e) {
+                                            AppLogger.w(TAG, "resizeActiveTask VERIFY error: " + e);
+                                        }
+                                    });
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: "
+                                    + err + " (taskId=" + rTaskId + " pkg=" + rPkg + ")");
+                        }
+                    });
+                } else {
+                    AdbLocalClient.executeShellWithResult(this, amCmd, new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            String trimmed = (out == null ? "" : out.trim());
+                            boolean looksOk = trimmed.contains("exit=0")
+                                    && !trimmed.toLowerCase().contains("unknown command")
+                                    && !trimmed.toLowerCase().contains("error")
+                                    && !trimmed.toLowerCase().contains("exception");
+                            AppLogger.i(TAG, "resizeActiveTask `am task resize` -> \""
+                                    + trimmed + "\" (looksOk=" + looksOk + ")");
+                            if (looksOk) return;
+                            AppLogger.i(TAG, "resizeActiveTask: trying `cmd activity task resize` fallback");
+                            AdbLocalClient.executeShellWithResult(ClusterService.this, cmdAct,
+                                    new AdbLocalClient.Callback() {
+                                        @Override public void onSuccess(String out2) {
+                                            AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
+                                                    + (out2 == null ? "" : out2.trim()) + "\"");
+                                        }
+                                        @Override public void onError(String err2) {
+                                            AppLogger.w(TAG, "resizeActiveTask `cmd activity task resize` AdbLocal error: " + err2);
+                                        }
+                                    });
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.w(TAG, "resizeActiveTask `am task resize` AdbLocal error: " + err
+                                    + " (taskId=" + rTaskId + " pkg=" + rPkg + ")");
+                        }
+                    });
+                }
+            }
         } catch (Exception e) {
-            AppLogger.w(TAG, "resizeActiveTask failed: " + e.getMessage());
+            AppLogger.w(TAG, "resizeActiveTask outer failure: "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -231,22 +500,149 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * Returns -1 if no running task is found.
      */
     public int findRunningTaskId(String packageName) {
+        // Path 1 — ActivityManager.getRunningTasks: on API 21+ returns ONLY the
+        // caller's own task for non-system apps. Kept for the rare device where
+        // DashCast has GET_TASKS (legacy BYD ROMs) and as a fast-path probe.
         try {
             android.app.ActivityManager am =
                     (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
             java.util.List<android.app.ActivityManager.RunningTaskInfo> tasks =
                     am.getRunningTasks(50);
-            if (tasks == null) return -1;
-            for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
-                if (t.topActivity != null
-                        && packageName.equals(t.topActivity.getPackageName())) {
-                    AppLogger.d(TAG, "findRunningTaskId " + packageName + " → taskId=" + t.id);
-                    return t.id;
+            if (tasks != null) {
+                for (android.app.ActivityManager.RunningTaskInfo t : tasks) {
+                    if (t.topActivity != null
+                            && packageName.equals(t.topActivity.getPackageName())) {
+                        AppLogger.d(TAG, "findRunningTaskId " + packageName
+                                + " → taskId=" + t.id + " (via AM)");
+                        return t.id;
+                    }
                 }
             }
         } catch (Exception e) {
-            AppLogger.w(TAG, "findRunningTaskId: " + e.getMessage());
+            AppLogger.w(TAG, "findRunningTaskId AM path: " + e.getMessage());
         }
+
+        // Path 2 (v1.2.13) — fallback via proxy daemon (uid 2000, shell privileges).
+        // dumpsys activity recents lists all TaskRecords with their numeric id and
+        // their affinity package, regardless of caller package. Required on DL5
+        // (and any modern Android) because path 1 is API-21-restricted.
+        try {
+            if (com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
+                String out = com.byd.dashcast.beta.BetaProxyClient
+                        .runShell("dumpsys activity recents");
+                if (out != null && !out.isEmpty()) {
+                    int id = parseTaskIdFromDumpsysRecents(out, packageName);
+                    if (id > 0) {
+                        AppLogger.d(TAG, "findRunningTaskId " + packageName
+                                + " → taskId=" + id + " (via daemon dumpsys recents)");
+                        return id;
+                    }
+                    AppLogger.w(TAG, "findRunningTaskId " + packageName
+                            + " — not found in dumpsys recents (out.length=" + out.length() + ")");
+                }
+            } else {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — daemon not connected; cannot fallback to dumpsys");
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "findRunningTaskId daemon dumpsys fallback: " + t.getMessage());
+        }
+
+        // Path 3 (v1.2.15) — fallback via AdbLocalClient shell. Required when the
+        // proxy daemon is not running (DL5 testeur in field log
+        // BYD_RE_Sniffer_20260523_150803.txt — daemon was off, every Apply tap
+        // produced "daemon not connected" then taskId<=0). AdbLocalClient
+        // already provides shell access through the local adb-over-TCP path
+        // that is also used by MainActivity.btnResizeApply for the (dead) wm
+        // overscan command, so we know it is functional on this ROM.
+        //
+        // executeShellWithResult is async by API — block with a CountDownLatch.
+        // This method is documented "Must be called from a background thread"
+        // so blocking is fine.
+        try {
+            final java.util.concurrent.atomic.AtomicReference<String> outRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.atomic.AtomicReference<String> errRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.CountDownLatch latch =
+                    new java.util.concurrent.CountDownLatch(1);
+            AdbLocalClient.executeShellWithResult(this, "dumpsys activity recents",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String report) { outRef.set(report); latch.countDown(); }
+                        @Override public void onError(String error)   { errRef.set(error);  latch.countDown(); }
+                    });
+            // Generous timeout — dumpsys activity recents normally returns in <1 s,
+            // but the AdbLocal connect path may need to establish a TCP connection.
+            boolean done = latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!done) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys timeout (5s)");
+                return -1;
+            }
+            String err = errRef.get();
+            if (err != null) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys error: " + err);
+                return -1;
+            }
+            String out = outRef.get();
+            if (out != null && !out.isEmpty()) {
+                int id = parseTaskIdFromDumpsysRecents(out, packageName);
+                if (id > 0) {
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName
+                            + " → taskId=" + id + " (via AdbLocal dumpsys recents)");
+                    return id;
+                }
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — not found in AdbLocal dumpsys (out.length=" + out.length() + ")");
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "findRunningTaskId AdbLocal dumpsys fallback: " + t.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * v1.2.13 — Parse a numeric taskId out of a {@code dumpsys activity recents} dump
+     * for the given package. Each Task appears as
+     * <pre>* Recent #N: Task{xxxxxxx #88 type=standard A=ru.yandex.yandexmaps U=0 ...</pre>
+     * The affinity {@code A=...} is almost always equal to the package name; if a Task
+     * has a different affinity, we fall back to matching {@code realActivity=&lt;pkg&gt;/...}
+     * or {@code cmp=&lt;pkg&gt;/...} on a line within the same Task block.
+     *
+     * Returns the first match (most-recent task), or -1 if none.
+     */
+    static int parseTaskIdFromDumpsysRecents(String dump, String packageName) {
+        if (dump == null || packageName == null) return -1;
+        // Fast path — "Task{... #ID ... A=<pkg>" on the same line.
+        try {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "Task\\{[^}]*#(\\d+)[^}]*\\bA=" + java.util.regex.Pattern.quote(packageName) + "\\b");
+            java.util.regex.Matcher m = p.matcher(dump);
+            if (m.find()) {
+                try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException ignored) {}
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback — scan block by block, accept realActivity= or cmp= match.
+        try {
+            // Split on the "* Recent #" boundary so each block contains exactly one Task header.
+            String[] blocks = dump.split("(?m)^\\s*\\* Recent #\\d+:\\s*");
+            java.util.regex.Pattern idP =
+                    java.util.regex.Pattern.compile("Task\\{[^}]*#(\\d+)");
+            String marker1 = "realActivity=" + packageName + "/";
+            String marker2 = "cmp=" + packageName + "/";
+            String marker3 = " A=" + packageName + " ";
+            for (String block : blocks) {
+                if (block == null || block.isEmpty()) continue;
+                if (block.contains(marker1) || block.contains(marker2) || block.contains(marker3)) {
+                    java.util.regex.Matcher mm = idP.matcher(block);
+                    if (mm.find()) {
+                        try { return Integer.parseInt(mm.group(1)); } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
         return -1;
     }
 
@@ -269,8 +665,37 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
 
     public void moveTaskToDisplay(final String packageName, final int targetDisplayId,
                                    final LaunchCallback callback) {
+        moveTaskToDisplayInternal(packageName, targetDisplayId, callback, false);
+    }
+
+    /**
+     * v1.2.55-beta — enforce display placement WITHOUT falling back to a fresh
+     * launch. Used to repair the case where a normal launch (with
+     * ActivityOptions.launchDisplayId) spawned the app's process but the system
+     * placed the task on display 0 instead of the target cluster display —
+     * observed on Waze first-tap from a cold app process (field report after
+     * v1.2.54). Shares the move + setTaskWindowingMode(FREEFORM) + resizeTask
+     * post-move sequence with {@link #moveTaskToDisplay} so apps with per-app
+     * insets (auto-applied by MainActivity.autoApplyInsetsIfNeeded at T+500 ms)
+     * keep their cluster bounds when the move happens at T+2500 ms. Silent
+     * no-op when the task is not yet registered (the user can re-tap) and
+     * skipped for {@code PKG_FORCE_FRESH_LAUNCH} packages since their normal
+     * launch path is "fresh launch only" by design.
+     */
+    public void enforceTaskOnDisplay(final String packageName, final int targetDisplayId) {
+        moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
+    }
+
+    private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
+                                            final LaunchCallback callback,
+                                            final boolean enforceOnly) {
         // ── Ghost-nav workaround: always fresh-launch TeleNav instead of moving ──
         if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
+            if (enforceOnly) {
+                AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch package "
+                        + packageName);
+                return;
+            }
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName
                     + " (ghost-nav workaround)");
             fallbackLaunch(packageName, targetDisplayId, callback);
@@ -282,6 +707,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 try {
                     int taskId = findRunningTaskId(packageName);
                     if (taskId == -1) {
+                        if (enforceOnly) {
+                            AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for "
+                                    + packageName + " (skip, no fallback launch)");
+                            return;
+                        }
                         AppLogger.w(TAG, "moveTaskToDisplay: no running task for "
                                 + packageName + " → fallback launch");
                         fallbackLaunch(packageName, targetDisplayId, callback);
@@ -294,8 +724,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     Class<?> iAtmClass = iatm.getClass();
                     iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
                             .invoke(iatm, taskId, targetDisplayId);
-                    AppLogger.i(TAG, "moveTaskToDisplay taskId=" + taskId
-                            + " → display=" + targetDisplayId + " OK");
+                    AppLogger.i(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                            + " taskId=" + taskId + " → display=" + targetDisplayId + " OK");
 
                     if (targetDisplayId > 0) {
                         Thread.sleep(300); // let WM settle after the display move
@@ -313,8 +743,13 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         try {
                             int insetH = getInsetH(packageName);
                             int insetV = getInsetV(packageName);
+                            // DL5 fix: dynamic cluster size (was hardcoded 1920×720).
+                            int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
+                            int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
+                            if (cw <= 0) cw = 1920;
+                            if (ch <= 0) ch = 720;
                             android.graphics.Rect bounds = new android.graphics.Rect(
-                                    insetH, insetV, 1920 - insetH, 720 - insetV);
+                                    insetH, insetV, cw - insetH, ch - insetV);
                             iAtmClass.getMethod("resizeTask",
                                     int.class, android.graphics.Rect.class, int.class)
                                     .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
@@ -332,12 +767,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     });
 
                 } catch (Exception e) {
-                    AppLogger.e(TAG, "moveTaskToDisplay error", e);
+                    AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                            + " error", e);
                     if (mDestroyed) return;
+                    if (enforceOnly) return; // never re-launch in enforce mode
                     fallbackLaunch(packageName, targetDisplayId, callback);
                 }
             }
-        }, "move-task-thread").start();
+        }, enforceOnly ? "enforce-task-display" : "move-task-thread").start();
     }
 
     private void fallbackLaunch(final String packageName, final int targetDisplayId,
@@ -377,6 +814,30 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // Direct launch via IActivityManager on the Freedom display (proven v2.29).
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching via IActivityManager on display=" + displayId + " → " + packageName);
+
+                // Recovery : a previous diag session may have left an orphan
+                // split-screen-primary stack on this display (v1.2.61 fallback
+                // path used setCustomTaskWindowingModeSplitScreenPrimary which
+                // poisons the stack mode). AOSP then routes our new task into
+                // that stack and throws "Can only have one child on stack
+                // mode=split-screen-primary". Pre-cleanup is cheap and a no-op
+                // on a healthy display.
+                if (displayId > 0) {
+                    try {
+                        String cleanLog = com.byd.dashcast.beta.BetaProxyClient
+                                .cleanFissionStacks(displayId);
+                        AppLogger.d(TAG, "cleanFissionStacks(" + displayId + ")\n" + cleanLog);
+                    } catch (Throwable ce) {
+                        AppLogger.w(TAG, "cleanFissionStacks pre-launch failed: " + ce.getMessage());
+                    }
+                }
+
+                // v1.2.81 — apply per-app DPI override BEFORE am start so the
+                // app reads the new density at process boot. Guarded by
+                // displayId > 0 inside the manager (NEVER touches display 0).
+                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
+                        ClusterService.this, packageName, displayId);
+
                 try {
                     android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
@@ -393,7 +854,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     opts.setLaunchDisplayId(displayId);
                     if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
 
-                    startActivityViaIAM(launchIntent, opts);
+                    // DiLink 5.0: our app (uid 10148) is denied launchDisplayId by IATM
+                    // (SecurityException seen in field log 22/05/2026 build 187).
+                    // Route through ADB shell (uid 2000) which D31 validated end-to-end.
+                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                        startActivityViaShell(packageName, displayId, launchIntent);
+                    } else {
+                        startActivityViaIAM(launchIntent, opts);
+                    }
 
                     AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                     if (callback != null) {
@@ -430,6 +898,17 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+                // Recovery cleanup — see launchOnDashboard() for rationale.
+                if (displayId > 0) {
+                    try {
+                        com.byd.dashcast.beta.BetaProxyClient.cleanFissionStacks(displayId);
+                    } catch (Throwable ce) {
+                        AppLogger.w(TAG, "cleanFissionStacks(WithBounds) failed: " + ce.getMessage());
+                    }
+                }
+                // v1.2.81 — same per-app DPI apply on the split-bounds path.
+                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
+                        ClusterService.this, packageName, displayId);
                 try {
                     android.content.Intent launchIntent =
                             getPackageManager().getLaunchIntentForPackage(packageName);
@@ -462,7 +941,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
                     }
-                    startActivityViaIAM(launchIntent, opts);
+                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                        // DL5: IATM denies our uid for cross-display launches — use shell.
+                        startActivityViaShell(packageName, displayId, launchIntent);
+                    } else {
+                        startActivityViaIAM(launchIntent, opts);
+                    }
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK [" + left + "," + top
                             + "," + right + "," + bottom + "] display=" + displayId);
                     if (callback != null) callback.onResult(true);
@@ -522,8 +1006,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Since we run only one app at a time on the cluster, we apply the app-specific 
         // bounds directly as a display overscan at launch.
         if (displayId > 0) {
-            AdbLocalClient.executeShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
-            AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
+            // wm overscan was removed from Android 11+ (API 30+). DL5 is API 32
+            // → "Unknown command: overscan". Skip the call entirely on DL5.
+            if (AdbLocalClient.isDiLink5Safe(this)) {
+                AppLogger.d(TAG, "DL5: skipping app-specific wm overscan (cmd removed in API 30+)");
+            } else {
+                ShellGateway.execShell(this, "wm overscan " + insetH + "," + insetV + "," + insetH + "," + insetV + " -d " + displayId);
+                AppLogger.i(TAG, "Applied app-specific wm overscan during launch on display " + displayId);
+            }
         }
     }
 
@@ -551,6 +1041,77 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         }
     }
 
+    /**
+     * DL5 launch path — bypasses IATM by shelling out to {@code am start --display N}.
+     *
+     * Background: on DiLink 5.0 (BYD-AUTO API 32), our process (uid 10148) is denied
+     * cross-display activity launches by IActivityTaskManager: a typed
+     * {@code startActivityAsUser} with {@code ActivityOptions.setLaunchDisplayId(3)}
+     * is rejected with {@code SecurityException: Permission Denial ... with launchDisplayId=3}
+     * (field log 22/05/2026 build 187, lines 38.767 / 46.196). The shell uid 2000
+     * has the privileges to land the activity on the cluster display — this is exactly
+     * what the D31 diagnostic probe validated end-to-end before build 188.
+     *
+     * The command pattern mirrors D31:
+     *   {@code am start --display N -a MAIN -c LAUNCHER -n <pkg>/<launcher> 2>&1}
+     *
+     * Fire-and-forget through {@link AdbLocalClient#executeShellWithResult}: the
+     * existing {@code launchOnDashboard} callback already optimistically reports
+     * success after dispatch, so the shell error path is logged but does not
+     * propagate (consistent with the legacy IATM path which also swallows
+     * RemoteException after best-effort).
+     */
+    private void startActivityViaShell(String packageName, int displayId,
+                                       android.content.Intent launchIntent) {
+        String component = null;
+        if (launchIntent != null && launchIntent.getComponent() != null) {
+            android.content.ComponentName cn = launchIntent.getComponent();
+            component = cn.getPackageName() + "/" + cn.getClassName();
+        }
+        if (component == null) {
+            AppLogger.e(TAG, "startActivityViaShell: cannot resolve component for " + packageName);
+            return;
+        }
+        // v1.2.30 — DL5 resize root cause fix.
+        // Field log BYD_RE_Sniffer_20260523_184727.txt proved that without
+        // an explicit windowing mode the task lands as WINDOWING_MODE_FULLSCREEN
+        // on display 3, and `cmd activity task resize` is a silent no-op on
+        // fullscreen tasks since API 30+ (returns exit=0, never changes bounds).
+        // Adding `--windowingMode 5` (FREEFORM) is the documented `am start`
+        // flag for selecting a windowing mode at launch time (AOSP ≥API 26,
+        // still present in API 32) and is the prerequisite for the subsequent
+        // resizeActiveTask() call to actually apply our inset bounds on the
+        // XDJA fission VirtualDisplay backing the cluster.
+        //
+        // v1.2.32 — DL5 resize second-order fix (REVERTED in v1.2.35).
+        // We used to also `settings put global force_resizable_activities 1`
+        // here to make non-resizable navigation apps (Yandex Maps, Google
+        // Maps, …) honor freeform bounds on the cluster display. That global
+        // is system-wide and persistent (Settings.Global) and had the very
+        // unwanted side effect of making every BYD head-unit app split-screen
+        // capable too (e.g. the 360° camera became resizable). We no longer
+        // touch that setting at launch time, and ClusterService.onCreate()
+        // proactively resets it back to 0 on DiLink 5 to clean up users who
+        // upgraded from v1.2.32 – v1.2.34. The freeform launch + per-task
+        // resize still works for apps whose manifest already declares
+        // resizeableActivity=true (or doesn't declare it on API 24+).
+        final String cmd = "am force-stop " + packageName + " 2>&1; "
+                + "am start --display " + displayId
+                + " --windowingMode 5"
+                + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+                + " -n " + component
+                + " --activity-clear-task 2>&1";
+        AppLogger.i(TAG, "DL5 launch via shell: " + cmd);
+        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.i(TAG, "DL5 am start → " + out.trim());
+            }
+            @Override public void onError(String err) {
+                AppLogger.e(TAG, "DL5 am start ERROR: " + err);
+            }
+        });
+    }
+
     public void restartProjection() {
         AppLogger.log(TAG, "restartProjection requested natively");
         if (mDisplayHelper != null) {
@@ -565,11 +1126,35 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      */
     public void stopProjectionNoAdb() {
         AppLogger.log(TAG, "stopProjectionNoAdb requested (ADB already sent)");
-        AdbLocalClient.executeShell(this, "wm overscan reset -d 1");
+        if (!AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d 1");
+        }
+        // v1.2.81 — restore default DPI on the cluster display before tearing
+        // down. Guarded by displayId > 0 inside the manager.
+        try {
+            com.byd.dashcast.cluster.ClusterDpiManager.restore(
+                    this, mDisplayHelper.getKnownClusterDisplayId());
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "DPI restore (stopProjectionNoAdb) failed: " + t.getMessage());
+        }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: stopped");
+        // v1.2.77 — drop the FG notification entirely instead of pushing an
+        // ongoing "Cluster : arrêté" that the user cannot swipe away. The
+        // service is about to stopSelf() so there is no reason to keep any
+        // notification at all.
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "stopForeground failed: " + t.getMessage());
+        }
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm != null) nm.cancel(NOTIF_ID);
         stopSelf();
     }
 
@@ -582,7 +1167,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Update the forwarder with the real dimensions and ID of the display
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
-        updateNotification("Cluster active — display " + displayId);
+        updateNotification(getString(R.string.notif_cluster_active, displayId));
 
         // Apply display-level insets via wm overscan so all apps launched on this display
         // stay within the safe area [INSET_H, INSET_V, 1920-INSET_H, 720-INSET_V].
@@ -590,14 +1175,19 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // because apps there are not tracked by the standard WM task system.
         // SAFETY GUARD: never apply overscan to the main display (id 0 or negative).
         if (displayId > 0) {
-            final int insetH = getInsetH(null);
-            final int insetV = getInsetV(null);
-            AdbLocalClient.executeShell(this,
-                    "wm overscan " + insetH + "," + insetV
-                    + "," + insetH + "," + insetV
-                    + " -d " + displayId);
-            AppLogger.i(TAG, "wm overscan applied on display " + displayId
-                    + " inset=" + insetH + "," + insetV);
+            if (AdbLocalClient.isDiLink5Safe(this)) {
+                // wm overscan removed in API 30+ — DL5 is API 32. No-op on DL5.
+                AppLogger.d(TAG, "DL5: skipping display-level wm overscan (cmd removed in API 30+)");
+            } else {
+                final int insetH = getInsetH(null);
+                final int insetV = getInsetV(null);
+                ShellGateway.execShell(this,
+                        "wm overscan " + insetH + "," + insetV
+                        + "," + insetH + "," + insetV
+                        + " -d " + displayId);
+                AppLogger.i(TAG, "wm overscan applied on display " + displayId
+                        + " inset=" + insetH + "," + insetV);
+            }
         } else {
             AppLogger.w(TAG, "wm overscan skipped: displayId=" + displayId + " (must be > 0)");
         }
@@ -611,7 +1201,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     public void onDashboardDisplayDisconnected() {
         AppLogger.log(TAG, "Cluster display disconnected");
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification("Cluster: disconnected");
+        updateNotification(getString(R.string.notif_cluster_disconnected));
         if (mListener != null) {
             mListener.onClusterDisplayDisconnected();
         }
@@ -622,9 +1212,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "Cluster projection",
+                getString(R.string.notif_cluster_channel_name),
                 NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Maintains display on the BYD cluster");
+        channel.setDescription(getString(R.string.notif_cluster_channel_desc));
         channel.setShowBadge(false);
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) nm.createNotificationChannel(channel);
@@ -637,7 +1227,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("BYD App")
+                .setContentTitle(getString(R.string.app_name))
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
                 .setContentIntent(pi)

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1.2.72 — Cluster resize editor (option B + ergonomie voiture).
+  Material 3 styling, 8 handles, presets row, large tactile buttons.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/md_background">
+
+    <FrameLayout
+        android:id="@+id/resize_canvas"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/md_surface_container_lowest">
+
+        <TextureView
+            android:id="@+id/resize_texture"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <com.byd.dashcast.cluster.ResizeFrameView
+            android:id="@+id/resize_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <!-- v1.2.84 — floating Close button (top-end) so the Activity stays
+             open after pressing Validate, until the user explicitly closes. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_close"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/resize_btn_close"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:icon="@android:drawable/ic_menu_close_clear_cancel"/>
+            xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+        <!-- v1.2.84 — Live preview checkbox (top-start). Off by default;
+             toggling on triggers a confirmation popup warning about flashes
+             on the cluster screen. -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/resize_sw_live"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="@color/md_surface_container"
+            android:textColor="@color/md_on_surface"
+            android:text="@string/resize_live_label"/>
+    </FrameLayout>
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Bottom action bar : coordonnées + presets + boutons. Hauteur 96dp
+         pour une bonne ergonomie en voiture (cible tactile >= 64dp). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="96dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:background="@color/md_surface_container">
+
+        <TextView
+            android:id="@+id/resize_coords"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/md_on_surface"
+            android:textSize="15sp"
+            android:fontFamily="monospace"
+            android:layout_marginEnd="16dp"
+            tools:ignore="UnusedAttribute"/>
+
+        <!-- Presets — scrollable in case the HMI is narrow. -->
+        <HorizontalScrollView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/resize_preset_full"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:minWidth="120dp"
+                    android:layout_marginEnd="10dp"
+                    android:text="@string/resize_preset_full"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/resize_preset_left"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:minWidth="120dp"
+                    android:layout_marginEnd="10dp"
+                    android:text="@string/resize_preset_left"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/resize_preset_right"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:minWidth="120dp"
+                    android:layout_marginEnd="10dp"
+                    android:text="@string/resize_preset_right"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/resize_preset_center"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="64dp"
+                    android:minWidth="120dp"
+                    android:layout_marginEnd="10dp"
+                    android:text="@string/resize_preset_center"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_cancel"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="64dp"
+            android:minWidth="120dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="10dp"
+            android:textSize="16sp"
+            android:text="@string/resize_btn_cancel"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resize_btn_ok"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="64dp"
+            android:minWidth="140dp"
+            android:textSize="16sp"
+            android:text="@string/resize_btn_ok"/>
+    </LinearLayout>
+</LinearLayout>

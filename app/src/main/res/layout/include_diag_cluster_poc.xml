@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cluster move/resize panel (v1.2.58).
+
+    VirtualDisplay POC abandoned (see PROJET_BYD_DOCUMENTATION). New approach :
+    piggyback on the xdja-owned `fission_*` trusted display (id ≈ 1, owner
+    com.xdja.containerservice, uid system) and drive Waze (or any app) using
+    OpenBYD-style `launchAndForce` + interactive `moveAndResize` to validate
+    bounds/position live — same UX as Dilink5 Dashboard / WindowManagement.
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/md_outline_variant"
+            app:cardBackgroundColor="@color/md_surface_container_low">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_cluster_poc_title"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/diag_cluster_poc_subtitle"
+                    android:textSize="13sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+
+                <!-- ── Row 1 : enumerate + restart daemon + share report ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_enumerate"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_cluster_poc_btn_enumerate"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_restart_daemon"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/diag_cluster_poc_btn_restart_daemon"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_share"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/diag_cluster_poc_btn_share"/>
+                </LinearLayout>
+
+                <!-- ── Row 1b (v1.2.58) : Phase A step 1 — auto-recovery test buttons.
+                     Mirrors the in-car test plan in the v1.2.58-beta release notes
+                     so the user can validate without ADB:
+                       • Kill daemon       → simulate crash, observe `attemptReconnect`
+                                            on the next normal action.
+                       • Test recovery     → kill + immediate typed-verb probe,
+                                            reports old/new PID + latency.
+                       • Anti-storm test   → kill ×3 in <1s, expects 1 reconnect
+                                            then 2 cooldown skips.
+                     Buttons are power-user only → hardcoded text per the
+                     DiagActivity convention. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_kill_daemon"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="💀 Kill daemon"
+                        tools:ignore="HardcodedText"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_test_recovery"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="🩺 Test recovery"
+                        tools:ignore="HardcodedText"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_test_storm"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="🌪 Anti-storm test"
+                        tools:ignore="HardcodedText"/>
+                </LinearLayout>
+
+                <!-- ── Row 1c (v1.2.62) : Phase A step 2 — watchdog status. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_watchdog_status"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="🐕 Watchdog status"
+                    tools:ignore="HardcodedText"/>
+
+                <!-- ── Row 1d (v1.2.63) : Phase A step 3 — fast rebroadcast test. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_test_rebroadcast"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="📡 Test rebroadcast (fast-path)"
+                    tools:ignore="HardcodedText"/>
+
+                <!-- ── Row 1e (v1.2.64) : Phase A — export daemon log via Telegram. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_export_daemon_log"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="📥 Export daemon log (Telegram)"
+                    tools:ignore="HardcodedText"/>
+
+                <!-- ── Section : app under test ──────────────────────── -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/diag_cluster_poc_section_app"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_cluster_poc_label_pkg"
+                        android:textSize="13sp"
+                        android:textColor="@color/md_on_surface_variant"/>
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_cluster_poc_pkg"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:singleLine="true"
+                        android:inputType="text"
+                        android:text="com.waze"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_launch"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_cluster_poc_btn_launch"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_stop"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/diag_cluster_poc_btn_stop"/>
+                </LinearLayout>
+
+                <!-- ── Section : interactive rect on fission ─────────── -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/diag_cluster_poc_section_rect"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"/>
+
+                <TextView
+                    android:id="@+id/tv_cluster_poc_rect"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="monospace"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:text="rect = (0, 0) 400×400"/>
+
+                <!-- X slider -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/diag_cluster_poc_slider_x"
+                    android:textSize="12sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+                <SeekBar
+                    android:id="@+id/sb_cluster_poc_x"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="1920"
+                    android:progress="0"/>
+
+                <!-- Y slider -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/diag_cluster_poc_slider_y"
+                    android:textSize="12sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+                <SeekBar
+                    android:id="@+id/sb_cluster_poc_y"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="720"
+                    android:progress="0"/>
+
+                <!-- W slider -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/diag_cluster_poc_slider_w"
+                    android:textSize="12sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+                <SeekBar
+                    android:id="@+id/sb_cluster_poc_w"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="1920"
+                    android:progress="400"/>
+
+                <!-- H slider -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/diag_cluster_poc_slider_h"
+                    android:textSize="12sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+                <SeekBar
+                    android:id="@+id/sb_cluster_poc_h"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="720"
+                    android:progress="400"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_apply"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="0dp"
+                        android:layout_weight="2"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_cluster_poc_btn_apply"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_cluster_poc_auto_apply"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:checkable="true"
+                        android:text="@string/diag_cluster_poc_btn_auto_apply"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_cluster_poc_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:padding="14dp"
+                    android:background="@color/md_surface_container_high"
+                    android:fontFamily="monospace"
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:text="@string/diag_cluster_poc_status_idle"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

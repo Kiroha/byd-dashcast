@@ -1,8 +1,11 @@
 package com.byd.dashcast;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+// LOT 4 — Bitmap/BitmapFactory imports removed (captureClusterDisplay deleted).
+import android.os.SystemClock;
+
+import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.beta.BetaProxyClient;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
@@ -51,15 +54,80 @@ public class AdbLocalClient {
     /** ADB TCP port — same for Android 7–10 in developer mode */
     private static final int ADB_PORT = 5555;
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // AutoContainer service name — DL3 vs DL5 dispatch
+    //   DiLink 3.0 (BYD Seal EU / Atto 3 …) → "AutoContainer" (PascalCase)
+    //   DiLink 5.0 (BYD-AUTO API 32)       → "auto_container" (snake_case)
+    // Confirmed by D11/D12 PASS on DL5 (log 22/05/2026) and by user on DL3.
+    // Helper must never throw (hot path called from background thread).
+    // ──────────────────────────────────────────────────────────────────────────
+    static String autoContainerSvcName(Context ctx) {
+        try {
+            if (ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx)) {
+                return "auto_container";
+            }
+        } catch (Throwable ignore) { /* DL3 safe default below */ }
+        return "AutoContainer";
+    }
+
+    static boolean isDiLink5Safe(Context ctx) {
+        try {
+            return ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx);
+        } catch (Throwable ignore) { return false; }
+    }
+
+    /** True if running on DiLink 2 (alps / k65v1, single display 0). */
+    public static boolean isDiLink2Safe(Context ctx) {
+        try {
+            return ctx != null
+                    && com.byd.dashcast.platform.Platform.get().isDiLink2(ctx);
+        } catch (Throwable ignore) { return false; }
+    }
+
+    /**
+     * DL2 SAFETY GUARD — matches any {@code wm overscan|size|density} subcommand
+     * (with any arguments, anywhere in the line, including pipelines and chains).
+     *
+     * <p>On DiLink 2 (alps / k65v1 / MT6765 / API 28) there is only physical
+     * display 0 (verified L3/L5 of the DL2 RECON REPORT 22/05/2026). The MTK
+     * fork silently falls back to display 0 when {@code -d N} targets a
+     * non-existent display id, which shrinks the user's main UI screen
+     * (field report: user set margins 80/50 → main screen got smaller).
+     * Any such command is therefore unconditionally blocked on DL2.
+     */
+    public static boolean isDisplayResizeCmd(String cmd) {
+        if (cmd == null) return false;
+        return cmd.matches("(?s).*\\bwm\\s+(overscan|size|density)\\b.*");
+    }
+
+    /**
+     * Returns true and logs a warning when {@code cmd} must be blocked because
+     * it is a display-resize command running on DL2. Centralised so every
+     * shell entry point (legacy {@code executeShell*}, {@link com.byd.dashcast.beta.ShellGateway})
+     * applies the same guard.
+     */
+    public static boolean blockDiLink2Resize(Context ctx, String cmd) {
+        if (isDiLink2Safe(ctx) && isDisplayResizeCmd(cmd)) {
+            AppLogger.w(TAG, "DL2 BLOCK: refused resize cmd \"" + cmd
+                    + "\" — single display 0, would shrink main screen");
+            return true;
+        }
+        return false;
+    }
+
     // -------------------------------------------------------------------------
 
     /**
      * Executes a raw shell command via local ADB (asynchronous).
      */
     public static void executeShell(final Context context, final String command) {
+        if (blockDiLink2Resize(context, command)) return;
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
+                try (Dadb dadb = connect(appCtx)) {
                     AdbShellResponse r = dadb.shell(command);
                     AppLogger.d(TAG, "executeShell: " + command + " -> " + r.getAllOutput().trim());
                 } catch (Exception e) {
@@ -73,8 +141,14 @@ public class AdbLocalClient {
     /** Executes a shell command and returns the result via callback (background thread). */
     public static void executeShellWithResult(final Context context, final String command,
                                               final Callback callback) {
+        if (blockDiLink2Resize(context, command)) {
+            if (callback != null) callback.onError(
+                    "blocked on DiLink 2: no cluster display (would shrink main screen)");
+            return;
+        }
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(() -> {
-            try (Dadb dadb = connect(context)) {
+            try (Dadb dadb = connect(appCtx)) {
                 String output = dadb.shell(command).getAllOutput().trim();
                 AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
                 if (callback != null) callback.onSuccess(output);
@@ -94,11 +168,8 @@ public class AdbLocalClient {
         void onError(String error);
     }
 
-    public interface BitmapCallback {
-        void onBitmap(Bitmap bitmap);
-        void onError(String error);
-    }
-
+    // LOT 4 — BitmapCallback interface removed: only used by captureClusterDisplay
+    // (also removed). No external caller across the codebase.
 
     // Grep pattern uses the [m] trick to prevent grep from matching its own cmdline.
     // "[m]irrordaemon" matches "mirrordaemon" in process names but not in the
@@ -160,159 +231,6 @@ public class AdbLocalClient {
         });
     }
 
-    // -------------------------------------------------------------------------
-
-    /**
-     * Starts the local ADB connection in a background thread.
-     *
-     * Strategy:
-     *  1. setprop persist.sys.acc.whitelist — BYD-specific mechanism (DiLink whitelist)
-     *  2. abb_exec package grant — attempt via direct Binder (UID 1000 possible on some ROMs)
-     *  3. BYD service enumeration via service list (for future proxy)
-     */
-    public static void connectAndGrant(final Context context, final Callback callback) {
-        sExecutor.execute(() -> {
-            try {
-                File privateKey = new File(context.getFilesDir(), "adb.key");
-                File publicKey  = new File(context.getFilesDir(), "adb.pub");
-                boolean newKey  = !privateKey.exists() || !publicKey.exists();
-
-                AppLogger.log(TAG, newKey
-                        ? "New ADB key generated → popup expected"
-                        : "Existing ADB key reloaded");
-                AppLogger.log(TAG, "Connecting dadb → localhost:" + ADB_PORT + " …");
-                try (Dadb dadb = connect(context)) {
-                AppLogger.log(TAG, "ADB connection established ✓");
-
-                StringBuilder sb = new StringBuilder();
-                String pkg = context.getPackageName();
-
-                // ── PASS 1: persist.sys.acc.whitelist (BYD DiLink mechanism) ─────────────
-                sb.append("=== [1] BYD DiLink whitelist ===\n");
-
-                // Read current value
-                AdbShellResponse rGet = dadb.shell("getprop persist.sys.acc.whitelist 2>&1");
-                String currentWhitelist = rGet.getAllOutput().trim();
-                sb.append("Current value: '").append(currentWhitelist).append("'\n");
-
-                // Add our package if not already present
-                String newVal = currentWhitelist.isEmpty() ? pkg
-                        : (currentWhitelist.contains(pkg) ? currentWhitelist
-                        : currentWhitelist + "," + pkg);
-
-                AdbShellResponse rSet = dadb.shell(
-                        "setprop persist.sys.acc.whitelist \"" + newVal + "\" 2>&1 && echo SETPROP_OK");
-                boolean setpropOk = rSet.getAllOutput().contains("SETPROP_OK");
-                sb.append("setprop: ").append(setpropOk ? "OK" : "ERROR — " + rSet.getAllOutput().trim()).append("\n");
-
-                if (setpropOk) {
-                    // Verify the value was persisted
-                    AdbShellResponse rVerify = dadb.shell("getprop persist.sys.acc.whitelist");
-                    sb.append("Value after: '").append(rVerify.getAllOutput().trim()).append("'\n");
-                    sb.append("\n⚠ Whitelist updated.\n")
-                      .append("→ Fully close the app then relaunch it.\n")
-                      .append("  If it works, *_GET permissions will be granted on next reboot.\n");
-                } else {
-                    sb.append("→ setprop refused (protected property on this ROM).\n");
-                }
-                sb.append("\n");
-
-                // ── PASS 2: test pm grant on _COMMON (dangerous?) and _GET (signature) ──
-                boolean abbSupported = dadb.supportsFeature("abb_exec");
-                sb.append("\n=== [2] abb_exec available: ").append(abbSupported).append(" ===\n");
-
-                // Check effective UID
-                AdbShellResponse rUid = dadb.shell("id 2>&1");
-                sb.append("Shell UID: ").append(rUid.getAllOutput().trim()).append("\n");
-
-                // _COMMON: dangerous — pm grant works (all granted here)
-                // _GET:    signature — always refused via pm grant
-                String[] commonPerms = {
-                    "android.permission.BYDAUTO_SPEED_COMMON",
-                    "android.permission.BYDAUTO_ENERGY_COMMON",
-                    "android.permission.BYDAUTO_GEARBOX_COMMON",
-                    "android.permission.BYDAUTO_BODYWORK_COMMON",
-                    "android.permission.BYDAUTO_AC_COMMON",
-                    "android.permission.BYDAUTO_DOOR_LOCK_COMMON",
-                    "android.permission.BYDAUTO_ENGINE_COMMON",
-                    "android.permission.BYDAUTO_INSTRUMENT_COMMON",
-                    "android.permission.BYDAUTO_LIGHT_COMMON",
-                    "android.permission.BYDAUTO_TYRE_COMMON",
-                    "android.permission.BYDAUTO_RADAR_COMMON",
-                    // SAFETYBELT_COMMON removed: unknown permission on Seal EU ROM
-                    // "android.permission.BYDAUTO_SAFETYBELT_COMMON",
-                };
-                String[] getPerms = {
-                    "android.permission.BYDAUTO_SPEED_GET",
-                    "android.permission.BYDAUTO_ENERGY_GET",
-                    "android.permission.BYDAUTO_GEARBOX_GET",
-                };
-                sb.append("\n── pm grant ALL _COMMON (dangerous) ──\n");
-                for (String perm : commonPerms) {
-                    String shortName = perm.replace("android.permission.BYDAUTO_", "");
-                    AdbShellResponse r = dadb.shell("pm grant " + pkg + " " + perm + " 2>&1 && echo GRANTED || echo DENIED");
-                    String out = r.getAllOutput().trim();
-                    sb.append(shortName).append(": ").append(
-                        out.contains("GRANTED") ? "OK ✓ (dangerous — granted)" :
-                        out.contains("not a changeable") ? "SIGNATURE — not grantable via pm" :
-                        out.contains("Unknown permission") ? "⚠️ Not available on this ROM" :
-                        out).append("\n");
-                }
-                sb.append("── pm grant _GET (signature — for reference) ──\n");
-                for (String perm : getPerms) {
-                    String shortName = perm.replace("android.permission.BYDAUTO_", "");
-                    AdbShellResponse r = dadb.shell("pm grant " + pkg + " " + perm + " 2>&1 && echo GRANTED || echo DENIED");
-                    String out = r.getAllOutput().trim();
-                    sb.append(shortName).append(": ").append(
-                        out.contains("GRANTED") ? "OK ✓ (unexpected)" :
-                        out.contains("not a changeable") ? "SIGNATURE (expected)" :
-                        out).append("\n");
-                }
-                sb.append("\n");
-
-                // ── PASS 3: BYD service enumeration (for future proxy) ─────────────────────
-                sb.append("=== [3] Services BYD accessibles via shell ===\n");
-                AdbShellResponse rSvc = dadb.shell(
-                        "service list 2>/dev/null | grep -i 'byd\\|auto\\|vehicle\\|car' | head -20");
-                sb.append(rSvc.getAllOutput().isEmpty() ? "(no BYD service found)\n" : rSvc.getAllOutput());
-
-                // Check if /proc or /sys expose vehicle data
-                AdbShellResponse rSys = dadb.shell(
-                        "ls /sys/class/byd* /proc/byd* /data/system/byd* 2>/dev/null | head -10");
-                if (!rSys.getAllOutput().trim().isEmpty()) {
-                    sb.append("BYD system files:\n").append(rSys.getAllOutput().trim()).append("\n");
-                }
-                sb.append("\n");
-
-                // ── Final permission state (raw dump + broad grep) ────────────────────────
-                // BYD ROM format may differ from AOSP standard — dump the
-                // "declared permissions" + "install permissions" + "runtime permissions" sections
-                AdbShellResponse rFinal = dadb.shell(
-                        "dumpsys package " + pkg + " 2>/dev/null | grep -iE 'bydauto|BYDAUTO|requested perm|install perm|runtime perm|grantedPermissions' | head -40");
-                sb.append("=== Current permissions (raw dump) ===\n");
-                String finalOut = rFinal.getAllOutput().trim();
-                if (finalOut.isEmpty()) {
-                    // Fallback : dump complet de la section permissions
-                    AdbShellResponse rFull = dadb.shell(
-                            "dumpsys package " + pkg + " 2>/dev/null | grep -A2 -E 'permission|Permission' | grep -iE 'byd|granted|denied' | head -30");
-                    finalOut = rFull.getAllOutput().trim();
-                }
-                sb.append(finalOut.isEmpty() ? "(no entries — check APK is installed)" : finalOut).append("\n");
-
-                AppLogger.log(TAG, "ADB local finished ✓");
-                callback.onSuccess(sb.toString());
-                }
-
-            } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                AppLogger.e(TAG, "ADB local failed", e);
-                AppLogger.log(TAG, "ADB local ERROR — " + msg);
-                callback.onError(msg);
-            }
-        }); // adb-local-thread
-    }
-
     // ── Private helper — dadb connection (key already authorized, no popup) ───────────
 
     /** Lock for key generation: prevents TOCTOU if two ADB methods are called
@@ -368,10 +286,11 @@ public class AdbLocalClient {
      * if you need to update the UI after success.
      */
     public static void grantOverlayPermission(final Context context, final Callback callback) {
+        final Context appCtx = context.getApplicationContext();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    String cmd = "appops set " + context.getPackageName()
+                try (Dadb dadb = connect(appCtx)) {
+                    String cmd = "appops set " + appCtx.getPackageName()
                             + " SYSTEM_ALERT_WINDOW allow";
                     AdbShellResponse r = dadb.shell(cmd + " 2>&1");
                     AppLogger.i(TAG, "grantOverlayPermission → " + cmd
@@ -386,75 +305,6 @@ public class AdbLocalClient {
             }
         }); // adb-overlay-grant
     }
-
-    /**
-     * TEST 10 — Cluster activation + restore sequence (Seal EU)
-     *
-     * Sequence:
-     *   1. sendInfo(1000, 30) — Seal EU screen size (CONFIRMED 16/04/2026)
-     *   2. wait 1s
-     *   3. sendInfo(1000, 16) — Qt standby
-     *   4. wait 2s
-     *   5. sendInfo(1000, 18) — close projection (投屏关闭)
-     *   6. wait 1s
-     *   7. sendInfo(1000,  0) — refresh Qt stream
-     *   8. Logcat AutoContainer
-     */
-    public static void runDisplayOneLaunch(final Context context, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                long t0 = AppLogger.startTiming();
-                AppLogger.i(TAG, "runDisplayOneLaunch started [" + Thread.currentThread().getName() + "]");
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-                    dadb.shell("logcat -c 2>&1");
-
-                    // ── 1. sendInfo(30) — Seal EU screen size ─────────────────
-                    sb.append("── sendInfo(1000, 30) = Seal EU screen size (12.3\") ──\n");
-                    AdbShellResponse rSend30 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
-                    sb.append(rSend30.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1000);
-
-                    // ── 2. sendInfo(16) — Qt standby ─────────────────────────
-                    sb.append("\n── sendInfo(1000, 16) = Qt standby ──\n");
-                    AdbShellResponse rSend16 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 16 s16 \"\" 2>&1");
-                    sb.append(rSend16.getAllOutput().trim()).append("\n");
-                    Thread.sleep(2000);
-
-                    // ── 3. sendInfo(18) — fermer projection ──────────────────
-                    sb.append("\n── sendInfo(1000, 18) = fermer projection (投屏关闭) ──\n");
-                    AdbShellResponse rSend18 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
-                    sb.append(rSend18.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1000);
-
-                    // ── 4. sendInfo(0) — refresh Qt stream ───────────────────
-                    sb.append("\n── sendInfo(1000, 0) = refresh Qt stream ──\n");
-                    AdbShellResponse rSend0 = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
-                    sb.append(rSend0.getAllOutput().trim()).append("\n");
-                    Thread.sleep(500);
-
-                    // ── 5. Logcat ─────────────────────────────────────────────
-                    sb.append("\n── Logcat (AutoContainer) ──\n");
-                    AdbShellResponse rLog = dadb.shell(
-                        "logcat -d 2>&1 | grep -iE 'AutoContainer|sendInfo' | tail -20");
-                    sb.append(rLog.getAllOutput().trim().isEmpty() ? "(no entries)" : rLog.getAllOutput().trim()).append("\n");
-
-                    AppLogger.endTiming(TAG, t0, "runDisplayOneLaunch finished");
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "runDisplayOneLaunch ERREUR", e);
-                    callback.onError(msg);
-                }
-            }
-        }); // adb-display1-thread
-    }
-
 
     /**
      * Restores the native BYD display on the cluster.
@@ -472,10 +322,58 @@ public class AdbLocalClient {
     public static void restoreBydOnCluster(final Context context,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // v1.2.78 — invalidate ClusterManager's fast-path flag NOW (synchronously, before
+        // the async dispatch). Qt will return to native mode as soon as sendInfo(18)
+        // lands; the VirtualDisplay persists, so subsequent activate() calls must
+        // take the warm path (30→6s→16) instead of the true fast path.
+        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "Restoring BYD cluster"
                         + (targetPackage != null ? " (target=" + targetPackage + ")" : ""));
+                // Phase 4d: try the typed daemon path for the whole sequence
+                // (force-stop + sendInfo×2). On any failure we fall through to
+                // the legacy shell sequence below so semantics are preserved.
+                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        if (targetPackage != null && !targetPackage.isEmpty()) {
+                            // Phase 4d.1 (build 180): userId=0 (current user) instead of -1.
+                            // USER_ALL (-1) is silently no-op on some API 29 BYD framework
+                            // builds — the call returned without throwing but the package
+                            // process remained alive (Waze stayed visible on display 0
+                            // after restoreBydOnCluster reported "typed ok").
+                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
+                            Thread.sleep(500);
+                            verifyForceStop(targetPackage, sb);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        sb.append("sendInfo(18) : OK (typed)\n");
+                        Thread.sleep(1000);
+                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        sb.append("sendInfo(0)  : OK (typed)\n");
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta restoreBydOnCluster typed ok (" + dt + "ms)");
+                        callback.onSuccess("BYD restored \u2713 (typed)\n" + sb);
+                        return;
+                    } catch (Throwable t) {
+                        if (t instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            callback.onError("interrupted");
+                            return;
+                        }
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta restoreBydOnCluster typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
@@ -491,12 +389,12 @@ public class AdbLocalClient {
                     }
 
                     AdbShellResponse rStop = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
                     Thread.sleep(1000);
 
                     AdbShellResponse rRestore = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
 
                     AppLogger.log(TAG, "restoreBydOnCluster -> OK");
@@ -524,10 +422,53 @@ public class AdbLocalClient {
     public static void restoreOriginCluster(final Context context, final int screenSizeCmd,
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
+        // v1.2.78 — see restoreBydOnCluster() above for rationale.
+        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
                         + (targetPackage != null ? " target=" + targetPackage : ""));
+                // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
+                // Falls back to the legacy shell flow on any failure.
+                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        if (targetPackage != null && !targetPackage.isEmpty()) {
+                            // Phase 4d.1 (build 180): see restoreBydOnCluster above.
+                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
+                            Thread.sleep(500);
+                            verifyForceStop(targetPackage, sb);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        sb.append("sendInfo(18) : OK (typed)\n");
+                        Thread.sleep(6000);
+                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        sb.append("sendInfo(0)  : OK (typed)\n");
+                        Thread.sleep(6000);
+                        BetaProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
+                        sb.append("sendInfo(").append(screenSizeCmd).append(") : OK (typed)\n");
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta restoreOriginCluster typed ok (" + dt + "ms)");
+                        callback.onSuccess("Origin cluster restored \u2713 (typed)\n" + sb);
+                        return;
+                    } catch (Throwable t) {
+                        if (t instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            callback.onError("interrupted");
+                            return;
+                        }
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta restoreOriginCluster typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     StringBuilder sb = new StringBuilder();
 
@@ -540,17 +481,17 @@ public class AdbLocalClient {
                     }
 
                     AdbShellResponse rStop = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 18 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
                     Thread.sleep(6000);
 
                     AdbShellResponse rRefresh = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 0 s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
                     Thread.sleep(6000);
 
                     AdbShellResponse rSize = dadb.shell(
-                        "service call AutoContainer 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
+                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
                     sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
                     sb.append(rSize.getAllOutput().trim()).append("\n");
 
@@ -585,6 +526,37 @@ public class AdbLocalClient {
                                 final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
+                // Phase 4c: try the typed daemon path first. P13 (build 176)
+                // proved binder.transact(2, ...) on AutoContainer is accepted
+                // from uid 2000 with descriptor android.os.IAutoContainer.
+                // On any failure we fall through to the legacy ADB shell
+                // wrapper below — semantics are preserved for callers that
+                // only inspect callback.onSuccess(String) for emptiness.
+                // DL5: skip typed path — Phase4Verbs hardcodes the DL3 service
+                // name ("AutoContainer") which does not exist on DL5.
+                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        if (!BetaProxyClient.isConnected()) {
+                            BetaProxyClient.connect(context);
+                        }
+                        BetaProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "beta sendInfo typed ok (" + dt + "ms): "
+                                + type + "," + infoInt + ",\"" + (infoStr == null ? "" : infoStr) + "\"");
+                        // Legacy wrapper returned `service call` stdout (Parcel
+                        // hex dump). Typed path has no equivalent payload —
+                        // empty string matches what every existing caller
+                        // already expects (none of them parses the dump).
+                        if (callback != null) callback.onSuccess("");
+                        return;
+                    } catch (Throwable t) {
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "beta sendInfo typed failed after " + dt
+                                + "ms, falling back to ADB shell: " + t.getMessage());
+                        // fall through to legacy path
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     // Escape shell metacharacters inside the double-quoted argument:
                     //   \  → must be first to avoid double-escaping
@@ -596,7 +568,8 @@ public class AdbLocalClient {
                             .replace("\"", "\\\"")
                             .replace("$",  "\\$")
                             .replace("`",  "\\`");
-                    String cmd = "service call AutoContainer 2 i32 " + type
+                    String svc = autoContainerSvcName(context);
+                    String cmd = "service call " + svc + " 2 i32 " + type
                                + " i32 " + infoInt + " s16 \"" + safeStr + "\" 2>&1";
                     AppLogger.log(TAG, "sendInfo ADB: " + cmd);
                     AdbShellResponse r = dadb.shell(cmd);
@@ -679,223 +652,10 @@ public class AdbLocalClient {
     // identified and fixed by v1.75 (ClusterSurfaceProbe).
     // Removed to avoid any impact on the vehicle.
 
-    // ── TEST 12 : Sonde taille display cluster + essais cmd 29/30/31 + wm size ──
-
-    /**
-     * Tests different approaches to fix the cluster display resolution.
-     *
-     * The AutoDisplayService VirtualDisplay is created in 1920×1080 (default values
-     * in decompiled com.xdja.containerservice code), but the physical panel is
-     * ~1920×480 (ratio ~4:1). Result: vertical stretching.
-     *
-     * This test tries sequentially:
-     *   1. Dump current state of display 1 (wm size, dumpsys display)
-     *   2. sendInfo(1000, 29) — 切换到8.8寸屏 (might change Qt surface)
-     *   3. Re-dump display 1 to see if dimensions changed
-     *   4. sendInfo(1000, 30) — 切换到12.3寸屏 (restore original config)
-     *   5. Try wm size 1920x480 -d 1 (force logical resolution)
-     *   6. Post-wm size dump
-     *   7. wm size reset -d 1 (cleanup)
-     *
-     * Result is a text report with before/after dumps for each command
-     */
-    public static void runClusterDisplaySizeTest(final Context context, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-
-                    // ── 1. Initial state ─────────────────────────────────────
-                    sb.append("=== [1] INITIAL CLUSTER DISPLAY STATE ===\n");
-
-                    AdbShellResponse rSize = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 : ").append(rSize.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rDensity = dadb.shell("wm density -d 1 2>&1");
-                    sb.append("wm density -d 1 : ").append(rDensity.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rDump = dadb.shell(
-                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
-                    String dumpOut = rDump.getAllOutput().trim();
-                    sb.append("dumpsys display id=1:\n").append(
-                            dumpOut.isEmpty() ? "  (not found in dumpsys)" : dumpOut).append("\n");
-
-                    // Surface info via SurfaceFlinger
-                    AdbShellResponse rSf = dadb.shell(
-                            "dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'fission|virtual|cluster' | head -5");
-                    String sfOut = rSf.getAllOutput().trim();
-                    if (!sfOut.isEmpty()) {
-                        sb.append("SurfaceFlinger :\n").append(sfOut).append("\n");
-                    }
-                    sb.append("\n");
-
-                    // ── 2. sendInfo(1000, 29) — switch 8.8" ──────────────────
-                    sb.append("=== [2] sendInfo(1000, 29) — 切换到8.8寸屏 ===\n");
-                    AdbShellResponse r29 = dadb.shell(
-                            "service call AutoContainer 2 i32 1000 i32 29 s16 \"\" 2>&1");
-                    sb.append("Result: ").append(r29.getAllOutput().trim()).append("\n");
-
-                    // Wait for Qt to apply the change
-                    Thread.sleep(1500);
-
-                    AdbShellResponse rPost29 = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 after cmd=29: ").append(rPost29.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rDump29 = dadb.shell(
-                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
-                    String dump29 = rDump29.getAllOutput().trim();
-                    sb.append("dumpsys display id=1 after cmd=29:\n").append(
-                            dump29.isEmpty() ? "  (not found)" : dump29).append("\n\n");
-
-                    // ── 3. sendInfo(1000, 30) — Seal EU mode (12.3") ─────────
-                    sb.append("=== [3] sendInfo(1000, 30) — Seal EU (12.3\") — CONFIRMED 16/04/2026 ===\n");
-                    AdbShellResponse r30 = dadb.shell(
-                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
-                    sb.append("Result: ").append(r30.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1500);
-
-                    AdbShellResponse rPost30 = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 after cmd=30: ").append(rPost30.getAllOutput().trim()).append("\n");
-                    sb.append("\n");
-
-                    // ── 4. sendInfo(1000, 31) — switch 10.25" ────────────────
-                    sb.append("=== [4] sendInfo(1000, 31) — 切换到10.25寸屏 ===\n");
-                    AdbShellResponse r31 = dadb.shell(
-                            "service call AutoContainer 2 i32 1000 i32 31 s16 \"\" 2>&1");
-                    sb.append("Result: ").append(r31.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1500);
-
-                    AdbShellResponse rPost31 = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 after cmd=31: ").append(rPost31.getAllOutput().trim()).append("\n");
-                    sb.append("\n");
-
-                    // Restore 12.3"
-                    dadb.shell("service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
-                    Thread.sleep(500);
-
-                    // ── 5. wm size 1920x480 -d 1 ─────────────────────────────
-                    sb.append("=== [5] wm size 1920x480 -d 1 ===\n");
-                    AdbShellResponse rWm = dadb.shell("wm size 1920x480 -d 1 2>&1");
-                    sb.append("Command result: ").append(rWm.getAllOutput().trim()).append("\n");
-                    Thread.sleep(500);
-
-                    AdbShellResponse rPostWm = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 after: ").append(rPostWm.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rDumpWm = dadb.shell(
-                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -10");
-                    String dumpWm = rDumpWm.getAllOutput().trim();
-                    sb.append("dumpsys display id=1 after:\n").append(
-                            dumpWm.isEmpty() ? "  (not found)" : dumpWm).append("\n\n");
-
-                    // ── 6. Reset ──────────────────────────────────────────────
-                    sb.append("=== [6] wm size reset -d 1 (cleanup) ===\n");
-                    AdbShellResponse rReset = dadb.shell("wm size reset -d 1 2>&1");
-                    sb.append("Result: ").append(rReset.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 final: ").append(rFinal.getAllOutput().trim()).append("\n");
-
-                    AppLogger.log(TAG, "TEST 12 finished ✓");
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                    AppLogger.e(TAG, "TEST 12 ERROR", e);
-                    callback.onError(msg);
-                }
-            }
-        }); // adb-display-size-test
-    }
-
-    /**
-     * Sends a cluster screen size change command to Qt.
-     *   cmd 29 = 切换到8.8寸屏  (8.8" — BYD Atto 3)
-     *   cmd 30 = 切换到12.3寸屏 (12.3" — Seal U-DMI, use on Seal EU to fix ADAS)
-     *   cmd 31 = 切换到10.25寸屏 (10.25" — Seal EU native)
-     * Returns a wm size -d 1 report before/after the command
-     */
-    public static void sendClusterScreenSize(final Context context, final int sizeCmd,
-            final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-
-                    String label = sizeCmd == 29 ? "8.8\"" : sizeCmd == 30 ? "12.3\"" : "10.25\"";
-                    sb.append("sendInfo(1000, ").append(sizeCmd).append(") → ").append(label).append("\n\n");
-
-                    AdbShellResponse rBefore = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("Before: ").append(rBefore.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rCmd = dadb.shell(
-                            "service call AutoContainer 2 i32 1000 i32 " + sizeCmd + " s16 \"\" 2>&1");
-                    sb.append("Cmd:    ").append(rCmd.getAllOutput().trim()).append("\n");
-
-                    Thread.sleep(1500);
-
-                    AdbShellResponse rAfter = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("After: ").append(rAfter.getAllOutput().trim()).append("\n");
-
-                    AdbShellResponse rDump = dadb.shell(
-                            "dumpsys display 2>/dev/null | grep -A5 'mDisplayId=1' | head -8");
-                    String dump = rDump.getAllOutput().trim();
-                    if (!dump.isEmpty())
-                        sb.append("\ndumpsys display id=1 :\n").append(dump).append("\n");
-
-                    AdbShellResponse rSf = dadb.shell(
-                            "dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'fission|virtual' | head -3");
-                    String sf = rSf.getAllOutput().trim();
-                    if (!sf.isEmpty())
-                        sb.append("\nSurfaceFlinger :\n").append(sf).append("\n");
-
-                    AppLogger.log(TAG, "sendClusterScreenSize(" + sizeCmd + ") ✓");
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "sendClusterScreenSize(" + sizeCmd + ") ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        });
-    }
-
-    /**
-     * Resets the cluster display size to default:
-     *   1. sendInfo(1000, 30) — 切换到12.3寸屏 (Qt default state, 1920×1080)
-     *   2. wm size reset -d 1 — cancel any Android logical override
-     * Use after testing cmd 29/31 which may have disrupted the display
-     */
-    public static void resetClusterDisplaySize(final Context context, final Callback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("🔄 Restoring default size\n\n");
-
-                    AdbShellResponse r30 = dadb.shell(
-                            "service call AutoContainer 2 i32 1000 i32 30 s16 \"\" 2>&1");
-                    sb.append("sendInfo(1000,30) 切换到12.3寸屏 : ")
-                      .append(r30.getAllOutput().trim()).append("\n");
-                    Thread.sleep(500);
-
-                    AdbShellResponse rReset = dadb.shell("wm size reset -d 1 2>&1");
-                    sb.append("wm size reset -d 1: ").append(rReset.getAllOutput().trim()).append("\n");
-                    Thread.sleep(300);
-
-                    AdbShellResponse rFinal = dadb.shell("wm size -d 1 2>&1");
-                    sb.append("wm size -d 1 final ").append(rFinal.getAllOutput().trim()).append("\n");
-
-                    AppLogger.log(TAG, "resetClusterDisplaySize ✓");
-                    callback.onSuccess(sb.toString());
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.e(TAG, "resetClusterDisplaySize ERREUR", e);
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // adb-display-reset
-    }
+    // ── TEST 12 / sendClusterScreenSize / resetClusterDisplaySize ──
+    // Removed in batch 6 audit: 0 callsite across the codebase after the Diag
+    // redesign. The 3 methods (~200 LoC total) were manual sondes from the
+    // pre-v0.9.88 era. Restore from git history if a future Diag tab needs them.
 
     /**
      * Force-stops an application via ADB.
@@ -949,43 +709,68 @@ public class AdbLocalClient {
         }); // adb-forcestop-thread
     }
 
-    /**
-     * Captures a frame of the cluster display via screencap (uid=2000 = guaranteed SurfaceFlinger access).
-     * Saves to the app's external cache dir; the app can read it directly (no
-     * READ_EXTERNAL_STORAGE required for the package-specific directory o 29).
-     */
-    public static void captureClusterDisplay(final Context context,
-            final int displayId, final BitmapCallback callback) {
-        sExecutor.execute(new Runnable() {
-            @Override public void run() {
-                try (Dadb dadb = connect(context)) {
-                    File cacheDir = context.getExternalCacheDir();
-                    if (cacheDir == null) cacheDir = context.getCacheDir();
-                    File outFile = new File(cacheDir, "cluster_live.png");
-                    // Chemin ADB : /storage/emulated/0 → /sdcard (symlink standard)
-                    @SuppressWarnings("SdCardPath")
-                    String remotePath = outFile.getAbsolutePath()
-                            .replace("/storage/emulated/0", "/sdcard");
-                    dadb.shell("screencap -d " + displayId + " -p " + remotePath);
-                    Bitmap bm = BitmapFactory.decodeFile(outFile.getAbsolutePath());
-                    if (bm != null) {
-                        callback.onBitmap(bm);
-                    } else {
-                        callback.onError("decodeFile null: " + outFile.getAbsolutePath());
-                    }
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    AppLogger.w(TAG, "captureClusterDisplay erreur: " + e.getMessage());
-                    callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-        }); // screenshot-mirror-thread
-    }
+    // LOT 4 — captureClusterDisplay removed: dead code (0 caller across the
+    // codebase, only referenced via reflection comment in AppLogger cleanup).
+    // The cluster preview is now sourced from the mirror surface (no screencap).
 
     private static String safeOut(String s) {
         if (s == null) return "(null)";
         s = s.trim();
         return s.isEmpty() ? "(empty)" : s;
+    }
+
+    /**
+     * Phase 4d.1 verification helper — after a typed forceStopPackage call,
+     * queries the daemon for surviving PIDs of {@code pkg}. Logs a WARN line
+     * if the kill was ineffective so we can spot silently-failing
+     * IActivityManager.forceStopPackage invocations in device logs (root cause
+     * of "Waze stays on display 0 after restoreBydOnCluster typed ok" in 179).
+     */
+    private static void verifyForceStop(String pkg, StringBuilder sb) {
+        try {
+            String pids = BetaProxyClient.getPidsByPackage(pkg);
+            if (pids != null && !pids.trim().isEmpty()) {
+                String alive = pids.trim();
+                AppLogger.w(TAG, "beta force-stop ineffective for " + pkg
+                        + " (pids=" + alive + ") — escalating kill -9");
+                sb.append("  WARN: still alive, pids=").append(alive).append("\n");
+                // v1.2.9 (Bug 1/2 défense en profondeur) : si IActivityManager
+                // .forceStopPackage a échoué silencieusement (cas connu BYD AUTO
+                // ROM avec certaines apps système-like), escalader avec kill -9
+                // sur les PIDs survivants via le daemon (uid=2000, droit kill
+                // sur process même uid).
+                try {
+                    String killCmd = "kill -9 " + alive.replaceAll("\\s+", " ");
+                    BetaProxyClient.runShell(killCmd);
+                    sb.append("  escalated: ").append(killCmd).append("\n");
+                    // Petit délai pour laisser le kernel libérer les PIDs avant re-check.
+                    try { Thread.sleep(200); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    String pids2 = BetaProxyClient.getPidsByPackage(pkg);
+                    if (pids2 != null && !pids2.trim().isEmpty()) {
+                        AppLogger.w(TAG, "verifyForceStop: " + pkg
+                                + " STILL alive after kill -9 (pids=" + pids2.trim() + ")");
+                        sb.append("  WARN: still alive after kill -9, pids=")
+                                .append(pids2.trim()).append("\n");
+                    } else {
+                        AppLogger.i(TAG, "verifyForceStop: " + pkg
+                                + " killed after escalation ✓");
+                        sb.append("  verified killed after escalation\n");
+                    }
+                } catch (Throwable escalateError) {
+                    AppLogger.w(TAG, "verifyForceStop: kill -9 escalation failed for "
+                            + pkg + ": " + escalateError.getMessage());
+                    sb.append("  WARN: escalation failed: ")
+                            .append(escalateError.getMessage()).append("\n");
+                }
+            } else {
+                sb.append("  verified killed\n");
+            }
+        } catch (Throwable t) {
+            // Verification must not break the teardown sequence.
+            AppLogger.w(TAG, "verifyForceStop(" + pkg + ") threw: " + t.getMessage());
+        }
     }
 
 }

@@ -15,13 +15,31 @@
     android:focusable="true"
     android:background="?android:attr/selectableItemBackground">
 
-    <ImageView
-        android:contentDescription="@null"
-        android:id="@+id/iv_app_icon"
+    <FrameLayout
         android:layout_width="44dp"
         android:layout_height="44dp"
-        android:layout_marginEnd="14dp"
-        android:scaleType="fitCenter"/>
+        android:layout_marginEnd="14dp">
+
+        <ImageView
+            android:contentDescription="@null"
+            android:id="@+id/iv_app_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"/>
+
+        <TextView
+            android:id="@+id/badge_auto_launch"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_auto_launch_badge"
+            android:contentDescription="@string/app_state_auto"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="@color/pure_white"
+            android:textSize="8sp"
+            android:visibility="gone"/>
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -60,17 +78,6 @@
             android:layout_marginTop="4dp"
             android:visibility="gone" />
     </LinearLayout>
-
-    <CheckBox
-        android:id="@+id/cb_auto_launch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_state_auto"
-        android:textSize="10sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginEnd="4dp"
-        android:buttonTint="#FFC107"
-        android:visibility="gone"/>
 
     <!-- Indicator: app currently displayed on the cluster -->
     <View

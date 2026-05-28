@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    "Coming soon" panel reused for the Cluster / Display / ADB local /
+    Système / Stress test tabs in DiagActivity. The Activity changes the
+    title programmatically depending on the selected tab.
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/md_outline_variant"
+    app:cardBackgroundColor="@color/md_surface_container_low">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingStart="32dp" android:paddingEnd="32dp"
+        android:paddingTop="48dp" android:paddingBottom="48dp">
+
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@drawable/ic_stethoscope"
+            android:padding="22dp"
+            android:background="@drawable/bg_diag_card_icon"
+            app:tint="@color/md_primary"
+            android:contentDescription="@string/main_nav_diag"/>
+
+        <TextView
+            android:id="@+id/tv_coming_soon_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/diag_coming_soon_title"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/diag_coming_soon_subtitle"
+            android:textSize="14sp"
+            android:textColor="@color/md_on_surface_variant"
+            android:gravity="center"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

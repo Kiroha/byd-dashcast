@@ -19,10 +19,221 @@ android {
 
     defaultConfig {
         applicationId "com.byd.dashcast"
-        minSdkVersion 29
+        minSdkVersion 28
         targetSdkVersion 29
-        versionCode 155
-        versionName "1.0.1"
+        // Public versionName bumped to 1.2.31 for the LOT 3 perf pass:
+        //   - ClusterInputForwarder.injectTouchAtMulti: PointerProperties[16] +
+        //     PointerCoords[16] pre-allocated once in the constructor, fields
+        //     reset per call → 0 array/object allocations per cluster touch event.
+        //   - MainActivity.forwardTouchFromMirror: pre-allocated mPointerIds /
+        //     mClusterXs / mClusterYs (int[16] / float[16] x2) reused per touch.
+        //   - BetaProxyClient.connect() late-arrival recovery: pingBinder()
+        //     replaced by isBinderAlive() (the live cache is hooked via
+        //     linkToDeath in the broadcast receiver, so isBinderAlive is
+        //     accurate — saves one IPC roundtrip on every recovery attempt).
+        //   - Phase4Verbs.autoContainerBinder: pingBinder() replaced by
+        //     isBinderAlive() + linkToDeath registered on first cache. Saves
+        //     one IPC per Phase4Verbs.autoContainerSendInfo() call.
+        //   - AppLogger.get(): defensive snapshot under LOCK, StringBuilder
+        //     format loop moved outside the lock — logger calls from worker
+        //     threads (Beta/ADB/Phase4 probes) no longer wait for the UI thread
+        //     to finish formatting 3000 entries.
+        //   - AppLogger.getCountByLevel(): incremental int[] counters
+        //     maintained in addEntry() / clear() / overflow eviction. LogActivity
+        //     refreshLog() no longer walks 3000 entries every 500 ms just to
+        //     compute the chip totals.
+        // LOT 4 (v1.2.32 / build 228) — hygiene + Waze retry:
+        //   - patch_*.py (7 scripts) moved to scripts_archive/ (root cleanup).
+        //   - ClusterService.sIsRunning → volatile (auto-resize-thread visibility).
+        //   - AdbLocalClient.captureClusterDisplay + BitmapCallback removed
+        //     (dead code, 0 caller); Bitmap/BitmapFactory imports pruned.
+        //   - MainActivity.autoApplyInsetsIfNeeded(): retry findRunningTaskId up
+        //     to 3× with 500 ms backoff when taskId<=0 (Waze post-launch race
+        //     observed in BYD_RE_Sniffer_20260523_204155.txt at 20:42:26.696).
+        // LOT 5 (v1.2.33 / build 229) — Toast lifecycle:
+        //   - 20 Toast.makeText() sites in MainActivity now use
+        //     getApplicationContext() instead of the Activity context. Fixes
+        //     the "Toast already killed" NotificationService warnings observed
+        //     in BYD_RE_Sniffer_20260523_204155.txt at 20:41:58 and 20:44:03
+        //     when an Activity instance finishes between makeText() and show().
+        //     Application context outlives the Activity → queued Toast always
+        //     resolves cleanly. Behaviour is identical for the user.
+        //   - #17 (broadcast IBinder signature permission) verified already
+        //     fully in place since LOT 2 / 1.2.30 — no additional work needed.
+        // v1.2.43-beta (build 301) — Voice tab PoC step 1/3.
+        //   - New Diagnostic tab "Voice (alpha)" — fully isolated in
+        //     com.byd.dashcast.voice.*. Zero touch to production code paths.
+        //   - VoiceService foreground service: AudioRecord 16 kHz mono 16-bit,
+        //     computes RMS / peak / clip counters every ~50 ms, broadcasts
+        //     them via LocalBroadcastManager. NO machine learning yet — this
+        //     step validates the audio chain (mic permission, FG service,
+        //     AudioRecord device-level wiring) on DL3/DL4/DL5 before adding
+        //     the openWakeWord + Vosk dependencies in v1.2.44 / v1.2.45.
+        //   - APK delta: ~20 KB (one service class + layout + strings).
+        // v1.2.44-beta (build 302) — Hotspot UX consistency + clients fix.
+        //   - Navrail "Hotspot" entry now appears on every secondary screen
+        //     (Diag, Sysinfo, Log, Settings), runtime-gated to DL3 + use_own_sim
+        //     just like the existing Main one. New helper NavRailHotspot.apply()
+        //     so the wiring is DRY across 5 activities.
+        //   - HotspotActivity itself gets the standard navrail on the left
+        //     (Hotspot = active), matching the other secondary screens.
+        //   - Uptime chrono now ticks every 1 s (was 5 s, looked frozen).
+        //   - Connected-clients list now uses 3 data sources (dumpsys wifip2p +
+        //     /proc/net/arp + `ip neigh`), falling back to ARP-on-peer-interface
+        //     when dumpsys doesn't populate a client list (BYD ROM variant).
+        // v1.2.45-beta (build 303) — Main "Compact apps panel" mode.
+        //   - New Settings toggle "Mode compact (liste apps étroite)" (default
+        //     OFF, historical 5-col layout preserved → zero regression for
+        //     users who don't enable it). Pref: PREF_COMPACT_APPS_PANEL.
+        //   - When ON: the left apps column on MainActivity is narrowed
+        //     (layout_weight 1.4 → 0.6) and switched from a 5-column to a
+        //     2-column grid, freeing significant horizontal+vertical space for
+        //     the cluster preview pane on the right.
+        //   - Filter chips row (when enabled via its own pref) is force-hidden
+        //     in compact mode because the chip row no longer fits in a 2-icon
+        //     column. Toggling compact OFF restores the chips per their pref.
+        //   - Live apply: MainActivity.applyCompactAppsPanelMode() is called
+        //     from onResume(), so the layout switches as soon as the user
+        //     leaves SettingsActivity. No activity restart required.
+        //   - toggleViewMode() (list↔grid button in the search bar) also
+        //     honours the compact spanCount on grid re-creation.
+        // v1.2.46-beta (build 304) — Diag cold-start perf : lazy test rows.
+        //   - DiagActivity.onCreate() was eagerly inflating the test row
+        //     catalogs of all 6 diag panels (Beta 28 + DL5 31 + DL5 Cluster 42
+        //     + DL2 40 + DL4 40 + Mirror 10 = 191 rows × ~6 findViewById each),
+        //     costing ~400-800 ms of UI-thread time at activity launch even
+        //     though only one panel is visible at a time. User reported the
+        //     Diagnostic page felt slow to open.
+        //   - Fix : each prepare<X>TestRows() now sits behind a lightweight
+        //     IfNeeded() guard (one boolean flag per panel) and is called
+        //     lazily from showPanelForTab() the first time that panel becomes
+        //     visible. Subsequent tab switches are free. Matches the existing
+        //     pattern already used for the Export APK and Voice panels.
+        //   - Zero behavioural change : same rows, same bindings, same Run-All
+        //     pipeline ; only the inflation moment changes (onCreate → first
+        //     showPanelForTab for that tab). The default tab is selected at
+        //     the end of onCreate, so its rows are still ready before the
+        //     first frame is drawn.
+        // v1.2.47-beta (build 305) — DL5 Fission runner fixes after field run.
+        //   Field test on a real DL5 (run 20260525_142241) revealed that the
+        //   F-tier scored "10 PASS / 2 WARN" but two of the PASS were false
+        //   positives:
+        //     - F05 / F09 launched Yandex with `-a MAIN -c LAUNCHER -p pkg`.
+        //       `am start` returned "Error: Activity not started, unable to
+        //       resolve Intent" yet still exited 0, so the runner marked PASS.
+        //     - F10 verified "displayId=0 anywhere in dump" → always true on
+        //       any device (display 0 is the main screen).
+        //   Plus F06/F08 used grep filters too broad to scope to the Yandex
+        //   task block, hitting parent tasks' bounds/mode instead.
+        //   Fixes (zero scope creep — runner-only, no UI):
+        //     - F02 now also resolves the launch ComponentName via
+        //       PackageManager.getLaunchIntentForPackage(); aborts F03..F10
+        //       if no launcher activity exists.
+        //     - F05 / F09 use `am start ... -n <pkg/.Activity>` (resolved in
+        //       F02). "unable to resolve" output is now a FAIL.
+        //     - F06 / F10 use awk to find the displayId that immediately
+        //       precedes the Yandex task in the dumpsys hierarchy (real
+        //       per-task displayId, not a substring sweep).
+        //     - F08 scopes `mBounds=Rect` extraction to the specific
+        //       `#<taskId} ` block with `grep -A 25`.
+        //   No behavioural change outside the F-tier diagnostic battery.
+        // v1.2.48-beta (build 306) — DL5 Fission interactive multi-display probe.
+        //   Second field test (run 20260525_144058) still scored 9 PASS / 2 WARN
+        //   / 1 FAIL because:
+        //     - The awk parser of v1.2.47 matched the FIRST `A=…yandexmaps`
+        //       occurrence in dumpsys, which is in the flat task list BEFORE
+        //       any `displayId=…` line → DISP= came out empty, F06 FAIL +
+        //       F10 WARN (false negatives — Yandex actually was on display 3).
+        //     - Tasks launched on fission displays end up `mode=fullscreen`
+        //       even with `--windowingMode 5` because the display itself
+        //       declares `mDisplayWindowingMode=fullscreen`; the later
+        //       `cmd activity task resize` is therefore a silent no-op.
+        //     - Dumpsys-based "which display is the cluster?" guesswork is
+        //       fragile on a 4-display ROM.
+        //   v1.2.48 rewrites the F-tier as an INTERACTIVE probe:
+        //     - F01 opens the cluster projection itself
+        //       (`service call auto_container 2 i32 1000 i32 16 s16 ""`) so
+        //       fission displays become routable.
+        //     - F04/F06/F08 force-stop + launch Yandex on candidate displays
+        //       2, 3, 4 in turn.
+        //     - F05/F07/F09 are localized Yes/No popups asking the user
+        //       "Is Yandex Maps visible on the cluster screen?". The runner
+        //       blocks on a CountDownLatch (180 s safety timeout). YES marks
+        //       that display as the cluster and skips the remaining probes;
+        //       NO moves Yandex back to display 0 + force-stops so the next
+        //       candidate launches from a clean slate.
+        //     - F10 sets the task to freeform (`cmd activity
+        //       set-task-windowing-mode <tid> 5`) ON the confirmed display,
+        //       working around the display-level fullscreen lock.
+        //     - F11/F12 resize + verify bounds; F13 moves back to display 0;
+        //       F14/F15/F16 clean up (force-stop, reset compat, close
+        //       projection if F01 opened it).
+        //   New i18n keys × 12 locales (~50 strings, idempotent script-style
+        //   batch edit). DiagActivity adds an `onPromptYesNo` AlertDialog
+        //   override on the existing fission Listener — non-DL5 platforms
+        //   and the R-tier listener are untouched (default method = NO).
+        //   Scope strictly limited to the F-tier diagnostic battery.
+        // v1.2.49-beta (build 307) — DL5 Fission task-id extraction hardening.
+        //   Third field test (run 20260525_152233) scored 11 PASS / 1 WARN /
+        //   0 FAIL / 4 SKIPPED. The interactive popup flow worked perfectly:
+        //   user said NO on display 2 (hidden), YES on display 3 → cluster
+        //   confirmed. But the v1.2.48 awk extraction (`extractYandexTaskId
+        //   OnDisplay`) still returned -1, so F10 WARNed and F11/F12 were
+        //   SKIPPED — the resize actually never ran.
+        //   Root cause: the awk pattern `(mPreferredTopFocusableRootTask|
+        //   mLastFocusedRootTask)=Task\{…A=…yandexmaps\}` does not match the
+        //   actual `dumpsys activity activities` layout on this 4-display
+        //   DiLink5 ROM. Rather than keep chasing ROM-specific awk syntax,
+        //   v1.2.49 drops the per-display scoping entirely: since we
+        //   force-stop Yandex before every candidate launch, exactly ONE
+        //   Yandex task exists at the moment we ask. So a global match for
+        //   `Task{…yandexmaps…}` (with `taskId=N…yandexmaps` as fallback)
+        //   suffices. The new extractor also retries 4× with 0/250/500/1000
+        //   ms backoff (covers late task registration) and dumps the raw
+        //   filtered dumpsys output into r.detail so any future regression
+        //   is debuggable from the report alone — no need for adb access.
+        //   Scope strictly limited to the F-tier extractor (one method
+        //   replaced, two call sites updated). F-flow, R-tier, popup logic,
+        //   i18n strings, and version-independent infra all untouched.
+        // v1.2.50-beta (build 308) — Voice tab PoC step 2/3 : wake-word
+        //   placeholder via openWakeWord ONNX Runtime.
+        //   Scope strictly limited to the Diag "Voice" tab. Adds:
+        //     - 3 ONNX assets under app/src/main/assets/voice/wakeword/
+        //       (melspectrogram.onnx 1.0 MB, embedding_model.onnx 1.3 MB,
+        //       hey_jarvis_v0.1.onnx 1.2 MB — openWakeWord release v0.5.1).
+        //       hey_jarvis is a placeholder for the future "Ok DashCast"
+        //       custom model — it validates the ONNX pipeline (melspec →
+        //       embedding → wake) end-to-end on real BYD hardware.
+        //     - New package com.byd.dashcast.voice.wakeword.WakeWordEngine
+        //       wrapping the ONNX Runtime sessions on its own worker thread.
+        //     - VoiceService gets a tiny non-invasive hook : a static
+        //       volatile SampleConsumer field — null in prod, set only when
+        //       the Diag Voice "Wake word" switch is toggled ON. Capture
+        //       loop unchanged when the field is null → zero regression.
+        //     - New ONNX Runtime dependency
+        //       com.microsoft.onnxruntime:onnxruntime-android:1.17.1 +
+        //       global ndk.abiFilters [arm64-v8a, armeabi-v7a] to constrain
+        //       native .so to the only ABIs DiLink ever runs on. Estimated
+        //       APK delta : ~12 MB (3.5 MB ONNX assets + ~8 MB native libs).
+        //     - Diag Voice tab grows a new "Wake word" MaterialCardView
+        //       (switch, score gauge, last-detection timestamp, model id).
+        //       Switch defaults OFF — engine is initialised lazily so that
+        //       users who never open the wake-word card pay zero cost.
+        //     - try/catch wraps every ONNX call ; on init failure the panel
+        //       shows "ONNX Runtime non disponible" and the toggle resets.
+        //   Strictly no edits to MainActivity / ClusterMirrorManager /
+        //   MirrorTestRunner / fission tiers / Settings / production launch
+        //   paths. The wake-word work runs entirely in com.byd.dashcast.
+        //   voice.wakeword.* + a 5-line static hook in VoiceService.
+        versionCode 344
+        versionName "1.3.0"
+
+        // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
+        // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
+        // those two ABIs to keep the APK from ballooning to 60 MB.
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
     }
 
     buildTypes {
@@ -79,4 +290,17 @@ dependencies {
 
     // dadb — pure-JVM ADB client (same library used by Overdrive)
     implementation 'dev.mobile:dadb:1.2.7'
+
+    // v1.2.43-beta — used by the voice PoC (VoiceService → DiagActivity).
+    // In-process broadcast only, no system-wide IPC, no extra permissions.
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+
+    // v1.2.50-beta — ONNX Runtime for openWakeWord wake-word detection.
+    // Scope strictly limited to the Diag Voice tab (com.byd.dashcast.voice.wakeword.*).
+    // The library ships native .so for several ABIs; we restrict to arm64+armv7
+    // (the only ABIs DiLink 3/4/5 ever run on) via android.defaultConfig.ndk.abiFilters
+    // to keep the APK growth under control. The runtime is initialised lazily —
+    // production paths never reach this code unless the user toggles the wake-word
+    // switch in the Diagnostic tab.
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
 }

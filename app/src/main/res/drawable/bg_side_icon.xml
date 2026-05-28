@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.2.44 — Side-card head icon background (rounded square, surface high) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+       android:shape="rectangle">
+    <solid android:color="@color/md_surface_container_high"/>
+    <corners android:radius="12dp"/>
+</shape>

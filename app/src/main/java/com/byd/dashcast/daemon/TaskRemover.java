@@ -1,5 +1,7 @@
 package com.byd.dashcast.daemon;
 
+import android.util.Log;
+
 import java.lang.reflect.Method;
 
 /**
@@ -9,11 +11,13 @@ import java.lang.reflect.Method;
  * des codes de transactions Binder qui changent selon les versions Android !
  */
 public class TaskRemover {
+    private static final String TAG = "TaskRemover";
+
     public static void main(String[] args) {
         if (args.length < 1) return;
         try {
             int taskId = Integer.parseInt(args[0]);
-            System.out.println("Java TaskRemover: Attempting to remove taskId " + taskId);
+            Log.i(TAG, "Attempting to remove taskId " + taskId);
 
             Object amService;
             Class<?> iClass;
@@ -44,16 +48,16 @@ public class TaskRemover {
                             continue;
                         }
                         found = true;
-                        System.out.println("Method removeTask successfully invoked!");
+                        Log.i(TAG, "Method removeTask successfully invoked!");
                         break;
                     }
                 }
             }
             if (!found) {
-                System.out.println("Error: Could not find removeTask method.");
+                Log.e(TAG, "Could not find removeTask method.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "removeTask failed", e);
         }
     }
 }

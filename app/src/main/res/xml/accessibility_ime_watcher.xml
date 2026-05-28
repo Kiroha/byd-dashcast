@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1.2.9 — Accessibility service config for ClusterImeWatcherService.
+  Purpose: detect when an EditText takes focus on the cluster (secondary)
+  display so the KeyboardBridgeActivity can auto-launch.
+
+  Scoped tightly:
+    * Only FOCUSED events (one of the cheapest event types).
+    * GENERIC feedback (no spoken / haptic feedback).
+    * No FLAG_REPORT_VIEW_IDS or content retrieval (lower CPU/RAM cost).
+    * Active only when the user manually enables the service in Settings.
+-->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeViewFocused|typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/a11y_ime_watcher_description"
+    android:summary="@string/a11y_ime_watcher_summary"/>

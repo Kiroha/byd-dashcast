@@ -18,9 +18,8 @@
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="status_disconnected">Dashboard : non connecté</string>
     <string name="btn_origin_cluster">Restaurer Dashboard d\'origine</string>
-    <string name="stop_sheet_subtitle">Maintenez appuyé pour des actions supplémentaires.</string>
-    <string name="stop_sheet_origin_desc">Utilise la taille d\'écran choisie dans les paramètres (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Affichage actif sur le cluster ✓</string>
+    <string name="mirror_unavailable">Aperçu local indisponible — l’affichage cluster reste actif</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
     <string name="cluster_control_title">Contrôle cluster</string>
     <string name="cluster_control_hide">Masquer ▼</string>
@@ -33,9 +32,6 @@
     <string name="status_dashboard_byd">Projection prête — choisissez une application</string>
     <string name="status_dashboard_app">Dashboard : %1$s</string>
     <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
-    <string name="toast_cluster_unavailable">Service cluster indisponible</string>
-    <string name="dialog_cluster_not_active">La projection cluster n\'est pas activée. Voulez-vous l\'activer maintenant ?</string>
-    <string name="dialog_activate_now">Activer</string>
     <string name="toast_app_already_cluster">App déjà sur le cluster</string>
     <string name="toast_restore_failed">Échec restauration : %1$s</string>
     <string name="toast_origin_failed">Échec restauration cluster d\'origine : %1$s</string>
@@ -48,7 +44,7 @@
     <string name="menu_log">📜 Logs</string>
     <string name="menu_language">🌐 Langue</string>
     <string name="menu_check_updates">🔄 Rechercher des mises à jour</string>
-    <string name="settings_prerelease_label">Inclure les versions pré-release (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">Permet de recevoir les versions de test avant leur publication officielle</string>
     <string name="cluster_label_88">8,8 pouces  (cmd=29)</string>
     <string name="cluster_label_123">12,3 pouces (cmd=30) — Seal EU</string>
@@ -109,6 +105,16 @@
     <string name="menu_view_list">📋 Mode Liste</string>
     <string name="notif_remote_channel_name">Bouton miroir cluster</string>
     <string name="notif_remote_content">📺 Miroir cluster actif</string>
+    <string name="notif_cluster_channel_name">Projection cluster</string>
+    <string name="notif_cluster_channel_desc">Maintient l\'affichage sur le cluster BYD</string>
+    <string name="notif_cluster_initializing">Cluster : initialisation…</string>
+    <string name="notif_cluster_active">Cluster actif — écran %1$d</string>
+    <string name="notif_cluster_stopped">Cluster : arrêté</string>
+    <string name="notif_cluster_disconnected">Cluster : déconnecté</string>
+    <string name="proxy_keeper_channel_name">Daemon proxy</string>
+    <string name="proxy_keeper_channel_desc">Maintient le daemon proxy disponible en arrière-plan</string>
+    <string name="proxy_keeper_notif_title">DashCast — proxy actif</string>
+    <string name="proxy_keeper_notif_text">Daemon surveillé toutes les 10 s</string>
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>
@@ -117,6 +123,21 @@
     <string name="confirm_kill_msg">Forcer l\'arrêt de %1$s ?</string>
     <string name="confirm_kill_ok">Arrêter</string>
     <string name="btn_relaunch">↺</string>
+    <!-- v1.2.8 — Keyboard bridge (DL5 IME workaround) -->
+    <string name="btn_keyboard">⌨</string>
+    <string name="btn_keyboard_desc">Clavier</string>
+    <string name="keyboard_bridge_title">Clavier déporté</string>
+    <!-- v1.2.9 — Onboarding banner (DL5 only) + accessibility service strings -->
+    <string name="a11y_ime_watcher_label">Clavier auto cluster (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Affiche le clavier déporté quand vous touchez un champ texte du cluster.</string>
+    <string name="a11y_ime_watcher_description">Surveille les événements de focus sur l’écran du cluster pour ouvrir automatiquement le pont clavier de DashCast. Ne lit ni ne stocke le contenu des champs.</string>
+    <string name="ime_banner_title">Clavier automatique sur le cluster</string>
+    <string name="ime_banner_body">Sur ce véhicule (DiLink 5) le clavier système ne peut pas s’afficher sur le cluster. Activez le service d’accessibilité pour que DashCast ouvre le pont clavier automatiquement quand vous touchez un champ texte. Sinon utilisez le bouton ⌨ du miroir.</string>
+    <string name="ime_banner_btn_enable">Activer</string>
+    <string name="ime_banner_btn_later">Plus tard</string>
+    <string name="ime_banner_btn_dismiss">Ne plus afficher</string>
+    <string name="ime_banner_toast_enabled">Clavier automatique actif ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Impossible d\'ouvrir les Réglages — activez manuellement le service d\'accessibilité « Clavier auto cluster ».</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
@@ -142,6 +163,7 @@
     <string name="usage_title">Temps d\'utilisation sur le cluster</string>
     <string name="usage_empty">Aucune donnée d\'utilisation</string>
     <string name="usage_reset">Réinitialiser</string>
+    <string name="toast_usage_stats_reset">Statistiques d\'utilisation effacées</string>
 
     <!-- Settings page (M3 redesign) -->
     <string name="settings_cluster_88_desc">Configuration par défaut — recommandé</string>
@@ -150,7 +172,11 @@
     <string name="settings_section_behavior">Comportement</string>
     <string name="settings_boot_auto_start_support">Active le mirror au démarrage véhicule</string>
     <string name="settings_reconnect_popup_support">Restaure si déconnecté inopinément</string>
+    <string name="settings_quick_stop">Arrêt rapide (sans restaurer le cluster d\'origine)</string>
+    <string name="settings_quick_stop_support">Envoie seulement sendInfo 18 + 0, sans changer la taille</string>
     <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
+    <string name="settings_compact_apps_panel">Mode compact (liste apps étroite)</string>
+    <string name="settings_compact_apps_panel_support">Libère de l\'espace pour le preview cluster — 2 colonnes au lieu de 5</string>
     <string name="settings_section_about">À propos</string>
     <string name="settings_about_version_label">Version</string>
     <string name="settings_check_update_title">Rechercher une mise à jour</string>
@@ -164,22 +190,78 @@
     <string name="main_nav_sysinfo">Système</string>
     <string name="main_nav_log">Journal</string>
     <string name="main_nav_help">Aide</string>
+    <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
+    <string name="main_nav_hotspot">Hotspot</string>
+    <string name="hotspot_title">Hotspot</string>
+    <string name="hotspot_back">Retour</string>
+    <string name="hotspot_hero_title">Hotspot 4G via TetherFi</string>
+    <string name="hotspot_hero_subtitle">Partagez votre connexion mobile en quelques tapotements</string>
+    <string name="hotspot_intro">Le hotspot natif du véhicule n\'est pas accessible sur DiLink 3. DashCast pilote à la place TetherFi (open-source) qui crée un point d\'accès Wi-Fi Direct + proxy SOCKS5 — aucune permission système requise, et la SIM de votre véhicule sert d\'upstream.</string>
+    <string name="hotspot_tf_status_unknown">⏳ Détection…</string>
+    <string name="hotspot_tf_status_installed">🟢 TetherFi installé — version %1$s</string>
+    <string name="hotspot_tf_status_missing">🔴 TetherFi n\'est pas installé. Appuyez sur « Installer » pour récupérer la dernière version.</string>
+    <string name="hotspot_tf_start">Démarrer</string>
+    <string name="hotspot_tf_stop">Arrêter</string>
+    <string name="hotspot_tf_toggle">Basculer</string>
+    <string name="hotspot_tf_open">Ouvrir TetherFi</string>
+    <string name="hotspot_tf_install">Installer TetherFi</string>
+    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — envoyé</string>
+    <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
+    <string name="hotspot_tf_open_failed">Ouverture TetherFi : %1$s</string>
+    <!-- Watchdog -->
+    <string name="hotspot_watchdog_title">Surveillance auto</string>
+    <string name="hotspot_watchdog_hint">Relance automatiquement le hotspot s\'il tombe (sonde toutes les 20 s).</string>
+    <string name="hotspot_watchdog_idle">Désactivée</string>
+    <string name="hotspot_watchdog_probing">⏳ sonde en cours…</string>
+    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi désinstallé — surveillance arrêtée</string>
+    <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB : %3$s</string>
+    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot actif (relances=%3$d)</string>
+    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 INACTIF — cooldown %3$d s</string>
+    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 INACTIF → relance #%3$d</string>
+    <!-- v1.2.42 — App settings -->
+    <string name="hotspot_autostart_boot_title">Démarrer au boot du véhicule</string>
+    <string name="hotspot_autostart_boot_hint">Lance automatiquement TetherFi quelques secondes après le démarrage du véhicule.</string>
+    <string name="hotspot_tf_update_available">🆕 Mise à jour TetherFi : v%1$d → v%2$d (toucher pour télécharger)</string>
+    <!-- v1.2.44 — Clients + live stats card -->
+    <string name="hotspot_clients_title">Clients connectés</string>
+    <string name="hotspot_clients_empty">Aucun client connecté</string>
+    <string name="hotspot_client_default_name">Appareil %1$s</string>
+    <string name="hotspot_stat_uptime">Uptime</string>
+    <string name="hotspot_stat_rx">Reçus</string>
+    <string name="hotspot_stat_tx">Envoyés</string>
+    <string name="settings_use_own_sim">J\'utilise ma propre carte SIM</string>
+    <string name="settings_use_own_sim_support">Active le bouton « Hotspot » dans la barre latérale pour partager votre connexion via TetherFi (DiLink 3 uniquement).</string>
     <string name="main_cluster_label">ÉTAT CLUSTER</string>
     <string name="main_cluster_status_subtitle">Activez la projection pour démarrer</string>
     <string name="main_preview_section">Aperçu temps réel</string>
     <string name="main_btn_full_preview">Miroir plein écran</string>
-    <string name="main_btn_capture">Capturer</string>
-    <string name="main_btn_reconnect">Activer la projection</string>
     <string name="main_btn_stop_mirror">Arrêter la projection</string>
     <string name="main_section_favorites">FAVORIS</string>
     <string name="main_section_all_apps">Toutes les applications</string>
-    <string name="main_capture_coming_soon">Capture bientôt disponible</string>
     <string name="sheet_auto_launch">Lancement automatique au démarrage</string>
     <string name="sheet_add_favorite">Ajouter aux favoris</string>
     <string name="sheet_remove_favorite">Retirer des favoris</string>
     <string name="sheet_to_main">Envoyer vers l\'écran principal</string>
     <string name="sheet_to_cluster">Envoyer vers le cluster</string>
+    <string name="sheet_resize_move">Redimensionner &amp; déplacer</string>
     <string name="sheet_force_stop">Forcer l\'arrêt</string>
+
+    <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">Annuler</string>
+    <string name="resize_btn_ok">Valider</string>
+    <!-- v1.2.72 — Presets ergonomie voiture -->
+    <string name="resize_preset_full">Plein écran</string>
+    <string name="resize_preset_left">Gauche ½</string>
+    <string name="resize_preset_right">Droite ½</string>
+    <string name="resize_preset_center">Centre 60 %</string>
+    <!-- v1.2.84 — Live mode + close button -->
+    <string name="resize_btn_close">Fermer</string>
+    <string name="resize_live_label">Aperçu live</string>
+    <string name="resize_live_warn_title">Activer l\'aperçu live ?</string>
+    <string name="resize_live_warn_msg">L\'aperçu live applique chaque déplacement au cluster en temps réel. Cela peut provoquer des flashs et des artefacts visuels sur l\'écran cluster pendant la manipulation. Continuer ?</string>
+    <string name="resize_live_warn_ok">Activer</string>
+    <string name="resize_no_package">Aucun package</string>
     <string name="main_cluster_status_off">Projection inactive</string>
     <string name="main_btn_exit_fullscreen">Quitter le plein écran</string>
     <!-- v0.9.81 — Diag M3 cards -->
@@ -187,6 +269,13 @@
     <string name="sysinfo_btn_save">Sauver</string>
     <string name="sysinfo_btn_share">Partager</string>
     <string name="sysinfo_btn_regen">Régénérer</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Redémarrer</string>
+    <string name="sysinfo_reboot_title">Redémarrer la tablette ?</string>
+    <string name="sysinfo_reboot_message">Le système va s\'arrêter et redémarrer. Toutes les apps en cours seront fermées.</string>
+    <string name="sysinfo_reboot_confirm">Redémarrer</string>
+    <string name="sysinfo_reboot_toast">Redémarrage en cours…</string>
+    <string name="sysinfo_reboot_failed">Échec du redémarrage. Vérifie que l\'ADB local est actif.</string>
     <string name="sysinfo_section_overview">Vue d\'ensemble</string>
     <string name="sysinfo_section_displays">Affichages détectés</string>
     <string name="sysinfo_section_services">Services</string>
@@ -208,6 +297,260 @@
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
     <string name="sysinfo_tile_dashcast_user_signed">user-signed</string>
-    <string name="diag_placeholder_title">Page Diag en cours de refonte</string>
-    <string name="diag_placeholder_subtitle">Les tests précédents ont été supprimés. De nouveaux outils diagnostiques arriveront ici prochainement.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <!-- Settings -->
+    <string name="settings_section_beta_engine">Moteur expérimental (beta)</string>
+    <string name="settings_beta_warning">Fonctionnalités expérimentales. En cas de souci, l\'application bascule automatiquement sur le moteur stable. Redémarrage requis après modification.</string>
+    <string name="settings_beta_proxy_daemon">Daemon de proxy privilégié</string>
+    <string name="settings_beta_proxy_daemon_support">Lance un démon persistant via ADB local (UID 2000) pour exécuter les commandes système. Inspiré d\'OpenBYD.</string>
+    <string name="settings_beta_system_context">Contexte système (réflexion)</string>
+    <string name="settings_beta_system_context_support">Récupère un Context système via ActivityThread.systemMain() pour contourner les permissions du SDK BYD.</string>
+    <string name="beta_restart_title">Redémarrage requis</string>
+    <string name="beta_restart_message">Cette option prendra effet au prochain lancement de DashCast. Vous pouvez continuer à utiliser l\'application normalement entre temps.</string>
+
+    <!-- Diag tabs -->
+    <string name="diag_tab_cluster">Cluster DL3</string>
+    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
+    <string name="diag_tab_display">Display</string>
+    <string name="diag_tab_export_apk">Export APK BYD</string>
+    <string name="diag_tab_voice">Voice (alpha)</string>
+
+    <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
+    <string name="diag_voice_header_title">Pilotage vocal — PoC chaîne audio</string>
+    <string name="diag_voice_header_subtitle">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
+    <string name="diag_voice_btn_start">Démarrer l’écoute</string>
+    <string name="diag_voice_btn_stop">Arrêter</string>
+    <string name="diag_voice_state_idle">Service arrêté</string>
+    <string name="diag_voice_state_running">En écoute…</string>
+    <string name="diag_voice_state_error_fmt">Erreur : %1$s</string>
+    <string name="diag_voice_perm_denied">Permission micro refusée — active-la dans les paramètres système pour activer le PoC.</string>
+    <string name="diag_voice_meter_label">VU-mètre temps réel</string>
+    <string name="diag_voice_meter_rms">RMS (niveau moyen)</string>
+    <string name="diag_voice_meter_peak">Pic instantané</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • pic %2$d • clip %3$d • frames %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Ce PoC ouvre un service foreground qui lit le micro à 16 kHz mono 16-bit et affiche le niveau audio en local. Aucune donnée n’est enregistrée, transmise ou analysée. Le wake word « Ok DashCast » sera ajouté en v1.2.44 (openWakeWord), la reconnaissance vocale en v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Échantillonnage : %1$d Hz mono 16-bit • source VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — écoute micro (PoC)</string>
+    <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
+
+    <!-- Diag — Voice wake-word card (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Activer</string>
+    <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Modèle : hey_jarvis_v0.1 (placeholder pour « Ok DashCast »)</string>
+    <string name="diag_voice_wakeword_last_fmt">Dernière détection : —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Dernière détection : %1$s (score %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime indisponible — %1$s</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_export_apk_header_title">Export APK BYD</string>
+    <string name="diag_export_apk_header_subtitle">Liste les APK BYD / XDJA / DiLink / cluster installés, extrait celui de ton choix et l’envoie via Telegram.</string>
+    <string name="diag_export_apk_refresh">Rafraîchir</string>
+    <string name="diag_export_apk_counters_idle">Prêt — appuie sur Rafraîchir pour scanner.</string>
+    <string name="diag_export_apk_counters_scanning">Scan en cours…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK détectés • %2$s sur disque</string>
+    <string name="diag_export_apk_hint">L\'APK est copié dans le cache de l\'app, partagé à Telegram, puis effacé automatiquement après 5 minutes. Rien n\'est conservé sur le stockage de la voiture.</string>
+    <string name="diag_export_apk_btn_export">Exporter</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK envoyé : %1$s</string>
+    <string name="diag_export_apk_chooser_title">Envoyer l\'APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">Échec export APK : %1$s</string>
+    <string name="diag_export_apk_err_no_source">Chemin APK introuvable pour ce package.</string>
+
+    <!-- Diag — Cluster DL5 recon panel (v1.2.37) -->
+    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
+    <string name="diag_dl5_cluster_header_subtitle">Sonde non destructive : détecte les commandes shell, compat flags et services disponibles pour le redimensionnement cluster sur DiLink 5.</string>
+    <string name="diag_dl5_cluster_run_all">Lancer la recon</string>
+    <string name="diag_dl5_cluster_copy_report">Copier rapport</string>
+    <string name="diag_dl5_cluster_send_telegram">Envoyer via Telegram</string>
+    <string name="diag_dl5_cluster_counters_idle">Prêt — aucune sonde exécutée</string>
+    <string name="diag_dl5_cluster_pill_unknown">Plateforme : inconnue</string>
+    <string name="diag_dl5_cluster_pill_dl5">Plateforme : DiLink 5</string>
+    <string name="diag_dl5_cluster_pill_other">Plateforme : autre</string>
+    <string name="diag_dl5_cluster_toast_report_copied">Rapport copié dans le presse-papier (%1$d entrées)</string>
+    <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Test live destructif : lance l’application choisie sur l’écran fission, force-resize, la ramène sur l’écran principal, puis nettoie. DiLink 5 uniquement, aucune commande de resize sur l’écran principal (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructif</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Cible : %1$s\n\nCette suite va :\n\n• Activer le compat FORCE_RESIZE_APP sur l’application\n• Force-stop l’application\n• La lancer sur l’écran fission (id ≠ 0) en windowingMode freeform\n• Tester un resize de la tâche\n• La ramener sur l’écran principal (id 0) pour valider le move\n• Force-stop puis reset du compat (nettoyage)\n\nAucune commande de resize n’est envoyée sur l’écran principal (id 0).\nContinuer ?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Choisir l’application à tester</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Aucune application lançable trouvée.</string>
+    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
+    <string name="diag_dl5_fission_prompt_title">Vérification cluster</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s est-il visible sur l\'écran cluster ?\n\n(test sur le display %2$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Oui</string>
+    <string name="diag_dl5_fission_prompt_no">Non</string>
+    <string name="diag_tab_adb_local">ADB local</string>
+    <string name="diag_tab_system">Système</string>
+    <string name="diag_tab_adas">ADAS</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+
+    <!-- Diag — Coming soon panel -->
+    <string name="diag_coming_soon_title">Bientôt disponible</string>
+    <string name="diag_coming_soon_subtitle">Cette section sera implémentée dans une prochaine version. Voir l\'onglet « Beta Engine » pour les tests actuels.</string>
+
+    <!-- Diag — Beta Engine panel -->
+    <string name="diag_beta_header_title">Moteur expérimental</string>
+    <string name="diag_beta_header_subtitle">Tests de Component A (daemon) et Component B (system context). Phase 1.</string>
+    <string name="diag_beta_pill_a_off">A · Daemon : OFF</string>
+    <string name="diag_beta_pill_a_on">A · Daemon : ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx : OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx : ON</string>
+    <string name="diag_beta_counters_idle">Cliquer sur « Lancer tous » pour démarrer</string>
+    <string name="diag_beta_counters_running">Exécution en cours…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Lancer tous</string>
+    <string name="diag_beta_copy_report">Envoyer (.log)</string>
+
+    <!-- ═══════════════ DiLink 5 — Diagnostic dédié (v1.1.0-beta2) ═══════════════ -->
+    <string name="diag_tab_dilink5">DiLink 5</string>
+    <string name="diag_dl5_header_title">Plateforme DiLink 5</string>
+    <string name="diag_dl5_header_subtitle">Tests dédiés DiLink 5.0 / Android 12.</string>
+    <string name="diag_dl5_header_subtitle_fmt">Produit : %1$s · API %2$d</string>
+    <string name="diag_dl5_pill_mode_auto_on">Mode : AUTO = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_auto_off">Mode : AUTO = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_forced_on">Mode : FORCÉ = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_forced_off">Mode : FORCÉ = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_unknown">Mode : —</string>
+    <string name="diag_dl5_d8_target_label">App cible (test D8 — cluster)</string>
+    <string name="diag_dl5_d8_running_toast">Test D8 sur %1$s — l\'app sera relancée puis rappelée sur l\'écran principal.</string>
+    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+    <string name="diag_tab_dilink2">DiLink 2</string>
+    <string name="diag_dl2_header_title">Plateforme DiLink 2 — Recon</string>
+    <string name="diag_dl2_header_subtitle">Suite de reconnaissance reflection-only (sans ADB local).</string>
+    <string name="diag_dl2_header_subtitle_fmt">Produit : %1$s · brand : %2$s · API %3$d</string>
+    <string name="diag_dl2_pill_unknown">Signature : —</string>
+    <string name="diag_dl2_pill_detected">Signature : DL2 détectée</string>
+    <string name="diag_dl2_pill_other">Signature : non-DL2</string>
+    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- ═══════════════ DiLink 4 — Diagnostic dédié (v1.2.28) ═══════════════ -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">Plateforme DiLink 4 — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">Tests dédiés DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + path DL3).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Produit : %1$s · brand : %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Signature : —</string>
+    <string name="diag_dl4_pill_detected">Signature : DL4 détectée</string>
+    <string name="diag_dl4_pill_other">Signature : non-DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ Le palier D1–D10 envoie des commandes sendInfo live sur l’AutoContainer puis lance clusterdebug sur l’écran cluster. Effet visible sur la voiture.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- Diag — Mirror tab (build 193) -->
+    <string name="diag_tab_mirror">Mirror</string>
+    <string name="diag_mirror_header_title">Mirror — Diagnostic</string>
+    <string name="diag_mirror_header_subtitle">Topologie SurfaceFlinger, état du daemon mirror, écran cluster.</string>
+    <string name="diag_mirror_header_subtitle_fmt">Produit : %1$s · API %2$d</string>
+    <string name="diag_mirror_pill_unknown">Plateforme : —</string>
+    <string name="diag_mirror_pill_dl5">Plateforme : DiLink 5</string>
+    <string name="diag_mirror_pill_other">Plateforme : autre</string>
+    <string name="diag_mirror_hint">Lance le mirror depuis l\'app au moins une fois avant la suite, puis tape « Envoyer (.log) » pour partager le rapport via Telegram.</string>
+    <string name="diag_mirror_send_log">Envoyer (.log)</string>
+
+    <!-- Settings — DiLink 5 -->
+    <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
+    <string name="settings_dilink5_mode_support">Adapte DashCast au protocole DiLink 5.0 / Android 12.</string>
+    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Redémarrage requis.</string>
+    <!-- v1.2.18 — Shown when the user taps the keyboard icon while the
+         ClusterImeWatcherService accessibility service is not enabled. -->
+    <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Sniffer</string>
+    <string name="diag_adas_title">ADAS — fenêtre cluster</string>
+    <string name="diag_adas_description">Affiche ou masque la fenêtre ADAS du cluster Qt (codes AutoContainer 12 / 13, génériques DiLink)</string>
+    <string name="diag_adas_btn_show">Afficher ADAS (12)</string>
+    <string name="diag_adas_btn_hide">Masquer ADAS (13)</string>
+    <string name="diag_adas_last_result">Dernier résultat</string>
+    <string name="diag_adas_no_test">Aucun test exécuté.\nAppuie sur Afficher ADAS ou Masquer ADAS pour envoyer la commande au cluster.</string>
+    <string name="diag_adas_technical_details">Détails techniques</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…envoi en cours…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nERREUR: %2$s</string>
+    <string name="diag_sniffer_description">Capture logcat continu + snapshots dumpsys vers fichier exportable</string>
+    <string name="diag_sniffer_pill_active">ACTIF</string>
+    <string name="diag_sniffer_pill_inactive">INACTIF</string>
+    <string name="diag_sniffer_idle_text">Aucune capture en cours.\nAppuie sur Démarrer pour lancer un nouveau fichier BYD_RE_Sniffer_*.txt.</string>
+    <string name="diag_sniffer_btn_start">Démarrer</string>
+    <string name="diag_sniffer_btn_stop">Arrêter</string>
+    <string name="diag_sniffer_btn_snapshot">Snapshot</string>
+    <string name="diag_sniffer_btn_export">Exporter</string>
+    <string name="diag_sniffer_btn_clean">Nettoyer</string>
+    <string name="diag_sniffer_content_title">Contenu capturé</string>
+    <string name="diag_sniffer_procedure_title">Procédure type</string>
+    <string name="diag_sniffer_initializing">Initialisation…</string>
+    <string name="diag_sniffer_active_fmt">ACTIF → %1$s\nCapture en cours (logcat + snapshots auto / 10 s)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Échec init : %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Arrêté → %1$s\nPrêt pour export.</string>
+    <string name="diag_sniffer_none">(aucun)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Capture précédente arrêtée → %1$s\n(%2$d KB) — exportable.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Capture précédente : %1$s (%2$d KB, ADB local indisponible — exportable)</string>
+    <string name="diag_sniffer_active_detail_fmt">ACTIF → %1$s\n(%2$d KB capturés)</string>
+    <string name="diag_sniffer_toast_started_fmt">Sniffer démarré → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Sniffer arrêté.</string>
+    <string name="diag_sniffer_toast_need_start">Démarrer le sniffer d\'abord.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Snapshot ajouté.</string>
+    <string name="diag_sniffer_toast_no_file">Aucun fichier sniffer à exporter.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Export erreur : %1$s</string>
+    <string name="diag_sniffer_chooser_title">Exporter Sniffer RE</string>
+    <string name="diag_sniffer_cleanup_busy">Arrête le sniffer avant de nettoyer (la capture écrit dans un fichier).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">Nettoyer les fichiers DashCast</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Supprime tous les logs et captures (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) du stockage de l\'application.\n\nLes clés ADB et préférences sont préservées.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Nettoyer</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Nettoyage : %1$d fichier(s) supprimé(s) · restant : %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">%1$d fichier(s) supprimé(s) — restant : %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Marges désactivées sur DiLink 2 (un seul écran).</string>
+    <string name="settings_warn_no_cluster">⚠️ Aucun cluster détecté — marges ignorées (DL2 ?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">Aucun navigateur disponible pour ouvrir %1$s</string>
+    <string name="diag_adas_doc_help">• Commande shell : service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Service : Auto_container sur DL3/Di4 (PascalCase), auto_container sur DL5+ (snake_case)\n• Code 12 = 显示Adas (Show ADAS) — généré par clusterdebug.SecondActivity.infoListInit()\n• Code 13 = 关闭Adas (Hide ADAS) — idem\n• Variants identiques : DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-series : codes 12/13 stripés (slots vides) — non supporté ici</string>
+    <string name="diag_sniffer_doc_content">• Header initial : ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live : logcat threadtime complet + buffer events (sans filtre, rien manqué)\n• Snapshots auto toutes les 10 s : displays, SurfaceFlinger, processus BYD/xdja/qt/cluster\n• Snapshot manuel : ajoute dumpsys window + broadcasts history\n• Persistance : la capture survit à la rotation/destruction d\u2019Activity (processus setsid)</string>
+    <string name="diag_sniffer_doc_workflow">1. Démarrer → la capture tourne en tâche de fond (setsid, survit à l\u2019Activity)\n2. Reproduire le bug / scénario à étudier\n3. Snapshot manuel aux moments clés (ex. juste avant/après crash)\n4. Arrêter\n5. Exporter → choisir Telegram pour partager le fichier</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+
+    <!-- ═══ Cluster POC overlay (v1.2.34) — inspiré OpenBYD 2.0 ═══ -->
+    <string name="diag_cluster_poc_title">Cluster Move/Resize — display Fission</string>
+    <string name="diag_cluster_poc_subtitle">Pilote interactif d\'une app (Waze, Maps, …) sur le display trusted xdja « fission_* » comme le font WindowManagement / Dilink5 Dashboard. La VD locale est abandonnée : on piggyback sur le display système (uid 1000) pour éviter le toast « écran secondaire » et le rebound sur display 0.</string>
+    <string name="diag_cluster_poc_btn_enumerate">📋 Lister displays</string>
+    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
+    <string name="diag_cluster_poc_btn_share">📤 Partager rapport</string>
+    <string name="diag_cluster_poc_section_app">Cible</string>
+    <string name="diag_cluster_poc_label_pkg">package :</string>
+    <string name="diag_cluster_poc_btn_launch">▶ Lancer sur fission</string>
+    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
+    <string name="diag_cluster_poc_section_rect">Position &amp; taille (px du display fission)</string>
+    <string name="diag_cluster_poc_slider_x">X (gauche)</string>
+    <string name="diag_cluster_poc_slider_y">Y (haut)</string>
+    <string name="diag_cluster_poc_slider_w">W (largeur)</string>
+    <string name="diag_cluster_poc_slider_h">H (hauteur)</string>
+    <string name="diag_cluster_poc_btn_apply">✅ Appliquer rect</string>
+    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
+    <string name="diag_cluster_poc_chooser_title">Partager rapport Cluster</string>
+    <string name="diag_cluster_poc_toast_no_report">Aucun rapport. Clique d\'abord « Lister displays ».</string>
+    <string name="diag_cluster_poc_status_idle">Prêt. Clique « Lister » pour voir les displays, puis « Lancer sur fission » pour démarrer la cible. Ensuite manipule les sliders X/Y/W/H et appuie « Appliquer rect » (ou active « Auto »).</string>
+    <string name="sysinfo_restart_action">Redémarrer</string>
+    <string name="sysinfo_restart_started">Redémarrage…</string>
+    <string name="sysinfo_restart_failed">Échec du redémarrage</string>
+    <string name="sysinfo_svc_projection">Projection</string>
+    <string name="sysinfo_svc_projection_sub">tap : 30→3s→16→3s→0</string>
+    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · valeur %1$s</string>
+    <string name="sysinfo_svc_force_resizable_checking">DL5 · vérification…</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Densité d\'affichage</string>
+    <string name="sheet_dpi_value_default">Défaut</string>
+    <string name="dpi_dialog_title">DPI cluster — %1$s</string>
+    <string name="dpi_default">Défaut système</string>
+    <string name="dpi_custom">Personnalisé…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Sera appliqué au prochain lancement</string>
+    <string name="sheet_dpi_value_fmt" translatable="false">%1$d dpi</string>
+    <string name="dpi_value_fmt" translatable="false">%1$d dpi</string>
 </resources>

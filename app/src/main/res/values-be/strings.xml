@@ -16,8 +16,6 @@
     <string name="btn_lang_uk">🇺🇦  Українська</string>
     <string name="status_disconnected">Панэль прыбораў: не падключана</string>
     <string name="btn_origin_cluster">Аднавіць штатную панэль</string>
-    <string name="stop_sheet_subtitle">Утрымлівайце для дадатковых дзеянняў.</string>
-    <string name="stop_sheet_origin_desc">Выкарыстоўвае памер экрана, абраны ў Наладах (8.8" / 12.3" / 10.25").</string>
     <string name="mirror_placeholder">Актыўны відарыс на кластары ✓</string>
     <string name="btn_cluster_split">⬛⬛ Падзяліць</string>
     <string name="cluster_control_title">Кіраванне кластарам</string>
@@ -31,9 +29,6 @@
     <string name="status_dashboard_byd">Праекцыя гатовая — абярыце дадатак</string>
     <string name="status_dashboard_app">Панэль прыбораў: %1$s</string>
     <string name="toast_app_incompatible">%1$s: не ўсталявана або несумяшчальна з некалькімі дысплеямі</string>
-    <string name="toast_cluster_unavailable">Служба кластара недаступная</string>
-    <string name="dialog_cluster_not_active">Праекцыя на прыборную панэль не актыўная. Актываваць зараз?</string>
-    <string name="dialog_activate_now">Актываваць</string>
     <string name="toast_app_already_cluster">Праграма ўжо на кластары</string>
     <string name="toast_restore_failed">Не ўдалося аднавіць: %1$s</string>
     <string name="toast_origin_failed">Не ўдалося аднавіць штатны кластар: %1$s</string>
@@ -46,7 +41,7 @@
     <string name="menu_log">📜 Журналы</string>
     <string name="menu_language">🌐 Мова</string>
     <string name="menu_check_updates">🔄 Праверыць абнаўленні</string>
-    <string name="settings_prerelease_label">Уключыць прэдвыпускнія версіі (alpha/beta)</string>
+    <string name="settings_prerelease_label">Beta Channel</string>
     <string name="settings_prerelease_hint">Атрымліваць тэставыя зборкі да афіцыйнага выпуску</string>
     <string name="cluster_label_88">8,8 цалі  (cmd=29)</string>
     <string name="cluster_label_123">12,3 цалі (cmd=30) — Seal EU</string>
@@ -89,6 +84,12 @@
     <string name="ota_downloading">Загрузка…</string>
     <string name="notif_remote_channel_name">Кнопка люстэрка кластара</string>
     <string name="notif_remote_content">📺 Люстэрка кластара актыўнае</string>
+    <string name="notif_cluster_channel_name">Праекцыя кластара</string>
+    <string name="notif_cluster_channel_desc">Падтрымлівае адлюстраванне на кластары BYD</string>
+    <string name="notif_cluster_initializing">Кластар: ініцыялізацыя…</string>
+    <string name="notif_cluster_active">Кластар актыўны — экран %1$d</string>
+    <string name="notif_cluster_stopped">Кластар: спынены</string>
+    <string name="notif_cluster_disconnected">Кластар: адлучаны</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКаманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Рэжым сеткі</string>
     <string name="menu_view_list">📋 Рэжым спісу</string>
@@ -121,6 +122,7 @@
     <string name="usage_title">Час выкарыстання на кластэры</string>
     <string name="usage_empty">Няма дадзеных выкарыстання</string>
     <string name="usage_reset">Скінуць</string>
+    <string name="toast_usage_stats_reset">Статыстыка выкарыстання ачышчана</string>
 
     <!-- Settings page (M3 redesign) -->
     <string name="settings_cluster_88_desc">Прадвызначаная канфігурацыя — рэкамендуецца</string>
@@ -129,7 +131,11 @@
     <string name="settings_section_behavior">Паводзіны</string>
     <string name="settings_boot_auto_start_support">Уключаць люстэрка пры запуску аўтамабіля</string>
     <string name="settings_reconnect_popup_support">Аднаўляць пры нечаканым адключэнні</string>
+    <string name="settings_quick_stop">Хуткі стоп (без аднаўлення зыходнага кластара)</string>
+    <string name="settings_quick_stop_support">Адпраўляе толькі sendInfo 18 + 0, без змены памеру</string>
     <string name="settings_category_filters_support">Паказваць чыпы ў меню праграм</string>
+    <string name="settings_compact_apps_panel">Кампактны рэжым (вузкі спіс прыкладанняў)</string>
+    <string name="settings_compact_apps_panel_support">Вызваляе месца для папярэдняга прагляду кластара — 2 слупкі замест 5</string>
     <string name="settings_section_about">Пра праграму</string>
     <string name="settings_about_version_label">Версія</string>
     <string name="settings_check_update_title">Праверыць абнаўленні</string>
@@ -147,17 +153,28 @@
     <string name="main_cluster_status_subtitle">Уключыце праекцыю, каб пачаць</string>
     <string name="main_preview_section">Папярэдні прагляд</string>
     <string name="main_btn_full_preview">Поўнаэкраннае люстра</string>
-    <string name="main_btn_capture">Зняць</string>
-    <string name="main_btn_reconnect">Запусціць праекцыю</string>
     <string name="main_btn_stop_mirror">Спыніць праекцыю</string>
     <string name="main_section_favorites">УЛЮБЁНЫЯ</string>
     <string name="main_section_all_apps">Усе праграмы</string>
-    <string name="main_capture_coming_soon">Хутка</string>
     <string name="sheet_auto_launch">Аўтазапуск пры старце</string>
     <string name="sheet_add_favorite">У выбранае</string>
     <string name="sheet_remove_favorite">З выбранага</string>
     <string name="sheet_to_main">На галоўны экран</string>
     <string name="sheet_to_cluster">На кластар</string>
+    <string name="sheet_resize_move">Змяніць памер і перамясціць</string>
+    <string name="resize_coords_fmt">[%1$d, %2$d, %3$d, %4$d]   %5$d × %6$d</string>
+    <string name="resize_btn_cancel">Скасаваць</string>
+    <string name="resize_btn_ok">Пацвердзіць</string>
+    <string name="resize_preset_full">На ўвесь экран</string>
+    <string name="resize_preset_left">Левая ½</string>
+    <string name="resize_preset_right">Правая ½</string>
+    <string name="resize_preset_center">Цэнтр 60 %</string>
+    <string name="resize_btn_close">Закрыць</string>
+    <string name="resize_live_label">Жывы папярэдні прагляд</string>
+    <string name="resize_live_warn_title">Уключыць жывы папярэдні прагляд?</string>
+    <string name="resize_live_warn_msg">Жывы папярэдні прагляд прымяняе кожны рух да кластара ў рэжыме рэальнага часу. Гэта можа выклікаць ўспышкі і візуальныя артэфакты на экране кластара падчас маніпуляцыі. Працягнуць?</string>
+    <string name="resize_live_warn_ok">Уключыць</string>
+    <string name="resize_no_package">Няма пакета</string>
     <string name="sheet_force_stop">Прымусовы прыпынак</string>
     <string name="main_cluster_status_off">Праекцыя выключана</string>
     <string name="main_btn_exit_fullscreen">Выйсці з поўнага экрана</string>
@@ -202,6 +219,309 @@
     <string name="log_btn_save_cd">Захаваць</string>
     <string name="log_save_failed">Не атрымалася захаваць журнал</string>
     <string name="log_saved_toast">Журнал захаваны: %1$s</string>
-    <string name="diag_placeholder_title">Старонка Diag перабудоўваецца</string>
-    <string name="diag_placeholder_subtitle">Папярэднія тэсты выдалены. Новыя дыягнастычныя інструменты з\'явяцца неўзабаве.</string>
+
+    <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
+    <string name="settings_section_beta_engine">Эксперыментальны рухавік (бета)</string>
+    <string name="settings_beta_warning">Эксперыментальныя функцыі. У выпадку праблемы дадатак аўтаматычна вяртаецца да стабільнага рухавіка. Пасля змены патрабуецца перазапуск.</string>
+    <string name="settings_beta_proxy_daemon">Прывілеяваны проксі-дэман</string>
+    <string name="settings_beta_proxy_daemon_support">Запускае пастаянны дэман праз лакальны ADB (UID 2000) для выканання сістэмных каманд. Натхнёна OpenBYD.</string>
+    <string name="settings_beta_system_context">Сістэмны кантэкст (рэфлексія)</string>
+    <string name="settings_beta_system_context_support">Атрымлівае Context сістэмы праз ActivityThread.systemMain(), каб абысці праверкі дазволаў SDK BYD.</string>
+    <string name="beta_restart_title">Патрэбен перазапуск</string>
+    <string name="beta_restart_message">Гэтая опцыя пачне дзейнічаць пры наступным запуску DashCast. Тым часам вы можаце працягваць карыстацца дадаткам як звычайна.</string>
+    <string name="diag_tab_cluster">Кластар</string>
+    <string name="diag_tab_display">Дысплей</string>
+    <string name="diag_tab_adb_local">Лакальны ADB</string>
+    <string name="diag_tab_system">Сістэма</string>
+    <string name="diag_tab_beta_engine">Beta Engine</string>
+    <string name="diag_coming_soon_title">Хутка з\'явіцца</string>
+    <string name="diag_coming_soon_subtitle">Гэты раздзел будзе рэалізаваны ў будучай версіі. Глядзіце ўкладку «Beta Engine» для бягучых тэстаў.</string>
+    <string name="diag_beta_header_title">Эксперыментальны рухавік</string>
+    <string name="diag_beta_header_subtitle">Тэсты Component A (дэман) і Component B (сістэмны кантэкст). Этап 1.</string>
+    <string name="diag_beta_pill_a_off">A · Дэман: OFF</string>
+    <string name="diag_beta_pill_a_on">A · Дэман: ON</string>
+    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
+    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_counters_idle">Націсніце «Запусціць усе», каб пачаць</string>
+    <string name="diag_beta_counters_running">Выкананне…</string>
+    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
+    <string name="diag_beta_run_all">Запусціць усе</string>
+    <string name="diag_beta_copy_report">Адправіць (.log)</string>
+
+    <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
+    <string name="diag_tab_dilink5">DiLink 5</string>
+    <string name="diag_dl5_header_title">Платформа DiLink 5</string>
+    <string name="diag_dl5_header_subtitle">Тэсты, прызначаныя для DiLink 5.0 / Android 12.</string>
+    <string name="diag_dl5_header_subtitle_fmt">Прадукт: %1$s · API %2$d</string>
+    <string name="diag_dl5_pill_mode_auto_on">Рэжым: AUTO = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_auto_off">Рэжым: AUTO = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_forced_on">Рэжым: ПРЫМУСОВЫ = DiLink 5</string>
+    <string name="diag_dl5_pill_mode_forced_off">Рэжым: ПРЫМУСОВЫ = DiLink 3</string>
+    <string name="diag_dl5_pill_mode_unknown">Рэжым: —</string>
+    <string name="diag_dl5_d8_target_label">Мэтавы дадатак (тэст D8 — кластар)</string>
+    <string name="diag_dl5_d8_running_toast">Тэст D8 на %1$s — дадатак будзе перазапушчаны і вернуты на галоўны экран.</string>
+    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+    <string name="settings_dilink5_mode">Рэжым DiLink 5 (эксперыментальны)</string>
+    <string name="settings_dilink5_mode_support">Адаптуе DashCast да пратакола DiLink 5.0 / Android 12.</string>
+    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Патрэбен перазапуск.</string>
+    <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
+    <string name="a11y_ime_watcher_label">Аўта-клавіятура кластара (DashCast)</string>
+    <string name="a11y_ime_watcher_summary">Паказвае моставаную клавіятуру пры дакрананні да тэкставага поля на кластары.</string>
+    <string name="a11y_ime_watcher_description">Сочыць за падзеямі фокусу на экране кластара, каб аўтаматычна адкрываць мост клавіятуры DashCast. Не чытае і не захоўвае змесціва палёў.</string>
+    <string name="ime_banner_title">Аўта-клавіятура на кластары</string>
+    <string name="ime_banner_body">На гэтым аўтамабілі (DiLink 5) сістэмная клавіятура не можа з\'явіцца на кластары. Уключыце службу спецыяльных магчымасцей, каб DashCast аўтаматычна адкрываў мост клавіятуры пры дакрананні да тэкставага поля. Інакш карыстайцеся кнопкай ⌨ у люстры.</string>
+    <string name="ime_banner_btn_enable">Уключыць</string>
+    <string name="ime_banner_btn_later">Пазней</string>
+    <string name="ime_banner_btn_dismiss">Больш не паказваць</string>
+    <string name="ime_banner_toast_enabled">Аўта-клавіятура актыўная ✓</string>
+    <string name="ime_banner_toast_cannot_open_settings">Немагчыма адкрыць Налады — уключыце ўручную службу спецыяльных магчымасцей « Аўта-клавіятура кластара ».</string>
+    <string name="keyboard_bridge_a11y_required_toast">Уключыце « DashCast Cluster IME » у Налады → Спецыяльныя магчымасці, каб клавіятура працавала на прыборнай панэлі.</string>
+    <string name="btn_keyboard">⌨</string>
+    <string name="btn_keyboard_desc">Клавіятура</string>
+    <string name="keyboard_bridge_title">Аддаленая клавіятура</string>
+    <string name="diag_tab_adas">ADAS</string>
+    <string name="diag_tab_dilink2">DiLink 2</string>
+    <string name="diag_tab_mirror">Mirror</string>
+    <string name="diag_dl2_header_title">Платформа DiLink 2 — Recon</string>
+    <string name="diag_dl2_header_subtitle">Набор распазнавання толькі праз reflection (без лакальнага ADB).</string>
+    <string name="diag_dl2_header_subtitle_fmt">Прадукт: %1$s · брэнд: %2$s · API %3$d</string>
+    <string name="diag_dl2_pill_unknown">Сігнатура: —</string>
+    <string name="diag_dl2_pill_detected">Сігнатура: DL2 выяўлена</string>
+    <string name="diag_dl2_pill_other">Сігнатура: не DL2</string>
+    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+    <string name="diag_mirror_header_title">Mirror — Дыягностыка</string>
+    <string name="diag_mirror_header_subtitle">Тапалогія SurfaceFlinger, стан дэмана mirror, экран кластара.</string>
+    <string name="diag_mirror_header_subtitle_fmt">Прадукт: %1$s · API %2$d</string>
+    <string name="diag_mirror_pill_unknown">Платформа: —</string>
+    <string name="diag_mirror_pill_dl5">Платформа: DiLink 5</string>
+    <string name="diag_mirror_pill_other">Платформа: іншая</string>
+    <string name="diag_mirror_hint">Запусціце mirror у праграме хаця б раз перад наборам, затым націсніце « Адправіць (.log) », каб падзяліцца справаздачай праз Telegram.</string>
+    <string name="diag_mirror_send_log">Адправіць (.log)</string>
+
+    <!-- DiLink 4 — Адмысловая дыягностыка (v1.2.28) -->
+    <string name="diag_tab_dilink4">DiLink 4</string>
+    <string name="diag_dl4_header_title">Платформа DiLink 4 — BYD-AUTO</string>
+    <string name="diag_dl4_header_subtitle">Тэсты, прызначаныя для DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + шлях DL3).</string>
+    <string name="diag_dl4_header_subtitle_fmt">Прадукт: %1$s · брэнд: %2$s · API %3$d</string>
+    <string name="diag_dl4_pill_unknown">Сігнатура: —</string>
+    <string name="diag_dl4_pill_detected">Сігнатура: DL4 выяўлена</string>
+    <string name="diag_dl4_pill_other">Сігнатура: не DL4</string>
+    <string name="diag_dl4_warning_d_tier">⚠ Узровень D1–D10 адпраўляе рэальныя каманды sendInfo у AutoContainer, затым запускае clusterdebug на экране кластара. Бачны эфект на машыне.</string>
+    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
+
+    <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
+    <string name="diag_tab_sniffer">Сніфер</string>
+    <string name="diag_adas_title">ADAS — акно кластара</string>
+    <string name="diag_adas_description">Паказвае або хавае акно ADAS кластара Qt (коды AutoContainer 12 / 13, агульныя DiLink)</string>
+    <string name="diag_adas_btn_show">Паказаць ADAS (12)</string>
+    <string name="diag_adas_btn_hide">Схаваць ADAS (13)</string>
+    <string name="diag_adas_last_result">Апошні вынік</string>
+    <string name="diag_adas_no_test">Ніводны тэст не выкананы.\nНацісніце «Паказаць ADAS» або «Схаваць ADAS», каб адправіць каманду ў кластар.</string>
+    <string name="diag_adas_technical_details">Тэхнічныя дэталі</string>
+    <string name="diag_adas_sending_fmt">$ %1$s\n…адпраўка…</string>
+    <string name="diag_adas_error_fmt">$ %1$s\nПАМЫЛКА: %2$s</string>
+    <string name="diag_sniffer_description">Бесперапынны захоп logcat + здымкі dumpsys у файл для экспарту</string>
+    <string name="diag_sniffer_pill_active">АКТЫЎНЫ</string>
+    <string name="diag_sniffer_pill_inactive">НЕАКТЫЎНЫ</string>
+    <string name="diag_sniffer_idle_text">Захоп не выконваецца.\nНацісніце «Запусціць», каб стварыць новы файл BYD_RE_Sniffer_*.txt.</string>
+    <string name="diag_sniffer_btn_start">Запусціць</string>
+    <string name="diag_sniffer_btn_stop">Спыніць</string>
+    <string name="diag_sniffer_btn_snapshot">Здымак</string>
+    <string name="diag_sniffer_btn_export">Экспарт</string>
+    <string name="diag_sniffer_btn_clean">Ачысціць</string>
+    <string name="diag_sniffer_content_title">Захоплены змест</string>
+    <string name="diag_sniffer_procedure_title">Тыповая працэдура</string>
+    <string name="diag_sniffer_initializing">Ініцыялізацыя…</string>
+    <string name="diag_sniffer_active_fmt">АКТЫЎНЫ → %1$s\nЗахоп выконваецца (logcat + аўта-здымкі / 10 с)</string>
+    <string name="diag_sniffer_init_fail_fmt">❌ Збой ініцыялізацыі: %1$s</string>
+    <string name="diag_sniffer_stopped_fmt">Спынена → %1$s\nГатова да экспарту.</string>
+    <string name="diag_sniffer_none">(няма)</string>
+    <string name="diag_sniffer_previous_stopped_fmt">Папярэдні захоп спынены → %1$s\n(%2$d KB) — экспартуецца.</string>
+    <string name="diag_sniffer_previous_no_adb_fmt">Папярэдні захоп: %1$s (%2$d KB, лакальны ADB недаступны — экспартуецца)</string>
+    <string name="diag_sniffer_active_detail_fmt">АКТЫЎНЫ → %1$s\n(%2$d KB захоплена)</string>
+    <string name="diag_sniffer_toast_started_fmt">Сніфер запушчаны → %1$s</string>
+    <string name="diag_sniffer_toast_stopped">Сніфер спынены.</string>
+    <string name="diag_sniffer_toast_need_start">Спачатку запусціце сніфер.</string>
+    <string name="diag_sniffer_toast_snapshot_added">Здымак дададзены.</string>
+    <string name="diag_sniffer_toast_no_file">Няма файла сніфера для экспарту.</string>
+    <string name="diag_sniffer_toast_export_error_fmt">Памылка экспарту: %1$s</string>
+    <string name="diag_sniffer_chooser_title">Экспартаваць Сніфер RE</string>
+    <string name="diag_sniffer_cleanup_busy">Спыніце сніфер перад ачысткай (захоп піша ў файл).</string>
+    <string name="diag_sniffer_cleanup_dialog_title">Ачысціць файлы DashCast</string>
+    <string name="diag_sniffer_cleanup_dialog_msg">Выдаляе ўсе журналы і захопы (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) са сховішча праграмы.\n\nКлючы ADB і налады захоўваюцца.</string>
+    <string name="diag_sniffer_cleanup_dialog_confirm">Ачысціць</string>
+    <string name="diag_sniffer_cleanup_status_fmt">Ачыстка: выдалена файлаў: %1$d · засталося: %2$s</string>
+    <string name="diag_sniffer_cleanup_toast_fmt">Выдалена файлаў: %1$d — засталося: %2$s</string>
+    <string name="settings_warn_dl2_no_margins">⚠️ Палі адключаны на DiLink 2 (адзін экран).</string>
+    <string name="settings_warn_no_cluster">⚠️ Кластар не выяўлены — палі ігнаруюцца (DL2?).</string>
+    <string name="settings_error_prefix_fmt">❌ %1$s</string>
+    <string name="settings_no_browser_fmt">Няма браўзера для адкрыцця %1$s</string>
+    <string name="diag_adas_doc_help">• Shell-каманда: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Сэрвіс: Auto_container на DL3/Di4 (PascalCase), auto_container на DL5+ (snake_case)\n• Код 12 = 显示Adas (Паказаць ADAS) — генеруецца clusterdebug.SecondActivity.infoListInit()\n• Код 13 = 关闭Adas (Схаваць ADAS) — тое ж\n• Ідэнтычныя варыянты: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-серыя: коды 12/13 выдаленыя (пустыя слоты) — тут не падтрымліваецца</string>
+    <string name="diag_sniffer_doc_content">• Пачатковы загаловак: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: поўны logcat threadtime + буфер events (без фільтра, нічога не страчана)\n• Аўта-здымкі кожныя 10 с: displays, SurfaceFlinger, працэсы BYD/xdja/qt/cluster\n• Ручны здымак: дадае dumpsys window + гісторыю broadcasts\n• Захаванне: запіс перажывае паварот/знішчэнне Activity (працэс setsid)</string>
+    <string name="diag_sniffer_doc_workflow">1. Запусціць → запіс ідзе ў фоне (setsid, перажывае Activity)\n2. Узнавіць баг / сцэнар, што вывучаецца\n3. Ручны здымак у ключавыя моманты (напр., якраз перад/пасля краху)\n4. Спыніць\n5. Экспартаваць → выбраць Telegram, каб падзяліцца файлам</string>
+    <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
+    <string name="sysinfo_restart_action">Перазапусціць</string>
+    <string name="sysinfo_restart_started">Перазапуск…</string>
+    <string name="sysinfo_restart_failed">Памылка перазапуску</string>
+    <string name="sysinfo_svc_projection">Праекцыя</string>
+    <string name="sysinfo_svc_projection_sub">націсні: 30→3с→16→3с→0</string>
+    <string name="sysinfo_svc_force_resizable">Force Resizable</string>
+    <string name="sysinfo_svc_force_resizable_sub">DL5 dev override · значэнне %1$s</string>
+    <string name="sysinfo_svc_force_resizable_checking">DL5 · праверка…</string>
+
+    <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
+    <string name="diag_dl5_cluster_test_fission">Тэст Fission</string>
+    <string name="diag_dl5_cluster_test_fission_hint">Дэструктыўны жывы тэст: запускае абраны дадатак на экране fission, прымушае змяніць памер, вяртае на галоўны экран, потым ачышчае. Толькі DiLink 5, ніякая каманда змены памеру не адпраўляецца на галоўны экран (id 0).</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_title">Тэст Fission — дэструктыўны</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_msg">Мэта: %1$s\n\nГэтая серыя:\n\n• Уключыць compat FORCE_RESIZE_APP на дадатку\n• Прымусова спыніць дадатак\n• Запусціць яго на экране fission (id ≠ 0) у рэжыме freeform\n• Праверыць змену памеру задачы\n• Вярнуць яго на галоўны экран (id 0) для праверкі перамяшчэння\n• Прымусова спыніць дадатак і скінуць compat (ачыстка)\n\nНіякая каманда змены памеру не адпраўляецца на галоўны экран (id 0).\nПрацягнуць?</string>
+    <string name="diag_dl5_cluster_test_fission_confirm_ok">Запусціць тэст</string>
+    <string name="diag_dl5_cluster_test_fission_only_dl5">Тэст Fission толькі для DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_fission_pick_title">Выберыце дадатак для тэсту</string>
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Запусковыя дадаткі не знойдзены.</string>
+    <string name="diag_dl5_fission_prompt_title">Праверка кластара</string>
+    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s бачны на экране кластара?\n\n(тэст экрана %2$d)</string>
+    <string name="diag_dl5_fission_prompt_yes">Так</string>
+    <string name="diag_dl5_fission_prompt_no">Не</string>
+
+    <!-- Diag — Export APK panel (v1.2.42) -->
+    <string name="diag_tab_export_apk">Экспарт APK BYD</string>
+    <string name="diag_export_apk_header_title">Экспарт APK BYD</string>
+    <string name="diag_export_apk_header_subtitle">Спіс усталяваных пакетаў BYD / XDJA / DiLink / cluster, выманне выбранага APK і адпраўка праз Telegram.</string>
+    <string name="diag_export_apk_refresh">Абнавіць</string>
+    <string name="diag_export_apk_counters_idle">Гатова — націсніце «Абнавіць» для сканавання.</string>
+    <string name="diag_export_apk_counters_scanning">Сканаванне…</string>
+    <string name="diag_export_apk_counters_fmt">%1$d APK знойдзена • %2$s на дыску</string>
+    <string name="diag_export_apk_hint">APK капіюецца ў кэш праграмы, перадаецца ў Telegram, а затым аўтаматычна выдаляецца праз 5 хвілін. Нічога не застаецца ў памяці аўтамабіля.</string>
+    <string name="diag_export_apk_btn_export">Экспарт</string>
+    <string name="diag_export_apk_btn_exporting">…</string>
+    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
+    <string name="diag_export_apk_sent_fmt">APK адпраўлены: %1$s</string>
+    <string name="diag_export_apk_chooser_title">Адправіць APK %1$s</string>
+    <string name="diag_export_apk_err_fmt">Памылка экспарту APK: %1$s</string>
+    <string name="diag_export_apk_err_no_source">Шлях APK не знойдзены для гэтага пакета.</string>
+
+    <!-- v1.2.43-beta — Voice PoC panel -->
+    <string name="diag_tab_voice">Голас (alpha)</string>
+    <string name="diag_voice_header_title">Галасавы кантроль — PoC аўдыё-ланцуга</string>
+    <string name="diag_voice_header_subtitle">Крок 1/3: правярае, што мікрафон даступны для прыкладання на гэтай платформе. ML мадэль яшчэ не загружаная.</string>
+    <string name="diag_voice_btn_start">Пачаць праслухоўванне</string>
+    <string name="diag_voice_btn_stop">Спыніць</string>
+    <string name="diag_voice_state_idle">Сэрвіс спынены</string>
+    <string name="diag_voice_state_running">Слухае…</string>
+    <string name="diag_voice_state_error_fmt">Памылка: %1$s</string>
+    <string name="diag_voice_perm_denied">Доступ да мікрафона забаронены — дазволь у наладах сістэмы каб уключыць PoC.</string>
+    <string name="diag_voice_meter_label">VU-метр у рэальным часе</string>
+    <string name="diag_voice_meter_rms">RMS (сярэдні ўзровень)</string>
+    <string name="diag_voice_meter_peak">Імгненны пік</string>
+    <string name="diag_voice_stats_fmt">RMS %1$d • пік %2$d • clip %3$d • кадры %4$d</string>
+    <string name="diag_voice_stats_idle">—</string>
+    <string name="diag_voice_hint">Гэты PoC адкрывае foreground-сэрвіс, які чытае мікрафон на 16 kHz mono 16-bit і паказвае ўзровень аўдыё лакальна. Нічога не запісваецца, не перадаецца і не аналізуецца. Слова актывацыі «Ok DashCast» з’явіцца ў v1.2.44 (openWakeWord), распазнаванне мовы ў v1.2.45 (Vosk).</string>
+    <string name="diag_voice_sample_rate_fmt">Частата дыскрэтызацыі: %1$d Hz mono 16-bit • крыніца VOICE_RECOGNITION</string>
+    <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
+    <string name="diag_voice_notif_title">DashCast — праслухоўванне мікрафона (PoC)</string>
+    <string name="diag_voice_notif_text">Узровень аўдыё аналізуецца лакальна, нічога не запісваецца.</string>
+
+    <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+    <string name="diag_voice_wakeword_card_title">Ключавое слова (openWakeWord)</string>
+    <string name="diag_voice_wakeword_switch">Уключыць</string>
+    <string name="diag_voice_wakeword_score_label">Sigmoid-ацэнка (парог 0,5)</string>
+    <string name="diag_voice_wakeword_model_fmt">Мадэль: hey_jarvis_v0.1 (заменнік для «Ok DashCast»)</string>
+    <string name="diag_voice_wakeword_last_fmt">Апошняе выяўленне: —</string>
+    <string name="diag_voice_wakeword_last_at_fmt">Апошняе выяўленне: %1$s (ацэнка %2$.2f)</string>
+    <string name="diag_voice_wakeword_unavailable">ONNX Runtime недаступны — %1$s</string>
+
+
+    <!-- Auto-aligned fallback strings (v1.2.51) -->
+    <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
+    <string name="ota_version_label">DashCast %1$s</string>
+    <string name="ota_progress_unknown">…</string>
+    <string name="ota_progress_percent">%1$d %%</string>
+    <string name="main_nav_hotspot">Hotspot</string>
+    <string name="hotspot_title">Hotspot</string>
+    <string name="hotspot_back">Back</string>
+    <string name="hotspot_hero_title">4G hotspot via TetherFi</string>
+    <string name="hotspot_hero_subtitle">Share your mobile data in a couple of taps</string>
+    <string name="hotspot_intro">The built-in hotspot is not reachable on DiLink 3. DashCast instead drives TetherFi (open-source) which creates a Wi-Fi Direct access point + SOCKS5 proxy — no system permission required, and your vehicle SIM is used as upstream.</string>
+    <string name="hotspot_tf_status_unknown">⏳ Detecting…</string>
+    <string name="hotspot_tf_status_installed">🟢 TetherFi installed — version %1$s</string>
+    <string name="hotspot_tf_status_missing">🔴 TetherFi is not installed. Tap “Install” to fetch the latest release.</string>
+    <string name="hotspot_tf_start">Start</string>
+    <string name="hotspot_tf_stop">Stop</string>
+    <string name="hotspot_tf_toggle">Toggle</string>
+    <string name="hotspot_tf_open">Open TetherFi</string>
+    <string name="hotspot_tf_install">Install TetherFi</string>
+    <string name="hotspot_tf_dispatched">▶ TetherFi %1$s — dispatched</string>
+    <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
+    <string name="hotspot_tf_open_failed">Open TetherFi: %1$s</string>
+    <string name="hotspot_watchdog_title">Auto watchdog</string>
+    <string name="hotspot_watchdog_hint">Automatically restarts the hotspot if it drops (probes every 20 s).</string>
+    <string name="hotspot_watchdog_idle">Off</string>
+    <string name="hotspot_watchdog_probing">⏳ probing…</string>
+    <string name="hotspot_watchdog_tf_gone">⛔ TetherFi uninstalled — watchdog stopped</string>
+    <string name="hotspot_watchdog_adb_err">%1$s #%2$d ⚠ ADB: %3$s</string>
+    <string name="hotspot_watchdog_up">%1$s #%2$d 🟢 hotspot UP (restarts=%3$d)</string>
+    <string name="hotspot_watchdog_cooldown">%1$s #%2$d 🟠 DOWN — cooldown %3$d s</string>
+    <string name="hotspot_watchdog_restart">%1$s #%2$d 🔴 DOWN → restart #%3$d</string>
+    <string name="hotspot_autostart_boot_title">Auto-start at vehicle boot</string>
+    <string name="hotspot_autostart_boot_hint">Automatically launches TetherFi a few seconds after the vehicle starts.</string>
+    <string name="hotspot_tf_update_available">🆕 TetherFi update: v%1$d → v%2$d (tap to download)</string>
+    <string name="hotspot_clients_title">Connected clients</string>
+    <string name="hotspot_clients_empty">No connected clients</string>
+    <string name="hotspot_client_default_name">Прылада %1$s</string>
+    <string name="hotspot_stat_uptime">Uptime</string>
+    <string name="hotspot_stat_rx">Received</string>
+    <string name="hotspot_stat_tx">Sent</string>
+    <string name="settings_use_own_sim">I use my own SIM card</string>
+    <string name="settings_use_own_sim_support">Shows the “Hotspot” button in the navigation rail so you can share your mobile data via TetherFi (DiLink 3 only).</string>
+    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
+    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Recon</string>
+    <string name="diag_dl5_cluster_header_subtitle">Non-destructive probe: detects shell commands, compat flags and services available for cluster resize on DiLink 5.</string>
+    <string name="diag_dl5_cluster_run_all">Run recon</string>
+    <string name="diag_dl5_cluster_copy_report">Copy report</string>
+    <string name="diag_dl5_cluster_send_telegram">Send via Telegram</string>
+    <string name="diag_dl5_cluster_counters_idle">Idle — no probe run yet</string>
+    <string name="diag_dl5_cluster_pill_unknown">Platform: unknown</string>
+    <string name="diag_dl5_cluster_pill_dl5">Platform: DiLink 5</string>
+    <string name="diag_dl5_cluster_pill_other">Platform: other</string>
+    <string name="diag_dl5_cluster_toast_report_copied">Report copied to clipboard (%1$d entries)</string>
+    <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
+    <string name="diag_cluster_poc_title">Cluster Move/Resize — Fission display</string>
+    <string name="diag_cluster_poc_subtitle">Interactive control of an app (Waze, Maps, …) on the trusted xdja « fission_* » display as done by WindowManagement / Dilink5 Dashboard. Local VD is abandoned: we piggyback on the system display (uid 1000) to avoid the « secondary screen » toast and the rebound on display 0.</string>
+    <string name="diag_cluster_poc_btn_enumerate">📋 Enumerate displays</string>
+    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Restart daemon</string>
+    <string name="diag_cluster_poc_btn_share">📤 Share report</string>
+    <string name="diag_cluster_poc_section_app">Target</string>
+    <string name="diag_cluster_poc_label_pkg">package:</string>
+    <string name="diag_cluster_poc_btn_launch">▶ Launch on fission</string>
+    <string name="diag_cluster_poc_btn_stop">⏹ Force-stop</string>
+    <string name="diag_cluster_poc_section_rect">Position &amp; size (px of fission display)</string>
+    <string name="diag_cluster_poc_slider_x">X (left)</string>
+    <string name="diag_cluster_poc_slider_y">Y (top)</string>
+    <string name="diag_cluster_poc_slider_w">W (width)</string>
+    <string name="diag_cluster_poc_slider_h">H (height)</string>
+    <string name="diag_cluster_poc_btn_apply">✅ Apply rect</string>
+    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
+    <string name="diag_cluster_poc_chooser_title">Share Cluster Report</string>
+    <string name="diag_cluster_poc_toast_no_report">No report. First tap « Enumerate displays ».</string>
+    <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
+    <string name="proxy_keeper_channel_name">Проксі-дэман</string>
+    <string name="proxy_keeper_channel_desc">Падтрымлівае проксі-дэман у фоне</string>
+    <string name="proxy_keeper_notif_title">DashCast — проксі актыўны</string>
+    <string name="proxy_keeper_notif_text">Праверка дэмана кожныя 10 с</string>
+    <!-- v1.2.76 — Reboot button + dialog -->
+    <string name="sysinfo_btn_reboot">Перазагрузіць</string>
+    <string name="sysinfo_reboot_title">Перазагрузіць планшэт?</string>
+    <string name="sysinfo_reboot_message">Сістэма выключыцца і перазапусціцца. Усе запушчаныя праграмы будуць закрыты.</string>
+    <string name="sysinfo_reboot_confirm">Перазагрузіць</string>
+    <string name="sysinfo_reboot_toast">Перазагрузка…</string>
+    <string name="sysinfo_reboot_failed">Не ўдалося перазагрузіць. Праверце, што лакальны ADB уключаны.</string>
+
+    <!-- v1.2.81 — Cluster per-app DPI override -->
+    <string name="sheet_cluster_dpi">Шчыльнасць экрана</string>
+    <string name="sheet_dpi_value_default">Прадвызн.</string>
+    <string name="dpi_dialog_title">DPI кластара — %1$s</string>
+    <string name="dpi_default">Сістэмнае прадвызначэнне</string>
+    <string name="dpi_custom">Уласнае…</string>
+    <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
+    <string name="dpi_applied_next_launch">Будзе ўжыта пры наступным запуску</string>
 </resources>

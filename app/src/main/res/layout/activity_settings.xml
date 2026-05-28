@@ -110,6 +110,27 @@
             android:layout_marginTop="2dp"/>
 
         <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+
+        <!-- v1.2.44 — Hotspot (DL3 + use_own_sim runtime-gated, wired by NavRailHotspot.apply) -->
+        <LinearLayout
+            android:id="@+id/nav_hotspot_set"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            android:clickable="true" android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_wifi_tethering"
+                android:padding="10dp"
+                android:contentDescription="@string/main_nav_hotspot"/>
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/main_nav_hotspot"
+                android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
     </LinearLayout>
 
     <ScrollView
@@ -308,10 +329,12 @@
 
                 <!-- Section: MARGES OVERSCAN -->
                 <TextView
+                    android:id="@+id/tv_overscan_section_title"
                     style="@style/Widget.DashCast.SectionHead"
                     android:text="@string/settings_overscan_section_title"/>
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_overscan"
                     style="@style/Widget.DashCast.Card.Filled"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -571,6 +594,63 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <!-- Arrêt rapide (sans restauration cluster d'origine) -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_speed"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_quick_stop"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_quick_stop_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_quick_stop"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- v1.2.42 — Carte SIM personnelle : conditionne le bouton Hotspot du navrail -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_sim_card"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_use_own_sim"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_use_own_sim_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_use_own_sim"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- v1.2.77 — Le démarrage auto de la projection est désormais
+                             toujours actif (plus de toggle Settings : ouvrir DashCast = vouloir projeter). -->
+
                         <!-- Filtres par catégorie -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
@@ -593,6 +673,33 @@
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_show_category_filters"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- v1.2.45 — Compact apps panel (2 cols instead of 5) -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_aspect_ratio"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_compact_apps_panel"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_compact_apps_panel_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_compact_apps_panel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>
@@ -729,6 +836,137 @@
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
                                 android:id="@+id/cb_prerelease"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ════════════════════════════════════════════════════════ -->
+                <!-- Section: BETA ENGINE — Experimental                       -->
+                <!-- ════════════════════════════════════════════════════════ -->
+                <TextView
+                    style="@style/Widget.DashCast.SectionHead"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/settings_section_beta_engine"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.DashCast.Card.Filled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/md_surface_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:contentPadding="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Warning banner -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="12dp"
+                            android:layout_marginBottom="4dp"
+                            android:background="@drawable/bg_beta_warning">
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:layout_marginEnd="10dp"
+                                android:src="@drawable/ic_science"
+                                android:tint="#FFB300"/>
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_beta_warning"
+                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                android:textColor="#FFB300"/>
+                        </LinearLayout>
+
+                        <!-- Switch A : proxy daemon -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_science"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_beta_proxy_daemon"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_beta_proxy_daemon_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_beta_proxy_daemon"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Switch B : system context bypass -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_science"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_beta_system_context"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_beta_system_context_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_beta_system_context"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Switch DiLink5 : platform override -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_science"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_dilink5_mode"/>
+                                <TextView
+                                    android:id="@+id/tv_beta_dilink5_support"
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_dilink5_mode_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_dilink5_mode"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>

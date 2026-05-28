@@ -103,6 +103,27 @@
             android:layout_marginTop="2dp"/>
 
         <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+
+        <!-- v1.2.44 — Hotspot (DL3 + use_own_sim runtime-gated, wired by NavRailHotspot.apply) -->
+        <LinearLayout
+            android:id="@+id/nav_hotspot_diag"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            android:clickable="true" android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_wifi_tethering"
+                android:padding="10dp"
+                android:contentDescription="@string/main_nav_hotspot"/>
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/main_nav_hotspot"
+                android:textSize="10sp" android:textColor="@color/md_on_surface_variant"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- ============= Main area ============= -->
@@ -111,7 +132,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingStart="20dp" android:paddingEnd="20dp"
-        android:paddingTop="20dp" android:paddingBottom="20dp">
+        android:paddingTop="20dp" android:paddingBottom="0dp">
 
         <!-- Top bar -->
         <LinearLayout
@@ -138,57 +159,119 @@
                 android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
 
-        <!-- Placeholder hero -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- Tabs -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabs_diag"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/md_outline_variant"
-            app:cardBackgroundColor="@color/md_surface_container_low">
+            android:layout_marginTop="8dp"
+            app:tabMode="scrollable"
+            app:tabGravity="start"
+            app:tabIndicatorColor="@color/md_primary"
+            app:tabSelectedTextColor="@color/md_primary"
+            app:tabTextColor="@color/md_on_surface_variant"
+            app:tabRippleColor="@color/md_surface_container_high"
+            app:tabBackground="@android:color/transparent">
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_cluster"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_display"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_adb_local"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_system"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_adas"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_beta_engine"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_dilink5"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_dilink2"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_dilink4"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_mirror"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_sniffer"
+                tools:ignore="HardcodedText"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_cluster_dl5"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_export_apk"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_voice"/>
+        </com.google.android.material.tabs.TabLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:paddingStart="32dp" android:paddingEnd="32dp"
-                android:paddingTop="48dp" android:paddingBottom="48dp">
+        <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
+        <FrameLayout
+            android:id="@+id/fl_diag_content"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="12dp"
+            android:paddingBottom="20dp">
 
-                <ImageView
-                    android:layout_width="96dp"
-                    android:layout_height="96dp"
-                    android:src="@drawable/ic_stethoscope"
-                    android:padding="22dp"
-                    android:background="@drawable/bg_diag_card_icon"
-                    app:tint="@color/md_primary"
-                    android:contentDescription="@string/main_nav_diag"/>
+            <!-- Beta Engine panel (default visible) -->
+            <include
+                android:id="@+id/panel_beta_engine"
+                layout="@layout/include_diag_beta_engine"/>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="@string/diag_placeholder_title"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:gravity="center"/>
+            <!-- DiLink 5 dedicated diagnostic panel -->
+            <include
+                android:id="@+id/panel_dilink5"
+                layout="@layout/include_diag_dilink5"/>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginStart="32dp"
-                    android:layout_marginEnd="32dp"
-                    android:text="@string/diag_placeholder_subtitle"
-                    android:textSize="14sp"
-                    android:textColor="@color/md_on_surface_variant"
-                    android:gravity="center"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <!-- DiLink 2 recon panel (build 185) -->
+            <include
+                android:id="@+id/panel_dilink2"
+                layout="@layout/include_diag_dilink2"/>
 
-        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+            <!-- DiLink 4 diagnostic panel (v1.2.28) -->
+            <include
+                android:id="@+id/panel_dilink4"
+                layout="@layout/include_diag_dilink4"/>
+
+            <!-- Mirror diagnostic panel (build 193) -->
+            <include
+                android:id="@+id/panel_mirror"
+                layout="@layout/include_diag_mirror"/>
+
+            <!-- RE Sniffer dedicated diagnostic panel (build 181) -->
+            <include
+                android:id="@+id/panel_sniffer"
+                layout="@layout/include_diag_sniffer"/>
+
+            <!-- ADAS show/hide dedicated diagnostic panel -->
+            <include
+                android:id="@+id/panel_adas"
+                layout="@layout/include_diag_adas"/>
+
+            <!-- Cluster overlay POC panel (v1.2.34) — DL3 cluster move/resize tool -->
+            <include
+                android:id="@+id/panel_cluster_poc"
+                layout="@layout/include_diag_cluster_poc"/>
+
+            <!-- Cluster DL5 recon panel (v1.2.37) — capability probing for DiLink 5 cluster -->
+            <include
+                android:id="@+id/panel_cluster_dl5"
+                layout="@layout/include_diag_cluster_dl5"/>
+
+            <!-- Export BYD APK panel (v1.2.42) — list every BYD package + pull/share its APK -->
+            <include
+                android:id="@+id/panel_export_apk"
+                layout="@layout/include_diag_export_apk"/>
+
+            <!-- Voice PoC panel (v1.2.43) — isolated audio-chain validation, no ML yet -->
+            <include
+                android:id="@+id/panel_voice"
+                layout="@layout/include_diag_voice"/>
+
+            <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
+            <include
+                android:id="@+id/panel_coming_soon"
+                layout="@layout/include_diag_coming_soon"/>
+
+        </FrameLayout>
     </LinearLayout>
 </LinearLayout>

@@ -2,6 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.byd.dashcast">
 
+    <!-- 1.2.30 — custom signature permission used by MirrorDaemon to protect
+         the ACTION_DAEMON_READY broadcast that carries the daemon IBinder.
+         protectionLevel=signature → only apps signed with our certificate
+         (i.e. this APK itself) hold the permission and can receive the binder.
+         Other apps on the device are filtered out by AMS before delivery. -->
+    <permission
+        android:name="com.byd.dashcast.permission.DAEMON_READY"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.byd.dashcast.permission.DAEMON_READY" />
+
     <!-- ===== PERMISSIONS BYD AUTO API ===== -->
 
     <!-- Auto-Boot -->
@@ -9,6 +19,12 @@
 
     <!-- Foreground Service pour maintenir la projection cluster en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <!-- v1.2.43-beta — Voice PoC (Diagnostic tab). Microphone access is
+         requested at runtime from the new VoiceService. FG service type
+         "microphone" is required on API 30+ to read AudioRecord from a
+         foreground service while the activity is in the background. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <!-- Connexion TCP localhost:5555 pour dadb (ADB local → popup autorisation) -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -23,6 +39,20 @@
     <!-- Miroir SurfaceControl — capturer le layer stack du cluster dans notre SurfaceView
          Signature permission: granted when our cert == platform cert (the case here with platform.keystore) -->
     <uses-permission android:name="android.permission.ACCESS_SURFACE_FLINGER"/>
+
+    <!-- v1.2.37 — Hotspot / tether eligibility (DL3 hidden-API attempt).
+         These are all signature|privileged on AOSP 10. Granted only if our
+         APK is signed with the platform key AND (on some OEMs) installed in
+         /system/priv-app. HotspotActivity probes the actual grant state via
+         PackageManager.checkPermission at runtime. Network state perms below
+         are "normal" and auto-granted at install time. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <uses-permission android:name="android.permission.OVERRIDE_WIFI_CONFIG"/>
+    <uses-permission android:name="android.permission.TETHER_PRIVILEGED"/>
 
     <!-- Body / Vehicle (COMMON = mandatory at runtime before getInstance) -->
     <uses-permission android:name="android.permission.BYDAUTO_BODYWORK_COMMON"/>
@@ -117,11 +147,44 @@
             android:name=".MainActivity"
             android:screenOrientation="landscape"/>
 
+        <!-- v1.2.8 — Keyboard bridge for DL5 cluster mirror (IME relay) -->
+        <activity
+            android:name=".KeyboardBridgeActivity"
+            android:label="@string/keyboard_bridge_title"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@style/KeyboardBridgeTheme"/>
+
+        <!-- v1.2.9 — Optional a11y service: auto-launches the bridge when an
+             EditText takes focus on the cluster. DL5 only; user must enable it
+             manually in Settings (Android system constraint). -->
+        <service
+            android:name=".ime.ClusterImeWatcherService"
+            android:exported="true"
+            android:label="@string/a11y_ime_watcher_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_ime_watcher"/>
+        </service>
+
         <!-- Compatibility diagnostic screen -->
         <activity
             android:name=".DiagActivity"
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
+
+        <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
+        <activity
+            android:name=".cluster.ClusterResizeActivity"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@style/AppTheme.NoActionBar"/>
 
         <!-- Full system report screen -->
         <activity
@@ -137,6 +200,15 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:launchMode="singleTop"/>
 
+        <!-- v1.2.36 — AOSP hotspot launcher (DL3 only — nav rail entry is
+             runtime-gated by Platform.isDiLink3()). Activity is exported=false. -->
+        <activity
+            android:name=".HotspotActivity"
+            android:label="Hotspot AOSP"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"/>
+
         <!-- User-facing settings (overscan tuning, cluster type) -->
         <activity
             android:name=".SettingsActivity"
@@ -150,11 +222,28 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
+        <!-- v1.2.73-beta — Phase A Step 4 Couche 2: keeps the BetaProxy
+             daemon alive 24/7 even when no DashCast activity is in the
+             foreground. Heartbeat 10s, START_STICKY, low-importance silent
+             notification (required by Android for FG services). -->
+        <service
+            android:name=".beta.ProxyKeeperService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
+
         <!-- Overlay service: quick-return icon to the streaming view -->
         <service
             android:name=".FloatingRemoteButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
+
+        <!-- v1.2.43-beta — Voice PoC service. Fully isolated, only started
+             from the Diagnostic > Voice tab. Reads AudioRecord 16 kHz mono
+             and broadcasts RMS/peak/clip metrics. No machine learning yet. -->
+        <service
+            android:name=".voice.VoiceService"
+            android:exported="false"
+            android:foregroundServiceType="microphone"/>
 
         <!-- OTA: receives PackageInstaller session result -->
         <receiver
@@ -172,13 +261,18 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Auto-Boot Overscan restoration -->
+        <!-- Auto-Boot Overscan restoration + v1.2.75 proxy daemon revive on OTA -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true"
             android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <!-- v1.2.75 — Couche 1: revive proxy daemon + KeeperService immediately
+                 after the app self-updates, without waiting for the user to open it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

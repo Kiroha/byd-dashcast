@@ -9,6 +9,7 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceControl;
 import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.platform.Platform;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,9 +36,18 @@ public class ClusterMirrorManager {
 
     // ── SurfaceControl mirror token ───────────────────────────────────────────────
     private IBinder mMirrorDisplayToken = null;
-    private Surface mMirrorSurface      = null;
+    // Audit batch 2 — removed dead field mMirrorSurface (was assigned in
+    // startMirror/startMirrorViaDaemon and nulled in stopPreview/destroyMirrorToken
+    // but never read anywhere). The Surface lifecycle is owned by MainActivity
+    // (TextureView's SurfaceTexture), we never needed our own reference.
 
     private boolean mMirrorActive = false;
+    // v1.2.55-beta — tracks which path established the active mirror. When the
+    // daemon Binder becomes available AFTER a direct-path mirror was put in
+    // place, MainActivity uses this flag to detect the stale state and
+    // restart via the daemon (which is the only path that actually streams
+    // frames on DL3/DL5 because the app process lacks ACCESS_SURFACE_FLINGER).
+    private boolean mMirrorViaDaemon = false;
     private int     mClusterW = 1920;
     private int     mClusterH = 720;   // Confirmed: fission_bg_xdjaVirtualSurface 1920×720 (dumpsys window 03/05/2026)
 
@@ -52,6 +62,8 @@ public class ClusterMirrorManager {
     public int     getClusterWidth()           { return mClusterW; }
     public int     getClusterHeight()          { return mClusterH; }
     public boolean isMirrorActive()            { return mMirrorActive; }
+    /** True iff the active mirror was established through the system-uid daemon path. */
+    public boolean isMirrorViaDaemon()         { return mMirrorActive && mMirrorViaDaemon; }
 
     /** Returns the horizontal letterbox offset (pixels) used in the last setDisplayProjection call. */
     public int   getProjOffsetX() { return mProjOffsetX; }
@@ -101,7 +113,7 @@ public class ClusterMirrorManager {
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
-    public boolean startMirror(Display clusterDisplay, Surface targetSurface,
+    public boolean startMirror(Context ctx, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         if (mMirrorActive) {
             AppLogger.d(TAG, "Mirror already active");
@@ -135,6 +147,7 @@ public class ClusterMirrorManager {
                 layerStack = (clusterDisplay != null) ? clusterDisplay.getDisplayId() : 2;
                 AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
             }
+            layerStack = applyDl5LayerStackOverride(ctx, layerStack);
 
             // 2. Create a display token for our mirror
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
@@ -183,8 +196,8 @@ public class ClusterMirrorManager {
             setDisplayProjection.invoke(tx, mMirrorDisplayToken, 0, srcRect, destRect);
             tx.apply();
 
-            mMirrorSurface = targetSurface;
             mMirrorActive  = true;
+            mMirrorViaDaemon = false;
             AppLogger.i(TAG, "SurfaceControl mirror ✓ layerStack=" + layerStack
                     + " src=" + mClusterW + "×" + mClusterH
                     + " dest=" + drawW + "×" + drawH + " offset=(" + offsetX + "," + offsetY + ")");
@@ -203,7 +216,7 @@ public class ClusterMirrorManager {
      * SYNCHRONOUS call: the daemon replies 1 (success) or 0 (failure) → mMirrorActive reflects
      * reality, which allows the screencap fallback if the daemon fails.
      */
-    public boolean startMirrorViaDaemon(IBinder daemonBinder, Display clusterDisplay,
+    public boolean startMirrorViaDaemon(Context ctx, IBinder daemonBinder, Display clusterDisplay,
                                         Surface targetSurface, int viewW, int viewH) {
         if (mMirrorActive) return true;
         if (daemonBinder == null || targetSurface == null || !targetSurface.isValid()) return false;
@@ -237,6 +250,12 @@ public class ClusterMirrorManager {
             layerStack = clusterDisplayId;
             AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
         }
+        layerStack = applyDl5LayerStackOverride(ctx, layerStack);
+        // v1.2.7 — On DL5 the daemon must inject touch on displayId=2 (composed fission output),
+        // not on the shadow render displayId=3 whose framebufferSpace is 1×1 — see field test
+        // 22/05/2026 (preview OK after layerStack 3→2 override but tactile not working until
+        // we mirror that override on the daemon's setDisplayId target).
+        clusterDisplayId = applyDl5DisplayIdOverride(ctx, clusterDisplayId);
 
         Parcel data  = Parcel.obtain();
         Parcel reply = Parcel.obtain();
@@ -255,8 +274,8 @@ public class ClusterMirrorManager {
             reply.readException();
             boolean daemonOk = reply.readInt() == 1;
             if (daemonOk) {
-                mMirrorSurface = targetSurface;
                 mMirrorActive  = true;
+                mMirrorViaDaemon = true;
                 AppLogger.i(TAG, "startMirrorViaDaemon ✓ layerStack=" + layerStack
                         + " " + mClusterW + "×" + mClusterH + " displayId=" + clusterDisplayId);
             } else {
@@ -295,11 +314,60 @@ public class ClusterMirrorManager {
             reply.recycle();
         }
         mMirrorActive  = false;
-        mMirrorSurface = null;
+        mMirrorViaDaemon = false;
         AppLogger.i(TAG, "stopMirrorViaDaemon done (sync)");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * DL5 cluster architecture quirk: apps render on layerStack 3/4
+     * (shared_fission_bg_XDJAScreenProjection_0/_1) which expose a shadow
+     * framebuffer of 1×1 px — copying that layerStack into our preview yields
+     * a black image. The actually-composited 1920×720 content displayed on
+     * the physical cluster lives on layerStack=2 (fission_bg_XDJAScreenProjection).
+     * Override 3/4 → 2 only on effective DL5. DL3 path untouched.
+     */
+    private static int applyDl5LayerStackOverride(Context ctx, int detectedLayerStack) {
+        if (ctx == null) return detectedLayerStack;
+        boolean dl5;
+        try {
+            dl5 = Platform.get().isDiLink5(ctx);
+        } catch (Throwable t) {
+            return detectedLayerStack;
+        }
+        if (!dl5) return detectedLayerStack;
+        if (detectedLayerStack == 3 || detectedLayerStack == 4) {
+            AppLogger.i(TAG, "DL5 override: layerStack " + detectedLayerStack
+                    + " → 2 (mirror composed fission output)");
+            return 2;
+        }
+        return detectedLayerStack;
+    }
+
+    /**
+     * v1.2.7 — Symmetric to {@link #applyDl5LayerStackOverride}: on DL5, when the detected
+     * displayId (used by the daemon's MotionEvent.setDisplayId target for touch injection) is
+     * the shadow render display 3 or 4 (framebufferSpace 1×1), rewrite it to 2 — the WMS
+     * displayId backing the composed 1920×720 cluster output where the user actually sees
+     * the apps. On DL3 and on any other displayId value, returns the input unchanged.
+     */
+    private static int applyDl5DisplayIdOverride(Context ctx, int detectedDisplayId) {
+        if (ctx == null) return detectedDisplayId;
+        boolean dl5;
+        try {
+            dl5 = Platform.get().isDiLink5(ctx);
+        } catch (Throwable t) {
+            return detectedDisplayId;
+        }
+        if (!dl5) return detectedDisplayId;
+        if (detectedDisplayId == 3 || detectedDisplayId == 4) {
+            AppLogger.i(TAG, "DL5 override: displayId " + detectedDisplayId
+                    + " → 2 (touch injection on composed cluster face)");
+            return 2;
+        }
+        return detectedDisplayId;
+    }
 
     private void destroyMirrorToken() {
         if (mMirrorDisplayToken != null) {
@@ -313,12 +381,12 @@ public class ClusterMirrorManager {
                 AppLogger.w(TAG, "destroyDisplay via reflection failed: " + e.getMessage());
             }
             mMirrorDisplayToken = null;
-            mMirrorSurface = null;
         }
     }
 
     private void stopPreview() {
         mMirrorActive = false;
+        mMirrorViaDaemon = false;
         mProjScale = 0f;  // Reset: signals "not yet set" to touch mapping
         destroyMirrorToken();
     }
