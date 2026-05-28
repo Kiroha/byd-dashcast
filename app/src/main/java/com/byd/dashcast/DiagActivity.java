@@ -2321,14 +2321,10 @@ public class DiagActivity extends AppCompatActivity {
         new Thread(() -> {
             final long t0 = System.currentTimeMillis();
             AdbLocalClient.executeShellWithResult(this,
-                    "PIDF=/data/local/tmp/dashcast_proxy.pid; "
-                            + "TRIG=/data/local/tmp/dashcast_proxy.trigger; "
-                            + "P=$(cat \"$PIDF\" 2>/dev/null); "
-                            + "if [ -z \"$P\" ]; then echo NO_PID_FILE; exit 0; fi; "
-                            + "if ! grep -aq dashcast_proxy /proc/$P/cmdline 2>/dev/null; then "
-                            + "  echo \"STALE pid=$P\"; exit 0; "
-                            + "fi; "
-                            + "echo trigger > \"$TRIG\" && echo \"REBROADCAST $P\" || echo \"TRIGGER_FAILED $P\"",
+                    "TRIG=/data/local/tmp/dashcast_proxy.trigger; "
+                            + "ALIVE_PID=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}' | head -n1); "
+                            + "if [ -z \"$ALIVE_PID\" ]; then echo NO_LIVE_DAEMON; exit 0; fi; "
+                            + "echo trigger > \"$TRIG\" && echo \"REBROADCAST $ALIVE_PID\" || echo \"TRIGGER_FAILED $ALIVE_PID\"",
                     new AdbLocalClient.Callback() {
                         @Override public void onSuccess(String r) {
                             long elapsed = System.currentTimeMillis() - t0;

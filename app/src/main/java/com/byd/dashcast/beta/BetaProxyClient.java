@@ -87,31 +87,27 @@ public final class BetaProxyClient {
      * </ul>
      */
     private static final String BOOTSTRAP_CMD =
-            // ── PID-file fast path (BEFORE the flock) ──────────────────────
-            // v1.2.65 hotfix: must NOT be gated by flock. The running daemon
-            // (if any) used to inherit FD 9 from the setsid spawn and held
-            // the lock for its entire lifetime — every subsequent bootstrap
-            // call then returned ALREADY_BOOTSTRAPPING and the fast path
-            // never executed. Old daemons in the field (1.2.63 / 1.2.64)
-            // still hold that FD until killed/rebooted, so we MUST be able
-            // to reach the rebroadcast trigger even with the lock held.
-            // The fast path is purely a PID-file read + a trigger-file
-            // write; concurrent invocations coalesce (multiple touches on
-            // the same trigger file produce a single rebroadcast burst in
-            // the FileObserver inside the daemon), so no locking is needed.
-            "PIDF=" + DAEMON_PID + "; TRIG=" + DAEMON_TRIGGER + "; "
-            + "if [ -f \"$PIDF\" ]; then "
-            +   "P=$(cat \"$PIDF\" 2>/dev/null); "
-            +   "if [ -n \"$P\" ] && [ -d \"/proc/$P\" ]; then "
-            // v1.2.66 hotfix: use /proc/$P/cmdline (argv0, set by --nice-name)
-            // instead of /proc/$P/comm (thread name, kept as "main" by the JVM
-            // regardless of --nice-name → fast-path NEVER matched in v1.2.65).
-            // -a treats cmdline (NUL-separated) as text; -q for silent.
-            +     "if grep -aq dashcast_proxy /proc/$P/cmdline 2>/dev/null; then "
-            +       "echo trigger > \"$TRIG\" 2>/dev/null; "
-            +       "echo \"REBROADCAST $P\"; exit 0; "
-            +     "fi; "
-            +   "fi; "
+            // ── Live-daemon fast path (BEFORE the flock) ───────────────────
+            // v1.2.67 hotfix: PID-file based detection turned out fragile in
+            // the field — the file may be empty/missing on first run,
+            // /proc/PID/comm is the JVM thread name ("main"), and toybox
+            // `grep -a` behaviour on cmdline can't be relied on across
+            // DiLink versions. We now use the EXACT same heuristic as the
+            // stale-kill below (proven since 1.1.5):
+            //   `ps -A | grep '[d]ashcast_proxy'`
+            // If ANY live daemon is found (any version, including the
+            // v1.2.63/64/65/66 ones stuck with the FD-9 lock leak), we just
+            // touch the trigger file — the FileObserver introduced in
+            // v1.2.63 lives in all those daemons and will re-emit the
+            // binder broadcast, letting us recover WITHOUT killing the
+            // stuck daemon and WITHOUT requiring a tablet reboot.
+            // Concurrent touches on the trigger file coalesce inside the
+            // FileObserver, so no locking is needed for the fast path.
+            "TRIG=" + DAEMON_TRIGGER + "; "
+            + "ALIVE_PID=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}' | head -n1); "
+            + "if [ -n \"$ALIVE_PID\" ]; then "
+            +   "echo trigger > \"$TRIG\" 2>/dev/null; "
+            +   "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
             + "fi; "
             // ── flock guard (bootstrap path only) ──────────────────────────
             // Reaches here only when no live daemon exists; serializes two
@@ -122,10 +118,10 @@ public final class BetaProxyClient {
             + "APK=$(pm path " + DAEMON_PKG + " 2>/dev/null | head -n1 | cut -d: -f2-); "
             + "if [ -z \"$APK\" ]; then echo ERR_NO_APK; exit 1; fi; "
             + "LOG=" + DAEMON_LOG + "; "
-            // Kill any stale daemon from a previous session (it survives app shutdown
-            // because of `setsid`). Without this, a new daemon would broadcast its
-            // binder on top of the old one — the app receiver only keeps the last
-            // one, but two live processes would still be wasteful.
+            // Stale-kill kept as last-line defence. If the fast path saw a
+            // live daemon we'd never reach here; if it didn't but `ps` here
+            // still finds one, the daemon died between the two `ps` calls —
+            // then this kill is harmless (already-gone PID).
             + "STALE=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy' | awk '{print $2}'); "
             + "if [ -n \"$STALE\" ]; then kill -9 $STALE 2>/dev/null; sleep 0.3; fi; "
             // Self-diagnostic header so a failed bootstrap is debuggable from the log.
@@ -135,11 +131,9 @@ public final class BetaProxyClient {
             +   "echo \"[boot] stale_killed=${STALE:-none}\"; "
             +   "ls -la \"$APK\" 2>&1; "
             +   "echo \"[boot] exec app_process64...\"; } > \"$LOG\" 2>&1; "
-            // v1.2.65 hotfix: `9>&-` after the inner shell closes FD 9 in
-            // the setsid'd child BEFORE exec, so the daemon does NOT inherit
-            // the flock. Without this, every future bootstrap call would see
-            // the lock held by the daemon itself and exit ALREADY_BOOTSTRAPPING
-            // forever, breaking auto-recovery + the fast path entirely.
+            // v1.2.65 hotfix kept: `9>&-` closes FD 9 in the setsid'd child
+            // BEFORE exec, so the new daemon does NOT inherit the flock and
+            // future bootstraps can take it cleanly.
             // Outer double-quotes so $APK expands BEFORE setsid hands the string to sh.
             + "setsid sh -c \"CLASSPATH='$APK' exec /system/bin/app_process64"
             +     " -Xnoimage-dex2oat /system/bin"
