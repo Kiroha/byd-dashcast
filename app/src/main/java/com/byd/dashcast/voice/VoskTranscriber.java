@@ -14,7 +14,12 @@ import com.byd.dashcast.AppLogger;
 
 import org.vosk.Model;
 import org.vosk.Recognizer;
-import org.vosk.android.StorageService;
+import java.io.BufferedInputStream;
+import java.io.FileOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -125,19 +130,59 @@ public final class VoskTranscriber {
         broadcastLoading();
         AppLogger.i(TAG, "Loading Vosk model — " + MODEL_ASSET);
 
-        // StorageService.unpack() handles download + unzip into the model dir.
-        StorageService.unpack(mCtx, MODEL_ASSET, "vosk",
-                (model) -> {
-                    mModel = model;
-                    mModelLoading = false;
-                    AppLogger.i(TAG, "Vosk model ready");
-                    new Thread(this::listenAndTranscribe, "vosk-transcriber").start();
-                },
-                (e) -> {
-                    mModelLoading = false;
-                    AppLogger.e(TAG, "Vosk model load error: " + e.getMessage());
-                    broadcastError("Modèle indisponible : " + e.getMessage());
-                });
+        new Thread(() -> {
+            try {
+                File modelDir = new File(mCtx.getExternalFilesDir("vosk"), MODEL_ASSET);
+                if (!new File(modelDir, "am").exists()) {
+                    AppLogger.i(TAG, "Downloading model from " + MODEL_URL);
+                    downloadAndUnzip(MODEL_URL, mCtx.getExternalFilesDir("vosk"));
+                    AppLogger.i(TAG, "Download complete");
+                }
+                AppLogger.i(TAG, "Opening model at " + modelDir.getAbsolutePath());
+                Model model = new Model(modelDir.getAbsolutePath());
+                mModel = model;
+                mModelLoading = false;
+                AppLogger.i(TAG, "Vosk model ready");
+                new Thread(this::listenAndTranscribe, "vosk-transcriber").start();
+            } catch (Exception e) {
+                mModelLoading = false;
+                AppLogger.e(TAG, "Vosk model error: " + e.getMessage());
+                broadcastError("Modèle indisponible : " + e.getMessage());
+            }
+        }, "vosk-model-loader").start();
+    }
+
+    private void downloadAndUnzip(String urlStr, File destDir) throws IOException {
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(15_000);
+        conn.setReadTimeout(120_000);
+        conn.connect();
+        int code = conn.getResponseCode();
+        if (code != HttpURLConnection.HTTP_OK) {
+            conn.disconnect();
+            throw new IOException("HTTP " + code);
+        }
+        try (ZipInputStream zis = new ZipInputStream(
+                new BufferedInputStream(conn.getInputStream()))) {
+            ZipEntry entry;
+            byte[] buf = new byte[8192];
+            while ((entry = zis.getNextEntry()) != null) {
+                File out = new File(destDir, entry.getName());
+                if (entry.isDirectory()) {
+                    out.mkdirs();
+                } else {
+                    out.getParentFile().mkdirs();
+                    try (FileOutputStream fos = new FileOutputStream(out)) {
+                        int n;
+                        while ((n = zis.read(buf)) != -1) fos.write(buf, 0, n);
+                    }
+                }
+                zis.closeEntry();
+            }
+        } finally {
+            conn.disconnect();
+        }
     }
 
     // ─── Capture + inference ──────────────────────────────────────────────
