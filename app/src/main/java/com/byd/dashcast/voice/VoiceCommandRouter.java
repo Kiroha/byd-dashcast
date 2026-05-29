@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.widget.Toast;
 
@@ -85,6 +86,7 @@ public final class VoiceCommandRouter {
     private final Context      mCtx;
     private TextToSpeech       mTts;
     private boolean            mTtsReady;
+    private long               mLastSpeakAt;  // dedup guard
 
     public VoiceCommandRouter(Context ctx) {
         mCtx = ctx.getApplicationContext();
@@ -186,6 +188,13 @@ public final class VoiceCommandRouter {
     }
 
     private void speak(String text) {
+        // Dedup: ignore if the same call fires within 300ms (double-broadcast guard).
+        long now = SystemClock.elapsedRealtime();
+        if (now - mLastSpeakAt < 300L) {
+            AppLogger.d(TAG, "speak() deduped: " + text);
+            return;
+        }
+        mLastSpeakAt = now;
         AppLogger.d(TAG, "speak: " + text);
         if (mTtsReady && mTts != null) {
             Bundle params = new Bundle();
@@ -193,8 +202,8 @@ public final class VoiceCommandRouter {
             mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dashcast_voice");
         } else {
             AppLogger.d(TAG, "TTS not ready — showing Toast: " + text);
-            android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-            mainHandler.post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());
+            new android.os.Handler(android.os.Looper.getMainLooper())
+                    .post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());
         }
     }
 

@@ -3056,20 +3056,12 @@ public class DiagActivity extends AppCompatActivity {
             }
             mVoiceCommandRouter = new VoiceCommandRouter(this);
             mVoskTranscriber = new VoskTranscriber(this);
-            // Wire the transcriber output to the router.
-            LocalBroadcastManager.getInstance(this).registerReceiver(
-                    mTranscriptCommandBridge,
-                    new IntentFilter(VoskTranscriber.ACTION_TRANSCRIPT));
             VoiceService.setTranscriber(mVoskTranscriber);
             AppLogger.i("DiagVoice", "Voice commands ON");
             if (tvVoiceTranscript != null)
                 tvVoiceTranscript.setText("En attente du mot d'éveil…");
         } else {
             VoiceService.setTranscriber(null);
-            try {
-                LocalBroadcastManager.getInstance(this)
-                        .unregisterReceiver(mTranscriptCommandBridge);
-            } catch (Throwable ignore) {}
             if (mVoskTranscriber != null) { mVoskTranscriber.release(); mVoskTranscriber = null; }
             if (mVoiceCommandRouter != null) { mVoiceCommandRouter.release(); mVoiceCommandRouter = null; }
             AppLogger.i("DiagVoice", "Voice commands OFF");
@@ -3077,33 +3069,9 @@ public class DiagActivity extends AppCompatActivity {
         }
     }
 
-    /** Bridge between the Vosk transcript broadcast and the command router. */
-    private final BroadcastReceiver mTranscriptCommandBridge = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context ctx, Intent intent) {
-            if (intent == null) return;
-            if (intent.getBooleanExtra(VoskTranscriber.EXTRA_LOADING, false)) {
-                if (tvVoiceTranscript != null)
-                    tvVoiceTranscript.setText("Chargement modèle voix…");
-                return;
-            }
-            String error = intent.getStringExtra(VoskTranscriber.EXTRA_ERROR);
-            if (error != null) {
-                if (tvVoiceTranscript != null)
-                    tvVoiceTranscript.setText("Erreur : " + error);
-                return;
-            }
-            String text = intent.getStringExtra(VoskTranscriber.EXTRA_TEXT);
-            if (tvVoiceTranscript != null)
-                tvVoiceTranscript.setText("\"" + text + "\"");
-            if (mVoiceCommandRouter != null && text != null)
-                mVoiceCommandRouter.route(text);
-        }
-    };
-
     private void onTranscriptBroadcast(Intent intent) {
-        // Also update the voice panel live (even when command routing is OFF,
-        // useful for testing recognition quality from the Diag tab).
+        // Updates the voice panel live. When command routing is ON, also routes the transcript.
+        // Single receiver path (voiceReceiver) — no mTranscriptCommandBridge to avoid double-route.
         if (!voicePanelBound || intent == null) return;
         if (tvVoiceTranscript == null) return;
         if (intent.getBooleanExtra(VoskTranscriber.EXTRA_LOADING, false)) {
@@ -3113,6 +3081,9 @@ public class DiagActivity extends AppCompatActivity {
         } else {
             String text = intent.getStringExtra(VoskTranscriber.EXTRA_TEXT);
             if (text != null) tvVoiceTranscript.setText("\"" + text + "\"");
+            // Route the transcript when voice commands are enabled.
+            if (mVoiceCommandRouter != null && text != null)
+                mVoiceCommandRouter.route(text);
         }
     }
 }
