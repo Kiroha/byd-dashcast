@@ -15,6 +15,7 @@ import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.Display;
@@ -47,6 +48,7 @@ import com.byd.dashcast.beta.BetaTestRunner.TestResult;
 import com.byd.dashcast.beta.BetaTestRunner.Status;
 import com.byd.dashcast.dilink5.DiLink5TestRunner;
 import com.byd.dashcast.dilink5.Dl5ClusterReconRunner;
+import com.byd.dashcast.dilink5.Dl5VdTestRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
 import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
@@ -131,13 +133,17 @@ public class DiagActivity extends AppCompatActivity {
     private MaterialButton btnDl5ClusterRunAll;
     private MaterialButton btnDl5ClusterCopyReport;
     private MaterialButton btnDl5ClusterSendTelegram;
-    private MaterialButton btnDl5ClusterTestFission;   // v1.2.41 — live Fission test (DL5 only)
-    private LinearLayout   llDl5ClusterFissionRow;     // v1.2.41 — DL5-only gated container
+    private MaterialButton btnDl5ClusterTestFission;   // v1.2.41 — renamed to VD test button (layout id kept for compat)
+    private LinearLayout   llDl5ClusterFissionRow;     // v1.2.41 — row container (now used for VD test)
     private LinearLayout   llDl5ClusterTestList;
     private final List<View> dl5ClusterRowViews = new ArrayList<>();
     private final List<com.byd.dashcast.dilink5.DiLink5TestRunner.TestResult> dl5ClusterLastResults = new ArrayList<>();
-    /** v1.2.41 — whether the currently-displayed rows are F-tests (true) or R-tests (false). */
-    private boolean dl5ClusterShowingFission = false;
+    /** v1.3.12 — true when the VD-test rows are shown (false = Recon rows). */
+    private boolean dl5ClusterShowingVd = false;
+    // v1.3.12 — VD test infrastructure
+    private android.view.SurfaceView    mVdTestSurfaceView = null;
+    private android.view.SurfaceHolder  mVdTestSurfaceHolder = null;
+    private android.os.IBinder          mVdTestDaemonBinder = null;
 
     // DiLink 2 panel views (build 185 — recon-only)
     private TextView       tvDl2HeaderSubtitle;
@@ -216,6 +222,13 @@ public class DiagActivity extends AppCompatActivity {
                 voiceWakeWordEngine = null;
             }
         } catch (Throwable ignore) {}
+        // v1.3.12 — release VD test surface if any
+        if (mVdTestSurfaceView != null) {
+            mVdTestSurfaceView.setVisibility(View.GONE);
+            mVdTestSurfaceHolder = null;
+            mVdTestSurfaceView = null;
+        }
+        mVdTestDaemonBinder = null;
         super.onDestroy();
     }
 
@@ -726,14 +739,14 @@ public class DiagActivity extends AppCompatActivity {
         btnDl5ClusterRunAll.setOnClickListener(v -> runClusterDl5AllTests());
         btnDl5ClusterCopyReport.setOnClickListener(v -> copyClusterDl5Report());
         btnDl5ClusterSendTelegram.setOnClickListener(v -> sendClusterDl5ToTelegram());
-        btnDl5ClusterTestFission.setOnClickListener(v -> confirmAndRunClusterDl5FissionTests());
+        btnDl5ClusterTestFission.setOnClickListener(v -> confirmAndRunClusterDl5VdTests());
         btnDl5ClusterCopyReport.setEnabled(false);
         btnDl5ClusterSendTelegram.setEnabled(false);
     }
 
     private void prepareClusterDl5TestRows() {
         prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.catalog());
-        dl5ClusterShowingFission = false;
+        dl5ClusterShowingVd = false;
     }
 
     /** v1.2.46 — lazy : inflate the DL5 Cluster recon rows on first panel show. */
@@ -762,9 +775,9 @@ public class DiagActivity extends AppCompatActivity {
 
     private void runClusterDl5AllTests() {
         // Re-prime the list with the R-recon catalog (in case the user just
-        // ran a Fission test before).
+        // ran a VD test before).
         prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.catalog());
-        dl5ClusterShowingFission = false;
+        dl5ClusterShowingVd = false;
         btnDl5ClusterRunAll.setEnabled(false);
         if (btnDl5ClusterTestFission != null) btnDl5ClusterTestFission.setEnabled(false);
         btnDl5ClusterCopyReport.setEnabled(false);
@@ -795,38 +808,32 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    // ─── v1.2.41 — Fission live test battery (DL5 only) ──────────────────────
+    // ─── v1.3.12 — VD pipeline test battery (DL5 only, replaces Fission) ────────
 
-    private void confirmAndRunClusterDl5FissionTests() {
-        // HARD RULE: DL5 only. The button is hidden on other platforms but
-        // double-check here in case of layout overrides.
+    private void confirmAndRunClusterDl5VdTests() {
+        // HARD RULE: DL5 only.
         if (!Platform.get().isAutoDetectedDiLink5()) {
-            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_only_dl5,
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_vd_only_dl5,
                     Toast.LENGTH_LONG).show();
             return;
         }
-        // v1.2.56 — let the user pick which app to target instead of the
-        // hard-coded Yandex Maps fallback that skipped F03..F13 for everyone
-        // who didn't have that exact package installed.
-        pickFissionTargetThenConfirm();
+        pickVdTargetThenConfirm();
     }
 
     /**
-     * v1.2.56 — enumerate launchable apps, show a single-choice picker,
+     * v1.3.12 — enumerate launchable apps, show a single-choice picker,
      * then chain into the confirm dialog with the chosen package.
      */
-    private void pickFissionTargetThenConfirm() {
+    private void pickVdTargetThenConfirm() {
         android.content.pm.PackageManager pm = getPackageManager();
         android.content.Intent main = new android.content.Intent(android.content.Intent.ACTION_MAIN);
         main.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
         java.util.List<android.content.pm.ResolveInfo> infos = pm.queryIntentActivities(main, 0);
         if (infos == null || infos.isEmpty()) {
-            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_pick_empty,
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_vd_pick_empty,
                     Toast.LENGTH_LONG).show();
             return;
         }
-        // Dedupe by package + skip our own apk so the user never targets
-        // DashCast itself for a destructive resize cycle.
         String selfPkg = getPackageName();
         java.util.Map<String, String> pkgToLabel = new java.util.LinkedHashMap<>();
         for (android.content.pm.ResolveInfo ri : infos) {
@@ -838,11 +845,10 @@ public class DiagActivity extends AppCompatActivity {
             pkgToLabel.put(pkg, label == null ? pkg : label.toString());
         }
         if (pkgToLabel.isEmpty()) {
-            Toast.makeText(this, R.string.diag_dl5_cluster_test_fission_pick_empty,
+            Toast.makeText(this, R.string.diag_dl5_cluster_test_vd_pick_empty,
                     Toast.LENGTH_LONG).show();
             return;
         }
-        // Sort alphabetically by label (case-insensitive) for findability.
         java.util.List<java.util.Map.Entry<String, String>> sorted =
                 new java.util.ArrayList<>(pkgToLabel.entrySet());
         java.util.Collections.sort(sorted, (a, b) ->
@@ -851,81 +857,120 @@ public class DiagActivity extends AppCompatActivity {
         final String[] labels = new String[sorted.size()];
         for (int i = 0; i < sorted.size(); i++) {
             pkgs[i]   = sorted.get(i).getKey();
-            labels[i] = sorted.get(i).getValue() + "  —  " + sorted.get(i).getKey();
+            labels[i] = sorted.get(i).getValue() + "  \u2014  " + sorted.get(i).getKey();
         }
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.diag_dl5_cluster_test_fission_pick_title)
+                .setTitle(R.string.diag_dl5_cluster_test_vd_pick_title)
                 .setItems(labels, (d, which) -> {
                     if (which < 0 || which >= pkgs.length) return;
-                    confirmFissionRun(pkgs[which], sorted.get(which).getValue());
+                    confirmVdRun(pkgs[which], sorted.get(which).getValue());
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
-    /** v1.2.56 — second-step confirm dialog showing the chosen target. */
-    private void confirmFissionRun(String targetPkg, String targetLabel) {
+    /** v1.3.12 — second-step confirm dialog showing the chosen target. */
+    private void confirmVdRun(String targetPkg, String targetLabel) {
         String displayName = targetLabel + " (" + targetPkg + ")";
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.diag_dl5_cluster_test_fission_confirm_title)
-                .setMessage(getString(R.string.diag_dl5_cluster_test_fission_confirm_msg,
-                        displayName))
+                .setTitle(R.string.diag_dl5_cluster_test_vd_confirm_title)
+                .setMessage(getString(R.string.diag_dl5_cluster_test_vd_confirm_msg, displayName))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.diag_dl5_cluster_test_fission_confirm_ok,
-                        (d, w) -> runClusterDl5FissionTests(targetPkg, targetLabel))
+                .setPositiveButton(R.string.diag_dl5_cluster_test_vd_confirm_ok,
+                        (d, w) -> runClusterDl5VdTests(targetPkg))
                 .show();
     }
 
-    private void runClusterDl5FissionTests(String targetPkg, String targetLabel) {
-        // Replace row list with the F-catalog and flip the renderer flag so
-        // Copy / Telegram use renderFissionReport.
-        prepareClusterDl5TestRowsFor(Dl5ClusterReconRunner.fissionCatalog());
-        dl5ClusterShowingFission = true;
+    /**
+     * v1.3.12 — Acquire the daemon binder via ServiceManager reflection.
+     * Returns null on any error (V05 then records FAIL with descriptive message).
+     */
+    private IBinder tryGetVdTestDaemonBinder() {
+        try {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            java.lang.reflect.Method get = sm.getDeclaredMethod("getService", String.class);
+            get.setAccessible(true);
+            return (IBinder) get.invoke(null, "byd_mirror_daemon");
+        } catch (Exception e) {
+            AppLogger.w("DiagActivity", "tryGetVdTestDaemonBinder: " + e);
+            return null;
+        }
+    }
+
+    private void runClusterDl5VdTests(String targetPkg) {
+        prepareClusterDl5TestRowsFor(Dl5VdTestRunner.catalog());
+        dl5ClusterShowingVd = true;
+
         btnDl5ClusterRunAll.setEnabled(false);
         btnDl5ClusterTestFission.setEnabled(false);
         btnDl5ClusterCopyReport.setEnabled(false);
         btnDl5ClusterSendTelegram.setEnabled(false);
-        Dl5ClusterReconRunner.runFission(this, targetPkg, targetLabel, new Dl5ClusterReconRunner.Listener() {
-            @Override public void onSuiteStarted(List<DiLink5TestRunner.TestResult> results) {
-                if (mDestroyed) return;
-                dl5ClusterLastResults.clear();
-                dl5ClusterLastResults.addAll(results);
-                for (int i = 0; i < results.size() && i < dl5ClusterRowViews.size(); i++) {
-                    bindDl5Row(dl5ClusterRowViews.get(i), results.get(i));
-                }
-                tvDl5ClusterCounters.setText(getString(R.string.diag_beta_counters_running));
-            }
-            @Override public void onTestUpdated(int index, DiLink5TestRunner.TestResult result) {
-                if (mDestroyed) return;
-                if (index < dl5ClusterRowViews.size()) bindDl5Row(dl5ClusterRowViews.get(index), result);
-                updateClusterDl5Counters();
-            }
-            @Override public void onSuiteFinished(List<DiLink5TestRunner.TestResult> results) {
-                if (mDestroyed) return;
-                btnDl5ClusterRunAll.setEnabled(true);
-                btnDl5ClusterTestFission.setEnabled(true);
-                btnDl5ClusterCopyReport.setEnabled(true);
-                btnDl5ClusterSendTelegram.setEnabled(true);
-                updateClusterDl5Counters();
-            }
-            // v1.2.48 — interactive Yes/No prompt for the fission runner.
-            // Called on the UI thread; the runner thread blocks until the
-            // callback is invoked (or its 180 s safety timeout elapses, in
-            // which case the result is recorded as NO).
-            @Override public void onPromptYesNo(String title, String message,
-                                                java.util.function.Consumer<Boolean> callback) {
-                if (mDestroyed) { callback.accept(false); return; }
-                new androidx.appcompat.app.AlertDialog.Builder(DiagActivity.this)
-                        .setTitle(title)
-                        .setMessage(message)
-                        .setCancelable(false)
-                        .setPositiveButton(R.string.diag_dl5_fission_prompt_yes,
-                                (d, w) -> callback.accept(true))
-                        .setNegativeButton(R.string.diag_dl5_fission_prompt_no,
-                                (d, w) -> callback.accept(false))
-                        .show();
-            }
-        });
+
+        // Obtain daemon binder (may be null — V05 handles gracefully).
+        mVdTestDaemonBinder = tryGetVdTestDaemonBinder();
+
+        // Create a SurfaceView for the VD mirror output, sized 1920×720 (cluster dims).
+        // We attach it to the test list container so it appears inline in the Diag panel.
+        if (mVdTestSurfaceView == null) {
+            mVdTestSurfaceView = new android.view.SurfaceView(this);
+            mVdTestSurfaceHolder = mVdTestSurfaceView.getHolder();
+            // Request fixed size matching cluster resolution (1920×720).
+            mVdTestSurfaceHolder.setFixedSize(1920, 720);
+            // Use a FrameLayout wrapper to constrain display height on screen.
+            android.widget.FrameLayout wrapper = new android.widget.FrameLayout(this);
+            int dp240 = (int) (240 * getResources().getDisplayMetrics().density);
+            android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp240);
+            wrapper.addView(mVdTestSurfaceView, lp);
+            llDl5ClusterTestList.addView(wrapper, 0);
+        }
+        mVdTestSurfaceView.setVisibility(View.VISIBLE);
+
+        Dl5VdTestRunner.run(this, targetPkg,
+                mVdTestDaemonBinder,
+                mVdTestSurfaceHolder != null ? mVdTestSurfaceHolder.getSurface() : null,
+                1920, 720,
+                new Dl5VdTestRunner.Listener() {
+                    @Override public void onSuiteStarted(List<DiLink5TestRunner.TestResult> results) {
+                        if (mDestroyed) return;
+                        dl5ClusterLastResults.clear();
+                        dl5ClusterLastResults.addAll(results);
+                        for (int i = 0; i < results.size() && i < dl5ClusterRowViews.size(); i++) {
+                            bindDl5Row(dl5ClusterRowViews.get(i), results.get(i));
+                        }
+                        tvDl5ClusterCounters.setText(getString(R.string.diag_beta_counters_running));
+                    }
+                    @Override public void onTestUpdated(int index, DiLink5TestRunner.TestResult result) {
+                        if (mDestroyed) return;
+                        if (index < dl5ClusterRowViews.size())
+                            bindDl5Row(dl5ClusterRowViews.get(index), result);
+                        updateClusterDl5Counters();
+                    }
+                    @Override public void onSuiteFinished(List<DiLink5TestRunner.TestResult> results) {
+                        if (mDestroyed) return;
+                        btnDl5ClusterRunAll.setEnabled(true);
+                        btnDl5ClusterTestFission.setEnabled(true);
+                        btnDl5ClusterCopyReport.setEnabled(true);
+                        btnDl5ClusterSendTelegram.setEnabled(true);
+                        updateClusterDl5Counters();
+                        if (mVdTestSurfaceView != null && !dl5ClusterShowingVd) {
+                            mVdTestSurfaceView.setVisibility(View.GONE);
+                        }
+                    }
+                    @Override public void onPromptYesNo(String title, String message,
+                                                        java.util.function.Consumer<Boolean> callback) {
+                        if (mDestroyed) { callback.accept(false); return; }
+                        new androidx.appcompat.app.AlertDialog.Builder(DiagActivity.this)
+                                .setTitle(title)
+                                .setMessage(message)
+                                .setCancelable(false)
+                                .setPositiveButton(R.string.diag_dl5_fission_prompt_yes,
+                                        (d, w) -> callback.accept(true))
+                                .setNegativeButton(R.string.diag_dl5_fission_prompt_no,
+                                        (d, w) -> callback.accept(false))
+                                .show();
+                    }
+                });
     }
 
     private void updateClusterDl5Counters() {
@@ -947,8 +992,8 @@ public class DiagActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
             return;
         }
-        String report = dl5ClusterShowingFission
-                ? Dl5ClusterReconRunner.renderFissionReport(dl5ClusterLastResults)
+        String report = dl5ClusterShowingVd
+                ? Dl5VdTestRunner.renderReport(dl5ClusterLastResults)
                 : Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
         AppLogger.i("DiagActivity", "DL5 Cluster report:\n" + report);
         AppLogger.shareWithReport(this, report);
@@ -962,8 +1007,8 @@ public class DiagActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.diag_dl5_cluster_toast_no_results, Toast.LENGTH_SHORT).show();
             return;
         }
-        String report = dl5ClusterShowingFission
-                ? Dl5ClusterReconRunner.renderFissionReport(dl5ClusterLastResults)
+        String report = dl5ClusterShowingVd
+                ? Dl5VdTestRunner.renderReport(dl5ClusterLastResults)
                 : Dl5ClusterReconRunner.renderReport(dl5ClusterLastResults);
         AppLogger.i("DiagActivity", "DL5 Cluster report (Telegram):\n" + report);
         AppLogger.shareReportToTelegram(this, report);

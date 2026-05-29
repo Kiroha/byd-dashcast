@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission riservato a DiLink 5.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Scegli l\'app da testare</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">Nessuna app avviabile trovata.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">Valida la pipeline VirtualDisplay → MirrorDaemon in 7 passi: creazione VD, avvio app su VD, mirroring sulla superficie cluster. Solo DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Destinazione: %1$s\n\nQuesta suite:\n\n• V01: attivare la proiezione cluster (auto_container)\n• V02: verificare che l\'app sia avviabile\n• V03: creare VirtualDisplay 1920×720\n• V04: avviare l\'app sul VD\n• V05: avviare il mirror tramite MirrorDaemon\n• V06: verificare visivamente il rendering del cluster\n• V07: pulizia (stop mirror, eliminare VD, force-stop)\n\nSolo DiLink 5. L\'app di destinazione sarà fermata durante il test.\nContinuare?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Avvia test</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">Test VD Pipeline solo per DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Scegli l\'app da testare</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Nessuna app avviabile trovata.</string>
     <string name="diag_dl5_fission_prompt_title">Verifica cluster</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s è visibile sullo schermo del cluster?\n\n(test display %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Sì</string>

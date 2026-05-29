@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">اختبار Fission مخصص لـ DiLink 5 فقط.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">اختر التطبيق للاختبار</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">اختبار VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">يتحقق من مسار VirtualDisplay → MirrorDaemon في 7 خطوات: إنشاء VD، تشغيل التطبيق على VD، عكس الصورة على سطح الكتلة. لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">اختبار VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">الهدف: %1$s\n\nستقوم هذه المجموعة بـ:\n\n• V01: تفعيل إسقاط الكتلة (auto_container)\n• V02: التحقق من إمكانية تشغيل التطبيق\n• V03: إنشاء VirtualDisplay 1920×720\n• V04: تشغيل التطبيق على VD\n• V05: بدء النسخ المرآوي عبر MirrorDaemon\n• V06: التحقق البصري من عرض الكتلة\n• V07: التنظيف (إيقاف المرآة، حذف VD، force-stop)\n\nلـ DiLink 5 فقط. سيتم إيقاف التطبيق المستهدف قسرًا خلال الاختبار.\nهل تريد المتابعة؟</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">تشغيل الاختبار</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">اختبار VD Pipeline مخصص لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">اختر التطبيق للاختبار</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
     <string name="diag_dl5_fission_prompt_title">التحقق من شاشة العنقود</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">هل %1$s مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">نعم</string>

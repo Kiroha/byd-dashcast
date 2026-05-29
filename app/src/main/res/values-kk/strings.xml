@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Сынайтын қолданбаны таңдау</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline сынағы</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon конвейерін 7 қадаммен тексереді: VD жасау, VD-да қолданбаны іске қосу, кластер бетіне айналу. Тек DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline сынағы</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Мақсат: %1$s\n\nБұл топтама:\n\n• V01: кластер проекциясын белсендіру (auto_container)\n• V02: қолданбаны іске қосуға болатынын тексеру\n• V03: 1920×720 VirtualDisplay жасау\n• V04: қолданбаны VD-да іске қосу\n• V05: MirrorDaemon арқылы айналуды бастау\n• V06: кластер рендерингін визуалды тексеру\n• V07: тазалау (айналуды тоқтату, VD жою, force-stop)\n\nТек DiLink 5. Мақсатты қолданба сынақ кезінде мәжбүрлі тоқтатылады.\nЖалғастыру?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Сынақты бастау</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline сынағы тек DiLink 5 үшін.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Сынауға арналған қолданбаны таңдаңыз</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
     <string name="diag_dl5_fission_prompt_title">Кластерді тексеру</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s кластер экранында көрінеді ме?\n\n(%2$d экранын сынау)</string>
     <string name="diag_dl5_fission_prompt_yes">Иә</string>

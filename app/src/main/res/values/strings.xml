@@ -383,8 +383,15 @@
     <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
     <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Choisir l’application à tester</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Aucune application lançable trouvée.</string>
-    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
+    <string name="diag_dl5_cluster_test_fission_pick_empty">Aucune application lançable trouvée.</string>    <!-- v1.3.12 — VD pipeline test battery (replaces Fission). -->
+    <string name="diag_dl5_cluster_test_vd">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">Valide le pipeline VirtualDisplay → MirrorDaemon en 7 étapes : création VD, lancement app sur VD, miroir vers la surface cluster. DiLink 5 uniquement.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Cible : %1$s\n\nCette suite va :\n\n• V01 : activer la projection cluster (auto_container)\n• V02 : vérifier que l\'application est lançable\n• V03 : créer un VirtualDisplay 1920×720\n• V04 : lancer l\'application sur le VD\n• V05 : démarrer le miroir via MirrorDaemon\n• V06 : vérifier visuellement le rendu cluster\n• V07 : nettoyer (stop miroir, supprimer VD, force-stop)\n\nDiLink 5 uniquement. L\'application cible sera force-stoppée pendant le test.\nContinuer ?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Lancer le test</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">Test VD Pipeline réservé à DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Choisir l\'application à tester</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Aucune application lançable trouvée.</string>    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
     <string name="diag_dl5_fission_prompt_title">Vérification cluster</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s est-il visible sur l\'écran cluster ?\n\n(test sur le display %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Oui</string>
