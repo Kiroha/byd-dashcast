@@ -352,7 +352,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         int nFrames = melspec.length;
         // We need at least EMB_WINDOW + (WAKE_WINDOW-1)*EMB_STRIDE = 76 + 120 = 196 mel frames.
         int needed = EMB_WINDOW + (WAKE_WINDOW - 1) * EMB_STRIDE;
-        if (nFrames < needed) return mLastScore;
+        if (nFrames < needed) {
+            AppLogger.d(TAG, "runOneEval: nFrames=" + nFrames + " < needed=" + needed + " — skipping");
+            return mLastScore;
+        }
 
         // 2) embedding : pack the last WAKE_WINDOW windows of EMB_WINDOW frames each (stride EMB_STRIDE)
         //    into a single (WAKE_WINDOW, 76, 32, 1) batch tensor.
@@ -401,14 +404,18 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         long[] shape = { 1L, (long) n };
         try (OnnxTensor in = OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(tight), shape);
              OrtSession.Result out = mSessMel.run(Collections.singletonMap(mMelInputName, in))) {
-            // Output shape : (time, 1, 1, 32) float32.
+            // Actual output shape: (batch=1, channel=1, time, mels=32).
+            // The time dimension is at index 2, NOT index 0 — raw.length is the
+            // batch dim (always 1), so using raw.length as nFrames always gave 1
+            // (< 196 needed) and triggered the early-return in runOneEval, keeping
+            // the score permanently at 0.0.
             float[][][][] raw = (float[][][][]) out.get(0).getValue();
-            int nFrames = raw.length;
+            int nFrames = raw[0][0].length;  // raw[batch][channel][time][mel]
             float[][] mel = new float[nFrames][32];
             for (int t = 0; t < nFrames; t++) {
-                float[] src = raw[t][0][0];
+                float[] src = raw[0][0][t];  // shape (32,) — raw log-mel in dB
                 for (int k = 0; k < 32; k++) {
-                    mel[t][k] = src[k] / 10f + 2f;
+                    mel[t][k] = src[k] / 10f + 2f;  // openWakeWord normalization
                 }
             }
             return mel;
