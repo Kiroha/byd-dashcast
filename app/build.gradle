@@ -240,8 +240,20 @@ android {
         //   launcher-agnostic findRunningTaskId fallback into the voice
         //   beta line. No new feature beyond bringing the beta back in
         //   sync with main so DL3 testers benefit from both fixes.
-        versionCode 351
-        versionName "1.3.6-beta"
+        // v1.3.7-beta (build 352) — log noise reduction + ROM-strip handling.
+        //   ClusterService.findRunningTaskId: intermediate "not found in
+        //   dumpsys recents/activities" lines downgraded from WARN to DEBUG
+        //   (they are part of a normal Path 1→2→3 cascade; only the final
+        //   outcome matters and is already logged at the call site).
+        //   ClusterService.moveTaskToDisplayInternal: cache one-shot probe
+        //   for IActivityTaskManager.moveTaskToDisplay(int,int) — observed
+        //   stripped on the BYD DiLink 3 API 29 ROM (field log
+        //   byd_log_20260529_170731 errored on every cluster tap). On the
+        //   first NoSuchMethodException, log a single WARN explaining the
+        //   ROM lacks the hidden API, then skip the reflection entirely on
+        //   subsequent calls and go straight to the launcher fallback.
+        versionCode 352
+        versionName "1.3.7-beta"
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
