@@ -2,11 +2,8 @@ package com.byd.dashcast.voice;
 
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
-import android.os.Handler;
-import android.os.Looper;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -70,21 +67,19 @@ public final class VoskTranscriber {
 
     // ─── Audio config ──────────────────────────────────────────────────────
 
-    private static final int SAMPLE_RATE  = 16_000;
     /** Maximum recording window after wake word. */
-    private static final int MAX_LISTEN_MS = 5_000;
+    private static final int MAX_LISTEN_MS         = 5_000;
     /** Stop early when RMS stays below this for SILENCE_MS consecutive ms. */
     private static final int SILENCE_THRESHOLD_RMS = 200;
     /** Silence duration that ends the listen window. */
-    private static final int SILENCE_MS  = 1_200;
+    private static final int SILENCE_MS            = 1_200;
 
     // ─── State ────────────────────────────────────────────────────────────
 
-    private final Context     mCtx;
-    private final Handler     mMain = new Handler(Looper.getMainLooper());
-    private volatile Model    mModel;
-    private volatile boolean  mModelLoading;
-    private volatile boolean  mListening;
+    private final Context    mCtx;
+    private volatile Model   mModel;
+    private volatile boolean mModelLoading;
+    private volatile boolean mListening;
 
     public VoskTranscriber(Context ctx) {
         mCtx = ctx.getApplicationContext();
@@ -110,7 +105,7 @@ public final class VoskTranscriber {
             }
             loadModelThenListen();
         } else {
-            new Thread(this::listenAndTranscribe, "vosk-transcriber").start();
+            new Thread(this::doListenViaServiceStream, "vosk-transcriber").start();
         }
     }
 
@@ -143,7 +138,7 @@ public final class VoskTranscriber {
                 mModel = model;
                 mModelLoading = false;
                 AppLogger.i(TAG, "Vosk model ready");
-                new Thread(this::listenAndTranscribe, "vosk-transcriber").start();
+                doListenViaServiceStream();
             } catch (Exception e) {
                 mModelLoading = false;
                 AppLogger.e(TAG, "Vosk model error: " + e.getMessage());
@@ -185,75 +180,83 @@ public final class VoskTranscriber {
         }
     }
 
-    // ─── Capture + inference ──────────────────────────────────────────────
+    // ─── Capture + inference (via VoiceService SampleConsumer pipe) ───────
+    //
+    // Instead of opening a second AudioRecord (which contends with VoiceService
+    // for the mic), we temporarily replace VoiceService's SampleConsumer with
+    // our own Vosk consumer. VoiceService's single AudioRecord keeps running;
+    // WakeWordEngine is paused for the duration. A CountDownLatch unblocks us
+    // when silence or the max window is reached.
 
-    private void listenAndTranscribe() {
+    private void doListenViaServiceStream() {
+        if (!VoiceService.isRunning()) {
+            AppLogger.w(TAG, "doListenViaServiceStream: VoiceService not running — skip");
+            return;
+        }
         mListening = true;
-        AppLogger.i(TAG, "Listening for command (max " + MAX_LISTEN_MS + " ms)…");
+        AppLogger.i(TAG, "Listening for command via service stream (max " + MAX_LISTEN_MS + " ms)…");
 
-        final int channel = AudioFormat.CHANNEL_IN_MONO;
-        final int format  = AudioFormat.ENCODING_PCM_16BIT;
-        final int minBuf  = AudioRecord.getMinBufferSize(SAMPLE_RATE, channel, format);
-        final int bufSize = Math.max(minBuf, 3200);
+        final VoiceService.SampleConsumer prevConsumer = VoiceService.getSampleConsumer();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final long deadline = System.currentTimeMillis() + MAX_LISTEN_MS;
+        final long[] silenceStartMs = {-1L};
+        Recognizer reco = null;
 
-        AudioRecord rec = null;
-        Recognizer   reco = null;
         try {
-            rec = new AudioRecord(
-                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                    SAMPLE_RATE, channel, format, bufSize);
-            if (rec.getState() != AudioRecord.STATE_INITIALIZED) {
-                broadcastError("AudioRecord init failed");
-                return;
-            }
-            reco = new Recognizer(mModel, SAMPLE_RATE);
+            reco = new Recognizer(mModel, VoiceService.SAMPLE_RATE_HZ);
+            final Recognizer finalReco = reco;
 
-            rec.startRecording();
-            final long deadline = System.currentTimeMillis() + MAX_LISTEN_MS;
-            long silenceStart   = -1L;
-            final short[] frame = new short[bufSize / 2];
-            final byte[]  bytes = new byte[bufSize];
+            // Install our Vosk consumer; this pauses WakeWordEngine feed.
+            VoiceService.setSampleConsumer((pcm, n) -> {
+                if (latch.getCount() == 0) return; // already done
 
-            while (System.currentTimeMillis() < deadline) {
-                int n = rec.read(frame, 0, frame.length);
-                if (n <= 0) continue;
-
-                // Convert short[] → byte[] (little-endian) for Vosk
+                // Feed PCM to Vosk (little-endian byte conversion)
+                byte[] bytes = new byte[n * 2];
                 for (int i = 0; i < n; i++) {
-                    bytes[i * 2]     = (byte) (frame[i] & 0xFF);
-                    bytes[i * 2 + 1] = (byte) ((frame[i] >> 8) & 0xFF);
+                    bytes[i * 2]     = (byte) (pcm[i] & 0xFF);
+                    bytes[i * 2 + 1] = (byte) ((pcm[i] >> 8) & 0xFF);
                 }
-                reco.acceptWaveForm(bytes, n * 2);
+                finalReco.acceptWaveForm(bytes, n * 2);
 
-                // Silence detection : compute RMS over the frame
+                // Silence + timeout detection
                 long sumSq = 0L;
-                for (int i = 0; i < n; i++) sumSq += (long) frame[i] * (long) frame[i];
+                for (int i = 0; i < n; i++) sumSq += (long) pcm[i] * (long) pcm[i];
                 int rms = (int) Math.sqrt((double) sumSq / n);
-                if (rms < SILENCE_THRESHOLD_RMS) {
-                    if (silenceStart < 0) silenceStart = System.currentTimeMillis();
-                    else if (System.currentTimeMillis() - silenceStart >= SILENCE_MS) {
+                long now = System.currentTimeMillis();
+
+                if (now >= deadline) {
+                    latch.countDown();
+                } else if (rms < SILENCE_THRESHOLD_RMS) {
+                    if (silenceStartMs[0] < 0) silenceStartMs[0] = now;
+                    else if (now - silenceStartMs[0] >= SILENCE_MS) {
                         AppLogger.d(TAG, "Silence detected — stopping early");
-                        break;
+                        latch.countDown();
                     }
                 } else {
-                    silenceStart = -1L;
+                    silenceStartMs[0] = -1L;
                 }
-            }
+            });
 
-            String resultJson = reco.getFinalResult();
+            // Block until the consumer signals done (or hard timeout)
+            boolean timedOut = !latch.await(MAX_LISTEN_MS + 500L, TimeUnit.MILLISECONDS);
+            if (timedOut) AppLogger.d(TAG, "Listen window timed out");
+
+            // Restore WakeWordEngine consumer BEFORE calling getFinalResult so
+            // no concurrent acceptWaveForm can happen.
+            VoiceService.setSampleConsumer(prevConsumer);
+
+            String resultJson = finalReco.getFinalResult();
             String text = extractText(resultJson).trim().toLowerCase(java.util.Locale.FRENCH);
             AppLogger.i(TAG, "Transcript: \"" + text + "\"");
             broadcastText(text);
 
-        } catch (IOException e) {
-            AppLogger.e(TAG, "Vosk recognizer error: " + e.getMessage());
+        } catch (Exception e) {
+            AppLogger.e(TAG, "Vosk error: " + e.getMessage());
             broadcastError(e.getMessage());
         } finally {
+            // Always restore previous consumer and mark as idle
+            VoiceService.setSampleConsumer(prevConsumer);
             if (reco != null) try { reco.close(); } catch (Throwable ignore) {}
-            if (rec  != null) {
-                try { rec.stop();    } catch (Throwable ignore) {}
-                try { rec.release(); } catch (Throwable ignore) {}
-            }
             mListening = false;
         }
     }

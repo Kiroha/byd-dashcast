@@ -3,7 +3,10 @@ package com.byd.dashcast.voice;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
+import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
+import android.widget.Toast;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -183,12 +186,16 @@ public final class VoiceCommandRouter {
     }
 
     private void speak(String text) {
-        if (!mTtsReady || mTts == null) {
-            AppLogger.d(TAG, "TTS not ready, skipping: " + text);
-            return;
+        AppLogger.d(TAG, "speak: " + text);
+        if (mTtsReady && mTts != null) {
+            Bundle params = new Bundle();
+            params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dashcast_voice");
+        } else {
+            AppLogger.d(TAG, "TTS not ready — showing Toast: " + text);
+            android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+            mainHandler.post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());
         }
-        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dashcast_voice");
-        AppLogger.d(TAG, "TTS: " + text);
     }
 
     /**
