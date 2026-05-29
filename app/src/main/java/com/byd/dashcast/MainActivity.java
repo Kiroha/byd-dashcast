@@ -873,44 +873,35 @@ public class MainActivity extends AppCompatActivity
      */
     private void applyCompactAppsPanelMode() {
         if (llAppListSection == null) return;
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean compact = prefs.getBoolean(SettingsActivity.PREF_COMPACT_APPS_PANEL, false);
 
-        // Adjust the left-pane weight inside the parent horizontal LinearLayout.
+        // v1.3.2 — Left apps column is now always a fixed 160dp width (= 2 × 80dp
+        // favorite tile) with span=2. This guarantees that the search bar,
+        // favorites strip and grid columns all line up vertically, and that the
+        // right-pane live preview gets every remaining pixel of horizontal space.
         android.view.ViewGroup.LayoutParams lp = llAppListSection.getLayoutParams();
         if (lp instanceof LinearLayout.LayoutParams) {
-            float target = compact ? 0.6f : 1.4f;
             LinearLayout.LayoutParams llp = (LinearLayout.LayoutParams) lp;
-            if (llp.weight != target) {
-                llp.weight = target;
+            int targetW = (int) (160 * getResources().getDisplayMetrics().density);
+            if (llp.width != targetW || llp.weight != 0f) {
+                llp.width = targetW;
+                llp.weight = 0f;
                 llAppListSection.setLayoutParams(llp);
             }
         }
 
-        // Re-create the GridLayoutManager with the right spanCount if currently
-        // in grid mode. In list mode there is no spanCount, so we skip — the
-        // narrowed column still works fine with a vertical list.
+        // Always 2-column grid to match the favorites strip (2 × 80dp tiles).
         if (rvApps != null && mAdapter != null && mAdapter.isGridMode()) {
-            int targetSpan = compact ? 2 : 5;
             androidx.recyclerview.widget.RecyclerView.LayoutManager cur = rvApps.getLayoutManager();
             int curSpan = (cur instanceof GridLayoutManager) ? ((GridLayoutManager) cur).getSpanCount() : -1;
-            if (curSpan != targetSpan) {
-                rvApps.setLayoutManager(new GridLayoutManager(this, targetSpan));
+            if (curSpan != 2) {
+                rvApps.setLayoutManager(new GridLayoutManager(this, 2));
             }
         }
 
-        // Chips visibility: forced GONE in compact mode, otherwise honour the
-        // user's PREF_SHOW_CATEGORY_FILTERS pref so toggling compact off
-        // restores the chips if the user had them enabled.
+        // Category-filter chips: too wide for a 160dp column, force-hidden.
         View chips = findViewById(R.id.ll_category_filters);
         if (chips != null) {
-            if (compact) {
-                chips.setVisibility(View.GONE);
-            } else {
-                boolean showChips = prefs.getBoolean(
-                        SettingsActivity.PREF_SHOW_CATEGORY_FILTERS, false);
-                chips.setVisibility(showChips ? View.VISIBLE : View.GONE);
-            }
+            chips.setVisibility(View.GONE);
         }
     }
 
