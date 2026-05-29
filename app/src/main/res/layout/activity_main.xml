@@ -568,7 +568,7 @@
                 <LinearLayout
                     android:id="@+id/ll_right_pane_content"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical">
 
                     <!-- ────── Hero status card ────── -->
@@ -652,14 +652,14 @@
                         android:letterSpacing="0.1"/>
 
                     <!-- ────── Preview card (holds the cluster mirror frame) ────── -->
-                    <!-- v1.2.82 — enlarged from 200dp → 320dp so the live preview is
-                         actually usable without entering fullscreen (cluster aspect
-                         is 1920×720 ≈ 2.67:1, so 320dp height gives ~853dp wide if
-                         space available, which is a comfortable visible target). -->
+                    <!-- v1.3.2 — Fills all available vertical space inside the right
+                         pane (weight=1) so the live preview occupies the whole green
+                         area while action buttons stay pinned just below it. -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/card_cluster_preview"
                         android:layout_width="match_parent"
-                        android:layout_height="320dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
                         app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
                         app:cardBackgroundColor="#0F1115"
