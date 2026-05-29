@@ -1045,18 +1045,21 @@ public final class Dl5ClusterReconRunner {
             return;
         }
         int taskId = st.yandexTaskIdOnCluster;
-        // Single shell roundtrip: bounds + stackId + verb help.
+        // Single shell roundtrip: bounds + stack/rootTask hints + verb help.
         String cmd =
-                "echo '===== task bounds + stack containment =====' ; "
-              + "dumpsys activity activities 2>&1 | grep -B2 -A 30 -E '#" + taskId + "[^0-9]' "
-              + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=|StackId=|stackId=|Stack #|in stack' "
-              + "| head -25 ; "
-              + "echo ; echo '===== cmd activity stack ?? =====' ; "
-              + "cmd activity stack 2>&1 | head -30 ; echo __exit_a_stack=$? ; "
-              + "echo ; echo '===== cmd activity task ?? =====' ; "
-              + "cmd activity task 2>&1 | head -30 ; echo __exit_a_task=$? ; "
-              + "echo ; echo '===== am stack ?? =====' ; "
-              + "am stack 2>&1 | head -20 ; echo __exit_am_stack=$? ; "
+            "echo '===== task bounds + stack containment =====' ; "
+              + "dumpsys activity activities 2>&1 | grep -B2 -A 40 -E '#" + taskId + "[^0-9]' "
+              + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=|StackId=|stackId=|Stack #|in stack|rootTaskId=|rootOfTask=|Task\\{' "
+              + "| head -35 ; "
+              + "echo ; echo '===== focused root-task markers for this task =====' ; "
+              + "dumpsys activity activities 2>&1 | grep -E 'mPreferredTopFocusableRootTask|mLastFocusedRootTask|rootOfTask=true' "
+              + "| grep -E '#" + taskId + "[^0-9]' | head -12 ; "
+              + "echo ; echo '===== cmd activity stack help =====' ; "
+              + "cmd activity stack help 2>&1 | head -30 ; echo __exit_a_stack=$? ; "
+              + "echo ; echo '===== cmd activity task help =====' ; "
+              + "cmd activity task help 2>&1 | head -30 ; echo __exit_a_task=$? ; "
+              + "echo ; echo '===== am stack help =====' ; "
+              + "am stack help 2>&1 | head -20 ; echo __exit_am_stack=$? ; "
               + "echo ; echo '===== wm ?? =====' ; "
               + "wm 2>&1 | head -15 ; echo __exit_wm=$?";
         String out = shellSync(ctx, cmd);
@@ -1079,13 +1082,39 @@ public final class Dl5ClusterReconRunner {
                     catch (NumberFormatException ignored) {}
                 }
             }
+            if (st.targetStackId <= 0) {
+                java.util.regex.Matcher m3 = java.util.regex.Pattern
+                        .compile("rootTaskId=(\\d+)").matcher(out);
+                if (m3.find()) {
+                    try { st.targetStackId = Integer.parseInt(m3.group(1)); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+            if (st.targetStackId <= 0) {
+                boolean ownRoot = out.contains("rootOfTask=true")
+                        && out.contains("#" + taskId + " ");
+                if (!ownRoot) {
+                    ownRoot = out.contains("mPreferredTopFocusableRootTask")
+                            && out.contains("#" + taskId + " ");
+                }
+                if (ownRoot) {
+                    st.targetStackId = taskId;
+                    dt.append("\n[v1.3.3] stackId fallback = taskId (")
+                      .append(taskId)
+                      .append(") because task is its own root task (Android 12+).\n");
+                }
+            }
         }
         // Verb inventory flags.
         boolean hasStackResize = out != null
                 && (out.contains("stack resize")
                  || out.contains("resize-stack")
-                 || out.contains("resizeStack"));
+                 || out.contains("resizeStack")
+                 || out.contains("Argument expected after \"stack\""));
         boolean hasTaskResize  = out != null && out.contains("task resize");
+        if (!hasTaskResize && out != null && out.contains("Argument expected after \"task\"")) {
+            hasTaskResize = true;
+        }
         boolean hasResizeable  = out != null && out.contains("resizeable");
 
         StringBuilder msg = new StringBuilder();
@@ -1118,24 +1147,21 @@ public final class Dl5ClusterReconRunner {
             r.status = DiLink5TestRunner.Status.SKIPPED;
             r.message = "no taskId (F10)"; return;
         }
-        int taskId  = st.yandexTaskIdOnCluster;
-        int stackId = st.targetStackId; // may be <=0; we still try the task-level paths
+                int taskId  = st.yandexTaskIdOnCluster;
+                int stackId = st.targetStackId > 0 ? st.targetStackId : taskId;
+                boolean stackIdIsFallback = (st.targetStackId <= 0);
         String rect = "100 80 1820 640";
-        String stackBlock;
-        if (stackId > 0) {
-            stackBlock =
-                    "echo ; echo '--- step 2a: am stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "am stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_am_stack_resize=$? ; "
-                  + "sleep 1 ; "
-                  + "echo ; echo '--- step 2b: cmd activity stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "cmd activity stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_a_stack_resize=$? ; "
-                  + "sleep 1 ; "
-                  + "echo ; echo '--- step 2c: cmd window stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "cmd window stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_w_stack_resize=$? ; "
-                  + "sleep 1 ; ";
-        } else {
-            stackBlock = "echo '--- step 2: SKIPPED \u2014 no stackId from F10 ---' ; ";
-        }
+                String stackBlock =
+                                "echo ; echo '--- step 2a: am stack resize ' " + stackId + " ' " + rect
+                            + (stackIdIsFallback ? " (fallback id=taskId) ---' ; " : " ---' ; ")
+                            + "am stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_am_stack_resize=$? ; "
+                            + "sleep 1 ; "
+                            + "echo ; echo '--- step 2b: cmd activity stack resize ' " + stackId + " ' " + rect + " ---' ; "
+                            + "cmd activity stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_a_stack_resize=$? ; "
+                            + "sleep 1 ; "
+                            + "echo ; echo '--- step 2c: cmd window stack resize ' " + stackId + " ' " + rect + " ---' ; "
+                            + "cmd window stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_w_stack_resize=$? ; "
+                            + "sleep 1 ; ";
         String cmd =
                 "echo '--- step 1: cmd activity task resizeable ' " + taskId + " ' 2 ---' ; "
               + "cmd activity task resizeable " + taskId + " 2 2>&1 ; echo __exit_resizeable=$? ; "
@@ -1149,7 +1175,7 @@ public final class Dl5ClusterReconRunner {
               + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=' | head -20";
         String out = shellSync(ctx, cmd);
         r.detail = "$ DL3 chain via shell (taskId=" + taskId
-                + ", stackId=" + (stackId > 0 ? stackId : "?") + ")\n\n"
+            + ", stackId=" + stackId + (stackIdIsFallback ? " [fallback=taskId]" : "") + ")\n\n"
                 + (out == null ? "<no output>" : out);
         if (out == null) {
             r.status = DiLink5TestRunner.Status.FAIL;

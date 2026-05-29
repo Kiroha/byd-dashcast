@@ -366,6 +366,41 @@ public class ClusterImeWatcherService extends AccessibilityService {
     }
 
     /**
+     * v1.3.3 — Touch-driven keyboard auto-trigger. Called by MainActivity's
+     * {@code forwardTouchFromMirror} after an ACTION_UP is forwarded to the
+     * cluster mirror (350 ms delay to let the cluster app process the tap and
+     * move input focus). Posts the editable-detection work to the background
+     * worker so {@code getWindowsOnAllDisplays()} is never called on the UI
+     * thread. No-op when the bridge is already showing, the service is not
+     * bound, or the debounce window has not elapsed.
+     *
+     * <p>This complements the existing event-driven path (TYPE_VIEW_FOCUSED
+     * from the accessibility subsystem). Both paths share the same debounce
+     * gate so they cannot double-launch the bridge.
+     */
+    public static void checkAndLaunchBridgeIfNeeded(Context ctx) {
+        ClusterImeWatcherService self = sInstance;
+        if (self == null) return;                          // service not enabled
+        if (KeyboardBridgeActivity.isShowing()) return;    // already open
+        long now = android.os.SystemClock.uptimeMillis();
+        if (now - self.mLastLaunchAt < DEBOUNCE_MS) return; // debounce
+        android.os.Handler worker = self.mWorker;
+        if (worker == null) return;
+        final ClusterImeWatcherService svc = self;
+        worker.post(new Runnable() {
+            @Override public void run() {
+                if (KeyboardBridgeActivity.isShowing()) return;
+                AccessibilityNodeInfo node = svc.findClusterFocusedEditable();
+                if (node == null) return;
+                try { node.recycle(); } catch (Throwable ignored) { }
+                svc.mLastLaunchAt = android.os.SystemClock.uptimeMillis();
+                AppLogger.d(TAG, "checkAndLaunchBridgeIfNeeded — cluster editable detected after touch, launching bridge");
+                svc.launchBridge();
+            }
+        });
+    }
+
+    /**
      * Walk every interactive window across every display, prefer those on a
      * non-default display (the cluster on DL3/DL5) and SKIP our own bridge
      * package (so we never overwrite the local EditText instead of the
