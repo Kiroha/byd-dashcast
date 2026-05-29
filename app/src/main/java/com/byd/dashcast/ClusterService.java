@@ -39,6 +39,18 @@ import com.byd.dashcast.platform.Platform;
 public class ClusterService extends Service implements DashboardDisplayHelper.Listener {
 
     private static final String TAG = "ClusterService";
+
+    // v1.3.7-beta — some BYD ROMs (notably DiLink 3 API 29) ship a stripped
+    // IActivityTaskManager that no longer exposes moveTaskToDisplay(int, int).
+    // We probe it once per process and remember the outcome so subsequent calls
+    // skip the reflection (which would log a noisy NoSuchMethodException stack
+    // trace at every cluster-app tap) and go straight to the launcher-based
+    // fallback path.
+    //
+    //   null    → unknown, try reflection
+    //   TRUE    → available, use reflection
+    //   FALSE   → stripped, skip reflection entirely
+    private static volatile Boolean sMoveTaskToDisplayAvailable = null;
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int NOTIF_ID = 1;
     // LOT 4 — volatile: written on main thread (onCreate/onDestroy) and read from
@@ -537,7 +549,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                 + " → taskId=" + id + " (via daemon dumpsys recents)");
                         return id;
                     }
-                    AppLogger.w(TAG, "findRunningTaskId " + packageName
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName
                             + " — not found in dumpsys recents (out.length=" + out.length() + ")");
                 }
                 // Path 2b (v1.3.4) — launcher-agnostic fallback via
@@ -556,7 +568,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                 + " → taskId=" + id + " (via daemon dumpsys activities)");
                         return id;
                     }
-                    AppLogger.w(TAG, "findRunningTaskId " + packageName
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName
                             + " — not found in dumpsys activities (out.length=" + outAct.length() + ")");
                 }
             } else {
@@ -612,7 +624,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                             + " → taskId=" + id + " (via AdbLocal dumpsys recents)");
                     return id;
                 }
-                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                AppLogger.d(TAG, "findRunningTaskId " + packageName
                         + " — not found in AdbLocal dumpsys (out.length=" + out.length() + ")");
             }
         } catch (Throwable t) {
@@ -654,7 +666,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                             + " → taskId=" + id + " (via AdbLocal dumpsys activities)");
                     return id;
                 }
-                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                AppLogger.d(TAG, "findRunningTaskId " + packageName
                         + " — not found in AdbLocal dumpsys activities (out.length=" + out.length() + ")");
             }
         } catch (Throwable t) {
@@ -814,6 +826,18 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     }
 
                     // IActivityTaskManager.moveTaskToDisplay(taskId, displayId)
+                    // v1.3.7-beta — short-circuit when a previous call has
+                    // already proven this ROM strips the method, to avoid
+                    // logging NoSuchMethodException on every cluster-app tap.
+                    if (Boolean.FALSE.equals(sMoveTaskToDisplayAvailable)) {
+                        AppLogger.d(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                                + ": method unavailable on this ROM → "
+                                + (enforceOnly ? "skip" : "fallback launch"));
+                        if (mDestroyed) return;
+                        if (enforceOnly) return;
+                        fallbackLaunch(packageName, targetDisplayId, callback);
+                        return;
+                    }
                     Class<?> atmClass  = Class.forName("android.app.ActivityTaskManager");
                     Object   iatm      = atmClass.getMethod("getService").invoke(null);
                     Class<?> iAtmClass = iatm.getClass();
@@ -862,8 +886,21 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     });
 
                 } catch (Exception e) {
-                    AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
-                            + " error", e);
+                    // v1.3.7-beta — a NoSuchMethodException on moveTaskToDisplay
+                    // means the BYD ROM stripped the hidden API (observed on
+                    // DiLink 3 API 29). Remember the outcome and downgrade
+                    // subsequent failures to a single WARN at first sight; the
+                    // launcher-based fallback handles the user-visible path.
+                    boolean stripped = (e instanceof NoSuchMethodException)
+                            || (e.getCause() instanceof NoSuchMethodException);
+                    if (stripped && sMoveTaskToDisplayAvailable == null) {
+                        sMoveTaskToDisplayAvailable = Boolean.FALSE;
+                        AppLogger.w(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                                + ": IActivityTaskManager.moveTaskToDisplay(int,int) stripped on this ROM — will use launcher fallback from now on");
+                    } else if (!stripped) {
+                        AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
+                                + " error", e);
+                    }
                     if (mDestroyed) return;
                     if (enforceOnly) return; // never re-launch in enforce mode
                     fallbackLaunch(packageName, targetDisplayId, callback);
