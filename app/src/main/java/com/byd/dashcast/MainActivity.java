@@ -2301,6 +2301,35 @@ public class MainActivity extends AppCompatActivity
                 event.getActionIndex(),
                 pointerCount
         );
+
+        // v1.3.3 — DL5 only: after the finger is lifted from the cluster mirror,
+        // wait 350 ms (enough for the cluster app to move input focus) then check
+        // whether a focused editable node is visible on the cluster. If so,
+        // auto-launch the keyboard bridge. This is additive to the event-driven
+        // path in ClusterImeWatcherService (TYPE_VIEW_FOCUSED), which can miss
+        // events when the ROM returns displayId=-1 on secondary-display a11y events.
+        // Guard: only on DL5, only on ACTION_UP (lift), only when mirror is active.
+        int actionMasked = event.getActionMasked();
+        if ((actionMasked == MotionEvent.ACTION_UP
+                || actionMasked == MotionEvent.ACTION_POINTER_UP)
+                && ClusterService.sIsRunning) {
+            try {
+                if (com.byd.dashcast.platform.Platform.get().isDiLink5(MainActivity.this)) {
+                    clusterMirror.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                com.byd.dashcast.ime.ClusterImeWatcherService
+                                        .checkAndLaunchBridgeIfNeeded(MainActivity.this);
+                            } catch (Throwable t) {
+                                AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
+                            }
+                        }
+                    }, 350);
+                }
+            } catch (Throwable t) {
+                AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
+            }
+        }
     }
 
     // ---- Restaurer l'affichage BYD d'origine ----
