@@ -140,6 +140,11 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     AppLogger.e(TAG, "DL5 force_resizable_activities cleanup ERROR: " + err);
                 }
             });
+            // v1.3.5 — Proactively enable ClusterImeWatcherService so the auto-keyboard
+            // works from the very first touch, without requiring a manual ⌨ tap first.
+            // Field log 20260529: service was not enabled → first keyboard trigger only
+            // fired after user tapped ⌨ in fullscreen mirror (which called tryAdbEnableA11y).
+            KeyboardBridgeActivity.ensureClusterImeEnabled(this);
         }
         // Signature + permissions diagnostics — debug only (opens an ADB connection).
         if (BuildConfig.DEBUG) {

@@ -350,6 +350,50 @@ public class KeyboardBridgeActivity extends Activity {
      * Checks the comma-separated {@code enabled_accessibility_services}
      * secure setting against our service's component name.
      */
+    /**
+     * v1.3.5 — Proactive background enable called by {@link ClusterService} on DL5
+     * session start. Fire-and-forget, no UI. Safe to call repeatedly (idempotent:
+     * the shell script checks whether the component is already listed).
+     */
+    public static void ensureClusterImeEnabled(android.content.Context ctx) {
+        // Quick Java-side pre-check to skip the ADB round-trip when already enabled.
+        try {
+            String enabled = android.provider.Settings.Secure.getString(
+                    ctx.getContentResolver(),
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (enabled != null) {
+                String myComp = ctx.getPackageName()
+                        + "/" + ClusterImeWatcherService.class.getName();
+                for (String s : enabled.split(":")) {
+                    if (s != null && s.trim().equalsIgnoreCase(myComp)) return;
+                }
+            }
+        } catch (Throwable ignored) { }
+        final String comp = ctx.getPackageName()
+                + "/com.byd.dashcast.ime.ClusterImeWatcherService";
+        final String cmd =
+                "COMP=" + comp + ";"
+                + " CUR=$(settings get secure enabled_accessibility_services);"
+                + " if [ -z \"$CUR\" ] || [ \"$CUR\" = \"null\" ]; then NEW=\"$COMP\";"
+                + " else case \"$CUR\" in *\"|$COMP|\"*) NEW=\"$CUR\";;"
+                + "             *) NEW=\"$CUR:$COMP\";; esac; fi;"
+                + " settings put secure enabled_accessibility_services \"$NEW\""
+                + " && settings put secure accessibility_enabled 1"
+                + " && echo OK:$NEW || echo FAIL";
+        AdbLocalClient.executeShellWithResult(ctx, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String r) {
+                if (r != null && r.trim().startsWith("OK")) {
+                    AppLogger.i(TAG, "ensureClusterImeEnabled proactive OK");
+                } else {
+                    AppLogger.w(TAG, "ensureClusterImeEnabled unexpected reply: " + r);
+                }
+            }
+            @Override public void onError(String err) {
+                AppLogger.w(TAG, "ensureClusterImeEnabled ADB error: " + err);
+            }
+        });
+    }
+
     private boolean isClusterImeWatcherEnabled() {
         try {
             String enabled = android.provider.Settings.Secure.getString(
