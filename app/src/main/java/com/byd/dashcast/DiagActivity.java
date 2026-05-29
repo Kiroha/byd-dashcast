@@ -52,7 +52,9 @@ import com.byd.dashcast.dilink5.Dl5VdTestRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
 import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
+import com.byd.dashcast.voice.VoiceCommandRouter;
 import com.byd.dashcast.voice.VoiceService;
+import com.byd.dashcast.voice.VoskTranscriber;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
@@ -215,6 +217,17 @@ public class DiagActivity extends AppCompatActivity {
         mDestroyed = true;
         try { exportApkCleanupHandler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         try { unregisterVoiceReceiver(); } catch (Throwable ignore) {}
+        try {
+            if (mVoskTranscriber != null) {
+                VoiceService.setTranscriber(null);
+                mVoskTranscriber.release();
+                mVoskTranscriber = null;
+            }
+            if (mVoiceCommandRouter != null) {
+                mVoiceCommandRouter.release();
+                mVoiceCommandRouter = null;
+            }
+        } catch (Throwable ignore) {}
         try {
             if (voiceWakeWordEngine != null) {
                 VoiceService.setSampleConsumer(null);
@@ -2767,6 +2780,12 @@ public class DiagActivity extends AppCompatActivity {
     private TextView       tvVoiceWwModel;
     private com.byd.dashcast.voice.wakeword.WakeWordEngine voiceWakeWordEngine;
 
+    // v1.4.0-beta voice commands card
+    private com.google.android.material.materialswitch.MaterialSwitch swVoiceCommands;
+    private TextView       tvVoiceTranscript;
+    private VoskTranscriber mVoskTranscriber;
+    private VoiceCommandRouter mVoiceCommandRouter;
+
     private final BroadcastReceiver voiceReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context ctx, Intent intent) {
@@ -2788,6 +2807,8 @@ public class DiagActivity extends AppCompatActivity {
                 applyVoiceState(state, reason);
             } else if (com.byd.dashcast.voice.wakeword.WakeWordEngine.ACTION_WAKEWORD.equals(action)) {
                 onWakeWordBroadcast(intent);
+            } else if (VoskTranscriber.ACTION_TRANSCRIPT.equals(action)) {
+                onTranscriptBroadcast(intent);
             }
         }
     };
@@ -2816,6 +2837,14 @@ public class DiagActivity extends AppCompatActivity {
             swVoiceWakeword.setOnCheckedChangeListener((bv, checked) -> onWakeWordToggle(checked));
         }
 
+        // v1.4.0 voice commands card
+        swVoiceCommands  = panelVoice.findViewById(R.id.sw_voice_commands);
+        tvVoiceTranscript = panelVoice.findViewById(R.id.tv_voice_transcript);
+        if (swVoiceCommands != null) {
+            swVoiceCommands.setChecked(mVoskTranscriber != null);
+            swVoiceCommands.setOnCheckedChangeListener((bv, checked) -> onVoiceCommandsToggle(checked));
+        }
+
         // Reflect current state in case the service is already running (e.g. orientation change).
         applyVoiceState(VoiceService.isRunning() ? VoiceService.STATE_STARTED : VoiceService.STATE_STOPPED, null);
         voicePanelBound = true;
@@ -2833,6 +2862,7 @@ public class DiagActivity extends AppCompatActivity {
         f.addAction(VoiceService.ACTION_LEVEL);
         f.addAction(VoiceService.ACTION_STATE);
         f.addAction(com.byd.dashcast.voice.wakeword.WakeWordEngine.ACTION_WAKEWORD);
+        f.addAction(VoskTranscriber.ACTION_TRANSCRIPT);
         LocalBroadcastManager.getInstance(this).registerReceiver(voiceReceiver, f);
         voiceReceiverRegistered = true;
     }
@@ -3013,4 +3043,77 @@ public class DiagActivity extends AppCompatActivity {
                     R.string.diag_voice_perm_denied, Toast.LENGTH_LONG).show();
         }
     }
+
+    // ─── v1.4.0 voice commands ────────────────────────────────────────────
+
+    private void onVoiceCommandsToggle(boolean enabled) {
+        if (enabled) {
+            if (mVoskTranscriber != null) return;
+            // Wake word must be active to feed the transcriber.
+            if (voiceWakeWordEngine == null) {
+                if (swVoiceWakeword != null) swVoiceWakeword.setChecked(true);
+                // onWakeWordToggle will have been called synchronously.
+            }
+            mVoiceCommandRouter = new VoiceCommandRouter(this);
+            mVoskTranscriber = new VoskTranscriber(this);
+            // Wire the transcriber output to the router.
+            LocalBroadcastManager.getInstance(this).registerReceiver(
+                    mTranscriptCommandBridge,
+                    new IntentFilter(VoskTranscriber.ACTION_TRANSCRIPT));
+            VoiceService.setTranscriber(mVoskTranscriber);
+            AppLogger.i("DiagVoice", "Voice commands ON");
+            if (tvVoiceTranscript != null)
+                tvVoiceTranscript.setText("En attente du mot d'éveil…");
+        } else {
+            VoiceService.setTranscriber(null);
+            try {
+                LocalBroadcastManager.getInstance(this)
+                        .unregisterReceiver(mTranscriptCommandBridge);
+            } catch (Throwable ignore) {}
+            if (mVoskTranscriber != null) { mVoskTranscriber.release(); mVoskTranscriber = null; }
+            if (mVoiceCommandRouter != null) { mVoiceCommandRouter.release(); mVoiceCommandRouter = null; }
+            AppLogger.i("DiagVoice", "Voice commands OFF");
+            if (tvVoiceTranscript != null) tvVoiceTranscript.setText("");
+        }
+    }
+
+    /** Bridge between the Vosk transcript broadcast and the command router. */
+    private final BroadcastReceiver mTranscriptCommandBridge = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent intent) {
+            if (intent == null) return;
+            if (intent.getBooleanExtra(VoskTranscriber.EXTRA_LOADING, false)) {
+                if (tvVoiceTranscript != null)
+                    tvVoiceTranscript.setText("Chargement modèle voix…");
+                return;
+            }
+            String error = intent.getStringExtra(VoskTranscriber.EXTRA_ERROR);
+            if (error != null) {
+                if (tvVoiceTranscript != null)
+                    tvVoiceTranscript.setText("Erreur : " + error);
+                return;
+            }
+            String text = intent.getStringExtra(VoskTranscriber.EXTRA_TEXT);
+            if (tvVoiceTranscript != null)
+                tvVoiceTranscript.setText("\"" + text + "\"");
+            if (mVoiceCommandRouter != null && text != null)
+                mVoiceCommandRouter.route(text);
+        }
+    };
+
+    private void onTranscriptBroadcast(Intent intent) {
+        // Also update the voice panel live (even when command routing is OFF,
+        // useful for testing recognition quality from the Diag tab).
+        if (!voicePanelBound || intent == null) return;
+        if (tvVoiceTranscript == null) return;
+        if (intent.getBooleanExtra(VoskTranscriber.EXTRA_LOADING, false)) {
+            tvVoiceTranscript.setText("Chargement modèle voix…");
+        } else if (intent.getStringExtra(VoskTranscriber.EXTRA_ERROR) != null) {
+            tvVoiceTranscript.setText("Erreur : " + intent.getStringExtra(VoskTranscriber.EXTRA_ERROR));
+        } else {
+            String text = intent.getStringExtra(VoskTranscriber.EXTRA_TEXT);
+            if (text != null) tvVoiceTranscript.setText("\"" + text + "\"");
+        }
+    }
 }
+

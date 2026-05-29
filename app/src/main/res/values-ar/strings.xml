@@ -432,6 +432,11 @@
     <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">الأوامر الصوتية (Vosk)</string>
+    <string name="diag_voice_commands_switch">تفعيل</string>
+    <string name="diag_voice_commands_hint">قل "Hey Jarvis" ثم أمرك: "الكتلة"، "إغلاق الكتلة"، "تشغيل YouTube"، "التشخيص"، "السجلات".</string>
     <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">تفعيل</string>
     <string name="diag_voice_wakeword_score_label">درجة السيجمويد (عتبة 0٫5)</string>
