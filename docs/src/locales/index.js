@@ -6,12 +6,13 @@ import es from './es.js';
 import fr from './fr.js';
 import it from './it.js';
 import kk from './kk.js';
+import pl from './pl.js';
 import ru from './ru.js';
 import tr from './tr.js';
 import uk from './uk.js';
 import uz from './uz.js';
 
-export const localeOrder = ['fr', 'en', 'de', 'it', 'tr', 'es', 'ru', 'uk', 'ar', 'uz', 'kk', 'be']; // Matches activity_welcome.xml Row1=FR/EN/DE Row2=IT/TR/ES Row3=RU/UK/AR Row4=UZ/KK/BE
+export const localeOrder = ['fr', 'en', 'de', 'it', 'tr', 'es', 'ru', 'uk', 'ar', 'uz', 'kk', 'be', 'pl']; // Matches activity_welcome.xml Row1=FR/EN/DE Row2=IT/TR/ES Row3=RU/UK/AR Row4=UZ/KK/BE Row5=PL
 
 export const locales = {
   ar,
@@ -22,6 +23,7 @@ export const locales = {
   fr,
   it,
   kk,
+  pl,
   ru,
   tr,
   uk,
