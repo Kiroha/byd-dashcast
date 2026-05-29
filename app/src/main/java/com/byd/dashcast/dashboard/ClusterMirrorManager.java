@@ -283,6 +283,14 @@ public class ClusterMirrorManager {
                         + " (check logcat for MirrorDaemon details)");
             }
             return daemonOk;
+        } catch (android.os.DeadObjectException doe) {
+            // v1.3.3 — silent binder death: kernel did not notify sDeath, so
+            // the cached binder is stuck "alive". Eagerly invalidate so the
+            // keeper re-bootstraps within HEARTBEAT_MS instead of leaving every
+            // call broken until the user quits the app.
+            com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("MirrorStart");
+            AppLogger.e(TAG, "startMirrorViaDaemon DeadObjectException — binder invalidated", doe);
+            return false;
         } catch (Exception e) {
             AppLogger.e(TAG, "startMirrorViaDaemon failed", e);
             return false;
@@ -307,6 +315,10 @@ public class ClusterMirrorManager {
             daemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_MIRROR_STOP,
                     data, reply, 0);
             try { reply.readException(); } catch (Throwable ignored) { /* daemon may not write reply */ }
+        } catch (android.os.DeadObjectException doe) {
+            // v1.3.3 — see comment in startMirrorViaDaemon.
+            com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("MirrorStop");
+            AppLogger.w(TAG, "stopMirrorViaDaemon DeadObjectException — binder invalidated");
         } catch (Exception e) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: " + e.getMessage());
         } finally {
