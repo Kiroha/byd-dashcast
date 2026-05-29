@@ -134,7 +134,20 @@ public final class ProxyKeeperService extends Service {
         // (Android does not love services that self-stop in a tight loop).
         if (!BetaConfig.isProxyDaemonEnabled(ctx)) return;
 
-        if (BetaProxyClient.isConnected()) {
+        // v1.3.3 — Defense in depth against silent binder deaths seen on
+        // DiLink 3 / Android 10: do a real pingBinder() round-trip (cheap,
+        // ~1 ms) rather than only the local isBinderAlive() check.
+        // pingBinder returns false the instant the daemon process is gone,
+        // even when the kernel's binderDied() notification was never
+        // delivered to our DeathRecipient. This converts every "stuck
+        // alive" case into a recoverable one within HEARTBEAT_MS.
+        android.os.IBinder b = BetaProxyClient.getDaemonBinder();
+        boolean alive = (b != null) && b.pingBinder();
+        if (b != null && !alive) {
+            BetaProxyClient.invalidateBinder("KeeperPing");
+        }
+
+        if (alive) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
             return;
         }
