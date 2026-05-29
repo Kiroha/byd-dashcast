@@ -1765,6 +1765,8 @@ public class MainActivity extends AppCompatActivity
             public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        // Audit B19: forceStop callback may arrive after Activity destroy.
+                        if (isFinishing() || isDestroyed()) return;
                         AppLogger.i(TAG, "forceStop " + app.packageName + " OK");
                         // Cluster state already cleared eagerly above (before async ops).
                         if (app.packageName != null && app.packageName.equals(mSecondDashboardPkg)) {
@@ -1783,6 +1785,8 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        // Audit B19: forceStop error callback may arrive after Activity destroy.
+                        if (isFinishing() || isDestroyed()) return;
                         Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_kill_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "forceStop FAILED: " + error);
@@ -3822,6 +3826,8 @@ public class MainActivity extends AppCompatActivity
                 @Override public void onSuccess(final String report) {
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
+                            // Audit B19: shell callback may arrive after Activity destroy.
+                            if (isFinishing() || isDestroyed()) return;
                             // Trust the OS, not the shell echo: re-read from
                             // Settings.Secure via the same helper used by the banner.
                             boolean ok = com.byd.dashcast.ime.ClusterImeWatcherService
@@ -3848,6 +3854,8 @@ public class MainActivity extends AppCompatActivity
                 @Override public void onError(final String error) {
                     runOnUiThread(new Runnable() {
                         @Override public void run() {
+                            // Audit B19: shell error callback may arrive after Activity destroy.
+                            if (isFinishing() || isDestroyed()) return;
                             AppLogger.w("MainActivity",
                                     "one-click a11y enable shell failed: " + error
                                   + " — falling back to Settings UI");
