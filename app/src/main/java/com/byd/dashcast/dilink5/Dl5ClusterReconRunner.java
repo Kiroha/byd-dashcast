@@ -1049,14 +1049,15 @@ public final class Dl5ClusterReconRunner {
         String cmd =
                 "echo '===== task bounds + stack containment =====' ; "
               + "dumpsys activity activities 2>&1 | grep -B2 -A 30 -E '#" + taskId + "[^0-9]' "
-              + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=|StackId=|stackId=|Stack #|in stack' "
-              + "| head -25 ; "
-              + "echo ; echo '===== cmd activity stack ?? =====' ; "
-              + "cmd activity stack 2>&1 | head -30 ; echo __exit_a_stack=$? ; "
-              + "echo ; echo '===== cmd activity task ?? =====' ; "
-              + "cmd activity task 2>&1 | head -30 ; echo __exit_a_task=$? ; "
-              + "echo ; echo '===== am stack ?? =====' ; "
-              + "am stack 2>&1 | head -20 ; echo __exit_am_stack=$? ; "
+              + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=|StackId=|stackId=|Stack #|in stack|rootTaskId=|rootOfTask=|Task\\{' "
+              + "| head -40 ; "
+              + "echo ; echo '===== rootTaskId resolution (Android 12+) =====' ; "
+              + "dumpsys activity activities 2>&1 | grep -E 'mPreferredTopFocusableRootTask|mLastFocusedRootTask|rootOfTask=true' "
+              + "| grep -E '#" + taskId + "[^0-9]' | head -5 ; "
+              + "echo ; echo '===== cmd activity stack help =====' ; "
+              + "cmd activity stack help 2>&1 | head -25 ; echo __exit_a_stack_help=$? ; "
+              + "echo ; echo '===== am stack help =====' ; "
+              + "am stack help 2>&1 | head -25 ; echo __exit_am_stack_help=$? ; "
               + "echo ; echo '===== wm ?? =====' ; "
               + "wm 2>&1 | head -15 ; echo __exit_wm=$?";
         String out = shellSync(ctx, cmd);
@@ -1079,13 +1080,38 @@ public final class Dl5ClusterReconRunner {
                     catch (NumberFormatException ignored) {}
                 }
             }
+            // v1.2.73 — Android 12 (DL5) renamed "Stack" → "root task". For
+            // top-level tasks like a freshly-launched cluster app,
+            // taskId == rootTaskId, so we can safely fallback to taskId when
+            // the dump confirms this task is itself a root task.
+            if (st.targetStackId <= 0) {
+                boolean isOwnRoot = out.contains("rootOfTask=true")
+                        && out.contains("#" + taskId + " ");
+                if (!isOwnRoot) {
+                    isOwnRoot = out.contains("mPreferredTopFocusableRootTask")
+                            && out.contains("#" + taskId + " ");
+                }
+                if (isOwnRoot) {
+                    st.targetStackId = taskId;
+                    dt.append("\n[v1.2.73] stackId fallback = taskId (")
+                      .append(taskId).append(") because task is its own root task (Android 12+).\n");
+                }
+            }
         }
         // Verb inventory flags.
         boolean hasStackResize = out != null
                 && (out.contains("stack resize")
                  || out.contains("resize-stack")
-                 || out.contains("resizeStack"));
-        boolean hasTaskResize  = out != null && out.contains("task resize");
+                 || out.contains("resizeStack")
+                 || out.contains("resize <STACK_ID>")
+                 // v1.2.73 — if `cmd activity stack` errored with "Argument
+                 // expected after stack", the subverb dispatcher still exists,
+                 // so the verb surface IS there — we just couldn't enumerate
+                 // it. Mark it Y when the dispatcher is alive.
+                 || out.contains("Argument expected after \"stack\""));
+        boolean hasTaskResize  = out != null
+                && (out.contains("task resize")
+                 || out.contains("Argument expected after \"task\""));
         boolean hasResizeable  = out != null && out.contains("resizeable");
 
         StringBuilder msg = new StringBuilder();
@@ -1119,23 +1145,25 @@ public final class Dl5ClusterReconRunner {
             r.message = "no taskId (F10)"; return;
         }
         int taskId  = st.yandexTaskIdOnCluster;
-        int stackId = st.targetStackId; // may be <=0; we still try the task-level paths
+        // v1.3.3 — if F10 couldn't extract a separate stackId, use taskId
+        // itself. On Android 12 (DL5) a freshly-launched top-level task is
+        // its own root task, so taskId IS the stackId for `am stack resize`.
+        int stackId = st.targetStackId > 0 ? st.targetStackId : taskId;
+        boolean stackIdIsFallback = (st.targetStackId <= 0);
         String rect = "100 80 1820 640";
-        String stackBlock;
-        if (stackId > 0) {
-            stackBlock =
-                    "echo ; echo '--- step 2a: am stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "am stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_am_stack_resize=$? ; "
-                  + "sleep 1 ; "
-                  + "echo ; echo '--- step 2b: cmd activity stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "cmd activity stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_a_stack_resize=$? ; "
-                  + "sleep 1 ; "
-                  + "echo ; echo '--- step 2c: cmd window stack resize ' " + stackId + " ' " + rect + " ---' ; "
-                  + "cmd window stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_w_stack_resize=$? ; "
-                  + "sleep 1 ; ";
-        } else {
-            stackBlock = "echo '--- step 2: SKIPPED \u2014 no stackId from F10 ---' ; ";
-        }
+        // v1.3.3 — always run step 2 (never SKIP). If we don't have a
+        // dedicated stackId, taskId is the next-best guess on Android 12+.
+        String stackBlock =
+                "echo ; echo '--- step 2a: am stack resize ' " + stackId + " ' " + rect
+              + (stackIdIsFallback ? " (fallback id=taskId) ---' ; " : " ---' ; ")
+              + "am stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_am_stack_resize=$? ; "
+              + "sleep 1 ; "
+              + "echo ; echo '--- step 2b: cmd activity stack resize ' " + stackId + " ' " + rect + " ---' ; "
+              + "cmd activity stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_a_stack_resize=$? ; "
+              + "sleep 1 ; "
+              + "echo ; echo '--- step 2c: cmd window stack resize ' " + stackId + " ' " + rect + " ---' ; "
+              + "cmd window stack resize " + stackId + " " + rect + " 2>&1 ; echo __exit_w_stack_resize=$? ; "
+              + "sleep 1 ; ";
         String cmd =
                 "echo '--- step 1: cmd activity task resizeable ' " + taskId + " ' 2 ---' ; "
               + "cmd activity task resizeable " + taskId + " 2 2>&1 ; echo __exit_resizeable=$? ; "
@@ -1149,7 +1177,7 @@ public final class Dl5ClusterReconRunner {
               + "| grep -E 'mBounds=Rect|mWindowingMode=|mAppBounds=' | head -20";
         String out = shellSync(ctx, cmd);
         r.detail = "$ DL3 chain via shell (taskId=" + taskId
-                + ", stackId=" + (stackId > 0 ? stackId : "?") + ")\n\n"
+                + ", stackId=" + stackId + (stackIdIsFallback ? " [fallback=taskId]" : "") + ")\n\n"
                 + (out == null ? "<no output>" : out);
         if (out == null) {
             r.status = DiLink5TestRunner.Status.FAIL;
