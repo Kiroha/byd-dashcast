@@ -339,7 +339,7 @@ public final class ProxyDaemonMain {
         }
     }
 
-    /** v1.2.70 hardening: periodic self-check thread (every 10s).
+    /** v1.2.70 hardening: periodic self-check thread.
      *
      *  <p>Responsibilities:
      *  <ul>
@@ -350,26 +350,48 @@ public final class ProxyDaemonMain {
      *    <li>Detect that our PID file was clobbered (another daemon spawned
      *        in parallel and won the race) → suicide so the survivor stays
      *        canonical.</li>
+     *    <li>v1.3.9: poll trigger file mtime every 1s as backup for
+     *        FileObserver unreliability observed on DL5 (inotify events not
+     *        delivered in uid=2000 / app_process64 context).</li>
      *  </ul>
      *
      *  <p>Daemon thread, started as DAEMON so it never blocks JVM shutdown. */
     private static void installSelfHealHeartbeat() {
         Thread t = new Thread("dashcast-self-heal") {
             @Override public void run() {
+                // v1.3.9 — record the initial mtime so we only react to
+                // FUTURE writes, not the file that was there when we started.
+                long lastTriggerMtime = new File(TRIGGER_FILE).lastModified();
+                int tick = 0;
                 while (true) {
                     try {
-                        Thread.sleep(10_000L);
+                        Thread.sleep(1_000L);
                     } catch (InterruptedException ignore) {
                         return;
                     }
-                    try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
-                    try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
+                    // v1.3.9 — every tick: poll trigger file mtime.
+                    // This is the primary recovery path when FileObserver
+                    // silently stops delivering events on DL5.
+                    try {
+                        File f = new File(TRIGGER_FILE);
+                        long mtime = f.lastModified();
+                        if (mtime != lastTriggerMtime) {
+                            lastTriggerMtime = mtime;
+                            log("trigger poll: mtime changed → rebroadcast");
+                            emitBroadcast();
+                        }
+                    } catch (Throwable th) { log("trigger poll: " + th); }
+                    // Every 10 ticks (10s): full self-heal (file + pid lock).
+                    if (++tick % 10 == 0) {
+                        try { healTriggerFile(); } catch (Throwable th) { log("heal trigger: " + th); }
+                        try { healPidLock();     } catch (Throwable th) { log("heal pid: " + th); }
+                    }
                 }
             }
         };
         t.setDaemon(true);
         t.start();
-        log("self-heal heartbeat armed (10s)");
+        log("self-heal heartbeat armed (1s poll + 10s heal)");
     }
 
     private static void healTriggerFile() {

@@ -371,10 +371,18 @@ public final class BetaProxyClient {
         // exactly this deadlock: the broadcast was always 0 ms late because the
         // receiver was blocked on us. CountDownLatch.await() does not release
         // monitors the way Object.wait() does, so we have to drop LOCK manually.
+        //
+        // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
+        // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
+        // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
+        // the fallback am-start triggers quickly rather than blocking 15s.
+        // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
+        // on DiLink SoCs).
+        long waitMs = upper.startsWith("REBROADCAST") ? 5_000L : BROADCAST_WAIT_MS;
         CountDownLatch latch;
         synchronized (LOCK) { latch = sBinderLatch; }
         try {
-            latch.await(BROADCAST_WAIT_MS, TimeUnit.MILLISECONDS);
+            latch.await(waitMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             return false;
@@ -388,7 +396,7 @@ public final class BetaProxyClient {
             // via linkToDeath in the receiver above, so isBinderAlive is
             // strictly equivalent here and avoids one IPC while holding LOCK.
             if (sBinder == null || !sBinder.isBinderAlive()) {
-                AppLogger.w(TAG, "no live binder after " + BROADCAST_WAIT_MS
+                AppLogger.w(TAG, "no live binder after " + waitMs
                         + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
                 sBinder = null;
                 // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
