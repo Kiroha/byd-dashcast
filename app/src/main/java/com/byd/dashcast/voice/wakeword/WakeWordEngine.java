@@ -249,7 +249,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
                 n = (int) Math.min(total, AUDIO_BUFFER_LEN);
                 int start = (w - n + AUDIO_BUFFER_LEN) % AUDIO_BUFFER_LEN;
                 for (int i = 0; i < n; i++) {
-                    audioWindow[i] = mRing[(start + i) % AUDIO_BUFFER_LEN];
+                    // Normalize int16 PCM → float32 [-1, 1] as expected by the
+                    // openWakeWord melspectrogram model (mirrors openwakeword/utils.py:
+                    // x = x.astype(np.float32) / 32768).
+                    audioWindow[i] = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f;
                 }
             }
             if (n < MIN_AUDIO_SAMPLES) continue;
