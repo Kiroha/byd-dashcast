@@ -432,6 +432,11 @@
     <string name="diag_voice_notif_text">Audiopegel wird lokal analysiert, nichts wird aufgezeichnet.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Sprachbefehle (Vosk)</string>
+    <string name="diag_voice_commands_switch">Aktivieren</string>
+    <string name="diag_voice_commands_hint">Sagen Sie "Hey Jarvis" und dann Ihren Befehl: "Cluster", "Cluster schließen", "YouTube starten", "Diagnose", "Protokolle".</string>
     <string name="diag_voice_wakeword_card_title">Aktivierungswort (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Aktivieren</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-Score (Schwelle 0,5)</string>

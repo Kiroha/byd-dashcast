@@ -432,6 +432,11 @@
     <string name="diag_voice_notif_text">Livello audio analizzato localmente, nulla viene registrato.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Comandi vocali (Vosk)</string>
+    <string name="diag_voice_commands_switch">Attiva</string>
+    <string name="diag_voice_commands_hint">Di\' "Hey Jarvis" e poi il tuo comando: "cluster", "chiudi cluster", "avvia YouTube", "diagnostica", "log".</string>
     <string name="diag_voice_wakeword_card_title">Parola di attivazione (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Attiva</string>
     <string name="diag_voice_wakeword_score_label">Punteggio sigmoide (soglia 0,5)</string>

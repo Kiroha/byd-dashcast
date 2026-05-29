@@ -432,6 +432,11 @@
     <string name="diag_voice_notif_text">Узровень аўдыё аналізуецца лакальна, нічога не запісваецца.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Галасавыя каманды (Vosk)</string>
+    <string name="diag_voice_commands_switch">Уключыць</string>
+    <string name="diag_voice_commands_hint">Скажыце «Hey Jarvis», затым каманду: «кластар», «закрыць кластар», «запусціць YouTube», «дыягностыка», «журналы».</string>
     <string name="diag_voice_wakeword_card_title">Ключавое слова (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Уключыць</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-ацэнка (парог 0,5)</string>

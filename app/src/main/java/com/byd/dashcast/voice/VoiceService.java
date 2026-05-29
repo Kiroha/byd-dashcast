@@ -117,6 +117,25 @@ public final class VoiceService extends Service {
     /** Returns the currently installed consumer (or null). */
     public static SampleConsumer getSampleConsumer() { return sSampleConsumer; }
 
+    // ─── v1.4.0-beta voice command hook ───────────────────────────────────
+    //
+    // When the user enables voice commands in the Diag tab, a VoskTranscriber
+    // is installed here.  The capture loop calls triggerTranscription() each
+    // time the wake-word engine fires a DETECTED broadcast so that Vosk can
+    // open its own short AudioRecord window (VoiceService's own record is
+    // paused for MAX_LISTEN_MS to avoid capturing both).
+
+    private static volatile VoskTranscriber sTranscriber;
+
+    /** Installs (or removes, with {@code null}) the post-wake transcriber. */
+    public static void setTranscriber(VoskTranscriber t) { sTranscriber = t; }
+
+    /** Triggers a Vosk listen window; no-op if no transcriber is installed. */
+    public static void triggerTranscription() {
+        VoskTranscriber t = sTranscriber;
+        if (t != null) t.startListening();
+    }
+
     // ─── Service lifecycle ─────────────────────────────────────────────────
 
     @Override public IBinder onBind(Intent intent) { return null; }

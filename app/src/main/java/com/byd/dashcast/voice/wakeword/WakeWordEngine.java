@@ -275,6 +275,8 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
                     mLastDetectMs = evalNow;
                     detected = true;
                     AppLogger.i(TAG, "Wake word DETECTED — score=" + score + " label=" + MODEL_LABEL);
+                    // Trigger post-wake transcription (no-op if no transcriber installed).
+                    com.byd.dashcast.voice.VoiceService.triggerTranscription();
                 }
                 broadcastScore(score, detected);
                 // v1.2.80 — surface a periodic diag line so the user can

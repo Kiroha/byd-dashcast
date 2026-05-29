@@ -51,6 +51,7 @@ import android.graphics.Typeface;
 
 import com.byd.dashcast.dashboard.DashboardLauncher;
 import com.byd.dashcast.model.AppInfo;
+import com.byd.dashcast.voice.VoiceCommandRouter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -362,6 +363,11 @@ public class MainActivity extends AppCompatActivity
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
                 new IntentFilter(com.byd.dashcast.daemon.MirrorDaemon.ACTION_DAEMON_READY));
+
+        // v1.4.0 — Voice command receiver (dispatched by VoiceCommandRouter via LocalBroadcastManager)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .registerReceiver(mVoiceCommandReceiver,
+                        new IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND));
 
         // Floating 📺 mirror button — started once, visibility controlled by show()/hide()
         startService(new Intent(this, FloatingRemoteButton.class));
@@ -820,6 +826,34 @@ public class MainActivity extends AppCompatActivity
         handleShowMirrorIntent(intent);
     }
 
+    // ─── v1.4.0 Voice command receiver ─────────────────────────────────────────
+
+    private final BroadcastReceiver mVoiceCommandReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (isFinishing() || isDestroyed() || intent == null) return;
+            String cmd = intent.getStringExtra(com.byd.dashcast.voice.VoiceCommandRouter.EXTRA_CMD);
+            if (cmd == null) return;
+            if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_CLUSTER_ON.equals(cmd)) {
+                activateCluster();
+            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_CLUSTER_OFF.equals(cmd)) {
+                restoreBydDashboard();
+            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_OPEN_DIAG.equals(cmd)) {
+                startActivity(new Intent(MainActivity.this,
+                        com.byd.dashcast.DiagActivity.class));
+            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_OPEN_LOGS.equals(cmd)) {
+                startActivity(new Intent(MainActivity.this,
+                        com.byd.dashcast.LogActivity.class));
+            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_LAUNCH_ON_CLUSTER.equals(cmd)) {
+                String pkg = intent.getStringExtra(
+                        com.byd.dashcast.voice.VoiceCommandRouter.EXTRA_PKG);
+                if (pkg != null) quickSwitchToApp(pkg);
+            } else {
+                AppLogger.d(TAG, "Voice: unhandled cmd=" + cmd);
+            }
+        }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -1065,6 +1099,10 @@ public class MainActivity extends AppCompatActivity
         // postDelayed that individual removeCallbacks() calls may have missed).
         mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
+        try {
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                    .unregisterReceiver(mVoiceCommandReceiver);
+        } catch (Throwable ignore) {}
         if (mServiceBound) {
             unbindService(mServiceConn);
             mServiceBound  = false;

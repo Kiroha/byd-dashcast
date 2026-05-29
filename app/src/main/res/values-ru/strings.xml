@@ -432,6 +432,11 @@
     <string name="diag_voice_notif_text">Уровень аудио анализируется локально, ничего не записывается.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Голосовые команды (Vosk)</string>
+    <string name="diag_voice_commands_switch">Включить</string>
+    <string name="diag_voice_commands_hint">Скажите «Hey Jarvis», затем команду: «кластер», «закрыть кластер», «запустить YouTube», «диагностика», «журналы».</string>
     <string name="diag_voice_wakeword_card_title">Ключевое слово (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Включить</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-оценка (порог 0,5)</string>
