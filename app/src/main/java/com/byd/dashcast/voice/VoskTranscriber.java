@@ -138,6 +138,11 @@ public final class VoskTranscriber {
                 mModel = model;
                 mModelLoading = false;
                 AppLogger.i(TAG, "Vosk model ready");
+                // Notify user that model is ready (first-launch: they may have spoken too early).
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                        android.widget.Toast.makeText(mCtx,
+                                "Jarvis prêt — réessayez votre commande",
+                                android.widget.Toast.LENGTH_SHORT).show());
                 doListenViaServiceStream();
             } catch (Exception e) {
                 mModelLoading = false;
