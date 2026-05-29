@@ -320,20 +320,34 @@ public final class ProxyDaemonMain {
 
     /** Watch {@link #TRIGGER_FILE} for CREATE/MODIFY events. The bootstrap
      *  script touches that file to ask us to re-broadcast the binder — used
-     *  when the app process restarts but our daemon survived (setsid). */
+     *  when the app process restarts but our daemon survived (setsid).
+     *
+     *  <p>v1.3.10: watches the PARENT DIRECTORY instead of the file itself.
+     *  On Android 12 (DL5, uid=2000, app_process64), inotify watches on a
+     *  specific file inode are silently dropped when the shell creates the
+     *  file with O_TRUNC (which may allocate a new inode). A directory-level
+     *  watch captures CREATE/CLOSE_WRITE on any child including our trigger
+     *  file, regardless of inode recycling. */
     private static void installTriggerObserver() {
         try {
-            // Ensure the file exists so the observer can watch it.
-            try { new File(TRIGGER_FILE).createNewFile(); } catch (Throwable ignore) {}
-            sTriggerObserver = new FileObserver(TRIGGER_FILE,
+            // Ensure the trigger file and its parent directory exist.
+            File triggerFile = new File(TRIGGER_FILE);
+            File parentDir   = triggerFile.getParentFile();
+            try { triggerFile.createNewFile(); } catch (Throwable ignore) {}
+            // v1.3.10: watch the DIRECTORY (more robust on Android 12).
+            // onEvent path argument will be just the filename, not full path.
+            final String triggerName = triggerFile.getName();
+            sTriggerObserver = new FileObserver(parentDir,
                     FileObserver.MODIFY | FileObserver.CREATE | FileObserver.CLOSE_WRITE) {
                 @Override public void onEvent(int event, String path) {
-                    log("rebroadcast trigger received (event=" + event + ")");
-                    emitBroadcast();
+                    if (triggerName.equals(path)) {
+                        log("rebroadcast trigger received via dir-watch (event=" + event + ")");
+                        emitBroadcast();
+                    }
                 }
             };
             sTriggerObserver.startWatching();
-            log("trigger observer armed on " + TRIGGER_FILE);
+            log("trigger observer armed on dir " + parentDir + " (filter=" + triggerName + ")");
         } catch (Throwable t) {
             log("installTriggerObserver failed: " + t);
         }
@@ -398,12 +412,11 @@ public final class ProxyDaemonMain {
         File f = new File(TRIGGER_FILE);
         if (!f.exists()) {
             try { f.createNewFile(); log("trigger file re-created"); } catch (Throwable ignore) {}
-            // FileObserver loses its inode binding on delete — re-arm it.
-            try {
-                if (sTriggerObserver != null) sTriggerObserver.stopWatching();
-            } catch (Throwable ignore) {}
-            installTriggerObserver();
-        } else if (sTriggerObserver == null) {
+            // v1.3.10: directory watch survives trigger file deletion (watches
+            // the parent dir inode, not the file inode). Only re-arm if the
+            // observer itself is gone.
+        }
+        if (sTriggerObserver == null) {
             installTriggerObserver();
         }
     }
