@@ -35,8 +35,13 @@ public final class BetaProxyMetrics {
     public static final String K_FAILS_TIMEOUT  = "fails_timeout";
     /** Bootstrap shell errored out (ADB off, dex2oat crash, SELinux, …). */
     public static final String K_FAILS_OTHER    = "fails_other";
-    /** Cached binder went dead and was cleared by sDeath or a failed transact. */
+    /** Cached binder went dead and was cleared by sDeath (kernel-notified). */
     public static final String K_BINDER_ZOMBIES = "binder_zombies";
+    /** v1.3.3 — Binder transact() threw DeadObjectException although
+     *  sDeath had not fired yet (silent death, kernel notif missing or
+     *  late). Sites must call {@link BetaProxyClient#invalidateBinder} so
+     *  the next isConnected() check returns false immediately. */
+    public static final String K_BINDER_DEATHS_SILENT = "binder_deaths_silent";
 
     public static void inc(Context ctx, String key) {
         if (ctx == null || key == null) return;
@@ -63,7 +68,8 @@ public final class BetaProxyMetrics {
         sb.append("fails_no_apk   = ").append(sp.getInt(K_FAILS_NO_APK,   0)).append('\n');
         sb.append("fails_timeout  = ").append(sp.getInt(K_FAILS_TIMEOUT,  0)).append('\n');
         sb.append("fails_other    = ").append(sp.getInt(K_FAILS_OTHER,    0)).append('\n');
-        sb.append("binder_zombies = ").append(sp.getInt(K_BINDER_ZOMBIES, 0));
+        sb.append("binder_deaths_notif  = ").append(sp.getInt(K_BINDER_ZOMBIES, 0)).append('\n');
+        sb.append("binder_deaths_silent = ").append(sp.getInt(K_BINDER_DEATHS_SILENT, 0));
         return sb.toString();
     }
 
