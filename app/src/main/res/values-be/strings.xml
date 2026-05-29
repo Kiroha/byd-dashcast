@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">Тэст Fission толькі для DiLink 5.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Выберыце дадатак для тэсту</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">Запусковыя дадаткі не знойдзены.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">Тэст VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">Правярае pipeline VirtualDisplay → MirrorDaemon у 7 крокаў: стварэнне VD, запуск праграмы на VD, адлюстраванне на паверхню кластара. Толькі DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">Тэст VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Мэта: %1$s\n\nГэты набор:\n\n• V01: актываваць праекцыю кластара (auto_container)\n• V02: праверыць, ці можна запусціць праграму\n• V03: стварыць VirtualDisplay 1920×720\n• V04: запусціць праграму на VD\n• V05: запусціць люстэрка праз MirrorDaemon\n• V06: візуальна праверыць рэндэрынг кластара\n• V07: ачысціць (спыніць люстэрка, выдаліць VD, force-stop)\n\nТолькі DiLink 5. Мэтавая праграма будзе прымусова спынена.\nПрацягнуць?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Запусціць тэст</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">Тэст VD Pipeline толькі для DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Выбраць праграму для тэсту</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Запусковыя дадаткі не знойдзены.</string>
     <string name="diag_dl5_fission_prompt_title">Праверка кластара</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s бачны на экране кластара?\n\n(тэст экрана %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Так</string>

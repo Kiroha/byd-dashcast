@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Sinov uchun ilovani tanlang</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline testi</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon quvurini 7 bosqichda tekshiradi: VD yaratish, VD-da ilovani ishga tushirish, klaster yuzasiga aks ettirish. Faqat DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline testi</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Maqsad: %1$s\n\nBu to\'plam:\n\n• V01: klaster proeksiyasini faollashtirish (auto_container)\n• V02: ilova ishga tushirilishi mumkinligini tekshirish\n• V03: 1920×720 VirtualDisplay yaratish\n• V04: ilovani VD-da ishga tushirish\n• V05: MirrorDaemon orqali ko\'zguni boshlash\n• V06: klaster renderingini vizual tekshirish\n• V07: tozalash (ko\'zguni to\'xtatish, VD o\'chirish, force-stop)\n\nFaqat DiLink 5. Maqsad ilova test vaqtida majburan to\'xtatiladi.\nDavom etish?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testni boshlash</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline testi faqat DiLink 5 uchun.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Sinab ko\'rish uchun ilovani tanlang</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
     <string name="diag_dl5_fission_prompt_title">Klaster tekshiruvi</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s klaster ekranida ko\'rinadimi?\n\n(displey %2$d sinovi)</string>
     <string name="diag_dl5_fission_prompt_yes">Ha</string>

@@ -379,6 +379,15 @@
     <string name="diag_dl5_cluster_test_fission_only_dl5">Fission Testi yalnızca DiLink 5 içindir.</string>
     <string name="diag_dl5_cluster_test_fission_pick_title">Test edilecek uygulamayı seç</string>
     <string name="diag_dl5_cluster_test_fission_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline Testi</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon hattını 7 adımda doğrular: VD oluşturma, VD üzerinde uygulama başlatma, küme yüzeyine yansıtma. Yalnızca DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline Testi</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Hedef: %1$s\n\nBu paket:\n\n• V01: küme projeksiyonunu etkinleştir (auto_container)\n• V02: uygulamanın başlatılabilir olduğunu doğrula\n• V03: 1920×720 VirtualDisplay oluştur\n• V04: uygulamayı VD üzerinde başlat\n• V05: MirrorDaemon aracılığıyla yansıtmayı başlat\n• V06: küme oluşturma işlemini görsel olarak doğrula\n• V07: temizle (yansıtmayı durdur, VD\'yi sil, force-stop)\n\nYalnızca DiLink 5. Hedef uygulama test sırasında zorla durdurulacak.\nDevam edilsin mi?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testi başlat</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline Testi yalnızca DiLink 5 içindir.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Test edilecek uygulamayı seçin</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
     <string name="diag_dl5_fission_prompt_title">Cluster doğrulama</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s cluster ekranında görünüyor mu?\n\n(ekran %2$d testi)</string>
     <string name="diag_dl5_fission_prompt_yes">Evet</string>
