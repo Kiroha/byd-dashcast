@@ -277,6 +277,39 @@ public final class BetaProxyClient {
     }
 
     /**
+     * v1.3.3 — Eager invalidation entry point for call-sites that detect a
+     * dead binder by catching {@link android.os.DeadObjectException} from a
+     * {@code transact()} call on the daemon binder. The kernel sometimes
+     * fails to deliver the binderDied() notification on DiLink 3 / Android
+     * 10 (observed silent deaths on user devices in v1.3.x), leaving
+     * {@link #isConnected()} stuck on {@code true} while every call throws.
+     * Sites must call this method as soon as they catch such an exception
+     * so that:
+     *   (1) the next {@link #isConnected()} returns false immediately;
+     *   (2) {@link ProxyKeeperService} picks up the dead state at its next
+     *       heartbeat and triggers a reconnect;
+     *   (3) the silent-death event is counted in metrics for diagnosis.
+     *
+     * Safe to call from any thread, idempotent.
+     *
+     * @param reason short tag included in the log line (e.g. "MirrorStart").
+     */
+    public static void invalidateBinder(String reason) {
+        synchronized (LOCK) {
+            IBinder dead = sBinder;
+            if (dead == null) return; // already invalidated, nothing to do
+            try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+            sBinder = null;
+            sDaemonUid = -1;
+            sDaemonPid = -1;
+            sDaemonVer = null;
+            BetaProxyMetrics.inc(sAppCtx, BetaProxyMetrics.K_BINDER_DEATHS_SILENT);
+            AppLogger.w(TAG, "invalidateBinder(" + reason
+                    + ") — silent death detected by caller (kernel notif missing)");
+        }
+    }
+
+    /**
      * Ensure the daemon is reachable. If a binder is already cached and live,
      * returns immediately. Otherwise: (1) registers a receiver if not done yet;
      * (2) bootstraps a daemon via {@link AdbLocalClient}; (3) waits up to

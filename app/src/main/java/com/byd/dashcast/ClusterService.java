@@ -540,6 +540,25 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     AppLogger.w(TAG, "findRunningTaskId " + packageName
                             + " — not found in dumpsys recents (out.length=" + out.length() + ")");
                 }
+                // Path 2b (v1.3.4) — launcher-agnostic fallback via
+                // `dumpsys activity activities`. Third-party launchers (e.g.
+                // com.dudu.autoui observed in field log byd_log_20260529_214954)
+                // replace the BYD launcher and manage the recent task stack
+                // differently, so live tasks never show up in `dumpsys activity
+                // recents`. `activities` lists every ActivityRecord across all
+                // stacks regardless of launcher behaviour.
+                String outAct = com.byd.dashcast.beta.BetaProxyClient
+                        .runShell("dumpsys activity activities");
+                if (outAct != null && !outAct.isEmpty()) {
+                    int id = parseTaskIdFromDumpsysActivities(outAct, packageName);
+                    if (id > 0) {
+                        AppLogger.d(TAG, "findRunningTaskId " + packageName
+                                + " → taskId=" + id + " (via daemon dumpsys activities)");
+                        return id;
+                    }
+                    AppLogger.w(TAG, "findRunningTaskId " + packageName
+                            + " — not found in dumpsys activities (out.length=" + outAct.length() + ")");
+                }
             } else {
                 AppLogger.w(TAG, "findRunningTaskId " + packageName
                         + " — daemon not connected; cannot fallback to dumpsys");
@@ -599,6 +618,48 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         } catch (Throwable t) {
             AppLogger.w(TAG, "findRunningTaskId AdbLocal dumpsys fallback: " + t.getMessage());
         }
+
+        // Path 3b (v1.3.4) — launcher-agnostic fallback via AdbLocal
+        // + `dumpsys activity activities`. Same rationale as Path 2b for
+        // devices where the daemon is not running.
+        try {
+            final java.util.concurrent.atomic.AtomicReference<String> outRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.atomic.AtomicReference<String> errRef =
+                    new java.util.concurrent.atomic.AtomicReference<>(null);
+            final java.util.concurrent.CountDownLatch latch =
+                    new java.util.concurrent.CountDownLatch(1);
+            AdbLocalClient.executeShellWithResult(this, "dumpsys activity activities",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String report) { outRef.set(report); latch.countDown(); }
+                        @Override public void onError(String error)   { errRef.set(error);  latch.countDown(); }
+                    });
+            boolean done = latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!done) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys activities timeout (5s)");
+                return -1;
+            }
+            String err = errRef.get();
+            if (err != null) {
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — AdbLocal dumpsys activities error: " + err);
+                return -1;
+            }
+            String out = outRef.get();
+            if (out != null && !out.isEmpty()) {
+                int id = parseTaskIdFromDumpsysActivities(out, packageName);
+                if (id > 0) {
+                    AppLogger.d(TAG, "findRunningTaskId " + packageName
+                            + " → taskId=" + id + " (via AdbLocal dumpsys activities)");
+                    return id;
+                }
+                AppLogger.w(TAG, "findRunningTaskId " + packageName
+                        + " — not found in AdbLocal dumpsys activities (out.length=" + out.length() + ")");
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "findRunningTaskId AdbLocal dumpsys activities fallback: " + t.getMessage());
+        }
         return -1;
     }
 
@@ -641,6 +702,40 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         try { return Integer.parseInt(mm.group(1)); } catch (NumberFormatException ignored) {}
                     }
                 }
+            }
+        } catch (Exception ignored) {}
+        return -1;
+    }
+
+    /**
+     * v1.3.4 — Parse a numeric taskId out of a {@code dumpsys activity activities}
+     * dump for the given package. Used as a launcher-agnostic fallback when the
+     * stock recent-task stack is not populated (third-party launchers such as
+     * {@code com.dudu.autoui} bypass {@code mRecentTasks}).
+     *
+     * AOSP {@code ActivityRecord.toString()} emits a stable form across API 28–33:
+     * <pre>ActivityRecord{hash u0 com.waze/.MainActivity t88}</pre>
+     * The {@code t<N>} suffix is the owning task id. This is present whether the
+     * record appears under a {@code Stack}/{@code Task} block, a {@code Hist}/{@code Run}
+     * list, or the resumed/focused-activity lines, so a single regex covers all
+     * dumpsys variants we have observed on DiLink 2 / 3 / 4 / 5.
+     *
+     * Returns the first match (top-most resumed activity for the package),
+     * or -1 if none.
+     */
+    static int parseTaskIdFromDumpsysActivities(String dump, String packageName) {
+        if (dump == null || packageName == null) return -1;
+        try {
+            // ActivityRecord{<hash> u<uid> <pkg>/<class> t<taskId>}
+            // <class> may start with a leading dot or be a fully-qualified name;
+            // it never contains a space or closing brace.
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "ActivityRecord\\{[^}]*\\s"
+                            + java.util.regex.Pattern.quote(packageName)
+                            + "/[^\\s}]+\\st(\\d+)\\}");
+            java.util.regex.Matcher m = p.matcher(dump);
+            if (m.find()) {
+                try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException ignored) {}
             }
         } catch (Exception ignored) {}
         return -1;
