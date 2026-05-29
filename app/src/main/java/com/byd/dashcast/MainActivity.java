@@ -1145,7 +1145,50 @@ public class MainActivity extends AppCompatActivity
                     final AppInfo pending = mPendingAppAfterActivation;
                     mPendingAppAfterActivation = null;
                     AppLogger.i(TAG, "Auto-sending pending app after activation: " + pending.packageName);
-                    onSendToDashboard(pending);
+                    // v1.3.8-beta — if this auto-send is for a restored cluster
+                    // app and our cached pkg matches it, the "already on cluster
+                    // — show mirror only" shortcut in onSendToDashboard would
+                    // skip the actual launch. If Android killed the process
+                    // while DashCast was in background, that path would just
+                    // mirror the empty cluster display (black screen for the
+                    // user) and only state-poll would clear state ~8 s later.
+                    // Pre-check pidof and force a fresh launch if dead, so
+                    // onSendToDashboard takes the normal launch path.
+                    if (pending.packageName != null
+                            && pending.packageName.equals(mCurrentDashboardPkg)) {
+                        final String checkPkg = pending.packageName;
+                        ShellGateway.execShellWithResult(MainActivity.this,
+                                "pidof " + checkPkg,
+                                new AdbLocalClient.Callback() {
+                                    @Override public void onSuccess(String output) {
+                                        final boolean alive = output != null && !output.trim().isEmpty();
+                                        runOnUiThread(new Runnable() {
+                                            @Override public void run() {
+                                                if (isFinishing() || isDestroyed()) return;
+                                                if (!alive) {
+                                                    AppLogger.w(TAG, "auto-restore: " + checkPkg
+                                                            + " process is dead → clearing cluster state for fresh launch");
+                                                    clearClusterState();
+                                                }
+                                                onSendToDashboard(pending);
+                                            }
+                                        });
+                                    }
+                                    @Override public void onError(String error) {
+                                        // Daemon down or pidof failed — proceed with shortcut path.
+                                        AppLogger.w(TAG, "auto-restore: pidof failed (" + error
+                                                + ") — proceeding with mirror shortcut");
+                                        runOnUiThread(new Runnable() {
+                                            @Override public void run() {
+                                                if (isFinishing() || isDestroyed()) return;
+                                                onSendToDashboard(pending);
+                                            }
+                                        });
+                                    }
+                                });
+                    } else {
+                        onSendToDashboard(pending);
+                    }
                 }
 
                 // Auto-Launch process
