@@ -145,7 +145,8 @@
         <!-- Main 15.6" screen -->
         <activity
             android:name=".MainActivity"
-            android:screenOrientation="landscape"/>
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustPan|stateHidden"/>
 
         <!-- v1.2.8 — Keyboard bridge for DL5 cluster mirror (IME relay) -->
         <activity
