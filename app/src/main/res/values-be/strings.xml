@@ -437,7 +437,10 @@
     <string name="diag_voice_commands_title">Галасавыя каманды (Vosk)</string>
     <string name="diag_voice_commands_switch">Уключыць</string>
     <string name="diag_voice_commands_hint">Скажыце «Hey Jarvis», затым каманду: «кластар», «закрыць кластар», «запусціць YouTube», «дыягностыка», «журналы».</string>
-    <string name="diag_voice_wakeword_card_title">Ключавое слова (openWakeWord)</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">Ключ API OpenAI (неабавязкова — актывуе Jarvis ШІ)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Ключавое слова (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Уключыць</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-ацэнка (парог 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Мадэль: hey_jarvis_v0.1 (заменнік для «Ok DashCast»)</string>

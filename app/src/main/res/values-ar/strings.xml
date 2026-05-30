@@ -437,7 +437,10 @@
     <string name="diag_voice_commands_title">الأوامر الصوتية (Vosk)</string>
     <string name="diag_voice_commands_switch">تفعيل</string>
     <string name="diag_voice_commands_hint">قل "Hey Jarvis" ثم أمرك: "الكتلة"، "إغلاق الكتلة"، "تشغيل YouTube"، "التشخيص"، "السجلات".</string>
-    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">مفتاح OpenAI API (اختياري — يُفعّل Jarvis الذكاء الاصطناعي)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">تفعيل</string>
     <string name="diag_voice_wakeword_score_label">درجة السيجمويد (عتبة 0٫5)</string>
     <string name="diag_voice_wakeword_model_fmt">النموذج: hey_jarvis_v0.1 (نائب لـ «Ok DashCast»)</string>

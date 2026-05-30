@@ -437,6 +437,10 @@
     <string name="diag_voice_commands_title">Ovozli buyruqlar (Vosk)</string>
     <string name="diag_voice_commands_switch">Yoqish</string>
     <string name="diag_voice_commands_hint">"Hey Jarvis" deb ayting, so\'ng buyrug\'ingizni: "klaster", "klasterni yoping", "YouTube ni ishga tushiring", "diagnostika", "jurnallar".</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API kaliti (ixtiyoriy — Jarvis Sun\'iy intellektini faollashtiradi)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>
     <string name="diag_voice_wakeword_card_title">Faollashtirish soʻzi (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Yoqish</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid baho (chegara 0,5)</string>

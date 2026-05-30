@@ -223,9 +223,9 @@ public class DiagActivity extends AppCompatActivity {
                 mVoskTranscriber.release();
                 mVoskTranscriber = null;
             }
-            if (mVoiceCommandRouter != null) {
-                mVoiceCommandRouter.release();
-                mVoiceCommandRouter = null;
+            if (mLlmVoiceEngine != null) {
+                mLlmVoiceEngine.release();
+                mLlmVoiceEngine = null;
             }
         } catch (Throwable ignore) {}
         try {
@@ -2780,11 +2780,12 @@ public class DiagActivity extends AppCompatActivity {
     private TextView       tvVoiceWwModel;
     private com.byd.dashcast.voice.wakeword.WakeWordEngine voiceWakeWordEngine;
 
-    // v1.4.0-beta voice commands card
+    // v1.4.2-beta voice commands card
     private com.google.android.material.materialswitch.MaterialSwitch swVoiceCommands;
     private TextView       tvVoiceTranscript;
+    private android.widget.EditText etApiKey;
     private VoskTranscriber mVoskTranscriber;
-    private VoiceCommandRouter mVoiceCommandRouter;
+    private com.byd.dashcast.voice.LlmVoiceEngine mLlmVoiceEngine;
 
     private final BroadcastReceiver voiceReceiver = new BroadcastReceiver() {
         @Override
@@ -2840,6 +2841,19 @@ public class DiagActivity extends AppCompatActivity {
         // v1.4.0 voice commands card
         swVoiceCommands  = panelVoice.findViewById(R.id.sw_voice_commands);
         tvVoiceTranscript = panelVoice.findViewById(R.id.tv_voice_transcript);
+        etApiKey         = panelVoice.findViewById(R.id.et_openai_api_key);
+        if (etApiKey != null) {
+            // Pre-fill with stored key (masked display via inputType=textPassword in XML)
+            String stored = com.byd.dashcast.voice.LlmVoiceEngine.readApiKey(this);
+            if (stored != null) etApiKey.setText(stored);
+            etApiKey.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    String key = etApiKey.getText().toString().trim();
+                    com.byd.dashcast.voice.LlmVoiceEngine.saveApiKey(DiagActivity.this, key);
+                    AppLogger.d("DiagVoice", "API key saved (" + (key.isEmpty() ? "empty" : "***") + ")");
+                }
+            });
+        }
         if (swVoiceCommands != null) {
             swVoiceCommands.setChecked(mVoskTranscriber != null);
             swVoiceCommands.setOnCheckedChangeListener((bv, checked) -> onVoiceCommandsToggle(checked));
@@ -3052,18 +3066,20 @@ public class DiagActivity extends AppCompatActivity {
             // Wake word must be active to feed the transcriber.
             if (voiceWakeWordEngine == null) {
                 if (swVoiceWakeword != null) swVoiceWakeword.setChecked(true);
-                // onWakeWordToggle will have been called synchronously.
             }
-            mVoiceCommandRouter = new VoiceCommandRouter(this);
+            mLlmVoiceEngine  = new com.byd.dashcast.voice.LlmVoiceEngine(this);
             mVoskTranscriber = new VoskTranscriber(this);
             VoiceService.setTranscriber(mVoskTranscriber);
-            AppLogger.i("DiagVoice", "Voice commands ON");
+            boolean hasKey = com.byd.dashcast.voice.LlmVoiceEngine.hasApiKey(this);
+            AppLogger.i("DiagVoice", "Voice commands ON — LLM=" + hasKey);
             if (tvVoiceTranscript != null)
-                tvVoiceTranscript.setText("En attente du mot d'éveil…");
+                tvVoiceTranscript.setText(hasKey
+                        ? "En attente du mot d'éveil… (Jarvis IA activé)"
+                        : "En attente du mot d'éveil… (mode regex, configurez une clé API)");
         } else {
             VoiceService.setTranscriber(null);
             if (mVoskTranscriber != null) { mVoskTranscriber.release(); mVoskTranscriber = null; }
-            if (mVoiceCommandRouter != null) { mVoiceCommandRouter.release(); mVoiceCommandRouter = null; }
+            if (mLlmVoiceEngine  != null) { mLlmVoiceEngine.release();  mLlmVoiceEngine  = null; }
             AppLogger.i("DiagVoice", "Voice commands OFF");
             if (tvVoiceTranscript != null) tvVoiceTranscript.setText("");
         }
@@ -3082,8 +3098,8 @@ public class DiagActivity extends AppCompatActivity {
             String text = intent.getStringExtra(VoskTranscriber.EXTRA_TEXT);
             if (text != null) tvVoiceTranscript.setText("\"" + text + "\"");
             // Route the transcript when voice commands are enabled.
-            if (mVoiceCommandRouter != null && text != null)
-                mVoiceCommandRouter.route(text);
+            if (mLlmVoiceEngine != null && text != null)
+                mLlmVoiceEngine.route(text);
         }
     }
 }

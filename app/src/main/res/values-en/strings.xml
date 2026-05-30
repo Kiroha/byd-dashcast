@@ -304,7 +304,10 @@
     <string name="diag_voice_commands_title">Voice commands (Vosk)</string>
     <string name="diag_voice_commands_switch">Enable</string>
     <string name="diag_voice_commands_hint">Say "Hey Jarvis" then your command: "cluster", "close cluster", "launch YouTube", "diagnostics", "logs".</string>
-    <string name="diag_voice_wakeword_card_title">Wake word (openWakeWord)</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API key (optional — activates Jarvis AI)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Wake word (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Enable</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid score (threshold 0.5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (placeholder for “Ok DashCast”)</string>
