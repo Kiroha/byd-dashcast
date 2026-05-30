@@ -96,6 +96,53 @@ public final class VoiceService extends Service {
     private static volatile boolean sIsRunning;
     public  static boolean isRunning() { return sIsRunning; }
 
+    // ─── v1.4.2-beta pre-roll ring buffer ─────────────────────────────────
+    //
+    // Always keep the last PRE_ROLL_SAMPLES of audio in a circular buffer.
+    // VoskTranscriber calls getPreRollCopy() right before installing its
+    // SampleConsumer so that audio captured during and just after wake-word
+    // detection (while the Recognizer object is being created) is not lost.
+    // Without this, the first 100-200 ms of the command is missed, turning
+    // "diagnostic" into "stic".
+
+    /** 500 ms of pre-roll at 16 kHz — enough to cover Recognizer init delay. */
+    private static final int PRE_ROLL_SAMPLES = SAMPLE_RATE_HZ / 2; // 8 000
+    private static final short[] sPreRollBuf  = new short[PRE_ROLL_SAMPLES];
+    private static int     sPreRollHead  = 0;   // next write position
+    private static boolean sPreRollFull  = false;
+    private static final Object PRE_ROLL_LOCK = new Object();
+
+    private static void pushPreRoll(short[] pcm, int n) {
+        synchronized (PRE_ROLL_LOCK) {
+            for (int i = 0; i < n; i++) {
+                sPreRollBuf[sPreRollHead] = pcm[i];
+                sPreRollHead = (sPreRollHead + 1) % PRE_ROLL_SAMPLES;
+                if (sPreRollHead == 0) sPreRollFull = true;
+            }
+        }
+    }
+
+    /**
+     * Returns a linearised copy of the pre-roll ring buffer (oldest sample
+     * first). The returned array is a snapshot — safe to use from any thread.
+     */
+    public static short[] getPreRollCopy() {
+        synchronized (PRE_ROLL_LOCK) {
+            if (!sPreRollFull && sPreRollHead == 0) return new short[0];
+            int len = sPreRollFull ? PRE_ROLL_SAMPLES : sPreRollHead;
+            short[] out = new short[len];
+            if (sPreRollFull) {
+                // oldest data starts at sPreRollHead
+                int part1 = PRE_ROLL_SAMPLES - sPreRollHead;
+                System.arraycopy(sPreRollBuf, sPreRollHead, out, 0,     part1);
+                System.arraycopy(sPreRollBuf, 0,            out, part1, sPreRollHead);
+            } else {
+                System.arraycopy(sPreRollBuf, 0, out, 0, sPreRollHead);
+            }
+            return out;
+        }
+    }
+
     // ─── v1.2.50-beta wake-word hook ───────────────────────────────────────
     //
     // The Diag "Wake word" switch installs an in-process consumer that the
@@ -237,6 +284,7 @@ public final class VoiceService extends Service {
             // if one is currently installed. Null = production behaviour =
             // zero overhead. try/catch keeps a misbehaving consumer from
             // killing the capture loop.
+            pushPreRoll(frame, read); // v1.4.2 pre-roll (always, low cost)
             SampleConsumer c = sSampleConsumer;
             if (c != null) {
                 try { c.onFrame(frame, read); }

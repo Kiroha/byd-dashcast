@@ -69,10 +69,12 @@ public final class VoskTranscriber {
 
     /** Maximum recording window after wake word. */
     private static final int MAX_LISTEN_MS         = 5_000;
-    /** Stop early when RMS stays below this for SILENCE_MS consecutive ms. */
-    private static final int SILENCE_THRESHOLD_RMS = 200;
-    /** Silence duration that ends the listen window. */
-    private static final int SILENCE_MS            = 1_200;
+    /** Stop early when RMS stays below this for SILENCE_MS consecutive ms.
+     *  500 is safe in a quiet car; raise further if background noise is high. */
+    private static final int SILENCE_THRESHOLD_RMS = 500;
+    /** Silence duration that ends the listen window.
+     *  800 ms is snappy enough to not cut mid-word. */
+    private static final int SILENCE_MS            = 800;
 
     // ─── State ────────────────────────────────────────────────────────────
 
@@ -210,6 +212,22 @@ public final class VoskTranscriber {
         try {
             reco = new Recognizer(mModel, VoiceService.SAMPLE_RATE_HZ);
             final Recognizer finalReco = reco;
+
+            // v1.4.2 — feed pre-roll BEFORE installing the live consumer.
+            // This covers audio captured during wake-word detection latency
+            // (Recognizer creation = ~100-200 ms) which would otherwise be
+            // lost, turning "diagnostic" into "stic".
+            short[] preRoll = VoiceService.getPreRollCopy();
+            if (preRoll.length > 0) {
+                byte[] preBytes = new byte[preRoll.length * 2];
+                for (int i = 0; i < preRoll.length; i++) {
+                    preBytes[i * 2]     = (byte) (preRoll[i] & 0xFF);
+                    preBytes[i * 2 + 1] = (byte) ((preRoll[i] >> 8) & 0xFF);
+                }
+                finalReco.acceptWaveForm(preBytes, preBytes.length);
+                AppLogger.d(TAG, "Pre-roll fed: " + preRoll.length + " samples ("
+                        + (preRoll.length * 1000 / VoiceService.SAMPLE_RATE_HZ) + " ms)");
+            }
 
             // Install our Vosk consumer; this pauses WakeWordEngine feed.
             VoiceService.setSampleConsumer((pcm, n) -> {
