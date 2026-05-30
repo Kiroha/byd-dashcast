@@ -437,7 +437,10 @@
     <string name="diag_voice_commands_title">Sesli komutlar (Vosk)</string>
     <string name="diag_voice_commands_switch">Etkinleştir</string>
     <string name="diag_voice_commands_hint">"Hey Jarvis" deyin, ardından komutunuzu: "küme", "kümeyi kapat", "YouTube başlat", "tanılama", "günlükler".</string>
-    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API anahtarı (isteğe bağlı — Jarvis Yapay Zekasını etkinleştirir)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Etkinleştir</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid puanı (eşik 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (“Ok DashCast” için yer tutucu)</string>

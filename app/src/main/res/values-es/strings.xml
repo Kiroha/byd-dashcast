@@ -437,7 +437,10 @@
     <string name="diag_voice_commands_title">Comandos de voz (Vosk)</string>
     <string name="diag_voice_commands_switch">Activar</string>
     <string name="diag_voice_commands_hint">Di "Hey Jarvis" y luego tu comando: "cluster", "cerrar cluster", "abrir YouTube", "diagnóstico", "registros".</string>
-    <string name="diag_voice_wakeword_card_title">Palabra de activación (openWakeWord)</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">Clave API de OpenAI (opcional — activa Jarvis IA)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Palabra de activación (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Activar</string>
     <string name="diag_voice_wakeword_score_label">Puntuación sigmoide (umbral 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Modelo: hey_jarvis_v0.1 (marcador para «Ok DashCast»)</string>

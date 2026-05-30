@@ -437,6 +437,10 @@
     <string name="diag_voice_commands_title">Голосові команди (Vosk)</string>
     <string name="diag_voice_commands_switch">Увімкнути</string>
     <string name="diag_voice_commands_hint">Скажіть «Hey Jarvis», потім команду: «кластер», «закрити кластер», «запустити YouTube», «діагностика», «журнали».</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">Ключ API OpenAI (необов\'язково — активує Jarvis ШІ)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>
     <string name="diag_voice_wakeword_card_title">Ключове слово (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Увімкнути</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-оцінка (поріг 0,5)</string>

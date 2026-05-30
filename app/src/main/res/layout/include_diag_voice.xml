@@ -10,6 +10,7 @@
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -344,6 +345,30 @@
                     android:textSize="13sp"
                     android:fontFamily="monospace"
                     android:text=""/>
+
+                <!-- v1.4.2-beta — OpenAI API key for LLM voice engine -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/diag_voice_apikey_label"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"/>
+
+                <EditText
+                    android:id="@+id/et_openai_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/diag_voice_apikey_hint"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:imeOptions="actionDone"
+                    android:textColor="@color/md_on_surface"
+                    android:textColorHint="@color/md_on_surface_variant"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace"
+                    tools:ignore="HardcodedText"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

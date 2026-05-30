@@ -343,6 +343,9 @@
     <string name="diag_voice_commands_title">Commandes vocales (Vosk)</string>
     <string name="diag_voice_commands_switch">Activer</string>
     <string name="diag_voice_commands_hint">Dites « Hey Jarvis » puis votre commande : « cluster », « ferme le cluster », « lance YouTube », « diagnostics », « logs ».</string>
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">Clé API OpenAI (optionnel — active Jarvis IA)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>
     <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Activer</string>
     <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
