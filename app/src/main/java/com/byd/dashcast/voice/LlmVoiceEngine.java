@@ -2,6 +2,8 @@ package com.byd.dashcast.voice;
 
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
@@ -75,8 +77,8 @@ public final class LlmVoiceEngine {
     // ─── State ─────────────────────────────────────────────────────────────
     private final Context              mCtx;
     private final VoiceCommandRouter   mFallback;
-    private final Handler              mMain = new Handler(Looper.getMainLooper());
-
+    private final Handler              mMain = new Handler(Looper.getMainLooper());    /** Guard: stop any previous TTS playback before starting a new one. */
+    private MediaPlayer                mActiveMp;
     public LlmVoiceEngine(Context ctx) {
         mCtx     = ctx.getApplicationContext();
         mFallback = new VoiceCommandRouter(ctx);
@@ -99,6 +101,12 @@ public final class LlmVoiceEngine {
     /** Releases the fallback router (TTS engine). Call from owner's onDestroy. */
     public void release() {
         mFallback.release();
+        mMain.post(() -> {
+            if (mActiveMp != null) {
+                try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
+                mActiveMp = null;
+            }
+        });
     }
 
     // ─── API key storage ───────────────────────────────────────────────────
@@ -249,9 +257,29 @@ public final class LlmVoiceEngine {
             }
             final File finalTmp = tmp;
             mMain.post(() -> {
+                // Stop any previous TTS still playing
+                if (mActiveMp != null) {
+                    try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
+                    mActiveMp = null;
+                }
+                final AudioManager am = (AudioManager)
+                        mCtx.getSystemService(android.content.Context.AUDIO_SERVICE);
+                final AudioFocusRequest focusReq = new AudioFocusRequest.Builder(
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(new android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build())
+                        .setAcceptsDelayedFocusGain(false)
+                        .build();
+                int focus = am.requestAudioFocus(focusReq);
+                if (focus != AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                        && focus != AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
+                    AppLogger.w(TAG, "Audio focus not granted ("+focus+") — playing anyway");
+                }
                 try {
                     MediaPlayer mp = new MediaPlayer();
-                    // AudioAttributes preferred over deprecated setAudioStreamType() (API 21+)
+                    mActiveMp = mp;
                     mp.setAudioAttributes(new android.media.AudioAttributes.Builder()
                             .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
                             .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -259,21 +287,26 @@ public final class LlmVoiceEngine {
                     mp.setDataSource(finalTmp.getAbsolutePath());
                     mp.setOnCompletionListener(p -> {
                         p.release();
+                        if (mActiveMp == p) mActiveMp = null;
                         finalTmp.delete();
+                        am.abandonAudioFocusRequest(focusReq);
                     });
                     mp.setOnErrorListener((p, what, extra) -> {
                         AppLogger.w(TAG, "MediaPlayer error what=" + what);
                         p.release();
+                        if (mActiveMp == p) mActiveMp = null;
                         finalTmp.delete();
+                        am.abandonAudioFocusRequest(focusReq);
                         return true;
                     });
                     mp.setOnPreparedListener(p -> {
                         p.start();
                         AppLogger.d(TAG, "Playing TTS audio");
                     });
-                    mp.prepareAsync(); // non-blocking — starts on OnPreparedListener
+                    mp.prepareAsync();
                 } catch (Exception e) {
                     AppLogger.w(TAG, "MediaPlayer error: " + e.getMessage());
+                    am.abandonAudioFocusRequest(focusReq);
                 }
             });
         } catch (Exception e) {
