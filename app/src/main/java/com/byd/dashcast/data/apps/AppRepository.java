@@ -2,6 +2,7 @@ package com.byd.dashcast.data.apps;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Handler;
@@ -10,6 +11,7 @@ import android.os.Looper;
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;
+import com.byd.dashcast.model.AppShortcut;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -134,6 +136,18 @@ public final class AppRepository {
         mCachedApps = null;
     }
 
+    /**
+     * Returns the current in-memory app list without triggering a reload.
+     * Safe to call from the main thread immediately after {@link #setFavorite} or
+     * {@link #setAutoLaunch} to refresh the UI without a PackageManager re-query.
+     *
+     * @return the cached sorted list, or an empty list if no load has completed yet.
+     */
+    public List<AppInfo> getApps() {
+        List<AppInfo> cached = mCachedApps;
+        return cached != null ? cached : Collections.emptyList();
+    }
+
     /** Shuts down the background executor. Call from Application.onTerminate() if needed. */
     public void shutdown() {
         mExecutor.shutdown();
@@ -167,9 +181,20 @@ public final class AppRepository {
         Set<String> favorites  = ClusterPrefs.getFavorites(ctx);
         String autoLaunchPkg   = ClusterPrefs.getAutoLaunchPkg(ctx);
         String selfPkg         = ctx.getPackageName();
+        SharedPreferences prefs = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
 
         // Exclude well-known system launchers that should never appear in the list.
         Set<String> exclusions = buildExclusionSet(selfPkg);
+
+        // Check shortcut host permission once — avoids per-app SecurityException overhead.
+        android.content.pm.LauncherApps launcherApps = null;
+        boolean hasShortcutPerm = false;
+        int densityDpi = ctx.getResources().getDisplayMetrics().densityDpi;
+        try {
+            launcherApps = (android.content.pm.LauncherApps)
+                    ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+            hasShortcutPerm = launcherApps != null && launcherApps.hasShortcutHostPermission();
+        } catch (Exception ignored) { }
 
         List<AppInfo> apps = new ArrayList<>(resolveInfos.size());
         for (ResolveInfo ri : resolveInfos) {
@@ -193,6 +218,31 @@ public final class AppRepository {
             AppInfo info      = new AppInfo(pkg, name, icon);
             info.isFavorite   = favorites.contains(pkg);
             info.isAutoLaunch = pkg.equals(autoLaunchPkg);
+            info.launchCount  = prefs.getInt("launch_count_" + pkg, 0);
+
+            // Load pinned/dynamic/manifest shortcuts. Permission checked once above.
+            if (hasShortcutPerm) {
+                try {
+                    android.content.pm.LauncherApps.ShortcutQuery query =
+                            new android.content.pm.LauncherApps.ShortcutQuery();
+                    query.setQueryFlags(
+                              android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                            | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
+                            | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
+                    query.setPackage(pkg);
+                    List<android.content.pm.ShortcutInfo> shortcuts =
+                            launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
+                    if (shortcuts != null) {
+                        for (android.content.pm.ShortcutInfo s : shortcuts) {
+                            android.graphics.drawable.Drawable sIcon =
+                                    launcherApps.getShortcutIconDrawable(s, densityDpi);
+                            info.shortcuts.add(new AppShortcut(
+                                    s.getId(), s.getShortLabel().toString(), sIcon));
+                        }
+                    }
+                } catch (Exception ignored) { }
+            }
+
             apps.add(info);
         }
 
@@ -202,13 +252,22 @@ public final class AppRepository {
     }
 
     /**
-     * Sort order: favorites first, then alphabetical by display name (locale-aware).
-     * Stable so equal-priority items keep their relative PackageManager order.
+     * 4-level sort matching the UI contract:
+     * 1. Category  (Navigation → Media → Other)
+     * 2. Favorites first within each category
+     * 3. Usage frequency (descending launch count)
+     * 4. Alphabetical fallback (locale-aware, case-insensitive)
      */
     private static void sortApps(List<AppInfo> apps) {
         Collections.sort(apps, (a, b) -> {
+            if (a.category != b.category) {
+                return Integer.compare(a.category, b.category);
+            }
             if (a.isFavorite && !b.isFavorite) return -1;
             if (!a.isFavorite && b.isFavorite) return 1;
+            if (a.launchCount != b.launchCount) {
+                return Integer.compare(b.launchCount, a.launchCount); // descending
+            }
             return a.appName.compareToIgnoreCase(b.appName);
         });
     }
