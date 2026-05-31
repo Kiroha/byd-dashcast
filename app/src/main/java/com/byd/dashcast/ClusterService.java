@@ -57,7 +57,16 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // worker threads (auto-resize-thread in MainActivity.autoApplyInsetsIfNeeded,
     // BetaProxyClient connect path). Without volatile, the worker could observe a
     // stale `false` after the service started and bail out incorrectly.
+    //
+    // ARCHITECTURE NOTE: prefer the method-based accessor {@link #isRunning()} over
+    // the raw field. Direct field reads bypass future logic changes and make it
+    // harder to trace all callers. The field is kept public for backward-compat
+    // with existing call sites that pre-date this accessor.
     public static volatile boolean sIsRunning = false;
+
+    /** @return {@code true} while this service is alive between onCreate() and onDestroy(). */
+    public static boolean isRunning() { return sIsRunning; }
+
     /** v1.2.8 — exposed so satellite activities (KeyboardBridgeActivity) can reach the
      *  InputForwarder without binding the service themselves. */
     private static volatile ClusterService sInstance = null;
