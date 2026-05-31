@@ -174,7 +174,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // actually live. Outside of that window the cluster display is dormant
         // and any focus event from a secondary display is none of our business
         // (other in-vehicle systems, external HDMI, etc.).
-        if (!com.byd.dashcast.ClusterService.sIsRunning) return;
+        if (!com.byd.dashcast.ClusterService.isRunning()) return;
 
         try {
             // Cluster filter: focus events from the head-unit display are
