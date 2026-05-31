@@ -173,6 +173,10 @@ public final class ClusterPrefs {
         return prefs(ctx).getBoolean(KEY_GRID_MODE, false);
     }
 
+    public static boolean isGridMode(Context ctx, boolean defaultValue) {
+        return prefs(ctx).getBoolean(KEY_GRID_MODE, defaultValue);
+    }
+
     public static void setGridMode(Context ctx, boolean gridMode) {
         edit(ctx).putBoolean(KEY_GRID_MODE, gridMode).apply();
     }
@@ -199,6 +203,10 @@ public final class ClusterPrefs {
 
     public static boolean isBootAutoStartEnabled(Context ctx) {
         return prefs(ctx).getBoolean(KEY_BOOT_AUTO_START, false);
+    }
+
+    public static void setBootAutoStartEnabled(Context ctx, boolean enabled) {
+        edit(ctx).putBoolean(KEY_BOOT_AUTO_START, enabled).apply();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
