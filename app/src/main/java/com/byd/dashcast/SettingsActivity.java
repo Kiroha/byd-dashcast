@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 
 import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.platform.Platform;
 
 /**
@@ -37,11 +38,12 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
-    static final String PREFS_NAME      = "byd_app_prefs";
+    // Delegates to ClusterPrefs — the single source of truth for this string.
+    static final String PREFS_NAME      = ClusterPrefs.PREFS_NAME;
 
     // ── Cluster type ─────────────────────────────────────────────────────────
-    static final String PREF_CLUSTER_TYPE = "cluster_screen_size_cmd";
-    static final int    DEFAULT_CLUSTER_TYPE = 30;      // 12.3" — Seal EU
+    static final String PREF_CLUSTER_TYPE = ClusterPrefs.KEY_CLUSTER_TYPE;
+    static final int    DEFAULT_CLUSTER_TYPE = ClusterPrefs.CLUSTER_TYPE_DEFAULT;  // 12.3" — Seal EU
 
     // ── Overscan inset ───────────────────────────────────────────────────────
     public static final String PREF_INSET_H = "overscan_inset_h";
@@ -52,7 +54,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String PREF_OTA_PRERELEASE = "ota_include_prerelease";
     public static final boolean DEFAULT_OTA_PRERELEASE = false;
     // ── Boot / UI toggles ───────────────────────────────────────────────────────────────
-    public static final String PREF_BOOT_AUTO_START       = "boot_auto_start_enabled";
+    public static final String PREF_BOOT_AUTO_START       = ClusterPrefs.KEY_BOOT_AUTO_START;
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
     public static final String PREF_RECONNECT_POPUP       = "reconnect_popup_enabled";
     public static final String PREF_VISUAL_OVERSCAN_MODE  = "visual_overscan_mode";
@@ -244,7 +246,7 @@ public class SettingsActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
         // Cluster type radio
-        int cmd = prefs.getInt(PREF_CLUSTER_TYPE, DEFAULT_CLUSTER_TYPE);
+        int cmd = ClusterPrefs.getClusterType(this);
         switch (cmd) {
             case 29: rgClusterType.check(R.id.rb_88);   break;
             case 31: rgClusterType.check(R.id.rb_1025); break;
@@ -269,7 +271,7 @@ public class SettingsActivity extends AppCompatActivity {
         updateVisualMockup();
         
         // Auto Boot Projection toggle state
-        boolean bootAutoStart = prefs.getBoolean(PREF_BOOT_AUTO_START, false);
+        boolean bootAutoStart = ClusterPrefs.isBootAutoStartEnabled(this);
         cbBootAutoStart.setChecked(bootAutoStart);
         
         // Category filters toggle
@@ -323,8 +325,7 @@ public class SettingsActivity extends AppCompatActivity {
                 if      (checkedId == R.id.rb_88)   cmd = 29;
                 else if (checkedId == R.id.rb_123)  cmd = 30;
                 else if (checkedId == R.id.rb_1025) cmd = 31;
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .putInt(PREF_CLUSTER_TYPE, cmd).apply();
+                ClusterPrefs.setClusterType(SettingsActivity.this, cmd);
                 AppLogger.i("SettingsActivity", "cluster type → cmd=" + cmd);
             }
         });
@@ -395,8 +396,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Auto Start Projection checkbox
         cbBootAutoStart.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean(PREF_BOOT_AUTO_START, isChecked).apply();
+            ClusterPrefs.setBootAutoStartEnabled(this, isChecked);
         });
 
         View.OnClickListener dpadListener = new View.OnClickListener() {
