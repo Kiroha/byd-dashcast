@@ -50,6 +50,7 @@ import android.text.style.StyleSpan;
 import android.graphics.Typeface;
 
 import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.data.apps.AppRepository;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;
 import com.byd.dashcast.voice.VoiceCommandRouter;
@@ -94,6 +95,8 @@ public class MainActivity extends AppCompatActivity
     private DashboardLauncher       mDashboardLauncher; // local reference updated after bind
 
     private static final String PREFS_NAME         = ClusterPrefs.PREFS_NAME;
+    /** Single source of truth for app loading, caching, and favorite/auto-launch mutations. */
+    private final AppRepository mAppRepo = new AppRepository();
     private String mPendingAutoLaunchPkg = null;
     private AppInfo mPendingAppAfterActivation = null;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
@@ -1279,16 +1282,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSetAutoLaunch(AppInfo app, boolean enable) {
-        if (enable) {
-            ClusterPrefs.setAutoLaunchPkg(this, app.packageName);
-            // Clear other auto launches in memory
-            for (AppInfo a : mAdapter.getApps()) {
-                a.isAutoLaunch = a.packageName.equals(app.packageName);
-            }
-        } else {
-            ClusterPrefs.setAutoLaunchPkg(this, null);
-            app.isAutoLaunch = false;
-        }
+        mAppRepo.setAutoLaunch(this, app.packageName, enable);
         // Use post to avoid IllegalStateException (cannot call notify during bind)
         rvApps.post(new Runnable() {
             @android.annotation.SuppressLint("NotifyDataSetChanged") // full refresh after auto-launch toggle
@@ -1301,16 +1295,9 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onToggleFavorite(AppInfo app) {
-        Set<String> favs = new HashSet<>(ClusterPrefs.getFavorites(this));
-        if (favs.contains(app.packageName)) {
-            favs.remove(app.packageName);
-            app.isFavorite = false;
-        } else {
-            favs.add(app.packageName);
-            app.isFavorite = true;
-        }
-        ClusterPrefs.setFavorites(this, favs);
-        loadAppsAsync(); // Reload and re-sort
+        // setFavorite patches the in-memory cache and re-sorts — no PackageManager re-query.
+        mAppRepo.setFavorite(this, app.packageName, !app.isFavorite);
+        deliverAppsToUI(mAppRepo.getApps(), false);
     }
 
     // v0.9.72 — long-press opens a bottom sheet with the per-app actions that
@@ -3498,112 +3485,43 @@ public class MainActivity extends AppCompatActivity
     // ---- Async loading of the app list ----
 
     /**
-     * Loads the list of installed apps in a background thread, then publishes
-     * the result on the main thread via Handler.
+     * Triggers an app list load via {@link AppRepository}.
+     * If a cached list is already available it is delivered immediately (zero latency
+     * on rotation); a background PackageManager refresh always follows.
+     * The result is split into favorites (strip) and non-favorites (grid) by
+     * {@link #deliverAppsToUI}.
      */
     private void loadAppsAsync() {
-        java.util.concurrent.ExecutorService loader = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "load-apps");
-            t.setDaemon(true);
-            return t;
+        mAppRepo.loadApps(this, apps -> {
+            if (isFinishing() || isDestroyed()) return;
+            deliverAppsToUI(apps, true);
         });
-        loader.execute(new Runnable() {
-            @Override public void run() {
-                PackageManager pm = getPackageManager();
-                Intent launcherIntent = new Intent(Intent.ACTION_MAIN, null);
-                launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+    }
 
-                List<ResolveInfo> resolveInfos = pm.queryIntentActivities(launcherIntent, 0);
-                List<AppInfo> apps = new ArrayList<>();
-                final String ownPackage = getPackageName();
-
-                for (ResolveInfo ri : resolveInfos) {
-                    String pkg = ri.activityInfo.packageName;
-                    if (pkg.equals(ownPackage)) continue;
-                    String name = ri.loadLabel(pm).toString();
-                    AppInfo appInfo = new AppInfo(pkg, name, ri.loadIcon(pm));
-                    
-                    try {
-                        android.content.pm.LauncherApps launcherApps = (android.content.pm.LauncherApps) getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
-                        if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
-                            android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
-                            query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
-                            query.setPackage(pkg);
-                            
-                            java.util.List<android.content.pm.ShortcutInfo> shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle());
-                            if (shortcuts != null) {
-                                for (android.content.pm.ShortcutInfo shortcut : shortcuts) {
-                                    android.graphics.drawable.Drawable shortcutIcon = launcherApps.getShortcutIconDrawable(shortcut, getResources().getDisplayMetrics().densityDpi);
-                                    appInfo.shortcuts.add(new AppShortcut(shortcut.getId(), shortcut.getShortLabel().toString(), shortcutIcon));
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Ignored: app has no shortcuts or no permission
-                    }
-                    
-                    apps.add(appInfo);
-                }
-
-                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                Set<String> favs = ClusterPrefs.getFavorites(MainActivity.this);
-                String autoPkg = ClusterPrefs.getAutoLaunchPkg(MainActivity.this);
-
-                for (AppInfo info : apps) {
-                    if (favs.contains(info.packageName)) {
-                        info.isFavorite = true;
-                    }
-                    if (autoPkg != null && autoPkg.equals(info.packageName)) {
-                        info.isAutoLaunch = true;
-                    }
-                    info.launchCount = prefs.getInt("launch_count_" + info.packageName, 0);
-                }
-
-                Collections.sort(apps, new Comparator<AppInfo>() {
-                    @Override
-                    public int compare(AppInfo a, AppInfo b) {
-                        // 1. Group automatically by Category (Navigation -> Media -> Others)
-                        if (a.category != b.category) {
-                            return Integer.compare(a.category, b.category);
-                        }
-                        // 2. Inside the category, push Favorites to the top
-                        if (a.isFavorite && !b.isFavorite) return -1;
-                        if (!a.isFavorite && b.isFavorite) return 1;
-                        // 3. Then sort by usage frequency
-                        if (a.launchCount != b.launchCount) {
-                            return Integer.compare(b.launchCount, a.launchCount); // descending
-                        }
-                        // 4. Alphabetical fallback
-                        return a.appName.compareToIgnoreCase(b.appName);
-                    }
-                });
-
-                final List<AppInfo> result = apps;
-                // v0.9.75 — favorites are shown in the dedicated strip above the list,
-                // hide them from the main grid to avoid duplication.
-                final List<AppInfo> nonFavs = new java.util.ArrayList<>(apps.size());
-                for (AppInfo a : result) {
-                    if (!a.isFavorite) nonFavs.add(a);
-                }
-                runOnUiThread(() -> {
-                    // 1.2.30 — if the activity tore down while the loader thread was
-                    // still walking PackageManager, do not touch the adapter / strip.
-                    if (isFinishing() || isDestroyed()) return;
-                    mAdapter.setApps(nonFavs);
-                    refreshFavoritesStrip(result);
-                    // One-shot tip: show once, on first ever launch
-                    if (!ClusterPrefs.isFirstLaunchTipShown(MainActivity.this)) {
-                        ClusterPrefs.setFirstLaunchTipShown(MainActivity.this);
-                        mScreenshotHandler.postDelayed(() ->
-                                Toast.makeText(getApplicationContext(),
-                                        getString(R.string.tooltip_tap_send),
-                                        Toast.LENGTH_LONG).show(),
-                                1200);
-                    }
-                });
-            }
-        });
-        loader.shutdown(); // thread ends as soon as the above task finishes
+    /**
+     * Splits {@code apps} into favorites (strip) and non-favorites (grid),
+     * then pushes both to the UI. Must be called on the main thread.
+     *
+     * @param apps             full sorted list from {@link AppRepository}
+     * @param showFirstLaunchTip show the one-shot welcome tip if not yet shown
+     */
+    private void deliverAppsToUI(List<AppInfo> apps, boolean showFirstLaunchTip) {
+        if (isFinishing() || isDestroyed()) return;
+        // Favorites shown in the dedicated strip above the list; hide from the main grid.
+        List<AppInfo> nonFavs = new ArrayList<>(apps.size());
+        for (AppInfo a : apps) {
+            if (!a.isFavorite) nonFavs.add(a);
+        }
+        mAdapter.setApps(nonFavs);
+        refreshFavoritesStrip(apps);
+        if (showFirstLaunchTip && !ClusterPrefs.isFirstLaunchTipShown(this)) {
+            ClusterPrefs.setFirstLaunchTipShown(this);
+            mScreenshotHandler.postDelayed(() ->
+                    Toast.makeText(getApplicationContext(),
+                            getString(R.string.tooltip_tap_send),
+                            Toast.LENGTH_LONG).show(),
+                    1200);
+        }
     }
 
     // ── Category filter helpers ──────────────────────────────────────────────
