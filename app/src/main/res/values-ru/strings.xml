@@ -441,6 +441,19 @@
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">Ключ API OpenAI (необязательно — активирует Jarvis ИИ)</string>
     <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Ключевое слово (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Модель распознавания речи</string>
+    <string name="diag_voice_model_small_label">Малая модель (~40 МБ)</string>
+    <string name="diag_voice_model_small_desc">Быстрая загрузка, хорошая точность для коротких команд.</string>
+    <string name="diag_voice_model_large_label">Большая модель (~1,3 ГБ) — высокая точность</string>
+    <string name="diag_voice_model_large_desc">Лучшее распознавание, рекомендуется при Wi-Fi.</string>
+    <string name="diag_voice_model_storage_fmt">Доступно %1$d МБ</string>
+    <string name="diag_voice_model_download_btn">Скачать</string>
+    <string name="diag_voice_model_delete_btn">Удалить</string>
+    <string name="diag_voice_model_status_downloaded">✓ Модель установлена</string>
+    <string name="diag_voice_model_status_not_downloaded">Не установлена</string>
+    <string name="diag_voice_model_progress_fmt">%1$d МБ / %2$d МБ (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Распаковка…</string>
     <string name="diag_voice_wakeword_switch">Включить</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-оценка (порог 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Модель: hey_jarvis_v0.1 (плейсхолдер для «Ok DashCast»)</string>

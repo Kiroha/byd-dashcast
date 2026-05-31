@@ -441,6 +441,19 @@
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">OpenAI-API-Schlüssel (optional – aktiviert Jarvis KI)</string>
     <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Aktivierungswort (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Spracherkennungsmodell</string>
+    <string name="diag_voice_model_small_label">Kleines Modell (~40 MB)</string>
+    <string name="diag_voice_model_small_desc">Schneller Download, gute Genauigkeit für kurze Befehle.</string>
+    <string name="diag_voice_model_large_label">Großes Modell (~1,3 GB) — hohe Genauigkeit</string>
+    <string name="diag_voice_model_large_desc">Bessere Spracherkennung, empfohlen bei WLAN-Verbindung.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d MB verfügbar</string>
+    <string name="diag_voice_model_download_btn">Herunterladen</string>
+    <string name="diag_voice_model_delete_btn">Löschen</string>
+    <string name="diag_voice_model_status_downloaded">✓ Modell installiert</string>
+    <string name="diag_voice_model_status_not_downloaded">Nicht installiert</string>
+    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Wird entpackt…</string>
     <string name="diag_voice_wakeword_switch">Aktivieren</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid-Score (Schwelle 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Modell: hey_jarvis_v0.1 (Platzhalter für „Ok DashCast“)</string>

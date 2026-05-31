@@ -441,6 +441,19 @@
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">مفتاح OpenAI API (اختياري — يُفعّل Jarvis الذكاء الاصطناعي)</string>
     <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">نموذج التعرف على الصوت</string>
+    <string name="diag_voice_model_small_label">نموذج صغير (~40 ميغابايت)</string>
+    <string name="diag_voice_model_small_desc">تنزيل سريع، دقة جيدة للأوامر القصيرة.</string>
+    <string name="diag_voice_model_large_label">نموذج كبير (~1.3 جيجابايت) — دقة عالية</string>
+    <string name="diag_voice_model_large_desc">تعرف أفضل، يوصى به عند الاتصال بالواي فاي.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d ميغابايت متاح</string>
+    <string name="diag_voice_model_download_btn">تنزيل</string>
+    <string name="diag_voice_model_delete_btn">حذف</string>
+    <string name="diag_voice_model_status_downloaded">✓ النموذج مثبّت</string>
+    <string name="diag_voice_model_status_not_downloaded">غير مثبّت</string>
+    <string name="diag_voice_model_progress_fmt">%1$d ميغابايت / %2$d ميغابايت (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">جار الاستخراج…</string>
     <string name="diag_voice_wakeword_switch">تفعيل</string>
     <string name="diag_voice_wakeword_score_label">درجة السيجمويد (عتبة 0٫5)</string>
     <string name="diag_voice_wakeword_model_fmt">النموذج: hey_jarvis_v0.1 (نائب لـ «Ok DashCast»)</string>

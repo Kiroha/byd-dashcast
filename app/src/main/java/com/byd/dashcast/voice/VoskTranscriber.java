@@ -2,12 +2,14 @@ package com.byd.dashcast.voice;
 
 import android.content.Context;
 import android.content.Intent;
+import java.io.FileInputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 import org.vosk.Model;
 import org.vosk.Recognizer;
@@ -22,37 +24,29 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * v1.4.0-beta — Voice step 3 : post-wake transcription with Vosk (offline).
+ * v1.4.3-beta — Voice step 3 : post-wake transcription with Vosk (offline).
  *
- * <p>When the wake-word engine fires, {@link VoiceService} calls
- * {@link #startListening()}. The transcriber then records for up to
- * {@link #MAX_LISTEN_MS} ms (or until silence of {@link #SILENCE_MS}),
- * runs Vosk on the captured audio, and broadcasts the text via
- * {@link #ACTION_TRANSCRIPT} so that {@link VoiceCommandRouter} can act on it.
- *
- * <p>The Vosk model is downloaded once to
- * {@code getExternalFilesDir("vosk")/vosk-model-small-fr-0.22/} on first use
- * (about 40 MB). Subsequent uses are instant (model loaded in RAM once).
- * The model language is French ; additional language packs can be added later.
- *
- * <p><b>Threading</b>: all Vosk inference runs on a dedicated
- * {@code vosk-transcriber} thread. Only broadcasts are posted to the main
- * thread. Safe to call {@link #startListening()} from any thread.
- *
- * <p><b>Isolation</b>: no production code path references this class.
- * It is only instantiated when the user enables voice commands in the Diag tab.
+ * <p>Two models available (selected via the Voice panel in DiagActivity):
+ * <ul>
+ *   <li><b>Small</b> (default, ~40 MB): fast download, good accuracy for short commands.
+ *   <li><b>High-accuracy</b> (~1.3 GB, vosk-model-fr-0.6-linto): much better French ASR,
+ *       resumable download with progress bar.
+ * </ul>
  */
 public final class VoskTranscriber {
 
     private static final String TAG = "VoskTranscriber";
 
-    // ─── Model config ──────────────────────────────────────────────────────
+    // ─── Model catalogue ──────────────────────────────────────────────────
 
-    /** Vosk small FR model — ~40 MB download, good accuracy for short commands. */
-    private static final String MODEL_ASSET = "vosk-model-small-fr-0.22";
-    /** URL to download the model zip from the Vosk CDN. */
-    private static final String MODEL_URL =
-            "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip";
+    public static final String MODEL_SMALL_ASSET = "vosk-model-small-fr-0.22";
+    public static final String MODEL_SMALL_URL   = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip";
+    public static final long   MODEL_SMALL_BYTES = 42_000_000L;       // ~40 MB
+
+    /** LinTO large FR model — significantly better accuracy, ~1.3 GB download. */
+    public static final String MODEL_LARGE_ASSET = "vosk-model-fr-0.6-linto";
+    public static final String MODEL_LARGE_URL   = "https://alphacephei.com/vosk/models/vosk-model-fr-0.6-linto.zip";
+    public static final long   MODEL_LARGE_BYTES = 1_400_000_000L;    // ~1.3 GB
 
     // ─── Broadcast contract ────────────────────────────────────────────────
 
@@ -64,6 +58,12 @@ public final class VoskTranscriber {
     public static final String EXTRA_LOADING     = "loading";
     /** String extra — human-readable error if something went wrong. */
     public static final String EXTRA_ERROR       = "error";
+    /** Int extra (0–100) — download progress percent; -1 = unzipping. Present only during download. */
+    public static final String EXTRA_PROGRESS       = "dl_progress";
+    /** Int extra — megabytes downloaded so far. */
+    public static final String EXTRA_PROGRESS_MB    = "dl_mb_done";
+    /** Int extra — total megabytes expected. */
+    public static final String EXTRA_PROGRESS_TOTAL = "dl_mb_total";
 
     // ─── Audio config ──────────────────────────────────────────────────────
 
@@ -76,15 +76,22 @@ public final class VoskTranscriber {
      *  800 ms is snappy enough to not cut mid-word. */
     private static final int SILENCE_MS            = 800;
 
-    // ─── State ────────────────────────────────────────────────────────────
+    // ─── State ────────────────────────────────────────────────────
 
     private final Context    mCtx;
+    private final String     mModelAsset;   // determined from ClusterPrefs at construction
+    private final String     mModelUrl;
+    private final long       mModelBytes;
     private volatile Model   mModel;
     private volatile boolean mModelLoading;
     private volatile boolean mListening;
 
     public VoskTranscriber(Context ctx) {
         mCtx = ctx.getApplicationContext();
+        boolean large = ClusterPrefs.isVoskHighAccuracy(mCtx);
+        mModelAsset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
+        mModelUrl   = large ? MODEL_LARGE_URL   : MODEL_SMALL_URL;
+        mModelBytes = large ? MODEL_LARGE_BYTES : MODEL_SMALL_BYTES;
     }
 
     // ─── Public API ────────────────────────────────────────────────────────
@@ -120,19 +127,91 @@ public final class VoskTranscriber {
         }
     }
 
+    /**
+     * Downloads (and unzips) the current model in the background without starting
+     * a listen session. Safe to call when voice commands are disabled. Progress is
+     * broadcast via {@link #ACTION_TRANSCRIPT} + {@link #EXTRA_PROGRESS}.
+     * No-op if the model is already present on disk.
+     */
+    public void preDownload() {
+        if (mModelLoading) return;
+        File modelDir = new File(mCtx.getExternalFilesDir("vosk"), mModelAsset);
+        if (new File(modelDir, "am").exists()) {
+            // Already there — broadcast 100% so the UI updates
+            broadcastProgress(100, (int)(mModelBytes / 1024 / 1024), (int)(mModelBytes / 1024 / 1024));
+            return;
+        }
+        mModelLoading = true;
+        new Thread(() -> {
+            try {
+                downloadWithProgress(mCtx.getExternalFilesDir("vosk"), mModelUrl, mModelBytes);
+                mModelLoading = false;
+                AppLogger.i(TAG, "Pre-download complete: " + mModelAsset);
+                broadcastProgress(100, (int)(mModelBytes / 1024 / 1024), (int)(mModelBytes / 1024 / 1024));
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                        android.widget.Toast.makeText(mCtx,
+                                "Modèle téléchargé — Jarvis prêt",
+                                android.widget.Toast.LENGTH_SHORT).show());
+            } catch (Exception e) {
+                mModelLoading = false;
+                AppLogger.e(TAG, "preDownload error: " + e.getMessage());
+                broadcastError("Téléchargement échoué : " + e.getMessage());
+            }
+        }, "vosk-predownload").start();
+    }
+
+    // ─── Static helpers (used by the UI) ────────────────────────────────
+
+    /** Returns true if the given model variant is fully extracted on disk. */
+    public static boolean isModelDownloaded(Context ctx, boolean large) {
+        String asset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
+        File modelDir = new File(ctx.getExternalFilesDir("vosk"), asset);
+        return new File(modelDir, "am").exists();
+    }
+
+    /** Returns free space in MB on the external files directory. */
+    public static long getFreeSpaceMb(Context ctx) {
+        File dir = ctx.getExternalFilesDir("vosk");
+        if (dir == null) dir = ctx.getCacheDir();
+        return dir.getFreeSpace() / 1024 / 1024;
+    }
+
+    /**
+     * Deletes the extracted model directory for the given variant.
+     * Also removes any partial download temp file.
+     * @return true if the directory was deleted (or didn't exist).
+     */
+    public static boolean deleteModel(Context ctx, boolean large) {
+        String asset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
+        File voskDir = ctx.getExternalFilesDir("vosk");
+        // Delete temp download file if present
+        new File(voskDir, asset + ".download.tmp").delete();
+        File modelDir = new File(voskDir, asset);
+        if (!modelDir.exists()) return true;
+        return deleteRecursive(modelDir);
+    }
+
+    private static boolean deleteRecursive(File f) {
+        if (f.isDirectory()) {
+            File[] children = f.listFiles();
+            if (children != null) for (File c : children) deleteRecursive(c);
+        }
+        return f.delete();
+    }
+
     // ─── Model loading ────────────────────────────────────────────────────
 
     private void loadModelThenListen() {
         mModelLoading = true;
         broadcastLoading();
-        AppLogger.i(TAG, "Loading Vosk model — " + MODEL_ASSET);
+        AppLogger.i(TAG, "Loading Vosk model — " + mModelAsset);
 
         new Thread(() -> {
             try {
-                File modelDir = new File(mCtx.getExternalFilesDir("vosk"), MODEL_ASSET);
+                File modelDir = new File(mCtx.getExternalFilesDir("vosk"), mModelAsset);
                 if (!new File(modelDir, "am").exists()) {
-                    AppLogger.i(TAG, "Downloading model from " + MODEL_URL);
-                    downloadAndUnzip(MODEL_URL, mCtx.getExternalFilesDir("vosk"));
+                    AppLogger.i(TAG, "Downloading model from " + mModelUrl);
+                    downloadWithProgress(mCtx.getExternalFilesDir("vosk"), mModelUrl, mModelBytes);
                     AppLogger.i(TAG, "Download complete");
                 }
                 AppLogger.i(TAG, "Opening model at " + modelDir.getAbsolutePath());
@@ -140,7 +219,6 @@ public final class VoskTranscriber {
                 mModel = model;
                 mModelLoading = false;
                 AppLogger.i(TAG, "Vosk model ready");
-                // Notify user that model is ready (first-launch: they may have spoken too early).
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
                         android.widget.Toast.makeText(mCtx,
                                 "Jarvis prêt — réessayez votre commande",
@@ -154,21 +232,71 @@ public final class VoskTranscriber {
         }, "vosk-model-loader").start();
     }
 
-    private void downloadAndUnzip(String urlStr, File destDir) throws IOException {
+    /**
+     * Downloads a zip to a resumable temp file, then unzips it.
+     * Broadcasts {@link #EXTRA_PROGRESS} every 1% during download and
+     * {@link #EXTRA_PROGRESS} = -1 (indeterminate) during unzip.
+     */
+    private void downloadWithProgress(File destDir, String urlStr, long expectedBytes)
+            throws IOException {
+        File tmpZip = new File(destDir, new File(urlStr).getName() + ".download.tmp");
+        long alreadyDone = tmpZip.exists() ? tmpZip.length() : 0;
+
+        // Storage check: need zip + extracted (estimate 2× for peak usage)
+        long freeBytes = destDir.getFreeSpace();
+        long needed    = Math.max(0, expectedBytes - alreadyDone) + expectedBytes;
+        if (freeBytes < needed) {
+            throw new IOException("Espace insuffisant : besoin de "
+                    + (needed / 1024 / 1024) + " Mo, disponible : "
+                    + (freeBytes / 1024 / 1024) + " Mo");
+        }
+
+        // ── Download (with HTTP resume) ───────────────────────────────────
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(15_000);
-        conn.setReadTimeout(120_000);
+        conn.setReadTimeout(0);          // unlimited — large file
+        if (alreadyDone > 0) conn.setRequestProperty("Range", "bytes=" + alreadyDone + "-");
         conn.connect();
+
         int code = conn.getResponseCode();
-        if (code != HttpURLConnection.HTTP_OK) {
+        boolean resumed = (code == 206);  // HTTP_PARTIAL
+        if (code != HttpURLConnection.HTTP_OK && !resumed) {
             conn.disconnect();
             throw new IOException("HTTP " + code);
         }
+        if (!resumed) alreadyDone = 0; // server doesn't support range, restart
+        final long totalBytes = resumed ? expectedBytes : conn.getContentLengthLong();
+
+        try (FileOutputStream fos = new FileOutputStream(tmpZip, resumed);
+             BufferedInputStream bis = new BufferedInputStream(conn.getInputStream(), 65_536)) {
+            byte[] buf = new byte[65_536];
+            int n;
+            long downloaded = alreadyDone;
+            int lastPct = -1;
+            while ((n = bis.read(buf)) != -1) {
+                fos.write(buf, 0, n);
+                downloaded += n;
+                int pct = totalBytes > 0 ? (int) (downloaded * 100L / totalBytes) : 0;
+                if (pct != lastPct) {
+                    lastPct = pct;
+                    broadcastProgress(pct,
+                            (int) (downloaded / 1024 / 1024),
+                            (int) (totalBytes  / 1024 / 1024));
+                }
+            }
+        } finally {
+            conn.disconnect();
+        }
+
+        // ── Unzip — broadcast indeterminate (-1) during extraction ────────
+        broadcastProgress(-1, 0, (int) (expectedBytes / 1024 / 1024));
+        AppLogger.i(TAG, "Unzipping " + tmpZip.getName() + " ("
+                + (tmpZip.length() / 1024 / 1024) + " Mo)");
         try (ZipInputStream zis = new ZipInputStream(
-                new BufferedInputStream(conn.getInputStream()))) {
+                new BufferedInputStream(new FileInputStream(tmpZip), 65_536))) {
             ZipEntry entry;
-            byte[] buf = new byte[8192];
+            byte[] buf = new byte[65_536];
             while ((entry = zis.getNextEntry()) != null) {
                 File out = new File(destDir, entry.getName());
                 if (entry.isDirectory()) {
@@ -182,9 +310,9 @@ public final class VoskTranscriber {
                 }
                 zis.closeEntry();
             }
-        } finally {
-            conn.disconnect();
         }
+        tmpZip.delete();
+        AppLogger.i(TAG, "Unzip complete");
     }
 
     // ─── Capture + inference (via VoiceService SampleConsumer pipe) ───────
@@ -313,6 +441,15 @@ public final class VoskTranscriber {
     private void broadcastLoading() {
         Intent i = new Intent(ACTION_TRANSCRIPT);
         i.putExtra(EXTRA_LOADING, true);
+        LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
+    }
+
+    private void broadcastProgress(int pct, int mbDone, int mbTotal) {
+        Intent i = new Intent(ACTION_TRANSCRIPT);
+        i.putExtra(EXTRA_LOADING, true);
+        i.putExtra(EXTRA_PROGRESS, pct);
+        i.putExtra(EXTRA_PROGRESS_MB, mbDone);
+        i.putExtra(EXTRA_PROGRESS_TOTAL, mbTotal);
         LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
     }
 

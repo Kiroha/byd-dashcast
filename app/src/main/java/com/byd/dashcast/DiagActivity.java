@@ -50,6 +50,7 @@ import com.byd.dashcast.dilink5.DiLink5TestRunner;
 import com.byd.dashcast.dilink5.Dl5ClusterReconRunner;
 import com.byd.dashcast.dilink5.Dl5VdTestRunner;
 import com.byd.dashcast.dilink2.DiLink2TestRunner;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.voice.VoiceCommandRouter;
@@ -226,6 +227,10 @@ public class DiagActivity extends AppCompatActivity {
             if (mLlmVoiceEngine != null) {
                 mLlmVoiceEngine.release();
                 mLlmVoiceEngine = null;
+            }
+            if (mModelPreloader != null) {
+                mModelPreloader.release();
+                mModelPreloader = null;
             }
         } catch (Throwable ignore) {}
         try {
@@ -2786,6 +2791,18 @@ public class DiagActivity extends AppCompatActivity {
     private android.widget.EditText etApiKey;
     private VoskTranscriber mVoskTranscriber;
     private com.byd.dashcast.voice.LlmVoiceEngine mLlmVoiceEngine;
+    // v1.4.3-beta ASR model selection
+    private android.widget.RadioGroup  rgVoskModel;
+    private android.widget.RadioButton rbModelSmall;
+    private android.widget.RadioButton rbModelLarge;
+    private TextView       tvModelStorage;
+    private View           llModelDownload;
+    private View           llModelProgress;
+    private View           llModelInstalled;
+    private android.widget.ProgressBar pbModelDownload;
+    private TextView       tvModelProgress;
+    /** Non-null only when downloading before voice commands are enabled. */
+    private VoskTranscriber mModelPreloader;
 
     private final BroadcastReceiver voiceReceiver = new BroadcastReceiver() {
         @Override
@@ -2858,6 +2875,32 @@ public class DiagActivity extends AppCompatActivity {
             swVoiceCommands.setChecked(mVoskTranscriber != null);
             swVoiceCommands.setOnCheckedChangeListener((bv, checked) -> onVoiceCommandsToggle(checked));
         }
+
+        // v1.4.3-beta — model selector
+        rgVoskModel    = panelVoice.findViewById(R.id.rg_vosk_model);
+        rbModelSmall   = panelVoice.findViewById(R.id.rb_model_small);
+        rbModelLarge   = panelVoice.findViewById(R.id.rb_model_large);
+        tvModelStorage = panelVoice.findViewById(R.id.tv_model_storage);
+        llModelDownload  = panelVoice.findViewById(R.id.ll_model_download);
+        llModelProgress  = panelVoice.findViewById(R.id.ll_model_progress);
+        llModelInstalled = panelVoice.findViewById(R.id.ll_model_installed);
+        pbModelDownload  = panelVoice.findViewById(R.id.pb_model_download);
+        tvModelProgress  = panelVoice.findViewById(R.id.tv_model_progress);
+        View btnDownload = panelVoice.findViewById(R.id.btn_download_model);
+        View btnDelete   = panelVoice.findViewById(R.id.btn_delete_model);
+        if (btnDownload != null) btnDownload.setOnClickListener(v -> triggerModelDownload());
+        if (btnDelete   != null) btnDelete.setOnClickListener(v -> {
+            boolean large = ClusterPrefs.isVoskHighAccuracy(this);
+            VoskTranscriber.deleteModel(this, large);
+            updateModelUi();
+        });
+        if (rgVoskModel != null) {
+            // Restore saved preference
+            boolean savedLarge = ClusterPrefs.isVoskHighAccuracy(this);
+            if (savedLarge && rbModelLarge != null) rbModelLarge.setChecked(true);
+            rgVoskModel.setOnCheckedChangeListener((rg, id) -> onModelRadioChange(id == R.id.rb_model_large));
+        }
+        updateModelUi();
 
         // Reflect current state in case the service is already running (e.g. orientation change).
         applyVoiceState(VoiceService.isRunning() ? VoiceService.STATE_STARTED : VoiceService.STATE_STOPPED, null);
@@ -3078,10 +3121,93 @@ public class DiagActivity extends AppCompatActivity {
                         : "En attente du mot d'éveil… (mode regex, configurez une clé API)");
         } else {
             VoiceService.setTranscriber(null);
+            VoiceService.setTranscriber(null);
             if (mVoskTranscriber != null) { mVoskTranscriber.release(); mVoskTranscriber = null; }
             if (mLlmVoiceEngine  != null) { mLlmVoiceEngine.release();  mLlmVoiceEngine  = null; }
             AppLogger.i("DiagVoice", "Voice commands OFF");
             if (tvVoiceTranscript != null) tvVoiceTranscript.setText("");
+        }
+    }
+
+    private void onModelRadioChange(boolean large) {
+        ClusterPrefs.setVoskHighAccuracy(this, large);
+        // If voice commands are active, recreate the transcriber with the new model
+        if (mVoskTranscriber != null) {
+            VoiceService.setTranscriber(null);
+            mVoskTranscriber.release();
+            mVoskTranscriber = new VoskTranscriber(this);
+            VoiceService.setTranscriber(mVoskTranscriber);
+        }
+        updateModelUi();
+    }
+
+    private void triggerModelDownload() {
+        boolean large = ClusterPrefs.isVoskHighAccuracy(this);
+        if (mVoskTranscriber != null) {
+            // Use active transcriber — it will load the model on next listen
+            // but here we only want to download, so use a dedicated preloader
+        }
+        if (mModelPreloader == null) {
+            mModelPreloader = new VoskTranscriber(this);
+        }
+        mModelPreloader.preDownload();
+        updateModelUi();
+    }
+
+    private void updateModelUi() {
+        if (tvModelStorage == null) return;
+        boolean large = ClusterPrefs.isVoskHighAccuracy(this);
+        long freeMb = VoskTranscriber.getFreeSpaceMb(this);
+        tvModelStorage.setText(getString(R.string.diag_voice_model_storage_fmt, freeMb));
+        // Update radio state if it doesn't match prefs
+        if (rgVoskModel != null) {
+            int wanted = large ? R.id.rb_model_large : R.id.rb_model_small;
+            if (rgVoskModel.getCheckedRadioButtonId() != wanted) {
+                rgVoskModel.check(wanted);
+            }
+        }
+        if (!large) {
+            // Small model: no download needed
+            if (llModelDownload  != null) llModelDownload.setVisibility(View.GONE);
+            if (llModelProgress  != null) llModelProgress.setVisibility(View.GONE);
+            if (llModelInstalled != null) llModelInstalled.setVisibility(View.GONE);
+            return;
+        }
+        boolean downloaded = VoskTranscriber.isModelDownloaded(this, true);
+        if (downloaded) {
+            if (llModelDownload  != null) llModelDownload.setVisibility(View.GONE);
+            if (llModelProgress  != null) llModelProgress.setVisibility(View.GONE);
+            if (llModelInstalled != null) llModelInstalled.setVisibility(View.VISIBLE);
+        } else {
+            if (llModelDownload  != null) llModelDownload.setVisibility(View.VISIBLE);
+            if (llModelProgress  != null) llModelProgress.setVisibility(View.GONE);
+            if (llModelInstalled != null) llModelInstalled.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateDownloadProgress(int pct, int mbDone, int mbTotal) {
+        if (llModelProgress == null) return;
+        if (llModelDownload  != null) llModelDownload.setVisibility(View.GONE);
+        if (llModelInstalled != null) llModelInstalled.setVisibility(View.GONE);
+        if (pct == 100) {
+            llModelProgress.setVisibility(View.GONE);
+            updateModelUi();
+            // Free the preloader if it was used only for download
+            if (mModelPreloader != null) { mModelPreloader.release(); mModelPreloader = null; }
+            return;
+        }
+        llModelProgress.setVisibility(View.VISIBLE);
+        if (pbModelDownload != null) {
+            pbModelDownload.setIndeterminate(pct < 0);
+            if (pct >= 0) pbModelDownload.setProgress(pct);
+        }
+        if (tvModelProgress != null) {
+            if (pct < 0) {
+                tvModelProgress.setText(getString(R.string.diag_voice_model_unzipping));
+            } else {
+                tvModelProgress.setText(getString(R.string.diag_voice_model_progress_fmt,
+                        mbDone, mbTotal, pct));
+            }
         }
     }
 
@@ -3091,6 +3217,14 @@ public class DiagActivity extends AppCompatActivity {
         if (!voicePanelBound || intent == null) return;
         if (tvVoiceTranscript == null) return;
         if (intent.getBooleanExtra(VoskTranscriber.EXTRA_LOADING, false)) {
+            // Check for download progress extras
+            if (intent.hasExtra(VoskTranscriber.EXTRA_PROGRESS)) {
+                int pct    = intent.getIntExtra(VoskTranscriber.EXTRA_PROGRESS, 0);
+                int mbDone = intent.getIntExtra(VoskTranscriber.EXTRA_PROGRESS_MB, 0);
+                int mbTot  = intent.getIntExtra(VoskTranscriber.EXTRA_PROGRESS_TOTAL, 0);
+                updateDownloadProgress(pct, mbDone, mbTot);
+                return;
+            }
             tvVoiceTranscript.setText("Chargement modèle voix…");
         } else if (intent.getStringExtra(VoskTranscriber.EXTRA_ERROR) != null) {
             tvVoiceTranscript.setText("Erreur : " + intent.getStringExtra(VoskTranscriber.EXTRA_ERROR));
