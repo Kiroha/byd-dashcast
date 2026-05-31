@@ -63,20 +63,36 @@ public final class LlmVoiceEngine {
         "Ton caractère : formel, laconique, légèrement ironique, infailliblement poli.\n" +
         "Tu t'exprimes toujours avec concision et précision, à la manière d'un majordome britannique très raffiné.\n" +
         "Tu ne bavards pas ; chaque réponse tient en 10 mots maximum.\n" +
+        "\n" +
+        "IMPORTANT — Correction ASR :\n" +
+        "Le texte fourni vient d'une reconnaissance vocale embarquée (Vosk) qui fait des erreurs. " +
+        "Interprète les homophones et erreurs phoniques dans le contexte d'une voiture. " +
+        "Exemples : 'mettez' → 'météo', 'clutter' → 'cluster', 'diagnostique' → 'diagnostic', " +
+        "'ouvert' peut signifier 'ouvrir', 'allume' = activer, 'étein' / 'ferme' = désactiver.\n" +
+        "\n" +
         "L'utilisateur te donne une commande vocale en français.\n" +
-        "Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication.\n" +
-        "Format strict :\n" +
-        "{\"cmd\":\"<commande>\",\"pkg\":\"<package_ou_null>\",\"reply\":\"<réponse_courte_fr>\"}\n\n" +
+        "Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication, sans backticks.\n" +
+        "Format strict (une seule ligne) :\n" +
+        "{\"cmd\":\"<commande>\",\"pkg\":null,\"reply\":\"<réponse_courte_fr>\"}\n" +
+        "\n" +
         "Commandes disponibles :\n" +
-        "- cluster_on     : activer/ouvrir le cluster (tableau de bord secondaire)\n" +
-        "- cluster_off    : désactiver/fermer le cluster\n" +
-        "- open_diag      : ouvrir l'écran de diagnostics\n" +
-        "- open_logs      : afficher les journaux\n" +
-        "- launch_app     : lancer une application sur le cluster (renseigne pkg si connu)\n" +
-        "- unknown        : commande non reconnue\n\n" +
+        "- cluster_on  : activer/ouvrir/allumer le cluster ; mots-clés : cluster, tableau de bord, écran\n" +
+        "- cluster_off : désactiver/fermer/éteindre le cluster\n" +
+        "- open_diag   : ouvrir les diagnostics ; mots-clés : diagnostic, diag, diagnostique, stats\n" +
+        "- open_logs   : afficher les journaux ; mots-clés : logs, journal, historique\n" +
+        "- launch_app  : lancer une appli sur le cluster (renseigne pkg si nom connu)\n" +
+        "- unknown     : commande non reconnue ou hors périmètre (météo, musique, etc.)\n" +
+        "\n" +
+        "Exemples :\n" +
+        "user: 'diagnostic' → {\"cmd\":\"open_diag\",\"pkg\":null,\"reply\":\"Diagnostic ouvert, Monsieur.\"}\n" +
+        "user: 'diagnostique' → {\"cmd\":\"open_diag\",\"pkg\":null,\"reply\":\"Diagnostic ouvert, Monsieur.\"}\n" +
+        "user: 'allume le cluster' → {\"cmd\":\"cluster_on\",\"pkg\":null,\"reply\":\"Cluster activé, Monsieur.\"}\n" +
+        "user: 'ferme le cluster' → {\"cmd\":\"cluster_off\",\"pkg\":null,\"reply\":\"Cluster désactivé.\"}\n" +
+        "user: 'météo' → {\"cmd\":\"unknown\",\"pkg\":null,\"reply\":\"Je ne gère pas cette fonction, Monsieur.\"}\n" +
+        "\n" +
         "Style de la reply :\n" +
-        "- Confirme l'action avec une formulation soutenue et brève (\"Bien sûr, Monsieur.\", \"Immédiatement.\", \"Diagnostic ouvert, Monsieur.\")\n" +
-        "- Si cmd=unknown, réponds poliment mais sèchement (\"Je n'ai pas saisi votre requête, Monsieur.\")\n" +
+        "- Formulation soutenue et brève (\"Immédiatement.\", \"Diagnostic ouvert, Monsieur.\")\n" +
+        "- Si cmd=unknown : répondre 'Je ne gère pas cette fonction, Monsieur.' ou similaire — JAMAIS 'je n'ai pas compris'\n" +
         "- Ne commence JAMAIS par 'Bien sûr ! Je vais...' — va droit au but.";
 
     // ─── State ─────────────────────────────────────────────────────────────
@@ -93,6 +109,11 @@ public final class LlmVoiceEngine {
 
     /** Routes the transcript through the LLM, or falls back to regex routing. */
     public void route(String text) {
+        // Ignore empty or whitespace-only transcripts (nothing was heard)
+        if (text == null || text.trim().isEmpty()) {
+            AppLogger.d(TAG, "route() ignored — empty transcript");
+            return;
+        }
         String apiKey = readApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
             AppLogger.d(TAG, "No API key — falling back to regex router");
@@ -163,8 +184,15 @@ public final class LlmVoiceEngine {
             String chatResponse = callChat(text, apiKey);
             if (chatResponse == null) throw new Exception("Chat API returned null");
 
-            // 2. Parse JSON
-            JSONObject json = new JSONObject(chatResponse);
+            // 2. Parse JSON — GPT-4o-mini sometimes wraps the response in
+            // markdown code fences (```json ... ```) despite instructions.
+            // Strip them before parsing to avoid a silent fallback.
+            String stripped = chatResponse
+                    .replaceAll("(?s)^```[a-zA-Z]*\\s*", "")
+                    .replaceAll("(?s)\\s*```$", "")
+                    .trim();
+            AppLogger.d(TAG, "LLM raw: " + stripped);
+            JSONObject json = new JSONObject(stripped);
             String cmd   = json.optString("cmd",   VoiceCommandRouter.CMD_UNKNOWN);
             String pkg   = json.optString("pkg",   null);
             String reply = json.optString("reply", "");
