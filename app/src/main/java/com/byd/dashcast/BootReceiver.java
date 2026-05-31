@@ -8,10 +8,9 @@ import android.content.SharedPreferences;
 import com.byd.dashcast.beta.BetaConfig;
 import com.byd.dashcast.beta.BetaProxyClient;
 import com.byd.dashcast.beta.ProxyKeeperService;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 public class BootReceiver extends BroadcastReceiver {
-
-    private static final String PREFS_NAME = SettingsActivity.PREFS_NAME;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -35,8 +34,8 @@ public class BootReceiver extends BroadcastReceiver {
                     "ProxyKeeperService.ensureRunning failed: " + t.getMessage());
         }
 
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        boolean autoStartEnabled = prefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false);
+        SharedPreferences prefs = context.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+        boolean autoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(context);
         boolean prewarmDaemon    = BetaConfig.isProxyDaemonEnabled(context);
 
         // We need to keep the process alive across multiple async tasks that
