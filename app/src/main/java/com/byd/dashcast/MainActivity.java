@@ -50,6 +50,7 @@ import android.text.style.StyleSpan;
 import android.graphics.Typeface;
 
 import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;
 import com.byd.dashcast.voice.VoiceCommandRouter;
 
@@ -92,19 +93,9 @@ public class MainActivity extends AppCompatActivity
     private boolean                 mBindRequested   = false; // true as soon as a bindService is in progress
     private DashboardLauncher       mDashboardLauncher; // local reference updated after bind
 
-    private static final String PREFS_NAME         = SettingsActivity.PREFS_NAME;
-    /** Package of the app sent to the main display — persisted to survive Activity recreation */
-    private static final String PREF_MAIN_PKG      = "main_display_pkg";
-    /** Package/name of the app currently active on the cluster — persisted to survive Activity recreation */
-    private static final String PREF_CLUSTER_PKG   = "cluster_active_pkg";
-    private static final String PREF_CLUSTER_NAME  = "cluster_active_name";
-    /** sendInfo code for cluster screen size: 29=8.8", 30=12.3" (default Seal EU), 31=10.25" */
-    private static final String PREF_CLUSTER_TYPE = SettingsActivity.PREF_CLUSTER_TYPE;
-    
-    private static final String PREF_AUTO_LAUNCH_PKG = "auto_launch_pkg";
+    private static final String PREFS_NAME         = ClusterPrefs.PREFS_NAME;
     private String mPendingAutoLaunchPkg = null;
     private AppInfo mPendingAppAfterActivation = null;
-    private static final int    CLUSTER_TYPE_DEFAULT = 30;
     private final ServiceConnection mServiceConn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
@@ -140,12 +131,6 @@ public class MainActivity extends AppCompatActivity
     private int    mCurrentSplitSlot    = 0;      // 0=full screen, 1=left, 2=right
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
-    private static final String PREF_FIRST_LAUNCH_TIP   = "first_launch_tip_shown";
-    /** v1.2.9 — set to true once the user permanently dismisses the IME a11y banner. */
-    private static final String PREF_IME_BANNER_DISMISSED = "ime_a11y_banner_dismissed";
-    /** Last app voluntarily launched on the cluster — never cleared on disconnect, for reconnect reminder. */
-    private static final String PREF_LAST_CLUSTER_PKG  = "last_cluster_pkg";
-    private static final String PREF_LAST_CLUSTER_NAME = "last_cluster_name";
     /** Timeout before re-enabling the Activate button if the cluster never connects. */
     private static final long   ACTIVATE_TIMEOUT_MS    = 30_000;
     private Runnable            mActivateTimeoutRunnable = null;
@@ -215,10 +200,6 @@ public class MainActivity extends AppCompatActivity
     // so Android doesn't re-launch them on the (still-alive) VirtualDisplay later.
     // Persisted to SharedPreferences so it survives a process kill (car shutdown).
     private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
-    private static final String PREF_SESSION_CLUSTER_PKGS = "session_cluster_pkgs";
-    private static final String PREF_GRID_MODE  = "grid_mode";
-    private static final String PREF_FAVORITES  = "favorites";
-
     // UI — cluster control panel
     private LinearLayout panelClusterControl;
     private LinearLayout panelResize;
@@ -291,13 +272,12 @@ public class MainActivity extends AppCompatActivity
 
         // Safety-net: if projection auto-start is disabled, move any leftover
         // cluster apps back to Display 0 (covers case where BootReceiver couldn't run).
-        SharedPreferences bootPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        // Auto-launch (cf. PREF_AUTO_LAUNCH_PKG / onSetAutoLaunch / onClusterDisplayConnected).
+        // Auto-launch (cf. ClusterPrefs.getAutoLaunchPkg / onSetAutoLaunch / onClusterDisplayConnected).
         // The pending package is consumed at most once per Activity instance, in the cluster-connect
         // callback. Setting it here ensures that if the user previously marked an app as auto-launch,
         // it is sent to the cluster as soon as the dashboard display becomes available.
-        mPendingAutoLaunchPkg = bootPrefs.getString(PREF_AUTO_LAUNCH_PKG, null);
-        if (!bootPrefs.getBoolean(SettingsActivity.PREF_BOOT_AUTO_START, false)) {
+        mPendingAutoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(this);
+        if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
             // Defensive: cleanup uses IActivityTaskManager binder reflection per package.
             // With a non-trivial persisted set, calling on the main thread during onCreate
             // could approach the ANR threshold. Off-load to a named daemon thread; the work
@@ -311,7 +291,7 @@ public class MainActivity extends AppCompatActivity
         } else {
             // Auto-start enabled: clear the persisted set (projection is active,
             // apps will be managed normally).
-            bootPrefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+            ClusterPrefs.clearSessionClusterPkgs(this);
         }
 
         // Unlock hidden Android APIs (SurfaceControl, etc.)
@@ -413,7 +393,7 @@ public class MainActivity extends AppCompatActivity
         mAdapter = new AppListAdapter(this);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         // v0.9.71 — grid is now the default view mode (mockup fidelity).
-        boolean isGrid = prefs.getBoolean(PREF_GRID_MODE, true);
+        boolean isGrid = ClusterPrefs.isGridMode(this, true);
         mAdapter.setGridMode(isGrid);
         updateViewToggleButton();
         
@@ -682,8 +662,7 @@ public class MainActivity extends AppCompatActivity
         mInsetOverlay       = (InsetOverlayView) findViewById(R.id.inset_overlay);
 
         // Restore mMainDisplayPkg (lost if Activity is destroyed and recreated)
-        mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getString(PREF_MAIN_PKG, null);
+        mMainDisplayPkg = ClusterPrefs.getMainPkg(this);
         if (mMainDisplayPkg != null) {
             mAdapter.setMainPackage(mMainDisplayPkg);
             updateFavoritesIndicators();
@@ -982,11 +961,9 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardApp = name;
                     addToRecentApps(pkgName, name);
                     trackUsageStart();
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                            .putString(PREF_CLUSTER_PKG, pkgName)
-                            .putString(PREF_CLUSTER_NAME, name)
-                            .putString(PREF_LAST_CLUSTER_PKG, pkgName)
-                            .putString(PREF_LAST_CLUSTER_NAME, name).apply();
+                    ClusterPrefs.setClusterPkg(MainActivity.this, pkgName);
+                    ClusterPrefs.setClusterName(MainActivity.this, name);
+                    ClusterPrefs.setLastCluster(MainActivity.this, pkgName, name);
                     mAdapter.setCurrentPackage(pkgName);
                     updateFavoritesIndicators();
                     updateDashboardStatus(mCurrentDashboardApp);
@@ -1142,9 +1119,8 @@ public class MainActivity extends AppCompatActivity
                 // mCurrentDashboardPkg is only null here if the Activity instance was killed
                 // while in background (Home pressed) and a new instance was recreated.
                 if (mCurrentDashboardPkg == null) {
-                    SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    String _pkg  = _p.getString(PREF_CLUSTER_PKG, null);
-                    String _name = _p.getString(PREF_CLUSTER_NAME, null);
+                    String _pkg  = ClusterPrefs.getClusterPkg(MainActivity.this);
+                    String _name = ClusterPrefs.getClusterName(MainActivity.this);
                     if (_pkg != null) {
                         mCurrentDashboardPkg = _pkg;
                         mCurrentDashboardApp = _name;
@@ -1172,8 +1148,7 @@ public class MainActivity extends AppCompatActivity
 
                 // Restore mMainDisplayPkg if Activity was recreated
                 if (mMainDisplayPkg == null) {
-                    mMainDisplayPkg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .getString(PREF_MAIN_PKG, null);
+                    mMainDisplayPkg = ClusterPrefs.getMainPkg(MainActivity.this);
                     if (mMainDisplayPkg != null) mAdapter.setMainPackage(mMainDisplayPkg);
                     updateFavoritesIndicators();
                 }
@@ -1249,9 +1224,8 @@ public class MainActivity extends AppCompatActivity
                 boolean reconnectEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                         .getBoolean(SettingsActivity.PREF_RECONNECT_POPUP, false);
                 if (reconnectEnabled && wasManual && mCurrentDashboardPkg == null) {
-                    final SharedPreferences _pp = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    final String lastPkg  = _pp.getString(PREF_LAST_CLUSTER_PKG, null);
-                    final String lastName = _pp.getString(PREF_LAST_CLUSTER_NAME, null);
+                    final String lastPkg  = ClusterPrefs.getLastClusterPkg(MainActivity.this);
+                    final String lastName = ClusterPrefs.getLastClusterName(MainActivity.this);
                     if (lastPkg != null && lastName != null) {
                         new AlertDialog.Builder(MainActivity.this)
                             .setTitle(getString(R.string.dialog_reconnect_title))
@@ -1286,9 +1260,9 @@ public class MainActivity extends AppCompatActivity
                 mCurrentDashboardPkg = null;
                 setActivateBtnEnabled(true);
                 mMainDisplayPkg = null;
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                        .remove(PREF_MAIN_PKG)
-                        .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+                ClusterPrefs.setMainPkg(MainActivity.this, null);
+                ClusterPrefs.setClusterPkg(MainActivity.this, null);
+                ClusterPrefs.setClusterName(MainActivity.this, null);
                 clearSplitState();
                 mAdapter.setCurrentPackage(null);
                 updateFavoritesIndicators();
@@ -1305,15 +1279,14 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSetAutoLaunch(AppInfo app, boolean enable) {
-        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (enable) {
-            p.edit().putString(PREF_AUTO_LAUNCH_PKG, app.packageName).apply();
+            ClusterPrefs.setAutoLaunchPkg(this, app.packageName);
             // Clear other auto launches in memory
             for (AppInfo a : mAdapter.getApps()) {
                 a.isAutoLaunch = a.packageName.equals(app.packageName);
             }
         } else {
-            p.edit().remove(PREF_AUTO_LAUNCH_PKG).apply();
+            ClusterPrefs.setAutoLaunchPkg(this, null);
             app.isAutoLaunch = false;
         }
         // Use post to avoid IllegalStateException (cannot call notify during bind)
@@ -1328,8 +1301,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onToggleFavorite(AppInfo app) {
-        SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> favs = new HashSet<>(p.getStringSet(PREF_FAVORITES, new HashSet<>()));
+        Set<String> favs = new HashSet<>(ClusterPrefs.getFavorites(this));
         if (favs.contains(app.packageName)) {
             favs.remove(app.packageName);
             app.isFavorite = false;
@@ -1337,7 +1309,7 @@ public class MainActivity extends AppCompatActivity
             favs.add(app.packageName);
             app.isFavorite = true;
         }
-        p.edit().putStringSet(PREF_FAVORITES, favs).apply();
+        ClusterPrefs.setFavorites(this, favs);
         loadAppsAsync(); // Reload and re-sort
     }
 
@@ -1612,7 +1584,7 @@ public class MainActivity extends AppCompatActivity
             mMainDisplayPkg = null;
             mAdapter.setMainPackage(null);
             updateFavoritesIndicators();
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_MAIN_PKG).apply();
+            ClusterPrefs.setMainPkg(this, null);
         }
 
         // ── Split mode: an app already occupies a slot → the new app goes into the other one ──
@@ -1676,11 +1648,9 @@ public class MainActivity extends AppCompatActivity
                     persistSessionClusterPackages();
                     addToRecentApps(pkgName, appName);
                     trackUsageStart();
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                            .putString(PREF_CLUSTER_PKG, pkgName)
-                            .putString(PREF_CLUSTER_NAME, appName)
-                            .putString(PREF_LAST_CLUSTER_PKG, pkgName)
-                            .putString(PREF_LAST_CLUSTER_NAME, appName).apply();
+                    ClusterPrefs.setClusterPkg(MainActivity.this, pkgName);
+                    ClusterPrefs.setClusterName(MainActivity.this, appName);
+                    ClusterPrefs.setLastCluster(MainActivity.this, pkgName, appName);
                     mAdapter.setCurrentPackage(pkgName);
                     updateFavoritesIndicators();
                     updateDashboardStatus(appName);
@@ -1729,8 +1699,8 @@ public class MainActivity extends AppCompatActivity
         // Clean up cluster state before move
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        ClusterPrefs.setClusterPkg(this, null);
+        ClusterPrefs.setClusterName(this, null);
         // Force-stop the secondary slot in split mode (prevents it from staying on display 1)
         if (mSecondDashboardPkg != null) {
             AdbLocalClient.forceStopApp(this, mSecondDashboardPkg, null);
@@ -1742,8 +1712,7 @@ public class MainActivity extends AppCompatActivity
         updateFavoritesIndicators();
         mAdapter.setMainPackage(app.packageName);
         updateFavoritesIndicators();
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit().putString(PREF_MAIN_PKG, app.packageName).apply();
+        ClusterPrefs.setMainPkg(this, app.packageName);
         updateDashboardStatus(null);
         setActivateBtnEnabled(true);
         showAppList();
@@ -1784,8 +1753,8 @@ public class MainActivity extends AppCompatActivity
         if (isOnCluster) {
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+            ClusterPrefs.setClusterPkg(MainActivity.this, null);
+            ClusterPrefs.setClusterName(MainActivity.this, null);
             mAdapter.setCurrentPackage(null);
             updateFavoritesIndicators();
             updateDashboardStatus(null);
@@ -2099,8 +2068,7 @@ public class MainActivity extends AppCompatActivity
                                 AppLogger.w(TAG, "state-poll: main-display app " + mainPkg
                                         + " process died → clearing main marker");
                                 mMainDisplayPkg = null;
-                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                        .edit().remove(PREF_MAIN_PKG).apply();
+                                ClusterPrefs.setMainPkg(MainActivity.this, null);
                                 if (mAdapter != null) {
                                     mAdapter.setMainPackage(null);
                                     updateFavoritesIndicators();
@@ -2124,8 +2092,8 @@ public class MainActivity extends AppCompatActivity
         trackUsageStop(mCurrentDashboardPkg);
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        ClusterPrefs.setClusterPkg(this, null);
+        ClusterPrefs.setClusterName(this, null);
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
         updateDashboardStatus(null);
@@ -2463,8 +2431,7 @@ public class MainActivity extends AppCompatActivity
 
     /** Returns the sendInfo code for the screen size chosen in settings. */
     private int getClusterTypeCmd() {
-        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getInt(PREF_CLUSTER_TYPE, CLUSTER_TYPE_DEFAULT);
+        return ClusterPrefs.getClusterType(this);
     }
 
     /** ⋮ menu — developer tools accessible without cluttering the toolbar. */
@@ -2674,8 +2641,8 @@ public class MainActivity extends AppCompatActivity
         // during the brief window between moveTaskToDisplay and forceStopApp.
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        ClusterPrefs.setClusterPkg(this, null);
+        ClusterPrefs.setClusterName(this, null);
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
 
@@ -2809,9 +2776,7 @@ public class MainActivity extends AppCompatActivity
 
     /** Persists the session cluster packages set to SharedPreferences. */
     private void persistSessionClusterPackages() {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .putStringSet(PREF_SESSION_CLUSTER_PKGS, new java.util.HashSet<>(mSessionClusterPackages))
-                .apply();
+        ClusterPrefs.setSessionClusterPkgs(this, new java.util.HashSet<>(mSessionClusterPackages));
     }
 
     /**
@@ -2820,9 +2785,7 @@ public class MainActivity extends AppCompatActivity
      * Only runs if boot_auto_start_enabled is false.
      */
     static void cleanupDisplayAffinityAtBoot(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(
-                SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE);
-        java.util.Set<String> pkgs = prefs.getStringSet(PREF_SESSION_CLUSTER_PKGS, null);
+        java.util.Set<String> pkgs = ClusterPrefs.getSessionClusterPkgs(context);
         if (pkgs == null || pkgs.isEmpty()) {
             AppLogger.d("DisplayCleanup", "No session cluster packages to clean up");
             return;
@@ -2836,9 +2799,9 @@ public class MainActivity extends AppCompatActivity
         }
         // Keep only failed packages for a later retry (next boot/app launch).
         if (remaining.isEmpty()) {
-            prefs.edit().remove(PREF_SESSION_CLUSTER_PKGS).apply();
+            ClusterPrefs.clearSessionClusterPkgs(context);
         } else {
-            prefs.edit().putStringSet(PREF_SESSION_CLUSTER_PKGS, remaining).apply();
+            ClusterPrefs.setSessionClusterPkgs(context, remaining);
             AppLogger.w("DisplayCleanup", "Cleanup partially failed, keeping pending set: " + remaining);
         }
     }
@@ -3167,7 +3130,7 @@ public class MainActivity extends AppCompatActivity
     private void toggleViewMode() {
         SharedPreferences p2 = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         boolean nv = !mAdapter.isGridMode();
-        p2.edit().putBoolean(PREF_GRID_MODE, nv).apply();
+        ClusterPrefs.setGridMode(this, nv);
         mAdapter.setGridMode(nv);
         if (nv) {
             // v1.2.45 — honour compact-mode spanCount when re-creating the grid.
@@ -3343,8 +3306,8 @@ public class MainActivity extends AppCompatActivity
         // Eagerly clear tracked cluster state (same rationale as restoreBydDashboard).
         mCurrentDashboardApp = null;
         mCurrentDashboardPkg = null;
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .remove(PREF_CLUSTER_PKG).remove(PREF_CLUSTER_NAME).apply();
+        ClusterPrefs.setClusterPkg(this, null);
+        ClusterPrefs.setClusterName(this, null);
         mAdapter.setCurrentPackage(null);
         updateFavoritesIndicators();
 
@@ -3583,8 +3546,8 @@ public class MainActivity extends AppCompatActivity
                 }
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                Set<String> favs = prefs.getStringSet(PREF_FAVORITES, new HashSet<>());
-                String autoPkg = prefs.getString(PREF_AUTO_LAUNCH_PKG, null);
+                Set<String> favs = ClusterPrefs.getFavorites(MainActivity.this);
+                String autoPkg = ClusterPrefs.getAutoLaunchPkg(MainActivity.this);
 
                 for (AppInfo info : apps) {
                     if (favs.contains(info.packageName)) {
@@ -3629,9 +3592,8 @@ public class MainActivity extends AppCompatActivity
                     mAdapter.setApps(nonFavs);
                     refreshFavoritesStrip(result);
                     // One-shot tip: show once, on first ever launch
-                    SharedPreferences _p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    if (!_p.getBoolean(PREF_FIRST_LAUNCH_TIP, false)) {
-                        _p.edit().putBoolean(PREF_FIRST_LAUNCH_TIP, true).apply();
+                    if (!ClusterPrefs.isFirstLaunchTipShown(MainActivity.this)) {
+                        ClusterPrefs.setFirstLaunchTipShown(MainActivity.this);
                         mScreenshotHandler.postDelayed(() ->
                                 Toast.makeText(getApplicationContext(),
                                         getString(R.string.tooltip_tap_send),
@@ -3780,10 +3742,7 @@ public class MainActivity extends AppCompatActivity
                 btnDismiss.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
                         try {
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                    .edit()
-                                    .putBoolean(PREF_IME_BANNER_DISMISSED, true)
-                                    .apply();
+                            ClusterPrefs.setImeBannerDismissed(MainActivity.this);
                         } catch (Throwable ignored) { }
                         card.setVisibility(View.GONE);
                     }
@@ -3809,8 +3768,7 @@ public class MainActivity extends AppCompatActivity
         try {
             boolean isDl5 = com.byd.dashcast.platform.Platform.get().isDiLink5(this);
             if (isDl5) {
-                boolean dismissed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                        .getBoolean(PREF_IME_BANNER_DISMISSED, false);
+                boolean dismissed = ClusterPrefs.isImeBannerDismissed(this);
                 boolean enabled = com.byd.dashcast.ime.ClusterImeWatcherService.isEnabled(this);
                 shouldShow = !dismissed && !enabled;
                 if (enabled && card.getVisibility() == View.VISIBLE) {
