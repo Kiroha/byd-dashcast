@@ -345,8 +345,19 @@
     <string name="diag_voice_commands_hint">Dites « Hey Jarvis » puis votre commande : « cluster », « ferme le cluster », « lance YouTube », « diagnostics », « logs ».</string>
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">Clé API OpenAI (optionnel — active Jarvis IA)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>
-    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Modèle de reconnaissance vocale</string>
+    <string name="diag_voice_model_small_label">Petit modèle (~40 Mo)</string>
+    <string name="diag_voice_model_small_desc">Téléchargement rapide, bonne précision pour les commandes courtes.</string>
+    <string name="diag_voice_model_large_label">Grand modèle (~1,3 Go) — haute précision</string>
+    <string name="diag_voice_model_large_desc">Meilleure reconnaissance du français, recommandé si vous avez le Wi-Fi.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d Mo disponibles</string>
+    <string name="diag_voice_model_download_btn">Télécharger</string>
+    <string name="diag_voice_model_delete_btn">Supprimer</string>
+    <string name="diag_voice_model_status_downloaded">✓ Modèle installé</string>
+    <string name="diag_voice_model_status_not_downloaded">Non installé</string>
+    <string name="diag_voice_model_progress_fmt">%1$d Mo / %2$d Mo (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Décompression en cours…</string>    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Activer</string>
     <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Modèle : hey_jarvis_v0.1 (placeholder pour « Ok DashCast »)</string>

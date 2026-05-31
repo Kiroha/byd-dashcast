@@ -441,6 +441,19 @@
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">OpenAI API кілті (міндетті емес — Jarvis ЖИ-ні іске қосады)</string>
     <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Ояту сөзі (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Сөйлеуді тану үлгісі</string>
+    <string name="diag_voice_model_small_label">Шағын үлгі (~40 МБ)</string>
+    <string name="diag_voice_model_small_desc">Жылдам жүктеу, қысқа командалар үшін жақсы дәлдік.</string>
+    <string name="diag_voice_model_large_label">Үлкен үлгі (~1,3 ГБ) — жоғары дәлдік</string>
+    <string name="diag_voice_model_large_desc">Жақсырақ тану, Wi-Fi болғанда ұсынылады.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d МБ қолжетімді</string>
+    <string name="diag_voice_model_download_btn">Жүктеу</string>
+    <string name="diag_voice_model_delete_btn">Жою</string>
+    <string name="diag_voice_model_status_downloaded">✓ Үлгі орнатылды</string>
+    <string name="diag_voice_model_status_not_downloaded">Орнатылмаған</string>
+    <string name="diag_voice_model_progress_fmt">%1$d МБ / %2$d МБ (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Шығарылуда…</string>
     <string name="diag_voice_wakeword_switch">Қосу</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid бағасы (босаға 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Үлгі: hey_jarvis_v0.1 («Ok DashCast» үшін орынбасар)</string>

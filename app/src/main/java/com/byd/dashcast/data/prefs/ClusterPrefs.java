@@ -54,7 +54,9 @@ public final class ClusterPrefs {
 
     // ── Startup behaviour ────────────────────────────────────────────────────
     public static final String KEY_BOOT_AUTO_START = "boot_auto_start_enabled";
-
+    // ── Voice ASR model ──────────────────────────────────────────────
+    /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
+    public static final String KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy";
     private ClusterPrefs() { /* static utility class */ }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -207,6 +209,18 @@ public final class ClusterPrefs {
 
     public static void setBootAutoStartEnabled(Context ctx, boolean enabled) {
         edit(ctx).putBoolean(KEY_BOOT_AUTO_START, enabled).apply();
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Voice ASR model
+    // ───────────────────────────────────────────────────────────────────────
+
+    public static boolean isVoskHighAccuracy(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_VOSK_HIGH_ACCURACY, false);
+    }
+
+    public static void setVoskHighAccuracy(Context ctx, boolean highAccuracy) {
+        edit(ctx).putBoolean(KEY_VOSK_HIGH_ACCURACY, highAccuracy).apply();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

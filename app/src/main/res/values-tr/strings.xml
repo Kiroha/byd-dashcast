@@ -441,6 +441,19 @@
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">OpenAI API anahtarı (isteğe bağlı — Jarvis Yapay Zekasını etkinleştirir)</string>
     <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Ses tanıma modeli</string>
+    <string name="diag_voice_model_small_label">Küçük model (~40 MB)</string>
+    <string name="diag_voice_model_small_desc">Hızlı indirme, kısa komutlar için iyi doğruluk.</string>
+    <string name="diag_voice_model_large_label">Büyük model (~1,3 GB) — yüksek doğruluk</string>
+    <string name="diag_voice_model_large_desc">Daha iyi tanıma, Wi-Fi bağlantısında önerilir.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d MB kullanılabilir</string>
+    <string name="diag_voice_model_download_btn">İndir</string>
+    <string name="diag_voice_model_delete_btn">Sil</string>
+    <string name="diag_voice_model_status_downloaded">✓ Model kuruldu</string>
+    <string name="diag_voice_model_status_not_downloaded">Kurulu değil</string>
+    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Çıkarılıyor…</string>
     <string name="diag_voice_wakeword_switch">Etkinleştir</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid puanı (eşik 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (“Ok DashCast” için yer tutucu)</string>
