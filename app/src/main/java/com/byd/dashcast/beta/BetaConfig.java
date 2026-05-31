@@ -3,6 +3,8 @@ package com.byd.dashcast.beta;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.byd.dashcast.data.prefs.ClusterPrefs;
+
 /**
  * BetaConfig — centralised access to the experimental "Beta Engine" preferences.
  *
@@ -33,8 +35,6 @@ public final class BetaConfig {
 
     private BetaConfig() {}
 
-    private static final String PREFS_NAME = "byd_app_prefs"; // same file as SettingsActivity.PREFS_NAME
-
     public static final String  PREF_USE_PROXY_DAEMON   = "beta_use_proxy_daemon";
     // v1.2.79 — Phase C basculement : le proxy daemon devient le chemin par
     // défaut. Phase A (couches 1-4) a verrouillé sa disponibilité 24/7
@@ -49,7 +49,7 @@ public final class BetaConfig {
 
     private static SharedPreferences prefs(Context ctx) {
         return ctx.getApplicationContext()
-                  .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                  .getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     public static boolean isProxyDaemonEnabled(Context ctx) {
