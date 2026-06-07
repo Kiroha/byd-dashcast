@@ -87,6 +87,11 @@ public final class ProxyDaemonMain {
      *  restarted app gets the binder without restarting the daemon. */
     private static final String TRIGGER_FILE = "/data/local/tmp/dashcast_proxy.trigger";
 
+    /** APK versionCode written at startup so the bootstrap script can detect a
+     *  stale daemon that survived an OTA update (REBROADCAST would otherwise
+     *  reconnect to the old, class-loaded binary). Deleted by shutdown hook. */
+    private static final String VERSION_FILE = "/data/local/tmp/dashcast_proxy_ver";
+
     /** Transaction: no args → {@code long} (epoch ms). */
     public static final int TXN_PING   = android.os.IBinder.FIRST_CALL_TRANSACTION;        // 1
     /** Transaction: no args → {@code int uid, int pid, String ver}. */
@@ -170,6 +175,7 @@ public final class ProxyDaemonMain {
                 System.exit(3);
                 return;
             }
+            writeVersionFile();
             installPidShutdownHook();
             Looper.prepareMainLooper();
 
@@ -301,6 +307,12 @@ public final class ProxyDaemonMain {
         }
     }
 
+    private static void writeVersionFile() {
+        try (FileOutputStream fos = new FileOutputStream(new File(VERSION_FILE))) {
+            fos.write(Integer.toString(com.byd.dashcast.BuildConfig.VERSION_CODE).getBytes());
+        } catch (Throwable ignore) {}
+    }
+
     /** Remove the PID file on JVM shutdown. Pure best-effort — a SIGKILL'd
      *  daemon will leave a stale file behind, which the bootstrap script
      *  detects via {@code /proc/$PID/comm} sanity check. */
@@ -310,6 +322,7 @@ public final class ProxyDaemonMain {
                 @Override public void run() {
                     try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
+                    try { new File(VERSION_FILE).delete(); } catch (Throwable ignore) {}
                 }
             });
         } catch (Throwable ignore) {

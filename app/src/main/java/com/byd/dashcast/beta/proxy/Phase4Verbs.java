@@ -930,13 +930,78 @@ public final class Phase4Verbs {
                 return log.toString();
             }
 
-            // Task is on displayId. am start --windowingMode 5 sets the task
-            // hint to FREEFORM but on BYD the containing stack stays FULLSCREEN,
-            // which causes resizeTask to throw "resizeTask not allowed on task".
-            // Calling setTaskWindowingMode (AOSP) first flips both task AND stack.
+            // Placement sequence mirrors DevTool handleLaunchAndForce exactly:
+            //  1. setDisplayToSingleTaskInstance
+            //  2. getAllStackInfos → resolve stackId (RunningTaskInfo.stackId may be stale)
+            //  3. FREEFORM pre-move  (setTaskWindowingMode on existing stack)
+            //  4. moveStackToDisplay (creates new FULLSCREEN stack → moves task)
+            //     — tolerated if already on target display (throws but we catch)
+            //  5. FREEFORM post-move (new stack defaults to FULLSCREEN, must re-apply)
+            //  6. resizeTask         (succeeds now that stack IS in FREEFORM mode)
+            //  7. setFocusedTask
+            // This is the ONLY sequence confirmed to work on BYD DiLink 3.0.
             log.append("  ").append(setDisplayToSingleTaskInstance(displayId)).append('\n');
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
+
+            // Resolve real stackId via getAllStackInfos (same as DevTool Step 3b).
+            int stackId = -1;
+            try {
+                Class<?> ac = Class.forName("android.app.ActivityTaskManager");
+                Object ia = ac.getMethod("getService").invoke(null);
+                Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
+                java.util.List<?> ss;
+                if (res instanceof java.util.List) ss = (java.util.List<?>) res;
+                else if (res != null && res.getClass().isArray())
+                    ss = java.util.Arrays.asList((Object[]) res);
+                else ss = java.util.Collections.emptyList();
+                outer2:
+                for (Object si : ss) {
+                    int[] tids;
+                    try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
+                    catch (Exception ignore) { continue; }
+                    if (tids == null) continue;
+                    for (int t : tids) {
+                        if (t == taskId) {
+                            try { stackId = si.getClass().getField("stackId").getInt(si); }
+                            catch (Exception ignore) {}
+                            break outer2;
+                        }
+                    }
+                }
+                log.append("  stackId=").append(stackId).append('\n');
+            } catch (Throwable ex) {
+                log.append("  WARN getAllStackInfos: ").append(ex.getMessage()).append('\n');
+            }
+
+            // FREEFORM pre-move: flip task+stack to FREEFORM before the move.
             log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n');
+
+            // moveStackToDisplay: even if task is already on displayId, calling
+            // this creates the FREEFORM stack context that allows resizeTask.
+            // Throws "already on same display" when the direct-launch path was
+            // used — that is non-fatal; pre-FREEFORM already applied.
+            if (stackId >= 0) {
+                try {
+                    Class<?> ac = Class.forName("android.app.ActivityTaskManager");
+                    Object ia = ac.getMethod("getService").invoke(null);
+                    java.lang.reflect.Method mv = ia.getClass().getMethod(
+                            "moveStackToDisplay", int.class, int.class);
+                    mv.invoke(ia, stackId, displayId);
+                    log.append("  OK moveStackToDisplay(").append(stackId).append(',')
+                       .append(displayId).append(")\n");
+                } catch (Throwable ex) {
+                    Throwable c = (ex instanceof java.lang.reflect.InvocationTargetException
+                            && ex.getCause() != null) ? ex.getCause() : ex;
+                    log.append("  moveStackToDisplay: ").append(c.getClass().getSimpleName())
+                       .append(" — ").append(c.getMessage()).append('\n');
+                }
+            }
+
+            // FREEFORM post-move: moveStackToDisplay creates a FULLSCREEN stack;
+            // re-apply FREEFORM so resizeTask is accepted and Waze's
+            // canAddActivity() check sees FREEFORM and skips the redirect.
+            log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n');
+
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
             // Async watchdog — polls getAllStackInfos() every 500 ms.

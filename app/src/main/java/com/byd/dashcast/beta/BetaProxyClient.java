@@ -107,8 +107,15 @@ public final class BetaProxyClient {
             + "PS_OUT=$(ps -A 2>/dev/null | grep '[d]ashcast_proxy'); "
             + "ALIVE_PID=$(echo \"$PS_OUT\" | awk '{print $2}' | head -n1); "
             + "if [ -n \"$ALIVE_PID\" ]; then "
-            +   "echo trigger > \"$TRIG\" 2>/dev/null; "
-            +   "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
+            // Version check: daemon loaded from old APK after OTA has a stale
+            // versionCode in VERSION_FILE — fall through to kill+restart instead
+            // of REBROADCAST, so Phase4Verbs is always from the current APK.
+            +   "DAEMON_VER=$(cat /data/local/tmp/dashcast_proxy_ver 2>/dev/null); "
+            +   "if [ \"$DAEMON_VER\" = \"" + com.byd.dashcast.BuildConfig.VERSION_CODE + "\" ]; then "
+            +     "echo trigger > \"$TRIG\" 2>/dev/null; "
+            +     "echo \"REBROADCAST $ALIVE_PID\"; exit 0; "
+            +   "fi; "
+            +   "echo \"[diag] proxy stale ver=${DAEMON_VER:-?} expected=" + com.byd.dashcast.BuildConfig.VERSION_CODE + "\" >&2; "
             + "fi; "
             // ── flock guard ── REMOVED in v1.2.69 ──────────────────────────
             // v1.2.68 tried to gate the flock on its availability, but
