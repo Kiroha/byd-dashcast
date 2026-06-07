@@ -27,14 +27,15 @@ import android.view.Display;
  * CLUSTER COMMANDS (type=1000) — CONFIRMED IN CAR (13/04/2026 + 16/04/2026, BYD Seal EU) :
  *
  *   infoInt=30  → 切换到12.3寸屏 = SWITCH TO Seal EU MODE (correct resolution) :
- *                  MUST be sent BEFORE infoInt=16 on Seal EU.
- *                  Fixes the ADAS window bug and UI stretching.
- *                  Full sequence: sendInfo(30) → wait 1s → sendInfo(16) → wait 2s → startActivity.
+ *                  ONLY safe to send on the SLOW path (no VD present).
+ *                  Sending when a VD already exists causes AutoDisplayService to call
+ *                  createVirtualDisplay() again, corrupting the ATM display registry.
+ *                  Slow path sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35).
  *
  *   infoInt=16  → 全屏投屏开启 = ENABLE fullscreen projection :
  *                  Qt enters standby, display 1 remains registered in IActivityManager.
  *                  THIS IS THE CORRECT COMMAND to launch an app on display 1.
- *                  Sequence: sendInfo(30) → sendInfo(16) → wait 2s → startActivity on display 1.
+ *                  Warm path (VD present): sendInfo(16) only — no cmd 30!
  *
  *   infoInt=18  → 投屏关闭 = CLOSE the projection :
  *                  THIS IS THE CORRECT RESTORE COMMAND (cmd=0 alone is NOT enough).
@@ -224,39 +225,16 @@ public class ClusterManager {
         if (found != null) {
             // Warm path: VD persisted from a previous session (or boot) but Qt has
             // returned to native mode (after a stop, or at first launch since boot).
-            //
-            // ADAS Window Fix OFF (default): skip sendInfo(30) — just sendInfo(16).
-            //   Leaves the cluster screen size unchanged; no visual shape disruption.
-            // ADAS Window Fix ON: sendInfo(30) → 3s → sendInfo(16) (original behaviour).
-            //   The 3s delay is needed for Qt to reconfigure the viewport after cmd 30.
+            // Always use sendInfo(16) only — cmd 30 must NOT be sent here.
+            // Sending cmd 30 when a VD already exists causes AutoDisplayService to call
+            // createVirtualDisplay() again (new display id), which throws a RuntimeException
+            // in RootActivityContainer.onDisplayAdded and corrupts the ATM display registry,
+            // causing subsequent startActivity(launchDisplayId=1) to fail with SecurityException.
+            // The ADAS fix only applies on the slow path (before any VD exists).
             final Display displayFound = found;
-            final boolean adasFix = com.byd.dashcast.data.prefs.ClusterPrefs
-                    .isAdasWindowFixEnabled(mContext);
             AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
-                    + " but Qt in native mode — warm path"
-                    + (adasFix ? " (30→3s→16, ADAS fix ON)" : " (16 only, ADAS fix OFF)"));
-
-            if (adasFix) {
-                // Original warm path: sendInfo(30) → 3s → sendInfo(16)
-                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
-                    new AdbLocalClient.Callback() {
-                        @Override public void onSuccess(String out) {
-                            AppLogger.i(TAG, "warm path ADB(cmd=30): " + out);
-                            mHandler.postDelayed(new Runnable() {
-                                @Override public void run() {
-                                    sendWarmCmd16(displayFound, callback);
-                                }
-                            }, 3000);
-                        }
-                        @Override public void onError(String err) {
-                            AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
-                            sendWarmCmd16(displayFound, callback);
-                        }
-                    });
-            } else {
-                // Default: sendInfo(16) only — no screen-size change
-                sendWarmCmd16(displayFound, callback);
-            }
+                    + " but Qt in native mode — warm path (16 only)");
+            sendWarmCmd16(displayFound, callback);
             return;
         }
 
