@@ -704,11 +704,14 @@ public class MirrorDaemon {
     /** Creates an overlay SurfaceView on the cluster display and returns its Surface. */
     private static Surface tryAttachSlotOverlay(SlotInfo slot) {
         try {
+            out("[ATTACH_SLOT] step1: resolveClusterDisplay pkg=" + slot.pkg);
             Display target = resolveClusterDisplay();
             if (target == null) {
-                out("[Fission] tryAttachSlotOverlay: cluster display not found");
+                out("[ATTACH_SLOT] FAIL: cluster display not found");
                 return null;
             }
+            out("[ATTACH_SLOT] step2: targetDisplay=" + target.getDisplayId()
+                    + " latch setup pkg=" + slot.pkg);
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Surface> surfaceRef = new AtomicReference<>();
             final AtomicReference<String>  errorRef   = new AtomicReference<>();
@@ -719,10 +722,12 @@ public class MirrorDaemon {
                     Context displayCtx = null;
                     try { displayCtx = base.createDisplayContext(target); }
                     catch (Exception e) {
-                        out("[Fission] createDisplayContext: " + e.getMessage());
+                        out("[ATTACH_SLOT] createDisplayContext: " + e.getMessage());
                     }
                     boolean hasRes = displayCtx != null && displayCtx.getResources() != null;
                     Context viewCtx = hasRes ? displayCtx : base;
+                    out("[ATTACH_SLOT] step3: displayCtx=" + (displayCtx != null ? "ok" : "null")
+                            + " resources=" + (hasRes ? "ok" : "null") + " pkg=" + slot.pkg);
 
                     // Grant OP_SYSTEM_ALERT_WINDOW (op=24) to our uid via AppOps
                     if (sContext != null) {
@@ -733,7 +738,10 @@ public class MirrorDaemon {
                             setMode.setAccessible(true);
                             setMode.invoke(appOps, 24, android.os.Process.myUid(),
                                     sContext.getPackageName(), 0);
-                        } catch (Exception ignored) {}
+                            out("[ATTACH_SLOT] OP_SYSTEM_ALERT_WINDOW granted");
+                        } catch (Exception appE) {
+                            out("[ATTACH_SLOT] AppOps skipped (" + appE.getMessage() + ")");
+                        }
                     }
 
                     SurfaceView sv = new SurfaceView(viewCtx);
@@ -742,16 +750,21 @@ public class MirrorDaemon {
                         @Override public void surfaceCreated(SurfaceHolder h) {
                             Surface s = h.getSurface();
                             if (s != null && s.isValid()) {
+                                out("[ATTACH_SLOT] surfaceCreated valid pkg=" + slot.pkg);
                                 surfaceRef.compareAndSet(null, s); latch.countDown();
                             }
                         }
                         @Override public void surfaceChanged(SurfaceHolder h, int f, int w2, int h2) {
                             Surface s = h.getSurface();
                             if (s != null && s.isValid()) {
+                                out("[ATTACH_SLOT] surfaceChanged valid " + w2 + "x" + h2
+                                        + " pkg=" + slot.pkg);
                                 surfaceRef.compareAndSet(null, s); latch.countDown();
                             }
                         }
-                        @Override public void surfaceDestroyed(SurfaceHolder h) {}
+                        @Override public void surfaceDestroyed(SurfaceHolder h) {
+                            out("[ATTACH_SLOT] surfaceDestroyed pkg=" + slot.pkg);
+                        }
                     });
 
                     WindowManager wm = (displayCtx != null)
@@ -762,12 +775,14 @@ public class MirrorDaemon {
                     }
                     WindowManager.LayoutParams lp = createOverlayLayoutParams(target, slot.w, slot.h);
                     lp.x = slot.x; lp.y = slot.y;
+                    out("[ATTACH_SLOT] step4: wm.addView display=" + target.getDisplayId()
+                            + " pos=" + lp.x + "," + lp.y + " size=" + slot.w + "x" + slot.h);
                     wm.addView(sv, lp);
                     slot.overlayView = sv;
                     slot.overlayWM = wm;
                 } catch (Exception e) {
-                    out("[Fission] tryAttachSlotOverlay error: "
-                            + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    out("[ATTACH_SLOT] error: " + e.getClass().getSimpleName()
+                            + ": " + e.getMessage());
                     errorRef.set(e.getMessage()); latch.countDown();
                 }
             };
@@ -776,19 +791,21 @@ public class MirrorDaemon {
             else new android.os.Handler(Looper.getMainLooper()).post(attach);
 
             if (!latch.await(2, TimeUnit.SECONDS)) {
-                out("[Fission] tryAttachSlotOverlay timeout for " + slot.pkg); return null;
+                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg); return null;
             }
             if (errorRef.get() != null) {
-                out("[Fission] tryAttachSlotOverlay failed: " + errorRef.get()); return null;
+                out("[ATTACH_SLOT] FAIL: " + errorRef.get()); return null;
             }
             Surface surface = surfaceRef.get();
             if (surface == null || !surface.isValid()) {
-                out("[Fission] tryAttachSlotOverlay: no valid surface for " + slot.pkg); return null;
+                out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg); return null;
             }
+            out("[ATTACH_SLOT] OK surface valid pkg=" + slot.pkg
+                    + " display=" + target.getDisplayId());
             return surface;
         } catch (Exception e) {
-            out("[Fission] tryAttachSlotOverlay exception: "
-                    + e.getClass().getSimpleName() + ": " + e.getMessage());
+            out("[ATTACH_SLOT] exception: " + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
             return null;
         }
     }
@@ -796,20 +813,22 @@ public class MirrorDaemon {
     /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */
     private static int createTrustedVdForSlot(SlotInfo slot, Surface surface, String vdName) {
         try {
+            out("[CREATE_VD] name=" + vdName + " size=" + slot.w + "x" + slot.h + " dpi=160");
             DisplayManager dm = sContext.getSystemService(DisplayManager.class);
             VirtualDisplay vd = null;
             try {
                 // flags 1346 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)|TRUSTED(1024)
                 vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 1346);
-                if (vd != null) out("[Fission] VD TRUSTED OK name=" + vdName);
+                if (vd != null) out("[CREATE_VD] TRUSTED OK name=" + vdName);
             } catch (Exception e) {
-                out("[Fission] VD TRUSTED failed, fallback flags=322: " + e.getMessage());
+                out("[CREATE_VD] TRUSTED failed, fallback flags=322: " + e.getMessage());
             }
             if (vd == null) {
                 // flags 322 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)
                 vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 322);
+                if (vd != null) out("[CREATE_VD] fallback OK name=" + vdName);
             }
-            if (vd == null) return -1;
+            if (vd == null) { out("[CREATE_VD] FAIL: both flags failed name=" + vdName); return -1; }
             slot.vd = vd;
             slot.displayId = vd.getDisplay().getDisplayId();
             // Safety guard: new VD must never land on display 0
@@ -817,6 +836,7 @@ public class MirrorDaemon {
                 out("SAFETY: createTrustedVdForSlot: VD got displayId=0 — RELEASING");
                 vd.release(); slot.vd = null; return -1;
             }
+            out("[CREATE_VD] OK displayId=" + slot.displayId + " name=" + vdName);
             return slot.displayId;
         } catch (Exception e) {
             out("[Fission] createTrustedVdForSlot error: " + e.getMessage());
@@ -839,7 +859,13 @@ public class MirrorDaemon {
         lp.setTitle("dashcast_fission_overlay");
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.x = 0; lp.y = 0;
-        if (sContext != null) lp.packageName = sContext.getPackageName();
+        // WMS resolves TYPE_SYSTEM_OVERLAY permission against this package — must be "com.android.shell"
+        // (uid=2000) which holds INTERNAL_SYSTEM_WINDOW. Matches DevTool pattern.
+        lp.packageName = "com.android.shell";
+        out("[Fission] createOverlayLayoutParams type=" + overlayType
+                + " size=" + w + "×" + h
+                + (target != null ? " display=" + target.getDisplayId() : "")
+                + " pkg=" + lp.packageName);
         return lp;
     }
 }
