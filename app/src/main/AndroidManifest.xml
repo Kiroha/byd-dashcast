@@ -217,6 +217,21 @@
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
 
+        <!-- v1.3.30-beta — Fission multi-app projection (gated by PREF_FISSION_MODE) -->
+        <activity
+            android:name=".fission.FissionActivity"
+            android:label="@string/fission_title"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"/>
+
+        <activity
+            android:name=".fission.FissionLayoutEditorActivity"
+            android:label="@string/fission_editor_title"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"/>
+
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"

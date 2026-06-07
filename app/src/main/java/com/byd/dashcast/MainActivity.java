@@ -774,6 +774,22 @@ public class MainActivity extends AppCompatActivity
             });
         }
 
+        // v1.3.30-beta — Fission mode button (visible only when PREF_FISSION_MODE enabled)
+        Button btnFissionOpen = (Button) findViewById(R.id.btn_fission_open);
+        if (btnFissionOpen != null) {
+            if (com.byd.dashcast.beta.BetaConfig.isFissionModeEnabled(this)) {
+                btnFissionOpen.setVisibility(View.VISIBLE);
+                btnFissionOpen.setOnClickListener(v -> {
+                    try {
+                        startActivity(new android.content.Intent(
+                                MainActivity.this, com.byd.dashcast.fission.FissionActivity.class));
+                    } catch (Exception e) {
+                        AppLogger.e("MainActivity", "FissionActivity launch failed", e);
+                    }
+                });
+            }
+        }
+
         // v1.2.9 — IME a11y onboarding banner (DL5 only)
         setupImeA11yBanner();
 

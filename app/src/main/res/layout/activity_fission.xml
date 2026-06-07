@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/md_background">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_fission"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/md_surface_container"
+        app:title="@string/fission_title"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:menu="@menu/menu_fission"/>
+
+    <!-- Cluster mirror preview — setFixedSize(1920,720) sets buffer; view height = aspect ratio -->
+    <SurfaceView
+        android:id="@+id/sv_fission_preview"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"/>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/md_outline_variant"/>
+
+    <!-- Status text -->
+    <TextView
+        android:id="@+id/tv_fission_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:textSize="13sp"
+        android:textColor="@color/md_on_surface_variant"
+        android:text="@string/fission_status_idle"/>
+
+    <!-- Action buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_fission_add"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:text="@string/fission_btn_add"
+            android:textSize="13sp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:backgroundTint="@color/md_primary"
+            android:textColor="@color/md_on_primary"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_fission_stop"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="40dp"
+            android:text="@string/fission_btn_stop"
+            android:textSize="13sp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:backgroundTint="@color/md_error"
+            android:textColor="@color/md_on_error"/>
+
+    </LinearLayout>
+
+    <!-- Active slots list -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/ll_fission_slots"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:visibility="gone"/>
+
+    </ScrollView>
+
+</LinearLayout>
