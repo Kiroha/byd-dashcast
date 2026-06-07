@@ -224,69 +224,39 @@ public class ClusterManager {
         if (found != null) {
             // Warm path: VD persisted from a previous session (or boot) but Qt has
             // returned to native mode (after a stop, or at first launch since boot).
-            // We MUST replay sendInfo(30) → 3s → sendInfo(16) to put Qt back into
-            // projection. The 3s delay matches the slow-path 30→16 transition;
-            // 800ms is NOT enough when Qt is coming out of native mode (the user-
-            // reported "no black rectangle" symptom is exactly this race).
-            AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
-                    + " but Qt in native mode — warm path (30→3s→16)");
+            //
+            // ADAS Window Fix OFF (default): skip sendInfo(30) — just sendInfo(16).
+            //   Leaves the cluster screen size unchanged; no visual shape disruption.
+            // ADAS Window Fix ON: sendInfo(30) → 3s → sendInfo(16) (original behaviour).
+            //   The 3s delay is needed for Qt to reconfigure the viewport after cmd 30.
             final Display displayFound = found;
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
-                new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String out) {
-                        AppLogger.i(TAG, "warm path ADB(cmd=30): " + out);
-                        mHandler.postDelayed(new Runnable() {
-                            @Override public void run() {
-                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                                    new AdbLocalClient.Callback() {
-                                        @Override public void onSuccess(String out2) {
-                                            AppLogger.i(TAG, "warm path ADB(cmd=16): " + out2);
-                                            notifyProjectionActive();
-                                            mHandler.post(new Runnable() {
-                                                @Override public void run() {
-                                                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
-                                                }
-                                            });
-                                        }
-                                        @Override public void onError(String err) {
-                                            AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: " + err);
-                                            // We still report the display back — caller logic handles
-                                            // post-activation discovery; flag stays false so the next
-                                            // explicit activate() will retry the warm path.
-                                            mHandler.post(new Runnable() {
-                                                @Override public void run() {
-                                                    callback.onDisplayReady(displayFound, displayFound.getDisplayId());
-                                                }
-                                            });
-                                        }
-                                    });
-                            }
-                        }, 3000);
-                    }
-                    @Override public void onError(String err) {
-                        AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
-                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                            new AdbLocalClient.Callback() {
-                                @Override public void onSuccess(String out2) {
-                                    AppLogger.i(TAG, "warm path ADB(cmd=16) fallback: " + out2);
-                                    notifyProjectionActive();
-                                    mHandler.post(new Runnable() {
-                                        @Override public void run() {
-                                            callback.onDisplayReady(displayFound, displayFound.getDisplayId());
-                                        }
-                                    });
+            final boolean adasFix = com.byd.dashcast.data.prefs.ClusterPrefs
+                    .isAdasWindowFixEnabled(mContext);
+            AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
+                    + " but Qt in native mode — warm path"
+                    + (adasFix ? " (30→3s→16, ADAS fix ON)" : " (16 only, ADAS fix OFF)"));
+
+            if (adasFix) {
+                // Original warm path: sendInfo(30) → 3s → sendInfo(16)
+                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            AppLogger.i(TAG, "warm path ADB(cmd=30): " + out);
+                            mHandler.postDelayed(new Runnable() {
+                                @Override public void run() {
+                                    sendWarmCmd16(displayFound, callback);
                                 }
-                                @Override public void onError(String err2) {
-                                    AppLogger.e(TAG, "warm path ADB(cmd=16) fallback ERROR: " + err2);
-                                    mHandler.post(new Runnable() {
-                                        @Override public void run() {
-                                            callback.onDisplayReady(displayFound, displayFound.getDisplayId());
-                                        }
-                                    });
-                                }
-                            });
-                    }
-                });
+                            }, 3000);
+                        }
+                        @Override public void onError(String err) {
+                            AppLogger.e(TAG, "warm path ADB(cmd=30) ERROR: " + err);
+                            sendWarmCmd16(displayFound, callback);
+                        }
+                    });
+            } else {
+                // Default: sendInfo(16) only — no screen-size change
+                sendWarmCmd16(displayFound, callback);
+            }
             return;
         }
 
@@ -373,72 +343,99 @@ public class ClusterManager {
         }, delayMs == 0 ? POLL_INTERVAL_MS : delayMs);
     }
 
+    // ── Warm path helper ──────────────────────────────────────────────────────
+
+    /** Sends sendInfo(16) and notifies the callback when done (or on error). */
+    private void sendWarmCmd16(final Display display, final DisplayReadyCallback callback) {
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) {
+                    AppLogger.i(TAG, "warm path ADB(cmd=16): " + out);
+                    notifyProjectionActive();
+                    mHandler.post(new Runnable() {
+                        @Override public void run() {
+                            callback.onDisplayReady(display, display.getDisplayId());
+                        }
+                    });
+                }
+                @Override public void onError(String err) {
+                    AppLogger.e(TAG, "warm path ADB(cmd=16) ERROR: " + err);
+                    // Report display anyway — caller decides what to do.
+                    mHandler.post(new Runnable() {
+                        @Override public void run() {
+                            callback.onDisplayReady(display, display.getDisplayId());
+                        }
+                    });
+                }
+            });
+    }
+
     // ── Activation sequence sendInfo(30 → 16) ──────────────────────────────
 
     /**
-     * Full activation sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35).
-     * Confirmed sequence from logcat (03/05/2026, BYD Seal EU):
-     *   sendInfo(35) triggers Qt JNI → AutoDisplayService.createVirtualDisplay() → VD appears ~280ms later.
+     * Full activation sequence to create the VirtualDisplay (slow path).
+     *
+     * ADAS Window Fix OFF (default): sendInfo(16) → 3s → sendInfo(35)
+     *   No screen-size change; Qt enters projection without reconfiguring the viewport.
+     * ADAS Window Fix ON: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35)
+     *   Classic sequence confirmed on Seal EU (03/05/2026). sendInfo(35) triggers
+     *   Qt JNI → AutoDisplayService.createVirtualDisplay() → VD appears ~280ms later.
+     *
      * The DisplayReadyCallback is NOT called here: the DisplayListener / polling handles it.
      */
     private void sendActivationSequence() {
-        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+        final boolean adasFix = com.byd.dashcast.data.prefs.ClusterPrefs
+                .isAdasWindowFixEnabled(mContext);
+        AppLogger.i(TAG, "sendActivationSequence — ADAS fix " + (adasFix ? "ON (30→3s→16→3s→35)" : "OFF (16→3s→35)"));
+
+        if (adasFix) {
+            // Original sequence: sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(35)
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "activation ADB(cmd=30): " + out);
+                        mHandler.postDelayed(new Runnable() {
+                            @Override public void run() { sendActivationCmd16ThenCmd35(); }
+                        }, 3000);
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: " + err);
+                        // cmd=30 failed — still attempt 16 → 35
+                        sendActivationCmd16ThenCmd35();
+                    }
+                });
+        } else {
+            // Default: sendInfo(16) → 3s → sendInfo(35), no screen-size change
+            sendActivationCmd16ThenCmd35();
+        }
+    }
+
+    /** Sends sendInfo(16) → 3s delay → sendInfo(35) (VirtualDisplay creation trigger). */
+    private void sendActivationCmd16ThenCmd35() {
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
             new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {
-                    AppLogger.i(TAG, "activation ADB(cmd=30): " + out);
+                    AppLogger.i(TAG, "activation ADB(cmd=16): " + out);
                     mHandler.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                                new AdbLocalClient.Callback() {
-                                    @Override public void onSuccess(String out2) {
-                                        AppLogger.i(TAG, "activation ADB(cmd=16): " + out2);
-                                        mHandler.postDelayed(new Runnable() {
-                                            @Override public void run() {
-                                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
-                                                    new AdbLocalClient.Callback() {
-                                                        @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35): " + out3); }
-                                                        @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
-                                                    });
-                                            }
-                                        }, 3000);
-                                    }
-                                    @Override public void onError(String err) {
-                                        AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: " + err);
-                                        // Still attempt sendInfo(35) even if cmd=16 failed
-                                        mHandler.postDelayed(new Runnable() {
-                                            @Override public void run() {
-                                                AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
-                                                    new AdbLocalClient.Callback() {
-                                                        @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35) after err16: " + out3); }
-                                                        @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
-                                                    });
-                                            }
-                                        }, 3000);
-                                    }
-                                });
-                        }
+                        @Override public void run() { sendActivationCmd35(); }
                     }, 3000);
                 }
                 @Override public void onError(String err) {
-                    AppLogger.e(TAG, "activation ADB(cmd=30) ERROR: " + err);
-                    // On cmd=30 error: still send 16 → 3s → 35
-                    AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                        new AdbLocalClient.Callback() {
-                            @Override public void onSuccess(String out2) {
-                                AppLogger.i(TAG, "activation ADB(cmd=16) after err30: " + out2);
-                                mHandler.postDelayed(new Runnable() {
-                                    @Override public void run() {
-                                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
-                                            new AdbLocalClient.Callback() {
-                                                @Override public void onSuccess(String out3) { AppLogger.i(TAG, "activation ADB(cmd=35) after err30: " + out3); }
-                                                @Override public void onError(String err3)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err3); }
-                                            });
-                                    }
-                                }, 3000);
-                            }
-                            @Override public void onError(String err2) { AppLogger.e(TAG, "activation ADB(cmd=16) ERROR after err30: " + err2); }
-                        });
+                    AppLogger.e(TAG, "activation ADB(cmd=16) ERROR: " + err);
+                    // Still attempt sendInfo(35) even if cmd=16 failed
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() { sendActivationCmd35(); }
+                    }, 3000);
                 }
+            });
+    }
+
+    /** Sends sendInfo(35) — triggers Qt JNI → AutoDisplayService.createVirtualDisplay(). */
+    private void sendActivationCmd35() {
+        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_DI40_MODE, "",
+            new AdbLocalClient.Callback() {
+                @Override public void onSuccess(String out) { AppLogger.i(TAG, "activation ADB(cmd=35): " + out); }
+                @Override public void onError(String err)   { AppLogger.e(TAG, "activation ADB(cmd=35) ERROR: " + err); }
             });
     }
 

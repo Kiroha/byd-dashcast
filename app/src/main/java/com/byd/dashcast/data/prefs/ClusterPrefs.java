@@ -54,6 +54,15 @@ public final class ClusterPrefs {
 
     // ── Startup behaviour ────────────────────────────────────────────────────
     public static final String KEY_BOOT_AUTO_START = "boot_auto_start_enabled";
+    // ── Projection start behaviour ───────────────────────────────────────────
+    /**
+     * When false (default): projection start sends only sendInfo(16) + sendInfo(0),
+     * leaving the cluster screen size unchanged.
+     * When true: sendInfo(30) is prepended — fixes ADAS window stretching on
+     * some screen sizes but causes a visible shape change on others.
+     */
+    public static final String KEY_ADAS_WINDOW_FIX = "adas_window_fix";
+
     // ── Voice ASR model ──────────────────────────────────────────────
     /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
     public static final String KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy";
@@ -209,6 +218,18 @@ public final class ClusterPrefs {
 
     public static void setBootAutoStartEnabled(Context ctx, boolean enabled) {
         edit(ctx).putBoolean(KEY_BOOT_AUTO_START, enabled).apply();
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Projection start behaviour
+    // ───────────────────────────────────────────────────────────────────────
+
+    public static boolean isAdasWindowFixEnabled(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_ADAS_WINDOW_FIX, false);
+    }
+
+    public static void setAdasWindowFixEnabled(Context ctx, boolean enabled) {
+        edit(ctx).putBoolean(KEY_ADAS_WINDOW_FIX, enabled).apply();
     }
 
     // ───────────────────────────────────────────────────────────────────────
