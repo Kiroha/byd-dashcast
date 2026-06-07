@@ -223,18 +223,90 @@ public class ClusterManager {
             return;
         }
         if (found != null) {
-            // Warm path: VD persisted from a previous session (or boot) but Qt has
-            // returned to native mode (after a stop, or at first launch since boot).
-            // Always use sendInfo(16) only — cmd 30 must NOT be sent here.
-            // Sending cmd 30 when a VD already exists causes AutoDisplayService to call
-            // createVirtualDisplay() again (new display id), which throws a RuntimeException
-            // in RootActivityContainer.onDisplayAdded and corrupts the ATM display registry,
-            // causing subsequent startActivity(launchDisplayId=1) to fail with SecurityException.
-            // The ADAS fix only applies on the slow path (before any VD exists).
-            final Display displayFound = found;
+            final boolean adasFix = com.byd.dashcast.data.prefs.ClusterPrefs
+                    .isAdasWindowFixEnabled(mContext);
+            if (!adasFix) {
+                // Default warm path: VD present, Qt in native mode → sendInfo(16) only.
+                AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
+                        + " but Qt in native mode — warm path (16 only)");
+                sendWarmCmd16(found, callback);
+                return;
+            }
+
+            // ADAS fix ON + warm path: cmd 30 causes AutoDisplayService to recreate the VD
+            // with a NEW display ID (e.g. id=1 → id=2). If we kept using the stale Display{id=1}
+            // object, startActivity(launchDisplayId=1) would fail with SecurityException because
+            // id=1 no longer exists.
+            //
+            // Fix: arm a DisplayListener BEFORE cmd 30, catch onDisplayAdded(newId), wait 1s
+            // for the ATM to finish registering the new display in RootActivityContainer, then
+            // send cmd 16 using the correct new Display object.
+            //
+            // Fallback: if cmd 30 doesn't trigger a VD change on this car (dimensions already
+            // match), fall back to sendWarmCmd16 on the original display after 4s timeout.
             AppLogger.i(TAG, "VD present id=" + found.getDisplayId()
-                    + " but Qt in native mode — warm path (16 only)");
-            sendWarmCmd16(displayFound, callback);
+                    + " — warm path ADAS (30 → new VD → 16)");
+
+            final Display originalDisplay = found;
+            // cmd 30 triggers VD recreation within ~700ms; 4s is very generous
+            final long adasRemapTimeoutMs = 4000;
+            // Time for ATM's RootActivityContainer.onDisplayAdded to finish processing
+            final long atmStabilizeMs = 1000;
+
+            final DisplayManager.DisplayListener[] adasListenerHolder =
+                    new DisplayManager.DisplayListener[1];
+
+            final Runnable fallback = new Runnable() {
+                @Override public void run() {
+                    dm.unregisterDisplayListener(adasListenerHolder[0]);
+                    mActiveDisplayListener = null;
+                    mActiveDisplayManager  = null;
+                    AppLogger.w(TAG, "ADAS warm path: no VD change after cmd 30 ("
+                            + adasRemapTimeoutMs + "ms) — fallback cmd 16 on original id="
+                            + originalDisplay.getDisplayId());
+                    sendWarmCmd16(originalDisplay, callback);
+                }
+            };
+
+            adasListenerHolder[0] = new DisplayManager.DisplayListener() {
+                @Override public void onDisplayAdded(int displayId) {
+                    Display d = dm.getDisplay(displayId);
+                    if (!isClusterDisplay(d)) return;
+                    // New cluster VD appeared after cmd 30 — this is the correct display
+                    mHandler.removeCallbacks(fallback);
+                    dm.unregisterDisplayListener(adasListenerHolder[0]);
+                    mActiveDisplayListener = null;
+                    mActiveDisplayManager  = null;
+                    AppLogger.i(TAG, "ADAS warm path: new VD id=" + displayId
+                            + " — stabilizing " + atmStabilizeMs + "ms for ATM then cmd 16");
+                    final Display newDisplay = d;
+                    mHandler.postDelayed(new Runnable() {
+                        @Override public void run() { sendWarmCmd16(newDisplay, callback); }
+                    }, atmStabilizeMs);
+                }
+                @Override public void onDisplayRemoved(int displayId) {}
+                @Override public void onDisplayChanged(int displayId) {}
+            };
+            mActiveDisplayManager  = dm;
+            mActiveDisplayListener = adasListenerHolder[0];
+            dm.registerDisplayListener(adasListenerHolder[0], mHandler);
+            mHandler.postDelayed(fallback, adasRemapTimeoutMs);
+
+            // Arm listener, then fire cmd 30 — onDisplayAdded(newId) will follow
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_SCREEN_SIZE_SEAL_EU, "",
+                new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String out) {
+                        AppLogger.i(TAG, "ADAS warm path ADB(cmd=30): " + out);
+                    }
+                    @Override public void onError(String err) {
+                        AppLogger.e(TAG, "ADAS warm path ADB(cmd=30) ERROR: " + err);
+                        mHandler.removeCallbacks(fallback);
+                        dm.unregisterDisplayListener(adasListenerHolder[0]);
+                        mActiveDisplayListener = null;
+                        mActiveDisplayManager  = null;
+                        sendWarmCmd16(originalDisplay, callback);
+                    }
+                });
             return;
         }
 
