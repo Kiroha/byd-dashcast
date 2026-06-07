@@ -1610,8 +1610,6 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void startSniffer() {
-        killSnifferProcesses();
-
         mSnifferFile = buildSnifferFile();
         getSharedPreferences(PREF_SNIFFER, MODE_PRIVATE).edit()
                 .putString(PREF_SNIFFER_PATH, mSnifferFile.getAbsolutePath()).apply();
@@ -1623,36 +1621,48 @@ public class DiagActivity extends AppCompatActivity {
         btnSnifferStart.setEnabled(false);
 
         String headerCmd =
-            // Do NOT clear the buffer — dump the ring buffer first so pre-start
-            // events (Fission launches, watchdog, VD creation) are preserved.
-            "touch /data/local/tmp/" + RE_SNIFFER_TAG
-            + " ; echo === BYD RE SNIFFER === > " + p
+            // Kill any previous sniffer first — merged here (not a separate async call)
+            // to guarantee the kill completes before touch creates the new tag file.
+            "rm -f /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; if [ -f " + pf + " ]; then"
+            + "   while IFS= read -r pid; do"
+            + "     [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
+            + "   done < " + pf + ";"
+            + "   rm -f " + pf + ";"
+            + " fi"
+            + " ; pkill -f " + RE_SNIFFER_PREFIX + " 2>/dev/null; true"
+            // Tag file created AFTER the kill so restoreSnifferState sees ACTIVE only
+            // when the live logcat processes are actually running.
+            + " ; touch /data/local/tmp/" + RE_SNIFFER_TAG
+            + " ; echo '=== BYD RE SNIFFER ===' > " + p
             + " ; date >> " + p
             + " ; getprop ro.product.model >> " + p
             + " ; getprop ro.build.fingerprint >> " + p
-            + " ; echo --- RING BUFFER (pre-start) --- >> " + p
+            // Quote labels containing '(' — BYD sh treats unquoted '(' as subshell syntax.
+            + " ; echo '--- RING BUFFER (pre-start) ---' >> " + p
             + " ; logcat -d -v threadtime >> " + p + " 2>&1"
-            + " ; echo --- RING BUFFER EVENTS (pre-start) --- >> " + p
+            + " ; echo '--- RING BUFFER EVENTS (pre-start) ---' >> " + p
             + " ; logcat -b events -d -v threadtime >> " + p + " 2>&1"
-            + " ; echo --- DISPLAYS INITIAL --- >> " + p
+            + " ; echo '--- DISPLAYS INITIAL ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
-            + " ; echo --- WINDOW STACKS INITIAL --- >> " + p
+            + " ; echo '--- WINDOW STACKS INITIAL ---' >> " + p
             + " ; dumpsys activity activities 2>/dev/null"
             + "   | grep -E \"Stack #|Task id|taskId|displayId|realActivity|Waze|byd\" >> " + p
-            + " ; echo --- SURFACEFLINGER INITIAL --- >> " + p
+            + " ; echo '--- SURFACEFLINGER INITIAL ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null >> " + p
-            + " ; echo --- PROCESSUS INITIAL --- >> " + p
+            + " ; echo '--- PROCESSUS INITIAL ---' >> " + p
             + " ; ps -A 2>/dev/null >> " + p
-            + " ; echo --- MIRRORDAEMON LOG (pre-start) --- >> " + p
+            + " ; echo '--- MIRRORDAEMON LOG (pre-start) ---' >> " + p
             + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null >> " + p
-            + " ; echo === LIVE CAPTURE START === >> " + p;
+            + " ; echo '=== LIVE CAPTURE START ===' >> " + p;
 
         AdbLocalClient.executeShellWithResult(this, headerCmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 String snapLoop =
                     "while [ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ]; do sleep 5;"
                     + " echo >> " + p + ";"
-                    + " printf \"=== SNAP %s ===\\n\" $(date +%H:%M:%S) >> " + p + ";"
+                    // Use backtick (not $()) — BYD sh may not support POSIX $() substitution.
+                    + " printf \"=== SNAP %s ===\\n\" `date +%H:%M:%S` >> " + p + ";"
                     + " dumpsys display 2>/dev/null"
                     + "   | grep -E \"mDisplayId|mName|mState|fission|virtual|cluster|layerStack\""
                     + "   >> " + p + ";"
