@@ -584,4 +584,18 @@
     <string name="dpi_applied_next_launch">Sera appliqué au prochain lancement</string>
     <string name="sheet_dpi_value_fmt" translatable="false">%1$d dpi</string>
     <string name="dpi_value_fmt" translatable="false">%1$d dpi</string>
+
+    <!-- Fission multi-app projection (v1.3.30-beta+) -->
+    <string name="fission_title">Fission — Multi-apps cluster</string>
+    <string name="fission_status_idle">Appuyez sur + pour projeter une application</string>
+    <string name="fission_btn_add">+ Ajouter une app</string>
+    <string name="fission_btn_stop">Tout arrêter</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Éditeur de layouts</string>
+    <string name="fission_editor_clear">Effacer</string>
+    <string name="fission_editor_save">Enregistrer</string>
+    <string name="fission_editor_edit">Modifier</string>
+    <string name="fission_editor_delete">Supprimer</string>
+    <string name="fission_open">Fission</string>
 </resources>
