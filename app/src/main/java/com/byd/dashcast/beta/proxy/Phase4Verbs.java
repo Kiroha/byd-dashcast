@@ -930,10 +930,13 @@ public final class Phase4Verbs {
                 return log.toString();
             }
 
-            // Task should already be on displayId in FREEFORM mode. Resize +
-            // focus once.
+            // Task is on displayId. am start --windowingMode 5 sets the task
+            // hint to FREEFORM but on BYD the containing stack stays FULLSCREEN,
+            // which causes resizeTask to throw "resizeTask not allowed on task".
+            // Calling setTaskWindowingMode (AOSP) first flips both task AND stack.
             log.append("  ").append(setDisplayToSingleTaskInstance(displayId)).append('\n');
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
+            log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n');
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
             // Async watchdog — polls getAllStackInfos() every 500 ms.

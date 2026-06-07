@@ -77,6 +77,10 @@ public class MainActivity extends AppCompatActivity
                    AppListAdapter.OnSendToDashboardListener {
 
     private static final String TAG = "BYDApp";
+    // Orphan sniffer kill must only run once per process lifetime (first cold start).
+    // Subsequent MainActivity instances created by in-app navigation (e.g. DiagActivity
+    // tapping the Apps nav button) must not clobber a legitimately running sniffer.
+    private static boolean sOrphanSnifferKillDone = false;
 
     // --- Resize Zone ---
     private android.widget.SeekBar sbResizeW;
@@ -314,20 +318,16 @@ public class MainActivity extends AppCompatActivity
             AppLogger.w(TAG, "pruneOldFiles failed: " + t.getMessage());
         }
         try {
-            // Tag file lives on tmpfs (/data/local/tmp) and disappears at boot,
-            // so a present tag without a recorded session in DiagActivity's prefs
-            // means an orphan from a previous run (e.g. the user force-stopped
-            // DashCast while a sniffer capture was running — the setsid-detached
-            // logcat processes survived). We gate on the *absence* of the saved
-            // sniffer path so we never clobber a legitimate session that simply
-            // happens to coexist with MainActivity being (re)created. The
-            // pref-name pair below is intentionally hard-coded — pulling them
-            // via reflection from DiagActivity would force-load that Activity's
-            // class graph at app start, which we want to avoid.
-            String savedSnifferPath = getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
-                    .getString("re_sniffer_file_path", null);
-            if (savedSnifferPath == null) {
-                com.byd.dashcast.beta.ShellGateway.execShell(this,
+            // Orphan-sniffer cleanup: tag file lives on tmpfs and disappears at
+            // boot, so a present tag without a pref means orphan processes from
+            // a previous force-stop. Gated on sOrphanSnifferKillDone so this
+            // runs at most once per process — in-app navigation creates new
+            // MainActivity instances and must not clobber a live sniffer.
+            if (!sOrphanSnifferKillDone) {
+                sOrphanSnifferKillDone = true;
+                String savedSnifferPath = getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
+                        .getString("re_sniffer_file_path", null);
+                if (savedSnifferPath == null) com.byd.dashcast.beta.ShellGateway.execShell(this,
                     "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
                   + "  rm -f /data/local/tmp/.re_sniffer_run;"
                   + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
