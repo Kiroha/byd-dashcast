@@ -52,7 +52,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final int    DEFAULT_INSET_V = 50;
     // ── OTA pre-release ───────────────────────────────────────────────────────────────
     public static final String PREF_OTA_PRERELEASE = "ota_include_prerelease";
-    public static final boolean DEFAULT_OTA_PRERELEASE = false;
+    public static final boolean DEFAULT_OTA_PRERELEASE = true;
     // ── Boot / UI toggles ───────────────────────────────────────────────────────────────
     public static final String PREF_BOOT_AUTO_START       = ClusterPrefs.KEY_BOOT_AUTO_START;
     public static final String PREF_SHOW_CATEGORY_FILTERS = "show_category_filters";
