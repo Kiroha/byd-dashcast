@@ -901,24 +901,30 @@ public final class Phase4Verbs {
             }
 
             // Task should already be on displayId in FREEFORM mode. Resize +
-            // focus once. We keep a single short re-resize pass to catch the
-            // FLAG_ACTIVITY_LAUNCH_ADJACENT self-relaunch (Waze's
-            // FreeMapAppActivity → MainActivity).
+            // focus once.
             log.append("  ").append(setDisplayToSingleTaskInstance(displayId)).append('\n');
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
-            try { Thread.sleep(400); } catch (InterruptedException ie) {
+            // Sleep 1200 ms — apps like Waze fire FLAG_ACTIVITY_LAUNCH_ADJACENT
+            // ~1.3 s after FreeMapAppActivity appears, bouncing the task back to
+            // display 0 via launchToSide. The second pass must fire AFTER that
+            // bounce so it can re-anchor the task to the target display.
+            try { Thread.sleep(1200); } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             }
             // Second pass — re-find taskId in case the launcher Activity got
-            // replaced by a child Activity that opened a new task.
+            // replaced by a child Activity that opened a new task, then
+            // explicitly re-move the task to displayId (catches the
+            // FLAG_ACTIVITY_LAUNCH_ADJACENT / launchToSide bounce).
             int taskId2 = findTaskIdForPackage(packageName);
             if (taskId2 > 0 && taskId2 != taskId) {
                 log.append("taskId rebound: ").append(taskId).append(" → ")
                    .append(taskId2).append('\n');
                 taskId = taskId2;
             }
+            log.append("  ").append(moveTaskToDisplay(taskId, displayId)).append('\n');
+            log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
             log.append("  ").append(getTaskBoundsVerb(taskId)).append('\n');
