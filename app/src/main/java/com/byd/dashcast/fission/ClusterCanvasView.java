@@ -23,12 +23,23 @@ public class ClusterCanvasView extends View {
     private static final float HANDLE_RADIUS  = 32f;
     private static final float SNAP_THRESHOLD = 30f;
 
-    private final Paint mPaintXdja   = new Paint();
-    private final Paint mPaintFill   = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mPaintStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mPaintLabel  = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mPaintDraw   = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mPaintHandle = new Paint(Paint.ANTI_ALIAS_FLAG);
+    // ADAS panel — fixed BYD cluster widget position (1920×720 space)
+    private static final int ADAS_X = 1055;
+    private static final int ADAS_Y = 320;
+    private static final int ADAS_W = 330;
+    private static final int ADAS_H = 245;
+
+    private final Paint mPaintXdja      = new Paint();
+    private final Paint mPaintFill      = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintStroke    = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintLabel     = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintDraw      = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintHandle    = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintAdasBg     = new Paint();
+    private final Paint mPaintAdasBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintAdasLane   = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintAdasCar    = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintAdasTag    = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private Bitmap mBg;
 
@@ -77,6 +88,17 @@ public class ClusterCanvasView extends View {
         mPaintHandle.setColor(0xFFFFFFFF);
         mPaintHandle.setStyle(Paint.Style.FILL);
 
+        mPaintAdasBg.setColor(0xFF0C1420);
+        mPaintAdasBg.setStyle(Paint.Style.FILL);
+        mPaintAdasBorder.setColor(0xFF4A6070);
+        mPaintAdasBorder.setStyle(Paint.Style.STROKE);
+        mPaintAdasLane.setColor(0xCCFFFFFF);
+        mPaintAdasLane.setStyle(Paint.Style.STROKE);
+        mPaintAdasCar.setColor(0xFFE0E0E0);
+        mPaintAdasCar.setStyle(Paint.Style.FILL);
+        mPaintAdasTag.setColor(0x80AACCEE);
+        mPaintAdasTag.setFakeBoldText(true);
+
         mGesture = new GestureDetector(getContext(),
             new GestureDetector.SimpleOnGestureListener() {
                 @Override
@@ -118,6 +140,9 @@ public class ClusterCanvasView extends View {
         mScaleX = (float) w / CW;
         mScaleY = (float) h / CH;
         mPaintLabel.setTextSize(Math.max(14f, 26f * mScaleX));
+        mPaintAdasBorder.setStrokeWidth(2f * mScaleX);
+        mPaintAdasLane.setStrokeWidth(Math.max(1.5f, 2.5f * mScaleX));
+        mPaintAdasTag.setTextSize(Math.max(8f, 11f * mScaleX));
     }
 
     @Override
@@ -132,6 +157,8 @@ public class ClusterCanvasView extends View {
         if (mBottom > 0) c.drawRect(0,  pb, vw, vh, mPaintXdja);
         if (mLeft   > 0) c.drawRect(0,  py, px, pb, mPaintXdja);
         if (mRight  > 0) c.drawRect(pr, py, vw, pb, mPaintXdja);
+
+        drawAdasPanel(c);
 
         List<LayoutPreset.SlotDef> slots = mSlots;
         if (slots != null) {
@@ -165,6 +192,29 @@ public class ClusterCanvasView extends View {
             int ch = (int) (mCurrentRect.height() / mScaleY);
             drawCenteredText(c, cw + "×" + ch, mCurrentRect.centerX(), mCurrentRect.centerY());
         }
+    }
+
+    private void drawAdasPanel(Canvas c) {
+        float l  = ADAS_X * mScaleX,            t  = ADAS_Y * mScaleY;
+        float r  = (ADAS_X + ADAS_W) * mScaleX, b  = (ADAS_Y + ADAS_H) * mScaleY;
+        float pw = r - l, ph = b - t, cx = (l + r) / 2f;
+
+        // Screen body
+        c.drawRect(l, t, r, b, mPaintAdasBg);
+        c.drawRect(l, t, r, b, mPaintAdasBorder);
+
+        // Lane lines — two converging lines rising from bottom corners toward top center
+        c.drawLine(cx - pw * 0.32f, b - ph * 0.06f, cx - pw * 0.05f, t + ph * 0.22f, mPaintAdasLane);
+        c.drawLine(cx + pw * 0.32f, b - ph * 0.06f, cx + pw * 0.05f, t + ph * 0.22f, mPaintAdasLane);
+
+        // Car silhouette — small rounded rect at bottom center
+        float cw = pw * 0.20f, ch = ph * 0.19f;
+        float cl = cx - cw / 2f,  ct = b - ph * 0.09f - ch;
+        c.drawRoundRect(cl, ct, cl + cw, ct + ch, 3f * mScaleX, 3f * mScaleX, mPaintAdasCar);
+
+        // "ADAS" label top-left
+        c.drawText("ADAS", l + 4f * mScaleX,
+                t + mPaintAdasTag.getTextSize() + 3f * mScaleY, mPaintAdasTag);
     }
 
     private void drawCenteredText(Canvas c, String text, float cx, float cy) {
