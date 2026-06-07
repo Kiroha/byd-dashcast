@@ -433,6 +433,7 @@ public class AdbLocalClient {
                 // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
                 if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
+                    boolean callbackFired = false;
                     try {
                         if (!BetaProxyClient.isConnected()) {
                             BetaProxyClient.connect(context);
@@ -447,20 +448,27 @@ public class AdbLocalClient {
                         }
                         BetaProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
-                        Thread.sleep(6000);
+                        Thread.sleep(1000);
                         BetaProxyClient.autoContainerSendInfo(1000, 0, "");
                         sb.append("sendInfo(0)  : OK (typed)\n");
-                        Thread.sleep(6000);
-                        BetaProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
-                        sb.append("sendInfo(").append(screenSizeCmd).append(") : OK (typed)\n");
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta restoreOriginCluster typed ok (" + dt + "ms)");
+                        // Fire callback now \u2014 UI unblocked, ClusterManager state cleaned up.
+                        // screenSizeCmd is cosmetic and completes in background.
+                        callbackFired = true;
                         callback.onSuccess("Origin cluster restored \u2713 (typed)\n" + sb);
+                        Thread.sleep(3000);
+                        BetaProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
+                        AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=" + screenSizeCmd + ") sent in background");
                         return;
                     } catch (Throwable t) {
                         if (t instanceof InterruptedException) {
                             Thread.currentThread().interrupt();
-                            callback.onError("interrupted");
+                            return; // callback already fired; background screenSizeCmd aborted
+                        }
+                        if (callbackFired) {
+                            // Background screenSizeCmd failed \u2014 log only, callback already done
+                            AppLogger.w(TAG, "restoreOriginCluster background screenSize failed: " + t.getMessage());
                             return;
                         }
                         long dt = SystemClock.elapsedRealtime() - t0;
@@ -483,20 +491,25 @@ public class AdbLocalClient {
                     AdbShellResponse rStop = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
-                    Thread.sleep(6000);
+                    Thread.sleep(1000);
 
                     AdbShellResponse rRefresh = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
-                    Thread.sleep(6000);
 
-                    AdbShellResponse rSize = dadb.shell(
-                        "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
-                    sb.append("sendInfo(").append(screenSizeCmd).append(") : ");
-                    sb.append(rSize.getAllOutput().trim()).append("\n");
-
-                    AppLogger.log(TAG, "restoreOriginCluster -> OK");
+                    AppLogger.log(TAG, "restoreOriginCluster -> OK (screenSize in background)");
+                    // Fire callback now \u2014 UI unblocked, ClusterManager state cleaned up.
+                    // screenSizeCmd is cosmetic and completes in background after 3s Qt settling.
                     callback.onSuccess("Origin cluster restored \u2713\n" + sb);
+                    try {
+                        Thread.sleep(3000);
+                        dadb.shell("service call " + autoContainerSvcName(context)
+                                + " 2 i32 1000 i32 " + screenSizeCmd + " s16 \"\" 2>&1");
+                        AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=" + screenSizeCmd + ") sent in background");
+                    } catch (Exception bg) {
+                        if (bg instanceof InterruptedException) Thread.currentThread().interrupt();
+                        AppLogger.w(TAG, "restoreOriginCluster background screenSize failed: " + bg.getMessage());
+                    }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
