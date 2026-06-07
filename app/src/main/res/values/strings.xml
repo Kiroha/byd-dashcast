@@ -175,6 +175,8 @@
     <string name="settings_reconnect_popup_support">Restaure si déconnecté inopinément</string>
     <string name="settings_quick_stop">Arrêt rapide (sans restaurer le cluster d\'origine)</string>
     <string name="settings_quick_stop_support">Envoie seulement sendInfo 18 + 0, sans changer la taille</string>
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Envoie sendInfo(30) avant la projection — corrige l\'étirement ADAS sur certains véhicules. Désactiver si la shape du cluster change au démarrage.</string>
     <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
     <string name="settings_compact_apps_panel">Mode compact (liste apps étroite)</string>
     <string name="settings_compact_apps_panel_support">Libère de l\'espace pour le preview cluster — 2 colonnes au lieu de 5</string>

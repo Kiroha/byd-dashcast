@@ -64,6 +64,10 @@ public class SettingsActivity extends AppCompatActivity {
     // true            = quick stop: only sendInfo(18) + sendInfo(0), no size
     //                   reconfiguration of the original cluster.
     public static final String PREF_QUICK_STOP            = "quick_stop_enabled";
+    // ── ADAS Window Fix ─────────────────────────────────────────────────────────
+    // false (default) = projection start sends only sendInfo(16), no shape change.
+    // true            = sendInfo(30) is prepended to fix ADAS window stretching.
+    public static final String PREF_ADAS_WINDOW_FIX       = ClusterPrefs.KEY_ADAS_WINDOW_FIX;
     public static final String PREF_USE_OWN_SIM           = "use_own_sim";
     // v1.2.45 — Compact apps panel : narrows the left apps column to 2 icons
     // wide so the cluster preview gets more space. Default = false (5 columns,
@@ -102,6 +106,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbShowCategoryFilters;
     private CompoundButton cbReconnectPopup;
     private CompoundButton cbQuickStop;
+    private CompoundButton cbAdasWindowFix;
     private CompoundButton cbUseOwnSim;
     private CompoundButton cbCompactAppsPanel;
     private CompoundButton cbBetaProxyDaemon;
@@ -234,6 +239,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters);
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup);
         cbQuickStop      = findViewById(R.id.cb_quick_stop);
+        cbAdasWindowFix  = findViewById(R.id.cb_adas_window_fix);
         cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
         cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
@@ -286,6 +292,12 @@ public class SettingsActivity extends AppCompatActivity {
         // with size from Settings; when enabled, Stop only sends sendInfo 18 + 0).
         boolean quickStop = prefs.getBoolean(PREF_QUICK_STOP, false);
         cbQuickStop.setChecked(quickStop);
+
+        // ADAS Window Fix toggle (default: disabled — projection start sends only
+        // sendInfo(16) without changing the cluster screen shape).
+        if (cbAdasWindowFix != null) {
+            cbAdasWindowFix.setChecked(ClusterPrefs.isAdasWindowFixEnabled(this));
+        }
 
         // Use-own-SIM toggle (default: disabled). Controls visibility of the
         // Hotspot navrail entry. When the user uses a personal SIM card on a
@@ -439,6 +451,14 @@ public class SettingsActivity extends AppCompatActivity {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putBoolean(PREF_QUICK_STOP, isChecked).apply();
         });
+
+        // ADAS Window Fix checkbox
+        if (cbAdasWindowFix != null) {
+            cbAdasWindowFix.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                ClusterPrefs.setAdasWindowFixEnabled(this, isChecked);
+                AppLogger.i("SettingsActivity", "adas_window_fix=" + isChecked);
+            });
+        }
 
         // Use-own-SIM checkbox — toggles visibility of the Hotspot navrail entry
         cbUseOwnSim.setOnCheckedChangeListener((buttonView, isChecked) -> {
