@@ -448,7 +448,7 @@ public class AdbLocalClient {
                         }
                         BetaProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
-                        Thread.sleep(1000);
+                        Thread.sleep(2000);
                         BetaProxyClient.autoContainerSendInfo(1000, 0, "");
                         sb.append("sendInfo(0)  : OK (typed)\n");
                         long dt = SystemClock.elapsedRealtime() - t0;
@@ -491,7 +491,7 @@ public class AdbLocalClient {
                     AdbShellResponse rStop = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 18 s16 \"\" 2>&1");
                     sb.append("sendInfo(18) : ").append(rStop.getAllOutput().trim()).append("\n");
-                    Thread.sleep(1000);
+                    Thread.sleep(2000);
 
                     AdbShellResponse rRefresh = dadb.shell(
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
