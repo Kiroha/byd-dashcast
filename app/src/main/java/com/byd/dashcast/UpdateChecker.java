@@ -101,20 +101,30 @@ public class UpdateChecker {
                 .getBoolean(SettingsActivity.PREF_OTA_PRERELEASE,
                         SettingsActivity.DEFAULT_OTA_PRERELEASE);
 
-        // 1. Fetch latest release info from GitHub API
-        JSONObject release;
-        if (includePrerelease) {
-            String json = httpGet(RELEASES_LIST_API);
-            JSONArray list = new JSONArray(json);
-            if (list.length() == 0) {
-                AppLogger.i(TAG, "No releases found");
-                if (listener != null) ui.post(listener::onUpToDate);
-                return;
-            }
-            release = list.getJSONObject(0);
-        } else {
-            String json = httpGet(RELEASES_LATEST_API);
-            release = new JSONObject(json);
+        // 1. Fetch latest release info from GitHub API.
+        // Always use the list endpoint: /releases/latest only returns non-prerelease
+        // releases, so it gives HTTP 404 when all releases are tagged as pre-release
+        // (which is the case for this repo's beta channel). The list endpoint works
+        // for both stable and pre-release, and lets us filter properly.
+        JSONObject release = null;
+        String json = httpGet(RELEASES_LIST_API);
+        JSONArray list = new JSONArray(json);
+        for (int i = 0; i < list.length(); i++) {
+            JSONObject r = list.getJSONObject(i);
+            // Skip non-app releases (e.g. "voice-libs-v1"): a valid app tag starts
+            // with 'v' followed by a digit (v1.2.3) or directly with a digit (1.2.3).
+            String t = r.getString("tag_name");
+            String stripped = t.startsWith("v") ? t.substring(1) : t;
+            if (stripped.isEmpty() || !Character.isDigit(stripped.charAt(0))) continue;
+            // Honour the "include pre-releases" preference.
+            if (!includePrerelease && r.optBoolean("prerelease", false)) continue;
+            release = r;
+            break;
+        }
+        if (release == null) {
+            AppLogger.i(TAG, "No eligible release found (includePrerelease=" + includePrerelease + ")");
+            if (listener != null) ui.post(listener::onUpToDate);
+            return;
         }
         String tag = release.getString("tag_name");
         String latestVer = tag.startsWith("v") ? tag.substring(1) : tag;
