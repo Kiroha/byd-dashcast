@@ -752,6 +752,25 @@
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
 
+                    <!-- ────── Fission mode button (visible only when PREF_FISSION_MODE enabled) ────── -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_fission_open"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/fission_open"
+                        android:textSize="14sp"
+                        android:minHeight="52dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="26dp"
+                        app:backgroundTint="@color/md_tertiary_container"
+                        android:textColor="@color/md_on_tertiary_container"
+                        app:iconGravity="textStart"
+                        app:iconSize="20dp"
+                        android:visibility="gone"/>
+
                     <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->
                     <LinearLayout
                         android:id="@+id/panel_cluster_control"
@@ -870,21 +889,6 @@
                                     android:backgroundTint="@color/md_surface_container_high"
                                     android:textColor="@color/md_on_surface"/>
 
-                                <!-- v1.3.30-beta — Fission mode button (visible only when PREF_FISSION_MODE enabled) -->
-                                <Button
-                                    android:id="@+id/btn_fission_open"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="36dp"
-                                    android:text="@string/fission_open"
-                                    android:textSize="11sp"
-                                    android:paddingStart="12dp"
-                                    android:paddingEnd="12dp"
-                                    android:layout_marginEnd="4dp"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
-                                    android:backgroundTint="@color/md_tertiary_container"
-                                    android:textColor="@color/md_on_tertiary_container"
-                                    android:visibility="gone"/>
 
                                 <Button
                                     android:id="@+id/btn_keyboard_bridge"

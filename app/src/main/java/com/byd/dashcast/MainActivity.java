@@ -774,21 +774,19 @@ public class MainActivity extends AppCompatActivity
             });
         }
 
-        // v1.3.30-beta — Fission mode button (visible only when PREF_FISSION_MODE enabled)
+        // Fission button — wired once in onCreate, visibility refreshed in onResume.
         Button btnFissionOpen = (Button) findViewById(R.id.btn_fission_open);
         if (btnFissionOpen != null) {
-            if (com.byd.dashcast.beta.BetaConfig.isFissionModeEnabled(this)) {
-                btnFissionOpen.setVisibility(View.VISIBLE);
-                btnFissionOpen.setOnClickListener(v -> {
-                    try {
-                        startActivity(new android.content.Intent(
-                                MainActivity.this, com.byd.dashcast.fission.FissionActivity.class));
-                    } catch (Exception e) {
-                        AppLogger.e("MainActivity", "FissionActivity launch failed", e);
-                    }
-                });
-            }
+            btnFissionOpen.setOnClickListener(v -> {
+                try {
+                    startActivity(new android.content.Intent(
+                            MainActivity.this, com.byd.dashcast.fission.FissionActivity.class));
+                } catch (Exception e) {
+                    AppLogger.e("MainActivity", "FissionActivity launch failed", e);
+                }
+            });
         }
+        refreshFissionButton();
 
         // v1.2.9 — IME a11y onboarding banner (DL5 only)
         setupImeA11yBanner();
@@ -861,6 +859,8 @@ public class MainActivity extends AppCompatActivity
         // v1.2.45 — Compact apps panel pref is also live-applied so the user
         // sees the new column layout as soon as they leave Settings.
         applyCompactAppsPanelMode();
+        // Fission button visibility follows its toggle in SettingsActivity.
+        refreshFissionButton();
     }
 
     /**
@@ -903,6 +903,13 @@ public class MainActivity extends AppCompatActivity
      * PREF_SHOW_CATEGORY_FILTERS pref). Safe to call multiple times — purely
      * idempotent layout adjustments, no allocation of new fields.
      */
+    private void refreshFissionButton() {
+        View btn = findViewById(R.id.btn_fission_open);
+        if (btn == null) return;
+        btn.setVisibility(com.byd.dashcast.beta.BetaConfig.isFissionModeEnabled(this)
+                ? View.VISIBLE : View.GONE);
+    }
+
     private void applyCompactAppsPanelMode() {
         if (llAppListSection == null) return;
 
