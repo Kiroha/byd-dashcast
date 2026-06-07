@@ -141,17 +141,20 @@ public class FissionActivity extends Activity {
      * Returns true on success.
      */
     private boolean ensureDaemon() {
-        // Fast path
-        IBinder b = FissionClient.getBinderFromServiceManager();
-        if (b != null) { mDaemonBinder = b; FissionLayoutEditorActivity.sDaemonBinder = b; return true; }
-
-        // Guard: do not start a new daemon if ClusterService owns one
+        // Guard first — must run before any daemon access, including the fast path.
+        // ClusterService owns the daemon when normal projection is active; letting
+        // Fission reuse that binder would corrupt the mirror state and send apps
+        // back to display 0.
         if (ClusterService.sIsRunning) {
             safeRun(() -> Toast.makeText(this,
                     "Arrêtez d'abord la projection normale avant d'utiliser le mode Fission.",
                     Toast.LENGTH_LONG).show());
             return false;
         }
+
+        // Fast path — daemon already running (Fission started it earlier this session)
+        IBinder b = FissionClient.getBinderFromServiceManager();
+        if (b != null) { mDaemonBinder = b; FissionLayoutEditorActivity.sDaemonBinder = b; return true; }
 
         // Daemon not running — start it via AdbLocalClient (detached shell)
         safeRun(() -> setStatus("Démarrage du daemon…"));
