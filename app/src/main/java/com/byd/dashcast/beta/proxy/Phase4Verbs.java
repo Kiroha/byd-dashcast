@@ -789,8 +789,35 @@ public final class Phase4Verbs {
         }
     }
 
+    /** Set a task's windowing mode to FREEFORM (5) using the best available ATM API.
+     *  Needed after moveStackToDisplay(), which creates a new FULLSCREEN stack on the
+     *  target display and overrides the task's prior FREEFORM mode. */
+    public static String setTaskWindowingModeFreeform(int taskId) {
+        try {
+            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+            Object iAtm = atmCls.getMethod("getService").invoke(null);
+            try {
+                Method m = iAtm.getClass().getMethod(
+                        "setTaskWindowingMode", int.class, int.class, boolean.class);
+                m.invoke(iAtm, taskId, 5 /*WINDOWING_MODE_FREEFORM*/, true /*toTop*/);
+                return "OK setTaskWindowingMode(" + taskId + ",FREEFORM,true)";
+            } catch (NoSuchMethodException e1) {
+                Method m = iAtm.getClass().getMethod(
+                        "setCustomTaskWindowingMode", int.class, int.class, boolean.class);
+                m.invoke(iAtm, taskId, 5, true);
+                return "OK setCustomTaskWindowingMode(" + taskId + ",FREEFORM,true)";
+            }
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR setTaskWindowingModeFreeform: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
     /** Full OpenBYD 2.0 launchAndForce sequence : am start &rarr; poll task id &rarr;
-     *  loop 2&times; (moveTaskToDisplay + resizeTask + setFocusedRootTask).
+     *  move + resize + focus, with an async watchdog that re-anchors the task if it
+     *  bounces back to display 0 (Waze FLAG_ACTIVITY_LAUNCH_ADJACENT / launchToSide).
      *
      *  <p>Empirically the only path that reliably lands an app in FREEFORM
      *  windowing mode on the BYD fission cluster display (which lacks
@@ -906,28 +933,72 @@ public final class Phase4Verbs {
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
-            // Sleep 1200 ms — apps like Waze fire FLAG_ACTIVITY_LAUNCH_ADJACENT
-            // ~1.3 s after FreeMapAppActivity appears, bouncing the task back to
-            // display 0 via launchToSide. The second pass must fire AFTER that
-            // bounce so it can re-anchor the task to the target display.
-            try { Thread.sleep(1200); } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            // Second pass — re-find taskId in case the launcher Activity got
-            // replaced by a child Activity that opened a new task, then
-            // explicitly re-move the task to displayId (catches the
-            // FLAG_ACTIVITY_LAUNCH_ADJACENT / launchToSide bounce).
-            int taskId2 = findTaskIdForPackage(packageName);
-            if (taskId2 > 0 && taskId2 != taskId) {
-                log.append("taskId rebound: ").append(taskId).append(" → ")
-                   .append(taskId2).append('\n');
-                taskId = taskId2;
-            }
-            log.append("  ").append(moveTaskToDisplay(taskId, displayId)).append('\n');
-            log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
-            log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
-            log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
-            log.append("  ").append(getTaskBoundsVerb(taskId)).append('\n');
+            // Async watchdog — polls getAllStackInfos() every 500 ms.
+            // Apps like Waze fire FLAG_ACTIVITY_LAUNCH_ADJACENT ~1.3–2.8 s after
+            // FreeMapAppActivity appears (launchToSide), bouncing the task to
+            // display 0. Once detected, re-anchor: FREEFORM pre → moveStackToDisplay
+            // → FREEFORM post (new stack defaults to FULLSCREEN) → resize → focus.
+            // One successful re-move is sufficient; cap at 20 × 500 ms = 10 s.
+            final int wTaskId = taskId;
+            new Thread(() -> {
+                try {
+                    for (int iter = 0; iter < 20; iter++) {
+                        try { Thread.sleep(500); }
+                        catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt(); return;
+                        }
+                        if (iter < 4) continue; // skip first 2 s, let app settle
+                        int curDisplay = -1;
+                        try {
+                            Class<?> ac = Class.forName("android.app.ActivityTaskManager");
+                            Object ia = ac.getMethod("getService").invoke(null);
+                            Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
+                            java.util.List<?> ss;
+                            if (res instanceof java.util.List) ss = (java.util.List<?>) res;
+                            else if (res != null && res.getClass().isArray())
+                                ss = java.util.Arrays.asList((Object[]) res);
+                            else ss = java.util.Collections.emptyList();
+                            outer:
+                            for (Object si : ss) {
+                                int[] tids;
+                                try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
+                                catch (Exception ignore) { continue; }
+                                if (tids == null) continue;
+                                for (int t : tids) {
+                                    if (t == wTaskId) {
+                                        try { curDisplay = si.getClass()
+                                                .getField("displayId").getInt(si); }
+                                        catch (Exception ignore) {}
+                                        break outer;
+                                    }
+                                }
+                            }
+                        } catch (Throwable pollEx) {
+                            android.util.Log.w("Phase4Verbs",
+                                    "WATCHDOG poll err: " + pollEx.getMessage());
+                            continue;
+                        }
+                        if (curDisplay < 0) return;    // task gone
+                        if (curDisplay == displayId) continue; // still on target
+                        android.util.Log.i("Phase4Verbs",
+                                "WATCHDOG: task " + wTaskId + " on display " + curDisplay
+                                + " — re-anchoring to " + displayId);
+                        // FREEFORM pre + moveStackToDisplay (Android 10 primary API)
+                        moveTaskToDisplayViaStack(wTaskId, displayId);
+                        // FREEFORM post-move: new stack defaults to FULLSCREEN
+                        setTaskWindowingModeFreeform(wTaskId);
+                        resizeTaskRect(wTaskId, 0, 0, width, height);
+                        setFocusedRootTask(wTaskId);
+                        android.util.Log.i("Phase4Verbs", "WATCHDOG: re-anchor done");
+                        return;
+                    }
+                    android.util.Log.d("Phase4Verbs", "WATCHDOG: ended without bounce");
+                } catch (Throwable t) {
+                    android.util.Log.w("Phase4Verbs",
+                            "WATCHDOG unexpected: " + t.getMessage());
+                }
+            }, "fission-watchdog").start();
+            log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
             log.append("FINISH: launchAndForce complete.\n");
         } catch (Throwable t) {
             log.append("EXCEPTION: ").append(t).append('\n');
