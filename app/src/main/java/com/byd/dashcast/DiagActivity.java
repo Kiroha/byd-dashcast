@@ -1643,6 +1643,8 @@ public class DiagActivity extends AppCompatActivity {
             + " ; dumpsys SurfaceFlinger 2>/dev/null >> " + p
             + " ; echo --- PROCESSUS INITIAL --- >> " + p
             + " ; ps -A 2>/dev/null >> " + p
+            + " ; echo --- MIRRORDAEMON LOG (pre-start) --- >> " + p
+            + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null >> " + p
             + " ; echo === LIVE CAPTURE START === >> " + p;
 
         AdbLocalClient.executeShellWithResult(this, headerCmd, new AdbLocalClient.Callback() {

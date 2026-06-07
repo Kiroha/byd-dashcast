@@ -124,15 +124,17 @@ public class MirrorDaemon {
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Thread-safe stdout helper (Log.* goes to logcat, not our redirected file) */
+    /** Thread-safe stdout helper — writes to both the redirected log file AND logcat. */
     private static void out(String msg) {
         System.out.println("[MirrorDaemon] " + msg);
         System.out.flush();
+        Log.i(TAG, msg);   // logcat → captured by sniffer
     }
     private static void err(String msg, Throwable t) {
         System.err.println("[MirrorDaemon][ERROR] " + msg);
         if (t != null) t.printStackTrace(System.err);
         System.err.flush();
+        Log.e(TAG, msg, t); // logcat → captured by sniffer
     }
 
     public static void main(String[] args) {
