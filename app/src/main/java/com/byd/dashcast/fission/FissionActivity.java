@@ -274,6 +274,26 @@ public class FissionActivity extends Activity {
 
     private void startSlot(String pkg, String label, Rect rect) {
         if (!mSurfaceReady) return;
+
+        // Guard: normal projection may have (re)started automatically, e.g. via ADAS warm
+        // path, without the user noticing. Ask explicitly rather than silently blocking.
+        if (ClusterService.sIsRunning) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Projection en cours")
+                    .setMessage("La projection normale est active sur le cluster. "
+                            + "Voulez-vous l'arrêter pour utiliser le mode Fission ?")
+                    .setPositiveButton("Arrêter et continuer", (d, w) -> {
+                        // Clear the flag immediately so ensureDaemon() won't re-block.
+                        ClusterService.sIsRunning = false;
+                        ClusterService cs = ClusterService.getInstance();
+                        if (cs != null) cs.stopProjectionNoAdb();
+                        mUiHandler.postDelayed(() -> startSlot(pkg, label, rect), 400);
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show();
+            return;
+        }
+
         btnAdd.setEnabled(false);
         btnStopAll.setEnabled(false);
         setStatus("Démarrage de " + label + "…");
