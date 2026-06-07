@@ -47,6 +47,9 @@ public final class BetaConfig {
     public static final String  PREF_USE_SYSTEM_CONTEXT   = "beta_use_system_context";
     public static final boolean DEFAULT_USE_SYSTEM_CONTEXT = false;
 
+    public static final String  PREF_FISSION_MODE   = "fission_mode_enabled";
+    public static final boolean DEFAULT_FISSION_MODE = false;
+
     private static SharedPreferences prefs(Context ctx) {
         return ctx.getApplicationContext()
                   .getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
@@ -66,6 +69,14 @@ public final class BetaConfig {
 
     public static void setSystemContextEnabled(Context ctx, boolean enabled) {
         prefs(ctx).edit().putBoolean(PREF_USE_SYSTEM_CONTEXT, enabled).apply();
+    }
+
+    public static boolean isFissionModeEnabled(Context ctx) {
+        return prefs(ctx).getBoolean(PREF_FISSION_MODE, DEFAULT_FISSION_MODE);
+    }
+
+    public static void setFissionModeEnabled(Context ctx, boolean enabled) {
+        prefs(ctx).edit().putBoolean(PREF_FISSION_MODE, enabled).apply();
     }
 
     /** True if at least one experimental flag is enabled. */

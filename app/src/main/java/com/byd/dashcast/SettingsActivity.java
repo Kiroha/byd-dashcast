@@ -111,6 +111,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbCompactAppsPanel;
     private CompoundButton cbBetaProxyDaemon;
     private CompoundButton cbBetaSystemContext;
+    private CompoundButton cbFissionMode;
     private CompoundButton swDilink5Mode;
     private TextView tvBetaDilink5Support;
     private View        llSlidersMode;
@@ -244,6 +245,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
         cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
         cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
+        cbFissionMode       = findViewById(R.id.cb_fission_mode);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
         tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
     }
@@ -313,6 +315,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Beta Engine toggles (default OFF — restart required after change)
         cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
         cbBetaSystemContext.setChecked(BetaConfig.isSystemContextEnabled(this));
+        cbFissionMode.setChecked(BetaConfig.isFissionModeEnabled(this));
 
         // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
         // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
@@ -488,6 +491,10 @@ public class SettingsActivity extends AppCompatActivity {
             BetaConfig.setSystemContextEnabled(this, isChecked);
             AppLogger.i("SettingsActivity", "beta_system_context=" + isChecked);
             showRestartRequiredDialog();
+        });
+        cbFissionMode.setOnCheckedChangeListener((b, isChecked) -> {
+            BetaConfig.setFissionModeEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "fission_mode=" + isChecked);
         });
         swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {
             com.byd.dashcast.platform.Platform.setForcedBoolean(this, isChecked);
