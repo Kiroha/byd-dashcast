@@ -14,7 +14,20 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceControl;
 
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.view.Display;
+import android.view.Gravity;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.view.View;
+import android.view.WindowManager;
 import java.lang.reflect.Method;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Daemon MirrorDaemon — started via app_process (uid=2000 shell).
@@ -44,12 +57,64 @@ public class MirrorDaemon {
     public static final int    TRANSACT_INJECT_KEY    = 3;
     public static final int    TRANSACT_MIRROR_STOP   = 4;
 
+    // ── Fission slot transacts (purely additive — transacts 1-4 unchanged) ──
+    // 6-8 reserved (wire-format gap matching devtools numbering)
+    /** TRANSACT 5 — create default full-screen overlay+VD (legacy CLUSTER_ATTACH). */
+    public static final int TRANSACT_CLUSTER_ATTACH    = 5;
+    /** TRANSACT 9 — resize a named slot overlay+VD in-place. */
+    public static final int TRANSACT_RESIZE_SLOT       = 9;
+    /** TRANSACT 10 — create a named overlay+VD slot for one app at a given rect. */
+    public static final int TRANSACT_ATTACH_SLOT       = 10;
+    /** TRANSACT 11 — release one named slot without stopping others. */
+    public static final int TRANSACT_RELEASE_SLOT      = 11;
+    /** TRANSACT 12 — activate a layout: create N overlay+VD slots. */
+    public static final int TRANSACT_ACTIVATE_LAYOUT   = 12;
+    /** TRANSACT 13 — deactivate layout: release all layout_ slots. */
+    public static final int TRANSACT_DEACTIVATE_LAYOUT = 13;
+
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
     private static volatile int     sClusterDisplayId = 2;
     /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
     private static volatile boolean sMotionFirstLogged = false;
     private static volatile boolean sKeyFirstLogged    = false;
+
+    // ── Fission slot state ────────────────────────────────────────────────────
+    private static volatile Context sContext    = null;
+    private static volatile Context sSysContext = null;
+    private static final ConcurrentHashMap<String, SlotInfo> sSlots = new ConcurrentHashMap<>();
+
+    private static final class SlotInfo {
+        final String pkg;
+        int x, y, w, h;
+        View overlayView;
+        WindowManager overlayWM;
+        VirtualDisplay vd;
+        int displayId;
+
+        SlotInfo(String pkg, int x, int y, int w, int h) {
+            this.pkg = pkg; this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+
+        void release() {
+            if (vd != null) {
+                try { vd.release(); }
+                catch (Exception e) { out("[Fission] slot[" + pkg + "] VD release error: " + e.getMessage()); }
+                vd = null;
+            }
+            final View view = overlayView;
+            final WindowManager wm = overlayWM;
+            overlayView = null; overlayWM = null;
+            if (view != null && wm != null) {
+                Runnable r = () -> {
+                    try { wm.removeViewImmediate(view); }
+                    catch (Exception e) { out("[Fission] slot[" + pkg + "] overlay remove error: " + e.getMessage()); }
+                };
+                if (Looper.myLooper() == Looper.getMainLooper()) r.run();
+                else new android.os.Handler(Looper.getMainLooper()).post(r);
+            }
+        }
+    }
 
     // InputManager (init une seule fois, lu depuis les threads Binder → volatile)
     private static volatile Object  sInputManager    = null;
@@ -103,6 +168,16 @@ public class MirrorDaemon {
             }
             Log.i(TAG, "System context OK");
             out("System context OK");
+
+            // Save contexts for Fission slot operations (overlay + VD creation)
+            sSysContext = context;
+            try {
+                sContext = context.createPackageContext("com.android.shell", 0);
+                out("Fission: shell package context OK");
+            } catch (Exception ePkg) {
+                out("Fission: shell package context failed, fallback to system context: " + ePkg.getMessage());
+                sContext = context;
+            }
 
             // Unlock hidden APIs
             out("unlockHiddenApis()...");
@@ -209,6 +284,12 @@ public class MirrorDaemon {
                     stopMirror();
                     return true;
                 }
+                case TRANSACT_CLUSTER_ATTACH:   return handleClusterAttach(data, reply);
+                case TRANSACT_RESIZE_SLOT:       return handleResizeSlot(data, reply);
+                case TRANSACT_ATTACH_SLOT:       return handleAttachSlot(data, reply);
+                case TRANSACT_RELEASE_SLOT:      return handleReleaseSlot(data, reply);
+                case TRANSACT_ACTIVATE_LAYOUT:   return handleActivateLayout(data, reply);
+                case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
@@ -355,6 +436,8 @@ public class MirrorDaemon {
         } catch (Exception e) {
             Log.w(TAG, "stopMirror: destroyDisplay failed: " + e.getMessage());
         }
+        for (SlotInfo slot : sSlots.values()) slot.release();
+        sSlots.clear();
     }
 
     // ── Input injection ───────────────────────────────────────────────────────
@@ -470,5 +553,293 @@ public class MirrorDaemon {
         } catch (Exception e) {
             Log.e(TAG, "unlockHiddenApis failed", e);
         }
+    }
+
+    // ── Fission handlers ──────────────────────────────────────────────────────
+    // NOTE: data.enforceInterface(DESCRIPTOR) is already called by onTransact —
+    // do NOT call it again inside these handlers.
+
+    private static boolean handleClusterAttach(Parcel data, Parcel reply) {
+        @SuppressWarnings("unused") int layerStack = data.readInt(); // wire compat
+        int w = data.readInt(), h = data.readInt();
+        out("[Fission] CLUSTER_ATTACH " + w + "×" + h);
+        SlotInfo existing = sSlots.remove("__default__");
+        if (existing != null) existing.release();
+        SlotInfo slot = new SlotInfo("__default__", 0, 0, w, h);
+        Surface surface = tryAttachSlotOverlay(slot);
+        if (surface == null) { reply.writeNoException(); reply.writeInt(0); return true; }
+        int displayId = createTrustedVdForSlot(slot, surface, "dashcast_cluster_default");
+        if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true; }
+        sSlots.put("__default__", slot);
+        out("[Fission] CLUSTER_ATTACH OK displayId=" + displayId);
+        reply.writeNoException(); reply.writeInt(1);
+        reply.writeParcelable(surface, 0); reply.writeInt(displayId);
+        return true;
+    }
+
+    private static boolean handleAttachSlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        int x = data.readInt(), y = data.readInt();
+        int w = data.readInt(), h = data.readInt();
+        out("[Fission] ATTACH_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")");
+        SlotInfo existing = sSlots.remove(pkg);
+        if (existing != null) existing.release();
+        SlotInfo slot = new SlotInfo(pkg, x, y, w, h);
+        Surface surface = tryAttachSlotOverlay(slot);
+        if (surface == null) { reply.writeNoException(); reply.writeInt(0); return true; }
+        int displayId = createTrustedVdForSlot(slot, surface,
+                "dashcast_slot_" + pkg.replace('.', '_'));
+        if (displayId < 0) { slot.release(); reply.writeNoException(); reply.writeInt(0); return true; }
+        sSlots.put(pkg, slot);
+        out("[Fission] ATTACH_SLOT OK pkg=" + pkg + " displayId=" + displayId);
+        reply.writeNoException(); reply.writeInt(1);
+        reply.writeParcelable(surface, 0); reply.writeInt(displayId);
+        return true;
+    }
+
+    private static boolean handleReleaseSlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        out("[Fission] RELEASE_SLOT pkg=" + pkg);
+        SlotInfo slot = sSlots.remove(pkg);
+        if (slot != null) slot.release();
+        reply.writeNoException(); reply.writeInt(1);
+        return true;
+    }
+
+    private static boolean handleResizeSlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        int x = data.readInt(), y = data.readInt();
+        int w = data.readInt(), h = data.readInt();
+        out("[Fission] RESIZE_SLOT pkg=" + pkg + " (" + x + "," + y + "," + w + "×" + h + ")");
+        SlotInfo slot = sSlots.get(pkg);
+        if (slot == null) { reply.writeNoException(); reply.writeInt(0); return true; }
+        final CountDownLatch latch = new CountDownLatch(1);
+        new android.os.Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                WindowManager.LayoutParams lp = createOverlayLayoutParams(null, w, h);
+                lp.x = x; lp.y = y;
+                slot.overlayWM.updateViewLayout(slot.overlayView, lp);
+                ((SurfaceView) slot.overlayView).getHolder().setFixedSize(w, h);
+                slot.x = x; slot.y = y; slot.w = w; slot.h = h;
+            } catch (Exception e) {
+                out("[Fission] RESIZE_SLOT overlay error: " + e.getMessage());
+            } finally { latch.countDown(); }
+        });
+        try { latch.await(1, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
+        try { slot.vd.resize(w, h, 160); }
+        catch (Exception e) { out("[Fission] RESIZE_SLOT VD error: " + e.getMessage()); }
+        reply.writeNoException(); reply.writeInt(1);
+        return true;
+    }
+
+    private static boolean handleActivateLayout(Parcel data, Parcel reply) {
+        int n = data.readInt();
+        out("[Fission] ACTIVATE_LAYOUT n=" + n);
+        for (String key : new java.util.ArrayList<>(sSlots.keySet())) {
+            if (key.startsWith("layout_")) {
+                SlotInfo s = sSlots.remove(key); if (s != null) s.release();
+            }
+        }
+        reply.writeNoException(); reply.writeInt(n);
+        for (int i = 0; i < n; i++) {
+            String label = data.readString();
+            int x = data.readInt(), y = data.readInt();
+            int w = data.readInt(), h = data.readInt();
+            String safe = label.replaceAll("[^A-Za-z0-9_]", "_");
+            String key  = "layout_" + safe + "_" + i;
+            SlotInfo slot = new SlotInfo(key, x, y, w, h);
+            Surface surface = tryAttachSlotOverlay(slot);
+            if (surface == null) { reply.writeInt(-1); continue; }
+            int displayId = createTrustedVdForSlot(slot, surface, "dashcast_layout_" + safe);
+            if (displayId < 0) { slot.release(); reply.writeInt(-1); continue; }
+            sSlots.put(key, slot);
+            out("[Fission] ACTIVATE_LAYOUT [" + label + "] → displayId=" + displayId);
+            reply.writeInt(displayId);
+        }
+        return true;
+    }
+
+    private static boolean handleDeactivateLayout(Parcel data, Parcel reply) {
+        out("[Fission] DEACTIVATE_LAYOUT");
+        for (String key : new java.util.ArrayList<>(sSlots.keySet())) {
+            if (key.startsWith("layout_")) {
+                SlotInfo s = sSlots.remove(key); if (s != null) s.release();
+            }
+        }
+        reply.writeNoException(); reply.writeInt(1);
+        return true;
+    }
+
+    // ── Fission helpers ───────────────────────────────────────────────────────
+
+    /** Returns the cluster display (id ≥ 1). Refuses to return display 0 under any circumstances. */
+    private static Display resolveClusterDisplay() {
+        Context dmCtx = (sSysContext != null) ? sSysContext : sContext;
+        if (dmCtx == null) { out("[Fission] resolveClusterDisplay: no context"); return null; }
+        DisplayManager dm = dmCtx.getSystemService(DisplayManager.class);
+        if (dm == null) return null;
+        Display d = dm.getDisplay(1);
+        if (d != null) {
+            if (d.getDisplayId() == 0) {
+                out("SAFETY: resolveClusterDisplay: display(1) resolved to id=0 — REFUSED");
+                return null;
+            }
+            return d;
+        }
+        for (Display candidate : dm.getDisplays()) {
+            String name = candidate.getName();
+            if (name == null) continue;
+            if (name.toLowerCase(Locale.US).contains("cluster")
+                    || name.toLowerCase(Locale.US).contains("fission")) {
+                if (candidate.getDisplayId() == 0) {
+                    out("SAFETY: resolveClusterDisplay: name-match resolved to id=0 — REFUSED");
+                    continue;
+                }
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /** Creates an overlay SurfaceView on the cluster display and returns its Surface. */
+    private static Surface tryAttachSlotOverlay(SlotInfo slot) {
+        try {
+            Display target = resolveClusterDisplay();
+            if (target == null) {
+                out("[Fission] tryAttachSlotOverlay: cluster display not found");
+                return null;
+            }
+            final CountDownLatch latch = new CountDownLatch(1);
+            final AtomicReference<Surface> surfaceRef = new AtomicReference<>();
+            final AtomicReference<String>  errorRef   = new AtomicReference<>();
+
+            Runnable attach = () -> {
+                try {
+                    Context base = (sSysContext != null) ? sSysContext : sContext;
+                    Context displayCtx = null;
+                    try { displayCtx = base.createDisplayContext(target); }
+                    catch (Exception e) {
+                        out("[Fission] createDisplayContext: " + e.getMessage());
+                    }
+                    boolean hasRes = displayCtx != null && displayCtx.getResources() != null;
+                    Context viewCtx = hasRes ? displayCtx : base;
+
+                    // Grant OP_SYSTEM_ALERT_WINDOW (op=24) to our uid via AppOps
+                    if (sContext != null) {
+                        try {
+                            Object appOps = sContext.getSystemService(Context.APP_OPS_SERVICE);
+                            Method setMode = appOps.getClass().getMethod(
+                                    "setMode", int.class, int.class, String.class, int.class);
+                            setMode.setAccessible(true);
+                            setMode.invoke(appOps, 24, android.os.Process.myUid(),
+                                    sContext.getPackageName(), 0);
+                        } catch (Exception ignored) {}
+                    }
+
+                    SurfaceView sv = new SurfaceView(viewCtx);
+                    sv.getHolder().setFixedSize(slot.w, slot.h);
+                    sv.getHolder().addCallback(new SurfaceHolder.Callback() {
+                        @Override public void surfaceCreated(SurfaceHolder h) {
+                            Surface s = h.getSurface();
+                            if (s != null && s.isValid()) {
+                                surfaceRef.compareAndSet(null, s); latch.countDown();
+                            }
+                        }
+                        @Override public void surfaceChanged(SurfaceHolder h, int f, int w2, int h2) {
+                            Surface s = h.getSurface();
+                            if (s != null && s.isValid()) {
+                                surfaceRef.compareAndSet(null, s); latch.countDown();
+                            }
+                        }
+                        @Override public void surfaceDestroyed(SurfaceHolder h) {}
+                    });
+
+                    WindowManager wm = (displayCtx != null)
+                            ? displayCtx.getSystemService(WindowManager.class) : null;
+                    if (wm == null) {
+                        errorRef.set("WM null for display " + target.getDisplayId());
+                        latch.countDown(); return;
+                    }
+                    WindowManager.LayoutParams lp = createOverlayLayoutParams(target, slot.w, slot.h);
+                    lp.x = slot.x; lp.y = slot.y;
+                    wm.addView(sv, lp);
+                    slot.overlayView = sv;
+                    slot.overlayWM = wm;
+                } catch (Exception e) {
+                    out("[Fission] tryAttachSlotOverlay error: "
+                            + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    errorRef.set(e.getMessage()); latch.countDown();
+                }
+            };
+
+            if (Looper.myLooper() == Looper.getMainLooper()) attach.run();
+            else new android.os.Handler(Looper.getMainLooper()).post(attach);
+
+            if (!latch.await(2, TimeUnit.SECONDS)) {
+                out("[Fission] tryAttachSlotOverlay timeout for " + slot.pkg); return null;
+            }
+            if (errorRef.get() != null) {
+                out("[Fission] tryAttachSlotOverlay failed: " + errorRef.get()); return null;
+            }
+            Surface surface = surfaceRef.get();
+            if (surface == null || !surface.isValid()) {
+                out("[Fission] tryAttachSlotOverlay: no valid surface for " + slot.pkg); return null;
+            }
+            return surface;
+        } catch (Exception e) {
+            out("[Fission] tryAttachSlotOverlay exception: "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */
+    private static int createTrustedVdForSlot(SlotInfo slot, Surface surface, String vdName) {
+        try {
+            DisplayManager dm = sContext.getSystemService(DisplayManager.class);
+            VirtualDisplay vd = null;
+            try {
+                // flags 1346 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)|TRUSTED(1024)
+                vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 1346);
+                if (vd != null) out("[Fission] VD TRUSTED OK name=" + vdName);
+            } catch (Exception e) {
+                out("[Fission] VD TRUSTED failed, fallback flags=322: " + e.getMessage());
+            }
+            if (vd == null) {
+                // flags 322 = PRESENTATION(2)|SUPPORTS_TOUCH(64)|DESTROY_ON_REMOVAL(256)
+                vd = dm.createVirtualDisplay(vdName, slot.w, slot.h, 160, surface, 322);
+            }
+            if (vd == null) return -1;
+            slot.vd = vd;
+            slot.displayId = vd.getDisplay().getDisplayId();
+            // Safety guard: new VD must never land on display 0
+            if (slot.displayId == 0) {
+                out("SAFETY: createTrustedVdForSlot: VD got displayId=0 — RELEASING");
+                vd.release(); slot.vd = null; return -1;
+            }
+            return slot.displayId;
+        } catch (Exception e) {
+            out("[Fission] createTrustedVdForSlot error: " + e.getMessage());
+            return -1;
+        }
+    }
+
+    private static WindowManager.LayoutParams createOverlayLayoutParams(
+            Display target, int w, int h) {
+        // TYPE_SYSTEM_OVERLAY (2006): INTERNAL_SYSTEM_WINDOW is granted to shell uid=2000.
+        int overlayType = (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+                ? 2006
+                : WindowManager.LayoutParams.TYPE_PHONE;
+        final int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                w, h, overlayType, flags, android.graphics.PixelFormat.OPAQUE);
+        lp.setTitle("dashcast_fission_overlay");
+        lp.gravity = Gravity.TOP | Gravity.START;
+        lp.x = 0; lp.y = 0;
+        if (sContext != null) lp.packageName = sContext.getPackageName();
+        return lp;
     }
 }

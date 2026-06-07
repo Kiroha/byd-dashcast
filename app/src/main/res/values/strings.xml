@@ -487,6 +487,8 @@
     <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
     <string name="settings_dilink5_mode_support">Adapte DashCast au protocole DiLink 5.0 / Android 12.</string>
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Redémarrage requis.</string>
+    <string name="settings_fission_mode">Mode Fission (beta)</string>
+    <string name="settings_fission_mode_support">Projection multi-apps sur le cluster avec zones personnalisées. Nécessite le daemon de proxy.</string>
     <!-- v1.2.18 — Shown when the user taps the keyboard icon while the
          ClusterImeWatcherService accessibility service is not enabled. -->
     <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
