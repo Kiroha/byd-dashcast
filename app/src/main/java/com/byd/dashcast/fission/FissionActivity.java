@@ -121,6 +121,23 @@ public class FissionActivity extends Activity {
         super.onDestroy();
         mDestroyed = true;
         mUiHandler.removeCallbacksAndMessages(null);
+        // Release active slots when user navigates away without pressing Stop.
+        // isFinishing() guards against config-change recreation.
+        if (isFinishing() && !mSlots.isEmpty()) {
+            final IBinder binder = mDaemonBinder;
+            final List<String> pkgs = new ArrayList<>(mSlots.keySet());
+            mExec.execute(() -> {
+                for (String pkg : pkgs) {
+                    if (binder != null) {
+                        try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
+                    }
+                    AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
+                }
+                if (binder != null) {
+                    try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
+                }
+            });
+        }
         mExec.shutdown();
     }
 
@@ -386,6 +403,11 @@ public class FissionActivity extends Activity {
         mExec.execute(() -> {
             mProjecting  = false;
             mMirrorReady = false;
+            // Force-stop each projected app before releasing the display so it
+            // doesn't linger on the main screen after the user presses Stop.
+            for (String pkg : mSlots.keySet()) {
+                AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
+            }
             mSlots.clear();
             if (mDaemonBinder != null) {
                 FissionClient.stopMirror(mDaemonBinder);
@@ -408,6 +430,9 @@ public class FissionActivity extends Activity {
                 try { FissionClient.releaseSlot(mDaemonBinder, pkg); }
                 catch (Exception e) { AppLogger.e(TAG, "releaseSlot error", e); }
             }
+            // Kill the app after releasing its display slot so it doesn't linger
+            // on the main screen and leave stale task state for the next launch.
+            AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
             mSlots.remove(pkg);
             mProjecting = !mSlots.isEmpty();
             safeRun(() -> {
