@@ -837,6 +837,8 @@ public final class Phase4Verbs {
            .append(activityClass != null ? "/" + activityClass : "")
            .append(" → display=").append(displayId)
            .append(' ').append(width).append('x').append(height).append(" ==\n");
+        android.util.Log.i("Phase4Verbs", "FISSION launchAndForce START pkg=" + packageName
+                + " displayId=" + displayId + " " + width + "x" + height);
         try {
             // Pre-cleanup : nuke any zombie split-screen-primary / freeform
             // stack left on the target display by a previous session.
@@ -890,6 +892,7 @@ public final class Phase4Verbs {
                         + " --display " + displayId
                         + " --activity-no-animation"
                         + " -n " + cmpFlat;
+                android.util.Log.i("Phase4Verbs", "FISSION am start: " + cmd);
                 log.append("$ ").append(cmd).append('\n');
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
@@ -1000,8 +1003,11 @@ public final class Phase4Verbs {
             }, "fission-watchdog").start();
             log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
             log.append("FINISH: launchAndForce complete.\n");
+            android.util.Log.i("Phase4Verbs", "FISSION launchAndForce DONE pkg=" + packageName
+                    + " taskId=" + taskId + " displayId=" + displayId + " watchdog=running");
         } catch (Throwable t) {
             log.append("EXCEPTION: ").append(t).append('\n');
+            android.util.Log.e("Phase4Verbs", "FISSION launchAndForce EXCEPTION: " + t);
         }
         return log.toString();
     }
