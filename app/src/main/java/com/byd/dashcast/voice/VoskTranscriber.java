@@ -208,6 +208,9 @@ public final class VoskTranscriber {
 
         new Thread(() -> {
             try {
+                // Ensure native libs loaded BEFORE any Vosk/JNA class is touched.
+                VoiceLibsManager.ensureLoaded(mCtx);
+
                 File modelDir = new File(mCtx.getExternalFilesDir("vosk"), mModelAsset);
                 if (!new File(modelDir, "am").exists()) {
                     AppLogger.i(TAG, "Downloading model from " + mModelUrl);

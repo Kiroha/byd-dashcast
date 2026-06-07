@@ -301,6 +301,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     // ─── ONNX init & teardown ──────────────────────────────────────────────
 
     private void initOnnx() throws Exception {
+        // Ensure native libs are on disk and loaded BEFORE OrtEnvironment is touched.
+        // System.load(absolutePath) pre-empts OrtEnvironment's System.loadLibrary() call.
+        com.byd.dashcast.voice.VoiceLibsManager.ensureLoaded(mAppCtx);
+
         AssetManager am = mAppCtx.getAssets();
         byte[] melBytes  = readAssetBytes(am, ASSET_MEL);
         byte[] embBytes  = readAssetBytes(am, ASSET_EMB);
