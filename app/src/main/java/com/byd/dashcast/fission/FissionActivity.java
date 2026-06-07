@@ -327,7 +327,10 @@ public class FissionActivity extends Activity {
         int displayId = FissionClient.attachSlot(mDaemonBinder, pkg,
                 rect.left, rect.top, rect.width(), rect.height());
         if (displayId < 0) throw new RuntimeException("ATTACH_SLOT failed pour " + pkg);
-        AppLogger.d(TAG, "ATTACH_SLOT OK pkg=" + pkg + " displayId=" + displayId);
+        // INFO-level so it always appears in logcat / sniffer even without debug build
+        AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg
+                + " displayId=" + displayId
+                + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
 
         // Step 3 — LAUNCH_AND_FORCE via Proxy Daemon (Phase5b watchdog: am start + moveTaskToDisplay)
         // The Proxy Daemon must be running (enabled in Settings > Beta). If not connected we
@@ -342,11 +345,13 @@ public class FissionActivity extends Activity {
                         "Proxy Daemon non connecté. Activez « Proxy Daemon ADB » dans Paramètres > Beta.");
             }
         }
+        AppLogger.i(TAG, "FISSION LAUNCH_AND_FORCE pkg=" + pkg + " → displayId=" + displayId);
         String launchResult = BetaProxyClient.launchAndForce(pkg, null, displayId,
                 rect.width(), rect.height());
-        AppLogger.d(TAG, "launchAndForce result: " + launchResult);
+        // Always log the full daemon result at INFO so it's visible in sniffer
+        AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);
         if (launchResult != null && !launchResult.startsWith("OK"))
-            AppLogger.w(TAG, "launchAndForce non-OK: " + launchResult);
+            AppLogger.w(TAG, "FISSION launchAndForce non-OK: " + launchResult);
 
         // Step 4 — MIRROR_START on first slot (shows the cluster in the SurfaceView)
         if (isFirst) {
@@ -357,7 +362,7 @@ public class FissionActivity extends Activity {
             mMirrorReady = FissionClient.startMirror(mDaemonBinder,
                     displayId, rect.width(), rect.height(),
                     displayId, svW, svH, mHolder.getSurface());
-            AppLogger.d(TAG, "MIRROR_START ok=" + mMirrorReady);
+            AppLogger.i(TAG, "FISSION MIRROR_START displayId=" + displayId + " ok=" + mMirrorReady);
         }
 
         mSlots.put(pkg, new SlotState(pkg, label, displayId, new Rect(rect)));

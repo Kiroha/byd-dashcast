@@ -1623,14 +1623,22 @@ public class DiagActivity extends AppCompatActivity {
         btnSnifferStart.setEnabled(false);
 
         String headerCmd =
-            "logcat -c 2>/dev/null"
-            + " ; touch /data/local/tmp/" + RE_SNIFFER_TAG
+            // Do NOT clear the buffer — dump the ring buffer first so pre-start
+            // events (Fission launches, watchdog, VD creation) are preserved.
+            "touch /data/local/tmp/" + RE_SNIFFER_TAG
             + " ; echo === BYD RE SNIFFER === > " + p
             + " ; date >> " + p
             + " ; getprop ro.product.model >> " + p
             + " ; getprop ro.build.fingerprint >> " + p
+            + " ; echo --- RING BUFFER (pre-start) --- >> " + p
+            + " ; logcat -d -v threadtime >> " + p + " 2>&1"
+            + " ; echo --- RING BUFFER EVENTS (pre-start) --- >> " + p
+            + " ; logcat -b events -d -v threadtime >> " + p + " 2>&1"
             + " ; echo --- DISPLAYS INITIAL --- >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
+            + " ; echo --- WINDOW STACKS INITIAL --- >> " + p
+            + " ; dumpsys activity activities 2>/dev/null"
+            + "   | grep -E \"Stack #|Task id|taskId|displayId|realActivity|Waze|byd\" >> " + p
             + " ; echo --- SURFACEFLINGER INITIAL --- >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null >> " + p
             + " ; echo --- PROCESSUS INITIAL --- >> " + p
@@ -1640,12 +1648,16 @@ public class DiagActivity extends AppCompatActivity {
         AdbLocalClient.executeShellWithResult(this, headerCmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 String snapLoop =
-                    "while [ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ]; do sleep 10;"
+                    "while [ -f /data/local/tmp/" + RE_SNIFFER_TAG + " ]; do sleep 5;"
                     + " echo >> " + p + ";"
                     + " printf \"=== SNAP %s ===\\n\" $(date +%H:%M:%S) >> " + p + ";"
                     + " dumpsys display 2>/dev/null"
                     + "   | grep -E \"mDisplayId|mName|mState|fission|virtual|cluster|layerStack\""
                     + "   >> " + p + ";"
+                    // Window stacks: shows which task/app is on which displayId
+                    + " dumpsys activity activities 2>/dev/null"
+                    + "   | grep -E \"Stack #|displayId|taskId|realActivity|Waze|byd\""
+                    + "   | head -40 >> " + p + ";"
                     + " dumpsys SurfaceFlinger 2>/dev/null"
                     + "   | grep -iE \"display|fission|layer|cluster|mirror|virtual|qt\""
                     + "   | head -30 >> " + p + ";"
@@ -1660,7 +1672,7 @@ public class DiagActivity extends AppCompatActivity {
                     + "   & echo $! >> " + pf
                     + " ; setsid sh -c '" + snapLoop + "'"
                     + "   & echo $! >> " + pf
-                    + " ; setsid sh -c 'logcat -b events -v time >> " + p + " 2>&1'"
+                    + " ; setsid sh -c 'logcat -b events -v threadtime >> " + p + " 2>&1'"
                     + "   & echo $! >> " + pf;
 
                 AdbLocalClient.executeShell(DiagActivity.this, bgCmd);
