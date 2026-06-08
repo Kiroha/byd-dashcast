@@ -306,42 +306,48 @@ public class MainActivity extends AppCompatActivity
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
         com.byd.dashcast.dashboard.ClusterMirrorManager.unlockHiddenApis();
 
-        // v1.2.55-beta — storage hygiene. Field report: app reached 1.08 GB
-        // because every save/share/sniffer run produced a fresh timestamped
-        // file in getExternalFilesDir and nothing rotated. Also kills any
-        // orphan sniffer logcat processes that survived a previous DashCast
-        // force-stop (setsid-detached, see DiagActivity.startSniffer). Both
-        // calls are silent no-ops when nothing needs cleanup.
-        try {
-            AppLogger.pruneOldFiles(this, 3);
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "pruneOldFiles failed: " + t.getMessage());
-        }
-        try {
-            // Orphan-sniffer cleanup: tag file lives on tmpfs and disappears at
-            // boot, so a present tag without a pref means orphan processes from
-            // a previous force-stop. Gated on sOrphanSnifferKillDone so this
-            // runs at most once per process — in-app navigation creates new
-            // MainActivity instances and must not clobber a live sniffer.
-            if (!sOrphanSnifferKillDone) {
-                sOrphanSnifferKillDone = true;
-                String savedSnifferPath = getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
-                        .getString("re_sniffer_file_path", null);
-                if (savedSnifferPath == null) com.byd.dashcast.beta.ShellGateway.execShell(this,
-                    "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
-                  + "  rm -f /data/local/tmp/.re_sniffer_run;"
-                  + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
-                  + "    while IFS= read -r pid; do"
-                  + "      [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
-                  + "    done < /data/local/tmp/.re_sniffer_pids;"
-                  + "    rm -f /data/local/tmp/.re_sniffer_pids;"
-                  + "  fi;"
-                  + "  pkill -f BYD_RE_Sniffer_ 2>/dev/null; true;"
-                  + "fi");
+        // v1.2.55-beta — storage hygiene + orphan-sniffer cleanup.
+        // Both are file/shell I/O — off-loaded to a daemon thread to keep
+        // onCreate non-blocking. The sOrphanSnifferKillDone gate is evaluated
+        // here (main thread) before the thread starts so the "run once per
+        // process" invariant is preserved even when MainActivity is re-created
+        // during in-app navigation.
+        final Context hygieneCtx = getApplicationContext();
+        final boolean killOrphanSniffer = !sOrphanSnifferKillDone;
+        if (killOrphanSniffer) sOrphanSnifferKillDone = true;
+        Thread hygieneThread = new Thread(() -> {
+            try {
+                AppLogger.pruneOldFiles(hygieneCtx, 3);
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "pruneOldFiles failed: " + t.getMessage());
             }
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "orphan-sniffer cleanup failed: " + t.getMessage());
-        }
+            if (killOrphanSniffer) {
+                try {
+                    // Orphan-sniffer cleanup: tag file lives on tmpfs and
+                    // disappears at boot, so a present tag without a pref
+                    // means orphan processes from a previous force-stop.
+                    String savedSnifferPath = hygieneCtx
+                            .getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
+                            .getString("re_sniffer_file_path", null);
+                    if (savedSnifferPath == null)
+                        com.byd.dashcast.beta.ShellGateway.execShell(hygieneCtx,
+                            "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
+                          + "  rm -f /data/local/tmp/.re_sniffer_run;"
+                          + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
+                          + "    while IFS= read -r pid; do"
+                          + "      [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
+                          + "    done < /data/local/tmp/.re_sniffer_pids;"
+                          + "    rm -f /data/local/tmp/.re_sniffer_pids;"
+                          + "  fi;"
+                          + "  pkill -f BYD_RE_Sniffer_ 2>/dev/null; true;"
+                          + "fi");
+                } catch (Throwable t) {
+                    AppLogger.w(TAG, "orphan-sniffer cleanup failed: " + t.getMessage());
+                }
+            }
+        }, "storage-hygiene");
+        hygieneThread.setDaemon(true);
+        hygieneThread.start();
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,

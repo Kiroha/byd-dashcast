@@ -31,22 +31,38 @@ public final class Phase4Verbs {
 
     // ─── cached reflection (lazy, double-checked) ──────────────────────────
 
-    private static volatile Object sWindowManager;
-    private static volatile Method sSetOverscan;
+    private static volatile Object  sWindowManager;
+    private static volatile IBinder sWindowManagerBinder;
+    private static volatile Method  sSetOverscan;
+
+    // Mirrors the AutoContainer pattern: clears the cache when the 'window'
+    // service host process dies so the next call re-resolves cleanly.
+    private static final IBinder.DeathRecipient sWindowManagerDeath = new IBinder.DeathRecipient() {
+        @Override public void binderDied() {
+            synchronized (Phase4Verbs.class) {
+                sWindowManager       = null;
+                sWindowManagerBinder = null;
+            }
+        }
+    };
 
     private static Object windowManager() throws Throwable {
-        Object wm = sWindowManager;
-        if (wm != null) return wm;
+        IBinder cached = sWindowManagerBinder;
+        if (cached != null && cached.isBinderAlive()) return sWindowManager;
         synchronized (Phase4Verbs.class) {
-            wm = sWindowManager;
-            if (wm != null) return wm;
+            cached = sWindowManagerBinder;
+            if (cached != null && cached.isBinderAlive()) return sWindowManager;
             Class<?> sm = Class.forName("android.os.ServiceManager");
             IBinder b = (IBinder) sm.getMethod("getService", String.class).invoke(null, "window");
             if (b == null) throw new IllegalStateException("no 'window' service");
             Class<?> stub = Class.forName("android.view.IWindowManager$Stub");
-            wm = stub.getMethod("asInterface", IBinder.class).invoke(null, b);
+            Object wm = stub.getMethod("asInterface", IBinder.class).invoke(null, b);
             if (wm == null) throw new IllegalStateException("IWindowManager.asInterface returned null");
-            sWindowManager = wm;
+            // Best-effort death hook — same contract as autoContainerBinder().
+            try { b.linkToDeath(sWindowManagerDeath, 0); }
+            catch (Throwable t) { return wm; /* binder already dead, don't cache */ }
+            sWindowManagerBinder = b;
+            sWindowManager       = wm;
             return wm;
         }
     }
@@ -1013,6 +1029,7 @@ public final class Phase4Verbs {
             final int wTaskId = taskId;
             new Thread(() -> {
                 try {
+                    int stableCount = 0;
                     for (int iter = 0; iter < 20; iter++) {
                         try { Thread.sleep(500); }
                         catch (InterruptedException ie) {
@@ -1049,8 +1066,18 @@ public final class Phase4Verbs {
                                     "WATCHDOG poll err: " + pollEx.getMessage());
                             continue;
                         }
-                        if (curDisplay < 0) return;    // task gone
-                        if (curDisplay == displayId) continue; // still on target
+                        if (curDisplay < 0) return; // task gone
+                        if (curDisplay == displayId) {
+                            // Task is stable on the target display; exit early
+                            // after 3 consecutive confirmations (1.5 s) to avoid
+                            // running the full 10 s window unnecessarily.
+                            if (++stableCount >= 3) {
+                                android.util.Log.d("Phase4Verbs", "WATCHDOG: stable, done");
+                                return;
+                            }
+                            continue;
+                        }
+                        stableCount = 0; // reset on any off-target reading
                         android.util.Log.i("Phase4Verbs",
                                 "WATCHDOG: task " + wTaskId + " on display " + curDisplay
                                 + " — re-anchoring to " + displayId);
