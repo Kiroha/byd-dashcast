@@ -62,7 +62,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
      *  Volatile because read from the bridge activity's UI thread. */
     private static volatile ClusterImeWatcherService sInstance = null;
 
-    private long mLastLaunchAt = 0L;
+    private volatile long mLastLaunchAt = 0L;
     private boolean mIsDiLink5  = false;
 
     // v1.2.24 — Background worker for setTextOnCluster / performImeEnterOnCluster.

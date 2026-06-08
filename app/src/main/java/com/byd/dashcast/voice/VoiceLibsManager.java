@@ -193,7 +193,7 @@ public final class VoiceLibsManager {
         URL url = new URL(LIBS_ZIP_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(20_000);
-        conn.setReadTimeout(0);
+        conn.setReadTimeout(60_000);
         if (alreadyDone > 0) conn.setRequestProperty("Range", "bytes=" + alreadyDone + "-");
         conn.connect();
 
