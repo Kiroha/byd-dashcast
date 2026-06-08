@@ -85,7 +85,7 @@ public final class VoiceCommandRouter {
 
     private final Context      mCtx;
     private TextToSpeech       mTts;
-    private boolean            mTtsReady;
+    private volatile boolean   mTtsReady;
     private long               mLastSpeakAt;  // dedup guard
 
     public VoiceCommandRouter(Context ctx) {

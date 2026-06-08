@@ -106,6 +106,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      * use-after-destroy NPEs on {@link #mLauncher} / {@link #mMirrorManager}.
      */
     private volatile boolean       mDestroyed = false;
+    // Holds the pending launchOnDashboard callback so onDestroy() can fire it
+    // with false when removeCallbacksAndMessages() cancels the postDelayed Runnable.
+    private LaunchCallback         mPendingDashboardCallback;
     // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -188,6 +191,14 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         if (sInstance == this) sInstance = null;
         mDestroyed = true;
         mListener = null;
+        // If launchOnDashboard is waiting on its 2s postDelayed, its Runnable
+        // will be cancelled by removeCallbacksAndMessages() below — fire the
+        // callback with false now so the caller is never left hanging.
+        if (mPendingDashboardCallback != null) {
+            LaunchCallback pending = mPendingDashboardCallback;
+            mPendingDashboardCallback = null;
+            pending.onResult(false);
+        }
         // Cancel all pending Runnables on mMainHandler BEFORE release():
         // launchOnDashboard (postDelayed 2s) could post a callback
         // on a destroyed service (NPE / ADB thread leak).
@@ -955,8 +966,12 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // For the direct path (tap app without going through activateCluster),
         // activateClusterDisplay() was called at service startup → Qt already in standby.
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → " + packageName);
+        mPendingDashboardCallback = callback;
         mMainHandler.postDelayed(new Runnable() {
             @Override public void run() {
+                // Clear the pending-callback field first so onDestroy() does not
+                // double-fire it if the service is destroyed after this point.
+                mPendingDashboardCallback = null;
                 // Direct launch via IActivityManager on the Freedom display (proven v2.29).
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching via IActivityManager on display=" + displayId + " → " + packageName);

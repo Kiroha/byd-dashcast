@@ -342,9 +342,13 @@ public final class BetaProxyClient {
                 if (sDaemonUid < 0) handshake();
                 return true;
             }
-            ensureReceiverRegistered(ctx);
-            // arm the latch BEFORE bootstrapping so a fast broadcast isn't missed
+            // Arm the latch BEFORE registering the receiver so that a broadcast
+            // arriving immediately after registration (daemon already alive) finds
+            // a non-null latch and can count it down rather than being silently
+            // dropped. Both operations are inside LOCK so onReceive() cannot
+            // interleave, but creating the latch first is the safer ordering.
             sBinderLatch = new CountDownLatch(1);
+            ensureReceiverRegistered(ctx);
         }
 
         AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
