@@ -43,7 +43,6 @@
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             app:icon="@android:drawable/ic_menu_close_clear_cancel"/>
-            xmlns:app="http://schemas.android.com/apk/res-auto"/>
 
         <!-- v1.2.84 — Live preview checkbox (top-start). Off by default;
              toggling on triggers a confirmation popup warning about flashes
