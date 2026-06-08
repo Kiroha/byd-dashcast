@@ -92,6 +92,17 @@ public final class VoskTranscriber {
         mModelAsset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
         mModelUrl   = large ? MODEL_LARGE_URL   : MODEL_SMALL_URL;
         mModelBytes = large ? MODEL_LARGE_BYTES : MODEL_SMALL_BYTES;
+        // Delete the OTHER variant if it is on disk — prevents small (~40 MB)
+        // and large (~1.3 GB) from coexisting after a model switch.
+        // deleteModel() is a no-op when the directory does not exist.
+        final boolean otherIsLarge = !large;
+        Thread cleanup = new Thread(() -> {
+            if (deleteModel(mCtx, otherIsLarge)) {
+                AppLogger.d(TAG, "auto-purged inactive model (large=" + otherIsLarge + ")");
+            }
+        }, "vosk-model-cleanup");
+        cleanup.setDaemon(true);
+        cleanup.start();
     }
 
     // ─── Public API ────────────────────────────────────────────────────────
