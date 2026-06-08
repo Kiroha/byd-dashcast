@@ -10,6 +10,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.annotation.SuppressLint;
 import android.os.IBinder;
 import android.os.SystemClock;
 
@@ -206,6 +207,7 @@ public final class VoiceService extends Service {
 
     // ─── Capture loop ──────────────────────────────────────────────────────
 
+    @SuppressLint("MissingPermission")
     private void startCapture() {
         mErrorSignaled = false;
         final int channel = AudioFormat.CHANNEL_IN_MONO;
