@@ -567,4 +567,21 @@
     <string name="dpi_custom">Custom…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Will be applied on next launch</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Sends sendInfo(30) before projection — fixes ADAS stretching on some vehicles. Disable if cluster shape changes on startup.</string>
+    <string name="settings_fission_mode">Fission Mode (beta)</string>
+    <string name="settings_fission_mode_support">Multi-app projection on the cluster with custom zones. Requires proxy daemon.</string>
+    <string name="fission_title">Fission — Multi-app cluster</string>
+    <string name="fission_status_idle">Tap + to project an app</string>
+    <string name="fission_btn_add">+ Add app</string>
+    <string name="fission_btn_stop">Stop all</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Layout editor</string>
+    <string name="fission_editor_clear">Clear</string>
+    <string name="fission_editor_save">Save</string>
+    <string name="fission_editor_edit">Edit</string>
+    <string name="fission_editor_delete">Delete</string>
+    <string name="fission_open">Fission</string>
 </resources>

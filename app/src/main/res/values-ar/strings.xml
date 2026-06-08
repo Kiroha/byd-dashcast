@@ -555,4 +555,21 @@
     <string name="dpi_custom">مخصص…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">سيُطبَّق عند الإطلاق التالي</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">يرسل sendInfo(30) قبل الإسقاط — يصلح تمدد ADAS في بعض المركبات. قم بالتعطيل إذا تغير شكل المجموعة عند البدء.</string>
+    <string name="settings_fission_mode">وضع Fission (تجريبي)</string>
+    <string name="settings_fission_mode_support">إسقاط تطبيقات متعددة على المجموعة بمناطق مخصصة. يتطلب خادم الوكيل.</string>
+    <string name="fission_title">Fission — مجموعة متعددة التطبيقات</string>
+    <string name="fission_status_idle">اضغط + لعرض تطبيق</string>
+    <string name="fission_btn_add">+ إضافة تطبيق</string>
+    <string name="fission_btn_stop">إيقاف الكل</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">محرر التخطيطات</string>
+    <string name="fission_editor_clear">مسح</string>
+    <string name="fission_editor_save">حفظ</string>
+    <string name="fission_editor_edit">تعديل</string>
+    <string name="fission_editor_delete">حذف</string>
+    <string name="fission_open">Fission</string>
 </resources>

@@ -556,4 +556,21 @@
     <string name="dpi_custom">Своє значення…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Буде застосовано під час наступного запуску</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Надсилає sendInfo(30) перед проекцією — виправляє розтягування ADAS на деяких автомобілях. Вимкніть, якщо форма кластера змінюється при запуску.</string>
+    <string name="settings_fission_mode">Режим Fission (бета)</string>
+    <string name="settings_fission_mode_support">Мультидодаток на кластері з власними зонами. Потребує проксі-демон.</string>
+    <string name="fission_title">Fission — Мультидодаток</string>
+    <string name="fission_status_idle">Натисніть +, щоб проецювати додаток</string>
+    <string name="fission_btn_add">+ Додати додаток</string>
+    <string name="fission_btn_stop">Зупинити все</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Редактор layouts</string>
+    <string name="fission_editor_clear">Очистити</string>
+    <string name="fission_editor_save">Зберегти</string>
+    <string name="fission_editor_edit">Редагувати</string>
+    <string name="fission_editor_delete">Видалити</string>
+    <string name="fission_open">Fission</string>
 </resources>
