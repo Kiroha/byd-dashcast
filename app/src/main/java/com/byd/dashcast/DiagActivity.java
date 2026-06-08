@@ -2621,7 +2621,7 @@ public class DiagActivity extends AppCompatActivity {
                 }
                 if (!match) continue;
                 String vn = pi.versionName != null ? pi.versionName : "?";
-                long vc = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+                long vc = pi.getLongVersionCode();
                 String src = pi.applicationInfo != null ? pi.applicationInfo.sourceDir : null;
                 long size = 0;
                 if (src != null) {

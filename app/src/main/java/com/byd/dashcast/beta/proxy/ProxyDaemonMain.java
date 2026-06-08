@@ -1,5 +1,6 @@
 package com.byd.dashcast.beta.proxy;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
@@ -143,6 +144,7 @@ public final class ProxyDaemonMain {
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
+    @SuppressLint("StaticFieldLeak") // system context, daemon process-scoped, safe
     private static volatile Context sSystemContext;
 
     /** Strong reference to the trigger {@link FileObserver}, kept alive for the

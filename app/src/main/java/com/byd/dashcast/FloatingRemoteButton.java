@@ -387,11 +387,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
     private void demoteForeground() {
         if (!mIsForeground) return;
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                stopForeground(Service.STOP_FOREGROUND_REMOVE);
-            } else {
-                stopForeground(true);
-            }
+            stopForeground(Service.STOP_FOREGROUND_REMOVE);
             mIsForeground = false;
         } catch (Throwable t) {
             AppLogger.w(TAG, "demoteForeground failed: " + t.getMessage());

@@ -1,5 +1,6 @@
 package com.byd.dashcast.beta;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
@@ -59,6 +60,7 @@ public final class ProxyWatchdog {
     private static int sForegroundCount = 0;
 
     /** Application context cached at install(); used by connect() retries. */
+    @SuppressLint("StaticFieldLeak") // application context, process-scoped, safe
     private static volatile Context sAppCtx;
 
     /** Set true once {@link #install(Application)} has wired the activity

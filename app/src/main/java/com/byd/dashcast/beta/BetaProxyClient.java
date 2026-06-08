@@ -1,5 +1,6 @@
 package com.byd.dashcast.beta;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -203,6 +204,7 @@ public final class BetaProxyClient {
      * typed verb finds a dead binder. Application-scoped (not Activity), safe
      * to hold statically.
      */
+    @SuppressLint("StaticFieldLeak") // application context, process-scoped, safe
     private static volatile Context sAppCtx;
     /**
      * Anti-storm gate for {@link #attemptReconnect()}. A reconnect attempt is

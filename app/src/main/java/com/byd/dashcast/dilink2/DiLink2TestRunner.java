@@ -1223,7 +1223,7 @@ public final class DiLink2TestRunner {
             try {
                 PackageInfo pi = ctx.getPackageManager().getPackageInfo(pkg, 0);
                 vn = pi.versionName != null ? pi.versionName : "?";
-                vc = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+                vc = pi.getLongVersionCode();
             } catch (Throwable ignored) {}
             sLastDiscovery.add(new DiscoveredPkg(pkg, apkPath, vn, vc));
             sb.append("  ").append(pkg)
