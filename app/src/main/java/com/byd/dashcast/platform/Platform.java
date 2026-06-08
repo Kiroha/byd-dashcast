@@ -322,14 +322,15 @@ public final class Platform {
                 "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?"
             });
             final Process proc = p;
-            final StringBuilder out = new StringBuilder();
+            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             Thread r = new Thread(new Runnable() {
                 @Override public void run() {
                     byte[] buf = new byte[1024];
                     try (java.io.InputStream is = proc.getInputStream()) {
                         int n;
                         while ((n = is.read(buf)) > 0) {
-                            out.append(new String(buf, 0, n));
+                            // ByteArrayOutputStream.write() is synchronized — safe from reader thread
+                            baos.write(buf, 0, n);
                         }
                     } catch (Throwable ignore) {}
                 }
@@ -342,7 +343,8 @@ public final class Platform {
                 return true;  // timeout → assume supported, don't downgrade UX
             }
             r.join(200);
-            String s = out.toString();
+            // Decode only after join() — reader thread has stopped writing.
+            String s = baos.toString();
             if (s.contains("Unknown command")) return false;
             // exit=255 with "Unknown command" wording is the canonical strip
             // signature on AOSP. Plain exit=255 without the wording could also

@@ -249,7 +249,7 @@ public class AdbLocalClient {
         }
         
         // Retry loop to give the user time to click 'Allow USB Debugging' if the popup appears
-        int retries = 15;
+        int retries = 5;
         Exception lastE = null;
         while (retries > 0) {
             try {
@@ -339,7 +339,9 @@ public class AdbLocalClient {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!BetaProxyClient.isConnected()) {
-                            BetaProxyClient.connect(context);
+                            // Never call connect() from an executor thread — blocks 10–15 s.
+                            // ProxyKeeperService reconnects in background; skip to legacy path.
+                            throw new Exception("BetaProxy not connected — skip typed path");
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
@@ -436,7 +438,9 @@ public class AdbLocalClient {
                     boolean callbackFired = false;
                     try {
                         if (!BetaProxyClient.isConnected()) {
-                            BetaProxyClient.connect(context);
+                            // Never call connect() from an executor thread — blocks 10–15 s.
+                            // ProxyKeeperService reconnects in background; skip to legacy path.
+                            throw new Exception("BetaProxy not connected — skip typed path");
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
@@ -551,7 +555,9 @@ public class AdbLocalClient {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
                         if (!BetaProxyClient.isConnected()) {
-                            BetaProxyClient.connect(context);
+                            // Never call connect() from an executor thread — blocks 10–15 s.
+                            // ProxyKeeperService reconnects in background; skip to legacy path.
+                            throw new Exception("BetaProxy not connected — skip typed path");
                         }
                         BetaProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
                         long dt = SystemClock.elapsedRealtime() - t0;

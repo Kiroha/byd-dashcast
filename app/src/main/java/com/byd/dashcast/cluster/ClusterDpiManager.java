@@ -1,7 +1,6 @@
 package com.byd.dashcast.cluster;
 
 import android.content.Context;
-import android.os.SystemClock;
 
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.beta.ShellGateway;
@@ -40,7 +39,7 @@ public final class ClusterDpiManager {
     private static final String TAG = "ClusterDpiMgr";
 
     /** Settle delay after a wm density change before issuing am start. */
-    private static final long SETTLE_MS = 150L;
+    public static final long SETTLE_MS = 150L;
 
     /** displayId → last applied DPI (0 == system default / reset). */
     private static final Map<Integer, Integer> sCache = new HashMap<>();
@@ -54,11 +53,12 @@ public final class ClusterDpiManager {
      *   <li>{@code displayId <= 0} (SAFETY: never touch display 0),</li>
      *   <li>the desired density equals the currently cached one for that display.</li>
      * </ul>
-     * Sleeps {@value #SETTLE_MS}&nbsp;ms after a real change so the launch
-     * inherits the new density.
+     * Returns {@code true} if a density command was dispatched (caller should
+     * wait {@link #SETTLE_MS} ms before issuing {@code am start}).
+     * Returns {@code false} if already at the desired density (no settle needed).
      */
-    public static void applyForLaunch(Context ctx, String pkg, int displayId) {
-        if (ctx == null || displayId <= 0) return; // SAFETY: never touch main screen
+    public static boolean applyForLaunch(Context ctx, String pkg, int displayId) {
+        if (ctx == null || displayId <= 0) return false; // SAFETY: never touch main screen
         try {
             int desired = (pkg == null || pkg.isEmpty())
                     ? 0
@@ -69,7 +69,7 @@ public final class ClusterDpiManager {
             }
             int currentVal = (current == null) ? 0 : current;
             if (currentVal == desired) {
-                return; // already in the right state — no shell call needed
+                return false; // already in the right state — no shell call needed
             }
             String cmd = (desired <= 0)
                     ? ("wm density reset -d " + displayId)
@@ -81,10 +81,12 @@ public final class ClusterDpiManager {
             synchronized (sCache) {
                 sCache.put(displayId, desired);
             }
-            SystemClock.sleep(SETTLE_MS);
+            // Caller is responsible for the SETTLE_MS delay (off the main thread).
+            return true;
         } catch (Throwable t) {
             // Never let a DPI tweak block the launch.
             AppLogger.w(TAG, "applyForLaunch failed: " + t.getMessage());
+            return false;
         }
     }
 

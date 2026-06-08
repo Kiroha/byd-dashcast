@@ -496,32 +496,50 @@ public class ClusterManager {
      * We look for either PRESENTATION or a non-default VIRTUAL, because the VirtualDisplay
      * from AutoDisplayService can have any category depending on the ROM version.
      */
+    /**
+     * Returns true if {@code name} matches a known BYD cluster VirtualDisplay pattern.
+     * DL3: "fission_bg_xdjaVirtualSurface", DL5: "XDJAScreenProjection_0/1".
+     * Case-insensitive substring match on "xdja" or "fission" covers both variants.
+     */
+    private static boolean isKnownClusterName(String name) {
+        if (name == null) return false;
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("xdja") || lower.contains("fission");
+    }
+
     private Display findClusterDisplay(DisplayManager dm) {
-        // Strategy 1: PRESENTATION category displays
+        // Strategy 1: PRESENTATION category — prefer displays with a known cluster name.
         Display[] presentations = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+        Display fallback = null;
         if (presentations != null) {
             for (Display d : presentations) {
-                if (d.getDisplayId() != 0) {
-                    AppLogger.d(TAG, "PRESENTATION candidate: id=" + d.getDisplayId() + " name=" + d.getName());
-                    return d;
-                }
+                if (d.getDisplayId() == 0) continue;
+                AppLogger.d(TAG, "PRESENTATION candidate: id=" + d.getDisplayId() + " name=" + d.getName());
+                if (isKnownClusterName(d.getName())) return d;
+                if (fallback == null) fallback = d; // unnamed non-zero: keep as fallback
             }
         }
-        // Strategy 2: any non-default display (id != 0)
+        if (fallback != null) return fallback;
+
+        // Strategy 2: any non-default display — prefer named, fall back to first.
         Display[] all = dm.getDisplays();
         if (all != null) {
+            Display anyNonDefault = null;
             for (Display d : all) {
-                if (d.getDisplayId() != 0) {
-                    AppLogger.d(TAG, "Non-default candidate: id=" + d.getDisplayId() + " name=" + d.getName());
-                    return d;
-                }
+                if (d.getDisplayId() == 0) continue;
+                AppLogger.d(TAG, "Non-default candidate: id=" + d.getDisplayId() + " name=" + d.getName());
+                if (isKnownClusterName(d.getName())) return d;
+                if (anyNonDefault == null) anyNonDefault = d;
             }
+            if (anyNonDefault != null) return anyNonDefault;
         }
         return null;
     }
 
     private boolean isClusterDisplay(Display d) {
-        // A display is considered cluster if it is not the primary display (id=0)
+        // A display is considered cluster if it is not the primary display (id=0).
+        // Prefer known cluster names, but accept any non-zero id as a fallback to
+        // preserve behaviour on unknown hardware variants.
         return d != null && d.getDisplayId() != 0;
     }
 
