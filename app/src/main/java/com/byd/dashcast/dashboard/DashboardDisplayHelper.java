@@ -141,6 +141,8 @@ public class DashboardDisplayHelper {
     }
 
     public int getKnownClusterDisplayId() {
-        return mKnownClusterDisplayId;
+        // -2 is an internal sentinel (stop() already called); expose as -1 to
+        // callers so they treat it as "not connected" rather than a raw magic value.
+        return mKnownClusterDisplayId == -2 ? -1 : mKnownClusterDisplayId;
     }
 }

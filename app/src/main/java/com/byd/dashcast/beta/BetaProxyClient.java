@@ -569,7 +569,7 @@ public final class BetaProxyClient {
             String out = reply.readString();
             return out == null ? "" : out;
         } catch (RemoteException e) {
-            sBinder = null;
+            invalidateBinder("Phase4Probes");
             throw new BetaProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();

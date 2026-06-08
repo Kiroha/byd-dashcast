@@ -130,7 +130,12 @@ public final class ShellGateway {
             final long t0 = SystemClock.elapsedRealtime();
             try {
                 if (!BetaProxyClient.isConnected()) {
-                    BetaProxyClient.connect(ctx);
+                    // Daemon not reachable — fall through to legacy immediately.
+                    // Blocking connect() here would stall ALL queued shell ops for
+                    // up to 15 s on a single thread. ProxyKeeperService reconnects
+                    // in the background; the next call will find the binder ready.
+                    AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
+                    return;
                 }
                 // Phase 4a/4b: try typed verb first. If it matches AND succeeds,
                 // we skip the shell entirely. If the parse fails OR the typed

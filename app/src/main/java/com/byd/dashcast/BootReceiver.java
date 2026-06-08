@@ -141,7 +141,7 @@ public class BootReceiver extends BroadcastReceiver {
                     } finally {
                         releaseOne.run();
                     }
-                }, 8_000L);
+                }, 7_000L);
             } else {
                 AppLogger.i("BootReceiver",
                         "TetherFi auto-start: pref ON but app not installed — skipped");

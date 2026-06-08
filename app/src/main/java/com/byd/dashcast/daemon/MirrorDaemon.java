@@ -99,7 +99,7 @@ public class MirrorDaemon {
             this.pkg = pkg; this.x = x; this.y = y; this.w = w; this.h = h;
         }
 
-        void release() {
+        synchronized void release() {
             if (vd != null) {
                 try { vd.release(); }
                 catch (Exception e) { out("[Fission] slot[" + pkg + "] VD release error: " + e.getMessage()); }
@@ -311,8 +311,8 @@ public class MirrorDaemon {
      * @return true if the mirror was configured successfully
      */
     @SuppressLint("NewApi")
-    private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
-                                       int viewW, int viewH, Surface surface) {
+    private static synchronized boolean setupMirror(int layerStack, int clusterW, int clusterH,
+                                                    int viewW, int viewH, Surface surface) {
         stopMirror();
         // v1.2.7 — reset per-session first-event trace so M7 captures the next injection chain.
         sMotionFirstLogged = false;
@@ -429,7 +429,7 @@ public class MirrorDaemon {
         }
     }
 
-    private static void stopMirror() {
+    private static synchronized void stopMirror() {
         IBinder token = sMirrorToken;
         if (token == null) return;
         sMirrorToken = null;
@@ -632,8 +632,12 @@ public class MirrorDaemon {
             } finally { latch.countDown(); }
         });
         try { latch.await(1, TimeUnit.SECONDS); } catch (InterruptedException ignored) {}
-        try { slot.vd.resize(w, h, 160); }
-        catch (Exception e) { out("[Fission] RESIZE_SLOT VD error: " + e.getMessage()); }
+        if (latch.getCount() == 0) {
+            try { slot.vd.resize(w, h, 160); }
+            catch (Exception e) { out("[Fission] RESIZE_SLOT VD error: " + e.getMessage()); }
+        } else {
+            out("[Fission] RESIZE_SLOT overlay timed out — VD resize skipped to avoid size mismatch");
+        }
         reply.writeNoException(); reply.writeInt(1);
         return true;
     }
