@@ -159,6 +159,8 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
 
     // ─── Pre-allocated inference buffers (worker-thread only) ─────────────────
     // Reused on every eval cycle to eliminate ~770 KB of heap allocation per 100ms.
+    private float[][]    mMelBuf;
+    private int          mMelBufFrames = -1;
     private final float[][][][] mEmbInput  = new float[WAKE_WINDOW][EMB_WINDOW][32][1];
     private final float[][][]   mWakeInput = new float[1][WAKE_WINDOW][96];
     private final HashMap<String, OnnxTensor> mMelMap  = new HashMap<>(2);
@@ -427,7 +429,11 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
                 // the score permanently at 0.0.
                 float[][][][] raw = (float[][][][]) out.get(0).getValue();
                 int nFrames = raw[0][0].length;  // raw[batch][channel][time][mel]
-                float[][] mel = new float[nFrames][32];
+                if (mMelBufFrames != nFrames) {
+                    mMelBuf = new float[nFrames][32];
+                    mMelBufFrames = nFrames;
+                }
+                float[][] mel = mMelBuf;
                 for (int t = 0; t < nFrames; t++) {
                     float[] src = raw[0][0][t];  // shape (32,) — raw log-mel in dB
                     for (int k = 0; k < 32; k++) {

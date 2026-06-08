@@ -65,6 +65,13 @@ public class ClusterResizeActivity extends Activity
 
     private static final int APPLY_THROTTLE_MS = 60;
 
+    private static final java.util.concurrent.ExecutorService sResizeExec =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "cluster-resize-apply");
+                t.setDaemon(true);
+                return t;
+            });
+
     /** v1.2.84 — persisted across launches so the user only sees the warning once
      *  per activation request (they re-confirm if they previously disabled it). */
     private static final String PREFS_NAME = "dashcast";
@@ -330,7 +337,7 @@ public class ClusterResizeActivity extends Activity
                 mLastApplyTs = System.currentTimeMillis();
             }
             final int l = rect[0], t = rect[1], r = rect[2], b = rect[3];
-            new Thread(() -> {
+            sResizeExec.execute(() -> {
                 try {
                     if (!BetaProxyClient.isConnected()) {
                         BetaProxyClient.connect(ClusterResizeActivity.this);
@@ -340,7 +347,7 @@ public class ClusterResizeActivity extends Activity
                 } catch (Throwable th) {
                     AppLogger.w(TAG, "moveAndResize failed: " + th.getMessage());
                 }
-            }, "cluster-resize-apply").start();
+            });
         }
     };
 

@@ -34,6 +34,7 @@ public class DashboardLauncher {
     private static Method sCachedSetLaunchDisplayId;
     private static Method sCachedSetLaunchWindowingMode;  // null if absent on this ROM
     private static Method sCachedSetLaunchBounds;          // null if absent on this ROM
+    private static volatile Method sStartActivityAsUser;
 
     private static synchronized void ensureLaunchMethodsCached() {
         if (sLaunchMethodsCached) return;
@@ -158,12 +159,15 @@ public class DashboardLauncher {
                 if (iAm == null) throw new IllegalStateException("IActivityManager null");
 
                 // startActivityAsUser(null, null, intent, null, null, null, 0, 0, null, optBundle, -2)
-                Method startActivity = null;
-                for (java.lang.reflect.Method m : iAm.getClass().getMethods()) {
-                    if (m.getName().equals("startActivityAsUser")) {
-                        Class<?>[] params = m.getParameterTypes();
-                        if (params.length == 11) { startActivity = m; break; }
+                Method startActivity = sStartActivityAsUser;
+                if (startActivity == null) {
+                    for (java.lang.reflect.Method m : iAm.getClass().getMethods()) {
+                        if (m.getName().equals("startActivityAsUser")) {
+                            Class<?>[] params = m.getParameterTypes();
+                            if (params.length == 11) { startActivity = m; break; }
+                        }
                     }
+                    sStartActivityAsUser = startActivity;
                 }
                 if (startActivity == null) throw new NoSuchMethodException("startActivityAsUser(11)");
                 int result = (int) startActivity.invoke(iAm,

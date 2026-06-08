@@ -30,7 +30,14 @@ public final class Phase4Verbs {
     private Phase4Verbs() {}
 
     /** Prevents spawning multiple fission-watchdog threads when launchAndForce() is called concurrently. */
-    private static volatile boolean sWatchdogActive = false;
+    private static final java.util.concurrent.atomic.AtomicBoolean sWatchdogActive =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    // ─── cached IActivityTaskManager reflection methods ────────────────────
+    private static volatile Method sGetTasks;
+    private static volatile Method sMoveTaskToDisplay;
+    private static volatile Method sResizeTask;
+    private static volatile int    sResizeTaskParamCount = -1;
 
     // ─── cached reflection (lazy, double-checked) ──────────────────────────
 
@@ -456,9 +463,12 @@ public final class Phase4Verbs {
             // (the stock AOSP API 29 signature). Enumerate all overloads of
             // `getTasks` on the Proxy class and invoke whichever one we find,
             // filling extra args with safe defaults (false / 0).
-            Method getTasks = null;
-            for (Method cand : iAtm.getClass().getMethods()) {
-                if ("getTasks".equals(cand.getName())) { getTasks = cand; break; }
+            Method getTasks = sGetTasks;
+            if (getTasks == null) {
+                for (Method cand : iAtm.getClass().getMethods()) {
+                    if ("getTasks".equals(cand.getName())) { getTasks = cand; break; }
+                }
+                sGetTasks = getTasks;
             }
             if (getTasks == null) {
                 android.util.Log.w("Phase4Verbs", "findTaskIdForPackage: no getTasks method on " + iAtm.getClass());
@@ -513,26 +523,31 @@ public final class Phase4Verbs {
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Method target = null;
-            String[] preferred = {
-                    "moveRootTaskToDisplay",
-                    "moveTaskToDisplay",
-                    "moveTopActivityToDisplay",
-                    "reparentTaskToDisplay"
-            };
-            Method[] methods = iAtm.getClass().getMethods();
-            outer:
-            for (String wanted : preferred) {
-                for (Method m : methods) {
-                    if (!m.getName().equals(wanted)) continue;
-                    Class<?>[] pt = m.getParameterTypes();
-                    if (pt.length == 2 && pt[0] == int.class && pt[1] == int.class) {
-                        target = m;
-                        break outer;
+            Method target = sMoveTaskToDisplay;
+            Method[] methods = null;
+            if (target == null) {
+                String[] preferred = {
+                        "moveRootTaskToDisplay",
+                        "moveTaskToDisplay",
+                        "moveTopActivityToDisplay",
+                        "reparentTaskToDisplay"
+                };
+                methods = iAtm.getClass().getMethods();
+                outer:
+                for (String wanted : preferred) {
+                    for (Method m : methods) {
+                        if (!m.getName().equals(wanted)) continue;
+                        Class<?>[] pt = m.getParameterTypes();
+                        if (pt.length == 2 && pt[0] == int.class && pt[1] == int.class) {
+                            target = m;
+                            break outer;
+                        }
                     }
                 }
+                if (target != null) sMoveTaskToDisplay = target;
             }
             if (target == null) {
+                if (methods == null) methods = iAtm.getClass().getMethods();
                 StringBuilder dump = new StringBuilder(
                         "ERR moveTaskToDisplay: no (int,int) variant. Candidates: ");
                 boolean first = true;
@@ -689,23 +704,36 @@ public final class Phase4Verbs {
             //   resizeTask(int, Rect, int)              — Android 10 stock
             //   resizeTask(int, Rect)                   — older
             //   resizeDockedStack / resizeStack         — fallback
-            Method m = null;
+            Method m = sResizeTask;
             Object[] args = null;
-            Method[] methods = iAtm.getClass().getMethods();
-            for (Method cand : methods) {
-                if (!cand.getName().equals("resizeTask")) continue;
-                Class<?>[] pt = cand.getParameterTypes();
-                if (pt.length == 3 && pt[0] == int.class
-                        && pt[1] == android.graphics.Rect.class
-                        && pt[2] == int.class) {
-                    m = cand; args = new Object[]{taskId, bounds, 1}; break;
+            Method[] methods = null;
+            if (m == null) {
+                methods = iAtm.getClass().getMethods();
+                for (Method cand : methods) {
+                    if (!cand.getName().equals("resizeTask")) continue;
+                    Class<?>[] pt = cand.getParameterTypes();
+                    if (pt.length == 3 && pt[0] == int.class
+                            && pt[1] == android.graphics.Rect.class
+                            && pt[2] == int.class) {
+                        m = cand; break;
+                    }
+                    if (pt.length == 2 && pt[0] == int.class
+                            && pt[1] == android.graphics.Rect.class) {
+                        m = cand;
+                    }
                 }
-                if (pt.length == 2 && pt[0] == int.class
-                        && pt[1] == android.graphics.Rect.class) {
-                    m = cand; args = new Object[]{taskId, bounds};
+                if (m != null) {
+                    sResizeTask = m;
+                    sResizeTaskParamCount = m.getParameterTypes().length;
                 }
             }
+            if (m != null) {
+                args = (sResizeTaskParamCount == 3)
+                        ? new Object[]{taskId, bounds, 1}
+                        : new Object[]{taskId, bounds};
+            }
             if (m == null) {
+                if (methods == null) methods = iAtm.getClass().getMethods();
                 StringBuilder dump = new StringBuilder("ERR resizeTask: no variant. Candidates: ");
                 boolean first = true;
                 for (Method cand : methods) {
@@ -1030,8 +1058,7 @@ public final class Phase4Verbs {
             // → FREEFORM post (new stack defaults to FULLSCREEN) → resize → focus.
             // One successful re-move is sufficient; cap at 20 × 500 ms = 10 s.
             final int wTaskId = taskId;
-            if (!sWatchdogActive) {
-                sWatchdogActive = true;
+            if (sWatchdogActive.compareAndSet(false, true)) {
                 new Thread(() -> {
                 try {
                     int stableCount = 0;
@@ -1100,10 +1127,10 @@ public final class Phase4Verbs {
                     android.util.Log.w("Phase4Verbs",
                             "WATCHDOG unexpected: " + t.getMessage());
                 } finally {
-                    sWatchdogActive = false;
+                    sWatchdogActive.set(false);
                 }
                 }, "fission-watchdog").start();
-            } // if (!sWatchdogActive)
+            } // if (sWatchdogActive.compareAndSet)
             log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
             log.append("FINISH: launchAndForce complete.\n");
             android.util.Log.i("Phase4Verbs", "FISSION launchAndForce DONE pkg=" + packageName

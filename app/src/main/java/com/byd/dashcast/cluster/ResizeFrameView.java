@@ -53,6 +53,8 @@ public class ResizeFrameView extends View {
     private int mClusterW = 1920;
     private int mClusterH = 720;
     private int mMinSize  = 200;   // cluster px
+    private int[] mSnapXs = { 0, 480, 960, 1440, 1920 };  // recomputed in setClusterSize
+    private int[] mSnapYs = { 0, 180, 360, 540, 720  };
 
     private final Rect mFrame = new Rect();
     private Listener mListener;
@@ -97,7 +99,10 @@ public class ResizeFrameView extends View {
     }
 
     public void setClusterSize(int w, int h) {
-        mClusterW = w; mClusterH = h; updateGestureExclusion(); invalidate();
+        mClusterW = w; mClusterH = h;
+        mSnapXs[1] = w / 4; mSnapXs[2] = w / 2; mSnapXs[3] = 3 * w / 4; mSnapXs[4] = w;
+        mSnapYs[1] = h / 4; mSnapYs[2] = h / 2; mSnapYs[3] = 3 * h / 4; mSnapYs[4] = h;
+        updateGestureExclusion(); invalidate();
     }
 
     public void setFrame(int l, int t, int r, int b) {
@@ -249,12 +254,10 @@ public class ResizeFrameView extends View {
         // Hard grid step (avoids sub-pixel jitter from the daemon).
         l = snapStep(l); t = snapStep(t); r = snapStep(r); b = snapStep(b);
         // Soft snap to anchors (edges, center, quarters).
-        int[] xs = { 0, mClusterW / 4, mClusterW / 2, 3 * mClusterW / 4, mClusterW };
-        int[] ys = { 0, mClusterH / 4, mClusterH / 2, 3 * mClusterH / 4, mClusterH };
-        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) l = softSnap(l, xs);
-        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) r = softSnap(r, xs);
-        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) t = softSnap(t, ys);
-        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) b = softSnap(b, ys);
+        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) l = softSnap(l, mSnapXs);
+        if (mActiveHandle != HANDLE_T && mActiveHandle != HANDLE_B) r = softSnap(r, mSnapXs);
+        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) t = softSnap(t, mSnapYs);
+        if (mActiveHandle != HANDLE_L && mActiveHandle != HANDLE_R) b = softSnap(b, mSnapYs);
         // Final clamp (in case snap pushed past the bounds).
         if (l < 0) l = 0; if (t < 0) t = 0;
         if (r > mClusterW) r = mClusterW; if (b > mClusterH) b = mClusterH;

@@ -32,6 +32,8 @@ import javax.net.ssl.HttpsURLConnection;
 public final class TetherFiUpdateChecker {
 
     private static final String TAG = "TFUpdate";
+    private static final java.util.concurrent.atomic.AtomicBoolean sChecking =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
     private static final String API_URL =
             "https://api.github.com/repos/pyamsoft/tetherfusenet/releases/latest";
     private static final String TF_PKG  = "com.pyamsoft.tetherfi";
@@ -72,6 +74,10 @@ public final class TetherFiUpdateChecker {
             postError(callback, "TetherFi not installed");
             return;
         }
+        if (!sChecking.compareAndSet(false, true)) {
+            AppLogger.w(TAG, "check: already in progress — ignored");
+            return;
+        }
         new Thread(() -> {
             HttpsURLConnection conn = null;
             try {
@@ -109,6 +115,7 @@ public final class TetherFiUpdateChecker {
                 postError(callback, t.getClass().getSimpleName()
                         + ": " + t.getMessage());
             } finally {
+                sChecking.set(false);
                 if (conn != null) {
                     try { conn.disconnect(); } catch (Throwable ignore) { }
                 }

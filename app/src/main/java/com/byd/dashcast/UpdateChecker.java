@@ -31,6 +31,7 @@ import java.net.URL;
 public class UpdateChecker {
 
     private static final String TAG = "UpdateChecker";
+    private static final Handler sUi = new Handler(Looper.getMainLooper());
     private static final java.util.concurrent.atomic.AtomicBoolean sDownloading =
             new java.util.concurrent.atomic.AtomicBoolean(false);
     private static final java.util.concurrent.atomic.AtomicBoolean sChecking =
@@ -94,15 +95,14 @@ public class UpdateChecker {
             AppLogger.w(TAG, "checkUpdate: check already in progress — ignored");
             return;
         }
-        final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
-                doCheckUpdate(context.getApplicationContext(), listener, ui);
+                doCheckUpdate(context.getApplicationContext(), listener, sUi);
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA check failed", e);
                 if (listener != null) {
                     String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                    ui.post(() -> listener.onError(msg));
+                    sUi.post(() -> listener.onError(msg));
                 }
             } finally {
                 sChecking.set(false);
