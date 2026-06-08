@@ -22,6 +22,7 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
     private final List<AppLogger.Entry> mEntries = new ArrayList<>();
     private final SimpleDateFormat mTimeFmt =
             new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+    private final Date mDateBuf = new Date();
 
     private final int mColorOk;
     private final int mColorWarn;
@@ -41,11 +42,19 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
         mColorTime  = ctx.getColor(R.color.md_on_surface_variant);
     }
 
-    @android.annotation.SuppressLint("NotifyDataSetChanged") // bulk replace
+    @android.annotation.SuppressLint("NotifyDataSetChanged")
     public void setEntries(List<AppLogger.Entry> entries) {
+        int oldSize = mEntries.size();
         mEntries.clear();
         mEntries.addAll(entries);
-        notifyDataSetChanged();
+        int newSize = mEntries.size();
+        if (newSize > oldSize) {
+            // Entries appended (append-only log with same filter) — notify only new rows.
+            notifyItemRangeInserted(oldSize, newSize - oldSize);
+        } else {
+            // Filter changed, cleared, or size shrank — full rebind needed.
+            notifyDataSetChanged();
+        }
     }
 
     public int size() { return mEntries.size(); }
@@ -71,11 +80,15 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
             case INFO:
             default:    color = mColorOk;    bgRes = R.drawable.bg_log_row_info;  levelLabel = "INFO";  break;
         }
-        h.root.setBackgroundResource(bgRes);
+        if (h.lastBgRes != bgRes) {
+            h.root.setBackgroundResource(bgRes);
+            h.lastBgRes = bgRes;
+        }
         h.bar.setBackgroundColor(color);
         h.level.setText(levelLabel);
         h.level.setTextColor(color);
-        h.time.setText(mTimeFmt.format(new Date(e.timestamp)));
+        mDateBuf.setTime(e.timestamp);
+        h.time.setText(mTimeFmt.format(mDateBuf));
         h.time.setTextColor(mColorTime);
         h.tag.setText(e.tag);
         h.tag.setTextColor(mColorTag);
@@ -94,6 +107,7 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
         final View      root;
         final View      bar;
         final TextView  level, time, tag, msg;
+        int lastBgRes = -1;
         VH(View v) {
             super(v);
             root  = v.findViewById(R.id.row_log_root);

@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.widget.Toast;
@@ -84,6 +86,8 @@ public final class VoiceCommandRouter {
     }
 
     // ─── TTS ──────────────────────────────────────────────────────────────
+
+    private static final Handler sMain = new Handler(Looper.getMainLooper());
 
     private final Context      mCtx;
     private volatile TextToSpeech mTts;
@@ -215,8 +219,7 @@ public final class VoiceCommandRouter {
             mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dashcast_voice");
         } else {
             AppLogger.d(TAG, "TTS not ready — showing Toast: " + text);
-            new android.os.Handler(android.os.Looper.getMainLooper())
-                    .post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());
+            sMain.post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());
         }
     }
 

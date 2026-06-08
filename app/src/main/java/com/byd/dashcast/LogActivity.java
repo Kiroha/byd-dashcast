@@ -232,11 +232,13 @@ public class LogActivity extends AppCompatActivity {
             filtered.add(e);
         }
 
+        int prevSize = mAdapter.size();
         mAdapter.setEntries(filtered);
         mEmptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
         mRecycler.setVisibility(filtered.isEmpty() ? View.GONE : View.VISIBLE);
 
-        if (!filtered.isEmpty()) {
+        // Auto-scroll to bottom only when new entries were appended, not on filter changes.
+        if (!filtered.isEmpty() && filtered.size() > prevSize) {
             mRecycler.scrollToPosition(filtered.size() - 1);
         }
         return true;

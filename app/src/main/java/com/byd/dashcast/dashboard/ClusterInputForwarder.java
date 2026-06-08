@@ -265,16 +265,23 @@ public class ClusterInputForwarder {
                 long now = SystemClock.uptimeMillis();
                 KeyEvent down = new KeyEvent(now, now,     KeyEvent.ACTION_DOWN, keyCode, 0);
                 KeyEvent up   = new KeyEvent(now, now + 1, KeyEvent.ACTION_UP,   keyCode, 0);
-                for (KeyEvent kev : new KeyEvent[]{down, up}) {
-                    Parcel data = Parcel.obtain();
-                    try {
-                        data.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
-                        data.writeParcelable(kev, 0);
-                        mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
-                                data, null, android.os.IBinder.FLAG_ONEWAY);
-                    } finally {
-                        data.recycle();
-                    }
+                Parcel dataDown = Parcel.obtain();
+                try {
+                    dataDown.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                    dataDown.writeParcelable(down, 0);
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                            dataDown, null, android.os.IBinder.FLAG_ONEWAY);
+                } finally {
+                    dataDown.recycle();
+                }
+                Parcel dataUp = Parcel.obtain();
+                try {
+                    dataUp.writeInterfaceToken(com.byd.dashcast.daemon.MirrorDaemon.DESCRIPTOR);
+                    dataUp.writeParcelable(up, 0);
+                    mDaemonBinder.transact(com.byd.dashcast.daemon.MirrorDaemon.TRANSACT_INJECT_KEY,
+                            dataUp, null, android.os.IBinder.FLAG_ONEWAY);
+                } finally {
+                    dataUp.recycle();
                 }
             } catch (android.os.DeadObjectException doe) {
                 com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("InjectKey");

@@ -18,6 +18,9 @@ import com.byd.dashcast.dashboard.DashboardDisplayHelper;
 import com.byd.dashcast.dashboard.DashboardLauncher;
 import com.byd.dashcast.platform.Platform;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * ClusterService — Foreground Service that maintains projection on the cluster
  * independently of the MainActivity lifecycle.
@@ -115,6 +118,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
+    // L2: cached once to avoid PendingIntent.getActivity() IPC on every notification update.
+    private PendingIntent mNotifPi;
     // ────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -728,9 +733,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // Fallback — scan block by block, accept realActivity= or cmp= match.
         try {
             // Split on the "* Recent #" boundary so each block contains exactly one Task header.
-            String[] blocks = dump.split("(?m)^\\s*\\* Recent #\\d+:\\s*");
-            java.util.regex.Pattern idP =
-                    java.util.regex.Pattern.compile("Task\\{[^}]*#(\\d+)");
+            String[] blocks = P_RECENT_SPLIT.split(dump);
+            java.util.regex.Pattern idP = P_TASK_ID;
             String marker1 = "realActivity=" + packageName + "/";
             String marker2 = "cmp=" + packageName + "/";
             String marker3 = " A=" + packageName + " ";
@@ -793,6 +797,20 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
      *
      * Callback is always called on the main thread.
      */
+    // H3: pre-compiled regexes for dumpsys task-id parse (avoid Pattern.compile per call).
+    private static final java.util.regex.Pattern P_TASK_ID =
+            java.util.regex.Pattern.compile("Task\\{[^}]*#(\\d+)");
+    private static final java.util.regex.Pattern P_RECENT_SPLIT =
+            java.util.regex.Pattern.compile("(?m)^\\s*\\* Recent #\\d+:\\s*");
+
+    // M1: reuse a single background thread for task-move operations instead of creating
+    // one per app launch.
+    private static final ExecutorService sMoveTaskExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "move-task-thread");
+        t.setDaemon(true);
+        return t;
+    });
+
     // TeleNav nav app is auto-started by BYD at boot; its process is often a zombie
     // that moveTaskToDisplay() moves as-is → black screen on cluster.  Force a fresh
     // launch instead (launchOnDashboard uses FLAG_ACTIVITY_CLEAR_TASK).
@@ -837,7 +855,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             return;
         }
 
-        new Thread(new Runnable() {
+        sMoveTaskExecutor.execute(new Runnable() {
             @Override public void run() {
                 try {
                     int taskId = findRunningTaskId(packageName);
@@ -937,7 +955,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     fallbackLaunch(packageName, targetDisplayId, callback);
                 }
             }
-        }, enforceOnly ? "enforce-task-display" : "move-task-thread").start();
+        });
     }
 
     private void fallbackLaunch(final String packageName, final int targetDisplayId,
@@ -1408,16 +1426,17 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     }
 
     private Notification buildNotification(String text) {
-        Intent tapIntent = new Intent(this, MainActivity.class);
-        tapIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pi = PendingIntent.getActivity(this, 0, tapIntent,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-
+        if (mNotifPi == null) {
+            Intent tapIntent = new Intent(this, MainActivity.class);
+            tapIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            mNotifPi = PendingIntent.getActivity(this, 0, tapIntent,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        }
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
-                .setContentIntent(pi)
+                .setContentIntent(mNotifPi)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();

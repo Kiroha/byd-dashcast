@@ -55,6 +55,9 @@ public final class Platform {
     private static volatile Boolean sCachedIsDiLink5 = null;
     private static volatile Boolean sCachedClusterResizeSupported = null;
 
+    /** Cached reflection handle for android.os.SystemProperties#get — resolved once. */
+    private static volatile Method sCachedSysPropGet = null;
+
     private final String  rawProductName;   // ro.product.name
     private final String  rawModel;          // Build.MODEL
     private final String  rawBrand;          // Build.BRAND
@@ -203,17 +206,21 @@ public final class Platform {
         if (autoDiLink4) return false;
         Boolean cached = sCachedIsDiLink5;
         if (cached != null) return cached;
-        String ov = readOverride(ctx);
-        boolean val;
-        if (OV_FORCE_ON.equals(ov)) {
-            val = true;
-        } else if (OV_FORCE_OFF.equals(ov)) {
-            val = false;
-        } else {
-            val = autoDiLink5;
+        synchronized (Platform.class) {
+            cached = sCachedIsDiLink5;
+            if (cached != null) return cached;
+            String ov = readOverride(ctx);
+            boolean val;
+            if (OV_FORCE_ON.equals(ov)) {
+                val = true;
+            } else if (OV_FORCE_OFF.equals(ov)) {
+                val = false;
+            } else {
+                val = autoDiLink5;
+            }
+            sCachedIsDiLink5 = val;
+            return val;
         }
-        sCachedIsDiLink5 = val;
-        return val;
     }
 
     /** Short summary used for diagnostics ("AUTO=on", "FORCED off", …). */
@@ -361,8 +368,12 @@ public final class Platform {
 
     private static String readProp(String key) {
         try {
-            Class<?> sp = Class.forName("android.os.SystemProperties");
-            Method m = sp.getMethod("get", String.class, String.class);
+            Method m = sCachedSysPropGet;
+            if (m == null) {
+                Class<?> sp = Class.forName("android.os.SystemProperties");
+                m = sp.getMethod("get", String.class, String.class);
+                sCachedSysPropGet = m;
+            }
             Object v = m.invoke(null, key, "");
             return v == null ? "" : v.toString();
         } catch (Throwable t) {
