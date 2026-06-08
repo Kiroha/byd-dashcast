@@ -264,7 +264,11 @@ public final class ProxyDaemonMain {
     private static boolean acquirePidLock() {
         try {
             File pidFile = new File(PID_FILE);
-            if (pidFile.exists()) {
+            // createNewFile() is atomic (O_CREAT|O_EXCL) — eliminates TOCTOU between
+            // exists() check and FileOutputStream creation.
+            boolean created = pidFile.createNewFile();
+            if (!created) {
+                // File already existed — check if a live daemon owns it.
                 String existing = readSmallFile(pidFile).trim();
                 if (!existing.isEmpty()) {
                     int otherPid = -1;
@@ -273,8 +277,8 @@ public final class ProxyDaemonMain {
                         return false;
                     }
                 }
+                // Stale or empty file — fall through and overwrite with our PID.
             }
-            // Stale or absent: claim it.
             try (FileOutputStream fos = new FileOutputStream(pidFile)) {
                 fos.write(Integer.toString(Process.myPid()).getBytes());
             }

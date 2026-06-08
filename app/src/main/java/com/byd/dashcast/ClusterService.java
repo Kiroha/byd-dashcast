@@ -1013,47 +1013,48 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // v1.2.81 — apply per-app DPI override BEFORE am start so the
                 // app reads the new density at process boot. Guarded by
                 // displayId > 0 inside the manager (NEVER touches display 0).
-                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
-                        ClusterService.this, packageName, displayId);
+                // Returns true if a density change was dispatched; in that case we
+                // post the actual am start with SETTLE_MS delay to avoid blocking
+                // the main thread with SystemClock.sleep().
+                boolean needsDpiSettle = com.byd.dashcast.cluster.ClusterDpiManager
+                        .applyForLaunch(ClusterService.this, packageName, displayId);
 
-                try {
-                    android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
-                    if (launchIntent == null) {
-                        AppLogger.e(TAG, "No launch intent found for " + packageName);
-                        if (callback != null) {
-                            mMainHandler.post(new Runnable() {
-                                @Override public void run() { callback.onResult(false); }
-                            });
+                Runnable doLaunch = new Runnable() {
+                    @Override public void run() {
+                        try {
+                            android.content.Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+                            if (launchIntent == null) {
+                                AppLogger.e(TAG, "No launch intent found for " + packageName);
+                                if (callback != null) callback.onResult(false);
+                                return;
+                            }
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                            opts.setLaunchDisplayId(displayId);
+                            if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
+
+                            // DiLink 5.0: our app (uid 10148) is denied launchDisplayId by IATM
+                            // (SecurityException seen in field log 22/05/2026 build 187).
+                            // Route through ADB shell (uid 2000) which D31 validated end-to-end.
+                            if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                                startActivityViaShell(packageName, displayId, launchIntent);
+                            } else {
+                                startActivityViaIAM(launchIntent, opts);
+                            }
+
+                            AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
+                            if (callback != null) callback.onResult(true);
+                        } catch (Exception e) {
+                            AppLogger.e(TAG, "Global launch error for " + packageName, e);
+                            if (callback != null) callback.onResult(false);
                         }
-                        return;
                     }
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
-                    opts.setLaunchDisplayId(displayId);
-                    if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
-
-                    // DiLink 5.0: our app (uid 10148) is denied launchDisplayId by IATM
-                    // (SecurityException seen in field log 22/05/2026 build 187).
-                    // Route through ADB shell (uid 2000) which D31 validated end-to-end.
-                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                        startActivityViaShell(packageName, displayId, launchIntent);
-                    } else {
-                        startActivityViaIAM(launchIntent, opts);
-                    }
-
-                    AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
-                    if (callback != null) {
-                        mMainHandler.post(new Runnable() {
-                            @Override public void run() { callback.onResult(true); }
-                        });
-                    }
-                } catch (Exception e) {
-                    AppLogger.e(TAG, "Global launch error for " + packageName, e);
-                    if (callback != null) {
-                        mMainHandler.post(new Runnable() {
-                            @Override public void run() { callback.onResult(false); }
-                        });
-                    }
+                };
+                if (needsDpiSettle) {
+                    mMainHandler.postDelayed(doLaunch,
+                            com.byd.dashcast.cluster.ClusterDpiManager.SETTLE_MS);
+                } else {
+                    doLaunch.run();
                 }
             }
         };
@@ -1086,52 +1087,63 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     }
                 }
                 // v1.2.81 — same per-app DPI apply on the split-bounds path.
-                com.byd.dashcast.cluster.ClusterDpiManager.applyForLaunch(
-                        ClusterService.this, packageName, displayId);
-                try {
-                    android.content.Intent launchIntent =
-                            getPackageManager().getLaunchIntentForPackage(packageName);
-                    if (launchIntent == null) {
-                        AppLogger.e(TAG, "launchOnDashboardWithBounds: no launch intent for "
-                                + packageName);
-                        if (callback != null) callback.onResult(false);
-                        return;
+                boolean needsDpiSettle = com.byd.dashcast.cluster.ClusterDpiManager
+                        .applyForLaunch(ClusterService.this, packageName, displayId);
+
+                Runnable doLaunchWithBounds = new Runnable() {
+                    @Override public void run() {
+                        try {
+                            android.content.Intent launchIntent =
+                                    getPackageManager().getLaunchIntentForPackage(packageName);
+                            if (launchIntent == null) {
+                                AppLogger.e(TAG, "launchOnDashboardWithBounds: no launch intent for "
+                                        + packageName);
+                                if (callback != null) callback.onResult(false);
+                                return;
+                            }
+                            launchIntent.addFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
+                            opts.setLaunchDisplayId(displayId);
+                            // WINDOWING_MODE_FREEFORM = 5
+                            try {
+                                java.lang.reflect.Method setWM = android.app.ActivityOptions.class
+                                        .getDeclaredMethod("setLaunchWindowingMode", int.class);
+                                setWM.setAccessible(true);
+                                setWM.invoke(opts, 5);
+                            } catch (Exception e) {
+                                AppLogger.w(TAG, "setLaunchWindowingMode unavailable: " + e.getMessage());
+                            }
+                            // Explicit bounds from the caller (split slot geometry)
+                            try {
+                                java.lang.reflect.Method setLB = android.app.ActivityOptions.class
+                                        .getDeclaredMethod("setLaunchBounds",
+                                                android.graphics.Rect.class);
+                                setLB.setAccessible(true);
+                                setLB.invoke(opts, new android.graphics.Rect(left, top, right, bottom));
+                            } catch (Exception e) {
+                                AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
+                            }
+                            if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                                // DL5: IATM denies our uid for cross-display launches — use shell.
+                                startActivityViaShell(packageName, displayId, launchIntent);
+                            } else {
+                                startActivityViaIAM(launchIntent, opts);
+                            }
+                            AppLogger.i(TAG, "launchOnDashboardWithBounds OK [" + left + "," + top
+                                    + "," + right + "," + bottom + "] display=" + displayId);
+                            if (callback != null) callback.onResult(true);
+                        } catch (Exception e) {
+                            AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
+                            if (callback != null) callback.onResult(false);
+                        }
                     }
-                    launchIntent.addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
-                    opts.setLaunchDisplayId(displayId);
-                    // WINDOWING_MODE_FREEFORM = 5
-                    try {
-                        java.lang.reflect.Method setWM = android.app.ActivityOptions.class
-                                .getDeclaredMethod("setLaunchWindowingMode", int.class);
-                        setWM.setAccessible(true);
-                        setWM.invoke(opts, 5);
-                    } catch (Exception e) {
-                        AppLogger.w(TAG, "setLaunchWindowingMode unavailable: " + e.getMessage());
-                    }
-                    // Explicit bounds from the caller (split slot geometry)
-                    try {
-                        java.lang.reflect.Method setLB = android.app.ActivityOptions.class
-                                .getDeclaredMethod("setLaunchBounds",
-                                        android.graphics.Rect.class);
-                        setLB.setAccessible(true);
-                        setLB.invoke(opts, new android.graphics.Rect(left, top, right, bottom));
-                    } catch (Exception e) {
-                        AppLogger.w(TAG, "setLaunchBounds unavailable: " + e.getMessage());
-                    }
-                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                        // DL5: IATM denies our uid for cross-display launches — use shell.
-                        startActivityViaShell(packageName, displayId, launchIntent);
-                    } else {
-                        startActivityViaIAM(launchIntent, opts);
-                    }
-                    AppLogger.i(TAG, "launchOnDashboardWithBounds OK [" + left + "," + top
-                            + "," + right + "," + bottom + "] display=" + displayId);
-                    if (callback != null) callback.onResult(true);
-                } catch (Exception e) {
-                    AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
-                    if (callback != null) callback.onResult(false);
+                };
+                if (needsDpiSettle) {
+                    mMainHandler.postDelayed(doLaunchWithBounds,
+                            com.byd.dashcast.cluster.ClusterDpiManager.SETTLE_MS);
+                } else {
+                    doLaunchWithBounds.run();
                 }
             }
         }, 500);

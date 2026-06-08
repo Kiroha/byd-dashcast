@@ -31,6 +31,10 @@ import java.net.URL;
 public class UpdateChecker {
 
     private static final String TAG = "UpdateChecker";
+    private static final java.util.concurrent.atomic.AtomicBoolean sDownloading =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private static final java.util.concurrent.atomic.AtomicBoolean sChecking =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
     private static final String RELEASES_LATEST_API =
             "https://api.github.com/repos/Kiroha/byd-dashcast/releases/latest";
     private static final String RELEASES_LIST_API =
@@ -59,6 +63,10 @@ public class UpdateChecker {
      * @param listener optional UI callback; all methods dispatched on the main thread.
      */
     public static void startDownload(final Context context, final String apkUrl, final ProgressListener listener) {
+        if (!sDownloading.compareAndSet(false, true)) {
+            AppLogger.w(TAG, "startDownload: download already in progress — ignored");
+            return;
+        }
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
@@ -75,11 +83,17 @@ public class UpdateChecker {
                     String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                     ui.post(() -> listener.onError(msg));
                 }
+            } finally {
+                sDownloading.set(false);
             }
         }, "ota-download").start();
     }
 
     public static void checkUpdate(final Context context, final ProgressListener listener) {
+        if (!sChecking.compareAndSet(false, true)) {
+            AppLogger.w(TAG, "checkUpdate: check already in progress — ignored");
+            return;
+        }
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
@@ -90,6 +104,8 @@ public class UpdateChecker {
                     String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                     ui.post(() -> listener.onError(msg));
                 }
+            } finally {
+                sChecking.set(false);
             }
         }, "ota-update").start();
     }

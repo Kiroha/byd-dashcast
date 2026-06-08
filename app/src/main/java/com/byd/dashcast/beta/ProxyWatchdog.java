@@ -57,7 +57,7 @@ public final class ProxyWatchdog {
 
     /** Foreground tracking: incremented in onResume, decremented in onPause.
      *  Updated on the main thread only by the activity callbacks. */
-    private static int sForegroundCount = 0;
+    private static volatile int sForegroundCount = 0;
 
     /** Application context cached at install(); used by connect() retries. */
     @SuppressLint("StaticFieldLeak") // application context, process-scoped, safe

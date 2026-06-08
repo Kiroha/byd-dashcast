@@ -29,6 +29,9 @@ public final class Phase4Verbs {
 
     private Phase4Verbs() {}
 
+    /** Prevents spawning multiple fission-watchdog threads when launchAndForce() is called concurrently. */
+    private static volatile boolean sWatchdogActive = false;
+
     // ─── cached reflection (lazy, double-checked) ──────────────────────────
 
     private static volatile Object  sWindowManager;
@@ -1027,7 +1030,9 @@ public final class Phase4Verbs {
             // → FREEFORM post (new stack defaults to FULLSCREEN) → resize → focus.
             // One successful re-move is sufficient; cap at 20 × 500 ms = 10 s.
             final int wTaskId = taskId;
-            new Thread(() -> {
+            if (!sWatchdogActive) {
+                sWatchdogActive = true;
+                new Thread(() -> {
                 try {
                     int stableCount = 0;
                     for (int iter = 0; iter < 20; iter++) {
@@ -1094,8 +1099,11 @@ public final class Phase4Verbs {
                 } catch (Throwable t) {
                     android.util.Log.w("Phase4Verbs",
                             "WATCHDOG unexpected: " + t.getMessage());
+                } finally {
+                    sWatchdogActive = false;
                 }
-            }, "fission-watchdog").start();
+                }, "fission-watchdog").start();
+            } // if (!sWatchdogActive)
             log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
             log.append("FINISH: launchAndForce complete.\n");
             android.util.Log.i("Phase4Verbs", "FISSION launchAndForce DONE pkg=" + packageName
@@ -1506,7 +1514,11 @@ public final class Phase4Verbs {
             }, "phase4-shell-reader");
             reader.setDaemon(true);
             reader.start();
-            p.waitFor();
+            boolean finished = p.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (!finished) {
+                try { p.destroyForcibly(); } catch (Throwable ignore) {}
+                return "[execShell timeout " + timeoutMs + "ms]";
+            }
             reader.join(Math.max(200, timeoutMs / 4));
             return out.toString().trim();
         } catch (Throwable t) {
