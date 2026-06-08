@@ -69,11 +69,7 @@ public final class ProxyKeeperService extends Service {
     public static void ensureRunning(Context ctx) {
         try {
             Intent i = new Intent(ctx, ProxyKeeperService.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ctx.startForegroundService(i);
-            } else {
-                ctx.startService(i);
-            }
+            ctx.startForegroundService(i);
         } catch (Throwable t) {
             AppLogger.w(TAG, "ensureRunning failed: " + t);
         }
@@ -168,7 +164,6 @@ public final class ProxyKeeperService extends Service {
     }
 
     private void ensureChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm == null) return;
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
@@ -185,24 +180,16 @@ public final class ProxyKeeperService extends Service {
 
     private Notification buildNotification() {
         Intent tap = new Intent(this, MainActivity.class);
-        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            piFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent pi = PendingIntent.getActivity(this, 0, tap, piFlags);
 
-        Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
+        Notification.Builder b = new Notification.Builder(this, CHANNEL_ID);
         b.setSmallIcon(R.mipmap.ic_launcher)
          .setContentTitle(getString(R.string.proxy_keeper_notif_title))
          .setContentText(getString(R.string.proxy_keeper_notif_text))
          .setOngoing(true)
          .setShowWhen(false)
          .setContentIntent(pi);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            b.setPriority(Notification.PRIORITY_MIN);
-        }
         return b.build();
     }
 }

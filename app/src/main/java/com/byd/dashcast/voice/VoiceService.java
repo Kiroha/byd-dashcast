@@ -353,7 +353,7 @@ public final class VoiceService extends Service {
 
     private Notification buildNotification() {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
+        if (nm != null) {
             NotificationChannel ch = nm.getNotificationChannel(CHANNEL_ID);
             if (ch == null) {
                 ch = new NotificationChannel(CHANNEL_ID,
@@ -363,9 +363,7 @@ public final class VoiceService extends Service {
                 nm.createNotificationChannel(ch);
             }
         }
-        Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
+        Notification.Builder b = new Notification.Builder(this, CHANNEL_ID);
         b.setContentTitle(getString(R.string.diag_voice_notif_title))
          .setContentText(getString(R.string.diag_voice_notif_text))
          .setSmallIcon(android.R.drawable.ic_btn_speak_now)
@@ -379,11 +377,7 @@ public final class VoiceService extends Service {
     /** Convenience: start the service. */
     public static void start(Context ctx) {
         Intent i = new Intent(ctx, VoiceService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ctx.startForegroundService(i);
-        } else {
-            ctx.startService(i);
-        }
+        ctx.startForegroundService(i);
     }
 
     /** Convenience: stop the service. */

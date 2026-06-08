@@ -1306,11 +1306,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // service is about to stopSelf() so there is no reason to keep any
         // notification at all.
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                stopForeground(Service.STOP_FOREGROUND_REMOVE);
-            } else {
-                stopForeground(true);
-            }
+            stopForeground(Service.STOP_FOREGROUND_REMOVE);
         } catch (Throwable t) {
             AppLogger.w(TAG, "stopForeground failed: " + t.getMessage());
         }

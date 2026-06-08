@@ -1,5 +1,6 @@
 package com.byd.dashcast.voice;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 
@@ -83,7 +84,8 @@ public final class VoiceLibsManager {
     // ─── State ─────────────────────────────────────────────────────────────
     private static volatile boolean sLoaded = false;
     private static final Object sLock = new Object();
-    private static Context sAppCtx;   // set once in ensureLoaded, safe across calls
+    @SuppressLint("StaticFieldLeak") // application context, set once, safe
+    private static Context sAppCtx;
 
     private VoiceLibsManager() {}
 

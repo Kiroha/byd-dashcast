@@ -1,5 +1,6 @@
 package com.byd.dashcast.beta;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
@@ -42,6 +43,7 @@ public final class BetaSystemContext {
     private static final String TAG = "BetaSystemContext";
 
     /** Singleton cache — reflection is expensive, the system context never changes within a process. */
+    @SuppressLint("StaticFieldLeak")
     private static volatile Context sCached = null;
     private static volatile Throwable sLastError = null;
 

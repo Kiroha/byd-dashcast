@@ -81,7 +81,9 @@ public class MirrorDaemon {
     private static volatile boolean sKeyFirstLogged    = false;
 
     // ── Fission slot state ────────────────────────────────────────────────────
+    @SuppressLint("StaticFieldLeak") // application context, daemon process-scoped, safe
     private static volatile Context sContext    = null;
+    @SuppressLint("StaticFieldLeak")
     private static volatile Context sSysContext = null;
     private static final ConcurrentHashMap<String, SlotInfo> sSlots = new ConcurrentHashMap<>();
 
@@ -852,9 +854,7 @@ public class MirrorDaemon {
     private static WindowManager.LayoutParams createOverlayLayoutParams(
             Display target, int w, int h) {
         // TYPE_SYSTEM_OVERLAY (2006): INTERNAL_SYSTEM_WINDOW is granted to shell uid=2000.
-        int overlayType = (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
-                ? 2006
-                : WindowManager.LayoutParams.TYPE_PHONE;
+        int overlayType = 2006; // TYPE_SYSTEM_OVERLAY: INTERNAL_SYSTEM_WINDOW granted to shell uid=2000
         final int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
