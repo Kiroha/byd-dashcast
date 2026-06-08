@@ -490,6 +490,46 @@ public class AppLogger {
                 }
             }
         }
+        // Vosk directory: remove orphan partial-download temp files.
+        // Uses File constructor to avoid creating the directory if it doesn't
+        // exist (getExternalFilesDir("vosk") would create it as a side effect).
+        File extBase = context.getExternalFilesDir(null);
+        if (extBase != null) {
+            File voskDir = new File(extBase, "vosk");
+            if (voskDir.isDirectory()) {
+                File[] voskEntries = voskDir.listFiles();
+                if (voskEntries != null) {
+                    for (File f : voskEntries) {
+                        if (f != null && f.isFile() && f.getName().endsWith(".download.tmp")) {
+                            if (f.delete()) deleted++;
+                        }
+                    }
+                }
+            }
+            // exported_apks: keep the 2 most recent, delete the rest.
+            File exportDir = new File(extBase, "exported_apks");
+            if (exportDir.isDirectory()) {
+                java.util.ArrayList<File> apks = new java.util.ArrayList<>();
+                File[] exportEntries = exportDir.listFiles();
+                if (exportEntries != null) {
+                    for (File f : exportEntries) {
+                        if (f != null && f.isFile() && f.getName().endsWith(".apk")) {
+                            apks.add(f);
+                        }
+                    }
+                }
+                if (apks.size() > 2) {
+                    java.util.Collections.sort(apks, new java.util.Comparator<File>() {
+                        @Override public int compare(File a, File b) {
+                            return Long.compare(b.lastModified(), a.lastModified());
+                        }
+                    });
+                    for (int i = 2; i < apks.size(); i++) {
+                        if (apks.get(i).delete()) deleted++;
+                    }
+                }
+            }
+        }
         if (deleted > 0) Log.i("AppLogger", "pruneOldFiles: " + deleted
                 + " file(s) deleted (keep " + keepPerPrefix + "/prefix)");
         return deleted;
