@@ -319,12 +319,16 @@ public final class VoiceService extends Service {
         sIsRunning = false;
         if (mRecord != null) {
             try { mRecord.stop(); } catch (Throwable ignore) {}
-            safeReleaseRecord();
         }
         Thread t = mCaptureThread;
         if (t != null) {
             try { t.join(500L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
             mCaptureThread = null;
+        }
+        // Release only after the capture thread has exited to avoid use-after-release
+        // of the native AudioRecord while read() may still be in progress.
+        if (mRecord != null) {
+            safeReleaseRecord();
         }
         if (!mErrorSignaled) {
             broadcastState(STATE_STOPPED, null);

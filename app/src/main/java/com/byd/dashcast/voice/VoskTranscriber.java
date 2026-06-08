@@ -129,6 +129,11 @@ public final class VoskTranscriber {
             }
             loadModelThenListen();
         } else {
+            // C7 fix: set mListening=true here, inside synchronized(this), BEFORE spawning
+            // the thread. Without this, a second startListening() call arriving before
+            // doListenViaServiceStream() runs sees mListening=false and spawns a second
+            // session, both racing on VoiceService.setSampleConsumer().
+            mListening = true;
             new Thread(this::doListenViaServiceStream, "vosk-transcriber").start();
         }
     }
@@ -154,14 +159,19 @@ public final class VoskTranscriber {
      * No-op if the model is already present on disk.
      */
     public void preDownload() {
-        if (mModelLoading) return;
+        // C4 fix: synchronize the check+set so concurrent calls (e.g. UI button + wake word
+        // trigger) cannot both pass the guard and start two simultaneous 1.3 GB downloads.
+        synchronized (this) {
+            if (mModelLoading) return;
+            mModelLoading = true;
+        }
         File modelDir = new File(mCtx.getExternalFilesDir("vosk"), mModelAsset);
         if (new File(modelDir, "am").exists()) {
-            // Already there — broadcast 100% so the UI updates
+            // Already on disk — reset flag (we set it above) and broadcast 100%.
+            mModelLoading = false;
             broadcastProgress(100, (int)(mModelBytes / 1024 / 1024), (int)(mModelBytes / 1024 / 1024));
             return;
         }
-        mModelLoading = true;
         new Thread(() -> {
             try {
                 downloadWithProgress(mCtx.getExternalFilesDir("vosk"), mModelUrl, mModelBytes);
@@ -283,7 +293,7 @@ public final class VoskTranscriber {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(15_000);
-        conn.setReadTimeout(0);          // unlimited — large file
+        conn.setReadTimeout(60_000);     // 60 s inter-packet; avoids infinite hang on TCP stall
         if (alreadyDone > 0) conn.setRequestProperty("Range", "bytes=" + alreadyDone + "-");
         conn.connect();
 
@@ -367,8 +377,13 @@ public final class VoskTranscriber {
         synchronized (mLifecycleLock) {
             if (mReleaseRequested || !VoiceService.isRunning()) {
                 AppLogger.w(TAG, "doListenViaServiceStream: aborted — released or service not running");
+                // C7 fix: mListening was pre-set to true by startListening() before spawn;
+                // reset it so future startListening() calls are not permanently blocked.
+                mListening = false;
                 return;
             }
+            // mListening was already set true by startListening() (fast path) or is
+            // still being set here by loadModelThenListen() (slow path via model load).
             mListening = true;
         }
         AppLogger.i(TAG, "Listening for command via service stream (max " + MAX_LISTEN_MS + " ms)…");

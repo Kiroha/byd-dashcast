@@ -46,6 +46,10 @@ public final class LlmVoiceEngine {
 
     private static final String TAG = "LlmVoiceEngine";
 
+    // C6 fix: prevent concurrent LLM calls (rapid triggers → two threads → competing audio).
+    private static final java.util.concurrent.atomic.AtomicBoolean sRouteActive =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
     // ─── Prefs ─────────────────────────────────────────────────────────────
     private static final String PREFS_NAME   = "dashcast_llm_prefs";
     public  static final String PREF_API_KEY = "openai_api_key";
@@ -134,8 +138,14 @@ public final class LlmVoiceEngine {
             mFallback.route(text);
             return;
         }
-        // Run network on a background thread
-        new Thread(() -> routeOnBackground(text, apiKey), "llm-voice").start();
+        if (!sRouteActive.compareAndSet(false, true)) {
+            AppLogger.d(TAG, "route() — LLM call already in flight, ignored");
+            return;
+        }
+        new Thread(() -> {
+            try { routeOnBackground(text, apiKey); }
+            finally { sRouteActive.set(false); }
+        }, "llm-voice").start();
     }
 
     /** Releases the fallback router (TTS engine). Call from owner's onDestroy. */
@@ -378,25 +388,27 @@ public final class LlmVoiceEngine {
         conn.setConnectTimeout(10_000);
         conn.setReadTimeout(20_000);
         conn.setDoOutput(true);
+        try {
+            byte[] body = json.getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+            }
 
-        byte[] body = json.getBytes(StandardCharsets.UTF_8);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(body);
-        }
+            int code = conn.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) {
+                AppLogger.w(TAG, "Chat API HTTP " + code);
+                return null;
+            }
 
-        int code = conn.getResponseCode();
-        if (code != HttpURLConnection.HTTP_OK) {
-            AppLogger.w(TAG, "Chat API HTTP " + code);
-            return null;
-        }
-
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-            return sb.toString();
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+                return sb.toString();
+            }
         } finally {
+            // C8 fix: always disconnect — was missing on non-200 responses (HTTP 429, 500, etc.)
             conn.disconnect();
         }
     }

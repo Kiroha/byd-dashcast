@@ -84,7 +84,7 @@ public final class VoiceCommandRouter {
     // ─── TTS ──────────────────────────────────────────────────────────────
 
     private final Context      mCtx;
-    private TextToSpeech       mTts;
+    private volatile TextToSpeech mTts;
     private volatile boolean   mTtsReady;
     private long               mLastSpeakAt;  // dedup guard
 
@@ -220,7 +220,7 @@ public final class VoiceCommandRouter {
         PackageManager pm = mCtx.getPackageManager();
         String lowerLabel = label.toLowerCase(Locale.FRENCH).trim();
         for (android.content.pm.ApplicationInfo info :
-                pm.getInstalledApplications(PackageManager.GET_META_DATA)) {
+                pm.getInstalledApplications(0)) {
             String appLabel = pm.getApplicationLabel(info).toString()
                     .toLowerCase(Locale.FRENCH);
             if (appLabel.contains(lowerLabel) || lowerLabel.contains(appLabel)) {
