@@ -12,7 +12,7 @@ import com.byd.dashcast.AppLogger;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.FloatBuffer;
-import java.util.Collections;
+import java.util.HashMap;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
@@ -156,6 +156,15 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     // v1.2.80 — rolling peak over PEAK_WINDOW_MS for diag visibility.
     private volatile float mPeakScore   = 0f;
     private volatile long  mPeakAtMs    = 0L;
+
+    // ─── Pre-allocated inference buffers (worker-thread only) ─────────────────
+    // Reused on every eval cycle to eliminate ~770 KB of heap allocation per 100ms.
+    private final float[][][][] mEmbInput  = new float[WAKE_WINDOW][EMB_WINDOW][32][1];
+    private final float[][][]   mWakeInput = new float[1][WAKE_WINDOW][96];
+    private final HashMap<String, OnnxTensor> mMelMap  = new HashMap<>(2);
+    private final HashMap<String, OnnxTensor> mEmbMap  = new HashMap<>(2);
+    private final HashMap<String, OnnxTensor> mWakeMap = new HashMap<>(2);
+    private final Intent mScoreIntent = new Intent(ACTION_WAKEWORD);
 
     public WakeWordEngine(Context ctx) {
         this.mAppCtx = ctx.getApplicationContext();
@@ -366,35 +375,35 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         }
 
         // 2) embedding : pack the last WAKE_WINDOW windows of EMB_WINDOW frames each (stride EMB_STRIDE)
-        //    into a single (WAKE_WINDOW, 76, 32, 1) batch tensor.
-        float[][][][] embInput = new float[WAKE_WINDOW][EMB_WINDOW][32][1];
+        //    into mEmbInput — reused instance field to avoid 600 KB allocation per eval.
         for (int b = 0; b < WAKE_WINDOW; b++) {
             int endFrame   = nFrames - (WAKE_WINDOW - 1 - b) * EMB_STRIDE;
             int startFrame = endFrame - EMB_WINDOW;
             for (int j = 0; j < EMB_WINDOW; j++) {
                 float[] row = melspec[startFrame + j];
                 for (int k = 0; k < 32; k++) {
-                    embInput[b][j][k][0] = row[k];
+                    mEmbInput[b][j][k][0] = row[k];
                 }
             }
         }
-        float[][] features = new float[WAKE_WINDOW][96];
-        try (OnnxTensor embT = OnnxTensor.createTensor(mEnv, embInput);
-             OrtSession.Result out = mSessEmb.run(Collections.singletonMap(mEmbInputName, embT))) {
-            float[][][][] raw = (float[][][][]) out.get(0).getValue();
-            // raw shape : (WAKE_WINDOW, 1, 1, 96) → squeeze
-            for (int b = 0; b < WAKE_WINDOW; b++) {
-                features[b] = raw[b][0][0];
+        try (OnnxTensor embT = OnnxTensor.createTensor(mEnv, mEmbInput)) {
+            mEmbMap.put(mEmbInputName, embT);
+            try (OrtSession.Result out = mSessEmb.run(mEmbMap)) {
+                float[][][][] raw = (float[][][][]) out.get(0).getValue();
+                // raw shape : (WAKE_WINDOW, 1, 1, 96) → copy into mWakeInput[0]
+                for (int b = 0; b < WAKE_WINDOW; b++) {
+                    System.arraycopy(raw[b][0][0], 0, mWakeInput[0][b], 0, 96);
+                }
             }
         }
 
-        // 3) wake : (1, 16, 96) float32 → (1, 1) sigmoid
-        float[][][] wakeInput = new float[1][WAKE_WINDOW][96];
-        wakeInput[0] = features;
-        try (OnnxTensor wt = OnnxTensor.createTensor(mEnv, wakeInput);
-             OrtSession.Result out = mSessWake.run(Collections.singletonMap(mWakeInputName, wt))) {
-            float[][] raw = (float[][]) out.get(0).getValue();
-            return raw[0][0];
+        // 3) wake : reuse mWakeInput — (1, 16, 96) float32 → (1, 1) sigmoid
+        try (OnnxTensor wt = OnnxTensor.createTensor(mEnv, mWakeInput)) {
+            mWakeMap.put(mWakeInputName, wt);
+            try (OrtSession.Result out = mSessWake.run(mWakeMap)) {
+                float[][] raw = (float[][]) out.get(0).getValue();
+                return raw[0][0];
+            }
         }
     }
 
@@ -405,28 +414,28 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
      * upstream library does before feeding the embedding model).
      */
     private float[][] computeMelspec(float[] audio, int n) throws Exception {
-        // The model expects (batch=1, samples). Feed a FloatBuffer view over a
-        // tight-fit copy to avoid spurious trailing zeros from the ring buffer
-        // capacity when n < AUDIO_BUFFER_LEN.
-        float[] tight = (n == audio.length) ? audio : java.util.Arrays.copyOf(audio, n);
+        // The model expects (batch=1, samples). FloatBuffer.wrap(audio, 0, n) provides a
+        // positional slice (limit=n) so ONNX reads exactly n samples — eliminates Arrays.copyOf.
         long[] shape = { 1L, (long) n };
-        try (OnnxTensor in = OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(tight), shape);
-             OrtSession.Result out = mSessMel.run(Collections.singletonMap(mMelInputName, in))) {
-            // Actual output shape: (batch=1, channel=1, time, mels=32).
-            // The time dimension is at index 2, NOT index 0 — raw.length is the
-            // batch dim (always 1), so using raw.length as nFrames always gave 1
-            // (< 196 needed) and triggered the early-return in runOneEval, keeping
-            // the score permanently at 0.0.
-            float[][][][] raw = (float[][][][]) out.get(0).getValue();
-            int nFrames = raw[0][0].length;  // raw[batch][channel][time][mel]
-            float[][] mel = new float[nFrames][32];
-            for (int t = 0; t < nFrames; t++) {
-                float[] src = raw[0][0][t];  // shape (32,) — raw log-mel in dB
-                for (int k = 0; k < 32; k++) {
-                    mel[t][k] = src[k] / 10f + 2f;  // openWakeWord normalization
+        try (OnnxTensor in = OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(audio, 0, n), shape)) {
+            mMelMap.put(mMelInputName, in);
+            try (OrtSession.Result out = mSessMel.run(mMelMap)) {
+                // Actual output shape: (batch=1, channel=1, time, mels=32).
+                // The time dimension is at index 2, NOT index 0 — raw.length is the
+                // batch dim (always 1), so using raw.length as nFrames always gave 1
+                // (< 196 needed) and triggered the early-return in runOneEval, keeping
+                // the score permanently at 0.0.
+                float[][][][] raw = (float[][][][]) out.get(0).getValue();
+                int nFrames = raw[0][0].length;  // raw[batch][channel][time][mel]
+                float[][] mel = new float[nFrames][32];
+                for (int t = 0; t < nFrames; t++) {
+                    float[] src = raw[0][0][t];  // shape (32,) — raw log-mel in dB
+                    for (int k = 0; k < 32; k++) {
+                        mel[t][k] = src[k] / 10f + 2f;  // openWakeWord normalization
+                    }
                 }
+                return mel;
             }
-            return mel;
         }
     }
 
@@ -443,15 +452,15 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     }
 
     private void broadcastScore(float score, boolean detected) {
-        Intent i = new Intent(ACTION_WAKEWORD);
-        i.putExtra(EXTRA_WW_SCORE,   score);
-        i.putExtra(EXTRA_WW_LAST_MS, mLastDetectMs);
-        i.putExtra(EXTRA_WW_LABEL,   MODEL_LABEL);
+        // Reuse mScoreIntent — LocalBroadcastManager delivers synchronously so reuse is safe.
+        mScoreIntent.putExtra(EXTRA_WW_SCORE,   score);
+        mScoreIntent.putExtra(EXTRA_WW_LAST_MS, mLastDetectMs);
+        mScoreIntent.putExtra(EXTRA_WW_LABEL,   MODEL_LABEL);
         // v1.2.80 — extra diag payload for the UI peak indicator.
-        i.putExtra(EXTRA_WW_PEAK_SCORE,  mPeakScore);
-        i.putExtra(EXTRA_WW_PEAK_AGE_MS, mPeakAtMs == 0L ? -1L
+        mScoreIntent.putExtra(EXTRA_WW_PEAK_SCORE,  mPeakScore);
+        mScoreIntent.putExtra(EXTRA_WW_PEAK_AGE_MS, mPeakAtMs == 0L ? -1L
                 : (SystemClock.elapsedRealtime() - mPeakAtMs));
-        LocalBroadcastManager.getInstance(mAppCtx).sendBroadcast(i);
+        LocalBroadcastManager.getInstance(mAppCtx).sendBroadcast(mScoreIntent);
         // Detection beep / haptic etc. is the UI's responsibility — keep the
         // engine side-effect-free beyond the broadcast.
         if (detected) { /* no-op : flag is conveyed through ww_last_ms == now */ }

@@ -29,6 +29,32 @@ public class DashboardLauncher {
     private final Context mContext;
     private int mDashboardDisplayId = -1;
 
+    // Cached reflection Methods — resolved once, reused on every launch call.
+    private static volatile boolean sLaunchMethodsCached = false;
+    private static Method sCachedSetLaunchDisplayId;
+    private static Method sCachedSetLaunchWindowingMode;  // null if absent on this ROM
+    private static Method sCachedSetLaunchBounds;          // null if absent on this ROM
+
+    private static synchronized void ensureLaunchMethodsCached() {
+        if (sLaunchMethodsCached) return;
+        try {
+            sCachedSetLaunchDisplayId = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchDisplayId", int.class);
+            sCachedSetLaunchDisplayId.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        try {
+            sCachedSetLaunchWindowingMode = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchWindowingMode", int.class);
+            sCachedSetLaunchWindowingMode.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        try {
+            sCachedSetLaunchBounds = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchBounds", Rect.class);
+            sCachedSetLaunchBounds.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        sLaunchMethodsCached = true;
+    }
+
     public DashboardLauncher(Context context) {
         mContext = context.getApplicationContext();
     }
@@ -76,31 +102,27 @@ public class DashboardLauncher {
         // makeCustomAnimation(ctx, 0, 0) = no enter/exit animation.
         // FLAG_ACTIVITY_NO_ANIMATION = also suppresses the system transition animation.
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        ensureLaunchMethodsCached();
         try {
             ActivityOptions options = ActivityOptions.makeCustomAnimation(mContext, 0, 0);
 
-            Method setLaunchDisplayId = ActivityOptions.class
-                    .getDeclaredMethod("setLaunchDisplayId", int.class);
-            setLaunchDisplayId.setAccessible(true);
-            setLaunchDisplayId.invoke(options, displayId);
+            if (sCachedSetLaunchDisplayId != null) {
+                sCachedSetLaunchDisplayId.invoke(options, displayId);
+            } else {
+                throw new NoSuchMethodException("setLaunchDisplayId absent on this ROM");
+            }
 
             // WINDOWING_MODE_FULLSCREEN (1) is rejected by DiLink 3.0 — confirmed by TEST 10.
             // The activity appears in a small floating window. FIX (BYD Dashboard APK v1.10.5):
             //   → WINDOWING_MODE_FREEFORM (5) + setLaunchBounds(0, 0, realW, realH)
-            try {
-                Method setWM = ActivityOptions.class
-                        .getDeclaredMethod("setLaunchWindowingMode", int.class);
-                setWM.setAccessible(true);
-                setWM.invoke(options, 5); // WINDOWING_MODE_FREEFORM = 5
+            if (sCachedSetLaunchWindowingMode != null) {
+                sCachedSetLaunchWindowingMode.invoke(options, 5); // WINDOWING_MODE_FREEFORM = 5
                 AppLogger.i(TAG, "setLaunchWindowingMode(FREEFORM=5) applied");
-            } catch (NoSuchMethodException ignored) {
+            } else {
                 AppLogger.w(TAG, "setLaunchWindowingMode absent (ROM trop ancienne)");
             }
             // Bounds = actual display dimensions → fills the entire cluster
-            try {
-                Method setLB = ActivityOptions.class
-                        .getDeclaredMethod("setLaunchBounds", Rect.class);
-                setLB.setAccessible(true);
+            if (sCachedSetLaunchBounds != null) {
                 Point size = new Point(1920, 720); // fallback: fission_bg_xdjaVirtualSurface confirmed 1920×720 (dumpsys window, 03/05/2026)
                 DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
                 Display targetDisplay = (dm != null) ? dm.getDisplay(displayId) : null;
@@ -110,9 +132,9 @@ public class DashboardLauncher {
                 } else {
                     AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×720");
                 }
-                setLB.invoke(options, new Rect(0, 0, size.x, size.y));
+                sCachedSetLaunchBounds.invoke(options, new Rect(0, 0, size.x, size.y));
                 AppLogger.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") applied");
-            } catch (NoSuchMethodException ignored) {
+            } else {
                 AppLogger.w(TAG, "setLaunchBounds absent");
             }
 
