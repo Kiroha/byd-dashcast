@@ -178,6 +178,7 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         }
         mAlive = true;
         mUnavailable = false;
+        mLastDetectMs = 0L;
         mWorker = new Thread(this::workerLoop, "wakeword-engine");
         mWorker.setPriority(Thread.NORM_PRIORITY - 1);
         mWorker.start();
@@ -188,7 +189,8 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
         mAlive = false;
         Thread w = mWorker;
         if (w != null) {
-            try { w.join(1000L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
+            w.interrupt(); // wake from Thread.sleep() immediately; no-op if in ONNX inference
+            try { w.join(3000L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
             mWorker = null;
         }
         releaseOnnx();

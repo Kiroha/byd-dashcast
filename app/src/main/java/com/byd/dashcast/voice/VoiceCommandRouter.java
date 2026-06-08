@@ -152,14 +152,18 @@ public final class VoiceCommandRouter {
                 dispatch(CMD_OPEN_LOGS, null);
                 break;
             case LAUNCH_APP:
-                String pkg = resolvePackage(launchLabel);
-                if (pkg != null) {
-                    speak("Lancement de " + launchLabel + " sur le cluster.");
-                    dispatch(CMD_LAUNCH_ON_CLUSTER, pkg);
-                } else {
-                    speak("Application non trouvée : " + launchLabel);
-                    AppLogger.w(TAG, "LAUNCH_APP: no package found for label=\"" + launchLabel + "\"");
-                }
+                final String appLabel = launchLabel;
+                // resolvePackage() iterates all installed apps — too slow for the main thread.
+                new Thread(() -> {
+                    String pkg = resolvePackage(appLabel);
+                    if (pkg != null) {
+                        speak("Lancement de " + appLabel + " sur le cluster.");
+                        dispatch(CMD_LAUNCH_ON_CLUSTER, pkg);
+                    } else {
+                        speak("Application non trouvée : " + appLabel);
+                        AppLogger.w(TAG, "LAUNCH_APP: no package found for label=\"" + appLabel + "\"");
+                    }
+                }, "voice-pkg-resolve").start();
                 break;
             default:
                 speak("Commande non reconnue : " + text);
