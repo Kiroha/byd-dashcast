@@ -555,4 +555,21 @@
     <string name="dpi_custom">Özel…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Sonraki başlatmada uygulanacak</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Projeksiyon öncesinde sendInfo(30) gönderir — bazı araçlarda ADAS bozulmasını düzeltir. Küme şekli başlangıçta değişirse devre dışı bırakın.</string>
+    <string name="settings_fission_mode">Fission Modu (beta)</string>
+    <string name="settings_fission_mode_support">Özel bölgelerle kümede çoklu uygulama projeksiyonu. Proxy daemon gerektirir.</string>
+    <string name="fission_title">Fission — Çoklu uygulama kümesi</string>
+    <string name="fission_status_idle">Uygulama yansıtmak için + tuşuna dokunun</string>
+    <string name="fission_btn_add">+ Uygulama ekle</string>
+    <string name="fission_btn_stop">Tümünü durdur</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Düzen düzenleyicisi</string>
+    <string name="fission_editor_clear">Temizle</string>
+    <string name="fission_editor_save">Kaydet</string>
+    <string name="fission_editor_edit">Düzenle</string>
+    <string name="fission_editor_delete">Sil</string>
+    <string name="fission_open">Fission</string>
 </resources>

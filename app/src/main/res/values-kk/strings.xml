@@ -555,4 +555,21 @@
     <string name="dpi_custom">Қолданушы…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Келесі іске қосуда қолданылады</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Проекция алдында sendInfo(30) жібереді — кейбір көліктерде ADAS созылуын түзетеді. Іске қосылу кезінде кластер пішіні өзгерсе өшіріңіз.</string>
+    <string name="settings_fission_mode">Fission режимі (бета)</string>
+    <string name="settings_fission_mode_support">Кластерде реттелетін аймақтармен көп қолданбалы проекция. Прокси демонды қажет етеді.</string>
+    <string name="fission_title">Fission — Көп қолданбалы кластер</string>
+    <string name="fission_status_idle">Қолданбаны көрсету үшін + түймесін басыңыз</string>
+    <string name="fission_btn_add">+ Қолданба қосу</string>
+    <string name="fission_btn_stop">Барлығын тоқтату</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Layout өңдегіші</string>
+    <string name="fission_editor_clear">Тазалау</string>
+    <string name="fission_editor_save">Сақтау</string>
+    <string name="fission_editor_edit">Өңдеу</string>
+    <string name="fission_editor_delete">Жою</string>
+    <string name="fission_open">Fission</string>
 </resources>

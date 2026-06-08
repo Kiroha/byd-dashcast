@@ -555,4 +555,21 @@
     <string name="dpi_custom">Personalizzato…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Verrà applicato al prossimo avvio</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Invia sendInfo(30) prima della proiezione — corregge lo stretching ADAS su alcuni veicoli. Disattivare se la forma del cluster cambia all\'avvio.</string>
+    <string name="settings_fission_mode">Modalità Fission (beta)</string>
+    <string name="settings_fission_mode_support">Proiezione multi-app sul cluster con zone personalizzate. Richiede il daemon proxy.</string>
+    <string name="fission_title">Fission — Cluster multi-app</string>
+    <string name="fission_status_idle">Tocca + per proiettare un\'app</string>
+    <string name="fission_btn_add">+ Aggiungi app</string>
+    <string name="fission_btn_stop">Ferma tutto</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Editor di layout</string>
+    <string name="fission_editor_clear">Cancella</string>
+    <string name="fission_editor_save">Salva</string>
+    <string name="fission_editor_edit">Modifica</string>
+    <string name="fission_editor_delete">Elimina</string>
+    <string name="fission_open">Fission</string>
 </resources>

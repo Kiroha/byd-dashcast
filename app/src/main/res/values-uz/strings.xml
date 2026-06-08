@@ -556,4 +556,21 @@
     <string name="dpi_custom">Maxsus…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Keyingi ishga tushirishda qo\'llaniladi</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Proyeksiyadan oldin sendInfo(30) yuboradi — ba\'zi transport vositalarida ADAS cho\'zilishini tuzatadi. Ishga tushirishda klaster shakli o\'zgarsa o\'chiring.</string>
+    <string name="settings_fission_mode">Fission rejimi (beta)</string>
+    <string name="settings_fission_mode_support">Klasterdagi maxsus zonalar bilan ko\'p ilovali proyeksiya. Proksi daemonni talab qiladi.</string>
+    <string name="fission_title">Fission — Ko\'p ilovali klaster</string>
+    <string name="fission_status_idle">Ilovani ko\'rsatish uchun + ni bosing</string>
+    <string name="fission_btn_add">+ Ilova qo\'shish</string>
+    <string name="fission_btn_stop">Hammasini to\'xtatish</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Layout muharriri</string>
+    <string name="fission_editor_clear">Tozalash</string>
+    <string name="fission_editor_save">Saqlash</string>
+    <string name="fission_editor_edit">Tahrirlash</string>
+    <string name="fission_editor_delete">O\'chirish</string>
+    <string name="fission_open">Fission</string>
 </resources>

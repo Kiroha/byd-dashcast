@@ -540,4 +540,45 @@
     <string name="dpi_custom">Niestandardowe…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Zostanie zastosowane przy następnym uruchomieniu</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Wysyła sendInfo(30) przed projekcją — naprawia rozciąganie ADAS na niektórych pojazdach. Wyłącz, jeśli kształt klastra zmienia się przy uruchomieniu.</string>
+    <string name="settings_fission_mode">Tryb Fission (beta)</string>
+    <string name="settings_fission_mode_support">Wieloaplikacyjna projekcja na klastrze z niestandardowymi strefami. Wymaga demona proxy.</string>
+    <string name="fission_title">Fission — Klaster wieloaplikacyjny</string>
+    <string name="fission_status_idle">Naciśnij +, aby wyświetlić aplikację</string>
+    <string name="fission_btn_add">+ Dodaj aplikację</string>
+    <string name="fission_btn_stop">Zatrzymaj wszystko</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Edytor układów</string>
+    <string name="fission_editor_clear">Wyczyść</string>
+    <string name="fission_editor_save">Zapisz</string>
+    <string name="fission_editor_edit">Edytuj</string>
+    <string name="fission_editor_delete">Usuń</string>
+    <string name="fission_open">Fission</string>
+    <!-- v1.4 Voice commands + VD pipeline test (missing from pl) -->
+    <string name="diag_voice_commands_title">Polecenia głosowe (Vosk)</string>
+    <string name="diag_voice_commands_switch">Włącz</string>
+    <string name="diag_voice_commands_hint">Powiedz „Hey Jarvis” a następnie komendę: „klaster”, „zamknij klaster”, „uruchom YouTube”, „diagnostyka”, „logi”.</string>
+    <string name="diag_voice_model_card_title">Model rozpoznawania mowy</string>
+    <string name="diag_voice_model_small_label">Mały model (~40 MB)</string>
+    <string name="diag_voice_model_small_desc">Szybkie pobieranie, dobra dokładność dla krótkich poleceń.</string>
+    <string name="diag_voice_model_large_label">Duży model (~1,3 GB) — wysoka dokładność</string>
+    <string name="diag_voice_model_large_desc">Lepsza rozpoznawalność, zalecane przy połączeniu Wi-Fi.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d MB dostępnych</string>
+    <string name="diag_voice_model_download_btn">Pobierz</string>
+    <string name="diag_voice_model_delete_btn">Usuń</string>
+    <string name="diag_voice_model_status_downloaded">✓ Model zainstalowany</string>
+    <string name="diag_voice_model_status_not_downloaded">Niezainstalowany</string>
+    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Rozpakowywanie…</string>
+    <string name="diag_dl5_cluster_test_vd">Test potoku VD</string>
+    <string name="diag_dl5_cluster_test_vd_hint">Sprawdza potok VirtualDisplay → MirrorDaemon w 7 krokach: tworzenie VD, uruchomienie aplikacji na VD, lustro na powierzchnię klastra. Tylko DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">Test potoku VD</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Cel: %1$s\n\nTen zestaw:\n\n• V01: aktywacja projekcji klastra (auto_container)\n• V02: weryfikacja, że aplikacja jest uruchamialna\n• V03: utwórz VirtualDisplay 1920×720\n• V04: uruchom aplikację na VD\n• V05: uruchom lustro przez MirrorDaemon\n• V06: wizualnie sprawdź renderowanie klastra\n• V07: wyczyść (zatrzymaj lustro, usuń VD, wymuś stop)\n\nTylko DiLink 5. Aplikacja docelowa zostanie wymuszona zatrzymana podczas testu.\nKontynuować?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Uruchom test</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">Test potoku VD jest dostępny tylko dla DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Wybierz aplikację do testowania</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Nie znaleziono żadnych uruchamialnych aplikacji.</string>
 </resources>
