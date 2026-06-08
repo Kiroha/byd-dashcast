@@ -120,6 +120,8 @@ public class SettingsActivity extends AppCompatActivity {
     private Button      btnHMinus, btnHPlus, btnVMinus, btnVPlus;
 
     private volatile boolean mDestroyed = false;
+    private SharedPreferences mPrefs;
+    private android.view.ViewGroup.MarginLayoutParams mSafeZoneParams;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -251,7 +253,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void loadPreferences() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        mPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = mPrefs;
 
         // Cluster type radio
         int cmd = ClusterPrefs.getClusterType(this);
@@ -397,14 +400,14 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Pre-release checkbox
         cbPrerelease.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_OTA_PRERELEASE, isChecked).apply();
             AppLogger.i("SettingsActivity", "ota_include_prerelease=" + isChecked);
         });
 
         // Visual Mode checkbox
         cbVisualMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_VISUAL_OVERSCAN_MODE, isChecked).apply();
             updateVisualModeState(isChecked);
         });
@@ -439,19 +442,19 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Category filters checkbox
         cbShowCategoryFilters.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_SHOW_CATEGORY_FILTERS, isChecked).apply();
         });
 
         // Reconnect popup checkbox
         cbReconnectPopup.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_RECONNECT_POPUP, isChecked).apply();
         });
 
         // Quick stop checkbox
         cbQuickStop.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_QUICK_STOP, isChecked).apply();
         });
 
@@ -465,7 +468,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Use-own-SIM checkbox — toggles visibility of the Hotspot navrail entry
         cbUseOwnSim.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            mPrefs.edit()
                     .putBoolean(PREF_USE_OWN_SIM, isChecked).apply();
             AppLogger.i("SettingsActivity", "use_own_sim=" + isChecked);
         });
@@ -475,7 +478,7 @@ public class SettingsActivity extends AppCompatActivity {
         // to the home screen (no activity restart needed).
         if (cbCompactAppsPanel != null) {
             cbCompactAppsPanel.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                mPrefs.edit()
                         .putBoolean(PREF_COMPACT_APPS_PANEL, isChecked).apply();
                 AppLogger.i("SettingsActivity", "compact_apps_panel=" + isChecked);
             });
@@ -533,20 +536,22 @@ public class SettingsActivity extends AppCompatActivity {
         int h = sbInsetH.getProgress();
         int v = sbInsetV.getProgress();
         if (flSafeZone != null) {
-            android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) flSafeZone.getLayoutParams();
+            if (mSafeZoneParams == null) {
+                mSafeZoneParams = (android.view.ViewGroup.MarginLayoutParams) flSafeZone.getLayoutParams();
+            }
             // Scale logic: Mockup is 320x120. Real cluster is 1920x720. Scale is 1/6.
-            params.leftMargin = (int) (h / 6f);
-            params.rightMargin = (int) (h / 6f);
-            params.topMargin = (int) (v / 6f);
-            params.bottomMargin = (int) (v / 6f);
-            flSafeZone.setLayoutParams(params);
+            mSafeZoneParams.leftMargin = (int) (h / 6f);
+            mSafeZoneParams.rightMargin = (int) (h / 6f);
+            mSafeZoneParams.topMargin = (int) (v / 6f);
+            mSafeZoneParams.bottomMargin = (int) (v / 6f);
+            flSafeZone.requestLayout();
         }
     }
 
     // ── Logic ─────────────────────────────────────────────────────────────────
 
     private void saveInsets(int h, int v) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+        mPrefs.edit()
                 .putInt(PREF_INSET_H, h)
                 .putInt(PREF_INSET_V, v)
                 .apply();

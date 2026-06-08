@@ -212,8 +212,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                             if (mListener != null) {
                                 mListener.onSendToDashboard(app);
                                 try {
-                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
-                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    android.content.pm.LauncherApps la = holder.launcherApps;
                                     if (la != null) {
                                         la.startShortcut(app.packageName, shortcut.id, null, null, android.os.Process.myUserHandle());
                                     }
@@ -254,8 +253,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                                     }
                                 }
                                 try {
-                                    android.content.pm.LauncherApps la = (android.content.pm.LauncherApps)
-                                            v.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
+                                    android.content.pm.LauncherApps la = holder.launcherApps;
                                     if (la != null) {
                                         la.startShortcut(app.packageName, chosenShortcut.id, null, null, android.os.Process.myUserHandle());
                                     }
@@ -341,9 +339,12 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final Button    btnToCluster;
         final Button    btnKill;
         final TextView  badgeAutoLaunch;
+        final android.content.pm.LauncherApps launcherApps;
 
         ViewHolder(View itemView, final OnSendToDashboardListener listener, final AppListAdapter adapter) {
             super(itemView);
+            launcherApps = (android.content.pm.LauncherApps)
+                    itemView.getContext().getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE);
             ivIcon              = (ImageView) itemView.findViewById(R.id.iv_app_icon);
             tvName              = (TextView)  itemView.findViewById(R.id.tv_app_name);
             tvCategory          = (TextView)  itemView.findViewById(R.id.tv_app_category);

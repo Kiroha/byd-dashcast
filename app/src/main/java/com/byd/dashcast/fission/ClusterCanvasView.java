@@ -16,6 +16,8 @@ import java.util.List;
 
 public class ClusterCanvasView extends View {
 
+    private static final java.util.regex.Pattern P_NL = java.util.regex.Pattern.compile("\n");
+
     private static final int   CW             = 1920;
     private static final int   CH             = 720;
     private static final int   COLOR_XDJA     = 0x99000000;
@@ -173,7 +175,7 @@ public class ClusterCanvasView extends View {
     }
 
     private void drawCenteredText(Canvas c, String text, float cx, float cy) {
-        String[] lines = text.split("\n");
+        String[] lines = P_NL.split(text);
         float lh = mPaintLabel.getTextSize() * 1.3f;
         float startY = cy - lh * (lines.length - 1) / 2f;
         for (String line : lines) {

@@ -56,6 +56,7 @@ import com.byd.dashcast.ime.ClusterImeWatcherService;
 public class KeyboardBridgeActivity extends Activity {
 
     private static final String TAG = "KeyboardBridge";
+    private static final java.util.regex.Pattern P_COLON = java.util.regex.Pattern.compile(":");
 
     /** v1.2.9 — set by the AccessibilityService when the bridge was auto-opened
      *  on a cluster EditText focus. Currently informational only (used for logs). */
@@ -364,7 +365,7 @@ public class KeyboardBridgeActivity extends Activity {
             if (enabled != null) {
                 String myComp = ctx.getPackageName()
                         + "/" + ClusterImeWatcherService.class.getName();
-                for (String s : enabled.split(":")) {
+                for (String s : P_COLON.split(enabled)) {
                     if (s != null && s.trim().equalsIgnoreCase(myComp)) return;
                 }
             }
@@ -402,7 +403,7 @@ public class KeyboardBridgeActivity extends Activity {
             if (enabled == null || enabled.isEmpty()) return false;
             String myComp = getPackageName() + "/" + ClusterImeWatcherService.class.getName();
             String myCompShort = getPackageName() + "/." + "ime.ClusterImeWatcherService";
-            for (String s : enabled.split(":")) {
+            for (String s : P_COLON.split(enabled)) {
                 if (s == null) continue;
                 String t = s.trim();
                 if (t.equalsIgnoreCase(myComp) || t.equalsIgnoreCase(myCompShort)) return true;

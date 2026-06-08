@@ -843,48 +843,52 @@ public class DiagActivity extends AppCompatActivity {
      * then chain into the confirm dialog with the chosen package.
      */
     private void pickVdTargetThenConfirm() {
-        android.content.pm.PackageManager pm = getPackageManager();
-        android.content.Intent main = new android.content.Intent(android.content.Intent.ACTION_MAIN);
-        main.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
-        java.util.List<android.content.pm.ResolveInfo> infos = pm.queryIntentActivities(main, 0);
-        if (infos == null || infos.isEmpty()) {
-            Toast.makeText(this, R.string.diag_dl5_cluster_test_vd_pick_empty,
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-        String selfPkg = getPackageName();
-        java.util.Map<String, String> pkgToLabel = new java.util.LinkedHashMap<>();
-        for (android.content.pm.ResolveInfo ri : infos) {
-            if (ri == null || ri.activityInfo == null) continue;
-            String pkg = ri.activityInfo.packageName;
-            if (pkg == null || pkg.equals(selfPkg)) continue;
-            if (pkgToLabel.containsKey(pkg)) continue;
-            CharSequence label = ri.loadLabel(pm);
-            pkgToLabel.put(pkg, label == null ? pkg : label.toString());
-        }
-        if (pkgToLabel.isEmpty()) {
-            Toast.makeText(this, R.string.diag_dl5_cluster_test_vd_pick_empty,
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-        java.util.List<java.util.Map.Entry<String, String>> sorted =
-                new java.util.ArrayList<>(pkgToLabel.entrySet());
-        java.util.Collections.sort(sorted, (a, b) ->
-                a.getValue().compareToIgnoreCase(b.getValue()));
-        final String[] pkgs   = new String[sorted.size()];
-        final String[] labels = new String[sorted.size()];
-        for (int i = 0; i < sorted.size(); i++) {
-            pkgs[i]   = sorted.get(i).getKey();
-            labels[i] = sorted.get(i).getValue() + "  \u2014  " + sorted.get(i).getKey();
-        }
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.diag_dl5_cluster_test_vd_pick_title)
-                .setItems(labels, (d, which) -> {
-                    if (which < 0 || which >= pkgs.length) return;
-                    confirmVdRun(pkgs[which], sorted.get(which).getValue());
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        final android.content.pm.PackageManager pm = getPackageManager();
+        final String selfPkg = getPackageName();
+        new Thread(() -> {
+            android.content.Intent main = new android.content.Intent(android.content.Intent.ACTION_MAIN);
+            main.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+            java.util.List<android.content.pm.ResolveInfo> infos = pm.queryIntentActivities(main, 0);
+            java.util.Map<String, String> pkgToLabel = new java.util.LinkedHashMap<>();
+            if (infos != null) {
+                for (android.content.pm.ResolveInfo ri : infos) {
+                    if (ri == null || ri.activityInfo == null) continue;
+                    String pkg = ri.activityInfo.packageName;
+                    if (pkg == null || pkg.equals(selfPkg)) continue;
+                    if (pkgToLabel.containsKey(pkg)) continue;
+                    CharSequence label = ri.loadLabel(pm);
+                    pkgToLabel.put(pkg, label == null ? pkg : label.toString());
+                }
+            }
+            final java.util.Map<String, String> result = pkgToLabel;
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (result.isEmpty()) {
+                    Toast.makeText(DiagActivity.this,
+                            R.string.diag_dl5_cluster_test_vd_pick_empty,
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                java.util.List<java.util.Map.Entry<String, String>> sorted =
+                        new java.util.ArrayList<>(result.entrySet());
+                java.util.Collections.sort(sorted, (a, b) ->
+                        a.getValue().compareToIgnoreCase(b.getValue()));
+                final String[] pkgs   = new String[sorted.size()];
+                final String[] labels = new String[sorted.size()];
+                for (int i = 0; i < sorted.size(); i++) {
+                    pkgs[i]   = sorted.get(i).getKey();
+                    labels[i] = sorted.get(i).getValue() + "  \u2014  " + sorted.get(i).getKey();
+                }
+                new androidx.appcompat.app.AlertDialog.Builder(DiagActivity.this)
+                        .setTitle(R.string.diag_dl5_cluster_test_vd_pick_title)
+                        .setItems(labels, (d, which) -> {
+                            if (which < 0 || which >= pkgs.length) return;
+                            confirmVdRun(pkgs[which], sorted.get(which).getValue());
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            });
+        }, "vd-pick-query").start();
     }
 
     /** v1.3.12 — second-step confirm dialog showing the chosen target. */

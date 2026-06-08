@@ -97,9 +97,12 @@ public class AdbLocalClient {
      * (field report: user set margins 80/50 → main screen got smaller).
      * Any such command is therefore unconditionally blocked on DL2.
      */
+    private static final java.util.regex.Pattern P_DISPLAY_RESIZE =
+            java.util.regex.Pattern.compile("(?s)\\bwm\\s+(overscan|size|density)\\b");
+
     public static boolean isDisplayResizeCmd(String cmd) {
         if (cmd == null) return false;
-        return cmd.matches("(?s).*\\bwm\\s+(overscan|size|density)\\b.*");
+        return P_DISPLAY_RESIZE.matcher(cmd).find();
     }
 
     /**

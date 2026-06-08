@@ -204,6 +204,7 @@ public final class Phase4Probes {
         if (dirs == null) return "FAIL_OTHER:/proc not readable";
         int scanned = 0, matched = 0;
         String needle = "com.byd.dashcast";
+        byte[] buf = new byte[256];
         for (File d : dirs) {
             String name = d.getName();
             if (!d.isDirectory()) continue;
@@ -215,7 +216,6 @@ public final class Phase4Probes {
             File cmd = new File(d, "cmdline");
             if (!cmd.canRead()) continue;
             scanned++;
-            byte[] buf = new byte[256];
             int n;
             try (FileInputStream fis = new FileInputStream(cmd)) {
                 n = fis.read(buf);
