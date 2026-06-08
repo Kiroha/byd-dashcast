@@ -2,8 +2,12 @@ package com.byd.dashcast.voice;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import java.io.FileInputStream;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -89,8 +93,22 @@ public final class VoskTranscriber {
     private volatile boolean mReleaseRequested;
     private final Object     mLifecycleLock = new Object();
 
+    // V5: cached process-local LBM singleton — avoids a synchronized lookup per broadcast.
+    private final LocalBroadcastManager mLbm;
+    // V1: reusable PCM→byte conversion buffer; grown as needed, never shrunk.
+    private byte[] mPcmBuf = new byte[0];
+    // V6: single-thread executor reused across listen sessions.
+    private final ExecutorService mListenExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "vosk-transcriber");
+        t.setDaemon(true);
+        return t;
+    });
+    // V7: shared main-thread Handler; one instance per process.
+    private static final Handler sMain = new Handler(Looper.getMainLooper());
+
     public VoskTranscriber(Context ctx) {
         mCtx = ctx.getApplicationContext();
+        mLbm = LocalBroadcastManager.getInstance(mCtx); // V5
         boolean large = ClusterPrefs.isVoskHighAccuracy(mCtx);
         mModelAsset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
         mModelUrl   = large ? MODEL_LARGE_URL   : MODEL_SMALL_URL;
@@ -116,30 +134,33 @@ public final class VoskTranscriber {
      * Safe to call from any thread; re-entrant calls while already listening
      * are ignored.
      */
-    public synchronized void startListening() {
-        if (mListening) {
-            AppLogger.d(TAG, "startListening() ignored — already listening");
-            return;
-        }
-        if (mModel == null) {
-            if (mModelLoading) {
-                mPendingListen = true;
-                AppLogger.d(TAG, "startListening() — model loading, queued");
+    public void startListening() {
+        synchronized (mLifecycleLock) {
+            if (mListening) {
+                AppLogger.d(TAG, "startListening() ignored — already listening");
                 return;
             }
-            loadModelThenListen();
-        } else {
-            // C7 fix: set mListening=true here, inside synchronized(this), BEFORE spawning
-            // the thread. Without this, a second startListening() call arriving before
-            // doListenViaServiceStream() runs sees mListening=false and spawns a second
-            // session, both racing on VoiceService.setSampleConsumer().
-            mListening = true;
-            new Thread(this::doListenViaServiceStream, "vosk-transcriber").start();
+            if (mModel == null) {
+                if (mModelLoading) {
+                    mPendingListen = true;
+                    AppLogger.d(TAG, "startListening() — model loading, queued");
+                    return;
+                }
+                loadModelThenListen();
+            } else {
+                // C7 fix: set mListening=true here, inside the lifecycle lock, BEFORE
+                // submitting to the executor. Without this, a second startListening()
+                // call arriving before doListenViaServiceStream() runs sees mListening=false
+                // and submits a second session, both racing on VoiceService.setSampleConsumer().
+                mListening = true;
+                mListenExecutor.execute(this::doListenViaServiceStream); // V6
+            }
         }
     }
 
     /** Releases the Vosk model from memory. Call from the owner's onDestroy. */
     public void release() {
+        mListenExecutor.shutdown(); // V6: stop accepting new listen tasks
         synchronized (mLifecycleLock) {
             mReleaseRequested = true;
             if (!mListening) {
@@ -161,7 +182,8 @@ public final class VoskTranscriber {
     public void preDownload() {
         // C4 fix: synchronize the check+set so concurrent calls (e.g. UI button + wake word
         // trigger) cannot both pass the guard and start two simultaneous 1.3 GB downloads.
-        synchronized (this) {
+        // C1 fix: use mLifecycleLock consistently (same lock as startListening/release).
+        synchronized (mLifecycleLock) {
             if (mModelLoading) return;
             mModelLoading = true;
         }
@@ -178,10 +200,9 @@ public final class VoskTranscriber {
                 mModelLoading = false;
                 AppLogger.i(TAG, "Pre-download complete: " + mModelAsset);
                 broadcastProgress(100, (int)(mModelBytes / 1024 / 1024), (int)(mModelBytes / 1024 / 1024));
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                        android.widget.Toast.makeText(mCtx,
-                                "Modèle téléchargé — Jarvis prêt",
-                                android.widget.Toast.LENGTH_SHORT).show());
+                sMain.post(() -> android.widget.Toast.makeText(mCtx,
+                        "Modèle téléchargé — Jarvis prêt",
+                        android.widget.Toast.LENGTH_SHORT).show());
             } catch (Exception e) {
                 mModelLoading = false;
                 AppLogger.e(TAG, "preDownload error: " + e.getMessage());
@@ -237,7 +258,7 @@ public final class VoskTranscriber {
         broadcastLoading();
         AppLogger.i(TAG, "Loading Vosk model — " + mModelAsset);
 
-        new Thread(() -> {
+        mListenExecutor.execute(() -> { // V6: reuse pooled thread
             try {
                 // Ensure native libs loaded BEFORE any Vosk/JNA class is touched.
                 VoiceLibsManager.ensureLoaded(mCtx);
@@ -253,10 +274,9 @@ public final class VoskTranscriber {
                 mModel = model;
                 mModelLoading = false;
                 AppLogger.i(TAG, "Vosk model ready");
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                        android.widget.Toast.makeText(mCtx,
-                                "Jarvis prêt — réessayez votre commande",
-                                android.widget.Toast.LENGTH_SHORT).show());
+                sMain.post(() -> android.widget.Toast.makeText(mCtx,
+                        "Jarvis prêt — réessayez votre commande",
+                        android.widget.Toast.LENGTH_SHORT).show());
                 doListenViaServiceStream();
                 if (mPendingListen) {
                     mPendingListen = false;
@@ -267,7 +287,7 @@ public final class VoskTranscriber {
                 AppLogger.e(TAG, "Vosk model error: " + e.getMessage());
                 broadcastError("Modèle indisponible : " + e.getMessage());
             }
-        }, "vosk-model-loader").start();
+        });
     }
 
     /**
@@ -404,12 +424,13 @@ public final class VoskTranscriber {
             // lost, turning "diagnostic" into "stic".
             short[] preRoll = VoiceService.getPreRollCopy();
             if (preRoll.length > 0) {
-                byte[] preBytes = new byte[preRoll.length * 2];
+                // V1: reuse mPcmBuf for pre-roll conversion (grown if needed, never shrunk).
+                if (mPcmBuf.length < preRoll.length * 2) mPcmBuf = new byte[preRoll.length * 2];
                 for (int i = 0; i < preRoll.length; i++) {
-                    preBytes[i * 2]     = (byte) (preRoll[i] & 0xFF);
-                    preBytes[i * 2 + 1] = (byte) ((preRoll[i] >> 8) & 0xFF);
+                    mPcmBuf[i * 2]     = (byte) (preRoll[i] & 0xFF);
+                    mPcmBuf[i * 2 + 1] = (byte) ((preRoll[i] >> 8) & 0xFF);
                 }
-                finalReco.acceptWaveForm(preBytes, preBytes.length);
+                finalReco.acceptWaveForm(mPcmBuf, preRoll.length * 2);
                 AppLogger.d(TAG, "Pre-roll fed: " + preRoll.length + " samples ("
                         + (preRoll.length * 1000 / VoiceService.SAMPLE_RATE_HZ) + " ms)");
             }
@@ -419,13 +440,13 @@ public final class VoskTranscriber {
                 if (latch.getCount() == 0) return; // already done
                 if (mReleaseRequested) { latch.countDown(); return; }
 
-                // Feed PCM to Vosk (little-endian byte conversion)
-                byte[] bytes = new byte[n * 2];
+                // V1: Feed PCM to Vosk — reuse mPcmBuf to avoid per-frame allocation.
+                if (mPcmBuf.length < n * 2) mPcmBuf = new byte[n * 2];
                 for (int i = 0; i < n; i++) {
-                    bytes[i * 2]     = (byte) (pcm[i] & 0xFF);
-                    bytes[i * 2 + 1] = (byte) ((pcm[i] >> 8) & 0xFF);
+                    mPcmBuf[i * 2]     = (byte) (pcm[i] & 0xFF);
+                    mPcmBuf[i * 2 + 1] = (byte) ((pcm[i] >> 8) & 0xFF);
                 }
-                finalReco.acceptWaveForm(bytes, n * 2);
+                finalReco.acceptWaveForm(mPcmBuf, n * 2);
 
                 // Silence + timeout detection
                 long sumSq = 0L;
@@ -501,13 +522,13 @@ public final class VoskTranscriber {
     private void broadcastText(String text) {
         Intent i = new Intent(ACTION_TRANSCRIPT);
         i.putExtra(EXTRA_TEXT, text);
-        LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
+        mLbm.sendBroadcast(i);
     }
 
     private void broadcastLoading() {
         Intent i = new Intent(ACTION_TRANSCRIPT);
         i.putExtra(EXTRA_LOADING, true);
-        LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
+        mLbm.sendBroadcast(i);
     }
 
     private void broadcastProgress(int pct, int mbDone, int mbTotal) {
@@ -516,12 +537,12 @@ public final class VoskTranscriber {
         i.putExtra(EXTRA_PROGRESS, pct);
         i.putExtra(EXTRA_PROGRESS_MB, mbDone);
         i.putExtra(EXTRA_PROGRESS_TOTAL, mbTotal);
-        LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
+        mLbm.sendBroadcast(i);
     }
 
     private void broadcastError(String msg) {
         Intent i = new Intent(ACTION_TRANSCRIPT);
         i.putExtra(EXTRA_ERROR, msg == null ? "erreur inconnue" : msg);
-        LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i);
+        mLbm.sendBroadcast(i);
     }
 }

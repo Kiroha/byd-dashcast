@@ -69,6 +69,12 @@ public class SysInfoActivity extends AppCompatActivity {
     private StringBuilder mReport;
 
     private volatile boolean mDestroyed = false;
+    // SI-2: single reusable executor — avoids creating a new thread pool on every startGenerate() call.
+    private final ExecutorService mReportExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "sysinfo-report");
+        t.setDaemon(true);
+        return t;
+    });
 
     @Override
     protected void attachBaseContext(android.content.Context base) {
@@ -132,6 +138,7 @@ public class SysInfoActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         mDestroyed = true;
+        mReportExecutor.shutdown();
     }
 
     // =========================================================================
@@ -145,7 +152,10 @@ public class SysInfoActivity extends AppCompatActivity {
                 // Recheck on the main thread: between the worker-side check above
                 // and the Runnable being dispatched, onDestroy may have fired.
                 if (mDestroyed) return;
-                tvReport.setText(colorizeReport(text));
+                // H6: skip colorizeReport() on intermediate updates — it runs 8 pattern
+                // matchers against the growing text on each of ~8 publishUpdate() calls.
+                // Colorization is applied once when the final result is ready (in startGenerate).
+                tvReport.setText(text);
                 scrollView.post(new Runnable() {
                     @Override public void run() { scrollView.fullScroll(ScrollView.FOCUS_DOWN); }
                 });
@@ -158,8 +168,7 @@ public class SysInfoActivity extends AppCompatActivity {
         btnSave.setEnabled(false);
         tvReport.setText(getString(R.string.sysinfo_generating));
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit(new Runnable() {
+        mReportExecutor.submit(new Runnable() {
             @Override public void run() {
                 final String result = generateReport();
                 runOnUiThread(new Runnable() {
@@ -178,7 +187,6 @@ public class SysInfoActivity extends AppCompatActivity {
                 });
             }
         });
-        executor.shutdown();
     }
 
     private String generateReport() {

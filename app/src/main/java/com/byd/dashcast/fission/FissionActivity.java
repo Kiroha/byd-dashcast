@@ -1,6 +1,7 @@
 package com.byd.dashcast.fission;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -67,12 +68,15 @@ public class FissionActivity extends Activity {
 
     private final Handler         mUiHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService mExec      = Executors.newSingleThreadExecutor();
+    // FA-3: application context for background lambdas — avoids holding Activity ref after destroy.
+    private Context mAppCtx;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        mAppCtx = getApplicationContext();
         setContentView(R.layout.activity_fission);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar_fission);
@@ -131,7 +135,7 @@ public class FissionActivity extends Activity {
                     if (binder != null) {
                         try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
                     }
-                    AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
+                    AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
                 }
                 if (binder != null) {
                     try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
@@ -196,49 +200,71 @@ public class FissionActivity extends Activity {
 
     private void pickApp() {
         if (!mSurfaceReady) return;
-        PackageManager pm = getPackageManager();
-        Intent main = new Intent(Intent.ACTION_MAIN);
-        main.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> infos = pm.queryIntentActivities(main, 0);
-        if (infos == null || infos.isEmpty()) {
-            Toast.makeText(this, "Aucune application disponible", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String selfPkg = getPackageName();
-        Map<String, String> pkgToLabel = new LinkedHashMap<>();
-        for (ResolveInfo ri : infos) {
-            if (ri == null || ri.activityInfo == null) continue;
-            String pkg = ri.activityInfo.packageName;
-            if (pkg == null || pkg.equals(selfPkg) || pkgToLabel.containsKey(pkg)
-                    || mSlots.containsKey(pkg)) continue;
-            CharSequence lbl = ri.loadLabel(pm);
-            pkgToLabel.put(pkg, lbl != null ? lbl.toString() : pkg);
-        }
-        if (pkgToLabel.isEmpty()) {
-            Toast.makeText(this, "Toutes les apps sont déjà projetées", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        List<Map.Entry<String, String>> sorted = new ArrayList<>(pkgToLabel.entrySet());
-        Collections.sort(sorted, (a, b) -> a.getValue().compareToIgnoreCase(b.getValue()));
-        final String[] pkgs   = new String[sorted.size()];
-        final String[] labels = new String[sorted.size()];
-        for (int i = 0; i < sorted.size(); i++) {
-            pkgs[i]   = sorted.get(i).getKey();
-            labels[i] = sorted.get(i).getValue() + "  —  " + pkgs[i];
-        }
-
-        List<LayoutPreset> presets = LayoutPrefs.load(this);
-        new AlertDialog.Builder(this)
-                .setTitle("Choisir une application")
-                .setItems(labels, (d, which) -> {
-                    if (which < 0 || which >= pkgs.length) return;
-                    String pkg2   = pkgs[which];
-                    String label2 = sorted.get(which).getValue();
-                    if (!presets.isEmpty()) showLayoutOrFreePicker(pkg2, label2, presets);
-                    else                    startSlot(pkg2, label2, autoRect());
-                })
-                .setNegativeButton("Annuler", null)
-                .show();
+        // Disable button while loading to prevent double-tap.
+        btnAdd.setEnabled(false);
+        // PM query + loadLabel can block >100 ms on a crowded head unit — run off main thread.
+        mExec.execute(() -> {
+            PackageManager pm = getPackageManager();
+            Intent main = new Intent(Intent.ACTION_MAIN);
+            main.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> infos;
+            try {
+                infos = pm.queryIntentActivities(main, 0);
+            } catch (Exception e) {
+                safeRun(() -> {
+                    btnAdd.setEnabled(mSurfaceReady);
+                    Toast.makeText(this, "Aucune application disponible", Toast.LENGTH_SHORT).show();
+                });
+                return;
+            }
+            if (infos == null || infos.isEmpty()) {
+                safeRun(() -> {
+                    btnAdd.setEnabled(mSurfaceReady);
+                    Toast.makeText(this, "Aucune application disponible", Toast.LENGTH_SHORT).show();
+                });
+                return;
+            }
+            String selfPkg = getPackageName();
+            Map<String, String> pkgToLabel = new LinkedHashMap<>();
+            for (ResolveInfo ri : infos) {
+                if (ri == null || ri.activityInfo == null) continue;
+                String pkg = ri.activityInfo.packageName;
+                if (pkg == null || pkg.equals(selfPkg) || pkgToLabel.containsKey(pkg)
+                        || mSlots.containsKey(pkg)) continue;
+                CharSequence lbl = ri.loadLabel(pm);
+                pkgToLabel.put(pkg, lbl != null ? lbl.toString() : pkg);
+            }
+            if (pkgToLabel.isEmpty()) {
+                safeRun(() -> {
+                    btnAdd.setEnabled(mSurfaceReady);
+                    Toast.makeText(this, "Toutes les apps sont déjà projetées", Toast.LENGTH_SHORT).show();
+                });
+                return;
+            }
+            List<Map.Entry<String, String>> sorted = new ArrayList<>(pkgToLabel.entrySet());
+            Collections.sort(sorted, (a, b) -> a.getValue().compareToIgnoreCase(b.getValue()));
+            final String[] pkgs   = new String[sorted.size()];
+            final String[] labels = new String[sorted.size()];
+            for (int i = 0; i < sorted.size(); i++) {
+                pkgs[i]   = sorted.get(i).getKey();
+                labels[i] = sorted.get(i).getValue() + "  —  " + pkgs[i];
+            }
+            List<LayoutPreset> presets = LayoutPrefs.load(this);
+            safeRun(() -> {
+                btnAdd.setEnabled(mSurfaceReady);
+                new AlertDialog.Builder(this)
+                        .setTitle("Choisir une application")
+                        .setItems(labels, (d, which) -> {
+                            if (which < 0 || which >= pkgs.length) return;
+                            String pkg2   = pkgs[which];
+                            String label2 = sorted.get(which).getValue();
+                            if (!presets.isEmpty()) showLayoutOrFreePicker(pkg2, label2, presets);
+                            else                    startSlot(pkg2, label2, autoRect());
+                        })
+                        .setNegativeButton("Annuler", null)
+                        .show();
+            });
+        });
     }
 
     private void showLayoutOrFreePicker(String pkg, String appLabel, List<LayoutPreset> presets) {
@@ -406,7 +432,7 @@ public class FissionActivity extends Activity {
             // Force-stop each projected app before releasing the display so it
             // doesn't linger on the main screen after the user presses Stop.
             for (String pkg : mSlots.keySet()) {
-                AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
+                AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
             }
             mSlots.clear();
             if (mDaemonBinder != null) {
@@ -432,7 +458,7 @@ public class FissionActivity extends Activity {
             }
             // Kill the app after releasing its display slot so it doesn't linger
             // on the main screen and leave stale task state for the next launch.
-            AdbLocalClient.executeShell(FissionActivity.this, "am force-stop " + pkg);
+            AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
             mSlots.remove(pkg);
             mProjecting = !mSlots.isEmpty();
             safeRun(() -> {

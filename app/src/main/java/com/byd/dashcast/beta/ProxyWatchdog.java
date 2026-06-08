@@ -11,6 +11,8 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.AppLogger;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * v1.2.62-beta — Phase A step 2 : foreground liveness ping for the proxy
  * daemon.
@@ -56,8 +58,8 @@ public final class ProxyWatchdog {
     private static volatile Handler       sHandler;
 
     /** Foreground tracking: incremented in onResume, decremented in onPause.
-     *  Updated on the main thread only by the activity callbacks. */
-    private static volatile int sForegroundCount = 0;
+     *  Main-thread writes, watchdog-thread reads — AtomicInteger ensures visibility. */
+    private static final AtomicInteger sForegroundCount = new AtomicInteger(0);
 
     /** Application context cached at install(); used by connect() retries. */
     @SuppressLint("StaticFieldLeak") // application context, process-scoped, safe
@@ -85,12 +87,10 @@ public final class ProxyWatchdog {
             @Override public void onActivityCreated(Activity a, Bundle b) {}
             @Override public void onActivityStarted(Activity a) {}
             @Override public void onActivityResumed(Activity a) {
-                sForegroundCount++;
-                if (sForegroundCount == 1) startPolling();
+                if (sForegroundCount.incrementAndGet() == 1) startPolling();
             }
             @Override public void onActivityPaused(Activity a) {
-                if (sForegroundCount > 0) sForegroundCount--;
-                if (sForegroundCount == 0) stopPolling();
+                if (sForegroundCount.get() > 0 && sForegroundCount.decrementAndGet() == 0) stopPolling();
             }
             @Override public void onActivityStopped(Activity a) {}
             @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
@@ -130,7 +130,7 @@ public final class ProxyWatchdog {
                         + ": " + t.getMessage());
             } finally {
                 // Only re-arm while still foreground.
-                if (sForegroundCount > 0 && sHandler != null) {
+                if (sForegroundCount.get() > 0 && sHandler != null) {
                     sHandler.postDelayed(this, PING_INTERVAL_MS);
                 }
             }
@@ -176,5 +176,5 @@ public final class ProxyWatchdog {
     public static boolean isInstalled() { return sInstalled; }
 
     /** Test helper (Diag) : current foreground activity count. */
-    public static int getForegroundCount() { return sForegroundCount; }
+    public static int getForegroundCount() { return sForegroundCount.get(); }
 }

@@ -27,6 +27,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * v1.4.2-beta — LLM-powered voice engine.
@@ -49,6 +51,23 @@ public final class LlmVoiceEngine {
     // C6 fix: prevent concurrent LLM calls (rapid triggers → two threads → competing audio).
     private static final java.util.concurrent.atomic.AtomicBoolean sRouteActive =
             new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    // L6: single reusable thread for all LLM calls — avoids new Thread per voice command.
+    private static final ExecutorService sLlmExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "llm-voice");
+        t.setDaemon(true);
+        return t;
+    });
+
+    // L5: immutable AudioAttributes shared across all TTS playback sessions.
+    private static final android.media.AudioAttributes ASSISTANT_AUDIO_ATTRS =
+            new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build();
+
+    // H1: cached EncryptedSharedPreferences — avoids KeyStore IPC on every route() call.
+    private static volatile EncryptedSharedPreferences sCachedPrefs;
 
     // ─── Prefs ─────────────────────────────────────────────────────────────
     private static final String PREFS_NAME   = "dashcast_llm_prefs";
@@ -142,10 +161,10 @@ public final class LlmVoiceEngine {
             AppLogger.d(TAG, "route() — LLM call already in flight, ignored");
             return;
         }
-        new Thread(() -> {
+        sLlmExecutor.execute(() -> {
             try { routeOnBackground(text, apiKey); }
             finally { sRouteActive.set(false); }
-        }, "llm-voice").start();
+        });
     }
 
     /** Releases the fallback router (TTS engine). Call from owner's onDestroy. */
@@ -188,17 +207,25 @@ public final class LlmVoiceEngine {
         return k != null && !k.isEmpty();
     }
 
-    private static androidx.security.crypto.EncryptedSharedPreferences getEncryptedPrefs(Context ctx)
+    private static EncryptedSharedPreferences getEncryptedPrefs(Context ctx)
             throws Exception {
-        MasterKey masterKey = new MasterKey.Builder(ctx)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build();
-        return (EncryptedSharedPreferences) EncryptedSharedPreferences.create(
-                ctx,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM);
+        EncryptedSharedPreferences p = sCachedPrefs;
+        if (p != null) return p;
+        synchronized (LlmVoiceEngine.class) {
+            p = sCachedPrefs;
+            if (p != null) return p;
+            MasterKey masterKey = new MasterKey.Builder(ctx.getApplicationContext())
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build();
+            p = (EncryptedSharedPreferences) EncryptedSharedPreferences.create(
+                    ctx.getApplicationContext(),
+                    PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM);
+            sCachedPrefs = p;
+            return p;
+        }
     }
 
     // ─── LLM + TTS pipeline ────────────────────────────────────────────────
@@ -300,7 +327,7 @@ public final class LlmVoiceEngine {
 
             try (InputStream is = conn.getInputStream()) {
                 byte[] buf = new byte[4096];
-                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream(65_536);
                 int n;
                 while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
                 return baos.toByteArray();
@@ -330,10 +357,7 @@ public final class LlmVoiceEngine {
                         mCtx.getSystemService(android.content.Context.AUDIO_SERVICE);
                 final AudioFocusRequest focusReq = new AudioFocusRequest.Builder(
                         AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-                        .setAudioAttributes(new android.media.AudioAttributes.Builder()
-                                .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
-                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
-                                .build())
+                        .setAudioAttributes(ASSISTANT_AUDIO_ATTRS)
                         .setAcceptsDelayedFocusGain(false)
                         .build();
                 int focus = am.requestAudioFocus(focusReq);
@@ -344,10 +368,7 @@ public final class LlmVoiceEngine {
                 try {
                     MediaPlayer mp = new MediaPlayer();
                     mActiveMp = mp;
-                    mp.setAudioAttributes(new android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_ASSISTANT)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build());
+                    mp.setAudioAttributes(ASSISTANT_AUDIO_ATTRS);
                     mp.setDataSource(finalTmp.getAbsolutePath());
                     mp.setOnCompletionListener(p -> {
                         p.release();
@@ -402,7 +423,7 @@ public final class LlmVoiceEngine {
 
             try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(1024);
                 String line;
                 while ((line = br.readLine()) != null) sb.append(line);
                 return sb.toString();

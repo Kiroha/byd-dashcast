@@ -763,7 +763,15 @@ public final class BetaProxyClient {
             reply.readException();
             return reply.readInt();
         } catch (RemoteException e) {
-            sBinder = null;
+            // M9: unlink death recipient and guard inside LOCK — avoids leaking the
+            // DeathRecipient registration and prevents clobbering a fresh binder.
+            synchronized (LOCK) {
+                IBinder dead = sBinder;
+                if (dead != null) {
+                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                }
+                sBinder = null;
+            }
             throw new BetaProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();
@@ -953,10 +961,18 @@ public final class BetaProxyClient {
                             + "| awk '{print $2}' | xargs -r kill -9");
                 } catch (Throwable ignore) { /* daemon may already be dead */ }
             }
-            sBinder = null;
-            sDaemonUid = -1;
-            sDaemonPid = -1;
-            sDaemonVer = null;
+            // M10: acquire LOCK + unlinkToDeath before clearing state so we don't
+            // race with the broadcast receiver or sDeath.binderDied().
+            synchronized (LOCK) {
+                IBinder dead = sBinder;
+                if (dead != null) {
+                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                }
+                sBinder = null;
+                sDaemonUid = -1;
+                sDaemonPid = -1;
+                sDaemonVer = null;
+            }
             // Give AMS / the kernel a moment to reap the old process before
             // the receiver waits for the next broadcast.
             try { Thread.sleep(400L); } catch (InterruptedException ie) {
@@ -1060,7 +1076,15 @@ public final class BetaProxyClient {
         try {
             return op.run();
         } catch (RemoteException e) {
-            sBinder = null;
+            // C3: guard sBinder null-out inside LOCK so a freshly-arrived binder
+            // from the broadcast receiver (written inside LOCK) is not clobbered.
+            synchronized (LOCK) {
+                IBinder dead = sBinder;
+                if (dead != null && !dead.isBinderAlive()) {
+                    try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                    sBinder = null;
+                }
+            }
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
             if (!attemptReconnect()) {
@@ -1069,7 +1093,13 @@ public final class BetaProxyClient {
             try {
                 return op.run();
             } catch (RemoteException e2) {
-                sBinder = null;
+                synchronized (LOCK) {
+                    IBinder dead = sBinder;
+                    if (dead != null && !dead.isBinderAlive()) {
+                        try { dead.unlinkToDeath(sDeath, 0); } catch (Throwable ignore) {}
+                        sBinder = null;
+                    }
+                }
                 throw new BetaProxyException(
                         tag + " (after reconnect): " + e2.getMessage(), e2);
             }

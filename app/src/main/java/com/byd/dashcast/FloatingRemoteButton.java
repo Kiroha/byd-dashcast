@@ -102,6 +102,8 @@ public class FloatingRemoteButton extends Service {
     private boolean       mGrantAttempted = false;
     // v1.2.74 — track FG status so we can toggle the notification along with the badge.
     private boolean       mIsForeground = false;
+    // M19: cached once to avoid PendingIntent.getActivity() IPC on every show().
+    private PendingIntent mFgPendingIntent;
     // 1.2.30 \u2014 tracked so onDestroy() can dismiss the overlay dialog and avoid a
     // leaked TYPE_APPLICATION_OVERLAY window when the service tears down.
     private android.app.AlertDialog mQuickSwitchDialog;
@@ -121,7 +123,6 @@ public class FloatingRemoteButton extends Service {
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
         mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
         // 1.2.30 — dismiss the quick-switch dialog if still showing, otherwise
@@ -137,6 +138,7 @@ public class FloatingRemoteButton extends Service {
             }
             mFloatView = null;
         }
+        super.onDestroy();
     }
 
     // ── Overlay ───────────────────────────────────────────────────────────────
@@ -338,16 +340,18 @@ badge.setOnTouchListener(new View.OnTouchListener() {
         nm.createNotificationChannel(new NotificationChannel(
                 CHANNEL, getString(R.string.notif_remote_channel_name), NotificationManager.IMPORTANCE_MIN));
 
-        Intent tapIntent = new Intent(this, MainActivity.class);
-        tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent pi = PendingIntent.getActivity(
-                this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
+        if (mFgPendingIntent == null) {
+            Intent tapIntent = new Intent(this, MainActivity.class);
+            tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mFgPendingIntent = PendingIntent.getActivity(
+                    this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
+        }
 
         Notification notif = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentTitle("DashCast")
                 .setContentText(getString(R.string.notif_remote_content))
-                .setContentIntent(pi)
+                .setContentIntent(mFgPendingIntent)
                 .setOngoing(true)
                 .build();
 
@@ -365,15 +369,17 @@ badge.setOnTouchListener(new View.OnTouchListener() {
     private void promoteForeground() {
         if (mIsForeground) return;
         try {
-            Intent tapIntent = new Intent(this, MainActivity.class);
-            tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            PendingIntent pi = PendingIntent.getActivity(
-                    this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
+            if (mFgPendingIntent == null) {
+                Intent tapIntent = new Intent(this, MainActivity.class);
+                tapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                mFgPendingIntent = PendingIntent.getActivity(
+                        this, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE);
+            }
             Notification notif = new Notification.Builder(this, CHANNEL)
                     .setSmallIcon(android.R.drawable.ic_menu_view)
                     .setContentTitle("DashCast")
                     .setContentText(getString(R.string.notif_remote_content))
-                    .setContentIntent(pi)
+                    .setContentIntent(mFgPendingIntent)
                     .setOngoing(true)
                     .build();
             startForeground(NOTIF_ID, notif);
