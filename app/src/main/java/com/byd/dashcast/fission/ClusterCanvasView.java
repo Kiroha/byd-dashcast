@@ -28,7 +28,9 @@ public class ClusterCanvasView extends View {
     private final Paint mPaintStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mPaintLabel  = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mPaintDraw   = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint mPaintHandle = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintHandle     = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mPaintDrawStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF mBgRect          = new RectF();
 
     private Bitmap mBg;
 
@@ -77,6 +79,10 @@ public class ClusterCanvasView extends View {
         mPaintHandle.setColor(0xFFFFFFFF);
         mPaintHandle.setStyle(Paint.Style.FILL);
 
+        mPaintDrawStroke.setColor(0xFFF44336);
+        mPaintDrawStroke.setStyle(Paint.Style.STROKE);
+        mPaintDrawStroke.setStrokeWidth(3f);
+
         mGesture = new GestureDetector(getContext(),
             new GestureDetector.SimpleOnGestureListener() {
                 @Override
@@ -118,12 +124,13 @@ public class ClusterCanvasView extends View {
         mScaleX = (float) w / CW;
         mScaleY = (float) h / CH;
         mPaintLabel.setTextSize(Math.max(14f, 26f * mScaleX));
+        mBgRect.set(0, 0, w, h);
     }
 
     @Override
     protected void onDraw(Canvas c) {
         int vw = getWidth(), vh = getHeight();
-        if (mBg != null) c.drawBitmap(mBg, null, new RectF(0, 0, vw, vh), null);
+        if (mBg != null) c.drawBitmap(mBg, null, mBgRect, null);
         else c.drawColor(0xFF0A0A0A);
 
         float px = mLeft   * mScaleX, py  = mTop    * mScaleY;
@@ -158,9 +165,7 @@ public class ClusterCanvasView extends View {
         if (mDragMode == DragMode.DRAW && mCurrentRect != null) {
             mPaintDraw.setColor(COLOR_DRAWING);
             c.drawRect(mCurrentRect, mPaintDraw);
-            Paint str = new Paint(mPaintStroke);
-            str.setColor(0xFFF44336); str.setStrokeWidth(3f);
-            c.drawRect(mCurrentRect, str);
+            c.drawRect(mCurrentRect, mPaintDrawStroke);
             int cw = (int) (mCurrentRect.width()  / mScaleX);
             int ch = (int) (mCurrentRect.height() / mScaleY);
             drawCenteredText(c, cw + "×" + ch, mCurrentRect.centerX(), mCurrentRect.centerY());

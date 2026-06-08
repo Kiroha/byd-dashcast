@@ -15,6 +15,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import android.annotation.SuppressLint;
 import java.util.List;
 
 import com.byd.dashcast.AppLogger;
@@ -165,6 +166,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         super.onDestroy();
     }
 
+    @SuppressLint("NewApi")
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (!mIsDiLink5 || event == null) return;

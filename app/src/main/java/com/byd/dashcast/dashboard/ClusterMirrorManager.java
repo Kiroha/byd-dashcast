@@ -1,5 +1,6 @@
 package com.byd.dashcast.dashboard;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -113,6 +114,7 @@ public class ClusterMirrorManager {
      * @param targetSurface  Surface of our local TextureView (in-app)
      * @param viewW / viewH  View dimensions (for projection mapping)
      */
+    @SuppressLint("NewApi")
     public boolean startMirror(Context ctx, Display clusterDisplay, Surface targetSurface,
                                int viewW, int viewH) {
         if (mMirrorActive) {

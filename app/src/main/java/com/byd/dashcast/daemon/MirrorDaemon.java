@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import android.annotation.SuppressLint;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -307,6 +308,7 @@ public class MirrorDaemon {
      *
      * @return true if the mirror was configured successfully
      */
+    @SuppressLint("NewApi")
     private static boolean setupMirror(int layerStack, int clusterW, int clusterH,
                                        int viewW, int viewH, Surface surface) {
         stopMirror();
@@ -813,6 +815,7 @@ public class MirrorDaemon {
     }
 
     /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */
+    @SuppressLint("WrongConstant")
     private static int createTrustedVdForSlot(SlotInfo slot, Surface surface, String vdName) {
         try {
             out("[CREATE_VD] name=" + vdName + " size=" + slot.w + "x" + slot.h + " dpi=160");

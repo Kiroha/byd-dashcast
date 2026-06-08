@@ -2,6 +2,7 @@ package com.byd.dashcast.beta;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.pm.PackageManager;
 import android.os.Looper;
 
 import com.byd.dashcast.AppLogger;
@@ -106,10 +107,10 @@ public final class BetaSystemContext {
      */
     public static Context wrap(Context base) {
         return new ContextWrapper(base) {
-            @Override public int checkSelfPermission(String p)              { return 0; }
-            @Override public int checkPermission(String p, int pid, int uid) { return 0; }
-            @Override public int checkCallingPermission(String p)           { return 0; }
-            @Override public int checkCallingOrSelfPermission(String p)     { return 0; }
+            @Override public int checkSelfPermission(String p)              { return PackageManager.PERMISSION_GRANTED; }
+            @Override public int checkPermission(String p, int pid, int uid) { return PackageManager.PERMISSION_GRANTED; }
+            @Override public int checkCallingPermission(String p)           { return PackageManager.PERMISSION_GRANTED; }
+            @Override public int checkCallingOrSelfPermission(String p)     { return PackageManager.PERMISSION_GRANTED; }
             @Override public void enforceCallingOrSelfPermission(String p, String m) {}
             @Override public void enforceCallingPermission(String p, String m)       {}
             @Override public void enforcePermission(String p, int pid, int uid, String m) {}
