@@ -18,6 +18,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.core.content.ContextCompat;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -791,7 +792,7 @@ public class HotspotActivity extends AppCompatActivity {
         iconLp.setMarginEnd(dp(10));
         icon.setLayoutParams(iconLp);
         icon.setImageResource(R.drawable.ic_devices);
-        icon.setColorFilter(getResources().getColor(R.color.md_on_surface_variant));
+        icon.setColorFilter(ContextCompat.getColor(this, R.color.md_on_surface_variant));
 
         TextView tvName = new TextView(this);
         LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(
@@ -801,7 +802,7 @@ public class HotspotActivity extends AppCompatActivity {
                 ? c.name
                 : friendlyMacName(c.mac));
         tvName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        tvName.setTextColor(getResources().getColor(R.color.md_on_surface));
+        tvName.setTextColor(ContextCompat.getColor(this, R.color.md_on_surface));
         tvName.setSingleLine(true);
         tvName.setEllipsize(android.text.TextUtils.TruncateAt.END);
 
@@ -809,7 +810,7 @@ public class HotspotActivity extends AppCompatActivity {
         tvIp.setText(c.ip != null ? c.ip : c.mac);
         tvIp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvIp.setTypeface(android.graphics.Typeface.MONOSPACE);
-        tvIp.setTextColor(getResources().getColor(R.color.md_on_surface_variant));
+        tvIp.setTextColor(ContextCompat.getColor(this, R.color.md_on_surface_variant));
 
         row.addView(icon);
         row.addView(tvName);

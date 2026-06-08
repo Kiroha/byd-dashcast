@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.byd.dashcast">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- 1.2.30 — custom signature permission used by MirrorDaemon to protect
          the ACTION_DAEMON_READY broadcast that carries the daemon IBinder.

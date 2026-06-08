@@ -14,6 +14,7 @@ android {
     // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
     // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
     // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
+    namespace "com.byd.dashcast"
     compileSdkVersion 33
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
