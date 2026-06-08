@@ -1873,8 +1873,11 @@ public class MainActivity extends AppCompatActivity
                                 // can NPE the input forwarder.
                                 if (isFinishing() || isDestroyed()) return;
                                 mDaemonBinder = binder;
-                                if (mServiceBound && mClusterService != null) {
-                                    mClusterService.getInputForwarder().setDaemonBinder(binder);
+                                // Capture once — onServiceDisconnected() (main thread) can
+                                // null mClusterService concurrently with this background thread.
+                                final ClusterService svc = mClusterService;
+                                if (mServiceBound && svc != null) {
+                                    svc.getInputForwarder().setDaemonBinder(binder);
                                 }
                         // Restart the mirror if it is currently shown.
                         // v1.2.85 — was panelClusterControl (now fullscreen-only).
@@ -1884,9 +1887,9 @@ public class MainActivity extends AppCompatActivity
                                     // v1.2.55-beta — symmetric to the receiver path:
                                     // tear down any direct-path mirror so the daemon path
                                     // can take over and surface actual frames.
-                                    if (mClusterService != null) {
+                                    if (svc != null) {
                                         com.byd.dashcast.dashboard.ClusterMirrorManager mm =
-                                                mClusterService.getMirrorManager();
+                                                svc.getMirrorManager();
                                         if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
                                             AppLogger.i(TAG, "Daemon resolved late — restarting mirror via daemon");
                                             stopClusterMirror();

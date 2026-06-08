@@ -268,23 +268,25 @@ public final class LlmVoiceEngine {
         conn.setReadTimeout(15_000);
         conn.setDoOutput(true);
 
-        byte[] bodyBytes = body.toString().getBytes(StandardCharsets.UTF_8);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(bodyBytes);
-        }
+        try {
+            byte[] bodyBytes = body.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(bodyBytes);
+            }
 
-        int code = conn.getResponseCode();
-        if (code != HttpURLConnection.HTTP_OK) {
-            AppLogger.w(TAG, "TTS API HTTP " + code);
-            return null;
-        }
+            int code = conn.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) {
+                AppLogger.w(TAG, "TTS API HTTP " + code);
+                return null;
+            }
 
-        try (InputStream is = conn.getInputStream()) {
-            byte[] buf = new byte[4096];
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            int n;
-            while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
-            return baos.toByteArray();
+            try (InputStream is = conn.getInputStream()) {
+                byte[] buf = new byte[4096];
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                int n;
+                while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+                return baos.toByteArray();
+            }
         } finally {
             conn.disconnect();
         }
