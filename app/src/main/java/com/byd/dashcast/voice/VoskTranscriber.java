@@ -85,6 +85,7 @@ public final class VoskTranscriber {
     private volatile Model   mModel;
     private volatile boolean mModelLoading;
     private volatile boolean mListening;
+    private volatile boolean mPendingListen;
 
     public VoskTranscriber(Context ctx) {
         mCtx = ctx.getApplicationContext();
@@ -113,14 +114,15 @@ public final class VoskTranscriber {
      * Safe to call from any thread; re-entrant calls while already listening
      * are ignored.
      */
-    public void startListening() {
+    public synchronized void startListening() {
         if (mListening) {
             AppLogger.d(TAG, "startListening() ignored — already listening");
             return;
         }
         if (mModel == null) {
             if (mModelLoading) {
-                AppLogger.d(TAG, "startListening() — model still loading, queued");
+                mPendingListen = true;
+                AppLogger.d(TAG, "startListening() — model loading, queued");
                 return;
             }
             loadModelThenListen();
@@ -195,8 +197,9 @@ public final class VoskTranscriber {
     public static boolean deleteModel(Context ctx, boolean large) {
         String asset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
         File voskDir = ctx.getExternalFilesDir("vosk");
-        // Delete temp download file if present
+        // Delete temp download file and any partial extraction if present
         new File(voskDir, asset + ".download.tmp").delete();
+        deleteRecursive(new File(voskDir, asset + ".extracting"));
         File modelDir = new File(voskDir, asset);
         if (!modelDir.exists()) return true;
         return deleteRecursive(modelDir);
@@ -238,6 +241,10 @@ public final class VoskTranscriber {
                                 "Jarvis prêt — réessayez votre commande",
                                 android.widget.Toast.LENGTH_SHORT).show());
                 doListenViaServiceStream();
+                if (mPendingListen) {
+                    mPendingListen = false;
+                    startListening();
+                }
             } catch (Exception e) {
                 mModelLoading = false;
                 AppLogger.e(TAG, "Vosk model error: " + e.getMessage());
@@ -303,16 +310,22 @@ public final class VoskTranscriber {
             conn.disconnect();
         }
 
-        // ── Unzip — broadcast indeterminate (-1) during extraction ────────
+        // ── Unzip — extract to a temp dir, rename atomically on success only ─
+        // Prevents a partial extraction from being mistaken for a ready model:
+        // if interrupted, tmpExtract exists but the final mModelAsset dir does not,
+        // so the "am" guard in loadModelThenListen() correctly triggers a re-download.
         broadcastProgress(-1, 0, (int) (expectedBytes / 1024 / 1024));
         AppLogger.i(TAG, "Unzipping " + tmpZip.getName() + " ("
                 + (tmpZip.length() / 1024 / 1024) + " Mo)");
+        File tmpExtract = new File(destDir, mModelAsset + ".extracting");
+        deleteRecursive(tmpExtract);
+        tmpExtract.mkdirs();
         try (ZipInputStream zis = new ZipInputStream(
                 new BufferedInputStream(new FileInputStream(tmpZip), 65_536))) {
             ZipEntry entry;
             byte[] buf = new byte[65_536];
             while ((entry = zis.getNextEntry()) != null) {
-                File out = new File(destDir, entry.getName());
+                File out = new File(tmpExtract, entry.getName());
                 if (entry.isDirectory()) {
                     out.mkdirs();
                 } else {
@@ -325,6 +338,12 @@ public final class VoskTranscriber {
                 zis.closeEntry();
             }
         }
+        File finalModelDir = new File(destDir, mModelAsset);
+        deleteRecursive(finalModelDir);
+        if (!new File(tmpExtract, mModelAsset).renameTo(finalModelDir)) {
+            throw new IOException("Finalisation du modèle impossible : rename échoué");
+        }
+        deleteRecursive(tmpExtract);
         tmpZip.delete();
         AppLogger.i(TAG, "Unzip complete");
     }

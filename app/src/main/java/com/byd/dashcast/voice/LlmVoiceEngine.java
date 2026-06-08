@@ -108,6 +108,7 @@ public final class LlmVoiceEngine {
     private final VoiceCommandRouter   mFallback;
     private final Handler              mMain = new Handler(Looper.getMainLooper());    /** Guard: stop any previous TTS playback before starting a new one. */
     private MediaPlayer                mActiveMp;
+    private volatile boolean           mReleased = false;
     public LlmVoiceEngine(Context ctx) {
         mCtx     = ctx.getApplicationContext();
         mFallback = new VoiceCommandRouter(ctx);
@@ -135,6 +136,7 @@ public final class LlmVoiceEngine {
     /** Releases the fallback router (TTS engine). Call from owner's onDestroy. */
     public void release() {
         mFallback.release();
+        mReleased = true;
         mMain.post(() -> {
             if (mActiveMp != null) {
                 try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
@@ -302,6 +304,7 @@ public final class LlmVoiceEngine {
             }
             final File finalTmp = tmp;
             mMain.post(() -> {
+                if (mReleased) { finalTmp.delete(); return; }
                 // Stop any previous TTS still playing
                 if (mActiveMp != null) {
                     try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
