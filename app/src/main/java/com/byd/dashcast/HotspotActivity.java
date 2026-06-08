@@ -601,6 +601,9 @@ public class HotspotActivity extends AppCompatActivity {
             Pattern.compile("([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})");
     private static final Pattern P_NAME =
             Pattern.compile("deviceName[=:\\s]+([^,\\n\\r]+?)(?:,| deviceAddress| primary| status)");
+    private static final Pattern P_NEWLINE  = Pattern.compile("\\r?\\n");
+    private static final Pattern P_SPACES   = Pattern.compile("\\s+");
+    private static final Pattern P_IP_ADDR  = Pattern.compile("\\d{1,3}(?:\\.\\d{1,3}){3}");
 
     private static final class HClient {
         final String mac;
@@ -662,8 +665,8 @@ public class HotspotActivity extends AppCompatActivity {
         // BYD ROM, see the empty-clients bug report).
         final Map<String, String> mac2ip = new HashMap<>();
         final LinkedHashMap<String, String> arpPeers = new LinkedHashMap<>();
-        for (String line : arp.split("\\r?\\n")) {
-            String[] cols = line.trim().split("\\s+");
+        for (String line : P_NEWLINE.split(arp)) {
+            String[] cols = P_SPACES.split(line.trim());
             if (cols.length < 6) continue;
             String ip    = cols[0];
             String flags = cols[2];
@@ -671,7 +674,7 @@ public class HotspotActivity extends AppCompatActivity {
             String dev   = cols[5];
             if (!P_MAC.matcher(mac).matches()) continue;
             if ("00:00:00:00:00:00".equalsIgnoreCase(mac)) continue;
-            if (!ip.matches("\\d{1,3}(?:\\.\\d{1,3}){3}")) continue;
+            if (!P_IP_ADDR.matcher(ip).matches()) continue;
             String mlow = mac.toLowerCase(Locale.US);
             mac2ip.put(mlow, ip);
             // Flags 0x0 == incomplete entry (no reply yet); 0x2 = complete (connected).
@@ -695,7 +698,7 @@ public class HotspotActivity extends AppCompatActivity {
         final LinkedHashMap<String, HClient> byMac = new LinkedHashMap<>();
         boolean inClientList = false;
         String pendingName = null;
-        for (String raw : dumpsys.split("\\r?\\n")) {
+        for (String raw : P_NEWLINE.split(dumpsys)) {
             String line = raw.trim();
             String low  = line.toLowerCase(Locale.US);
 
@@ -743,14 +746,14 @@ public class HotspotActivity extends AppCompatActivity {
         // v1.2.44 — `ip neigh show` fallback. Format:
         //   192.168.49.2 dev p2p-wlan0-0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
         // Pick up STALE/DELAY/PROBE/REACHABLE on a peer interface; skip FAILED.
-        for (String line : neigh.split("\\r?\\n")) {
+        for (String line : P_NEWLINE.split(neigh)) {
             String low = line.toLowerCase(Locale.US);
             if (low.isEmpty() || low.startsWith("==")) continue;
             if (low.contains(" failed") || low.contains(" incomplete")) continue;
             int devIdx = low.indexOf(" dev ");
             if (devIdx < 0) continue;
             String afterDev = low.substring(devIdx + 5).trim();
-            String dev = afterDev.split("\\s+", 2)[0];
+            String dev = P_SPACES.split(afterDev.trim(), 2)[0];
             boolean onPeerInterface = dev.startsWith("p2p-") || dev.startsWith("p2p")
                     || dev.startsWith("ap") || dev.contains("ap0")
                     || dev.contains("softap") || dev.endsWith("-ap");
@@ -760,8 +763,8 @@ public class HotspotActivity extends AppCompatActivity {
             String mac = mm.group(1).toLowerCase(Locale.US);
             if ("00:00:00:00:00:00".equalsIgnoreCase(mac)) continue;
             if (byMac.containsKey(mac)) continue;
-            String ip = line.trim().split("\\s+", 2)[0];
-            if (!ip.matches("\\d{1,3}(?:\\.\\d{1,3}){3}")) ip = null;
+            String ip = P_SPACES.split(line.trim(), 2)[0];
+            if (!P_IP_ADDR.matcher(ip).matches()) ip = null;
             byMac.put(mac, new HClient(mac, null, ip));
         }
         return new ArrayList<>(byMac.values());
