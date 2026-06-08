@@ -86,6 +86,8 @@ public final class VoskTranscriber {
     private volatile boolean mModelLoading;
     private volatile boolean mListening;
     private volatile boolean mPendingListen;
+    private volatile boolean mReleaseRequested;
+    private final Object     mLifecycleLock = new Object();
 
     public VoskTranscriber(Context ctx) {
         mCtx = ctx.getApplicationContext();
@@ -133,10 +135,15 @@ public final class VoskTranscriber {
 
     /** Releases the Vosk model from memory. Call from the owner's onDestroy. */
     public void release() {
-        Model m = mModel;
-        mModel = null;
-        if (m != null) {
-            try { m.close(); } catch (Throwable ignore) {}
+        synchronized (mLifecycleLock) {
+            mReleaseRequested = true;
+            if (!mListening) {
+                Model m = mModel;
+                mModel = null;
+                if (m != null) try { m.close(); } catch (Throwable ignore) {}
+            }
+            // If mListening=true, an active session holds the model.
+            // doListenViaServiceStream's finally block closes it once the Recognizer is done.
         }
     }
 
@@ -357,11 +364,13 @@ public final class VoskTranscriber {
     // when silence or the max window is reached.
 
     private void doListenViaServiceStream() {
-        if (!VoiceService.isRunning()) {
-            AppLogger.w(TAG, "doListenViaServiceStream: VoiceService not running — skip");
-            return;
+        synchronized (mLifecycleLock) {
+            if (mReleaseRequested || !VoiceService.isRunning()) {
+                AppLogger.w(TAG, "doListenViaServiceStream: aborted — released or service not running");
+                return;
+            }
+            mListening = true;
         }
-        mListening = true;
         AppLogger.i(TAG, "Listening for command via service stream (max " + MAX_LISTEN_MS + " ms)…");
 
         final VoiceService.SampleConsumer prevConsumer = VoiceService.getSampleConsumer();
@@ -393,6 +402,7 @@ public final class VoskTranscriber {
             // Install our Vosk consumer; this pauses WakeWordEngine feed.
             VoiceService.setSampleConsumer((pcm, n) -> {
                 if (latch.getCount() == 0) return; // already done
+                if (mReleaseRequested) { latch.countDown(); return; }
 
                 // Feed PCM to Vosk (little-endian byte conversion)
                 byte[] bytes = new byte[n * 2];
@@ -438,10 +448,18 @@ public final class VoskTranscriber {
             AppLogger.e(TAG, "Vosk error: " + e.getMessage());
             broadcastError(e.getMessage());
         } finally {
-            // Always restore previous consumer and mark as idle
+            // Restore consumer, close Recognizer first, then model if release was requested.
+            // Order matters: Recognizer must be closed before Model to avoid use-after-free.
             VoiceService.setSampleConsumer(prevConsumer);
             if (reco != null) try { reco.close(); } catch (Throwable ignore) {}
-            mListening = false;
+            synchronized (mLifecycleLock) {
+                mListening = false;
+                if (mReleaseRequested) {
+                    Model m = mModel;
+                    mModel = null;
+                    if (m != null) try { m.close(); } catch (Throwable ignore) {}
+                }
+            }
         }
     }
 

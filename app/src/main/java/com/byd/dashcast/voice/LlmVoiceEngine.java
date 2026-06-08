@@ -112,6 +112,11 @@ public final class LlmVoiceEngine {
     public LlmVoiceEngine(Context ctx) {
         mCtx     = ctx.getApplicationContext();
         mFallback = new VoiceCommandRouter(ctx);
+        // Clean up .mp3 temp files orphaned by a previous crash
+        // (deleteOnExit() is unreliable on Android — process is killed, not cleanly exited).
+        File[] stale = mCtx.getCacheDir().listFiles(
+                (d, n) -> n.startsWith("jarvis_tts_") && n.endsWith(".mp3"));
+        if (stale != null) for (File f : stale) f.delete();
     }
 
     // ─── Public API ────────────────────────────────────────────────────────
@@ -189,6 +194,7 @@ public final class LlmVoiceEngine {
     // ─── LLM + TTS pipeline ────────────────────────────────────────────────
 
     private void routeOnBackground(String text, String apiKey) {
+        if (mReleased) return;
         try {
             // 1. Chat completion → JSON command
             String chatResponse = callChat(text, apiKey);

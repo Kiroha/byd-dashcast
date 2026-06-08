@@ -202,6 +202,8 @@ public final class VoiceService extends Service {
     @Override
     public void onDestroy() {
         stopCapture();
+        sSampleConsumer = null;
+        sTranscriber    = null;
         super.onDestroy();
     }
 
@@ -210,6 +212,10 @@ public final class VoiceService extends Service {
     @SuppressLint("MissingPermission")
     private void startCapture() {
         mErrorSignaled = false;
+        synchronized (PRE_ROLL_LOCK) {
+            sPreRollHead = 0;
+            sPreRollFull = false;
+        }
         final int channel = AudioFormat.CHANNEL_IN_MONO;
         final int format  = AudioFormat.ENCODING_PCM_16BIT;
         final int minBuf  = AudioRecord.getMinBufferSize(SAMPLE_RATE_HZ, channel, format);
