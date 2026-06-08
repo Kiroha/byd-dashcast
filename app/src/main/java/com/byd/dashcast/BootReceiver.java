@@ -12,6 +12,9 @@ import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 public class BootReceiver extends BroadcastReceiver {
 
+    private static final android.os.Handler sMain =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+
     @Override
     public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
@@ -124,7 +127,7 @@ public class BootReceiver extends BroadcastReceiver {
 
             if (installed) {
                 pending.incrementAndGet();
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                sMain.postDelayed(() -> {
                     try {
                         Intent it = new Intent();
                         it.setClassName("com.pyamsoft.tetherfi",

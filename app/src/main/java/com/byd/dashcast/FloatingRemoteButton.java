@@ -107,6 +107,14 @@ public class FloatingRemoteButton extends Service {
     // 1.2.30 \u2014 tracked so onDestroy() can dismiss the overlay dialog and avoid a
     // leaked TYPE_APPLICATION_OVERLAY window when the service tears down.
     private android.app.AlertDialog mQuickSwitchDialog;
+    // M2: reused snap-to-edge animator \u2014 avoids allocating ValueAnimator + DecelerateInterpolator
+    // on every drag release.
+    private android.animation.ValueAnimator mSnapAnimator;
+    private static final android.view.animation.DecelerateInterpolator DECELERATE =
+            new android.view.animation.DecelerateInterpolator();
+    // L3: cached prefs reference \u2014 getSharedPreferences() is a HashMap lookup but
+    // no need to repeat it on every long-press.
+    private android.content.SharedPreferences mPrefs;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -123,6 +131,7 @@ public class FloatingRemoteButton extends Service {
 
     @Override
     public void onDestroy() {
+        if (mSnapAnimator != null) { mSnapAnimator.cancel(); mSnapAnimator = null; }
         mDimHandler.removeCallbacksAndMessages(null);
         sInstance = null;
         // 1.2.30 — dismiss the quick-switch dialog if still showing, otherwise
@@ -189,6 +198,23 @@ public class FloatingRemoteButton extends Service {
         params.x = 12;
         params.y = 220;
 
+        mPrefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+
+        mSnapAnimator = android.animation.ValueAnimator.ofInt(0, 0);
+        mSnapAnimator.setDuration(250);
+        mSnapAnimator.setInterpolator(DECELERATE);
+        mSnapAnimator.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                params.x = (Integer) animation.getAnimatedValue();
+                try {
+                    if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params);
+                } catch (Exception ignored) {
+                    AppLogger.d(TAG, "updateViewLayout skipped: " + ignored.getMessage());
+                }
+            }
+        });
+
 badge.setOnTouchListener(new View.OnTouchListener() {
             private int   initX, initY;
             private float initTX, initTY;
@@ -249,21 +275,9 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                             // If params.x > halfWidth, it's closer to the LEFT edge.
                             int targetX = (params.x > halfWidth) ? (screenWidth - badge.getWidth()) : 0;
                             
-                            android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofInt(params.x, targetX);
-                            anim.setDuration(250);
-                            anim.setInterpolator(new android.view.animation.DecelerateInterpolator());
-                            anim.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
-                                @Override
-                                public void onAnimationUpdate(android.animation.ValueAnimator animation) {
-                                    params.x = (Integer) animation.getAnimatedValue();
-                                    try {
-                                        if (mFloatView != null) mWindowManager.updateViewLayout(mFloatView, params);
-                                    } catch (Exception ignored) {
-                                        AppLogger.d(TAG, "updateViewLayout skipped: " + ignored.getMessage());
-                                    }
-                                }
-                            });
-                            anim.start();
+                            if (mSnapAnimator.isRunning()) mSnapAnimator.cancel();
+                            mSnapAnimator.setIntValues(params.x, targetX);
+                            mSnapAnimator.start();
                         }
                         return true;
                 }
@@ -295,9 +309,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
     public static final String EXTRA_QUICK_SWITCH_PKG = "quick_switch_pkg";
 
     private void showQuickSwitchPopup() {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        String raw = prefs.getString(SettingsActivity.PREF_RECENT_APPS, "");
+        String raw = mPrefs.getString(SettingsActivity.PREF_RECENT_APPS, "");
         if (raw.isEmpty()) {
             android.widget.Toast.makeText(this,
                     getString(R.string.quick_switch_empty), android.widget.Toast.LENGTH_SHORT).show();

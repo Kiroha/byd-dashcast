@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -60,6 +61,17 @@ public class SysInfoActivity extends AppCompatActivity {
             ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss", Locale.getDefault()));
     private static final ThreadLocal<SimpleDateFormat> SDF_TIME_HM =
             ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm", Locale.getDefault()));
+
+    // H2: BYD reflection caches — Class.forName() is expensive on first call; results
+    // are stable per process lifetime (BYD SDK classes don't reload).
+    private static final ConcurrentHashMap<String, Class<?>> sBydClassCache =
+            new ConcurrentHashMap<>();
+    private static final java.util.Set<String> sBydClassNotFound =
+            java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+    // M4: PID lookup cache — pgrep forks a shell; cap refresh at 5s.
+    private static final long PID_TTL_MS = 5_000L;
+    private static final ConcurrentHashMap<String, long[]> sPidCache =
+            new ConcurrentHashMap<>();
 
     private TextView tvReport;
     private ScrollView scrollView;
@@ -419,13 +431,8 @@ public class SysInfoActivity extends AppCompatActivity {
 
         final File outFile = new File(outDir, filename);
         final String payload = mReport.toString();
-        // 1.2.30 — file write moved off the UI thread (StrictMode disk write +
-        // potential ANR if /sdcard is slow on DL2/DL5).
-        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "sysinfo-save");
-            t.setDaemon(true);
-            return t;
-        }).submit(new Runnable() { @Override public void run() {
+        // H1: reuse mReportExecutor instead of creating a new thread pool per save.
+        mReportExecutor.submit(new Runnable() { @Override public void run() {
             String error = null;
             try (FileWriter fw = new FileWriter(outFile)) {
                 fw.write(payload);
@@ -605,12 +612,27 @@ public class SysInfoActivity extends AppCompatActivity {
         return sb.toString();
     }
 
+    /** Cached Class.forName() — avoids repeated ClassLoader lookups for BYD SDK classes. */
+    private static Class<?> bydClass(String name) throws ClassNotFoundException {
+        if (sBydClassNotFound.contains(name)) throw new ClassNotFoundException(name);
+        Class<?> c = sBydClassCache.get(name);
+        if (c != null) return c;
+        try {
+            c = Class.forName(name);
+            sBydClassCache.put(name, c);
+            return c;
+        } catch (ClassNotFoundException e) {
+            sBydClassNotFound.add(name);
+            throw e;
+        }
+    }
+
     /** Calls a list of zero-arg getters on a BYD device and formats `key = value` lines. */
     private String probeBydCall(String label, String className, String[] methods) {
         StringBuilder sb = new StringBuilder();
         sb.append("  ── ").append(label).append("\n");
         try {
-            Class<?> cls = Class.forName(className);
+            Class<?> cls = bydClass(className);
             Method getInstance = cls.getMethod("getInstance", Context.class);
             Object dev = getInstance.invoke(null, getApplicationContext());
             if (dev == null) {
@@ -650,7 +672,7 @@ public class SysInfoActivity extends AppCompatActivity {
         for (String className : devices) {
             String shortName = className.substring(className.lastIndexOf('.') + 1);
             try {
-                Class<?> cls = Class.forName(className);
+                Class<?> cls = bydClass(className);
                 Method getInstance = cls.getMethod("getInstance", Context.class);
                 Object instance = getInstance.invoke(null, getApplicationContext());
                 sb.append(String.format("  %-35s %s\n",
@@ -772,7 +794,7 @@ public class SysInfoActivity extends AppCompatActivity {
     private String[] fetchBydVehicleInfo() {
         String headline = "", subtitle = "";
         try {
-            Class<?> cls = Class.forName("android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
+            Class<?> cls = bydClass("android.hardware.bydauto.bodywork.BYDAutoBodyworkDevice");
             Method getInstance = cls.getMethod("getInstance", Context.class);
             Object dev = getInstance.invoke(null, getApplicationContext());
             if (dev != null) {
@@ -1182,6 +1204,9 @@ public class SysInfoActivity extends AppCompatActivity {
 
     /** Returns the first PID matching the given pattern via `pgrep -f`, or -1. */
     private static int pidOf(String pattern) {
+        long now = android.os.SystemClock.elapsedRealtime();
+        long[] cached = sPidCache.get(pattern);
+        if (cached != null && (now - cached[1]) < PID_TTL_MS) return (int) cached[0];
         Process p = null;
         try {
             p = new ProcessBuilder("sh", "-c", "pgrep -f " + pattern + " | head -n 1")
@@ -1194,16 +1219,20 @@ public class SysInfoActivity extends AppCompatActivity {
             // child may hang in I/O wait forever. Cap at 2s + destroyForcibly.
             if (!p.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) {
                 p.destroyForcibly();
+                sPidCache.put(pattern, new long[]{-1, now});
                 return -1;
             }
             if (line != null && !line.trim().isEmpty()) {
-                return Integer.parseInt(line.trim());
+                int pid = Integer.parseInt(line.trim());
+                sPidCache.put(pattern, new long[]{pid, now});
+                return pid;
             }
         } catch (Throwable t) {
             // pgrep may not be available on all ROMs; ignore.
         } finally {
             if (p != null) try { p.destroy(); } catch (Throwable ignored) {}
         }
+        sPidCache.put(pattern, new long[]{-1, now});
         return -1;
     }
 
