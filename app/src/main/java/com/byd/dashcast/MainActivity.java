@@ -227,6 +227,8 @@ public class MainActivity extends AppCompatActivity
     // Shared handler for state-poll runnables (was also used by the screenshot
     // mirror fallback removed in 1.2.29 — kept for startStatePoll/stopStatePoll).
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
+    // Guard for autoApplyInsetsIfNeeded: only one resize thread at a time.
+    private volatile Thread mAutoResizeThread;
 
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private IBinder mDaemonBinder = null;
@@ -352,11 +354,6 @@ public class MainActivity extends AppCompatActivity
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
                 new IntentFilter(com.byd.dashcast.daemon.MirrorDaemon.ACTION_DAEMON_READY));
-
-        // v1.4.0 — Voice command receiver (dispatched by VoiceCommandRouter via LocalBroadcastManager)
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                .registerReceiver(mVoiceCommandReceiver,
-                        new IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND));
 
         // Floating 📺 mirror button — started once, visibility controlled by show()/hide()
         startService(new Intent(this, FloatingRemoteButton.class));
@@ -1080,6 +1077,12 @@ public class MainActivity extends AppCompatActivity
             // through mPendingAppAfterActivation once the service is up.
         }
         startStatePoll();
+        // Register voice-command receiver here (onStart) so it is only active while
+        // the Activity is visible. Moved from onCreate/onDestroy to avoid firing
+        // cluster state mutations while the Activity is in the background.
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .registerReceiver(mVoiceCommandReceiver,
+                        new IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND));
     }
 
     @Override
@@ -1095,6 +1098,10 @@ public class MainActivity extends AppCompatActivity
         if (mServiceBound && mClusterService != null) {
             mClusterService.setListener(null);
         }
+        try {
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                    .unregisterReceiver(mVoiceCommandReceiver);
+        } catch (Throwable ignore) {}
     }
 
     @Override
@@ -1108,10 +1115,6 @@ public class MainActivity extends AppCompatActivity
         // postDelayed that individual removeCallbacks() calls may have missed).
         mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
-        try {
-            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                    .unregisterReceiver(mVoiceCommandReceiver);
-        } catch (Throwable ignore) {}
         if (mServiceBound) {
             unbindService(mServiceConn);
             mServiceBound  = false;
@@ -2198,28 +2201,35 @@ public class MainActivity extends AppCompatActivity
                     } else {
                         AppLogger.w(TAG, "autoApplyInsets: cluster display not connected — wm overscan skipped");
                     }
-                    new Thread(new Runnable() {
-                        @Override public void run() {
-                            // LOT 4 — Waze taskId race fix: dumpsys activity recents
-                            // does not always list a freshly-launched task within the
-                            // initial 500 ms window (observed on field log
-                            // BYD_RE_Sniffer_20260523_204155.txt: Waze launched at
-                            // 20:42:25.669 but absent from recents at 20:42:26.696,
-                            // 1027 ms later → resizeActiveTask aborted with
-                            // taskId<=0). Retry up to 3 times with 500 ms backoff.
-                            int taskId = -1;
-                            for (int attempt = 1; attempt <= 3; attempt++) {
-                                taskId = svc.findRunningTaskId(pkg);
-                                if (taskId > 0) break;
-                                if (!pkg.equals(mCurrentDashboardPkg)) return; // user switched app
-                                AppLogger.d(TAG, "autoApplyInsets: taskId<=0 for " + pkg
-                                        + " (attempt " + attempt + "/3) — retrying in 500 ms");
-                                try { Thread.sleep(500); }
-                                catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                    Thread prev = mAutoResizeThread;
+                    if (prev != null && prev.isAlive()) {
+                        AppLogger.d(TAG, "autoApplyInsets: resize thread still running, skipped for " + pkg);
+                    } else {
+                        Thread t = new Thread(new Runnable() {
+                            @Override public void run() {
+                                // LOT 4 — Waze taskId race fix: dumpsys activity recents
+                                // does not always list a freshly-launched task within the
+                                // initial 500 ms window (observed on field log
+                                // BYD_RE_Sniffer_20260523_204155.txt: Waze launched at
+                                // 20:42:25.669 but absent from recents at 20:42:26.696,
+                                // 1027 ms later → resizeActiveTask aborted with
+                                // taskId<=0). Retry up to 3 times with 500 ms backoff.
+                                int taskId = -1;
+                                for (int attempt = 1; attempt <= 3; attempt++) {
+                                    taskId = svc.findRunningTaskId(pkg);
+                                    if (taskId > 0) break;
+                                    if (!pkg.equals(mCurrentDashboardPkg)) return; // user switched app
+                                    AppLogger.d(TAG, "autoApplyInsets: taskId<=0 for " + pkg
+                                            + " (attempt " + attempt + "/3) — retrying in 500 ms");
+                                    try { Thread.sleep(500); }
+                                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                                }
+                                svc.resizeActiveTask(taskId, pkg);
                             }
-                            svc.resizeActiveTask(taskId, pkg);
-                        }
-                    }, "auto-resize-thread").start();
+                        }, "auto-resize-thread");
+                        mAutoResizeThread = t;
+                        t.start();
+                    }
                 }
             }
         }, 500);

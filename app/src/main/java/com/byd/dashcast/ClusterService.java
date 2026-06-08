@@ -109,6 +109,9 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     // Holds the pending launchOnDashboard callback so onDestroy() can fire it
     // with false when removeCallbacksAndMessages() cancels the postDelayed Runnable.
     private LaunchCallback         mPendingDashboardCallback;
+    // Runnable reference for the 2-second postDelayed so a second launchOnDashboard
+    // call can cancel the first before it fires (double-tap within the 2s window).
+    private Runnable               mPendingLaunchRunnable;
     // Reusable handler on the main thread (replaces ephemeral new Handler() calls).
     private final android.os.Handler mMainHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -872,7 +875,10 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                             + " taskId=" + taskId + " → display=" + targetDisplayId + " OK");
 
                     if (targetDisplayId > 0) {
-                        Thread.sleep(300); // let WM settle after the display move
+                        // let WM settle after the display move; isolated catch so
+                        // InterruptedException does not reach the outer catch(Exception)
+                        // which would wrongly trigger fallbackLaunch on a successful move.
+                        try { Thread.sleep(300); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 
                         // WINDOWING_MODE_FREEFORM = 5
                         try {
@@ -966,11 +972,22 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // For the direct path (tap app without going through activateCluster),
         // activateClusterDisplay() was called at service startup → Qt already in standby.
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → " + packageName);
+        // Cancel any pending launch from a previous call within the 2-s window so
+        // the superseded callback is never silently dropped (double-tap scenario).
+        if (mPendingLaunchRunnable != null) {
+            mMainHandler.removeCallbacks(mPendingLaunchRunnable);
+            mPendingLaunchRunnable = null;
+            if (mPendingDashboardCallback != null) {
+                LaunchCallback prev = mPendingDashboardCallback;
+                mPendingDashboardCallback = null;
+                prev.onResult(false);
+            }
+        }
         mPendingDashboardCallback = callback;
-        mMainHandler.postDelayed(new Runnable() {
+        mPendingLaunchRunnable = new Runnable() {
             @Override public void run() {
-                // Clear the pending-callback field first so onDestroy() does not
-                // double-fire it if the service is destroyed after this point.
+                // Clear tracking fields first so onDestroy() does not double-fire.
+                mPendingLaunchRunnable = null;
                 mPendingDashboardCallback = null;
                 // Direct launch via IActivityManager on the Freedom display (proven v2.29).
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
@@ -1039,7 +1056,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     }
                 }
             }
-        }, 2000);
+        };
+        mMainHandler.postDelayed(mPendingLaunchRunnable, 2000);
     }
 
     /**
