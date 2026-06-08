@@ -224,6 +224,13 @@ public class MainActivity extends AppCompatActivity
     // Grace period check for state poll
     private long         mLastLaunchTime = 0;
 
+    // Search debounce — avoids calling applyFilter on every keystroke.
+    private String   mPendingSearchQuery = null;
+    private final Runnable mSearchDebounce = () -> {
+        if (mPendingSearchQuery != null && mAdapter != null)
+            mAdapter.filter(mPendingSearchQuery);
+    };
+
     // Shared handler for state-poll runnables (was also used by the screenshot
     // mirror fallback removed in 1.2.29 — kept for startStatePoll/stopStatePoll).
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
@@ -411,11 +418,13 @@ public class MainActivity extends AppCompatActivity
         
         rvApps.setAdapter(mAdapter);
 
-        // Search bar
+        // Search bar — 150ms debounce avoids calling applyFilter on every keystroke.
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                mAdapter.filter(s.toString());
+                mPendingSearchQuery = s.toString();
+                mScreenshotHandler.removeCallbacks(mSearchDebounce);
+                mScreenshotHandler.postDelayed(mSearchDebounce, 150L);
             }
             @Override public void afterTextChanged(Editable s) {}
         });

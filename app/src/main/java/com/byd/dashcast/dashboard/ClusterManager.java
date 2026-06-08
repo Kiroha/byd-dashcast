@@ -372,7 +372,9 @@ public class ClusterManager {
             final DisplayReadyCallback callback,
             final long[] pollCount,
             long delayMs) {
-        mHandler.postDelayed(new Runnable() {
+        // Single Runnable allocated per activation; reschedules itself via postDelayed(this, …)
+        // instead of the previous recursive pattern that allocated a new Runnable every 500ms.
+        Runnable pollRunnable = new Runnable() {
             @Override public void run() {
                 pollCount[0]++;
                 if (pollCount[0] * POLL_INTERVAL_MS >= CLUSTER_DISPLAY_TIMEOUT_MS) return;
@@ -387,10 +389,11 @@ public class ClusterManager {
                     notifyProjectionActive();
                     callback.onDisplayReady(found, found.getDisplayId());
                 } else {
-                    scheduleDisplayPoll(dm, listenerHolder, callback, pollCount, POLL_INTERVAL_MS);
+                    mHandler.postDelayed(this, POLL_INTERVAL_MS);
                 }
             }
-        }, delayMs == 0 ? POLL_INTERVAL_MS : delayMs);
+        };
+        mHandler.postDelayed(pollRunnable, delayMs == 0 ? POLL_INTERVAL_MS : delayMs);
     }
 
     // ── Warm path helper ──────────────────────────────────────────────────────

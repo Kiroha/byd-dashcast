@@ -92,6 +92,9 @@ public final class VoiceService extends Service {
     private Thread           mCaptureThread;
     private AudioRecord      mRecord;
     private volatile boolean mErrorSignaled;
+    // Pre-allocated level broadcast intent — reused on every 50ms tick.
+    // LocalBroadcastManager delivers synchronously so reuse is safe.
+    private final Intent mLevelIntent = new Intent(ACTION_LEVEL);
 
     /** Singleton "is running" probe used by the UI to render the correct button. */
     private static volatile boolean sIsRunning;
@@ -302,13 +305,12 @@ public final class VoiceService extends Service {
             long now = SystemClock.elapsedRealtime();
             if (now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {
                 lastBroadcastAt = now;
-                Intent i = new Intent(ACTION_LEVEL);
-                i.putExtra(EXTRA_RMS, rms);
-                i.putExtra(EXTRA_PEAK, peak);
-                i.putExtra(EXTRA_CLIP, clipCount);
-                i.putExtra(EXTRA_FRAMES, frameCount);
-                i.putExtra(EXTRA_RUN_MS, now - startedAt);
-                LocalBroadcastManager.getInstance(this).sendBroadcast(i);
+                mLevelIntent.putExtra(EXTRA_RMS, rms);
+                mLevelIntent.putExtra(EXTRA_PEAK, peak);
+                mLevelIntent.putExtra(EXTRA_CLIP, clipCount);
+                mLevelIntent.putExtra(EXTRA_FRAMES, frameCount);
+                mLevelIntent.putExtra(EXTRA_RUN_MS, now - startedAt);
+                LocalBroadcastManager.getInstance(this).sendBroadcast(mLevelIntent);
             }
         }
         AppLogger.i(TAG, "Capture loop ended — frames=" + frameCount + " clip=" + clipCount);

@@ -35,6 +35,37 @@ public class ClusterMirrorManager {
     /** Guard to prevent repeated costly reflection calls if unlockHiddenApis is called more than once. */
     private static final AtomicBoolean sHiddenApisUnlocked = new AtomicBoolean(false);
 
+    // ── Cached reflection Methods — resolved once, reused on every mirror start ──────────────
+    private static volatile boolean  sMirrorMethodsCached     = false;
+    private static Method sCachedGetLayerStack;
+    private static Method sCachedCreateDisplay;
+    private static Method sCachedSetDisplaySurface;
+    private static Method sCachedSetDisplayLayerStack;
+    private static Method sCachedSetDisplayProjection;
+    private static Method sCachedDestroyDisplay;
+
+    private static synchronized void ensureMirrorMethodsCached() throws Exception {
+        if (sMirrorMethodsCached) return;
+        sCachedGetLayerStack = Display.class.getDeclaredMethod("getLayerStack");
+        sCachedGetLayerStack.setAccessible(true);
+        Class<?> scClass = Class.forName("android.view.SurfaceControl");
+        sCachedCreateDisplay = scClass.getDeclaredMethod("createDisplay", String.class, boolean.class);
+        sCachedCreateDisplay.setAccessible(true);
+        sCachedDestroyDisplay = scClass.getDeclaredMethod("destroyDisplay", IBinder.class);
+        sCachedDestroyDisplay.setAccessible(true);
+        Class<?> txClass = Class.forName("android.view.SurfaceControl$Transaction");
+        sCachedSetDisplaySurface = txClass.getDeclaredMethod("setDisplaySurface",
+                IBinder.class, Surface.class);
+        sCachedSetDisplaySurface.setAccessible(true);
+        sCachedSetDisplayLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
+                IBinder.class, int.class);
+        sCachedSetDisplayLayerStack.setAccessible(true);
+        sCachedSetDisplayProjection = txClass.getDeclaredMethod("setDisplayProjection",
+                IBinder.class, int.class, Rect.class, Rect.class);
+        sCachedSetDisplayProjection.setAccessible(true);
+        sMirrorMethodsCached = true;
+    }
+
     // ── SurfaceControl mirror token ───────────────────────────────────────────────
     private IBinder mMirrorDisplayToken = null;
     // Audit batch 2 — removed dead field mMirrorSurface (was assigned in
@@ -137,12 +168,12 @@ public class ClusterMirrorManager {
 
         // ── SurfaceControl mirror attempt ────────────────────────────────────
         try {
+            ensureMirrorMethodsCached();
+
             // 1. Cluster layer stack (@hide API)
             int layerStack = 0;
             try {
-                Method getLayerStack = Display.class.getDeclaredMethod("getLayerStack");
-                getLayerStack.setAccessible(true);
-                layerStack = (Integer) getLayerStack.invoke(clusterDisplay);
+                layerStack = (Integer) sCachedGetLayerStack.invoke(clusterDisplay);
                 AppLogger.d(TAG, "Cluster layerStack=" + layerStack);
             } catch (Exception e) {
                 // On some ROMs layerStack == displayId
@@ -152,11 +183,7 @@ public class ClusterMirrorManager {
             layerStack = applyDl5LayerStackOverride(ctx, layerStack);
 
             // 2. Create a display token for our mirror
-            Class<?> scClass = Class.forName("android.view.SurfaceControl");
-            Method createDisplay = scClass.getDeclaredMethod("createDisplay",
-                    String.class, boolean.class);
-            createDisplay.setAccessible(true);
-            mMirrorDisplayToken = (IBinder) createDisplay.invoke(null,
+            mMirrorDisplayToken = (IBinder) sCachedCreateDisplay.invoke(null,
                     "mybyd_preview_mirror", false);
             if (mMirrorDisplayToken == null) {
                 throw new RuntimeException("SurfaceControl.createDisplay → null");
@@ -177,25 +204,12 @@ public class ClusterMirrorManager {
             mProjOffsetY = offsetY;
             mProjScale   = scale;
 
-            // 4. SurfaceControl Transaction (@hide methods)
+            // 4. SurfaceControl Transaction (@hide methods — cached)
             SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
-            Class<?> txClass = tx.getClass();
 
-            Method setDisplaySurface = txClass.getDeclaredMethod("setDisplaySurface",
-                    IBinder.class, Surface.class);
-            setDisplaySurface.setAccessible(true);
-
-            Method setDisplayLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
-                    IBinder.class, int.class);
-            setDisplayLayerStack.setAccessible(true);
-
-            Method setDisplayProjection = txClass.getDeclaredMethod("setDisplayProjection",
-                    IBinder.class, int.class, Rect.class, Rect.class);
-            setDisplayProjection.setAccessible(true);
-
-            setDisplayLayerStack.invoke(tx, mMirrorDisplayToken, layerStack);
-            setDisplaySurface.invoke(tx, mMirrorDisplayToken, targetSurface);
-            setDisplayProjection.invoke(tx, mMirrorDisplayToken, 0, srcRect, destRect);
+            sCachedSetDisplayLayerStack.invoke(tx, mMirrorDisplayToken, layerStack);
+            sCachedSetDisplaySurface.invoke(tx, mMirrorDisplayToken, targetSurface);
+            sCachedSetDisplayProjection.invoke(tx, mMirrorDisplayToken, 0, srcRect, destRect);
             tx.apply();
 
             mMirrorActive  = true;
@@ -245,9 +259,8 @@ public class ClusterMirrorManager {
         int clusterDisplayId = (clusterDisplay != null) ? clusterDisplay.getDisplayId() : 2;
         int layerStack;
         try {
-            Method getLayerStack = Display.class.getDeclaredMethod("getLayerStack");
-            getLayerStack.setAccessible(true);
-            layerStack = (Integer) getLayerStack.invoke(clusterDisplay);
+            ensureMirrorMethodsCached();
+            layerStack = (Integer) sCachedGetLayerStack.invoke(clusterDisplay);
         } catch (Exception e) {
             layerStack = clusterDisplayId;
             AppLogger.w(TAG, "getLayerStack failed → fallback layerStack=" + layerStack);
@@ -386,11 +399,8 @@ public class ClusterMirrorManager {
     private void destroyMirrorToken() {
         if (mMirrorDisplayToken != null) {
             try {
-                Class<?> scClass = Class.forName("android.view.SurfaceControl");
-                Method destroyDisplay = scClass.getDeclaredMethod("destroyDisplay",
-                        IBinder.class);
-                destroyDisplay.setAccessible(true);
-                destroyDisplay.invoke(null, mMirrorDisplayToken);
+                ensureMirrorMethodsCached();
+                sCachedDestroyDisplay.invoke(null, mMirrorDisplayToken);
             } catch (Exception e) {
                 AppLogger.w(TAG, "destroyDisplay via reflection failed: " + e.getMessage());
             }

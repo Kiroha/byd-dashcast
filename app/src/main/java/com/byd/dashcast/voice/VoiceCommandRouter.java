@@ -16,6 +16,8 @@ import com.byd.dashcast.AppLogger;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
@@ -87,6 +89,12 @@ public final class VoiceCommandRouter {
     private volatile TextToSpeech mTts;
     private volatile boolean   mTtsReady;
     private long               mLastSpeakAt;  // dedup guard
+    // Single-thread executor reused for all package-resolve tasks (avoids new Thread per command).
+    private final ExecutorService mResolveExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "voice-pkg-resolve");
+        t.setDaemon(true);
+        return t;
+    });
 
     public VoiceCommandRouter(Context ctx) {
         mCtx = ctx.getApplicationContext();
@@ -154,7 +162,7 @@ public final class VoiceCommandRouter {
             case LAUNCH_APP:
                 final String appLabel = launchLabel;
                 // resolvePackage() iterates all installed apps — too slow for the main thread.
-                new Thread(() -> {
+                mResolveExecutor.execute(() -> {
                     String pkg = resolvePackage(appLabel);
                     if (pkg != null) {
                         speak("Lancement de " + appLabel + " sur le cluster.");
@@ -163,7 +171,7 @@ public final class VoiceCommandRouter {
                         speak("Application non trouvée : " + appLabel);
                         AppLogger.w(TAG, "LAUNCH_APP: no package found for label=\"" + appLabel + "\"");
                     }
-                }, "voice-pkg-resolve").start();
+                });
                 break;
             default:
                 speak("Commande non reconnue : " + text);
@@ -173,8 +181,9 @@ public final class VoiceCommandRouter {
         }
     }
 
-    /** Releases TTS engine. Call from owner's onDestroy. */
+    /** Releases TTS engine and resolve executor. Call from owner's onDestroy. */
     public void release() {
+        mResolveExecutor.shutdown();
         if (mTts != null) {
             mTts.stop();
             mTts.shutdown();
