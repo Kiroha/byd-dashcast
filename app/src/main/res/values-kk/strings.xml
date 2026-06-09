@@ -569,4 +569,8 @@
     <string name="fission_editor_edit">Өңдеу</string>
     <string name="fission_editor_delete">Жою</string>
     <string name="fission_open">Fission</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Орналасуларды басқару</string>
+    <string name="layout_manager_new">Жаңа орналасу</string>
+    <string name="layout_canvas_hint">Аймақ салу үшін сүйреңіз</string>
 </resources>

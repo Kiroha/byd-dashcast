@@ -578,4 +578,8 @@
     <string name="diag_dl5_cluster_test_vd_only_dl5">Test potoku VD jest dostępny tylko dla DiLink 5.</string>
     <string name="diag_dl5_cluster_test_vd_pick_title">Wybierz aplikację do testowania</string>
     <string name="diag_dl5_cluster_test_vd_pick_empty">Nie znaleziono żadnych uruchamialnych aplikacji.</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Menedżer układów</string>
+    <string name="layout_manager_new">Nowy układ</string>
+    <string name="layout_canvas_hint">Przeciągnij, aby narysować strefę</string>
 </resources>
