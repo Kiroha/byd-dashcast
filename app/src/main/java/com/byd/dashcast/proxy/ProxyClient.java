@@ -1079,6 +1079,38 @@ public final class ProxyClient {
     }
 
     /**
+     * Write an integer value to a CAN <em>setting</em> feature ID via
+     * {@code BYDAutoSettingDevice} inside the daemon.
+     *
+     * <p>Required for activating the navigation screen on the instrument cluster:
+     * call {@code canSettingInt(CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS, 3)}
+     * immediately after {@code canNaviStatus(NAVI_STATUS_ACTIVE)}.
+     *
+     * @param featureId raw BYD CAN setting feature constant
+     * @param value     integer to write
+     * @return SDK result code (0 = success).
+     */
+    public static int canSettingInt(int featureId, int value) throws ProxyException {
+        return callWithRetry("canSettingInt", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeInt(featureId);
+                data.writeInt(value);
+                b.transact(ProxyDaemonContract.TXN_CAN_SETTING_INT, data, reply, 0);
+                reply.readException();
+                return reply.readInt();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        });
+    }
+
+    /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
      * typed verbs: the old daemon process keeps the previous APK's
