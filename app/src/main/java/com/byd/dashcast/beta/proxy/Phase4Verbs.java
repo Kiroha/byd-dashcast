@@ -37,7 +37,6 @@ public final class Phase4Verbs {
     private static volatile Method sGetTasks;
     private static volatile Method sMoveTaskToDisplay;
     private static volatile Method sResizeTask;
-    private static volatile int    sResizeTaskParamCount = -1;
 
     // ─── cached reflection (lazy, double-checked) ──────────────────────────
 
@@ -724,11 +723,10 @@ public final class Phase4Verbs {
                 }
                 if (m != null) {
                     sResizeTask = m;
-                    sResizeTaskParamCount = m.getParameterTypes().length;
                 }
             }
             if (m != null) {
-                args = (sResizeTaskParamCount == 3)
+                args = (m.getParameterTypes().length == 3)
                         ? new Object[]{taskId, bounds, 1}
                         : new Object[]{taskId, bounds};
             }
