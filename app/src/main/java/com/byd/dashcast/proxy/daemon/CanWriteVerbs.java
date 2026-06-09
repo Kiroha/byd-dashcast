@@ -71,6 +71,13 @@ public final class CanWriteVerbs {
     /** Advanced distance-to-target (secondary / advanced HUD variant). */
     public static final int INSTRUMENT_DISTANCE_TARGET_AHEAD = 1139834904; // 0x43EC0018
 
+    // ─── BYDAutoSettingDevice feature IDs ────────────────────────────────
+
+    /** Activates the navigation display lane on the instrument cluster screen.
+     *  Lives on {@code BYDAutoSettingDevice} (NOT InstrumentDevice).
+     *  Set to value {@code 3} when navigation starts; not cleared on stop. */
+    public static final int SETTING_NAVI_SCREEN_STATUS = 1276174357; // 0x4C1A0015
+
     // ─── Navigation status values ─────────────────────────────────────────
 
     /** Value for {@link #INSTRUMENT_SEND_NAVI_STATUS}: navigation active. */
@@ -81,11 +88,13 @@ public final class CanWriteVerbs {
 
     // ─── Reflection caches (double-checked locking, process-lifetime) ─────
 
-    private static volatile Object  sDevice;         // BYDAutoInstrumentDevice singleton
-    private static volatile Class<?>  sEvClass;       // BYDAutoEventValue Class
-    private static volatile Field   sIntField;        // BYDAutoEventValue.intValue
-    private static volatile Field   sBytesField;      // BYDAutoEventValue.bufferDataValue
-    private static volatile Method  sSetMethod;       // device.set(int[], BYDAutoEventValue)
+    private static volatile Object   sDevice;          // BYDAutoInstrumentDevice singleton
+    private static volatile Object   sSettingDevice;   // BYDAutoSettingDevice singleton
+    private static volatile Class<?> sEvClass;         // BYDAutoEventValue Class
+    private static volatile Field    sIntField;        // BYDAutoEventValue.intValue
+    private static volatile Field    sBytesField;      // BYDAutoEventValue.bufferDataValue
+    private static volatile Method   sSetMethod;       // InstrumentDevice.set(int[], BYDAutoEventValue)
+    private static volatile Method   sSettingSetMethod;// SettingDevice.set(int[], BYDAutoEventValue)
 
     // ─── Public verbs ─────────────────────────────────────────────────────
 
@@ -121,6 +130,30 @@ public final class CanWriteVerbs {
         Object ev = evClass.newInstance();
         ensureBytesField().set(ev, data);
         return (int) ensureSetMethod().invoke(sDevice, new int[]{featureId}, ev);
+    }
+
+    /**
+     * Write an integer value to a CAN <em>setting</em> feature via
+     * {@code BYDAutoSettingDevice.set(int[], BYDAutoEventValue)}.
+     *
+     * <p>The setting device is a separate BYD hardware abstraction from
+     * {@code BYDAutoInstrumentDevice}. It is required for features such as
+     * {@link #SETTING_NAVI_SCREEN_STATUS} (1276174357) which activate the
+     * navigation screen on the cluster display. Mirrors the
+     * {@code CarControlImpl.setSettingFeatureValue} path in OpenBYD 2.2.
+     *
+     * @param wrappedCtx permission-bypass context (must grant all permissions)
+     * @param featureId  raw CAN setting feature ID (see constants above)
+     * @param value      integer value to write
+     * @return SDK result code: 0 = success
+     * @throws Throwable on reflection failure or if the SDK rejects the call
+     */
+    public static int settingSetInt(Context wrappedCtx, int featureId, int value) throws Throwable {
+        ensureSettingDevice(wrappedCtx);
+        Class<?> evClass = ensureEvClass();
+        Object ev = evClass.newInstance();
+        ensureIntField().set(ev, value);
+        return (int) ensureSettingSetMethod().invoke(sSettingDevice, new int[]{featureId}, ev);
     }
 
     // ─── Reflection initialisation (call order: device → evClass → fields/method) ─
@@ -198,6 +231,43 @@ public final class CanWriteVerbs {
             if (m == null) throw new NoSuchMethodException(
                     "no set(int[], BYDAutoEventValue) on " + device.getClass().getName());
             sSetMethod = m;
+            return m;
+        }
+    }
+
+    private static void ensureSettingDevice(Context ctx) throws Throwable {
+        if (sSettingDevice != null) return;
+        synchronized (CanWriteVerbs.class) {
+            if (sSettingDevice != null) return;
+            Class<?> cls = Class.forName(
+                    "android.hardware.bydauto.setting.BYDAutoSettingDevice");
+            Object d = cls.getMethod("getInstance", Context.class).invoke(null, ctx);
+            if (d == null) throw new IllegalStateException(
+                    "BYDAutoSettingDevice.getInstance() returned null");
+            sSettingDevice = d;
+        }
+    }
+
+    private static Method ensureSettingSetMethod() throws Throwable {
+        Method m = sSettingSetMethod;
+        if (m != null) return m;
+        synchronized (CanWriteVerbs.class) {
+            m = sSettingSetMethod;
+            if (m != null) return m;
+            Object device = sSettingDevice;
+            if (device == null) throw new IllegalStateException("setting device not initialised");
+            Class<?> evClass = ensureEvClass();
+            for (Method cand : device.getClass().getMethods()) {
+                if (!"set".equals(cand.getName())) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length == 2 && pt[0] == int[].class && pt[1] == evClass) {
+                    m = cand;
+                    break;
+                }
+            }
+            if (m == null) throw new NoSuchMethodException(
+                    "no set(int[], BYDAutoEventValue) on " + device.getClass().getName());
+            sSettingSetMethod = m;
             return m;
         }
     }

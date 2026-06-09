@@ -268,6 +268,21 @@
             android:exported="false"
             android:foregroundServiceType="microphone"/>
 
+        <!-- v1.4.11-beta — HUD navigation: parses Google Maps / Waze navigation
+             notifications to drive the BYD cluster HUD via CanBusController.
+             Requires the user to grant "Notification access" once in Settings
+             (Special app access → Notification access → DashCast).
+             android:permission guards so only the system can bind to this service. -->
+        <service
+            android:name=".hud.MapNotificationListenerService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
+
         <!-- OTA: receives PackageInstaller session result -->
         <receiver
             android:name=".InstallResultReceiver"

@@ -114,4 +114,12 @@ public final class ProxyDaemonContract {
      *  Write a byte buffer to any CAN instrument feature ID (e.g. street name UTF-8).
      *  Returns the SDK result code (0 = INSTRUMENT_COMMAND_SUCCESS). */
     public static final int TXN_CAN_INSTRUMENT_BYTES    = IBinder.FIRST_CALL_TRANSACTION + 17; // 18
+
+    /** {@code int featureId, int value} → {@code int resultCode}.
+     *  Write an integer value to a CAN <em>setting</em> feature ID via
+     *  {@code BYDAutoSettingDevice.set(int[], BYDAutoEventValue)}.
+     *  Required for {@code SET_NAVI_SCREEN_STATUS_SET} (1276174357 → value 3)
+     *  which activates the navigation lane on the instrument cluster display;
+     *  that feature lives on the SettingDevice, not InstrumentDevice. */
+    public static final int TXN_CAN_SETTING_INT         = IBinder.FIRST_CALL_TRANSACTION + 18; // 19
 }

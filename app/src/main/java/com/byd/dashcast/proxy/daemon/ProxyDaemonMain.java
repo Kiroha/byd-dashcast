@@ -57,8 +57,9 @@ public final class ProxyDaemonMain {
      *  v7 (v1.2.63-beta): adds PID-file + trigger-file rebroadcast plumbing.
      *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
      *  v10 (v1.4.7-beta): adds TXN_CAN_NAVI_STATUS / TXN_CAN_INSTRUMENT_INT / TXN_CAN_INSTRUMENT_BYTES.
+     *  v11 (v1.4.11-beta): adds TXN_CAN_SETTING_INT (BYDAutoSettingDevice, required for HUD activation).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "10";
+    private static final String PROTOCOL_VERSION = "11";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -789,6 +790,20 @@ public final class ProxyDaemonMain {
                         Context ctx = sWrappedContext;
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         int rc = CanWriteVerbs.setBytes(ctx, featureId, bytes == null ? new byte[0] : bytes);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_SETTING_INT: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    int value     = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.settingSetInt(ctx, featureId, value);
                         if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
