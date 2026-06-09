@@ -94,4 +94,24 @@ public final class ProxyDaemonContract {
      *  replacing the {@code am task remove} + {@code TaskRemover app_process}
      *  chain used by {@code AdbLocalClient.forceStopApp}. */
     public static final int TXN_REMOVE_TASK             = IBinder.FIRST_CALL_TRANSACTION + 14; // 15
+
+    // ─── CAN bus write (instrument cluster HUD) ───────────────────────────
+
+    /** {@code int status} → {@code int resultCode}.
+     *  Set navigation status on the instrument cluster HUD.
+     *  status: 2 = NAVI_STATUS_ACTIVE, 4 = NAVI_STATUS_STOPPED.
+     *  Calls {@code BYDAutoInstrumentDevice.set({INSTRUMENT_SEND_NAVI_STATUS}, eventValue)}
+     *  via the daemon's permission-bypassed system context. */
+    public static final int TXN_CAN_NAVI_STATUS         = IBinder.FIRST_CALL_TRANSACTION + 15; // 16
+
+    /** {@code int featureId, int value} → {@code int resultCode}.
+     *  Write an integer value to any CAN instrument feature ID.
+     *  featureId is the raw BYD CAN feature constant (see {@link CanWriteVerbs}).
+     *  Returns the SDK result code (0 = INSTRUMENT_COMMAND_SUCCESS). */
+    public static final int TXN_CAN_INSTRUMENT_INT      = IBinder.FIRST_CALL_TRANSACTION + 16; // 17
+
+    /** {@code int featureId, byte[] data} → {@code int resultCode}.
+     *  Write a byte buffer to any CAN instrument feature ID (e.g. street name UTF-8).
+     *  Returns the SDK result code (0 = INSTRUMENT_COMMAND_SUCCESS). */
+    public static final int TXN_CAN_INSTRUMENT_BYTES    = IBinder.FIRST_CALL_TRANSACTION + 17; // 18
 }

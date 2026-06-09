@@ -992,6 +992,92 @@ public final class ProxyClient {
         });
     }
 
+    // ─── CAN bus write verbs (Phase CAN-1, v1.4.7-beta) ───────────────────
+
+    /**
+     * Set the navigation status on the instrument cluster HUD.
+     *
+     * @param status {@code CanWriteVerbs.NAVI_STATUS_ACTIVE} (2) to start navigation display,
+     *               {@code CanWriteVerbs.NAVI_STATUS_STOPPED} (4) to stop it.
+     * @return SDK result code (0 = success).
+     */
+    public static int canNaviStatus(int status) throws ProxyException {
+        return callWithRetry("canNaviStatus", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeInt(status);
+                b.transact(ProxyDaemonContract.TXN_CAN_NAVI_STATUS, data, reply, 0);
+                reply.readException();
+                return reply.readInt();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        });
+    }
+
+    /**
+     * Write an integer value to a CAN instrument feature ID.
+     *
+     * <p>Use the constants in {@link com.byd.dashcast.proxy.daemon.CanWriteVerbs}
+     * or call the higher-level helpers in {@link com.byd.dashcast.CanBusController}.
+     *
+     * @param featureId raw BYD CAN feature constant
+     * @param value     integer to write
+     * @return SDK result code (0 = success).
+     */
+    public static int canInstrumentInt(int featureId, int value) throws ProxyException {
+        return callWithRetry("canInstrumentInt", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeInt(featureId);
+                data.writeInt(value);
+                b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_INT, data, reply, 0);
+                reply.readException();
+                return reply.readInt();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        });
+    }
+
+    /**
+     * Write a byte buffer to a CAN instrument feature ID (e.g. street name as UTF-8).
+     *
+     * @param featureId raw BYD CAN feature constant
+     * @param bytes     payload; null is treated as an empty array
+     * @return SDK result code (0 = success).
+     */
+    public static int canInstrumentBytes(int featureId, byte[] bytes) throws ProxyException {
+        final byte[] payload = (bytes == null) ? new byte[0] : bytes;
+        return callWithRetry("canInstrumentBytes", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeInt(featureId);
+                data.writeByteArray(payload);
+                b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_BYTES, data, reply, 0);
+                reply.readException();
+                return reply.readInt();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        });
+    }
+
     /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
