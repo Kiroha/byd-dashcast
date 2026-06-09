@@ -570,4 +570,8 @@
     <string name="fission_editor_edit">Tahrirlash</string>
     <string name="fission_editor_delete">O\'chirish</string>
     <string name="fission_open">Fission</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Tartiblarni boshqarish</string>
+    <string name="layout_manager_new">Yangi tartib</string>
+    <string name="layout_canvas_hint">Zona chizish uchun torting</string>
 </resources>

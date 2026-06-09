@@ -569,4 +569,8 @@
     <string name="fission_editor_edit">Изменить</string>
     <string name="fission_editor_delete">Удалить</string>
     <string name="fission_open">Fission</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Управление макетами</string>
+    <string name="layout_manager_new">Новый макет</string>
+    <string name="layout_canvas_hint">Перетащите, чтобы нарисовать зону</string>
 </resources>

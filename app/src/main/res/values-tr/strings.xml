@@ -569,4 +569,8 @@
     <string name="fission_editor_edit">Düzenle</string>
     <string name="fission_editor_delete">Sil</string>
     <string name="fission_open">Fission</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Düzen yöneticisi</string>
+    <string name="layout_manager_new">Yeni düzen</string>
+    <string name="layout_canvas_hint">Bir bölge çizmek için sürükleyin</string>
 </resources>

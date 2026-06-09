@@ -569,4 +569,8 @@
     <string name="fission_editor_edit">Modifica</string>
     <string name="fission_editor_delete">Elimina</string>
     <string name="fission_open">Fission</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Gestione layout</string>
+    <string name="layout_manager_new">Nuovo layout</string>
+    <string name="layout_canvas_hint">Trascina per disegnare una zona</string>
 </resources>
