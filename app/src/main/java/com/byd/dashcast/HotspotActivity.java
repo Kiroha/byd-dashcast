@@ -218,6 +218,8 @@ public class HotspotActivity extends AppCompatActivity {
         if (navDiag != null)     navDiag.setOnClickListener(v -> { startActivity(new Intent(this, DiagActivity.class)); finish(); });
         if (navSysinfo != null)  navSysinfo.setOnClickListener(v -> { startActivity(new Intent(this, SysInfoActivity.class)); finish(); });
         if (navLog != null)      navLog.setOnClickListener(v -> { startActivity(new Intent(this, LogActivity.class)); finish(); });
+        // v1.4.9-beta — Layouts
+        NavRailLayouts.apply(this, R.id.nav_layouts_hot, true);
     }
 
     @Override

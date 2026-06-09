@@ -231,6 +231,14 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="false"/>
 
+        <!-- v1.4.9-beta — Global layout manager accessible from navRail -->
+        <activity
+            android:name=".fission.LayoutManagerActivity"
+            android:label="@string/layout_manager_title"
+            android:screenOrientation="landscape"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"/>
+
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
             android:name=".ClusterService"

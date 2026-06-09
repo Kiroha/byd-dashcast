@@ -1,0 +1,430 @@
+package com.byd.dashcast.fission;
+
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.DiagActivity;
+import com.byd.dashcast.HotspotActivity;
+import com.byd.dashcast.LogActivity;
+import com.byd.dashcast.MainActivity;
+import com.byd.dashcast.NavRailHotspot;
+import com.byd.dashcast.R;
+import com.byd.dashcast.SettingsActivity;
+import com.byd.dashcast.SysInfoActivity;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class LayoutManagerActivity extends Activity {
+
+    private static final String TAG           = "LayoutManager";
+    private static final int    PANEL_WIDTH_DP = 300;
+    private static final int    ANIM_DURATION  = 220;
+
+    private ClusterCanvasView   mCanvas;
+    private RecyclerView        mRecycler;
+    private LayoutPresetAdapter mAdapter;
+    private HorizontalScrollView mHsvChips;
+    private LinearLayout        mChipsContainer;
+    private LinearLayout        mPanelContainer;
+    private ImageView           mIvToggle;
+    private TextView            mTvCanvasTitle;
+    private TextView            mTvToolbarName;
+
+    private List<LayoutPreset>  mPresets  = new ArrayList<>();
+    private LayoutPreset        mEditing;
+    private String              mActiveId;
+    private boolean             mPanelVisible = true;
+
+    private final ExecutorService mExec = Executors.newSingleThreadExecutor();
+
+    @Override
+    protected void onCreate(Bundle saved) {
+        super.onCreate(saved);
+        setContentView(R.layout.activity_layout_manager);
+
+        mCanvas         = findViewById(R.id.lm_canvas);
+        mRecycler       = findViewById(R.id.lm_recycler);
+        mHsvChips       = findViewById(R.id.lm_chips_scroll);
+        mPanelContainer = findViewById(R.id.lm_panel_container);
+        mIvToggle       = findViewById(R.id.lm_toggle_icon);
+        mTvCanvasTitle  = findViewById(R.id.lm_canvas_title);
+        mTvToolbarName  = findViewById(R.id.lm_canvas_toolbar_name);
+
+        mChipsContainer = mHsvChips != null
+                ? (LinearLayout) mHsvChips.getChildAt(0) : null;
+
+        // Load saved data
+        mPresets  = LayoutPrefs.load(this);
+        mActiveId = getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE)
+                .getString("active_layout_id", null);
+
+        // RecyclerView
+        mRecycler.setLayoutManager(new LinearLayoutManager(this));
+        mAdapter = new LayoutPresetAdapter(mPresets, mActiveId, new LayoutPresetAdapter.Callbacks() {
+            @Override public void onSelect(LayoutPreset p)   { loadIntoCanvas(p); }
+            @Override public void onEdit(LayoutPreset p)     { loadIntoCanvas(p); if (mPanelVisible) collapsePanel(); }
+            @Override public void onActivate(LayoutPreset p) { activateLayout(p); }
+            @Override public void onDeactivate()             { deactivateLayout(); }
+            @Override public void onDelete(LayoutPreset p)   { deleteLayout(p); }
+        });
+        mRecycler.setAdapter(mAdapter);
+
+        // Canvas listeners
+        mCanvas.setOnZoneDrawnListener((x, y, w, h) -> showAddZoneDialog(x, y, w, h));
+        mCanvas.setOnZoneLongPressListener(idx -> {
+            if (mEditing == null || idx < 0 || idx >= mEditing.slots.size()) return;
+            String label = mEditing.slots.get(idx).label;
+            new AlertDialog.Builder(this)
+                    .setTitle("Supprimer \"" + label + "\" ?")
+                    .setPositiveButton("Supprimer", (d, w2) -> {
+                        mEditing.slots.remove(idx);
+                        mCanvas.invalidate();
+                        refreshChips();
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show();
+        });
+
+        // Toggle panel
+        View btnToggle = findViewById(R.id.lm_toggle_btn);
+        if (btnToggle != null) btnToggle.setOnClickListener(v -> togglePanel());
+
+        // Toolbar buttons
+        View btnNew = findViewById(R.id.lm_btn_new_layout);
+        if (btnNew != null) btnNew.setOnClickListener(v -> startNewLayout());
+
+        View btnClear = findViewById(R.id.lm_btn_clear);
+        if (btnClear != null) btnClear.setOnClickListener(v -> {
+            if (mEditing != null) {
+                mEditing.slots.clear();
+                mCanvas.invalidate();
+                refreshChips();
+            }
+        });
+
+        View btnSave = findViewById(R.id.lm_btn_save);
+        if (btnSave != null) btnSave.setOnClickListener(v -> saveLayout());
+
+        // Initial state
+        if (!mPresets.isEmpty()) loadIntoCanvas(mPresets.get(0));
+        else startNewLayout();
+
+        // Nav rail wiring
+        wireNavRail();
+    }
+
+    private void wireNavRail() {
+        View navApps     = findViewById(R.id.nav_apps_lm);
+        View navSettings = findViewById(R.id.nav_settings_lm);
+        View navDiag     = findViewById(R.id.nav_diag_lm);
+        View navSysinfo  = findViewById(R.id.nav_sysinfo_lm);
+        View navLog      = findViewById(R.id.nav_log_lm);
+        View navLogo     = findViewById(R.id.iv_nav_logo_lm);
+
+        if (navApps     != null) navApps.setOnClickListener(v -> nav(MainActivity.class));
+        if (navSettings != null) navSettings.setOnClickListener(v -> nav(SettingsActivity.class));
+        if (navDiag     != null) navDiag.setOnClickListener(v -> nav(DiagActivity.class));
+        if (navSysinfo  != null) navSysinfo.setOnClickListener(v -> nav(SysInfoActivity.class));
+        if (navLog      != null) navLog.setOnClickListener(v -> nav(LogActivity.class));
+        if (navLogo     != null) navLogo.setOnClickListener(v -> nav(MainActivity.class));
+
+        NavRailHotspot.apply(this, R.id.nav_hotspot_lm, true);
+    }
+
+    private void nav(Class<? extends Activity> dest) {
+        startActivity(new Intent(this, dest));
+        finish();
+    }
+
+    // ── Canvas state ──────────────────────────────────────────────────────────
+
+    private void loadIntoCanvas(LayoutPreset preset) {
+        mEditing = new LayoutPreset(preset.name);
+        mEditing.id = preset.id;
+        for (LayoutPreset.SlotDef s : preset.slots)
+            mEditing.slots.add(new LayoutPreset.SlotDef(s.label, s.x, s.y, s.w, s.h));
+        mCanvas.setSlots(mEditing.slots);
+        mCanvas.invalidate();
+        setCanvasTitle(preset.name);
+        refreshChips();
+        mAdapter.setSelected(preset.id);
+    }
+
+    private void startNewLayout() {
+        mEditing = new LayoutPreset("Nouveau layout");
+        mCanvas.setSlots(mEditing.slots);
+        mCanvas.invalidate();
+        setCanvasTitle("Nouveau layout");
+        refreshChips();
+        mAdapter.setSelected(null);
+    }
+
+    private void setCanvasTitle(String name) {
+        if (mTvCanvasTitle  != null) mTvCanvasTitle.setText(name);
+        if (mTvToolbarName  != null) mTvToolbarName.setText(name);
+    }
+
+    private void refreshChips() {
+        if (mChipsContainer == null) return;
+        mChipsContainer.removeAllViews();
+        if (mEditing == null || mEditing.slots.isEmpty()) return;
+
+        for (int i = 0; i < mEditing.slots.size(); i++) {
+            LayoutPreset.SlotDef s = mEditing.slots.get(i);
+            final int idx = i;
+
+            TextView chip = new TextView(this);
+            chip.setText(s.label + "  " + s.w + "×" + s.h + " @ (" + s.x + "," + s.y + ")  ✕");
+            chip.setTextSize(12f);
+            chip.setTextColor(Color.parseColor("#2A5EA8"));
+            chip.setBackgroundResource(R.drawable.bg_log_filter);
+            int ph = dpToPx(10), pv = dpToPx(5);
+            chip.setPadding(ph, pv, ph, pv);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMarginEnd(dpToPx(6));
+            chip.setLayoutParams(lp);
+            chip.setOnClickListener(v -> {
+                mEditing.slots.remove(idx);
+                mCanvas.invalidate();
+                refreshChips();
+            });
+            mChipsContainer.addView(chip);
+        }
+    }
+
+    private void showAddZoneDialog(int x, int y, int w, int h) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int p = dpToPx(16);
+        form.setPadding(p, p, p, 0);
+
+        EditText etName = addField(form, "Nom de la zone", mEditing.nextSlotLabel());
+        addDivider(form, "Position & dimensions");
+        EditText etX = addField(form, "X (px)", String.valueOf(x));
+        EditText etY = addField(form, "Y (px)", String.valueOf(y));
+        EditText etW = addField(form, "Largeur (px)", String.valueOf(w));
+        EditText etH = addField(form, "Hauteur (px)", String.valueOf(h));
+
+        etName.selectAll();
+        new AlertDialog.Builder(this)
+                .setTitle("Nouvelle zone — " + w + "×" + h + " px")
+                .setView(form)
+                .setPositiveButton("Ajouter", (d, which) -> {
+                    String label = etName.getText().toString().trim();
+                    if (label.isEmpty()) label = mEditing.nextSlotLabel();
+                    int fx = parseInt(etX, x), fy = parseInt(etY, y);
+                    int fw = parseInt(etW, w), fh = parseInt(etH, h);
+                    mEditing.slots.add(new LayoutPreset.SlotDef(label, fx, fy, fw, fh));
+                    mCanvas.invalidate();
+                    refreshChips();
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
+    }
+
+    private EditText addField(LinearLayout parent, String hint, String value) {
+        TextView label = new TextView(this);
+        label.setText(hint);
+        label.setTextSize(12f);
+        label.setTextColor(Color.parseColor("#43474E"));
+        LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        llp.topMargin = dpToPx(8);
+        parent.addView(label, llp);
+
+        EditText et = new EditText(this);
+        et.setHint(hint);
+        et.setText(value);
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        parent.addView(et);
+        return et;
+    }
+
+    private void addDivider(LinearLayout parent, String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(11f);
+        tv.setTextColor(Color.parseColor("#74777F"));
+        tv.setAllCaps(true);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dpToPx(14);
+        parent.addView(tv, lp);
+    }
+
+    private int parseInt(EditText et, int fallback) {
+        try { return Integer.parseInt(et.getText().toString().trim()); }
+        catch (NumberFormatException e) { return fallback; }
+    }
+
+    // ── CRUD ──────────────────────────────────────────────────────────────────
+
+    private void saveLayout() {
+        if (mEditing == null || mEditing.slots.isEmpty()) {
+            Toast.makeText(this, "Dessinez au moins une zone", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        EditText et = new EditText(this);
+        et.setHint("Nom du layout");
+        et.setText(mEditing.name);
+        et.selectAll();
+        new AlertDialog.Builder(this)
+                .setTitle("Enregistrer le layout")
+                .setView(et)
+                .setPositiveButton("Enregistrer", (d, which) -> {
+                    String name = et.getText().toString().trim();
+                    if (name.isEmpty()) name = "Layout " + (mPresets.size() + 1);
+                    mEditing.name = name;
+                    boolean replaced = false;
+                    for (int i = 0; i < mPresets.size(); i++) {
+                        if (mPresets.get(i).id.equals(mEditing.id)) {
+                            mPresets.set(i, mEditing); replaced = true; break;
+                        }
+                    }
+                    if (!replaced) mPresets.add(mEditing);
+                    LayoutPrefs.save(this, mPresets);
+                    mAdapter.update(mPresets, mActiveId);
+                    setCanvasTitle(mEditing.name);
+                    Toast.makeText(this, "Layout enregistré ✓", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
+    }
+
+    private void deleteLayout(LayoutPreset preset) {
+        new AlertDialog.Builder(this)
+                .setTitle("Supprimer « " + preset.name + " » ?")
+                .setPositiveButton("Supprimer", (d, w) -> {
+                    if (preset.id.equals(mActiveId)) deactivateLayout();
+                    mPresets.remove(preset);
+                    LayoutPrefs.save(this, mPresets);
+                    mAdapter.update(mPresets, mActiveId);
+                    if (mEditing != null && mEditing.id.equals(preset.id)) startNewLayout();
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
+    }
+
+    private void activateLayout(LayoutPreset preset) {
+        IBinder binder = FissionLayoutEditorActivity.sDaemonBinder;
+        if (binder == null) {
+            Toast.makeText(this,
+                    "Daemon non connecté — lancez d'abord une projection Fission",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, "Activation de " + preset.name + "…", Toast.LENGTH_SHORT).show();
+        mExec.execute(() -> {
+            if (mActiveId != null && !mActiveId.equals(preset.id)) {
+                try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
+            }
+            try {
+                boolean ok = FissionClient.activateLayout(binder, preset);
+                mActiveId = preset.id;
+                getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()
+                        .putString("active_layout_id", mActiveId).apply();
+                runOnUiThread(() -> {
+                    mAdapter.update(mPresets, mActiveId);
+                    Toast.makeText(this,
+                            ok ? preset.name + " activé ✓"
+                               : preset.name + " activé (certains slots ont échoué)",
+                            Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                AppLogger.e(TAG, "activateLayout failed", e);
+                runOnUiThread(() -> Toast.makeText(this, "Erreur: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void deactivateLayout() {
+        IBinder binder = FissionLayoutEditorActivity.sDaemonBinder;
+        mActiveId = null;
+        for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
+        getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()
+                .remove("active_layout_id").apply();
+        mAdapter.update(mPresets, mActiveId);
+        if (binder != null) {
+            mExec.execute(() -> {
+                try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
+            });
+        }
+        Toast.makeText(this, "Mode libre activé", Toast.LENGTH_SHORT).show();
+    }
+
+    // ── Panel toggle animation ─────────────────────────────────────────────────
+
+    private void togglePanel() {
+        if (mPanelVisible) collapsePanel();
+        else expandPanel();
+    }
+
+    private void collapsePanel() {
+        if (!mPanelVisible || mPanelContainer == null) return;
+        int startW = dpToPx(PANEL_WIDTH_DP);
+        ValueAnimator anim = ValueAnimator.ofInt(startW, 0);
+        anim.setDuration(ANIM_DURATION);
+        anim.addUpdateListener(a -> {
+            ViewGroup.LayoutParams lp = mPanelContainer.getLayoutParams();
+            lp.width = (int) a.getAnimatedValue();
+            mPanelContainer.setLayoutParams(lp);
+        });
+        anim.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator a) {
+                mPanelContainer.setVisibility(View.GONE);
+            }
+        });
+        anim.start();
+        if (mIvToggle != null) mIvToggle.setImageResource(R.drawable.ic_arrow_forward);
+        mPanelVisible = false;
+    }
+
+    private void expandPanel() {
+        if (mPanelVisible || mPanelContainer == null) return;
+        mPanelContainer.setVisibility(View.VISIBLE);
+        int targetW = dpToPx(PANEL_WIDTH_DP);
+        ValueAnimator anim = ValueAnimator.ofInt(0, targetW);
+        anim.setDuration(ANIM_DURATION);
+        anim.addUpdateListener(a -> {
+            ViewGroup.LayoutParams lp = mPanelContainer.getLayoutParams();
+            lp.width = (int) a.getAnimatedValue();
+            mPanelContainer.setLayoutParams(lp);
+        });
+        anim.start();
+        if (mIvToggle != null) mIvToggle.setImageResource(R.drawable.ic_arrow_back);
+        mPanelVisible = true;
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mExec.shutdown();
+    }
+}
