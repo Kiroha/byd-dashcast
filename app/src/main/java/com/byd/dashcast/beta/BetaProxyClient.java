@@ -14,7 +14,7 @@ import android.os.SystemClock;
 import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.beta.proxy.BinderParcelable;
-import com.byd.dashcast.beta.proxy.ProxyDaemonMain;
+import com.byd.dashcast.beta.proxy.ProxyDaemonContract;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -489,9 +489,9 @@ public final class BetaProxyClient {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
             long t0 = SystemClock.elapsedRealtime();
-            b.transact(ProxyDaemonMain.TXN_PING, data, reply, 0);
+            b.transact(ProxyDaemonContract.TXN_PING, data, reply, 0);
             long t1 = SystemClock.elapsedRealtime();
             reply.readException();
             reply.readLong(); // epoch ms — unused, kept to drain the parcel
@@ -532,9 +532,9 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeString(cmd);
-                b.transact(ProxyDaemonMain.TXN_EXEC, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_EXEC, data, reply, 0);
                 reply.readException();
                 int exit = reply.readInt();
                 String output = reply.readString();
@@ -563,8 +563,8 @@ public final class BetaProxyClient {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-            b.transact(ProxyDaemonMain.TXN_PROBE_PHASE4, data, reply, 0);
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_PROBE_PHASE4, data, reply, 0);
             reply.readException();
             String out = reply.readString();
             return out == null ? "" : out;
@@ -594,13 +594,13 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeInt(displayId);
                 data.writeInt(left);
                 data.writeInt(top);
                 data.writeInt(right);
                 data.writeInt(bottom);
-                b.transact(ProxyDaemonMain.TXN_SET_OVERSCAN, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_SET_OVERSCAN, data, reply, 0);
                 // readException() throws if the daemon side called writeException —
                 // that becomes our trigger for the legacy fallback in ShellGateway.
                 reply.readException();
@@ -634,9 +634,9 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeString(pkg);
-                b.transact(ProxyDaemonMain.TXN_GET_PIDS, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_GET_PIDS, data, reply, 0);
                 reply.readException();
                 String pids = reply.readString();
                 return pids == null ? "" : pids;
@@ -670,11 +670,11 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeInt(type);
                 data.writeInt(info);
                 data.writeString(safeStr);
-                b.transact(ProxyDaemonMain.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
                 reply.readException();
             } finally {
                 reply.recycle();
@@ -702,10 +702,10 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeString(packageName);
                 data.writeInt(userId);
-                b.transact(ProxyDaemonMain.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
                 reply.readException();
             } finally {
                 reply.recycle();
@@ -750,7 +750,7 @@ public final class BetaProxyClient {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
             data.writeString(name == null ? "DashCast_VD" : name);
             data.writeInt(width);
             data.writeInt(height);
@@ -759,7 +759,7 @@ public final class BetaProxyClient {
             // Mirror the inline header used by readParcelable to signal "non-null".
             data.writeInt(1);
             surface.writeToParcel(data, 0);
-            b.transact(ProxyDaemonMain.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0);
+            b.transact(ProxyDaemonContract.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0);
             reply.readException();
             return reply.readInt();
         } catch (RemoteException e) {
@@ -795,9 +795,9 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeInt(displayId);
-                b.transact(ProxyDaemonMain.TXN_RELEASE_VIRTUAL_DISPLAY, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_RELEASE_VIRTUAL_DISPLAY, data, reply, 0);
                 reply.readException();
             } finally {
                 reply.recycle();
@@ -845,7 +845,7 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeString(pkg);
                 if (activityCls != null) {
                     data.writeInt(1);
@@ -856,7 +856,7 @@ public final class BetaProxyClient {
                 data.writeInt(displayId);
                 data.writeInt(width);
                 data.writeInt(height);
-                b.transact(ProxyDaemonMain.TXN_LAUNCH_AND_FORCE, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, data, reply, 0);
                 reply.readException();
                 return reply.readString();
             } finally {
@@ -886,14 +886,14 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeString(pkg);
                 data.writeInt(displayId);
                 data.writeInt(left);
                 data.writeInt(top);
                 data.writeInt(right);
                 data.writeInt(bottom);
-                b.transact(ProxyDaemonMain.TXN_MOVE_AND_RESIZE, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_MOVE_AND_RESIZE, data, reply, 0);
                 reply.readException();
                 return reply.readString();
             } finally {
@@ -923,9 +923,9 @@ public final class BetaProxyClient {
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
-                data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
                 data.writeInt(displayId);
-                b.transact(ProxyDaemonMain.TXN_CLEAN_FISSION_STACKS, data, reply, 0);
+                b.transact(ProxyDaemonContract.TXN_CLEAN_FISSION_STACKS, data, reply, 0);
                 reply.readException();
                 return reply.readString();
             } finally {
@@ -1123,8 +1123,8 @@ public final class BetaProxyClient {
             @Override
             public void onReceive(Context c, Intent intent) {
                 if (intent == null) return;
-                if (!ProxyDaemonMain.ACTION_PROXY_CONNECTED.equals(intent.getAction())) return;
-                BinderParcelable bp = intent.getParcelableExtra(ProxyDaemonMain.EXTRA_BINDER);
+                if (!ProxyDaemonContract.ACTION_PROXY_CONNECTED.equals(intent.getAction())) return;
+                BinderParcelable bp = intent.getParcelableExtra(ProxyDaemonContract.EXTRA_BINDER);
                 if (bp == null || bp.binder == null) {
                     AppLogger.w(TAG, "PROXY_CONNECTED received without binder extra");
                     return;
@@ -1177,12 +1177,12 @@ public final class BetaProxyClient {
                 }
             }
         };
-        IntentFilter filter = new IntentFilter(ProxyDaemonMain.ACTION_PROXY_CONNECTED);
+        IntentFilter filter = new IntentFilter(ProxyDaemonContract.ACTION_PROXY_CONNECTED);
         // 2-arg form: targetSdk=29 so platform does not enforce RECEIVER_EXPORTED.
         // If targetSdk is ever raised to 33+, switch to the 3-arg overload with
         // Context.RECEIVER_EXPORTED (the broadcaster is in another process / uid).
         appCtx.registerReceiver(sReceiver, filter);
-        AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonMain.ACTION_PROXY_CONNECTED);
+        AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonContract.ACTION_PROXY_CONNECTED);
     }
 
     /** Issue the WHOAMI transaction to populate uid/pid/version caches. */
@@ -1191,8 +1191,8 @@ public final class BetaProxyClient {
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
-            data.writeInterfaceToken(ProxyDaemonMain.DESCRIPTOR);
-            sBinder.transact(ProxyDaemonMain.TXN_WHOAMI, data, reply, 0);
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            sBinder.transact(ProxyDaemonContract.TXN_WHOAMI, data, reply, 0);
             reply.readException();
             sDaemonUid = reply.readInt();
             sDaemonPid = reply.readInt();
