@@ -53,17 +53,18 @@ public final class CanBusController {
     public static final int ICON_STRAIGHT_DOTTED        = 12;
     public static final int ICON_DETOUR_RIGHT           = 13;
     public static final int ICON_DETOUR_LEFT            = 14;
-    // Roundabouts (counter-clockwise / exit 1-10)
-    public static final int ICON_ROUNDABOUT_CCW_3_4_L   = 15;
-    public static final int ICON_ROUNDABOUT_CCW_1_4_L   = 16;
-    public static final int ICON_ROUNDABOUT_CCW_3_4_R   = 17;
-    public static final int ICON_ROUNDABOUT_CCW_1_4_R   = 18;
-    public static final int ICON_ROUNDABOUT_CCW_STR_L   = 19;
-    public static final int ICON_ROUNDABOUT_CCW_STR_R   = 20;
-    public static final int ICON_ROUNDABOUT_CCW_L_TO_R  = 21;
-    public static final int ICON_ROUNDABOUT_CCW_R_TO_L  = 22;
-    public static final int ICON_ROUNDABOUT_CCW_STR_A1  = 23;
-    public static final int ICON_ROUNDABOUT_CCW_STR_A2  = 24;
+    // Roundabout entry-direction variants (OpenBYD names: ROUNDABOUT_3_4_*, etc.)
+    public static final int ICON_ROUNDABOUT_3_4_LEFT     = 15;
+    public static final int ICON_ROUNDABOUT_1_4_LEFT     = 16;
+    public static final int ICON_ROUNDABOUT_3_4_RIGHT    = 17;
+    public static final int ICON_ROUNDABOUT_1_4_RIGHT    = 18;
+    public static final int ICON_ROUNDABOUT_STRAIGHT_L   = 19;
+    public static final int ICON_ROUNDABOUT_STRAIGHT_R   = 20;
+    public static final int ICON_ROUNDABOUT_L_TO_R       = 21;
+    public static final int ICON_ROUNDABOUT_R_TO_L       = 22;
+    public static final int ICON_ROUNDABOUT_STRAIGHT_A1  = 23;
+    public static final int ICON_ROUNDABOUT_STRAIGHT_A2  = 24;
+    // Roundabouts counter-clockwise (exit count 1-10)
     public static final int ICON_ROUNDABOUT_CCW_1_LAP   = 25;
     public static final int ICON_ROUNDABOUT_CCW_2_LAPS  = 26;
     public static final int ICON_ROUNDABOUT_CCW_3_LAPS  = 27;
@@ -74,7 +75,7 @@ public final class CanBusController {
     public static final int ICON_ROUNDABOUT_CCW_8_LAPS  = 32;
     public static final int ICON_ROUNDABOUT_CCW_9_LAPS  = 33;
     public static final int ICON_ROUNDABOUT_CCW_10_LAPS = 34;
-    // Roundabouts (clockwise / exit 1-10)
+    // Roundabouts clockwise (exit count 1-10)
     public static final int ICON_ROUNDABOUT_CW_1_LAP    = 35;
     public static final int ICON_ROUNDABOUT_CW_2_LAPS   = 36;
     public static final int ICON_ROUNDABOUT_CW_3_LAPS   = 37;

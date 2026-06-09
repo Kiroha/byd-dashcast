@@ -187,11 +187,12 @@ public final class HudController {
             intent.putExtra("NEW_ICON",            amapIcon);
             intent.putExtra("SEG_REMAIN_DIS",      d.distanceMeters);
             intent.putExtra("NEXT_ROAD_NAME",      d.roadName);
-            intent.putExtra("ROUTE_REMAIN_DIS",    d.remainingDistanceMeters  != null ? d.remainingDistanceMeters  : -1);
-            intent.putExtra("ROUTE_REMAIN_TIME",   d.remainingTimeSeconds     != null ? d.remainingTimeSeconds     : -1);
-            // NEXT_NEXT extras are not available from Google Maps — omit (default -1).
-            intent.putExtra("NEXT_NEXT_TURN_ICON", -1);
-            intent.putExtra("NEXT_SEG_REMAIN_DIS", -1);
+            intent.putExtra("ROUTE_REMAIN_DIS",  d.remainingDistanceMeters != null ? d.remainingDistanceMeters : -1);
+            intent.putExtra("ROUTE_REMAIN_TIME", d.remainingTimeSeconds    != null ? d.remainingTimeSeconds    : -1);
+            // NEXT_NEXT / secondary extras: only added when there is actual data (matching
+            // OpenBYD sendStandardAmapBroadcast — the BYD compositor must not receive these
+            // keys with value -1, only their absence signals "no secondary info").
+            // Google Maps notifications never carry secondary guidance, so we never add them.
             // Human-readable distance strings.
             intent.putExtra("SEG_REMAIN_DIS_AUTO", formatMeters(d.distanceMeters));
             if (d.remainingDistanceMeters != null) {
