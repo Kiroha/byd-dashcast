@@ -936,6 +936,63 @@ public final class ProxyClient {
     }
 
     /**
+     * Phase 7 typed verb — find the task ID hosting {@code packageName} via
+     * {@code IActivityTaskManager.getTasks()} reflection inside the daemon.
+     * Returns -1 if no matching task is found or the call fails.
+     *
+     * <p>Pair with {@link #removeTask} before {@link #forceStopPackage} to
+     * prevent orphan tasks from re-appearing on display 0 after teardown.
+     */
+    public static int findTaskIdForPackage(String packageName) throws ProxyException {
+        final String pkg = packageName == null ? "" : packageName;
+        return callWithRetry("findTaskIdForPackage", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeString(pkg);
+                b.transact(ProxyDaemonContract.TXN_FIND_TASK_FOR_PACKAGE, data, reply, 0);
+                reply.readException();
+                return reply.readInt();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+        });
+    }
+
+    /**
+     * Phase 7 typed verb — remove a task from the ActivityTaskManager recents
+     * stack via {@code IActivityTaskManager.removeTask(int)} reflection inside
+     * the daemon. Call this before {@link #forceStopPackage} to avoid orphan
+     * tasks on display 0 after session teardown.
+     *
+     * <p>Throws {@link ProxyException} if the daemon rejects the call (e.g.
+     * the ATM method was renamed by this OEM build) — callers should fall back
+     * to {@code am task remove} via ADB in that case.
+     */
+    public static void removeTask(int taskId) throws ProxyException {
+        callWithRetry("removeTask", () -> {
+            IBinder b = sBinder;
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            try {
+                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+                data.writeInt(taskId);
+                b.transact(ProxyDaemonContract.TXN_REMOVE_TASK, data, reply, 0);
+                reply.readException();
+            } finally {
+                reply.recycle();
+                data.recycle();
+            }
+            return null;
+        });
+    }
+
+    /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
      * typed verbs: the old daemon process keeps the previous APK's

@@ -689,6 +689,37 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "forceStop " + packageName + " ...");
+                // Phase 7: typed daemon path — findTask + removeTask + forceStopPackage.
+                // Replaces the 3-step ADB shell chain (dumpsys recents + am task remove
+                // + TaskRemover app_process + am force-stop). Falls through to ADB on
+                // any failure so semantics are fully preserved for callers.
+                if (!DaemonConfig.isLegacyPathEnabled(context) && ProxyClient.isConnected()) {
+                    final long t0 = SystemClock.elapsedRealtime();
+                    try {
+                        int taskId = ProxyClient.findTaskIdForPackage(packageName);
+                        if (taskId >= 0) {
+                            AppLogger.d(TAG, "forceStopApp typed: removeTask taskId=" + taskId);
+                            ProxyClient.removeTask(taskId);
+                            Thread.sleep(300);
+                        }
+                        ProxyClient.forceStopPackage(packageName, 0);
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.log(TAG, "forceStopApp typed ok (" + dt + "ms): "
+                                + packageName + " taskId=" + taskId);
+                        if (callback != null) callback.onSuccess("force-stop OK (typed)");
+                        return;
+                    } catch (Throwable t) {
+                        if (t instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            if (callback != null) callback.onError("interrupted");
+                            return;
+                        }
+                        long dt = SystemClock.elapsedRealtime() - t0;
+                        AppLogger.w(TAG, "forceStopApp typed failed after " + dt
+                                + "ms, falling back to ADB: " + t.getMessage());
+                        // fall through to ADB path below
+                    }
+                }
                 try (Dadb dadb = connect(context)) {
                     // Extract Task IDs associated with the package and remove them from Recents BEFORE force-stopping.
                     // On Android 10, dumpsys activity recents prints lines like:

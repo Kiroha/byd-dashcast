@@ -57,7 +57,7 @@ public final class ProxyDaemonMain {
      *  v7 (v1.2.63-beta): adds PID-file + trigger-file rebroadcast plumbing.
      *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "9";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -698,6 +698,38 @@ public final class ProxyDaemonMain {
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeString(log == null ? "" : log);
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_FIND_TASK_FOR_PACKAGE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    int taskId = Phase4TaskVerbs.findTaskIdForPackage(pkg);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(taskId);
+                    }
+                    return true;
+                }
+                case TXN_REMOVE_TASK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int taskId = data.readInt();
+                    try {
+                        Phase4TaskVerbs.removeTask(taskId);
+                        if (reply != null) {
+                            reply.writeNoException();
                         }
                     } catch (Throwable ex) {
                         Throwable cause = ex;
