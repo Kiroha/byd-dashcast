@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.byd.dashcast.ime.ClusterImeWatcherService;
+import com.byd.dashcast.proxy.ShellGateway;
 
 /**
  * v1.2.8 — Keyboard Bridge: workaround for the DL5 limitation where the system
@@ -219,7 +220,7 @@ public class KeyboardBridgeActivity extends Activity {
                 + " && settings put secure accessibility_enabled 1"
                 + " && echo OK:$NEW || echo FAIL";
         AppLogger.i(TAG, "tryAdbEnableA11y: invoking local ADB settings put secure …");
-        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String report) {
                 final String r = report == null ? "" : report.trim();
                 final boolean ok = r.startsWith("OK");
@@ -381,7 +382,7 @@ public class KeyboardBridgeActivity extends Activity {
                 + " settings put secure enabled_accessibility_services \"$NEW\""
                 + " && settings put secure accessibility_enabled 1"
                 + " && echo OK:$NEW || echo FAIL";
-        AdbLocalClient.executeShellWithResult(ctx, cmd, new AdbLocalClient.Callback() {
+        ShellGateway.execShellWithResult(ctx, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String r) {
                 if (r != null && r.trim().startsWith("OK")) {
                     AppLogger.i(TAG, "ensureClusterImeEnabled proactive OK");

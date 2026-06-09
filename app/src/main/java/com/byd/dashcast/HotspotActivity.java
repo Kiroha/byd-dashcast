@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.byd.dashcast.proxy.ShellGateway;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
@@ -406,7 +407,7 @@ public class HotspotActivity extends AppCompatActivity {
             final String cmd =
                     "dumpsys activity services " + TF_PKG +
                     " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN";
-            AdbLocalClient.executeShellWithResult(HotspotActivity.this, cmd,
+            ShellGateway.execShellWithResult(HotspotActivity.this, cmd,
                     new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {
                     watchdogProbeInFlight = false;
@@ -507,7 +508,7 @@ public class HotspotActivity extends AppCompatActivity {
             final String cmd =
                     "dumpsys activity services " + TF_PKG +
                     " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN";
-            AdbLocalClient.executeShellWithResult(HotspotActivity.this, cmd,
+            ShellGateway.execShellWithResult(HotspotActivity.this, cmd,
                     new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {
                     final boolean up = out != null && out.contains("UP");
@@ -625,7 +626,7 @@ public class HotspotActivity extends AppCompatActivity {
                 "cat /proc/net/arp 2>/dev/null; " +
                 "echo '===NEIGH==='; " +
                 "ip neigh show 2>/dev/null";
-        AdbLocalClient.executeShellWithResult(this, cmd,
+        ShellGateway.execShellWithResult(this, cmd,
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 final List<HClient> list = parseClients(out);

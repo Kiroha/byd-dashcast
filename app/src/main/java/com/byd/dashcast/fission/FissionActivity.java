@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import androidx.appcompat.app.AlertDialog;
 import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.ClusterService;
 import com.byd.dashcast.R;
@@ -135,7 +136,7 @@ public class FissionActivity extends Activity {
                     if (binder != null) {
                         try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
                     }
-                    AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
+                    ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
                 }
                 if (binder != null) {
                     try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
@@ -432,7 +433,7 @@ public class FissionActivity extends Activity {
             // Force-stop each projected app before releasing the display so it
             // doesn't linger on the main screen after the user presses Stop.
             for (String pkg : mSlots.keySet()) {
-                AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
+                ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
             }
             mSlots.clear();
             if (mDaemonBinder != null) {
@@ -458,7 +459,7 @@ public class FissionActivity extends Activity {
             }
             // Kill the app after releasing its display slot so it doesn't linger
             // on the main screen and leave stale task state for the next launch.
-            AdbLocalClient.executeShell(mAppCtx, "am force-stop " + pkg);
+            ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
             mSlots.remove(pkg);
             mProjecting = !mSlots.isEmpty();
             safeRun(() -> {

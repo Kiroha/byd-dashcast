@@ -82,4 +82,16 @@ public final class ProxyDaemonContract {
     /** {@code int displayId} → {@code String log}.
      *  Phase 6b: destroy every non-fullscreen, non-home stack on a display. */
     public static final int TXN_CLEAN_FISSION_STACKS    = IBinder.FIRST_CALL_TRANSACTION + 12; // 13
+
+    /** {@code String packageName} → {@code int taskId} (-1 if not found).
+     *  Phase 7: find the task ID hosting a package via ATM reflection, so
+     *  the caller can removeTask() before force-stopping (avoids orphan tasks
+     *  on display 0 after session teardown). */
+    public static final int TXN_FIND_TASK_FOR_PACKAGE   = IBinder.FIRST_CALL_TRANSACTION + 13; // 14
+
+    /** {@code int taskId} → void (or remote exception).
+     *  Phase 7: remove a task from the recents stack via ATM reflection,
+     *  replacing the {@code am task remove} + {@code TaskRemover app_process}
+     *  chain used by {@code AdbLocalClient.forceStopApp}. */
+    public static final int TXN_REMOVE_TASK             = IBinder.FIRST_CALL_TRANSACTION + 14; // 15
 }

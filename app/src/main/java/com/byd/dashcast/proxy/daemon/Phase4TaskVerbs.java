@@ -97,6 +97,36 @@ public final class Phase4TaskVerbs {
         return -1;
     }
 
+    // ─── Task removal ─────────────────────────────────────────────────────
+
+    /**
+     * Remove {@code taskId} from the ActivityTaskManager recents stack via
+     * reflection ({@code IActivityTaskManager.removeTask(int)}). Must be
+     * called before {@link Phase4ProcessVerbs#forceStopPackage} to avoid
+     * leaving an orphan task on display 0 after session teardown.
+     *
+     * <p>Throws if the method cannot be found or the call fails — callers
+     * should fall back to {@code am task remove} via ADB on any exception.
+     */
+    public static void removeTask(int taskId) throws Throwable {
+        Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+        Object iAtm = atmCls.getMethod("getService").invoke(null);
+        Method removeTask = null;
+        for (Method cand : iAtm.getClass().getMethods()) {
+            if ("removeTask".equals(cand.getName())) {
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length == 1 && pt[0] == int.class) {
+                    removeTask = cand;
+                    break;
+                }
+            }
+        }
+        if (removeTask == null) {
+            throw new NoSuchMethodException("removeTask(int) not found on " + iAtm.getClass());
+        }
+        removeTask.invoke(iAtm, taskId);
+    }
+
     // ─── Task movement ────────────────────────────────────────────────────
 
     /**

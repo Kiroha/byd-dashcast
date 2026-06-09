@@ -15,6 +15,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.byd.dashcast.proxy.ShellGateway;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -1080,7 +1082,7 @@ public class SysInfoActivity extends AppCompatActivity {
     /** v1.2.35 — DL5 only. Reads `settings global force_resizable_activities`
      *  and updates the given row to reflect the current value. */
     private void probeForceResizable(final View row) {
-        AdbLocalClient.executeShellWithResult(this,
+        ShellGateway.execShellWithResult(this,
                 "settings get global force_resizable_activities",
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String out) {
@@ -1110,7 +1112,7 @@ public class SysInfoActivity extends AppCompatActivity {
         if (!AdbLocalClient.isDiLink5Safe(this)) return;
         Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started,
                 Toast.LENGTH_SHORT).show();
-        AdbLocalClient.executeShellWithResult(this,
+        ShellGateway.execShellWithResult(this,
                 "v=$(settings get global force_resizable_activities); "
                 + "if [ \"$v\" = \"1\" ]; then "
                 + "  settings put global force_resizable_activities 0 2>&1; echo SET=0; "
@@ -1279,7 +1281,7 @@ public class SysInfoActivity extends AppCompatActivity {
         Toast.makeText(this, R.string.sysinfo_reboot_toast, Toast.LENGTH_SHORT).show();
         AppLogger.i("SysInfoActivity", "User-initiated reboot via SysInfo panel");
         try {
-            AdbLocalClient.executeShell(getApplicationContext(), "reboot");
+            ShellGateway.execShell(getApplicationContext(), "reboot");
         } catch (Throwable t) {
             AppLogger.e("SysInfoActivity", "reboot dispatch failed: " + t.getMessage());
             Toast.makeText(this, R.string.sysinfo_reboot_failed, Toast.LENGTH_LONG).show();

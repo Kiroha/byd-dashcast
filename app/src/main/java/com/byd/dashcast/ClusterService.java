@@ -152,7 +152,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                     + "if [ \"$v\" = \"1\" ]; then "
                     + "settings put global force_resizable_activities 0 2>&1; "
                     + "echo RESET; else echo OK=$v; fi";
-            AdbLocalClient.executeShellWithResult(this, check, new AdbLocalClient.Callback() {
+            ShellGateway.execShellWithResult(this, check, new AdbLocalClient.Callback() {
                 @Override public void onSuccess(String out) {
                     AppLogger.i(TAG, "DL5 force_resizable_activities cleanup → " + out.trim());
                 }
@@ -421,7 +421,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                             + "(skipping `am task resize` — known silent no-op on API 30+) taskId="
                             + rTaskId + " pkg=" + rPkg + " bounds=" + rBounds
                             + " (cluster framebuffer " + cw + "x" + ch + ")");
-                    AdbLocalClient.executeShellWithResult(this, cmdAct, new AdbLocalClient.Callback() {
+                    ShellGateway.execShellWithResult(this, cmdAct, new AdbLocalClient.Callback() {
                         @Override public void onSuccess(String out) {
                             AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
                                     + (out == null ? "" : out.trim()) + "\"");
@@ -450,7 +450,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                   +       "/Task=Task\\{[^}]*#[0-9]+[ }]/'"
                                   + " | grep -E 'mBounds|WindowingMode|displayId|resizeMode|#" + rTaskId + " '"
                                   + " | head -25";
-                            AdbLocalClient.executeShellWithResult(ClusterService.this, verify,
+                            ShellGateway.execShellWithResult(ClusterService.this, verify,
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String dump) {
                                             String d = (dump == null) ? "" : dump.trim();
@@ -468,7 +468,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                         }
                     });
                 } else {
-                    AdbLocalClient.executeShellWithResult(this, amCmd, new AdbLocalClient.Callback() {
+                    ShellGateway.execShellWithResult(this, amCmd, new AdbLocalClient.Callback() {
                         @Override public void onSuccess(String out) {
                             String trimmed = (out == null ? "" : out.trim());
                             boolean looksOk = trimmed.contains("exit=0")
@@ -479,7 +479,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                                     + trimmed + "\" (looksOk=" + looksOk + ")");
                             if (looksOk) return;
                             AppLogger.i(TAG, "resizeActiveTask: trying `cmd activity task resize` fallback");
-                            AdbLocalClient.executeShellWithResult(ClusterService.this, cmdAct,
+                            ShellGateway.execShellWithResult(ClusterService.this, cmdAct,
                                     new AdbLocalClient.Callback() {
                                         @Override public void onSuccess(String out2) {
                                             AppLogger.i(TAG, "resizeActiveTask `cmd activity task resize` -> \""
@@ -1311,7 +1311,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 + " -n " + component
                 + " --activity-clear-task 2>&1";
         AppLogger.i(TAG, "DL5 launch via shell: " + cmd);
-        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 AppLogger.i(TAG, "DL5 am start → " + out.trim());
             }

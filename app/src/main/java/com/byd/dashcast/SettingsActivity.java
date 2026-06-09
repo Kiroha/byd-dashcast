@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 
 import com.byd.dashcast.proxy.DaemonConfig;
+import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.platform.Platform;
 
@@ -585,7 +586,7 @@ public class SettingsActivity extends AppCompatActivity {
         final String cmd = "wm overscan " + h + "," + v + "," + h + "," + v + " -d " + clusterId;
         AppLogger.i("SettingsActivity", "applyOverscan → " + cmd);
 
-        AdbLocalClient.executeShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String report) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
