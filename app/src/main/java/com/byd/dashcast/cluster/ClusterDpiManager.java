@@ -3,7 +3,7 @@ package com.byd.dashcast.cluster;
 import android.content.Context;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.beta.ShellGateway;
+import com.byd.dashcast.proxy.ShellGateway;
 
 import java.util.HashMap;
 import java.util.Map;

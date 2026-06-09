@@ -23,7 +23,7 @@ import androidx.annotation.Nullable;
 
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.R;
-import com.byd.dashcast.beta.BetaProxyClient;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.dashboard.ClusterMirrorManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -237,7 +237,7 @@ public class ClusterResizeActivity extends Activity
         if (dm != null) clusterDisplay = dm.getDisplay(mDisplayId);
         mActiveSurface = new Surface(st);
         boolean ok = false;
-        IBinder daemon = BetaProxyClient.getDaemonBinder();
+        IBinder daemon = ProxyClient.getDaemonBinder();
         if (daemon != null) {
             try {
                 ok = mMirror.startMirrorViaDaemon(this, daemon, clusterDisplay, mActiveSurface, w, h);
@@ -270,7 +270,7 @@ public class ClusterResizeActivity extends Activity
 
     private void stopMirrorSafely() {
         if (mMirrorStarted && mMirror != null) {
-            IBinder daemon = BetaProxyClient.getDaemonBinder();
+            IBinder daemon = ProxyClient.getDaemonBinder();
             try {
                 if (daemon != null) mMirror.stopMirrorViaDaemon(daemon);
                 else                mMirror.stopMirror();
@@ -339,10 +339,10 @@ public class ClusterResizeActivity extends Activity
             final int l = rect[0], t = rect[1], r = rect[2], b = rect[3];
             sResizeExec.execute(() -> {
                 try {
-                    if (!BetaProxyClient.isConnected()) {
-                        BetaProxyClient.connect(ClusterResizeActivity.this);
+                    if (!ProxyClient.isConnected()) {
+                        ProxyClient.connect(ClusterResizeActivity.this);
                     }
-                    String log = BetaProxyClient.moveAndResize(mPkg, mDisplayId, l, t, r, b);
+                    String log = ProxyClient.moveAndResize(mPkg, mDisplayId, l, t, r, b);
                     AppLogger.d(TAG, "moveAndResize [" + l + "," + t + "," + r + "," + b + "] → " + log);
                 } catch (Throwable th) {
                     AppLogger.w(TAG, "moveAndResize failed: " + th.getMessage());

@@ -1,6 +1,6 @@
 package com.byd.dashcast;
 
-import com.byd.dashcast.beta.ShellGateway;
+import com.byd.dashcast.proxy.ShellGateway;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -58,7 +58,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
     private static final int NOTIF_ID = 1;
     // LOT 4 — volatile: written on main thread (onCreate/onDestroy) and read from
     // worker threads (auto-resize-thread in MainActivity.autoApplyInsetsIfNeeded,
-    // BetaProxyClient connect path). Without volatile, the worker could observe a
+    // ProxyClient connect path). Without volatile, the worker could observe a
     // stale `false` after the service started and bail out incorrectly.
     //
     // ARCHITECTURE NOTE: prefer the method-based accessor {@link #isRunning()} over
@@ -572,8 +572,8 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
         // their affinity package, regardless of caller package. Required on DL5
         // (and any modern Android) because path 1 is API-21-restricted.
         try {
-            if (com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
-                String out = com.byd.dashcast.beta.BetaProxyClient
+            if (com.byd.dashcast.proxy.ProxyClient.isConnected()) {
+                String out = com.byd.dashcast.proxy.ProxyClient
                         .runShell("dumpsys activity recents");
                 if (out != null && !out.isEmpty()) {
                     int id = parseTaskIdFromDumpsysRecents(out, packageName);
@@ -592,7 +592,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // differently, so live tasks never show up in `dumpsys activity
                 // recents`. `activities` lists every ActivityRecord across all
                 // stacks regardless of launcher behaviour.
-                String outAct = com.byd.dashcast.beta.BetaProxyClient
+                String outAct = com.byd.dashcast.proxy.ProxyClient
                         .runShell("dumpsys activity activities");
                 if (outAct != null && !outAct.isEmpty()) {
                     int id = parseTaskIdFromDumpsysActivities(outAct, packageName);
@@ -1020,7 +1020,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // on a healthy display.
                 if (displayId > 0) {
                     try {
-                        String cleanLog = com.byd.dashcast.beta.BetaProxyClient
+                        String cleanLog = com.byd.dashcast.proxy.ProxyClient
                                 .cleanFissionStacks(displayId);
                         AppLogger.d(TAG, "cleanFissionStacks(" + displayId + ")\n" + cleanLog);
                     } catch (Throwable ce) {
@@ -1099,7 +1099,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
                 // Recovery cleanup — see launchOnDashboard() for rationale.
                 if (displayId > 0) {
                     try {
-                        com.byd.dashcast.beta.BetaProxyClient.cleanFissionStacks(displayId);
+                        com.byd.dashcast.proxy.ProxyClient.cleanFissionStacks(displayId);
                     } catch (Throwable ce) {
                         AppLogger.w(TAG, "cleanFissionStacks(WithBounds) failed: " + ce.getMessage());
                     }

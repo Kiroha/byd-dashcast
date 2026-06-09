@@ -377,11 +377,11 @@ public class SysInfoActivity extends AppCompatActivity {
             // Recent events at the very end (mockup-faithful colored block).
             appendRecentEvents(sb, 5);
 
-            // v1.2.78 — Couche 4: BetaProxy persistent recovery metrics. Useful
+            // v1.2.78 — proxy daemon persistent recovery metrics. Useful
             // to spot long-term drift (binder zombies, fails_no_apk spikes…)
             // without having to scrape the LogActivity buffer.
             section(sb, "9. BETA PROXY METRICS");
-            sb.append(com.byd.dashcast.beta.BetaProxyMetrics.snapshot(this)).append('\n');
+            sb.append(com.byd.dashcast.proxy.ProxyMetrics.snapshot(this)).append('\n');
 
             // v1.2.81 — per-app cluster DPI overrides currently configured.
             section(sb, "10. CLUSTER DPI OVERRIDES");
@@ -985,14 +985,14 @@ public class SysInfoActivity extends AppCompatActivity {
                                : getString(R.string.sysinfo_svc_stopped),
                 clusterRunning, false,
                 clusterRunning ? null : new Runnable() { @Override public void run() {
-                    // v1.2.76 — MirrorDaemon restart: BetaProxyClient.connect() triggers the
+                    // v1.2.76 — MirrorDaemon restart: ProxyClient.connect() triggers the
                     // full ADB bootstrap (re-spawn app_process64 under uid 2000) when the
                     // daemon process is dead. Run off the UI thread because connect() does I/O.
                     Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
                     new Thread(new Runnable() { @Override public void run() {
                         final boolean ok;
                         try {
-                            ok = com.byd.dashcast.beta.BetaProxyClient.connect(getApplicationContext());
+                            ok = com.byd.dashcast.proxy.ProxyClient.connect(getApplicationContext());
                         } catch (Throwable t) {
                             AppLogger.w("SysInfoActivity", "MirrorDaemon restart failed: " + t.getMessage());
                             runOnUiThread(new Runnable() { @Override public void run() {

@@ -22,7 +22,7 @@ import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.ClusterService;
 import com.byd.dashcast.R;
-import com.byd.dashcast.beta.BetaProxyClient;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
@@ -380,16 +380,16 @@ public class FissionActivity extends Activity {
         // throw so the slot is not added — launching without the watchdog would leave the app
         // on display 0 and is not reliable enough to silently accept.
         safeRun(() -> setStatus("Lancement de " + label + " (displayId=" + displayId + ")…"));
-        if (!BetaProxyClient.isConnected()) {
-            AppLogger.d(TAG, "BetaProxyClient not connected — attempting connect…");
-            boolean connected = BetaProxyClient.connect(this);
+        if (!ProxyClient.isConnected()) {
+            AppLogger.d(TAG, "ProxyClient not connected — attempting connect…");
+            boolean connected = ProxyClient.connect(this);
             if (!connected) {
                 throw new RuntimeException(
                         "Proxy Daemon non connecté. Activez « Proxy Daemon ADB » dans Paramètres > Beta.");
             }
         }
         AppLogger.i(TAG, "FISSION LAUNCH_AND_FORCE pkg=" + pkg + " → displayId=" + displayId);
-        String launchResult = BetaProxyClient.launchAndForce(pkg, null, displayId,
+        String launchResult = ProxyClient.launchAndForce(pkg, null, displayId,
                 rect.width(), rect.height());
         // Always log the full daemon result at INFO so it's visible in sniffer
         AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);

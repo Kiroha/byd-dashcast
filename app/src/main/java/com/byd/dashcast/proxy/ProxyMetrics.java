@@ -1,10 +1,10 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
 /**
- * BetaProxyMetrics — v1.2.78 Couche 4.
+ * ProxyMetrics — v1.2.78 Couche 4.
  *
  * Persistent counters for the BetaProxy daemon recovery path. Stored in a
  * dedicated SharedPreferences file (process-shared, atomic apply() writes)
@@ -19,9 +19,9 @@ import android.content.SharedPreferences;
  * SysInfo (not exposed yet — keep the data around forever by default so
  * we can spot long-term drift).
  */
-public final class BetaProxyMetrics {
+public final class ProxyMetrics {
 
-    private BetaProxyMetrics() {}
+    private ProxyMetrics() {}
 
     private static final String PREFS = "beta_proxy_metrics";
 
@@ -39,7 +39,7 @@ public final class BetaProxyMetrics {
     public static final String K_BINDER_ZOMBIES = "binder_zombies";
     /** v1.3.3 — Binder transact() threw DeadObjectException although
      *  sDeath had not fired yet (silent death, kernel notif missing or
-     *  late). Sites must call {@link BetaProxyClient#invalidateBinder} so
+     *  late). Sites must call {@link ProxyClient#invalidateBinder} so
      *  the next isConnected() check returns false immediately. */
     public static final String K_BINDER_DEATHS_SILENT = "binder_deaths_silent";
 

@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.content.Context;
 import android.os.Handler;
@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * BetaTestRunner — runs the suite of diagnostic tests for the Beta Engine and
+ * DaemonTestRunner — runs the suite of diagnostic tests for the Beta Engine and
  * reports results asynchronously to a {@link Listener}. Used by the
  * "Beta Engine" tab of {@code DiagActivity}.
  *
@@ -33,9 +33,9 @@ import java.util.concurrent.Executors;
  *       working). X3 is a static check.</li>
  * </ul>
  */
-public final class BetaTestRunner {
+public final class DaemonTestRunner {
 
-    private static final String TAG = "BetaTestRunner";
+    private static final String TAG = "DaemonTestRunner";
 
     public enum Status { PENDING, RUNNING, PASS, FAIL, SKIPPED }
 
@@ -79,7 +79,7 @@ public final class BetaTestRunner {
 
     private static final Handler UI = new Handler(Looper.getMainLooper());
 
-    private BetaTestRunner() {}
+    private DaemonTestRunner() {}
 
     /** The canonical, ordered test catalog. */
     public static List<TestDef> catalog() {
@@ -102,11 +102,11 @@ public final class BetaTestRunner {
         list.add(new TestDef("A1", Family.A, "Proxy daemon alive",
                 "ps | grep dashcast_proxy returns 1+ lines."));
         list.add(new TestDef("A2", Family.A, "Binder reachable",
-                "BetaProxyClient.isConnected() == true."));
+                "ProxyClient.isConnected() == true."));
         list.add(new TestDef("A3", Family.A, "Round-trip ping < 500 ms",
-                "BetaProxyClient.ping() ∈ [0, 500] ms."));
+                "ProxyClient.ping() ∈ [0, 500] ms."));
         list.add(new TestDef("A4", Family.A, "Daemon UID = 2000",
-                "BetaProxyClient.getCallerUid() == 2000 (shell)."));
+                "ProxyClient.getCallerUid() == 2000 (shell)."));
         list.add(new TestDef("A5", Family.A, "Persistence across Activity destroy",
                 "Daemon still alive after DiagActivity finish + reopen."));
         list.add(new TestDef("A6", Family.A, "Restart resilience",
@@ -230,10 +230,10 @@ public final class BetaTestRunner {
     }
 
     private static void testB2(TestResult r) throws Exception {
-        BetaSystemContext.clearCache();
-        Context sys = BetaSystemContext.get();
+        SystemContextHelper.clearCache();
+        Context sys = SystemContextHelper.get();
         // before wrapping, the base context's package is "android"
-        // BetaSystemContext.get() returns the wrapped one — we test it indirectly
+        // SystemContextHelper.get() returns the wrapped one — we test it indirectly
         if (sys == null) throw new IllegalStateException("get() returned null");
         String pkg = sys.getPackageName();
         if (!"android".equals(pkg)) throw new IllegalStateException("unexpected package: " + pkg);
@@ -242,7 +242,7 @@ public final class BetaTestRunner {
     }
 
     private static void testB3(TestResult r) throws Exception {
-        Context sys = BetaSystemContext.get();
+        Context sys = SystemContextHelper.get();
         int p1 = sys.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS");
         int p2 = sys.checkSelfPermission("android.permission.MANAGE_USERS");
         int p3 = sys.checkSelfPermission("android.permission.DEVICE_POWER");
@@ -270,7 +270,7 @@ public final class BetaTestRunner {
             r.message = className + " not on classpath";
             return;
         }
-        Context sys = BetaSystemContext.get();
+        Context sys = SystemContextHelper.get();
         Method m = cls.getMethod("getInstance", Context.class);
         Object inst = m.invoke(null, sys);
         if (inst == null) throw new IllegalStateException("getInstance(systemCtx) returned null");
@@ -289,7 +289,7 @@ public final class BetaTestRunner {
         }
         Method m = cls.getMethod("getInstance", Context.class);
         Object legacy = m.invoke(null, ctx);
-        Object beta   = m.invoke(null, BetaSystemContext.get());
+        Object beta   = m.invoke(null, SystemContextHelper.get());
         String legacyStr = legacy == null ? "null" : "ok";
         String betaStr   = beta   == null ? "null" : "ok";
         r.status = (beta != null && legacy == null) ? Status.PASS
@@ -304,49 +304,49 @@ public final class BetaTestRunner {
     private static int sFirstPid = -1;
 
     private static void testA1(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
-            String tail = BetaProxyClient.readDaemonLogTail(ctx);
+            String tail = ProxyClient.readDaemonLogTail(ctx);
             r.message = "connect() returned false (bootstrap failed — see daemon log tail)";
             r.detail  = "daemon log tail:\n" + tail;
             return;
         }
-        if (sFirstPid < 0) sFirstPid = BetaProxyClient.getDaemonPid();
+        if (sFirstPid < 0) sFirstPid = ProxyClient.getDaemonPid();
         // Verify via ps that the process exists with our expected argv0
         try {
-            String ps = BetaProxyClient.runShell("ps -A 2>/dev/null | grep -E '[d]ashcast_proxy' | head -n3");
+            String ps = ProxyClient.runShell("ps -A 2>/dev/null | grep -E '[d]ashcast_proxy' | head -n3");
             if (ps == null || ps.trim().isEmpty()) {
                 r.status = Status.PASS;
-                r.message = "daemon connected (pid=" + BetaProxyClient.getDaemonPid()
+                r.message = "daemon connected (pid=" + ProxyClient.getDaemonPid()
                         + ") but ps grep returned no match (setArgV0 may have failed)";
             } else {
                 r.status = Status.PASS;
                 r.message = "ps match: " + ps.replace("\n", " | ");
             }
-        } catch (BetaProxyClient.BetaProxyException e) {
+        } catch (ProxyClient.ProxyException e) {
             r.status = Status.PASS;
-            r.message = "daemon connected (pid=" + BetaProxyClient.getDaemonPid()
+            r.message = "daemon connected (pid=" + ProxyClient.getDaemonPid()
                     + ") but EXEC ps failed: " + e.getMessage();
         }
     }
 
     private static void testA2(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "connect() returned false";
             return;
         }
-        if (!BetaProxyClient.isConnected()) {
+        if (!ProxyClient.isConnected()) {
             r.status = Status.FAIL;
             r.message = "isConnected() returned false after successful connect";
             return;
         }
         r.status = Status.PASS;
-        r.message = "isConnected = true, ver=" + BetaProxyClient.getProtocolVersion();
+        r.message = "isConnected = true, ver=" + ProxyClient.getProtocolVersion();
     }
 
     private static void testA3(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "connect() returned false";
             return;
@@ -356,7 +356,7 @@ public final class BetaTestRunner {
         int  ok = 0;
         long worst = 0;
         for (int i = 0; i < 5; i++) {
-            long p = BetaProxyClient.ping();
+            long p = ProxyClient.ping();
             if (p >= 0) { total += p; ok++; if (p > worst) worst = p; }
         }
         if (ok == 0) {
@@ -375,12 +375,12 @@ public final class BetaTestRunner {
     }
 
     private static void testA4(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "connect() returned false";
             return;
         }
-        int uid = BetaProxyClient.getCallerUid();
+        int uid = ProxyClient.getCallerUid();
         if (uid == 2000) {
             r.status = Status.PASS;
             r.message = "daemon UID = 2000 (shell) ✓";
@@ -391,20 +391,20 @@ public final class BetaTestRunner {
     }
 
     private static void testA5(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "connect() returned false";
             return;
         }
-        int pidBefore = BetaProxyClient.getDaemonPid();
-        BetaProxyClient.disconnect();
+        int pidBefore = ProxyClient.getDaemonPid();
+        ProxyClient.disconnect();
         try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "re-connect failed (daemon died after disconnect?)";
             return;
         }
-        int pidAfter = BetaProxyClient.getDaemonPid();
+        int pidAfter = ProxyClient.getDaemonPid();
         if (pidBefore == pidAfter && pidAfter > 0) {
             r.status = Status.PASS;
             r.message = "same daemon PID " + pidAfter + " before and after disconnect/reconnect";
@@ -416,25 +416,25 @@ public final class BetaTestRunner {
     }
 
     private static void testA6(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "connect() returned false";
             return;
         }
-        int pidBefore = BetaProxyClient.getDaemonPid();
+        int pidBefore = ProxyClient.getDaemonPid();
         try {
-            BetaProxyClient.runShell("kill -9 " + pidBefore);
-        } catch (BetaProxyClient.BetaProxyException ignore) {
+            ProxyClient.runShell("kill -9 " + pidBefore);
+        } catch (ProxyClient.ProxyException ignore) {
             // expected — the daemon process is being killed mid-command
         }
-        BetaProxyClient.disconnect();
+        ProxyClient.disconnect();
         try { Thread.sleep(700); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.FAIL;
             r.message = "re-bootstrap failed after kill -9 " + pidBefore;
             return;
         }
-        int pidAfter = BetaProxyClient.getDaemonPid();
+        int pidAfter = ProxyClient.getDaemonPid();
         if (pidAfter > 0 && pidAfter != pidBefore) {
             r.status = Status.PASS;
             r.message = "daemon respawned: pid " + pidBefore + " → " + pidAfter;
@@ -447,7 +447,7 @@ public final class BetaTestRunner {
     // ─── Component X — cross checks ────────────────────────────────────────
 
     private static void testX1(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.SKIPPED;
             r.message = "proxy daemon not reachable";
             return;
@@ -455,7 +455,7 @@ public final class BetaTestRunner {
         // Beta: 5 pings (already a daemon round-trip = best-case)
         long betaTotal = 0; int betaOk = 0;
         for (int i = 0; i < 5; i++) {
-            long p = BetaProxyClient.ping();
+            long p = ProxyClient.ping();
             if (p >= 0) { betaTotal += p; betaOk++; }
         }
         long betaAvg = betaOk > 0 ? betaTotal / betaOk : -1;
@@ -496,7 +496,7 @@ public final class BetaTestRunner {
     }
 
     private static void testX2(Context ctx, TestResult r) {
-        if (!BetaProxyClient.connect(ctx)) {
+        if (!ProxyClient.connect(ctx)) {
             r.status = Status.SKIPPED;
             r.message = "proxy daemon not reachable";
             return;
@@ -505,8 +505,8 @@ public final class BetaTestRunner {
         // the daemon was spawned under a different identity.
         String betaUid;
         try {
-            betaUid = BetaProxyClient.runShell("id -u").trim();
-        } catch (BetaProxyClient.BetaProxyException e) {
+            betaUid = ProxyClient.runShell("id -u").trim();
+        } catch (ProxyClient.ProxyException e) {
             r.status = Status.FAIL;
             r.message = "beta `id -u` failed: " + e.getMessage();
             return;
@@ -584,16 +584,16 @@ public final class BetaTestRunner {
     private static java.util.Map<String, String> ensureProbes(Context ctx) {
         java.util.Map<String, String> cached = sProbeCache;
         if (cached != null) return cached;
-        synchronized (BetaTestRunner.class) {
+        synchronized (DaemonTestRunner.class) {
             if (sProbeCache != null) return sProbeCache;
-            if (!BetaProxyClient.connect(ctx)) {
+            if (!ProxyClient.connect(ctx)) {
                 sProbeError = "daemon not connected";
                 return null;
             }
             try {
-                String wire = BetaProxyClient.runPhase4Probes();
+                String wire = ProxyClient.runPhase4Probes();
                 java.util.Map<String, String> parsed =
-                        com.byd.dashcast.beta.proxy.Phase4Probes.parse(wire);
+                        com.byd.dashcast.proxy.daemon.Phase4Probes.parse(wire);
                 if (parsed.isEmpty()) {
                     sProbeError = "empty probe response";
                     return null;
@@ -601,7 +601,7 @@ public final class BetaTestRunner {
                 AppLogger.i(TAG, "phase4 probes returned " + parsed.size() + " tokens");
                 sProbeCache = parsed;
                 return parsed;
-            } catch (BetaProxyClient.BetaProxyException e) {
+            } catch (ProxyClient.ProxyException e) {
                 sProbeError = e.getMessage();
                 AppLogger.w(TAG, "phase4 probe call failed: " + e.getMessage());
                 return null;

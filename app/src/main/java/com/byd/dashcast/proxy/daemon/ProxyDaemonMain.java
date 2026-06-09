@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta.proxy;
+package com.byd.dashcast.proxy.daemon;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -16,12 +16,12 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 
-import static com.byd.dashcast.beta.proxy.ProxyDaemonContract.*;
+import static com.byd.dashcast.proxy.daemon.ProxyDaemonContract.*;
 
 /**
  * ProxyDaemonMain — entry point for the Beta Engine Component A daemon (v1.1.6+).
  *
- * <p>Started by {@link com.byd.dashcast.beta.BetaProxyClient} via {@code app_process64}
+ * <p>Started by {@link com.byd.dashcast.proxy.ProxyClient} via {@code app_process64}
  * over a local-ADB pairing session, so the JVM inherits the {@code shell} UID
  * (2000) of the ADB connection.
  *
@@ -33,7 +33,7 @@ import static com.byd.dashcast.beta.proxy.ProxyDaemonContract.*;
  *   <li>Acquire a system {@link Context} via reflective
  *       {@code ActivityThread.systemMain().getSystemContext()}.</li>
  *   <li>Publish a {@link Binder} subclass implementing the
- *       {@code com.byd.dashcast.beta.proxy.IProxyDaemon} contract.</li>
+ *       {@code com.byd.dashcast.proxy.daemon.IProxyDaemon} contract.</li>
  *   <li>Broadcast {@link #ACTION_PROXY_CONNECTED} targeted at the app package
  *       with the binder wrapped in a {@link BinderParcelable} extra.</li>
  *   <li>Enter {@link Looper#loop()} to keep the binder pool alive.</li>

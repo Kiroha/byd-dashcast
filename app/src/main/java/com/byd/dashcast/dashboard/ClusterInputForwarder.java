@@ -209,7 +209,7 @@ public class ClusterInputForwarder {
                     } catch (android.os.DeadObjectException doe) {
                         // v1.3.3 — silent binder death seen on user devices;
                         // invalidate so ProxyKeeperService can recover.
-                        com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("InjectMotion");
+                        com.byd.dashcast.proxy.ProxyClient.invalidateBinder("InjectMotion");
                         AppLogger.w(TAG, "injectTouchAt: daemon binder dead — invalidated");
                     } catch (Exception e) {
                         AppLogger.e(TAG, "injectTouchAt via daemon failed", e);
@@ -284,7 +284,7 @@ public class ClusterInputForwarder {
                     dataUp.recycle();
                 }
             } catch (android.os.DeadObjectException doe) {
-                com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("InjectKey");
+                com.byd.dashcast.proxy.ProxyClient.invalidateBinder("InjectKey");
                 AppLogger.w(TAG, "injectKey: daemon binder dead — invalidated");
             } catch (Exception e) {
                 AppLogger.e(TAG, "injectKey via daemon failed", e);
@@ -335,7 +335,7 @@ public class ClusterInputForwarder {
                     data.recycle();
                 }
             } catch (android.os.DeadObjectException doe) {
-                com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("InjectKeyEvent");
+                com.byd.dashcast.proxy.ProxyClient.invalidateBinder("InjectKeyEvent");
                 AppLogger.w(TAG, "injectKeyEvent: daemon binder dead — invalidated");
             } catch (Exception e) {
                 AppLogger.e(TAG, "injectKeyEvent via daemon failed", e);

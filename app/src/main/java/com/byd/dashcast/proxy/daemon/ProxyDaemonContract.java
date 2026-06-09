@@ -1,10 +1,10 @@
-package com.byd.dashcast.beta.proxy;
+package com.byd.dashcast.proxy.daemon;
 
 import android.os.IBinder;
 
 /**
  * ProxyDaemonContract — wire protocol constants shared between the daemon
- * ({@link ProxyDaemonMain}) and the app-side client ({@link com.byd.dashcast.beta.BetaProxyClient}).
+ * ({@link ProxyDaemonMain}) and the app-side client ({@link com.byd.dashcast.proxy.ProxyClient}).
  *
  * <p>Separating the contract from the implementation ensures the client does not
  * depend on the daemon's entry-point class. Add a new transaction code here
@@ -22,12 +22,12 @@ public final class ProxyDaemonContract {
     // ─── Binder identity ─────────────────────────────────────────────────
 
     /** AIDL-style descriptor for {@link android.os.Binder#attachInterface}. */
-    public static final String DESCRIPTOR = "com.byd.dashcast.beta.proxy.IProxyDaemon";
+    public static final String DESCRIPTOR = "com.byd.dashcast.proxy.daemon.IProxyDaemon";
 
     // ─── Bootstrap broadcast ──────────────────────────────────────────────
 
     /** Broadcast action delivered to the app once the daemon is ready. */
-    public static final String ACTION_PROXY_CONNECTED = "com.byd.dashcast.beta.PROXY_CONNECTED";
+    public static final String ACTION_PROXY_CONNECTED = "com.byd.dashcast.proxy.PROXY_CONNECTED";
 
     /** Parcelable extra key carrying the daemon's {@link BinderParcelable}. */
     public static final String EXTRA_BINDER = "proxy_binder";
