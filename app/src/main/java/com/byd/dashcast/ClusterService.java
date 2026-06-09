@@ -517,7 +517,7 @@ public class ClusterService extends Service implements DashboardDisplayHelper.Li
             } catch (Exception e) {
                 AppLogger.w(TAG, "getDisplay(" + knownId + ") failed: " + e.getMessage());
             }
-            mListener.onClusterDisplayConnected(d, knownId);
+            if (d != null) mListener.onClusterDisplayConnected(d, knownId);
         }
     }
 

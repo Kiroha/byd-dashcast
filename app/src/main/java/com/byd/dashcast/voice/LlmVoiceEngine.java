@@ -131,6 +131,7 @@ public final class LlmVoiceEngine {
     private final VoiceCommandRouter   mFallback;
     private final Handler              mMain = new Handler(Looper.getMainLooper());    /** Guard: stop any previous TTS playback before starting a new one. */
     private MediaPlayer                mActiveMp;
+    private File                       mActiveTmpFile;
     private volatile boolean           mReleased = false;
     public LlmVoiceEngine(Context ctx) {
         mCtx     = ctx.getApplicationContext();
@@ -175,6 +176,8 @@ public final class LlmVoiceEngine {
             if (mActiveMp != null) {
                 try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
                 mActiveMp = null;
+                File tmp = mActiveTmpFile; mActiveTmpFile = null;
+                if (tmp != null) tmp.delete();
             }
         });
     }
@@ -352,6 +355,8 @@ public final class LlmVoiceEngine {
                 if (mActiveMp != null) {
                     try { mActiveMp.stop(); mActiveMp.release(); } catch (Throwable ignore) {}
                     mActiveMp = null;
+                    File prevTmp = mActiveTmpFile; mActiveTmpFile = null;
+                    if (prevTmp != null) prevTmp.delete();
                 }
                 final AudioManager am = (AudioManager)
                         mCtx.getSystemService(android.content.Context.AUDIO_SERVICE);
@@ -368,18 +373,19 @@ public final class LlmVoiceEngine {
                 try {
                     MediaPlayer mp = new MediaPlayer();
                     mActiveMp = mp;
+                    mActiveTmpFile = finalTmp;
                     mp.setAudioAttributes(ASSISTANT_AUDIO_ATTRS);
                     mp.setDataSource(finalTmp.getAbsolutePath());
                     mp.setOnCompletionListener(p -> {
                         p.release();
-                        if (mActiveMp == p) mActiveMp = null;
+                        if (mActiveMp == p) { mActiveMp = null; mActiveTmpFile = null; }
                         finalTmp.delete();
                         am.abandonAudioFocusRequest(focusReq);
                     });
                     mp.setOnErrorListener((p, what, extra) -> {
                         AppLogger.w(TAG, "MediaPlayer error what=" + what);
                         p.release();
-                        if (mActiveMp == p) mActiveMp = null;
+                        if (mActiveMp == p) { mActiveMp = null; mActiveTmpFile = null; }
                         finalTmp.delete();
                         am.abandonAudioFocusRequest(focusReq);
                         return true;
