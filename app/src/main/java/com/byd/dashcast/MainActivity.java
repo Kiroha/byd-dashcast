@@ -527,6 +527,8 @@ public class MainActivity extends AppCompatActivity
         });
         // v1.2.36 — Hotspot (DL3 only) ; v1.2.42 — conditionné sur pref "use_own_sim".
         refreshNavHotspot();
+        // v1.4.9-beta — Layouts
+        NavRailLayouts.apply(this, R.id.nav_layouts, false);
         View navHelp = findViewById(R.id.nav_help);
         if (navHelp != null) navHelp.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {

@@ -195,6 +195,11 @@
     <string name="main_nav_help">Aide</string>
     <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
     <string name="main_nav_hotspot">Hotspot</string>
+    <!-- v1.4.9-beta — Layouts manager -->
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Gestion des layouts</string>
+    <string name="layout_manager_new">Nouveau layout</string>
+    <string name="layout_canvas_hint">Tirez pour dessiner une zone</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Retour</string>
     <string name="hotspot_hero_title">Hotspot 4G via TetherFi</string>
