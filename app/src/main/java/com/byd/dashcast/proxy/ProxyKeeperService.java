@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -26,16 +26,16 @@ import com.byd.dashcast.R;
  * (so a background-only daemon death stayed undetected until the user came
  * back), this service runs as long as the process is alive — and a
  * {@code START_STICKY} return value asks Android to revive it after any
- * OOM kill. Combined with {@link com.byd.dashcast.beta.proxy.ProxyDaemonMain}'s
+ * OOM kill. Combined with {@link com.byd.dashcast.proxy.daemon.ProxyDaemonMain}'s
  * own {@code oom_score_adj = -900} hardening (Couche 3) and the
  * {@code BootReceiver} in v1.2.72 (Couche 1), the daemon should now be
  * reachable in essentially every situation short of the user having
  * disabled ADB (which is unrecoverable by design).
  *
  * <p>Heartbeat: every {@link #HEARTBEAT_MS} milliseconds we check
- * {@link BetaProxyClient#isConnected()} (≈ 5 µs, just a volatile read +
+ * {@link ProxyClient#isConnected()} (≈ 5 µs, just a volatile read +
  * {@code isBinderAlive()}). When the binder is dead we synchronously call
- * {@link BetaProxyClient#connect(Context)} which internally respects the
+ * {@link ProxyClient#connect(Context)} which internally respects the
  * 10 s reconnect cooldown so cascading bootstraps remain impossible.
  *
  * <p>Notification: low-importance silent channel, no sound, no vibration,
@@ -43,7 +43,7 @@ import com.byd.dashcast.R;
  * foreground service to display one. The intent points back at
  * {@link MainActivity} so a user tap just opens the app.
  *
- * <p>Self-disable: gated on {@link BetaConfig#isProxyDaemonEnabled(Context)};
+ * <p>Always active — the daemon is the default projection path.
  * users who haven't opted in see no service and no notification.
  */
 public final class ProxyKeeperService extends Service {
@@ -125,11 +125,6 @@ public final class ProxyKeeperService extends Service {
 
     private void tickInternal() {
         Context ctx = getApplicationContext();
-        // Honour the feature flag at every tick: a user toggle should make
-        // the heartbeat stop performing work without stopping the service
-        // (Android does not love services that self-stop in a tight loop).
-        if (!BetaConfig.isProxyDaemonEnabled(ctx)) return;
-
         // v1.3.3 — Defense in depth against silent binder deaths seen on
         // DiLink 3 / Android 10: do a real pingBinder() round-trip (cheap,
         // ~1 ms) rather than only the local isBinderAlive() check.
@@ -137,10 +132,10 @@ public final class ProxyKeeperService extends Service {
         // even when the kernel's binderDied() notification was never
         // delivered to our DeathRecipient. This converts every "stuck
         // alive" case into a recoverable one within HEARTBEAT_MS.
-        android.os.IBinder b = BetaProxyClient.getDaemonBinder();
+        android.os.IBinder b = ProxyClient.getDaemonBinder();
         boolean alive = (b != null) && b.pingBinder();
         if (b != null && !alive) {
-            BetaProxyClient.invalidateBinder("KeeperPing");
+            ProxyClient.invalidateBinder("KeeperPing");
         }
 
         if (alive) {
@@ -152,11 +147,11 @@ public final class ProxyKeeperService extends Service {
         AppLogger.i(TAG, "binder dead (downFor="
                 + (downForMs < 0 ? "unknown" : downForMs + "ms")
                 + ") — proactive reconnect from keeper");
-        boolean ok = BetaProxyClient.connect(ctx);
+        boolean ok = ProxyClient.connect(ctx);
         if (ok) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
             AppLogger.i(TAG, "keeper reconnect ✅ pid="
-                    + BetaProxyClient.getDaemonPid());
+                    + ProxyClient.getDaemonPid());
         } else {
             AppLogger.w(TAG, "keeper reconnect ❌ — retrying in "
                     + (HEARTBEAT_MS / 1000) + "s");

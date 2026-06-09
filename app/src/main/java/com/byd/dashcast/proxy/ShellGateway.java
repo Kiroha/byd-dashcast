@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.content.Context;
 import android.os.SystemClock;
@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * that transparently routes through the Beta Engine proxy daemon when the
  * {@code beta_proxy_enabled} flag is on.
  *
- * <p>Contract — see {@link BetaEngineGateway#safeCall}:
+ * <p>Contract — see {@link DaemonEngineGateway#safeCall}:
  * <ul>
  *   <li>If the proxy flag is OFF → delegates to {@link AdbLocalClient} directly
  *       (bit-for-bit identical to the v1.0.1 behaviour).</li>
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  *             pattern ({@code wm overscan L,T,R,B -d N} or
  *             {@code wm overscan reset -d N}) — see {@link #tryTypedVerb}.
  *             Typically returns in single-digit ms.</li>
- *         <li>Generic {@link BetaProxyClient#runShell(String)} otherwise (or
+ *         <li>Generic {@link ProxyClient#runShell(String)} otherwise (or
  *             on typed-verb failure).</li>
  *         <li>{@link AdbLocalClient#executeShellWithResult} as the last-resort
  *             fallback.</li>
@@ -121,15 +121,15 @@ public final class ShellGateway {
             if (cb != null) cb.onError("blocked: wm command targets display 0 (head unit)");
             return;
         }
-        // Fast path: proxy disabled → pure legacy, zero overhead.
-        if (!BetaConfig.isProxyDaemonEnabled(ctx)) {
+        // Legacy override: user explicitly requested the ADB path.
+        if (DaemonConfig.isLegacyPathEnabled(ctx)) {
             AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
             return;
         }
         sExecutor.execute(() -> {
             final long t0 = SystemClock.elapsedRealtime();
             try {
-                if (!BetaProxyClient.isConnected()) {
+                if (!ProxyClient.isConnected()) {
                     // Daemon not reachable — fall through to legacy immediately.
                     // Blocking connect() here would stall ALL queued shell ops for
                     // up to 15 s on a single thread. ProxyKeeperService reconnects
@@ -145,7 +145,7 @@ public final class ShellGateway {
                     if (cb != null) cb.onSuccess(typed);
                     return;
                 }
-                String out = BetaProxyClient.runShell(cmd);
+                String out = ProxyClient.runShell(cmd);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta runShell ok (" + dt + "ms): " + cmd);
                 if (cb != null) cb.onSuccess(out == null ? "" : out.trim());
@@ -168,9 +168,9 @@ public final class ShellGateway {
      *
      * <p>Currently handles:
      * <ul>
-     *   <li>{@code wm overscan L,T,R,B -d N} → {@link BetaProxyClient#setOverscan} (payload: {@code ""})</li>
-     *   <li>{@code wm overscan reset -d N}   → {@link BetaProxyClient#setOverscan}(N,0,0,0,0) (payload: {@code ""})</li>
-     *   <li>{@code pidof <pkg>}              → {@link BetaProxyClient#getPidsByPackage} (payload: space-separated PIDs)</li>
+     *   <li>{@code wm overscan L,T,R,B -d N} → {@link ProxyClient#setOverscan} (payload: {@code ""})</li>
+     *   <li>{@code wm overscan reset -d N}   → {@link ProxyClient#setOverscan}(N,0,0,0,0) (payload: {@code ""})</li>
+     *   <li>{@code pidof <pkg>}              → {@link ProxyClient#getPidsByPackage} (payload: space-separated PIDs)</li>
      * </ul>
      */
     private static String tryTypedVerb(String cmd, long t0) {
@@ -182,7 +182,7 @@ public final class ShellGateway {
                 int r = Integer.parseInt(m.group(3));
                 int b = Integer.parseInt(m.group(4));
                 int d = Integer.parseInt(m.group(5));
-                BetaProxyClient.setOverscan(d, l, t, r, b);
+                ProxyClient.setOverscan(d, l, t, r, b);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta setOverscan typed ok (" + dt + "ms): d=" + d
                         + " " + l + "," + t + "," + r + "," + b);
@@ -199,7 +199,7 @@ public final class ShellGateway {
             try {
                 int d = Integer.parseInt(mr.group(1));
                 // `wm overscan reset` clears overscan = setOverscan(d, 0, 0, 0, 0).
-                BetaProxyClient.setOverscan(d, 0, 0, 0, 0);
+                ProxyClient.setOverscan(d, 0, 0, 0, 0);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta setOverscan(reset) typed ok (" + dt + "ms): d=" + d);
                 return "";
@@ -214,7 +214,7 @@ public final class ShellGateway {
         if (mp.matches()) {
             try {
                 String pkg = mp.group(1);
-                String pids = BetaProxyClient.getPidsByPackage(pkg);
+                String pids = ProxyClient.getPidsByPackage(pkg);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta pidof typed ok (" + dt + "ms): " + pkg
                         + " → \"" + pids + "\"");

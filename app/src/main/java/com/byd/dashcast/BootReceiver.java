@@ -5,9 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
-import com.byd.dashcast.beta.BetaConfig;
-import com.byd.dashcast.beta.BetaProxyClient;
-import com.byd.dashcast.beta.ProxyKeeperService;
+import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.proxy.ProxyKeeperService;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 public class BootReceiver extends BroadcastReceiver {
@@ -28,8 +27,7 @@ public class BootReceiver extends BroadcastReceiver {
         if (!isBoot && !isReplace) return;
 
         // v1.2.75 — Couche 1: start the always-on FG keeper as early as
-        // possible. ensureRunning() is idempotent and gated on isProxyDaemonEnabled,
-        // so this is a no-op when the user hasn't opted in.
+        // possible. ensureRunning() is idempotent.
         try {
             ProxyKeeperService.ensureRunning(context.getApplicationContext());
         } catch (Throwable t) {
@@ -39,7 +37,7 @@ public class BootReceiver extends BroadcastReceiver {
 
         SharedPreferences prefs = context.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
         boolean autoStartEnabled = ClusterPrefs.isBootAutoStartEnabled(context);
-        boolean prewarmDaemon    = BetaConfig.isProxyDaemonEnabled(context);
+        boolean prewarmDaemon    = true;
 
         // We need to keep the process alive across multiple async tasks that
         // can run in parallel: (a) Phase 5 daemon pre-warm (~1.9 s connect()),
@@ -67,22 +65,20 @@ public class BootReceiver extends BroadcastReceiver {
             pending.incrementAndGet();
             new Thread(() -> {
                 try {
-                    AppLogger.i("BootReceiver", "beta daemon pre-warm starting...");
+                    AppLogger.i("BootReceiver", "daemon pre-warm starting...");
                     long t0 = System.currentTimeMillis();
-                    boolean ok = BetaProxyClient.connect(appCtx);
+                    boolean ok = ProxyClient.connect(appCtx);
                     long dt = System.currentTimeMillis() - t0;
-                    AppLogger.i("BootReceiver", "beta daemon pre-warm "
+                    AppLogger.i("BootReceiver", "daemon pre-warm "
                             + (ok ? "ok" : "FAILED") + " (" + dt + "ms)");
                 } catch (Throwable t) {
-                    // Pre-warm failure must never block boot: the runtime
-                    // fallback in ShellGateway / AdbLocalClient will still
-                    // route through legacy shell on demand.
+                    // Pre-warm failure must never block boot.
                     AppLogger.w("BootReceiver",
-                            "beta daemon pre-warm threw: " + t.getMessage());
+                            "daemon pre-warm threw: " + t.getMessage());
                 } finally {
                     releaseOne.run();
                 }
-            }, "beta-daemon-prewarm").start();
+            }, "daemon-prewarm").start();
         }
 
         if (autoStartEnabled) {

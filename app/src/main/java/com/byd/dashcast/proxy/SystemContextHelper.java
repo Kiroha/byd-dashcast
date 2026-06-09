@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -11,7 +11,7 @@ import com.byd.dashcast.AppLogger;
 import java.lang.reflect.Method;
 
 /**
- * BetaSystemContext — Component B of the Beta Engine.
+ * SystemContextHelper — Component B of the Beta Engine.
  *
  * <p>Obtains a system-uid {@link Context} via reflection on
  * {@code android.app.ActivityThread.systemMain().getSystemContext()} and wraps
@@ -36,11 +36,11 @@ import java.lang.reflect.Method;
  *
  * @see <a href="file:../../../external_code/BydAgent.java">BydAgent.java</a> — original pattern
  */
-public final class BetaSystemContext {
+public final class SystemContextHelper {
 
-    private BetaSystemContext() {}
+    private SystemContextHelper() {}
 
-    private static final String TAG = "BetaSystemContext";
+    private static final String TAG = "SystemContextHelper";
 
     /** Singleton cache — reflection is expensive, the system context never changes within a process. */
     @SuppressLint("StaticFieldLeak")
@@ -59,7 +59,7 @@ public final class BetaSystemContext {
     public static Context get() throws Exception {
         Context c = sCached;
         if (c != null) return c;
-        synchronized (BetaSystemContext.class) {
+        synchronized (SystemContextHelper.class) {
             if (sCached != null) return sCached;
             // ActivityThread.systemMain() instantiates an internal Handler, which
             // requires a Looper on the current thread. Match the BydAgent
@@ -123,7 +123,7 @@ public final class BetaSystemContext {
 
     /** Clear the cache — used by tests that want to re-run the reflection from scratch. */
     public static void clearCache() {
-        synchronized (BetaSystemContext.class) {
+        synchronized (SystemContextHelper.class) {
             sCached = null;
             sLastError = null;
         }

@@ -303,7 +303,7 @@ public class ClusterMirrorManager {
             // the cached binder is stuck "alive". Eagerly invalidate so the
             // keeper re-bootstraps within HEARTBEAT_MS instead of leaving every
             // call broken until the user quits the app.
-            com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("MirrorStart");
+            com.byd.dashcast.proxy.ProxyClient.invalidateBinder("MirrorStart");
             AppLogger.e(TAG, "startMirrorViaDaemon DeadObjectException — binder invalidated", doe);
             return false;
         } catch (Exception e) {
@@ -332,7 +332,7 @@ public class ClusterMirrorManager {
             try { reply.readException(); } catch (Throwable ignored) { /* daemon may not write reply */ }
         } catch (android.os.DeadObjectException doe) {
             // v1.3.3 — see comment in startMirrorViaDaemon.
-            com.byd.dashcast.beta.BetaProxyClient.invalidateBinder("MirrorStop");
+            com.byd.dashcast.proxy.ProxyClient.invalidateBinder("MirrorStop");
             AppLogger.w(TAG, "stopMirrorViaDaemon DeadObjectException — binder invalidated");
         } catch (Exception e) {
             AppLogger.w(TAG, "stopMirrorViaDaemon transact failed: " + e.getMessage());

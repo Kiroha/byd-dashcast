@@ -1,6 +1,6 @@
 package com.byd.dashcast;
 
-import com.byd.dashcast.beta.ShellGateway;
+import com.byd.dashcast.proxy.ShellGateway;
 import android.content.ComponentName;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -339,7 +339,7 @@ public class MainActivity extends AppCompatActivity
                             .getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
                             .getString("re_sniffer_file_path", null);
                     if (savedSnifferPath == null)
-                        com.byd.dashcast.beta.ShellGateway.execShell(hygieneCtx,
+                        com.byd.dashcast.proxy.ShellGateway.execShell(hygieneCtx,
                             "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
                           + "  rm -f /data/local/tmp/.re_sniffer_run;"
                           + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
@@ -918,7 +918,7 @@ public class MainActivity extends AppCompatActivity
     private void refreshFissionButton() {
         View btn = findViewById(R.id.btn_fission_open);
         if (btn == null) return;
-        btn.setVisibility(com.byd.dashcast.beta.BetaConfig.isFissionModeEnabled(this)
+        btn.setVisibility(com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
                 ? View.VISIBLE : View.GONE);
     }
 

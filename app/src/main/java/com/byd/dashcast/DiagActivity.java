@@ -41,11 +41,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.byd.dashcast.beta.BetaConfig;
-import com.byd.dashcast.beta.BetaTestRunner;
-import com.byd.dashcast.beta.BetaTestRunner.TestDef;
-import com.byd.dashcast.beta.BetaTestRunner.TestResult;
-import com.byd.dashcast.beta.BetaTestRunner.Status;
+import com.byd.dashcast.proxy.DaemonConfig;
+import com.byd.dashcast.proxy.DaemonTestRunner;
+import com.byd.dashcast.proxy.DaemonTestRunner.TestDef;
+import com.byd.dashcast.proxy.DaemonTestRunner.TestResult;
+import com.byd.dashcast.proxy.DaemonTestRunner.Status;
 import com.byd.dashcast.dilink5.DiLink5TestRunner;
 import com.byd.dashcast.dilink5.Dl5ClusterReconRunner;
 import com.byd.dashcast.dilink5.Dl5VdTestRunner;
@@ -73,7 +73,7 @@ import java.util.List;
  *   <li>Cluster, Display, ADB local, Système, Stress test — Phase-1 stubs
  *       ("Coming soon").</li>
  *   <li><b>Beta Engine</b> — full runner for the Component A / B test suite
- *       (see {@link BetaTestRunner}).</li>
+ *       (see {@link DaemonTestRunner}).</li>
  * </ul>
  */
 public class DiagActivity extends AppCompatActivity {
@@ -397,7 +397,7 @@ public class DiagActivity extends AppCompatActivity {
         lastResults.clear();
         llTestList.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (TestDef def : BetaTestRunner.catalog()) {
+        for (TestDef def : DaemonTestRunner.catalog()) {
             View row = inflater.inflate(R.layout.item_beta_test, llTestList, false);
             TestResult r = new TestResult(def);
             r.status = Status.PENDING;
@@ -448,16 +448,15 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void updateStatusPills() {
-        boolean aOn = BetaConfig.isProxyDaemonEnabled(this);
-        boolean bOn = BetaConfig.isSystemContextEnabled(this);
-        tvBetaStatusA.setText(aOn ? R.string.diag_beta_pill_a_on : R.string.diag_beta_pill_a_off);
-        tvBetaStatusB.setText(bOn ? R.string.diag_beta_pill_b_on : R.string.diag_beta_pill_b_off);
+        boolean legacyOn = DaemonConfig.isLegacyPathEnabled(this);
+        tvBetaStatusA.setText(legacyOn ? R.string.diag_beta_pill_a_on : R.string.diag_beta_pill_a_off);
+        tvBetaStatusB.setText(R.string.diag_beta_pill_b_off);
     }
 
     private void runAllTests() {
         btnRunAll.setEnabled(false);
         btnCopyReport.setEnabled(false);
-        BetaTestRunner.runAll(this, new BetaTestRunner.Listener() {
+        DaemonTestRunner.runAll(this, new DaemonTestRunner.Listener() {
             @Override public void onSuiteStarted(List<TestResult> results) {
                 if (mDestroyed) return;
                 lastResults.clear();
@@ -492,7 +491,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void copyReport() {
-        String report = BetaTestRunner.buildReport(lastResults);
+        String report = DaemonTestRunner.buildReport(lastResults);
         AppLogger.i("DiagActivity", "Beta Engine report:\n" + report);
         // Always send as a .log file attachment — easier for users to forward.
         AppLogger.shareWithReport(this, report);
@@ -2044,8 +2043,8 @@ public class DiagActivity extends AppCompatActivity {
                .append(" → display=").append(fissionId)
                .append(' ').append(w).append('x').append(h).append(" ==\n");
             try {
-                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
-                    boolean ok = com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                if (!com.byd.dashcast.proxy.ProxyClient.isConnected()) {
+                    boolean ok = com.byd.dashcast.proxy.ProxyClient.connect(this);
                     log.append("BetaProxy.connect() = ").append(ok).append('\n');
                     if (!ok) {
                         final String out = log + "\n❌ Daemon indisponible. Tente « 🔄 Restart daemon ».";
@@ -2054,7 +2053,7 @@ public class DiagActivity extends AppCompatActivity {
                         return;
                     }
                 }
-                String forceLog = com.byd.dashcast.beta.BetaProxyClient.launchAndForce(
+                String forceLog = com.byd.dashcast.proxy.ProxyClient.launchAndForce(
                         pkg, /*activityCls*/ null, fissionId, w, h);
                 log.append(forceLog).append('\n');
                 final String out = log + "\n✅ Séquence terminée. Regarde le cluster :\n"
@@ -2063,8 +2062,8 @@ public class DiagActivity extends AppCompatActivity {
                         + " • rien sur cluster → moveStackToDisplay a échoué (voir log)";
                 writeClusterPocReport(out);
                 safeRunOnUiThread(() -> status.setText(out));
-            } catch (com.byd.dashcast.beta.BetaProxyClient.BetaProxyException bex) {
-                log.append("❌ BetaProxyException : ").append(bex.getMessage()).append('\n');
+            } catch (com.byd.dashcast.proxy.ProxyClient.ProxyException bex) {
+                log.append("❌ ProxyException : ").append(bex.getMessage()).append('\n');
                 if (bex.getMessage() != null && bex.getMessage().contains("Unknown transaction")) {
                     log.append("\nDaemon obsolète (proto < 5). Hit « 🔄 Restart daemon » puis réessaie.");
                 }
@@ -2107,8 +2106,8 @@ public class DiagActivity extends AppCompatActivity {
                .append(" rect=[").append(l).append(',').append(t).append(',')
                .append(r).append(',').append(b).append("] ==\n");
             try {
-                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
-                    boolean ok = com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                if (!com.byd.dashcast.proxy.ProxyClient.isConnected()) {
+                    boolean ok = com.byd.dashcast.proxy.ProxyClient.connect(this);
                     log.append("connect = ").append(ok).append('\n');
                     if (!ok) {
                         final String out = log + "❌ Daemon indisponible.";
@@ -2116,13 +2115,13 @@ public class DiagActivity extends AppCompatActivity {
                         return;
                     }
                 }
-                String moveLog = com.byd.dashcast.beta.BetaProxyClient.moveAndResize(
+                String moveLog = com.byd.dashcast.proxy.ProxyClient.moveAndResize(
                         pkg, fissionId, l, t, r, b);
                 log.append(moveLog);
                 final String out = log.toString();
                 writeClusterPocReport(out);
                 safeRunOnUiThread(() -> status.setText(out));
-            } catch (com.byd.dashcast.beta.BetaProxyClient.BetaProxyException bex) {
+            } catch (com.byd.dashcast.proxy.ProxyClient.ProxyException bex) {
                 log.append("❌ ").append(bex.getMessage()).append('\n');
                 if (bex.getMessage() != null && bex.getMessage().contains("Unknown transaction")) {
                     log.append("\nDaemon obsolète (proto < 5 — pas de moveAndResize). "
@@ -2148,10 +2147,10 @@ public class DiagActivity extends AppCompatActivity {
             StringBuilder log = new StringBuilder();
             log.append("[stop] am force-stop ").append(pkg).append('\n');
             try {
-                if (!com.byd.dashcast.beta.BetaProxyClient.isConnected()) {
-                    com.byd.dashcast.beta.BetaProxyClient.connect(this);
+                if (!com.byd.dashcast.proxy.ProxyClient.isConnected()) {
+                    com.byd.dashcast.proxy.ProxyClient.connect(this);
                 }
-                String out = com.byd.dashcast.beta.BetaProxyClient.runShell(
+                String out = com.byd.dashcast.proxy.ProxyClient.runShell(
                         "am force-stop " + pkg);
                 if (out != null && !out.isEmpty()) log.append(out).append('\n');
                 log.append("✓ force-stop OK");
@@ -2212,10 +2211,10 @@ public class DiagActivity extends AppCompatActivity {
         if (status == null) return;
         status.setText("[restart] Kill + bootstrap daemon… (peut prendre 5–8 s)");
         new Thread(() -> {
-            boolean ok = com.byd.dashcast.beta.BetaProxyClient.killAndRestartDaemon(this);
-            String ver = com.byd.dashcast.beta.BetaProxyClient.getProtocolVersion();
-            int uid = com.byd.dashcast.beta.BetaProxyClient.getCallerUid();
-            int pid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+            boolean ok = com.byd.dashcast.proxy.ProxyClient.killAndRestartDaemon(this);
+            String ver = com.byd.dashcast.proxy.ProxyClient.getProtocolVersion();
+            int uid = com.byd.dashcast.proxy.ProxyClient.getCallerUid();
+            int pid = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
             int verInt = -1;
             try { verInt = ver == null ? -1 : Integer.parseInt(ver); } catch (Throwable ignored) {}
             final String msg = ok
@@ -2231,12 +2230,12 @@ public class DiagActivity extends AppCompatActivity {
     // ─── v1.2.58 — Phase A step 1 in-car validation (no ADB required) ────────
     //
     // Three test verbs validating the daemon auto-recovery wired into the
-    // typed verbs of BetaProxyClient (callWithRetry + attemptReconnect +
+    // typed verbs of ProxyClient (callWithRetry + attemptReconnect +
     // 10 s cooldown anti-storm). Buttons live in the Cluster POC panel because
     // that's where the proxy daemon is already explicitly surfaced (Restart
     // button), keeping all daemon controls together.
     //
-    // Kill is done via dadb (AdbLocalClient) — never via BetaProxyClient.runShell
+    // Kill is done via dadb (AdbLocalClient) — never via ProxyClient.runShell
     // — because that wrapped verb would auto-recover *during* the kill, racing
     // against the kill itself.
 
@@ -2244,7 +2243,7 @@ public class DiagActivity extends AppCompatActivity {
      *  diag actions (Lister, Lancer, Apply…) should auto-bootstrap silently. */
     private void killProxyDaemonForTest(TextView status) {
         if (status == null) return;
-        final int oldPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        final int oldPid = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
         status.setText("[kill] envoi SIGKILL au daemon (pid=" + oldPid + ")…");
         AdbLocalClient.executeShellWithResult(this,
                 "pgrep -f dashcast_proxy | xargs -r kill -9 ; "
@@ -2254,7 +2253,7 @@ public class DiagActivity extends AppCompatActivity {
                         final String tail = report == null ? "" : report.trim();
                         // Give DeathRecipient a beat to fire and clear sBinder.
                         try { Thread.sleep(200); } catch (InterruptedException ignored) {}
-                        final boolean still = com.byd.dashcast.beta.BetaProxyClient.isConnected();
+                        final boolean still = com.byd.dashcast.proxy.ProxyClient.isConnected();
                         safeRunOnUiThread(() -> status.setText(
                                 "[kill] ✅ shell OK (" + tail + ")\n"
                                 + "isConnected=" + still + " — relance n'importe quelle action "
@@ -2274,7 +2273,7 @@ public class DiagActivity extends AppCompatActivity {
      */
     private void testProxyAutoRecovery(TextView status) {
         if (status == null) return;
-        final int oldPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        final int oldPid = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
         status.setText("[recovery] kill pid=" + oldPid + " → probe verb (peut prendre 5–8 s)…");
         AdbLocalClient.executeShellWithResult(this,
                 "pgrep -f dashcast_proxy | xargs -r kill -9 ; "
@@ -2287,7 +2286,7 @@ public class DiagActivity extends AppCompatActivity {
                             boolean ok = false;
                             try {
                                 // Wrapped verb — exercises callWithRetry + attemptReconnect.
-                                String pids = com.byd.dashcast.beta.BetaProxyClient
+                                String pids = com.byd.dashcast.proxy.ProxyClient
                                         .getPidsByPackage("com.byd.dashcast");
                                 ok = true;
                                 verbResult = "pids=\"" + pids + "\"";
@@ -2296,8 +2295,8 @@ public class DiagActivity extends AppCompatActivity {
                                         + ": " + t.getMessage();
                             }
                             long elapsed = System.currentTimeMillis() - t0;
-                            final int newPid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
-                            final String ver = com.byd.dashcast.beta.BetaProxyClient.getProtocolVersion();
+                            final int newPid = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
+                            final String ver = com.byd.dashcast.proxy.ProxyClient.getProtocolVersion();
                             final boolean okFinal = ok;
                             final String verbResultFinal = verbResult;
                             safeRunOnUiThread(() -> status.setText(
@@ -2348,7 +2347,7 @@ public class DiagActivity extends AppCompatActivity {
                 long t0 = System.currentTimeMillis();
                 String result;
                 try {
-                    com.byd.dashcast.beta.BetaProxyClient.getPidsByPackage("com.byd.dashcast");
+                    com.byd.dashcast.proxy.ProxyClient.getPidsByPackage("com.byd.dashcast");
                     result = "✅ probe OK (reconnect)";
                 } catch (Throwable t) {
                     result = "⏸ probe blocked (" + t.getMessage() + ")";
@@ -2370,17 +2369,17 @@ public class DiagActivity extends AppCompatActivity {
      */
     private void showWatchdogStatus(TextView status) {
         if (status == null) return;
-        boolean installed = com.byd.dashcast.beta.ProxyWatchdog.isInstalled();
-        int fg            = com.byd.dashcast.beta.ProxyWatchdog.getForegroundCount();
-        long ageMs        = com.byd.dashcast.beta.ProxyWatchdog.getMsSinceLastSeenAlive();
-        boolean connected = com.byd.dashcast.beta.BetaProxyClient.isConnected();
-        int pid           = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
-        boolean proxyOn   = com.byd.dashcast.beta.BetaConfig.isProxyDaemonEnabled(this);
+        boolean installed = com.byd.dashcast.proxy.ProxyWatchdog.isInstalled();
+        int fg            = com.byd.dashcast.proxy.ProxyWatchdog.getForegroundCount();
+        long ageMs        = com.byd.dashcast.proxy.ProxyWatchdog.getMsSinceLastSeenAlive();
+        boolean connected = com.byd.dashcast.proxy.ProxyClient.isConnected();
+        int pid           = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
+        boolean legacyOn  = com.byd.dashcast.proxy.DaemonConfig.isLegacyPathEnabled(this);
         String age = ageMs < 0 ? "jamais observé" : (ageMs + " ms");
         status.setText("[watchdog]"
                 + " installed=" + installed
                 + " foreground=" + fg
-                + "\n  proxyEnabled=" + proxyOn
+                + "\n  legacyPath=" + legacyOn
                 + " connected=" + connected
                 + " pid=" + pid
                 + "\n  lastSeenAlive=" + age
@@ -2393,19 +2392,19 @@ public class DiagActivity extends AppCompatActivity {
      * fast path. If the daemon is alive, the script must return
      * {@code REBROADCAST <pid>} in tens of milliseconds (vs. ~1 s for a full
      * {@code app_process} respawn). The daemon-side {@code FileObserver}
-     * then re-emits {@link com.byd.dashcast.beta.proxy.ProxyDaemonMain#ACTION_PROXY_CONNECTED}.
+     * then re-emits {@link com.byd.dashcast.proxy.daemon.ProxyDaemonMain#ACTION_PROXY_CONNECTED}.
      * Does NOT touch the binder the app currently holds — purely validates
      * the shell-level plumbing.
      */
     private void testProxyRebroadcast(TextView status) {
         if (status == null) return;
-        final int pid = com.byd.dashcast.beta.BetaProxyClient.getDaemonPid();
+        final int pid = com.byd.dashcast.proxy.ProxyClient.getDaemonPid();
         if (pid <= 0) {
             status.setText("[rebroadcast] ⚠ daemon non connecté — connecte d'abord (Recovery/Storm).");
             return;
         }
         status.setText("[rebroadcast] PID=" + pid + " → bootstrap fast-path probe…");
-        // Inline reproduction of the BetaProxyClient fast-path branch — same
+        // Inline reproduction of the ProxyClient fast-path branch — same
         // file names + identity check. Returns REBROADCAST <pid> when the
         // daemon is alive, OK <apk> otherwise. Run in a worker thread so the
         // shell roundtrip never blocks the UI.

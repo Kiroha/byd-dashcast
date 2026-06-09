@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta.proxy;
+package com.byd.dashcast.proxy.daemon;
 
 import java.lang.reflect.Method;
 

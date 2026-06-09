@@ -17,7 +17,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 
-import com.byd.dashcast.beta.BetaConfig;
+import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.platform.Platform;
 
@@ -109,8 +109,7 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbAdasWindowFix;
     private CompoundButton cbUseOwnSim;
     private CompoundButton cbCompactAppsPanel;
-    private CompoundButton cbBetaProxyDaemon;
-    private CompoundButton cbBetaSystemContext;
+    private CompoundButton swLegacyPath;
     private CompoundButton cbFissionMode;
     private CompoundButton swDilink5Mode;
     private TextView tvBetaDilink5Support;
@@ -245,8 +244,7 @@ public class SettingsActivity extends AppCompatActivity {
         cbAdasWindowFix  = findViewById(R.id.cb_adas_window_fix);
         cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
         cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
-        cbBetaProxyDaemon   = findViewById(R.id.cb_beta_proxy_daemon);
-        cbBetaSystemContext = findViewById(R.id.cb_beta_system_context);
+        swLegacyPath        = findViewById(R.id.sw_legacy_path);
         cbFissionMode       = findViewById(R.id.cb_fission_mode);
         swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
         tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
@@ -315,10 +313,8 @@ public class SettingsActivity extends AppCompatActivity {
             cbCompactAppsPanel.setChecked(prefs.getBoolean(PREF_COMPACT_APPS_PANEL, false));
         }
 
-        // Beta Engine toggles (default OFF — restart required after change)
-        cbBetaProxyDaemon.setChecked(BetaConfig.isProxyDaemonEnabled(this));
-        cbBetaSystemContext.setChecked(BetaConfig.isSystemContextEnabled(this));
-        cbFissionMode.setChecked(BetaConfig.isFissionModeEnabled(this));
+        swLegacyPath.setChecked(DaemonConfig.isLegacyPathEnabled(this));
+        cbFissionMode.setChecked(DaemonConfig.isFissionModeEnabled(this));
 
         // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
         // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
@@ -484,19 +480,13 @@ public class SettingsActivity extends AppCompatActivity {
             });
         }
 
-        // Beta Engine — both toggles require app restart to take effect
-        cbBetaProxyDaemon.setOnCheckedChangeListener((b, isChecked) -> {
-            BetaConfig.setProxyDaemonEnabled(this, isChecked);
-            AppLogger.i("SettingsActivity", "beta_proxy_daemon=" + isChecked);
-            showRestartRequiredDialog();
-        });
-        cbBetaSystemContext.setOnCheckedChangeListener((b, isChecked) -> {
-            BetaConfig.setSystemContextEnabled(this, isChecked);
-            AppLogger.i("SettingsActivity", "beta_system_context=" + isChecked);
-            showRestartRequiredDialog();
+        // Legacy path — takes effect immediately, no restart needed.
+        swLegacyPath.setOnCheckedChangeListener((b, isChecked) -> {
+            DaemonConfig.setLegacyPathEnabled(this, isChecked);
+            AppLogger.i("SettingsActivity", "legacy_path=" + isChecked);
         });
         cbFissionMode.setOnCheckedChangeListener((b, isChecked) -> {
-            BetaConfig.setFissionModeEnabled(this, isChecked);
+            DaemonConfig.setFissionModeEnabled(this, isChecked);
             AppLogger.i("SettingsActivity", "fission_mode=" + isChecked);
         });
         swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {

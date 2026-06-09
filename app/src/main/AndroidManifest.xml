@@ -242,7 +242,7 @@
              foreground. Heartbeat 10s, START_STICKY, low-importance silent
              notification (required by Android for FG services). -->
         <service
-            android:name=".beta.ProxyKeeperService"
+            android:name=".proxy.ProxyKeeperService"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 

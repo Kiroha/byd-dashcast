@@ -958,12 +958,12 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- ════════════════════════════════════════════════════════ -->
-                <!-- Section: BETA ENGINE — Experimental                       -->
+                <!-- Section: ADVANCED                                         -->
                 <!-- ════════════════════════════════════════════════════════ -->
                 <TextView
                     style="@style/Widget.DashCast.SectionHead"
                     android:layout_marginTop="20dp"
-                    android:text="@string/settings_section_beta_engine"/>
+                    android:text="@string/settings_section_advanced"/>
 
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Widget.DashCast.Card.Filled"
@@ -979,31 +979,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <!-- Warning banner -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:padding="12dp"
-                            android:layout_marginBottom="4dp"
-                            android:background="@drawable/bg_beta_warning">
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_marginEnd="10dp"
-                                android:src="@drawable/ic_science"
-                                android:tint="#FFB300"/>
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_beta_warning"
-                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                android:textColor="#FFB300"/>
-                        </LinearLayout>
-
-                        <!-- Switch A : proxy daemon -->
+                        <!-- Switch : legacy ADB path -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
@@ -1018,40 +994,13 @@
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_beta_proxy_daemon"/>
+                                    android:text="@string/settings_legacy_path"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_beta_proxy_daemon_support"/>
+                                    android:text="@string/settings_legacy_path_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/cb_beta_proxy_daemon"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_vertical"/>
-                        </LinearLayout>
-
-                        <!-- Switch B : system context bypass -->
-                        <LinearLayout
-                            style="@style/Widget.DashCast.ListItem">
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_marginEnd="16dp"
-                                android:layout_gravity="center_vertical"
-                                android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_science"/>
-                            <LinearLayout
-                                style="@style/Widget.DashCast.ListItem.Content">
-                                <TextView
-                                    style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_beta_system_context"/>
-                                <TextView
-                                    style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_beta_system_context_support"/>
-                            </LinearLayout>
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/cb_beta_system_context"
+                                android:id="@+id/sw_legacy_path"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>

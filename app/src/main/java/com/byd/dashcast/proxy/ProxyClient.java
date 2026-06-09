@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
@@ -13,15 +13,15 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.beta.proxy.BinderParcelable;
-import com.byd.dashcast.beta.proxy.ProxyDaemonContract;
+import com.byd.dashcast.proxy.daemon.BinderParcelable;
+import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * BetaProxyClient — Component A client (v1.1.6+).
+ * ProxyClient — Component A client (v1.1.6+).
  *
  * <p>Talks to the proxy daemon (see {@link ProxyDaemonMain}) over a
  * direct {@link IBinder} reference obtained via a one-shot broadcast that
@@ -41,15 +41,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>Thread-safety: all public methods synchronize on a static lock, and
  * concurrent callers will queue.
  */
-public final class BetaProxyClient {
+public final class ProxyClient {
 
-    private static final String TAG = "BetaProxyClient";
+    private static final String TAG = "ProxyClient";
 
     /** App package whose APK hosts the daemon main class. Must match the installed package. */
     private static final String DAEMON_PKG = "com.byd.dashcast";
 
     /** Fully-qualified main class of the daemon. */
-    private static final String DAEMON_MAIN = "com.byd.dashcast.beta.proxy.ProxyDaemonMain";
+    private static final String DAEMON_MAIN = "com.byd.dashcast.proxy.daemon.ProxyDaemonMain";
 
     /** Path of the daemon's stdout/stderr capture on the device (overwritten each bootstrap). */
     private static final String DAEMON_LOG = "/data/local/tmp/dashcast_proxy.log";
@@ -251,13 +251,13 @@ public final class BetaProxyClient {
                 sDaemonVer = null;
                 // v1.2.78 — Couche 4: count the zombie. Best-effort: sAppCtx
                 // may still be null if no connect() has ever succeeded, in
-                // which case BetaProxyMetrics is a no-op.
-                BetaProxyMetrics.inc(sAppCtx, BetaProxyMetrics.K_BINDER_ZOMBIES);
+                // which case ProxyMetrics is a no-op.
+                ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_ZOMBIES);
             }
         }
     };
 
-    private BetaProxyClient() {}
+    private ProxyClient() {}
 
     /**
      * @return {@code true} if a live binder to the daemon is currently held.
@@ -312,7 +312,7 @@ public final class BetaProxyClient {
             sDaemonUid = -1;
             sDaemonPid = -1;
             sDaemonVer = null;
-            BetaProxyMetrics.inc(sAppCtx, BetaProxyMetrics.K_BINDER_DEATHS_SILENT);
+            ProxyMetrics.inc(sAppCtx, ProxyMetrics.K_BINDER_DEATHS_SILENT);
             AppLogger.w(TAG, "invalidateBinder(" + reason
                     + ") — silent death detected by caller (kernel notif missing)");
         }
@@ -367,9 +367,9 @@ public final class BetaProxyClient {
         // bootstrap-side outcome tells us WHY we are about to wait.
         String upper = bootMsg == null ? "" : bootMsg.trim();
         if (upper.startsWith("REBROADCAST")) {
-            BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_REBROADCASTS);
+            ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
         } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
-            BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_NO_APK);
+            ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_NO_APK);
             // Force the next attemptReconnect to bypass cooldown — the PM
             // race window is sub-second and a 1s+ wait wastes UX.
             synchronized (LOCK) {
@@ -414,9 +414,9 @@ public final class BetaProxyClient {
                 sBinder = null;
                 // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
                 if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
-                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_TIMEOUT);
+                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
                 } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
-                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_FAILS_OTHER);
+                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
                 }
                 return false;
             }
@@ -428,7 +428,7 @@ public final class BetaProxyClient {
                 // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
                 // counted above and we shouldn't double-count it as a cold one).
                 if (!upper.startsWith("REBROADCAST")) {
-                    BetaProxyMetrics.inc(ctx, BetaProxyMetrics.K_COLD_SPAWNS);
+                    ProxyMetrics.inc(ctx, ProxyMetrics.K_COLD_SPAWNS);
                 }
                 // v1.2.78 — reset backoff on success so the next failure starts
                 // at step 0 (1s) instead of inheriting the previous run's state.
@@ -525,10 +525,10 @@ public final class BetaProxyClient {
      * calls dispatch in parallel through the daemon's binder thread pool
      * instead of serializing behind a single static mutex.
      */
-    public static String runShell(String cmd) throws BetaProxyException {
+    public static String runShell(String cmd) throws ProxyException {
         return callWithRetry("runShell", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -539,7 +539,7 @@ public final class BetaProxyClient {
                 int exit = reply.readInt();
                 String output = reply.readString();
                 if (exit != 0 && output != null && output.startsWith("ERR ")) {
-                    throw new BetaProxyException(output.substring(4));
+                    throw new ProxyException(output.substring(4));
                 }
                 return output == null ? "" : output;
             } finally {
@@ -552,14 +552,14 @@ public final class BetaProxyClient {
     /**
      * Run the full Phase 4 feasibility probe suite inside the daemon and return
      * the raw pipe-separated result string ({@code "P1=PASS:...|P2=FAIL_SECURITY:..."}).
-     * Parse with {@link com.byd.dashcast.beta.proxy.Phase4Probes#parse(String)}.
+     * Parse with {@link com.byd.dashcast.proxy.daemon.Phase4Probes#parse(String)}.
      *
      * <p>Probes run sequentially in the daemon process under uid 2000; the whole
      * call typically returns in &lt; 1 s.
      */
-    public static String runPhase4Probes() throws BetaProxyException {
+    public static String runPhase4Probes() throws ProxyException {
         IBinder b = sBinder;
-        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
@@ -570,7 +570,7 @@ public final class BetaProxyClient {
             return out == null ? "" : out;
         } catch (RemoteException e) {
             invalidateBinder("Phase4Probes");
-            throw new BetaProxyException("transact: " + e.getMessage(), e);
+            throw new ProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();
             data.recycle();
@@ -584,13 +584,13 @@ public final class BetaProxyClient {
      * <p>Equivalent to {@code wm overscan left,top,right,bottom -d displayId}.
      * Probe P1 (build 173) proved this call succeeds from uid 2000 on the
      * BYD Seal EU. Typical latency: a few ms (first call may include the
-     * one-shot reflection cache warm-up in {@link com.byd.dashcast.beta.proxy.Phase4DisplayVerbs}).
+     * one-shot reflection cache warm-up in {@link com.byd.dashcast.proxy.daemon.Phase4DisplayVerbs}).
      */
     public static void setOverscan(int displayId, int left, int top, int right, int bottom)
-            throws BetaProxyException {
+            throws ProxyException {
         callWithRetry("setOverscan", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -626,11 +626,11 @@ public final class BetaProxyClient {
      * with 241 live processes; build-174 device logs show the legacy fork at
      * 48–181 ms.
      */
-    public static String getPidsByPackage(String packageName) throws BetaProxyException {
+    public static String getPidsByPackage(String packageName) throws ProxyException {
         final String pkg = packageName == null ? "" : packageName;
         return callWithRetry("getPidsByPackage", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -662,11 +662,11 @@ public final class BetaProxyClient {
      * {@code s16 ""} when {@code infoStr} was empty).
      */
     public static void autoContainerSendInfo(int type, int info, String str)
-            throws BetaProxyException {
+            throws ProxyException {
         final String safeStr = str == null ? "" : str;
         callWithRetry("autoContainerSendInfo", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -695,10 +695,10 @@ public final class BetaProxyClient {
      * users (legacy {@code am force-stop} default behaviour).
      */
     public static void forceStopPackage(String packageName, int userId)
-            throws BetaProxyException {
+            throws ProxyException {
         callWithRetry("forceStopPackage", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -732,7 +732,7 @@ public final class BetaProxyClient {
      * free the VD (the daemon retains a strong reference until then).
      *
      * <p>If the daemon predates build 235 (PROTOCOL_VERSION ≤ "2"), this
-     * call throws a {@link BetaProxyException} with cause
+     * call throws a {@link ProxyException} with cause
      * {@link RemoteException} reporting "Unknown transaction" — caller
      * should surface a "daemon obsolète, redémarre-le" hint.
      *
@@ -741,11 +741,11 @@ public final class BetaProxyClient {
     public static int createVirtualDisplay(String name, int width, int height,
                                            int densityDpi,
                                            android.view.Surface surface, int flags)
-            throws BetaProxyException {
+            throws ProxyException {
         IBinder b = sBinder;
-        if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+        if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
         if (surface == null || !surface.isValid()) {
-            throw new BetaProxyException("surface null or invalid");
+            throw new ProxyException("surface null or invalid");
         }
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
@@ -772,7 +772,7 @@ public final class BetaProxyClient {
                 }
                 sBinder = null;
             }
-            throw new BetaProxyException("transact: " + e.getMessage(), e);
+            throw new ProxyException("transact: " + e.getMessage(), e);
         } finally {
             reply.recycle();
             data.recycle();
@@ -788,10 +788,10 @@ public final class BetaProxyClient {
      *
      * @since v1.2.39 build 235 — Phase 5a.
      */
-    public static void releaseVirtualDisplay(int displayId) throws BetaProxyException {
+    public static void releaseVirtualDisplay(int displayId) throws ProxyException {
         callWithRetry("releaseVirtualDisplay", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -837,11 +837,11 @@ public final class BetaProxyClient {
      */
     public static String launchAndForce(String pkg, String activityCls,
                                         int displayId, int width, int height)
-            throws BetaProxyException {
-        if (pkg == null || pkg.isEmpty()) throw new BetaProxyException("pkg required");
+            throws ProxyException {
+        if (pkg == null || pkg.isEmpty()) throw new ProxyException("pkg required");
         return callWithRetry("launchAndForce", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -878,11 +878,11 @@ public final class BetaProxyClient {
      */
     public static String moveAndResize(String pkg, int displayId,
                                        int left, int top, int right, int bottom)
-            throws BetaProxyException {
-        if (pkg == null || pkg.isEmpty()) throw new BetaProxyException("pkg required");
+            throws ProxyException {
+        if (pkg == null || pkg.isEmpty()) throw new ProxyException("pkg required");
         return callWithRetry("moveAndResize", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -916,10 +916,10 @@ public final class BetaProxyClient {
      *
      * @since v1.2.63
      */
-    public static String cleanFissionStacks(int displayId) throws BetaProxyException {
+    public static String cleanFissionStacks(int displayId) throws ProxyException {
         return callWithRetry("cleanFissionStacks", () -> {
             IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new BetaProxyException("not connected");
+            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
             Parcel data = Parcel.obtain();
             Parcel reply = Parcel.obtain();
             try {
@@ -992,13 +992,13 @@ public final class BetaProxyClient {
      * must read {@code sBinder} fresh on every {@link #run()} call so that a
      * post-reconnect retry sees the new binder published by {@code connect()}.
      * Both checked exception types are declared because verb bodies need to
-     * throw {@link BetaProxyException} for logical errors (null Surface, bad
+     * throw {@link ProxyException} for logical errors (null Surface, bad
      * argument) and {@link RemoteException} for transport failures — only the
      * latter triggers the retry.
      */
     @FunctionalInterface
     private interface BinderOp<T> {
-        T run() throws RemoteException, BetaProxyException;
+        T run() throws RemoteException, ProxyException;
     }
 
     /**
@@ -1052,7 +1052,7 @@ public final class BetaProxyClient {
      * Wrap a typed-verb body in single-shot auto-recovery: pre-check live
      * binder (best-effort silent reconnect if dead), run the body, retry once
      * on {@link RemoteException} after a rate-limited reconnect. Logical
-     * {@link BetaProxyException} from the body (e.g. "not connected", "null
+     * {@link ProxyException} from the body (e.g. "not connected", "null
      * Surface") propagate unchanged — they are not transport errors and a
      * retry would not change the outcome.
      *
@@ -1064,7 +1064,7 @@ public final class BetaProxyClient {
      *            {@code "setOverscan"})
      * @param op  the verb body — must re-read {@code sBinder} on each call
      */
-    private static <T> T callWithRetry(String tag, BinderOp<T> op) throws BetaProxyException {
+    private static <T> T callWithRetry(String tag, BinderOp<T> op) throws ProxyException {
         // Pre-flight: if no live binder, opportunistically reconnect once
         // (cooldown-gated) before the first attempt. If reconnect fails, the
         // body will throw "not connected" on its own — sites that still want
@@ -1088,7 +1088,7 @@ public final class BetaProxyClient {
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
             if (!attemptReconnect()) {
-                throw new BetaProxyException(tag + ": " + e.getMessage(), e);
+                throw new ProxyException(tag + ": " + e.getMessage(), e);
             }
             try {
                 return op.run();
@@ -1100,7 +1100,7 @@ public final class BetaProxyClient {
                         sBinder = null;
                     }
                 }
-                throw new BetaProxyException(
+                throw new ProxyException(
                         tag + " (after reconnect): " + e2.getMessage(), e2);
             }
         }
@@ -1226,8 +1226,8 @@ public final class BetaProxyClient {
     }
 
     /** Thrown when the proxy daemon path fails — caller should fall back to legacy. */
-    public static class BetaProxyException extends Exception {
-        public BetaProxyException(String msg) { super(msg); }
-        public BetaProxyException(String msg, Throwable cause) { super(msg, cause); }
+    public static class ProxyException extends Exception {
+        public ProxyException(String msg) { super(msg); }
+        public ProxyException(String msg, Throwable cause) { super(msg, cause); }
     }
 }

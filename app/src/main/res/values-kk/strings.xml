@@ -222,12 +222,9 @@
     <string name="log_saved_toast">Журнал сақталды: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">Эксперименттік қозғалтқыш (бета)</string>
-    <string name="settings_beta_warning">Эксперименттік мүмкіндіктер. Қателік болса, қолданба автоматты түрде тұрақты қозғалтқышқа ауысады. Өзгертуден кейін қайта іске қосу қажет.</string>
-    <string name="settings_beta_proxy_daemon">Артықшылықты прокси-демон</string>
-    <string name="settings_beta_proxy_daemon_support">Жүйелік пәрмендерді орындау үшін жергілікті ADB (UID 2000) арқылы тұрақты демонды іске қосады. OpenBYD идеясы.</string>
-    <string name="settings_beta_system_context">Жүйелік контекст (рефлексия)</string>
-    <string name="settings_beta_system_context_support">BYD SDK рұқсаттарын айналып өту үшін ActivityThread.systemMain() арқылы жүйелік Context алады.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="beta_restart_title">Қайта іске қосу қажет</string>
     <string name="beta_restart_message">Бұл параметр DashCast-тың келесі іске қосылуында күшіне енеді. Сол кезге дейін қолданбаны қалыпты пайдалана аласыз.</string>
     <string name="diag_tab_cluster">Кластер</string>
@@ -239,10 +236,10 @@
     <string name="diag_coming_soon_subtitle">Бұл бөлім келесі нұсқада іске асырылады. Ағымдағы тестілер үшін «Beta Engine» қойындысын қараңыз.</string>
     <string name="diag_beta_header_title">Эксперименттік қозғалтқыш</string>
     <string name="diag_beta_header_subtitle">Component A (демон) және Component B (жүйелік контекст) тестілері. 1-кезең.</string>
-    <string name="diag_beta_pill_a_off">A · Демон: OFF</string>
-    <string name="diag_beta_pill_a_on">A · Демон: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
+    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Бастау үшін «Барлығын іске қосу» түймесін басыңыз</string>
     <string name="diag_beta_counters_running">Орындалуда…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>

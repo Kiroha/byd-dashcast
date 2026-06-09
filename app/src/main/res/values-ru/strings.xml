@@ -222,12 +222,9 @@
     <string name="log_saved_toast">Журнал сохранён: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">Экспериментальный движок (бета)</string>
-    <string name="settings_beta_warning">Экспериментальные функции. В случае проблемы приложение автоматически возвращается к стабильному движку. После изменения требуется перезапуск.</string>
-    <string name="settings_beta_proxy_daemon">Привилегированный прокси-демон</string>
-    <string name="settings_beta_proxy_daemon_support">Запускает постоянный демон через локальный ADB (UID 2000) для выполнения системных команд. Вдохновлено OpenBYD.</string>
-    <string name="settings_beta_system_context">Системный контекст (рефлексия)</string>
-    <string name="settings_beta_system_context_support">Получает системный Context через ActivityThread.systemMain(), чтобы обойти проверки разрешений BYD SDK.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="beta_restart_title">Требуется перезапуск</string>
     <string name="beta_restart_message">Этот параметр вступит в силу при следующем запуске DashCast. До этого момента вы можете продолжать пользоваться приложением как обычно.</string>
     <string name="diag_tab_cluster">Кластер</string>
@@ -239,10 +236,10 @@
     <string name="diag_coming_soon_subtitle">Этот раздел будет реализован в следующей версии. Текущие тесты — во вкладке «Beta Engine».</string>
     <string name="diag_beta_header_title">Экспериментальный движок</string>
     <string name="diag_beta_header_subtitle">Тесты Component A (демон) и Component B (системный контекст). Этап 1.</string>
-    <string name="diag_beta_pill_a_off">A · Демон: OFF</string>
-    <string name="diag_beta_pill_a_on">A · Демон: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
+    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Нажмите «Запустить все», чтобы начать</string>
     <string name="diag_beta_counters_running">Выполняется…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>

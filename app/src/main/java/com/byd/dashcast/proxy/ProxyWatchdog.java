@@ -1,4 +1,4 @@
-package com.byd.dashcast.beta;
+package com.byd.dashcast.proxy;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -17,9 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * v1.2.62-beta — Phase A step 2 : foreground liveness ping for the proxy
  * daemon.
  *
- * <p>Polls {@link BetaProxyClient#isConnected()} every {@link #PING_INTERVAL_MS}
+ * <p>Polls {@link ProxyClient#isConnected()} every {@link #PING_INTERVAL_MS}
  * while the app is in the foreground. If the cached binder is dead (daemon
- * crashed, killed, OOM), triggers {@link BetaProxyClient#connect(Context)}
+ * crashed, killed, OOM), triggers {@link ProxyClient#connect(Context)}
  * synchronously on the watchdog thread so the next user-initiated typed verb
  * is instant instead of paying the ~1 s bootstrap cost on its first call.
  *
@@ -36,12 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Phase A step 1's job (auto-recovery on the next call).
  *
  * <p>Reconnects respect the same 10 s cooldown gate as the on-demand
- * reconnect path because we route through {@link BetaProxyClient#connect}
+ * reconnect path because we route through {@link ProxyClient#connect}
  * which in turn re-uses the existing receiver/latch machinery; bootstrap
  * cascades remain impossible.
  *
  * <p><b>Safety</b>: never enables itself if the proxy is feature-flag
- * disabled ({@link BetaConfig#isProxyDaemonEnabled(Context)} false), to keep
+ * disabled (always active — the daemon is the default projection path.
  * users who never opted in at zero overhead.
  */
 public final class ProxyWatchdog {
@@ -140,11 +140,7 @@ public final class ProxyWatchdog {
     private static void tickInternal() {
         Context ctx = sAppCtx;
         if (ctx == null) return;
-        // Feature-flag gate. Users who never enabled the daemon never pay
-        // even the volatile read.
-        if (!BetaConfig.isProxyDaemonEnabled(ctx)) return;
-
-        if (BetaProxyClient.isConnected()) {
+        if (ProxyClient.isConnected()) {
             sLastSeenAliveMs = SystemClock.elapsedRealtime();
             return;
         }
@@ -155,11 +151,11 @@ public final class ProxyWatchdog {
         AppLogger.i(TAG, "binder dead (downFor="
                 + (downForMs < 0 ? "unknown" : downForMs + "ms")
                 + ") — proactive reconnect");
-        boolean ok = BetaProxyClient.connect(ctx);
+        boolean ok = ProxyClient.connect(ctx);
         if (ok) {
             sLastSeenAliveMs = SystemClock.elapsedRealtime();
             AppLogger.i(TAG, "proactive reconnect ✅ pid="
-                    + BetaProxyClient.getDaemonPid());
+                    + ProxyClient.getDaemonPid());
         } else {
             AppLogger.w(TAG, "proactive reconnect ❌ — will retry in "
                     + (PING_INTERVAL_MS / 1000) + "s");

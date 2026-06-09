@@ -4,8 +4,8 @@ import android.content.Context;
 // LOT 4 — Bitmap/BitmapFactory imports removed (captureClusterDisplay deleted).
 import android.os.SystemClock;
 
-import com.byd.dashcast.beta.BetaConfig;
-import com.byd.dashcast.beta.BetaProxyClient;
+import com.byd.dashcast.proxy.DaemonConfig;
+import com.byd.dashcast.proxy.ProxyClient;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
@@ -108,7 +108,7 @@ public class AdbLocalClient {
     /**
      * Returns true and logs a warning when {@code cmd} must be blocked because
      * it is a display-resize command running on DL2. Centralised so every
-     * shell entry point (legacy {@code executeShell*}, {@link com.byd.dashcast.beta.ShellGateway})
+     * shell entry point (legacy {@code executeShell*}, {@link com.byd.dashcast.proxy.ShellGateway})
      * applies the same guard.
      */
     public static boolean blockDiLink2Resize(Context ctx, String cmd) {
@@ -338,13 +338,13 @@ public class AdbLocalClient {
                 // (force-stop + sendInfo×2). On any failure we fall through to
                 // the legacy shell sequence below so semantics are preserved.
                 // DL5: skip typed path — Phase4ProcessVerbs hardcodes "AutoContainer".
-                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
-                        if (!BetaProxyClient.isConnected()) {
+                        if (!ProxyClient.isConnected()) {
                             // Never call connect() from an executor thread — blocks 10–15 s.
                             // ProxyKeeperService reconnects in background; skip to legacy path.
-                            throw new Exception("BetaProxy not connected — skip typed path");
+                            throw new Exception("proxy not connected — skip typed path");
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
@@ -353,15 +353,15 @@ public class AdbLocalClient {
                             // builds — the call returned without throwing but the package
                             // process remained alive (Waze stayed visible on display 0
                             // after restoreBydOnCluster reported "typed ok").
-                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            ProxyClient.forceStopPackage(targetPackage, 0);
                             sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
                             Thread.sleep(500);
                             verifyForceStop(targetPackage, sb);
                         }
-                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        ProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
                         Thread.sleep(1000);
-                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        ProxyClient.autoContainerSendInfo(1000, 0, "");
                         sb.append("sendInfo(0)  : OK (typed)\n");
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta restoreBydOnCluster typed ok (" + dt + "ms)");
@@ -436,27 +436,27 @@ public class AdbLocalClient {
                 // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
                 // Falls back to the legacy shell flow on any failure.
                 // DL5: skip typed path — Phase4ProcessVerbs hardcodes "AutoContainer".
-                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     boolean callbackFired = false;
                     try {
-                        if (!BetaProxyClient.isConnected()) {
+                        if (!ProxyClient.isConnected()) {
                             // Never call connect() from an executor thread — blocks 10–15 s.
                             // ProxyKeeperService reconnects in background; skip to legacy path.
-                            throw new Exception("BetaProxy not connected — skip typed path");
+                            throw new Exception("proxy not connected — skip typed path");
                         }
                         StringBuilder sb = new StringBuilder();
                         if (targetPackage != null && !targetPackage.isEmpty()) {
                             // Phase 4d.1 (build 180): see restoreBydOnCluster above.
-                            BetaProxyClient.forceStopPackage(targetPackage, 0);
+                            ProxyClient.forceStopPackage(targetPackage, 0);
                             sb.append("force-stop ").append(targetPackage).append(" (typed,u=0)\n");
                             Thread.sleep(500);
                             verifyForceStop(targetPackage, sb);
                         }
-                        BetaProxyClient.autoContainerSendInfo(1000, 18, "");
+                        ProxyClient.autoContainerSendInfo(1000, 18, "");
                         sb.append("sendInfo(18) : OK (typed)\n");
                         Thread.sleep(2000);
-                        BetaProxyClient.autoContainerSendInfo(1000, 0, "");
+                        ProxyClient.autoContainerSendInfo(1000, 0, "");
                         sb.append("sendInfo(0)  : OK (typed)\n");
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta restoreOriginCluster typed ok (" + dt + "ms)");
@@ -465,7 +465,7 @@ public class AdbLocalClient {
                         callbackFired = true;
                         callback.onSuccess("Origin cluster restored \u2713 (typed)\n" + sb);
                         Thread.sleep(3000);
-                        BetaProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
+                        ProxyClient.autoContainerSendInfo(1000, screenSizeCmd, "");
                         AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=" + screenSizeCmd + ") sent in background");
                         return;
                     } catch (Throwable t) {
@@ -554,15 +554,15 @@ public class AdbLocalClient {
                 // only inspect callback.onSuccess(String) for emptiness.
                 // DL5: skip typed path — Phase4ProcessVerbs hardcodes the DL3 service
                 // name ("AutoContainer") which does not exist on DL5.
-                if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
+                if (!DaemonConfig.isLegacyPathEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
-                        if (!BetaProxyClient.isConnected()) {
+                        if (!ProxyClient.isConnected()) {
                             // Never call connect() from an executor thread — blocks 10–15 s.
                             // ProxyKeeperService reconnects in background; skip to legacy path.
-                            throw new Exception("BetaProxy not connected — skip typed path");
+                            throw new Exception("proxy not connected — skip typed path");
                         }
-                        BetaProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
+                        ProxyClient.autoContainerSendInfo(type, infoInt, infoStr);
                         long dt = SystemClock.elapsedRealtime() - t0;
                         AppLogger.log(TAG, "beta sendInfo typed ok (" + dt + "ms): "
                                 + type + "," + infoInt + ",\"" + (infoStr == null ? "" : infoStr) + "\"");
@@ -750,7 +750,7 @@ public class AdbLocalClient {
      */
     private static void verifyForceStop(String pkg, StringBuilder sb) {
         try {
-            String pids = BetaProxyClient.getPidsByPackage(pkg);
+            String pids = ProxyClient.getPidsByPackage(pkg);
             if (pids != null && !pids.trim().isEmpty()) {
                 String alive = pids.trim();
                 AppLogger.w(TAG, "beta force-stop ineffective for " + pkg
@@ -763,13 +763,13 @@ public class AdbLocalClient {
                 // sur process même uid).
                 try {
                     String killCmd = "kill -9 " + alive.replaceAll("\\s+", " ");
-                    BetaProxyClient.runShell(killCmd);
+                    ProxyClient.runShell(killCmd);
                     sb.append("  escalated: ").append(killCmd).append("\n");
                     // Petit délai pour laisser le kernel libérer les PIDs avant re-check.
                     try { Thread.sleep(200); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
-                    String pids2 = BetaProxyClient.getPidsByPackage(pkg);
+                    String pids2 = ProxyClient.getPidsByPackage(pkg);
                     if (pids2 != null && !pids2.trim().isEmpty()) {
                         AppLogger.w(TAG, "verifyForceStop: " + pkg
                                 + " STILL alive after kill -9 (pids=" + pids2.trim() + ")");
