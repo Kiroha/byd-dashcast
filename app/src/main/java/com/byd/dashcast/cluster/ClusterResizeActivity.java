@@ -51,7 +51,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
  *   <li><b>Valider</b> just finishes (last applied rect is already in place).</li>
  * </ol>
  *
- * <p><b>Hands off</b> the v1.2.70 cascade in {@code Phase4Verbs.moveAndResize} — we
+ * <p><b>Hands off</b> the v1.2.70 cascade in {@code Phase4TaskVerbs.moveAndResize} — we
  * only feed it rectangles. Do not add bounds-massaging or pre/post hooks here.
  */
 public class ClusterResizeActivity extends Activity

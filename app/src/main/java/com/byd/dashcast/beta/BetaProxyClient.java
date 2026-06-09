@@ -110,7 +110,7 @@ public final class BetaProxyClient {
             + "if [ -n \"$ALIVE_PID\" ]; then "
             // Version check: daemon loaded from old APK after OTA has a stale
             // versionCode in VERSION_FILE — fall through to kill+restart instead
-            // of REBROADCAST, so Phase4Verbs is always from the current APK.
+            // of REBROADCAST, so proxy verbs are always from the current APK.
             +   "DAEMON_VER=$(cat /data/local/tmp/dashcast_proxy_ver 2>/dev/null); "
             +   "if [ \"$DAEMON_VER\" = \"" + com.byd.dashcast.BuildConfig.VERSION_CODE + "\" ]; then "
             +     "echo trigger > \"$TRIG\" 2>/dev/null; "
@@ -584,7 +584,7 @@ public final class BetaProxyClient {
      * <p>Equivalent to {@code wm overscan left,top,right,bottom -d displayId}.
      * Probe P1 (build 173) proved this call succeeds from uid 2000 on the
      * BYD Seal EU. Typical latency: a few ms (first call may include the
-     * one-shot reflection cache warm-up in {@link com.byd.dashcast.beta.proxy.Phase4Verbs}).
+     * one-shot reflection cache warm-up in {@link com.byd.dashcast.beta.proxy.Phase4DisplayVerbs}).
      */
     public static void setOverscan(int displayId, int left, int top, int right, int bottom)
             throws BetaProxyException {

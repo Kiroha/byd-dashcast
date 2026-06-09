@@ -551,7 +551,7 @@ public final class ProxyDaemonMain {
                     int r = data.readInt();
                     int b = data.readInt();
                     try {
-                        Phase4Verbs.setOverscan(displayId, l, t, r, b);
+                        Phase4DisplayVerbs.setOverscan(displayId, l, t, r, b);
                         if (reply != null) {
                             reply.writeNoException();
                         }
@@ -577,7 +577,7 @@ public final class ProxyDaemonMain {
                     String pkg = data.readString();
                     String pids;
                     try {
-                        pids = Phase4Verbs.getPidsByPackage(pkg);
+                        pids = Phase4ProcessVerbs.getPidsByPackage(pkg);
                     } catch (Throwable t) {
                         // Pure-Java /proc scan should never throw, but guard anyway:
                         // surface as a normal exception so the client falls back to shell.
@@ -601,7 +601,7 @@ public final class ProxyDaemonMain {
                     int info = data.readInt();
                     String str = data.readString();
                     try {
-                        Phase4Verbs.autoContainerSendInfo(type, info, str);
+                        Phase4ProcessVerbs.autoContainerSendInfo(type, info, str);
                         if (reply != null) {
                             reply.writeNoException();
                         }
@@ -624,7 +624,7 @@ public final class ProxyDaemonMain {
                     String pkg = data.readString();
                     int userId = data.readInt();
                     try {
-                        Phase4Verbs.forceStopPackage(pkg, userId);
+                        Phase4ProcessVerbs.forceStopPackage(pkg, userId);
                         if (reply != null) {
                             reply.writeNoException();
                         }
@@ -653,7 +653,7 @@ public final class ProxyDaemonMain {
                             ? android.view.Surface.CREATOR.createFromParcel(data)
                             : null;
                     try {
-                        int displayId = Phase4Verbs.createVirtualDisplay(
+                        int displayId = Phase4DisplayVerbs.createVirtualDisplay(
                                 sSystemContext, name, w, h, dpi, surface, vflag);
                         if (reply != null) {
                             reply.writeNoException();
@@ -677,7 +677,7 @@ public final class ProxyDaemonMain {
                     data.enforceInterface(DESCRIPTOR);
                     int displayId = data.readInt();
                     try {
-                        Phase4Verbs.releaseVirtualDisplay(displayId);
+                        Phase4DisplayVerbs.releaseVirtualDisplay(displayId);
                         if (reply != null) {
                             reply.writeNoException();
                         }
@@ -703,7 +703,7 @@ public final class ProxyDaemonMain {
                     int    w   = data.readInt();
                     int    h   = data.readInt();
                     try {
-                        String log = Phase4Verbs.launchAndForce(pkg, cls, did, w, h);
+                        String log = Phase4TaskVerbs.launchAndForce(pkg, cls, did, w, h);
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeString(log == null ? "" : log);
@@ -731,7 +731,7 @@ public final class ProxyDaemonMain {
                     int    r   = data.readInt();
                     int    b   = data.readInt();
                     try {
-                        String log = Phase4Verbs.moveAndResize(pkg, did, l, t, r, b);
+                        String log = Phase4TaskVerbs.moveAndResize(pkg, did, l, t, r, b);
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeString(log == null ? "" : log);
@@ -754,7 +754,7 @@ public final class ProxyDaemonMain {
                     data.enforceInterface(DESCRIPTOR);
                     int did = data.readInt();
                     try {
-                        String log = Phase4Verbs.cleanFissionStacks(did);
+                        String log = Phase4TaskVerbs.cleanFissionStacks(did);
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeString(log == null ? "" : log);
