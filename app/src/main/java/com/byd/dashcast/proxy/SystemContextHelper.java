@@ -118,6 +118,13 @@ public final class SystemContextHelper {
             @Override public void enforcePermission(String p, int pid, int uid, String m) {}
             @Override public void enforceUriPermission(android.net.Uri u, int pid, int uid, int mod, String m) {}
             @Override public void enforceUriPermission(android.net.Uri u, String r, String w, int pid, int uid, int mod, String m) {}
+            // Propagate the wrapper to derived contexts: the BYD SDK sometimes calls
+            // context.getApplicationContext().checkXxx() rather than context.checkXxx() directly.
+            // Without this override the bypass would not apply to that second-hop call.
+            @Override public Context getApplicationContext() {
+                Context appCtx = super.getApplicationContext();
+                return appCtx == null ? this : SystemContextHelper.wrap(appCtx);
+            }
         };
     }
 

@@ -56,8 +56,9 @@ public final class ProxyDaemonMain {
      *  v3 (build 235): adds TXN_CREATE_VIRTUAL_DISPLAY / TXN_RELEASE_VIRTUAL_DISPLAY.
      *  v7 (v1.2.63-beta): adds PID-file + trigger-file rebroadcast plumbing.
      *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
+     *  v10 (v1.4.7-beta): adds TXN_CAN_NAVI_STATUS / TXN_CAN_INSTRUMENT_INT / TXN_CAN_INSTRUMENT_BYTES.
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "9";
+    private static final String PROTOCOL_VERSION = "10";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -86,6 +87,13 @@ public final class ProxyDaemonMain {
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
     @SuppressLint("StaticFieldLeak") // system context, daemon process-scoped, safe
     private static volatile Context sSystemContext;
+
+    /** Permission-bypass wrapper around {@link #sSystemContext}.
+     *  Set immediately after {@link #sSystemContext}; used by {@link CanWriteVerbs} so that
+     *  {@code BYDAutoInstrumentDevice.set()} passes the SDK's internal permission check.
+     *  Null only if {@link #acquireSystemContext()} failed (daemon already exits in that case). */
+    @SuppressLint("StaticFieldLeak") // wrapped system context, daemon process-scoped, safe
+    private static volatile Context sWrappedContext;
 
     /** Strong reference to the trigger {@link FileObserver}, kept alive for the
      *  lifetime of the daemon. {@code FileObserver} is delivered via a
@@ -133,6 +141,7 @@ public final class ProxyDaemonMain {
                 return;
             }
             sSystemContext = systemContext;
+            sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.wrap(systemContext);
 
             emitBroadcast();
             installTriggerObserver();
@@ -745,6 +754,47 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_CAN_NAVI_STATUS: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int status = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.setInt(ctx, CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, status);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_INSTRUMENT_INT: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    int value     = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.setInt(ctx, featureId, value);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_INSTRUMENT_BYTES: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int    featureId = data.readInt();
+                    byte[] bytes     = data.createByteArray();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.setBytes(ctx, featureId, bytes == null ? new byte[0] : bytes);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
                 case INTERFACE_TRANSACTION: {
                     if (reply != null) reply.writeString(DESCRIPTOR);
                     return true;
@@ -753,6 +803,17 @@ public final class ProxyDaemonMain {
                     return super.onTransact(code, data, reply, flags);
             }
         }
+    }
+
+    /** Unwrap InvocationTargetException and ensure we always hand a real Exception to
+     *  {@link android.os.Parcel#writeException} (which only accepts Exception, not Throwable). */
+    static Exception wrapThrowable(Throwable t) {
+        Throwable cause = t;
+        if (t instanceof java.lang.reflect.InvocationTargetException && t.getCause() != null) {
+            cause = t.getCause();
+        }
+        if (cause instanceof Exception) return (Exception) cause;
+        return new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage(), cause);
     }
 
     private static void log(String s) {
