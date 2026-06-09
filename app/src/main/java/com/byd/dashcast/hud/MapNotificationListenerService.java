@@ -42,6 +42,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     private static final String TAG = "MapNavListener";
 
+    // Notification-level deduplication — avoid reprocessing identical notification content
+    // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
+    private String lastTitle   = "";
+    private String lastText    = "";
+    private String lastSubText = "";
+
     private static final String PKG_MAPS          = "com.google.android.apps.maps";
     private static final String PKG_MAPS_REVANCED  = "app.revanced.android.apps.maps";
     private static final String PKG_WAZE           = "com.waze";
@@ -350,6 +356,14 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ─── NotificationListenerService callbacks ────────────────────────────
 
     @Override
+    public void onListenerDisconnected() {
+        super.onListenerDisconnected();
+        // System unbound the listener (e.g. permission revoked, system crash).
+        // Close the HUD so the cluster doesn't stay frozen on the last nav state.
+        HudController.INSTANCE.closeNavigation(getApplicationContext());
+    }
+
+    @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
 
@@ -369,6 +383,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String text    = charSeqToString(extras.getCharSequence("android.text"));
         String bigText = charSeqToString(extras.getCharSequence("android.bigText"));
         String subText = charSeqToString(extras.getCharSequence("android.subText"));
+
+        // Notification-level deduplication: skip if content hasn't changed since last call.
+        if (title.equals(lastTitle) && text.equals(lastText) && subText.equals(lastSubText)) return;
+        lastTitle   = title;
+        lastText    = text;
+        lastSubText = subText;
 
         // Combine title + text for pattern matching.
         String combined = (title + " " + text + " " + bigText).trim();
@@ -415,6 +435,9 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         if (n != null && (n.flags & Notification.FLAG_ONGOING_EVENT) != 0) {
             Log.d(TAG, "nav notification removed → closeNavigation");
             HudController.INSTANCE.closeNavigation(this);
+            lastTitle   = "";
+            lastText    = "";
+            lastSubText = "";
         }
     }
 
