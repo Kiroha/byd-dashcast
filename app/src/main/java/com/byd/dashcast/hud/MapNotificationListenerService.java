@@ -101,60 +101,84 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         { "tunnel",              CanBusController.ICON_TUNNEL            },
     };
 
-    // ─── Text keyword → BYD turn icon ID (EN + FR) ───────────────────────
-    // Evaluated in order; first match wins.
+    // ─── Text keyword → BYD turn icon ID (EN + FR + DE) ─────────────────
+    // Evaluated in order; first match wins. More specific patterns come first.
+    // All keywords are lowercase — matched against combined.toLowerCase(Locale.ROOT).
     private static final Object[][] TEXT_KEYWORD_MAP = {
         // Destination / arrival (must be before generic "right"/"left")
-        { "you have arrived",    CanBusController.ICON_DESTINATION   },
-        { "vous êtes arrivé",    CanBusController.ICON_DESTINATION   },
-        { "destination",         CanBusController.ICON_DESTINATION   },
-        { "arrive",              CanBusController.ICON_DESTINATION   },
-        // U-turn
-        { "u-turn right",        CanBusController.ICON_U_TURN_RIGHT  },
-        { "u-turn left",         CanBusController.ICON_U_TURN_LEFT   },
-        { "u-turn",              CanBusController.ICON_U_TURN_LEFT   },
-        { "demi-tour",           CanBusController.ICON_U_TURN_LEFT   },
-        // Sharp
-        { "sharp right",         CanBusController.ICON_SHARP_RIGHT   },
-        { "sharp left",          CanBusController.ICON_SHARP_LEFT    },
-        { "virez fortement à droite", CanBusController.ICON_SHARP_RIGHT },
-        { "virez fortement à gauche", CanBusController.ICON_SHARP_LEFT  },
-        // Slight
-        { "slight right",        CanBusController.ICON_SLIGHT_RIGHT  },
-        { "slight left",         CanBusController.ICON_SLIGHT_LEFT   },
-        { "légèrement à droite", CanBusController.ICON_SLIGHT_RIGHT  },
-        { "légèrement à gauche", CanBusController.ICON_SLIGHT_LEFT   },
-        { "keep right",          CanBusController.ICON_SLIGHT_RIGHT_ALT },
-        { "keep left",           CanBusController.ICON_SLIGHT_LEFT_ALT  },
-        { "restez à droite",     CanBusController.ICON_SLIGHT_RIGHT_ALT },
-        { "restez à gauche",     CanBusController.ICON_SLIGHT_LEFT_ALT  },
+        { "you have arrived",         CanBusController.ICON_DESTINATION      },
+        { "you've arrived",           CanBusController.ICON_DESTINATION      },
+        { "vous êtes arrivé",         CanBusController.ICON_DESTINATION      }, // "Vous êtes arrivé(e)"
+        { "destination",              CanBusController.ICON_DESTINATION      },
+        { "sie haben ihr ziel",       CanBusController.ICON_DESTINATION      }, // DE
+        // U-turn (most specific first — must precede plain "right"/"left")
+        { "u-turn right",             CanBusController.ICON_U_TURN_RIGHT     },
+        { "u-turn left",              CanBusController.ICON_U_TURN_LEFT      },
+        { "u-turn",                   CanBusController.ICON_U_TURN_LEFT      },
+        { "uturn",                    CanBusController.ICON_U_TURN_LEFT      },
+        { "faites demi-tour",         CanBusController.ICON_U_TURN_LEFT      }, // exact Google Maps FR
+        { "demi-tour",                CanBusController.ICON_U_TURN_LEFT      },
+        { "kehren sie um",            CanBusController.ICON_U_TURN_LEFT      }, // DE
+        // Sharp (before slight/standard to avoid substring matches)
+        { "sharp right",              CanBusController.ICON_SHARP_RIGHT      },
+        { "sharp left",               CanBusController.ICON_SHARP_LEFT       },
+        { "virez fortement à droite", CanBusController.ICON_SHARP_RIGHT      },
+        { "virez fortement à gauche", CanBusController.ICON_SHARP_LEFT       },
+        { "scharf rechts",            CanBusController.ICON_SHARP_RIGHT      }, // DE
+        { "scharf links",             CanBusController.ICON_SHARP_LEFT       }, // DE
+        // Slight / keep (before standard turns)
+        { "slight right",             CanBusController.ICON_SLIGHT_RIGHT     },
+        { "slight left",              CanBusController.ICON_SLIGHT_LEFT      },
+        { "légèrement à droite",      CanBusController.ICON_SLIGHT_RIGHT     },
+        { "légèrement à gauche",      CanBusController.ICON_SLIGHT_LEFT      },
+        { "keep right",               CanBusController.ICON_SLIGHT_RIGHT_ALT },
+        { "keep left",                CanBusController.ICON_SLIGHT_LEFT_ALT  },
+        { "restez à droite",          CanBusController.ICON_SLIGHT_RIGHT_ALT },
+        { "restez à gauche",          CanBusController.ICON_SLIGHT_LEFT_ALT  },
+        { "halbrechts",               CanBusController.ICON_SLIGHT_RIGHT     }, // DE
+        { "halblinks",                CanBusController.ICON_SLIGHT_LEFT      }, // DE
         // Standard turns
-        { "turn right",          CanBusController.ICON_TURN_RIGHT    },
-        { "turn left",           CanBusController.ICON_TURN_LEFT     },
-        { "tournez à droite",    CanBusController.ICON_TURN_RIGHT    },
-        { "tournez à gauche",    CanBusController.ICON_TURN_LEFT     },
-        // Exit
-        { "exit right",          CanBusController.ICON_DETOUR_RIGHT  },
-        { "exit left",           CanBusController.ICON_DETOUR_LEFT   },
-        { "exit",                CanBusController.ICON_DETOUR_RIGHT  },
-        { "sortie",              CanBusController.ICON_DETOUR_RIGHT  },
+        { "turn right",               CanBusController.ICON_TURN_RIGHT       },
+        { "turn left",                CanBusController.ICON_TURN_LEFT        },
+        { "tournez à droite",         CanBusController.ICON_TURN_RIGHT       },
+        { "tournez à gauche",         CanBusController.ICON_TURN_LEFT        },
+        { "rechts abbiegen",          CanBusController.ICON_TURN_RIGHT       }, // DE
+        { "links abbiegen",           CanBusController.ICON_TURN_LEFT        }, // DE
+        // Exit / ramp
+        { "exit right",               CanBusController.ICON_DETOUR_RIGHT     },
+        { "exit left",                CanBusController.ICON_DETOUR_LEFT      },
+        { "take the exit",            CanBusController.ICON_DETOUR_RIGHT     },
+        { "exit",                     CanBusController.ICON_DETOUR_RIGHT     },
+        { "prenez la sortie",         CanBusController.ICON_DETOUR_RIGHT     }, // "Prenez la sortie n°5"
+        { "sortie",                   CanBusController.ICON_DETOUR_RIGHT     },
+        { "ausfahrt",                 CanBusController.ICON_DETOUR_RIGHT     }, // DE
         // Merge / ramp
-        { "merge",               CanBusController.ICON_SLIGHT_RIGHT  },
-        { "rejoindre",           CanBusController.ICON_SLIGHT_RIGHT  },
+        { "merge right",              CanBusController.ICON_SLIGHT_RIGHT     },
+        { "merge left",               CanBusController.ICON_SLIGHT_LEFT      },
+        { "merge",                    CanBusController.ICON_SLIGHT_RIGHT     },
+        { "rejoin",                   CanBusController.ICON_SLIGHT_RIGHT     }, // "rejoindre" and "rejoignez"
         // Roundabout
-        { "roundabout",          CanBusController.ICON_ROUNDABOUT_CW_1_LAP },
-        { "rond-point",          CanBusController.ICON_ROUNDABOUT_CW_1_LAP },
-        // Straight / continue
-        { "head ",               CanBusController.ICON_STRAIGHT_SOLID },
-        { "continue",            CanBusController.ICON_STRAIGHT_SOLID },
-        { "continuez",           CanBusController.ICON_STRAIGHT_SOLID },
-        { "straight",            CanBusController.ICON_STRAIGHT_SOLID },
-        { "tout droit",          CanBusController.ICON_STRAIGHT_SOLID },
-        // Tollbooth
-        { "tollbooth",           CanBusController.ICON_TOLLBOOTH     },
-        { "péage",               CanBusController.ICON_TOLLBOOTH     },
-        // Tunnel
-        { "tunnel",              CanBusController.ICON_TUNNEL        },
+        { "roundabout",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "rond-point",               CanBusController.ICON_ROUNDABOUT_CW_1_LAP  },
+        { "kreisverkehr",             CanBusController.ICON_ROUNDABOUT_CW_1_LAP  }, // DE
+        // Straight / continue (last — very generic, must not shadow more specific keys)
+        { "head north",               CanBusController.ICON_STRAIGHT_SOLID   },
+        { "head south",               CanBusController.ICON_STRAIGHT_SOLID   },
+        { "head east",                CanBusController.ICON_STRAIGHT_SOLID   },
+        { "head west",                CanBusController.ICON_STRAIGHT_SOLID   },
+        { "head toward",              CanBusController.ICON_STRAIGHT_SOLID   },
+        { "continue straight",        CanBusController.ICON_STRAIGHT_SOLID   },
+        { "continue",                 CanBusController.ICON_STRAIGHT_SOLID   },
+        { "continuez tout droit",     CanBusController.ICON_STRAIGHT_SOLID   },
+        { "continuez",                CanBusController.ICON_STRAIGHT_SOLID   },
+        { "tout droit",               CanBusController.ICON_STRAIGHT_SOLID   },
+        { "straight",                 CanBusController.ICON_STRAIGHT_SOLID   },
+        { "geradeaus",                CanBusController.ICON_STRAIGHT_SOLID   }, // DE
+        // Tollbooth / tunnel
+        { "tollbooth",                CanBusController.ICON_TOLLBOOTH        },
+        { "péage",                    CanBusController.ICON_TOLLBOOTH        },
+        { "maut",                     CanBusController.ICON_TOLLBOOTH        }, // DE
+        { "tunnel",                   CanBusController.ICON_TUNNEL           },
     };
 
     // ─── NotificationListenerService callbacks ────────────────────────────
@@ -182,7 +206,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         // Combine title + text for pattern matching.
         String combined = (title + " " + text + " " + bigText).trim();
-        String lower    = combined.toLowerCase(Locale.US);
+        String lower    = combined.toLowerCase(Locale.ROOT);
 
         if (combined.isEmpty()) return;
 
@@ -240,7 +264,7 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             Resources res = createPackageContext(pkg, 0).getResources();
             int resId = icon.getResId();
             if (resId == 0) return -1;
-            String name = res.getResourceEntryName(resId).toLowerCase(Locale.US);
+            String name = res.getResourceEntryName(resId).toLowerCase(Locale.ROOT);
             for (Object[] entry : ICON_NAME_MAP) {
                 if (name.contains((String) entry[0])) return (int) entry[1];
             }
