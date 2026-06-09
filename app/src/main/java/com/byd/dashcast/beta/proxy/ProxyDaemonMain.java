@@ -16,6 +16,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 
+import static com.byd.dashcast.beta.proxy.ProxyDaemonContract.*;
+
 /**
  * ProxyDaemonMain — entry point for the Beta Engine Component A daemon (v1.1.6+).
  *
@@ -47,31 +49,15 @@ import java.lang.reflect.Method;
  */
 public final class ProxyDaemonMain {
 
-    /** AIDL-style descriptor for {@link Binder#attachInterface(android.os.IInterface, String)}. */
-    public static final String DESCRIPTOR = "com.byd.dashcast.beta.proxy.IProxyDaemon";
-
-    /** Broadcast action delivered to the app once the daemon is ready. */
-    public static final String ACTION_PROXY_CONNECTED = "com.byd.dashcast.beta.PROXY_CONNECTED";
-
-    /** Parcelable extra key carrying the daemon's {@link BinderParcelable}. */
-    public static final String EXTRA_BINDER = "proxy_binder";
-
-    /** App package that should receive the broadcast (must own the receiver). */
-    public static final String TARGET_PKG = "com.byd.dashcast";
+    // Wire-protocol constants (DESCRIPTOR, TXN_*, ACTION_PROXY_CONNECTED, EXTRA_BINDER)
+    // live in ProxyDaemonContract and are imported via static import above.
 
     /** Protocol version reported by {@link #TXN_WHOAMI}. Bump on any wire-incompatible change.
-     *  v3 (build 235): adds {@link #TXN_CREATE_VIRTUAL_DISPLAY} and
-     *  {@link #TXN_RELEASE_VIRTUAL_DISPLAY} (Phase 5a — cluster mini-mode POC).
-     *  v7 (v1.2.63-beta, Phase A step 3): adds the PID-file + trigger-file
-     *  rebroadcast plumbing (the wire protocol itself is unchanged, but the
-     *  app uses {@code PROTOCOL_VERSION >= 7} to decide whether to attempt
-     *  the fast-rebroadcast path during bootstrap).
-     *  v8 (v1.2.70-beta, Phase A step 4): daemon hardening (OOM protection,
-     *  atomic PID lock via in-JVM check, self-heal heartbeat every 10s).
-     *  Wire protocol unchanged; bump signals to clients that suicide on
-     *  lock-steal is now possible (helps log analysis).
+     *  v3 (build 235): adds TXN_CREATE_VIRTUAL_DISPLAY / TXN_RELEASE_VIRTUAL_DISPLAY.
+     *  v7 (v1.2.63-beta): adds PID-file + trigger-file rebroadcast plumbing.
+     *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
      *  Purely additive — old clients keep working unchanged. */
-    public static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "8";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -93,54 +79,8 @@ public final class ProxyDaemonMain {
      *  reconnect to the old, class-loaded binary). Deleted by shutdown hook. */
     private static final String VERSION_FILE = "/data/local/tmp/dashcast_proxy_ver";
 
-    /** Transaction: no args → {@code long} (epoch ms). */
-    public static final int TXN_PING   = android.os.IBinder.FIRST_CALL_TRANSACTION;        // 1
-    /** Transaction: no args → {@code int uid, int pid, String ver}. */
-    public static final int TXN_WHOAMI = android.os.IBinder.FIRST_CALL_TRANSACTION + 1;    // 2
-    /** Transaction: {@code String cmd} → {@code int exit, String combinedOutput}. */
-    public static final int TXN_EXEC   = android.os.IBinder.FIRST_CALL_TRANSACTION + 2;    // 3
-    /** Transaction: no args → {@code String pipeSeparatedProbeResults}. Phase 4 feasibility. */
-    public static final int TXN_PROBE_PHASE4 = android.os.IBinder.FIRST_CALL_TRANSACTION + 3; // 4
-    /** Transaction: {@code int displayId, int l, int t, int r, int b} → nothing (or thrown exception).
-     *  Phase 4a typed verb replacing {@code wm overscan L,T,R,B -d displayId}. */
-    public static final int TXN_SET_OVERSCAN = android.os.IBinder.FIRST_CALL_TRANSACTION + 4; // 5
-    /** Transaction: {@code String packageName} → {@code String spaceSeparatedPids}.
-     *  Phase 4b typed verb replacing {@code pidof <pkg>} (state-poll hot path). */
-    public static final int TXN_GET_PIDS = android.os.IBinder.FIRST_CALL_TRANSACTION + 5; // 6
-    /** Transaction: {@code int type, int info, String str} → nothing (or thrown exception).
-     *  Phase 4c typed verb replacing {@code service call AutoContainer 2 i32 … i32 … s16 "…"}
-     *  used by {@code AdbLocalClient.sendInfo}. */
-    public static final int TXN_AUTOCONTAINER_SEND_INFO = android.os.IBinder.FIRST_CALL_TRANSACTION + 6; // 7
-    /** Transaction: {@code String packageName, int userId} → nothing (or thrown exception).
-     *  Phase 4d typed verb replacing {@code am force-stop <pkg>} used by
-     *  {@code AdbLocalClient.restoreBydOnCluster} / {@code restoreOriginCluster}
-     *  (end-of-session teardown hot path). */
-    public static final int TXN_FORCE_STOP_PACKAGE = android.os.IBinder.FIRST_CALL_TRANSACTION + 7; // 8
-    /** Transaction: {@code String name, int w, int h, int dpi, int flags, Surface surface}
-     *  → {@code int displayId}. Phase 5a — creates a VD on the daemon (uid 2000)
-     *  with the {@code CAPTURE_VIDEO_OUTPUT} permission an app uid cannot hold.
-     *  Mirrors OpenBYD 2.0 ClusterOverlayManager#launchOnVirtualDisplay. */
-    public static final int TXN_CREATE_VIRTUAL_DISPLAY = android.os.IBinder.FIRST_CALL_TRANSACTION + 8; // 9
-    /** Transaction: {@code int displayId} → nothing (or thrown exception).
-     *  Phase 5a — releases a VD previously created by
-     *  {@link #TXN_CREATE_VIRTUAL_DISPLAY}. */
-    public static final int TXN_RELEASE_VIRTUAL_DISPLAY = android.os.IBinder.FIRST_CALL_TRANSACTION + 9; // 10
-    /** Phase 5b — OpenBYD-style task relocation : am start, poll task id,
-     *  loop 2&times; (moveTaskToDisplay + resizeTask + setFocusedRootTask).
-     *  Bypasses {@code canPlaceEntityOnDisplay} which would otherwise reject
-     *  non-resizeable activities (Waze, Maps, …) on secondary displays. */
-    public static final int TXN_LAUNCH_AND_FORCE      = android.os.IBinder.FIRST_CALL_TRANSACTION + 10; // 11
-    /** Phase 6 — move + resize an existing task in place (no am start).
-     *  Args : {@code String pkg, int displayId, int l, int t, int r, int b}.
-     *  Returns a multi-line log. Used by Diag's interactive move/resize UI
-     *  on the fission display. */
-    public static final int TXN_MOVE_AND_RESIZE       = android.os.IBinder.FIRST_CALL_TRANSACTION + 11; // 12
-
-    /** Phase 6b — destroy every non-fullscreen, non-home stack on a display.
-     *  Args : {@code int displayId}. Returns a multi-line log.
-     *  Recovery verb for zombie split-screen-primary stacks that poison
-     *  fission display launches. */
-    public static final int TXN_CLEAN_FISSION_STACKS  = android.os.IBinder.FIRST_CALL_TRANSACTION + 12; // 13
+    /** App package that receives the {@link ProxyDaemonContract#ACTION_PROXY_CONNECTED} broadcast. */
+    private static final String TARGET_PKG = "com.byd.dashcast";
 
     /** Set in {@link #main(String[])} once the system context is acquired, so
      *  {@link ProxyBinder} can hand it to {@link Phase4Probes} without re-acquiring. */
@@ -518,7 +458,7 @@ public final class ProxyDaemonMain {
                 case TXN_EXEC: {
                     data.enforceInterface(DESCRIPTOR);
                     String cmd = data.readString();
-                    ExecResult er = runShell(cmd);
+                    ProxyShell.Result er = ProxyShell.exec(cmd);
                     if (reply != null) {
                         reply.writeNoException();
                         reply.writeInt(er.exit);
@@ -780,53 +720,6 @@ public final class ProxyDaemonMain {
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
-        }
-    }
-
-    private static final class ExecResult {
-        final int    exit;
-        final String output;
-        ExecResult(int exit, String output) { this.exit = exit; this.output = output; }
-    }
-
-    private static ExecResult runShell(String cmd) {
-        if (cmd == null) return new ExecResult(-1, "ERR null command");
-        try {
-            java.lang.Process p = new ProcessBuilder("sh", "-c", cmd)
-                    .redirectErrorStream(true)
-                    .start();
-            // Build 195 / P4 — read the full stdout/stderr stream into a single
-            // ByteArrayOutputStream then decode once. Replaces the per-line
-            // BufferedReader + StringBuilder.append('\n') pattern which on a
-            // 300-line dumpsys ate ~1000 String/StringBuilder allocations.
-            // Trailing newlines are stripped to preserve the exact semantics
-            // of the legacy line-by-line code (which never appended a final '\n').
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(2048);
-            byte[] chunk = new byte[4096];
-            try (InputStream in = p.getInputStream()) {
-                int n;
-                while ((n = in.read(chunk)) > 0) baos.write(chunk, 0, n);
-            }
-            // 1.2.29 — bounded waitFor: a hung child (e.g. dumpsys on a wedged service,
-            // pgrep on an MTK ROM that doesn't ship it) used to block the binder thread
-            // forever. The pool has ~15 threads; N hangs = daemon unresponsive.
-            boolean finished = p.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
-            if (!finished) {
-                try { p.destroyForcibly(); } catch (Throwable ignored) {}
-                return new ExecResult(-1, "ERR timeout 30s");
-            }
-            int code = p.exitValue();
-            String s = baos.toString("UTF-8");
-            int end = s.length();
-            while (end > 0) {
-                char c = s.charAt(end - 1);
-                if (c != '\n' && c != '\r') break;
-                end--;
-            }
-            return new ExecResult(code, end == s.length() ? s : s.substring(0, end));
-        } catch (Throwable t) {
-            String msg = t.getMessage();
-            return new ExecResult(-1, "ERR " + (msg == null ? t.getClass().getSimpleName() : msg));
         }
     }
 
