@@ -337,7 +337,7 @@ public class AdbLocalClient {
                 // Phase 4d: try the typed daemon path for the whole sequence
                 // (force-stop + sendInfo×2). On any failure we fall through to
                 // the legacy shell sequence below so semantics are preserved.
-                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                // DL5: skip typed path — Phase4ProcessVerbs hardcodes "AutoContainer".
                 if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     try {
@@ -435,7 +435,7 @@ public class AdbLocalClient {
                         + (targetPackage != null ? " target=" + targetPackage : ""));
                 // Phase 4d: try the typed daemon path (force-stop + sendInfo×3).
                 // Falls back to the legacy shell flow on any failure.
-                // DL5: skip typed path — Phase4Verbs hardcodes "AutoContainer".
+                // DL5: skip typed path — Phase4ProcessVerbs hardcodes "AutoContainer".
                 if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
                     boolean callbackFired = false;
@@ -552,7 +552,7 @@ public class AdbLocalClient {
                 // On any failure we fall through to the legacy ADB shell
                 // wrapper below — semantics are preserved for callers that
                 // only inspect callback.onSuccess(String) for emptiness.
-                // DL5: skip typed path — Phase4Verbs hardcodes the DL3 service
+                // DL5: skip typed path — Phase4ProcessVerbs hardcodes the DL3 service
                 // name ("AutoContainer") which does not exist on DL5.
                 if (BetaConfig.isProxyDaemonEnabled(context) && !isDiLink5Safe(context)) {
                     final long t0 = SystemClock.elapsedRealtime();
