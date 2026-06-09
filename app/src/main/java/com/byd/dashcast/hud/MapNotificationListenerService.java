@@ -52,24 +52,39 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static final String PKG_MAPS_REVANCED  = "app.revanced.android.apps.maps";
     private static final String PKG_WAZE           = "com.waze";
 
-    // ─── Distance regex: "300 m", "1.2 km", "1,2 km", "500m" ────────────
-    private static final Pattern RX_DIST_M  =
-            Pattern.compile("(\\d+)\\s*m\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern RX_DIST_KM =
-            Pattern.compile("(\\d+[.,]\\d+)\\s*km\\b|(\\d+)\\s*km\\b", Pattern.CASE_INSENSITIVE);
+    // ─── Distance: "300 m", "1.2 km", "1,2 km", "500 m", "3 км" ─
+    // Mirrors OpenBYD regex: \b(\d+[.,]?\d*)[\s ]*(km|км|m|м)\b
+    // Handles ASCII and Cyrillic unit suffixes, optional decimal, optional NBSP.
+    private static final Pattern RX_DIST =
+            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|m|м)\\b",
+                    Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
     private static final Pattern RX_ROAD_ONTO =
             Pattern.compile("(?:onto|on|sur|vers)\\s+(.+?)(?:\\s+in\\s+\\d|\\s+dans\\s+\\d|$)",
                     Pattern.CASE_INSENSITIVE);
 
-    // ─── Remaining time: "12 min", "1h 5m", "1 h 5 min" ─────────────────
-    private static final Pattern RX_REMAIN_TIME =
-            Pattern.compile("(\\d+)\\s*h\\s*(\\d+)\\s*(?:m|min)|(?<!\\d)(\\d+)\\s*(?:min|m)(?!\\w)",
+    // ─── Remaining time — two-pattern approach matching OpenBYD smali ─────
+    // Hours: \b(\d+)[\s ]*(?:h|hr|hrs|hour|hours|ч|ч\.)\b
+    // Mins:  \b(\d+)[\s ]*(?:min|mins|мин)\b
+    // Both handle ASCII and Cyrillic units plus non-breaking space.
+    private static final Pattern RX_HOURS =
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:h|hr|hrs|hour|hours|ч|ч\\.)\\b",
+                    Pattern.CASE_INSENSITIVE);
+    private static final Pattern RX_MINS =
+            Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин)\\b",
                     Pattern.CASE_INSENSITIVE);
 
-    // ─── Remaining distance: "3.2 km", "500 m" (for route-level info) ────
-    // (reuses RX_DIST_* on the subtext / parenthetical part)
+    // ─── Noise-notification skip strings (from OpenBYD smali) ────────────
+    // Matched (lowercase) against both title and text. These appear in ongoing
+    // navigation notifications that carry no maneuver data (GPS acquiring, etc.).
+    private static final String[] SKIP_STRINGS = {
+        "tap to open",
+        "running in the background",
+        "app is running",
+        "searching for gps",
+        "gps signal lost",
+    };
 
     // ─── Google Maps icon resource name → BYD turn icon ID ───────────────
     // Names observed across Maps versions 10.x–11.x (as of 2024-2025).
@@ -390,6 +405,14 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         lastText    = text;
         lastSubText = subText;
 
+        // Skip noise notifications (OpenBYD MapNotificationListenerService pattern).
+        // These are ongoing navigation notifications that carry no maneuver data.
+        String lowerText  = text.toLowerCase(Locale.ROOT);
+        String lowerTitle = title.toLowerCase(Locale.ROOT);
+        for (String skip : SKIP_STRINGS) {
+            if (lowerText.contains(skip) || lowerTitle.contains(skip)) return;
+        }
+
         // Combine title + text for pattern matching.
         String combined = (title + " " + text + " " + bigText).trim();
         String lower    = combined.toLowerCase(Locale.ROOT);
@@ -472,77 +495,57 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     // ─── Distance parsing ─────────────────────────────────────────────────
 
-    /**
-     * Returns the first distance value found (in metres) or -1.
-     * Prefers km over m when both appear (km is usually the step distance in longer segments).
-     */
+    /** Returns the first distance found (in metres) or -1. */
     private static int parseFirstDistance(String text) {
-        // Try km first.
-        Matcher m = RX_DIST_KM.matcher(text);
-        if (m.find()) {
-            String raw = m.group(1) != null ? m.group(1) : m.group(2);
-            if (raw != null) {
-                try {
-                    float km = Float.parseFloat(raw.replace(',', '.'));
-                    return Math.round(km * 1000f);
-                } catch (NumberFormatException ignore) {}
-            }
-        }
-        // Fall back to metres.
-        m = RX_DIST_M.matcher(text);
-        if (m.find()) {
-            try { return Integer.parseInt(m.group(1)); }
-            catch (NumberFormatException ignore) {}
-        }
-        return -1;
+        return parseMeters(text, -1);
     }
 
-    /**
-     * Tries to find a "remaining" or "route-level" distance in the subtext / route summary.
-     * Returns null if not found (caller passes null to HudNavigationData).
-     */
+    /** Returns the first distance found (in metres) or null. */
     private static Integer parseRemainingMeters(String text) {
         if (text == null || text.isEmpty()) return null;
-        // Look for parenthetical like "(3.2 km)" or "· 3.2 km" in the route summary.
-        Matcher m = RX_DIST_KM.matcher(text);
-        if (m.find()) {
-            String raw = m.group(1) != null ? m.group(1) : m.group(2);
-            if (raw != null) {
-                try {
-                    float km = Float.parseFloat(raw.replace(',', '.'));
-                    return Math.round(km * 1000f);
-                } catch (NumberFormatException ignore) {}
-            }
-        }
-        m = RX_DIST_M.matcher(text);
-        if (m.find()) {
-            try { return Integer.parseInt(m.group(1)); }
-            catch (NumberFormatException ignore) {}
-        }
-        return null;
+        int v = parseMeters(text, Integer.MIN_VALUE);
+        return v == Integer.MIN_VALUE ? null : v;
     }
 
     /**
-     * Parses a remaining time string like "12 min", "1h 5m", "1 h 05 min"
-     * into total seconds. Returns null if no time found.
+     * Core distance parser matching OpenBYD smali regex
+     * \b(\d+[.,]?\d*)[\s ]*(km|км|m|м)\b
+     * Unit determines conversion; returns {@code notFound} sentinel on failure.
+     */
+    private static int parseMeters(String text, int notFound) {
+        Matcher m = RX_DIST.matcher(text);
+        if (!m.find()) return notFound;
+        String unit = m.group(2).toLowerCase(Locale.ROOT);
+        try {
+            float val = Float.parseFloat(m.group(1).replace(',', '.'));
+            return (unit.equals("km") || unit.equals("км"))
+                    ? Math.round(val * 1000f)
+                    : Math.round(val);
+        } catch (NumberFormatException ignore) {
+            return notFound;
+        }
+    }
+
+    /**
+     * Parses remaining time using two separate patterns (hours + minutes),
+     * matching the OpenBYD smali approach. Supports "12 min", "1h 5m",
+     * "1 h 05 min", "45 мин", "2 ч 10 мин". Returns null if nothing found.
      */
     private static Integer parseRemainingSeconds(String text) {
         if (text == null || text.isEmpty()) return null;
-        Matcher m = RX_REMAIN_TIME.matcher(text);
-        if (!m.find()) return null;
-        // Group 1/2 = hours + minutes form; group 3 = minutes-only form.
-        if (m.group(1) != null && m.group(2) != null) {
-            try {
-                int h = Integer.parseInt(m.group(1));
-                int min = Integer.parseInt(m.group(2));
-                return (h * 60 + min) * 60;
-            } catch (NumberFormatException ignore) {}
-        } else if (m.group(3) != null) {
-            try {
-                return Integer.parseInt(m.group(3)) * 60;
-            } catch (NumberFormatException ignore) {}
+        int totalSeconds = 0;
+        boolean found = false;
+        Matcher mh = RX_HOURS.matcher(text);
+        if (mh.find()) {
+            try { totalSeconds += Integer.parseInt(mh.group(1)) * 3600; found = true; }
+            catch (NumberFormatException ignore) {}
         }
-        return null;
+        Matcher mm = RX_MINS.matcher(text);
+        if (mm.find()) {
+            try { totalSeconds += Integer.parseInt(mm.group(1)) * 60; found = true; }
+            catch (NumberFormatException ignore) {}
+        }
+        return found ? totalSeconds : null;
     }
 
     // ─── Road name ────────────────────────────────────────────────────────
