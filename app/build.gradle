@@ -265,8 +265,8 @@ android {
         //   pending app matches the restored cluster pkg, pidof first; if
         //   the process is dead, clearClusterState() before delegating to
         //   onSendToDashboard so it takes the normal fresh-launch path.
-        versionCode 423
-        versionName "1.4.13-beta"
+        versionCode 424
+        versionName "1.4.14-beta"
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
