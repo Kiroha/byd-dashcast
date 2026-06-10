@@ -21,7 +21,9 @@ public class LayoutPreset {
     public static class SlotDef {
         public String label;
         public int    x, y, w, h;
-        public int    displayId = -1;
+        public int    displayId  = -1;
+        /** Package name of the app bound to this zone, or null for a free zone. */
+        public String packageName = null;
 
         public SlotDef(String label, int x, int y, int w, int h) {
             this.label = label;
@@ -29,21 +31,32 @@ public class LayoutPreset {
             this.w = w; this.h = h;
         }
 
+        public SlotDef copy() {
+            SlotDef c = new SlotDef(label, x, y, w, h);
+            c.displayId   = displayId;
+            c.packageName = packageName;
+            return c;
+        }
+
         public Rect toRect() {
             return new Rect(x, y, x + w, y + h);
         }
 
         public JSONObject toJson() throws Exception {
-            return new JSONObject()
+            JSONObject o = new JSONObject()
                     .put("label", label)
                     .put("x", x).put("y", y)
                     .put("w", w).put("h", h);
+            if (packageName != null && !packageName.isEmpty()) o.put("packageName", packageName);
+            return o;
         }
 
         public static SlotDef fromJson(JSONObject o) throws Exception {
-            return new SlotDef(o.getString("label"),
+            SlotDef s = new SlotDef(o.getString("label"),
                     o.getInt("x"), o.getInt("y"),
                     o.getInt("w"), o.getInt("h"));
+            if (o.has("packageName")) s.packageName = o.optString("packageName", null);
+            return s;
         }
     }
 

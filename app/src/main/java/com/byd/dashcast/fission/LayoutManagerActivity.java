@@ -29,8 +29,14 @@ import com.byd.dashcast.NavRailHotspot;
 import com.byd.dashcast.R;
 import com.byd.dashcast.SettingsActivity;
 import com.byd.dashcast.SysInfoActivity;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -125,6 +131,9 @@ public class LayoutManagerActivity extends Activity {
         View btnSave = findViewById(R.id.lm_btn_save);
         if (btnSave != null) btnSave.setOnClickListener(v -> saveLayout());
 
+        View btnSetFavorite = findViewById(R.id.lm_btn_set_favorite);
+        if (btnSetFavorite != null) btnSetFavorite.setOnClickListener(v -> setCurrentLayoutAsFavorite());
+
         // Initial state
         if (!mPresets.isEmpty()) loadIntoCanvas(mPresets.get(0));
         else startNewLayout();
@@ -162,7 +171,7 @@ public class LayoutManagerActivity extends Activity {
         mEditing = new LayoutPreset(preset.name);
         mEditing.id = preset.id;
         for (LayoutPreset.SlotDef s : preset.slots)
-            mEditing.slots.add(new LayoutPreset.SlotDef(s.label, s.x, s.y, s.w, s.h));
+            mEditing.slots.add(s.copy());
         mCanvas.setSlots(mEditing.slots);
         mCanvas.invalidate();
         setCanvasTitle(preset.name);
@@ -194,7 +203,9 @@ public class LayoutManagerActivity extends Activity {
             final int idx = i;
 
             TextView chip = new TextView(this);
-            chip.setText(s.label + "  " + s.w + "×" + s.h + " @ (" + s.x + "," + s.y + ")  ✕");
+            String pkgSuffix = (s.packageName != null && !s.packageName.isEmpty())
+                    ? "  🔗 " + s.packageName : "";
+            chip.setText(s.label + "  " + s.w + "×" + s.h + " @ (" + s.x + "," + s.y + ")" + pkgSuffix + "  ✕");
             chip.setTextSize(12f);
             chip.setTextColor(Color.parseColor("#2A5EA8"));
             chip.setBackgroundResource(R.drawable.bg_log_filter);
@@ -227,6 +238,29 @@ public class LayoutManagerActivity extends Activity {
         EditText etW = addField(form, "Largeur (px)", String.valueOf(w));
         EditText etH = addField(form, "Hauteur (px)", String.valueOf(h));
 
+        addDivider(form, getString(R.string.fission_slot_pick_pkg));
+        final String[] pickedPkg = {null};
+        TextView tvBound = new TextView(this);
+        tvBound.setText(getString(R.string.fission_slot_pkg_none));
+        tvBound.setTextSize(13f);
+        tvBound.setTextColor(Color.parseColor("#74777F"));
+        LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tvLp.topMargin = dpToPx(4);
+        form.addView(tvBound, tvLp);
+
+        MaterialButton btnPickPkg = new MaterialButton(this,
+                null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnPickPkg.setText(getString(R.string.fission_slot_pick_pkg));
+        btnPickPkg.setTextSize(13f);
+        btnPickPkg.setInsetTop(0); btnPickPkg.setInsetBottom(0);
+        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(36));
+        btnLp.topMargin = dpToPx(6);
+        form.addView(btnPickPkg, btnLp);
+        btnPickPkg.setOnClickListener(v ->
+                showPackagePickerForZone(tvBound, pickedPkg));
+
         etName.selectAll();
         new AlertDialog.Builder(this)
                 .setTitle("Nouvelle zone — " + w + "×" + h + " px")
@@ -236,12 +270,56 @@ public class LayoutManagerActivity extends Activity {
                     if (label.isEmpty()) label = mEditing.nextSlotLabel();
                     int fx = parseInt(etX, x), fy = parseInt(etY, y);
                     int fw = parseInt(etW, w), fh = parseInt(etH, h);
-                    mEditing.slots.add(new LayoutPreset.SlotDef(label, fx, fy, fw, fh));
+                    LayoutPreset.SlotDef slot = new LayoutPreset.SlotDef(label, fx, fy, fw, fh);
+                    slot.packageName = (pickedPkg[0] != null && !pickedPkg[0].isEmpty())
+                            ? pickedPkg[0] : null;
+                    mEditing.slots.add(slot);
                     mCanvas.invalidate();
                     refreshChips();
                 })
                 .setNegativeButton("Annuler", null)
                 .show();
+    }
+
+    /** Opens an app-picker dialog and writes the selected package into {@code pickedPkg[0]}. */
+    private void showPackagePickerForZone(TextView tvBound, String[] pickedPkg) {
+        mExec.execute(() -> {
+            PackageManager pm = getPackageManager();
+            Intent main = new Intent(Intent.ACTION_MAIN);
+            main.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> infos;
+            try { infos = pm.queryIntentActivities(main, 0); }
+            catch (Exception e) { infos = new ArrayList<>(); }
+            final Map<String, String> pkgToLabel = new LinkedHashMap<>();
+            String selfPkg = getPackageName();
+            for (ResolveInfo ri : infos) {
+                if (ri == null || ri.activityInfo == null) continue;
+                String pkg = ri.activityInfo.packageName;
+                if (pkg == null || pkg.equals(selfPkg) || pkgToLabel.containsKey(pkg)) continue;
+                CharSequence lbl = ri.loadLabel(pm);
+                pkgToLabel.put(pkg, lbl != null ? lbl.toString() : pkg);
+            }
+            List<Map.Entry<String, String>> sorted = new ArrayList<>(pkgToLabel.entrySet());
+            Collections.sort(sorted, (a, b) -> a.getValue().compareToIgnoreCase(b.getValue()));
+            final String[] pkgs   = new String[sorted.size()];
+            final String[] labels = new String[sorted.size()];
+            for (int i = 0; i < sorted.size(); i++) {
+                pkgs[i]   = sorted.get(i).getKey();
+                labels[i] = sorted.get(i).getValue() + "  —  " + pkgs[i];
+            }
+            runOnUiThread(() -> new AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.fission_slot_pick_pkg))
+                    .setItems(labels, (d2, idx) -> {
+                        pickedPkg[0] = pkgs[idx];
+                        tvBound.setText(getString(R.string.fission_slot_zone_bound_fmt, labels[idx]));
+                    })
+                    .setNeutralButton(getString(R.string.fission_slot_pkg_none), (d2, w2) -> {
+                        pickedPkg[0] = null;
+                        tvBound.setText(getString(R.string.fission_slot_pkg_none));
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show());
+        });
     }
 
     private EditText addField(LinearLayout parent, String hint, String value) {
@@ -373,6 +451,26 @@ public class LayoutManagerActivity extends Activity {
             });
         }
         Toast.makeText(this, "Mode libre activé", Toast.LENGTH_SHORT).show();
+    }
+
+    private void setCurrentLayoutAsFavorite() {
+        if (mEditing == null) {
+            Toast.makeText(this, "Aucun layout chargé", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        boolean alreadySaved = false;
+        for (LayoutPreset p : mPresets) {
+            if (p.id.equals(mEditing.id)) { alreadySaved = true; break; }
+        }
+        if (!alreadySaved) {
+            Toast.makeText(this,
+                    "Enregistrez d'abord le layout avant de le définir en favori",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        LayoutPrefs.setFavoriteId(this, mEditing.id);
+        Toast.makeText(this,
+                getString(R.string.fission_layout_favorite_set_toast), Toast.LENGTH_SHORT).show();
     }
 
     // ── Panel toggle animation ─────────────────────────────────────────────────

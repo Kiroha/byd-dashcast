@@ -26,11 +26,14 @@ import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,6 +60,7 @@ public class FissionActivity extends Activity {
     private boolean       mMirrorReady;
     private boolean       mDestroyed;
     private int           mFirstDisplayId = -1;
+    private LayoutPreset  mActiveLayout;
 
     private final ConcurrentHashMap<String, SlotState> mSlots = new ConcurrentHashMap<>();
 
@@ -66,6 +70,8 @@ public class FissionActivity extends Activity {
     private TextView       tvStatus;
     private LinearLayout   llSlots;
     private MaterialButton btnAdd, btnStopAll;
+    private TextView       tvLayoutLabel;
+    private MaterialButton btnSwitchLayout;
 
     private final Handler         mUiHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService mExec      = Executors.newSingleThreadExecutor();
@@ -94,8 +100,11 @@ public class FissionActivity extends Activity {
         svPreview = findViewById(R.id.sv_fission_preview);
         tvStatus  = findViewById(R.id.tv_fission_status);
         llSlots   = findViewById(R.id.ll_fission_slots);
-        btnAdd    = findViewById(R.id.btn_fission_add);
-        btnStopAll = findViewById(R.id.btn_fission_stop);
+        btnAdd         = findViewById(R.id.btn_fission_add);
+        btnStopAll     = findViewById(R.id.btn_fission_stop);
+        tvLayoutLabel  = findViewById(R.id.tv_fission_layout_label);
+        btnSwitchLayout = findViewById(R.id.btn_fission_switch_layout);
+        if (btnSwitchLayout != null) btnSwitchLayout.setOnClickListener(v -> showLayoutSwitcher());
 
         btnStopAll.setEnabled(false);
 
@@ -110,8 +119,21 @@ public class FissionActivity extends Activity {
         btnAdd.setOnClickListener(v -> pickApp());
         btnStopAll.setOnClickListener(v -> stopAll());
 
-        // Try to get daemon binder from ServiceManager immediately (may already be running)
-        mExec.execute(this::tryGetBinder);
+        // Probe daemon + apply auto-layout / pre-create settings if configured
+        mExec.execute(() -> {
+            tryGetBinder();
+            LayoutPreset fav = LayoutPrefs.getFavoriteLayout(mAppCtx);
+            if (fav != null) {
+                mActiveLayout = fav;
+                safeRun(this::updateLayoutSelectorUi);
+                if (ClusterPrefs.isFissionAutoLayout(mAppCtx)) {
+                    safeRun(() -> setStatus(getString(R.string.fission_auto_activating)));
+                    activateFavoriteLayout();
+                } else if (ClusterPrefs.isFissionPrecreateSlots(mAppCtx)) {
+                    precreateSlots(fav);
+                }
+            }
+        });
     }
 
     @Override
@@ -366,15 +388,31 @@ public class FissionActivity extends Activity {
         // Step 1 — Ensure daemon is running
         if (!ensureDaemon()) throw new RuntimeException("Daemon non disponible");
 
-        // Step 2 — ATTACH_SLOT → daemon creates overlay+VD
-        safeRun(() -> setStatus("Création du slot pour " + label + "…"));
-        int displayId = FissionClient.attachSlot(mDaemonBinder, pkg,
-                rect.left, rect.top, rect.width(), rect.height());
-        if (displayId < 0) throw new RuntimeException("ATTACH_SLOT failed pour " + pkg);
-        // INFO-level so it always appears in logcat / sniffer even without debug build
-        AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg
-                + " displayId=" + displayId
-                + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
+        // Step 2 — ATTACH_SLOT or REUSE if VD already alive in daemon
+        int existingId = -1;
+        try { existingId = FissionClient.querySlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
+        final int displayId;
+        if (existingId > 0) {
+            // VD still alive — just resize, skip creating a new one
+            safeRun(() -> setStatus("Réutilisation du slot pour " + label + "…"));
+            try {
+                FissionClient.resizeSlot(mDaemonBinder, pkg,
+                        rect.left, rect.top, rect.width(), rect.height());
+            } catch (Exception ignored) {}
+            displayId = existingId;
+            AppLogger.i(TAG, "FISSION REUSE_SLOT pkg=" + pkg + " displayId=" + displayId);
+            safeRun(() -> Toast.makeText(this,
+                    getString(R.string.fission_slot_reused_toast), Toast.LENGTH_SHORT).show());
+        } else {
+            safeRun(() -> setStatus("Création du slot pour " + label + "…"));
+            int newId = FissionClient.attachSlot(mDaemonBinder, pkg,
+                    rect.left, rect.top, rect.width(), rect.height());
+            if (newId < 0) throw new RuntimeException("ATTACH_SLOT failed pour " + pkg);
+            displayId = newId;
+            AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg
+                    + " displayId=" + displayId
+                    + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
+        }
 
         // Step 3 — LAUNCH_AND_FORCE via Proxy Daemon (Phase5b watchdog: am start + moveTaskToDisplay)
         // The Proxy Daemon must be running (enabled in Settings > Beta). If not connected we
@@ -546,5 +584,138 @@ public class FissionActivity extends Activity {
         if (mDestroyed) return;
         if (Looper.myLooper() == Looper.getMainLooper()) { r.run(); return; }
         mUiHandler.post(() -> { if (!mDestroyed) r.run(); });
+    }
+
+    // ── Layout selector UI ────────────────────────────────────────────────────
+
+    private void updateLayoutSelectorUi() {
+        if (tvLayoutLabel == null) return;
+        if (mActiveLayout == null) {
+            tvLayoutLabel.setText(getString(R.string.fission_layout_mode_free));
+        } else {
+            String favId  = LayoutPrefs.getFavoriteId(this);
+            boolean isFav = mActiveLayout.id.equals(favId);
+            String text   = getString(R.string.fission_layout_active_fmt, mActiveLayout.name);
+            if (isFav) text += "  " + getString(R.string.fission_layout_favorite_suffix);
+            tvLayoutLabel.setText(text);
+        }
+    }
+
+    private void showLayoutSwitcher() {
+        List<LayoutPreset> presets = LayoutPrefs.load(this);
+        String favId = LayoutPrefs.getFavoriteId(this);
+        String[] names = new String[presets.size() + 1];
+        names[0] = getString(R.string.fission_layout_mode_free);
+        for (int i = 0; i < presets.size(); i++) {
+            LayoutPreset p  = presets.get(i);
+            String label    = (p.id.equals(favId) ? "⭐ " : "") + p.name;
+            if (mActiveLayout != null && p.id.equals(mActiveLayout.id)) label += "  ✓";
+            names[i + 1] = label;
+        }
+        final LayoutPreset[] arr = presets.toArray(new LayoutPreset[0]);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.fission_layout_switch))
+                .setItems(names, (d, which) -> {
+                    if (which == 0) {
+                        mActiveLayout = null;
+                        updateLayoutSelectorUi();
+                    } else {
+                        switchToLayout(arr[which - 1]);
+                    }
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
+    }
+
+    // ── Layout switching ──────────────────────────────────────────────────────
+
+    private void switchToLayout(LayoutPreset newLayout) {
+        btnAdd.setEnabled(false);
+        btnStopAll.setEnabled(false);
+        mActiveLayout = newLayout;
+        safeRun(this::updateLayoutSelectorUi);
+        mExec.execute(() -> {
+            try {
+                doSwitchToLayout(newLayout);
+            } catch (Exception e) {
+                AppLogger.e(TAG, "switchToLayout error", e);
+                safeRun(() -> Toast.makeText(this,
+                        "Erreur layout: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            } finally {
+                safeRun(() -> {
+                    updateSlotsUi();
+                    btnAdd.setEnabled(mSurfaceReady);
+                    btnStopAll.setEnabled(!mSlots.isEmpty());
+                });
+            }
+        });
+    }
+
+    /** Must be called from mExec background thread. */
+    private void doSwitchToLayout(LayoutPreset newLayout) throws Exception {
+        // Collect packages bound in new layout
+        Set<String> newPkgs = new HashSet<>();
+        for (LayoutPreset.SlotDef s : newLayout.slots) {
+            if (s.packageName != null && !s.packageName.isEmpty()) newPkgs.add(s.packageName);
+        }
+        // Release slots not present in new layout
+        List<String> toRelease = new ArrayList<>(mSlots.keySet());
+        for (String pkg : toRelease) {
+            if (!newPkgs.contains(pkg)) {
+                if (mDaemonBinder != null) {
+                    try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
+                }
+                ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
+                mSlots.remove(pkg);
+            }
+        }
+        mProjecting = !mSlots.isEmpty();
+        // Start / reuse bound slots
+        for (LayoutPreset.SlotDef s : newLayout.slots) {
+            if (s.packageName == null || s.packageName.isEmpty()) continue;
+            if (mSlots.containsKey(s.packageName)) continue;
+            String appLabel = getAppLabel(s.packageName);
+            doStartSlot(s.packageName, appLabel, s.toRect());
+        }
+    }
+
+    // ── Auto-activate & pre-create ────────────────────────────────────────────
+
+    /** Triggered on open when KEY_FISSION_AUTO_LAYOUT is true. Must run on mExec. */
+    private void activateFavoriteLayout() {
+        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(mAppCtx);
+        if (fav == null) { safeRun(() -> setStatus(null)); return; }
+        mActiveLayout = fav;
+        safeRun(this::updateLayoutSelectorUi);
+        try {
+            doSwitchToLayout(fav);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "activateFavoriteLayout failed", e);
+            safeRun(() -> setStatus("Erreur auto-layout: " + e.getMessage()));
+        }
+    }
+
+    /** Triggered on open when KEY_FISSION_PRECREATE_SLOTS is true. Must run on mExec. */
+    private void precreateSlots(LayoutPreset layout) {
+        safeRun(() -> setStatus(getString(R.string.fission_precreating_slots)));
+        if (!ensureDaemon()) { safeRun(() -> setStatus(null)); return; }
+        for (LayoutPreset.SlotDef s : layout.slots) {
+            String key = (s.packageName != null && !s.packageName.isEmpty())
+                    ? s.packageName : s.label;
+            try {
+                int id = FissionClient.attachSlot(mDaemonBinder, key, s.x, s.y, s.w, s.h);
+                if (id > 0) AppLogger.i(TAG, "FISSION PRECREATE slot=" + key + " displayId=" + id);
+            } catch (Exception e) {
+                AppLogger.w(TAG, "precreateSlots failed for " + key + ": " + e.getMessage());
+            }
+        }
+        safeRun(() -> setStatus(null));
+    }
+
+    private String getAppLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) { return pkg; }
     }
 }

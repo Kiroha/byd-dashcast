@@ -146,6 +146,22 @@ public class FissionClient {
         } finally { data.recycle(); reply.recycle(); }
     }
 
+    /**
+     * Queries the displayId of an existing slot for {@code pkg}.
+     * Returns the live displayId if the daemon still holds the slot, -1 otherwise.
+     * Fast O(1) call — no shell, no polling.
+     */
+    public static int querySlot(IBinder binder, String pkg) throws Exception {
+        Parcel data = Parcel.obtain(), reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeString(pkg);
+            binder.transact(MirrorDaemon.TRANSACT_QUERY_SLOT, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally { data.recycle(); reply.recycle(); }
+    }
+
     public static void stopMirror(IBinder binder) {
         if (binder == null) return;
         Parcel data = Parcel.obtain();

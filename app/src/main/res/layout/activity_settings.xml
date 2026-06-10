@@ -1090,6 +1090,60 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <!-- Fission: activate favourite layout automatically -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_dashboard"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_fission_auto_layout"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_fission_auto_layout_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_fission_auto_layout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Fission: pre-create VD slots on Fission open -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                android:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_science"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_fission_precreate_slots"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_fission_precreate_slots_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_fission_precreate_slots"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

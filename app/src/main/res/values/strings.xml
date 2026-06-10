@@ -497,6 +497,10 @@
     <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Redémarrage requis.</string>
     <string name="settings_fission_mode">Mode Fission (beta)</string>
     <string name="settings_fission_mode_support">Projection multi-apps sur le cluster avec zones personnalisées. Nécessite le daemon de proxy.</string>
+    <string name="settings_fission_auto_layout">Layout favori automatique</string>
+    <string name="settings_fission_auto_layout_support">Active le layout favori dès l\'ouverture de Fission et lance automatiquement les apps liées</string>
+    <string name="settings_fission_precreate_slots">Pré-créer les slots au démarrage</string>
+    <string name="settings_fission_precreate_slots_support">Prépare les Virtual Displays du layout favori à l\'ouverture de Fission (sans lancer les apps)</string>
     <!-- v1.2.18 — Shown when the user taps the keyboard icon while the
          ClusterImeWatcherService accessibility service is not enabled. -->
     <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
@@ -606,4 +610,19 @@
     <string name="fission_editor_edit">Modifier</string>
     <string name="fission_editor_delete">Supprimer</string>
     <string name="fission_open">Fission</string>
+
+    <!-- Fission layout selector + slot management (v1.4.17-beta+) -->
+    <string name="fission_layout_mode_free">Mode libre</string>
+    <string name="fission_layout_active_fmt">Layout : %1$s</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_switch">Changer</string>
+    <string name="fission_layout_set_favorite">Définir comme favori</string>
+    <string name="fission_layout_favorite_set_toast">Layout favori défini ✓</string>
+    <string name="fission_slot_zone_free">Zone libre</string>
+    <string name="fission_slot_zone_bound_fmt">App liée : %1$s</string>
+    <string name="fission_slot_pick_pkg">Lier une application…</string>
+    <string name="fission_slot_pkg_none">Aucune — zone libre</string>
+    <string name="fission_slot_reused_toast">Slot existant réutilisé ✓</string>
+    <string name="fission_auto_activating">Activation du layout favori…</string>
+    <string name="fission_precreating_slots">Préparation des slots…</string>
 </resources>
