@@ -3775,6 +3775,90 @@ public class MainActivity extends AppCompatActivity
         card.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
     }
 
+    /**
+     * v1.4.13 — One-click grant of notification listener access via the proxy
+     * daemon shell (same uid=2000 trick as the IME a11y one-click).
+     * Appends the component to {@code Settings.Secure.enabled_notification_listeners}.
+     * Falls back to opening Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS if the
+     * shell route fails.
+     */
+    private void enableHudNotifListenerOneClick(final View card, final View btnEnable) {
+        if (btnEnable != null) btnEnable.setEnabled(false);
+        try {
+            final String comp = "com.byd.dashcast/com.byd.dashcast.hud.MapNotificationListenerService";
+            final String cmd =
+                "COMP='" + comp + "'; "
+              + "CURRENT=$(settings get secure enabled_notification_listeners 2>/dev/null); "
+              + "if [ \"$CURRENT\" = \"null\" ] || [ -z \"$CURRENT\" ]; then "
+              +   "NEW=\"$COMP\"; "
+              + "elif echo \"$CURRENT\" | grep -q \"$COMP\"; then "
+              +   "NEW=\"$CURRENT\"; "
+              + "else "
+              +   "NEW=\"$CURRENT:$COMP\"; "
+              + "fi; "
+              + "settings put secure enabled_notification_listeners \"$NEW\"; "
+              + "echo OUT=$(settings get secure enabled_notification_listeners)";
+
+            ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+                @Override public void onSuccess(final String report) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (isFinishing() || isDestroyed()) return;
+                            String enabled = android.provider.Settings.Secure.getString(
+                                    getContentResolver(), "enabled_notification_listeners");
+                            boolean ok = enabled != null && enabled.contains(getPackageName());
+                            if (ok) {
+                                AppLogger.i("MainActivity",
+                                        "Notification listener enabled via shell (one-click) ✓");
+                                try {
+                                    android.widget.Toast.makeText(getApplicationContext(),
+                                            R.string.hud_notif_banner_toast_enabled,
+                                            android.widget.Toast.LENGTH_SHORT).show();
+                                } catch (Throwable ignored) { }
+                                if (card != null) card.setVisibility(View.GONE);
+                                if (btnEnable != null) btnEnable.setEnabled(true);
+                            } else {
+                                AppLogger.w("MainActivity",
+                                        "shell succeeded but listener still not enabled, falling back. report=" + report);
+                                openNotifListenerSettingsFallback();
+                                if (btnEnable != null) btnEnable.setEnabled(true);
+                            }
+                        }
+                    });
+                }
+                @Override public void onError(final String error) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (isFinishing() || isDestroyed()) return;
+                            AppLogger.w("MainActivity",
+                                    "one-click notif listener enable shell failed: " + error
+                                  + " — falling back to Settings UI");
+                            openNotifListenerSettingsFallback();
+                            if (btnEnable != null) btnEnable.setEnabled(true);
+                        }
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "enableHudNotifListenerOneClick threw", t);
+            openNotifListenerSettingsFallback();
+            if (btnEnable != null) btnEnable.setEnabled(true);
+        }
+    }
+
+    /** Fallback: open the system Notification Listener Settings screen. */
+    private void openNotifListenerSettingsFallback() {
+        try {
+            android.content.Intent i = new android.content.Intent(
+                    android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Throwable t) {
+            AppLogger.w("MainActivity", "ACTION_NOTIFICATION_LISTENER_SETTINGS unavailable: "
+                    + t.getMessage());
+        }
+    }
+
     /** Wire the HUD notification banner buttons once. Visibility is decided by {@link #refreshHudNotifBanner()}. */
     private void setupHudNotifBanner() {
         try {
@@ -3788,12 +3872,7 @@ public class MainActivity extends AppCompatActivity
             if (btnEnable != null) {
                 btnEnable.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View v) {
-                        try {
-                            startActivity(new android.content.Intent(
-                                    android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-                        } catch (Throwable t) {
-                            AppLogger.e("MainActivity", "Cannot open notification listener settings", t);
-                        }
+                        enableHudNotifListenerOneClick(card, v);
                     }
                 });
             }

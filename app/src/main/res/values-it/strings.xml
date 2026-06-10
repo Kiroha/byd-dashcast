@@ -275,6 +275,7 @@
     <string name="ime_banner_toast_cannot_open_settings">Impossibile aprire Impostazioni — attiva manualmente il servizio di accessibilità « Tastiera auto del cluster ».</string>
     <string name="hud_notif_banner_title">HUD Navigazione — Accesso alle notifiche richiesto</string>
     <string name="hud_notif_banner_body">DashCast deve poter leggere le notifiche per mostrare le istruzioni di navigazione sul cluster. Attivalo in Impostazioni → Accesso speciale app → Accesso alle notifiche → DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">Accesso alle notifiche attivato ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Attiva « DashCast Cluster IME » in Impostazioni → Accessibilità affinché la tastiera funzioni sul cluster.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Tastiera</string>

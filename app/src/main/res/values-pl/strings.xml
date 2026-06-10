@@ -400,6 +400,7 @@
     <string name="ime_banner_toast_cannot_open_settings">Nie można otworzyć Ustawień — włącz ręcznie usługę ułatwień dostępu „Klaster auto-klawiatura”.</string>
     <string name="hud_notif_banner_title">HUD Nawigacja — wymagany dostęp do powiadomień</string>
     <string name="hud_notif_banner_body">DashCast potrzebuje dostępu do powiadomień, aby wyświetlać wskazówki nawigacji na klastrze. Włącz w Ustawienia → Dostęp specjalny → Dostęp do powiadomień → DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">Dostęp do powiadomień przyznany ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Włącz „DashCast Cluster IME” w Ustawienia → Ułatwienia dostępu, aby klawiatura działała na klastrze.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klawiatura</string>
