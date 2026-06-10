@@ -273,6 +273,8 @@
     <string name="ime_banner_btn_dismiss">Nicht mehr anzeigen</string>
     <string name="ime_banner_toast_enabled">Auto-Tastatur aktiv ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Einstellungen können nicht geöffnet werden — bitte aktivieren Sie den Bedienungshilfen-Dienst « Cluster-Auto-Tastatur » manuell.</string>
+    <string name="hud_notif_banner_title">HUD Navigation — Benachrichtigungszugriff erforderlich</string>
+    <string name="hud_notif_banner_body">DashCast benötigt Zugriff auf Benachrichtigungen, um Navigationshinweise auf dem Cluster anzuzeigen. Aktivieren unter Einstellungen → Spezieller App-Zugriff → Benachrichtigungszugriff → DashCast.</string>
     <string name="keyboard_bridge_a11y_required_toast">Aktiviere « DashCast Cluster IME » unter Einstellungen → Bedienungshilfen, damit die Tastatur auf dem Cluster funktioniert.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Tastatur</string>

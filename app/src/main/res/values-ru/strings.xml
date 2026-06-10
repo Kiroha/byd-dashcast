@@ -273,6 +273,8 @@
     <string name="ime_banner_btn_dismiss">Больше не показывать</string>
     <string name="ime_banner_toast_enabled">Авто-клавиатура активна ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Невозможно открыть Настройки — включите вручную службу специальных возможностей « Авто-клавиатура кластера ».</string>
+    <string name="hud_notif_banner_title">HUD Навигация — требуется доступ к уведомлениям</string>
+    <string name="hud_notif_banner_body">DashCast нужен доступ к уведомлениям для отображения навигационных подсказок на кластере. Включите в Настройки → Специальный доступ → Доступ к уведомлениям → DashCast.</string>
     <string name="keyboard_bridge_a11y_required_toast">Включите « DashCast Cluster IME » в Настройки → Специальные возможности, чтобы клавиатура работала на приборной панели.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Клавиатура</string>

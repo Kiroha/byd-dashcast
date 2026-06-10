@@ -273,6 +273,8 @@
     <string name="ime_banner_btn_dismiss">Boshqa ko\'rsatilmasin</string>
     <string name="ime_banner_toast_enabled">Avto-klaviatura faol ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Sozlamalarni ochib bo\'lmadi — « Klaster avto-klaviaturasi » maxsus imkoniyatlar xizmatini qo\'lda yoqing.</string>
+    <string name="hud_notif_banner_title">HUD Navigatsiya — bildirishnomaga kirish talab qilinadi</string>
+    <string name="hud_notif_banner_body">DashCast klaster ekranida navigatsiya ko\'rsatmalarini ko\'rsatish uchun bildirishnomalarga kirishni talab qiladi. Sozlamalar → Maxsus ilova kirishi → Bildirishnomalarga kirish → DashCast bo\'limidan yoqing.</string>
     <string name="keyboard_bridge_a11y_required_toast">Klaviatura asboblar paneli ekranida ishlashi uchun Sozlamalar → Maxsus imkoniyatlar bo\'limidan « DashCast Cluster IME » xizmatini yoqing.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klaviatura</string>
