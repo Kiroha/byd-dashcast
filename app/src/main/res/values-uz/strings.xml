@@ -200,6 +200,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
+    <string name="sysinfo_svc_checking">Tekshirish…</string>
     <string name="sysinfo_svc_stopped">To‘xtatilgan</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ishlamayapti</string>
     <string name="sysinfo_svc_conn">CONN</string>

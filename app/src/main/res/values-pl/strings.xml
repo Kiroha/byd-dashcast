@@ -242,6 +242,7 @@
     <string name="sysinfo_svc_run">DZIAŁA</string>
     <string name="sysinfo_svc_off">WYŁ.</string>
     <string name="sysinfo_svc_mirror_sub">Obserwacja pidof · 500 ms</string>
+    <string name="sysinfo_svc_checking">Sprawdzanie…</string>
     <string name="sysinfo_svc_stopped">Zatrzymano</string>
     <string name="sysinfo_svc_adb_unreachable">5555 nieosiągalne</string>
     <string name="sysinfo_svc_conn">POŁĄCZ.</string>
