@@ -1101,11 +1101,19 @@ public class MainActivity extends AppCompatActivity
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
         stopStatePoll();
-        // Remove the listener but keep the service active: projection continues.
-        // Stop the mirror: the HandlerThread must not capture frames in the background.
-        // The mirror restarts automatically via the savedItem mechanism in
-        // onClusterDisplayConnected() when the Activity returns to the foreground.
-        stopClusterMirror();
+        // Keep the daemon mirror alive when a nav app is actively streaming on the
+        // cluster display: MainActivity goes to background when the nav app takes
+        // the foreground on display 0, but the mirror must survive (field bug:
+        // mirror was killed ~10 s after Maps launched on cluster).
+        // When no cluster app is active the mirror is stopped as before.
+        // onDestroy() always stops the mirror before unbinding so a recreated
+        // Activity instance starts with a clean mMirrorActive=false state.
+        boolean clusterAppActive = mCurrentDashboardApp != null
+                && mServiceBound && mClusterService != null
+                && mClusterService.getDisplayId() > 0;
+        if (!clusterAppActive) {
+            stopClusterMirror();
+        }
         if (mServiceBound && mClusterService != null) {
             mClusterService.setListener(null);
         }
@@ -1127,6 +1135,9 @@ public class MainActivity extends AppCompatActivity
         mScreenshotHandler.removeCallbacksAndMessages(null);
         unregisterReceiver(mDaemonReadyReceiver);
         if (mServiceBound) {
+            // Stop mirror before unbinding so a recreated Activity starts with
+            // mMirrorActive=false (covers the onStop kept-alive path).
+            stopClusterMirror();
             unbindService(mServiceConn);
             mServiceBound  = false;
             mBindRequested = false;
