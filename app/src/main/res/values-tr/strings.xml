@@ -273,6 +273,8 @@
     <string name="ime_banner_btn_dismiss">Bir daha gösterme</string>
     <string name="ime_banner_toast_enabled">Otomatik klavye aktif ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Ayarlar açılamadı — « Küme otomatik klavyesi » erişilebilirlik hizmetini elle etkinleştirin.</string>
+    <string name="hud_notif_banner_title">HUD Navigasyon — Bildirim erişimi gerekli</string>
+    <string name="hud_notif_banner_body">DashCast, navigasyon talimatlarını küme ekranında göstermek için bildirim erişimine ihtiyaç duyar. Ayarlar → Özel uygulama erişimi → Bildirim erişimi → DashCast yolundan etkinleştirin.</string>
     <string name="keyboard_bridge_a11y_required_toast">Klavyenin gösterge panelinde çalışması için Ayarlar → Erişilebilirlik bölümünden « DashCast Cluster IME »\'yi etkinleştirin.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klavye</string>

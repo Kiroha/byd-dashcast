@@ -51,6 +51,7 @@ public final class ClusterPrefs {
     static final String KEY_GRID_MODE            = "grid_mode";
     static final String KEY_FIRST_LAUNCH_TIP     = "first_launch_tip_shown";
     static final String KEY_IME_BANNER_DISMISSED = "ime_a11y_banner_dismissed";
+    static final String KEY_HUD_BANNER_DISMISSED = "hud_notif_banner_dismissed";
 
     // ── Startup behaviour ────────────────────────────────────────────────────
     public static final String KEY_BOOT_AUTO_START = "boot_auto_start_enabled";
@@ -206,6 +207,14 @@ public final class ClusterPrefs {
 
     public static void setImeBannerDismissed(Context ctx) {
         edit(ctx).putBoolean(KEY_IME_BANNER_DISMISSED, true).apply();
+    }
+
+    public static boolean isHudBannerDismissed(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_HUD_BANNER_DISMISSED, false);
+    }
+
+    public static void setHudBannerDismissed(Context ctx) {
+        edit(ctx).putBoolean(KEY_HUD_BANNER_DISMISSED, true).apply();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

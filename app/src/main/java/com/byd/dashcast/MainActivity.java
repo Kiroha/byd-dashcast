@@ -804,6 +804,8 @@ public class MainActivity extends AppCompatActivity
 
         // v1.2.9 — IME a11y onboarding banner (DL5 only)
         setupImeA11yBanner();
+        // v1.4.12 — HUD notification access banner (all devices)
+        setupHudNotifBanner();
 
         // Cluster mirror: touch → map coordinates → inject on display 1
         clusterMirror.setOnTouchListener(new View.OnTouchListener() {
@@ -1022,6 +1024,10 @@ public class MainActivity extends AppCompatActivity
         // v1.2.9 — user may have just enabled/disabled the a11y service in Settings.
         try { refreshImeA11yBanner(); } catch (Throwable t) {
             AppLogger.e("MainActivity", "refreshImeA11yBanner failed", t);
+        }
+        // v1.4.12 — user may have just granted notification access in Settings.
+        try { refreshHudNotifBanner(); } catch (Throwable t) {
+            AppLogger.e("MainActivity", "refreshHudNotifBanner failed", t);
         }
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -3764,6 +3770,77 @@ public class MainActivity extends AppCompatActivity
             }
         } catch (Throwable t) {
             AppLogger.e("MainActivity", "refreshImeA11yBanner inner failed", t);
+            shouldShow = false;
+        }
+        card.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+    }
+
+    /** Wire the HUD notification banner buttons once. Visibility is decided by {@link #refreshHudNotifBanner()}. */
+    private void setupHudNotifBanner() {
+        try {
+            final View card = findViewById(R.id.card_hud_notif_banner);
+            if (card == null) return;
+
+            View btnEnable  = findViewById(R.id.btn_hud_banner_enable);
+            View btnLater   = findViewById(R.id.btn_hud_banner_later);
+            View btnDismiss = findViewById(R.id.btn_hud_banner_dismiss);
+
+            if (btnEnable != null) {
+                btnEnable.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        try {
+                            startActivity(new android.content.Intent(
+                                    android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                        } catch (Throwable t) {
+                            AppLogger.e("MainActivity", "Cannot open notification listener settings", t);
+                        }
+                    }
+                });
+            }
+            if (btnLater != null) {
+                btnLater.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        card.setVisibility(View.GONE);
+                    }
+                });
+            }
+            if (btnDismiss != null) {
+                btnDismiss.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        try {
+                            ClusterPrefs.setHudBannerDismissed(MainActivity.this);
+                        } catch (Throwable ignored) { }
+                        card.setVisibility(View.GONE);
+                    }
+                });
+            }
+
+            refreshHudNotifBanner();
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "setupHudNotifBanner failed", t);
+        }
+    }
+
+    /**
+     * Recomputes whether the HUD notification access banner should be visible.
+     * Banner shows iff notification listener access is NOT granted AND the user
+     * did not permanently dismiss it. Safe to call repeatedly.
+     */
+    private void refreshHudNotifBanner() {
+        final View card = findViewById(R.id.card_hud_notif_banner);
+        if (card == null) return;
+
+        boolean shouldShow = false;
+        try {
+            boolean dismissed = ClusterPrefs.isHudBannerDismissed(this);
+            if (!dismissed) {
+                String enabled = android.provider.Settings.Secure.getString(
+                        getContentResolver(), "enabled_notification_listeners");
+                boolean granted = enabled != null && enabled.contains(getPackageName());
+                shouldShow = !granted;
+            }
+        } catch (Throwable t) {
+            AppLogger.e("MainActivity", "refreshHudNotifBanner inner failed", t);
             shouldShow = false;
         }
         card.setVisibility(shouldShow ? View.VISIBLE : View.GONE);

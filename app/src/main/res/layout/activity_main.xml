@@ -396,6 +396,89 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- v1.4.12-beta — HUD navigation onboarding banner.
+             Hidden by default; shown when notification listener access is not
+             granted so the user can open the exact Settings screen to enable it. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_hud_notif_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/md_tertiary_container"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tv_hud_banner_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/hud_notif_banner_title"
+                    android:textColor="@color/md_on_tertiary_container"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tv_hud_banner_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/hud_notif_banner_body"
+                    android:textColor="@color/md_on_tertiary_container"
+                    android:textSize="12sp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_dismiss"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_dismiss"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:backgroundTint="@android:color/transparent"
+                        android:textColor="@color/md_on_tertiary_container"/>
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_later"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_later"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:backgroundTint="@android:color/transparent"
+                        android:textColor="@color/md_on_tertiary_container"/>
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_enable"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_enable"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:backgroundTint="@color/md_primary"
+                        android:textColor="@color/md_on_primary"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- ────── CONTENT ROW (left pane + right pane) ────── -->
         <LinearLayout
             android:layout_width="match_parent"
