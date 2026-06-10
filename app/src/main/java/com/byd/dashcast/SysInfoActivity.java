@@ -27,11 +27,17 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SysInfoActivity — generates a complete diagnostic report of the BYD system.
@@ -272,6 +278,26 @@ public class SysInfoActivity extends AppCompatActivity {
                 sb.append("  → #").append(d.getDisplayId())
                   .append(" ").append(d.getName())
                   .append(" ").append(getDisplaySize(d)).append("\n");
+            }
+            publishUpdate(sb.toString());
+
+            // 3b. uid=2000 probe — bypasses FLAG_PRIVATE filter so VirtualDisplays
+            // created by privileged processes (XDJA cluster VD, mirror VD, …) are
+            // visible even when DisplayManager.getDisplays() hides them.
+            sb.append("\n[uid=2000 dumpsys probe — ALL displays incl. PRIVATE]\n");
+            {
+                final String[] shellOut = {null};
+                final CountDownLatch latch = new CountDownLatch(1);
+                AdbLocalClient.executeShellWithResult(SysInfoActivity.this,
+                        "dumpsys display | grep -E 'DisplayDeviceInfo\\{|^\\s+(mDisplayId|mLayerStack|isPrivate)=' | head -120",
+                        new AdbLocalClient.Callback() {
+                            @Override public void onSuccess(String r) { shellOut[0] = r; latch.countDown(); }
+                            @Override public void onError(String e)   { shellOut[0] = "[shell error: " + e + "]"; latch.countDown(); }
+                        });
+                try { latch.await(8, TimeUnit.SECONDS); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                sb.append(shellOut[0] != null ? shellOut[0] : "[timeout — AdbLocalClient unavailable]").append("\n");
             }
             publishUpdate(sb.toString());
 
@@ -846,13 +872,17 @@ public class SysInfoActivity extends AppCompatActivity {
     }
 
     private void populateDisplaysList() {
-        android.widget.LinearLayout container = findViewById(R.id.ll_displays_list);
+        final android.widget.LinearLayout container = findViewById(R.id.ll_displays_list);
         if (container == null) return;
         container.removeAllViews();
+
+        // --- Phase 1: synchronous API pass (instant, no I/O) ---
         DisplayManager dm = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
-        Display[] displays = dm.getDisplays();
+        final Display[] displays = dm.getDisplays();
+        final Set<Integer> apiIds = new HashSet<>();
         android.view.LayoutInflater inf = android.view.LayoutInflater.from(this);
         for (Display d : displays) {
+            apiIds.add(d.getDisplayId());
             View row = inf.inflate(R.layout.row_sysinfo, container, false);
             android.widget.ImageView icon  = row.findViewById(R.id.row_icon);
             TextView headline              = row.findViewById(R.id.row_headline);
@@ -873,6 +903,65 @@ public class SysInfoActivity extends AppCompatActivity {
             badge.setText("●");
             container.addView(row);
         }
+
+        // --- Phase 2: uid=2000 async probe — finds PRIVATE/HIDDEN displays ---
+        // DisplayManager.getDisplays() silently omits displays created with
+        // VIRTUAL_DISPLAY_FLAG_PRIVATE (e.g. XDJA cluster VD on DiLink 5).
+        // dumpsys display as uid=2000 reads the internal DisplayManagerService
+        // state without any privacy filter. We cross-reference the IDs and add
+        // rows for anything the API missed.
+        ShellGateway.execShellWithResult(this,
+                "dumpsys display | grep -E '^\\s+mDisplayId=[0-9]|^\\s+mLayerStack=[0-9]' | head -80",
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(final String raw) {
+                // Parse id → layerStack from the shell output. Lines alternate:
+                //   "  mDisplayId=N"
+                //   "  mLayerStack=N"
+                final LinkedHashMap<Integer, Integer> idToStack = new LinkedHashMap<>();
+                int lastId = -1;
+                for (String line : raw.split("\n")) {
+                    String t = line.trim();
+                    if (t.startsWith("mDisplayId=")) {
+                        try { lastId = Integer.parseInt(t.substring("mDisplayId=".length()).trim()); }
+                        catch (NumberFormatException e) { lastId = -1; }
+                    } else if (t.startsWith("mLayerStack=") && lastId >= 0) {
+                        try {
+                            int stack = Integer.parseInt(t.substring("mLayerStack=".length()).trim());
+                            idToStack.put(lastId, stack);
+                        } catch (NumberFormatException e) { idToStack.put(lastId, -1); }
+                        lastId = -1;
+                    }
+                }
+                // Hidden = IDs present in dumpsys but absent from DisplayManager API
+                final LinkedHashMap<Integer, Integer> hidden = new LinkedHashMap<>();
+                for (Map.Entry<Integer, Integer> e : idToStack.entrySet()) {
+                    if (!apiIds.contains(e.getKey())) hidden.put(e.getKey(), e.getValue());
+                }
+                if (hidden.isEmpty()) return;
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (mDestroyed) return;
+                    android.view.LayoutInflater inf2 = android.view.LayoutInflater.from(SysInfoActivity.this);
+                    for (Map.Entry<Integer, Integer> e : hidden.entrySet()) {
+                        View row = inf2.inflate(R.layout.row_sysinfo, container, false);
+                        android.widget.ImageView icon  = row.findViewById(R.id.row_icon);
+                        TextView headline              = row.findViewById(R.id.row_headline);
+                        TextView support               = row.findViewById(R.id.row_support);
+                        TextView badge                 = row.findViewById(R.id.row_badge);
+                        icon.setImageResource(R.drawable.ic_visibility);
+                        headline.setText(getString(R.string.sysinfo_disp_row_headline,
+                                e.getKey(), getString(R.string.sysinfo_disp_hidden)));
+                        String stackStr = e.getValue() >= 0 ? "layerStack=" + e.getValue() : "layerStack=?";
+                        support.setText(stackStr + " · " + getString(R.string.sysinfo_disp_hidden_sub));
+                        badge.setText("●");
+                        badge.setTextColor(0xFFFF9800); // orange — not visible via API
+                        container.addView(row);
+                    }
+                }});
+            }
+            @Override public void onError(String err) {
+                AppLogger.w("SysInfoActivity", "uid=2000 display probe failed: " + err);
+            }
+        });
     }
 
     /** v1.2.78 — manual recovery: always replays sendInfo(30) → 3s → sendInfo(16) → 3s →

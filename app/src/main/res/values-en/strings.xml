@@ -239,6 +239,8 @@
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtual (mirror)</string>
     <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_hidden">Hidden (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">Not visible via DisplayManager API</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Watching pidof · 500 ms</string>
