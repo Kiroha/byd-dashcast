@@ -1024,6 +1024,50 @@ public class SysInfoActivity extends AppCompatActivity {
             }}, "sysinfo-pidof").start();
         }
 
+        // BetaProxy daemon — uid=2000 process (dashcast_proxy). Status via ProxyClient.isConnected()
+        // (volatile read, ~5 µs). PID and metrics resolved on a background thread.
+        final boolean proxyConnected = com.byd.dashcast.proxy.ProxyClient.isConnected();
+        final View proxyRow = addServiceRow(inf, container, "BetaProxy",
+                proxyConnected ? getString(R.string.sysinfo_svc_checking)
+                               : getString(R.string.sysinfo_svc_stopped),
+                proxyConnected, false,
+                proxyConnected ? null : new Runnable() { @Override public void run() {
+                    Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_started, Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() { @Override public void run() {
+                        final boolean ok;
+                        try {
+                            ok = com.byd.dashcast.proxy.ProxyClient.connect(getApplicationContext());
+                        } catch (Throwable t) {
+                            AppLogger.w("SysInfoActivity", "BetaProxy restart failed: " + t.getMessage());
+                            runOnUiThread(new Runnable() { @Override public void run() {
+                                if (!mDestroyed) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            }});
+                            return;
+                        }
+                        runOnUiThread(new Runnable() { @Override public void run() {
+                            if (mDestroyed) return;
+                            if (!ok) Toast.makeText(SysInfoActivity.this, R.string.sysinfo_restart_failed, Toast.LENGTH_LONG).show();
+                            populateServicesList();
+                        }});
+                    }}, "sysinfo-proxy-restart").start();
+                }});
+        if (proxyConnected && proxyRow != null) {
+            new Thread(new Runnable() { @Override public void run() {
+                final int pid = pidOf("dashcast_proxy");
+                final int spawns  = com.byd.dashcast.proxy.ProxyMetrics.get(
+                        SysInfoActivity.this, com.byd.dashcast.proxy.ProxyMetrics.K_COLD_SPAWNS);
+                final int zombies = com.byd.dashcast.proxy.ProxyMetrics.get(
+                        SysInfoActivity.this, com.byd.dashcast.proxy.ProxyMetrics.K_BINDER_ZOMBIES);
+                runOnUiThread(new Runnable() { @Override public void run() {
+                    if (mDestroyed) return;
+                    String sub = (pid > 0 ? "pid " + pid : "pid ?")
+                            + " · spawns " + spawns
+                            + (zombies > 0 ? " · ⚠ " + zombies + " zombie" : "");
+                    setServiceRowState(proxyRow, true, false, sub);
+                }});
+            }}, "sysinfo-proxy-pid").start();
+        }
+
         // Projection state (v1.2.78) — reflects ClusterManager.sQtInProjectionMode, which is
         // independent of the VirtualDisplay lifecycle. Tap always replays the slow path
         // sendInfo(30) → 3s → sendInfo(16) → 3s → sendInfo(0) regardless of current state,

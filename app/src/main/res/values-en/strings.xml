@@ -242,6 +242,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Watching pidof · 500 ms</string>
+    <string name="sysinfo_svc_checking">Checking…</string>
     <string name="sysinfo_svc_stopped">Stopped</string>
     <string name="sysinfo_svc_adb_unreachable">5555 unreachable</string>
     <string name="sysinfo_svc_conn">CONN</string>

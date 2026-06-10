@@ -200,6 +200,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof izleniyor · 500 ms</string>
+    <string name="sysinfo_svc_checking">Kontrol ediliyor…</string>
     <string name="sysinfo_svc_stopped">Durduruldu</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ulaşılamıyor</string>
     <string name="sysinfo_svc_conn">CONN</string>

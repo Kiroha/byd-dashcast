@@ -200,6 +200,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Наблюдает pidof · 500 мс</string>
+    <string name="sysinfo_svc_checking">Проверка…</string>
     <string name="sysinfo_svc_stopped">Остановлено</string>
     <string name="sysinfo_svc_adb_unreachable">5555 недоступен</string>
     <string name="sysinfo_svc_conn">CONN</string>
