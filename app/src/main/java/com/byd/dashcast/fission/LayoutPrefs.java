@@ -7,8 +7,9 @@ import java.util.List;
 
 public class LayoutPrefs {
 
-    private static final String PREFS_NAME = "dashcast_fission_layouts_v1";
-    private static final String KEY_LIST   = "presets";
+    private static final String PREFS_NAME       = "dashcast_fission_layouts_v1";
+    private static final String KEY_LIST         = "presets";
+    private static final String KEY_FAVORITE_ID  = "favorite_layout_id";
 
     public static List<LayoutPreset> load(Context ctx) {
         List<LayoutPreset> result = new ArrayList<>();
@@ -30,5 +31,25 @@ public class LayoutPrefs {
             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
                     .putString(KEY_LIST, arr.toString()).apply();
         } catch (Exception ignored) {}
+    }
+
+    public static String getFavoriteId(Context ctx) {
+        return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_FAVORITE_ID, null);
+    }
+
+    public static void setFavoriteId(Context ctx, String id) {
+        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(KEY_FAVORITE_ID, id).apply();
+    }
+
+    /** Returns the favorite layout, or null if none set or the id no longer exists. */
+    public static LayoutPreset getFavoriteLayout(Context ctx) {
+        String id = getFavoriteId(ctx);
+        if (id == null) return null;
+        for (LayoutPreset p : load(ctx)) {
+            if (id.equals(p.id)) return p;
+        }
+        return null;
     }
 }

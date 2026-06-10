@@ -472,10 +472,22 @@
                         android:textSize="13sp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
+                        android:layout_marginEnd="8dp"
                         app:cornerRadius="18dp"
                         app:icon="@drawable/ic_save"
                         app:iconSize="15dp"
                         app:iconGravity="textStart"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lm_btn_set_favorite"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="⭐ Favori"
+                        android:textSize="13sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="18dp"/>
 
                 </LinearLayout>
 

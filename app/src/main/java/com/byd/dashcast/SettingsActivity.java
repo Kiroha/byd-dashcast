@@ -112,6 +112,8 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbCompactAppsPanel;
     private CompoundButton swLegacyPath;
     private CompoundButton cbFissionMode;
+    private CompoundButton swFissionAutoLayout;
+    private CompoundButton swFissionPrecreateSlots;
     private CompoundButton swDilink5Mode;
     private TextView tvBetaDilink5Support;
     private View        llSlidersMode;
@@ -248,8 +250,10 @@ public class SettingsActivity extends AppCompatActivity {
         cbUseOwnSim      = findViewById(R.id.cb_use_own_sim);
         cbCompactAppsPanel = findViewById(R.id.cb_compact_apps_panel);
         swLegacyPath        = findViewById(R.id.sw_legacy_path);
-        cbFissionMode       = findViewById(R.id.cb_fission_mode);
-        swDilink5Mode       = findViewById(R.id.sw_dilink5_mode);
+        cbFissionMode           = findViewById(R.id.cb_fission_mode);
+        swFissionAutoLayout     = findViewById(R.id.sw_fission_auto_layout);
+        swFissionPrecreateSlots = findViewById(R.id.sw_fission_precreate_slots);
+        swDilink5Mode           = findViewById(R.id.sw_dilink5_mode);
         tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
     }
 
@@ -318,6 +322,8 @@ public class SettingsActivity extends AppCompatActivity {
 
         swLegacyPath.setChecked(DaemonConfig.isLegacyPathEnabled(this));
         cbFissionMode.setChecked(DaemonConfig.isFissionModeEnabled(this));
+        swFissionAutoLayout.setChecked(ClusterPrefs.isFissionAutoLayout(this));
+        swFissionPrecreateSlots.setChecked(ClusterPrefs.isFissionPrecreateSlots(this));
 
         // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
         // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
@@ -491,6 +497,14 @@ public class SettingsActivity extends AppCompatActivity {
         cbFissionMode.setOnCheckedChangeListener((b, isChecked) -> {
             DaemonConfig.setFissionModeEnabled(this, isChecked);
             AppLogger.i("SettingsActivity", "fission_mode=" + isChecked);
+        });
+        swFissionAutoLayout.setOnCheckedChangeListener((b, isChecked) -> {
+            ClusterPrefs.setFissionAutoLayout(this, isChecked);
+            AppLogger.i("SettingsActivity", "fission_auto_layout=" + isChecked);
+        });
+        swFissionPrecreateSlots.setOnCheckedChangeListener((b, isChecked) -> {
+            ClusterPrefs.setFissionPrecreateSlots(this, isChecked);
+            AppLogger.i("SettingsActivity", "fission_precreate_slots=" + isChecked);
         });
         swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {
             com.byd.dashcast.platform.Platform.setForcedBoolean(this, isChecked);

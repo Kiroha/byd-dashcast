@@ -67,6 +67,15 @@ public final class ClusterPrefs {
     // ── Voice ASR model ──────────────────────────────────────────────
     /** true = high-accuracy large model (~1.3 GB), false = small model (~40 MB, default). */
     public static final String KEY_VOSK_HIGH_ACCURACY = "vosk_high_accuracy";
+
+    // ── Fission layout automation ─────────────────────────────────────────────
+    /** When true: favourite layout is activated automatically when FissionActivity opens,
+     *  and all bound apps are launched immediately. */
+    public static final String KEY_FISSION_AUTO_LAYOUT     = "fission_auto_layout";
+    /** When true: VD slots for the favourite layout are pre-created when FissionActivity
+     *  opens, so the first launch is instant. Apps are NOT started automatically. */
+    public static final String KEY_FISSION_PRECREATE_SLOTS = "fission_precreate_slots";
+
     private ClusterPrefs() { /* static utility class */ }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -251,6 +260,22 @@ public final class ClusterPrefs {
 
     public static void setVoskHighAccuracy(Context ctx, boolean highAccuracy) {
         edit(ctx).putBoolean(KEY_VOSK_HIGH_ACCURACY, highAccuracy).apply();
+    }
+
+    public static boolean isFissionAutoLayout(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_FISSION_AUTO_LAYOUT, false);
+    }
+
+    public static void setFissionAutoLayout(Context ctx, boolean v) {
+        edit(ctx).putBoolean(KEY_FISSION_AUTO_LAYOUT, v).apply();
+    }
+
+    public static boolean isFissionPrecreateSlots(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_FISSION_PRECREATE_SLOTS, false);
+    }
+
+    public static void setFissionPrecreateSlots(Context ctx, boolean v) {
+        edit(ctx).putBoolean(KEY_FISSION_PRECREATE_SLOTS, v).apply();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

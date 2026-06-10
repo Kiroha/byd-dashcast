@@ -72,6 +72,8 @@ public class MirrorDaemon {
     public static final int TRANSACT_ACTIVATE_LAYOUT   = 12;
     /** TRANSACT 13 — deactivate layout: release all layout_ slots. */
     public static final int TRANSACT_DEACTIVATE_LAYOUT = 13;
+    /** TRANSACT 14 — query the displayId for a named slot; returns -1 if not alive. */
+    public static final int TRANSACT_QUERY_SLOT        = 14;
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
@@ -295,6 +297,7 @@ public class MirrorDaemon {
                 case TRANSACT_RELEASE_SLOT:      return handleReleaseSlot(data, reply);
                 case TRANSACT_ACTIVATE_LAYOUT:   return handleActivateLayout(data, reply);
                 case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
+                case TRANSACT_QUERY_SLOT:        return handleQuerySlot(data, reply);
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
@@ -666,6 +669,16 @@ public class MirrorDaemon {
             out("[Fission] ACTIVATE_LAYOUT [" + label + "] → displayId=" + displayId);
             reply.writeInt(displayId);
         }
+        return true;
+    }
+
+    private static boolean handleQuerySlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        SlotInfo slot = sSlots.get(pkg);
+        int displayId = (slot != null && slot.vd != null) ? slot.displayId : -1;
+        out("[Fission] QUERY_SLOT pkg=" + pkg + " → displayId=" + displayId);
+        reply.writeNoException();
+        reply.writeInt(displayId);
         return true;
     }
 
