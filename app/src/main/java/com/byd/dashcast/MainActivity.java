@@ -3777,8 +3777,9 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * v1.4.13 — One-click grant of notification listener access via the proxy
-     * daemon shell (same uid=2000 trick as the IME a11y one-click).
-     * Appends the component to {@code Settings.Secure.enabled_notification_listeners}.
+     * daemon shell (uid=2000). Uses {@code cmd notification allow_listener} which
+     * calls NotificationManagerService.setNotificationListenerAccessGranted() via
+     * binder — the authoritative API, not a raw Settings.Secure write.
      * Falls back to opening Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS if the
      * shell route fails.
      */
@@ -3786,18 +3787,7 @@ public class MainActivity extends AppCompatActivity
         if (btnEnable != null) btnEnable.setEnabled(false);
         try {
             final String comp = "com.byd.dashcast/com.byd.dashcast.hud.MapNotificationListenerService";
-            final String cmd =
-                "COMP='" + comp + "'; "
-              + "CURRENT=$(settings get secure enabled_notification_listeners 2>/dev/null); "
-              + "if [ \"$CURRENT\" = \"null\" ] || [ -z \"$CURRENT\" ]; then "
-              +   "NEW=\"$COMP\"; "
-              + "elif echo \"$CURRENT\" | grep -q \"$COMP\"; then "
-              +   "NEW=\"$CURRENT\"; "
-              + "else "
-              +   "NEW=\"$CURRENT:$COMP\"; "
-              + "fi; "
-              + "settings put secure enabled_notification_listeners \"$NEW\"; "
-              + "echo OUT=$(settings get secure enabled_notification_listeners)";
+            final String cmd = "cmd notification allow_listener " + comp;
 
             ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
                 @Override public void onSuccess(final String report) {
