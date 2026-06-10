@@ -275,6 +275,7 @@
     <string name="ime_banner_toast_cannot_open_settings">تعذر فتح الإعدادات — فعّل يدويًا خدمة إمكانية الوصول « لوحة المفاتيح التلقائية للعنقود ».</string>
     <string name="hud_notif_banner_title">HUD ملاحة — مطلوب الوصول إلى الإشعارات</string>
     <string name="hud_notif_banner_body">يحتاج DashCast إلى الوصول إلى الإشعارات لعرض تعليمات الملاحة على لوحة العدادات. فعّله من الإعدادات ← الوصول الخاص للتطبيقات ← الوصول إلى الإشعارات ← DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">تم تفعيل الوصول إلى الإشعارات ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">فعّل « DashCast Cluster IME » من الإعدادات ← إمكانية الوصول حتى تعمل لوحة المفاتيح على لوحة العدادات.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">لوحة المفاتيح</string>

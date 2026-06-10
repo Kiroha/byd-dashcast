@@ -427,6 +427,7 @@
     <string name="ime_banner_toast_cannot_open_settings">Cannot open Settings — please enable the « Cluster auto-keyboard » accessibility service manually.</string>
     <string name="hud_notif_banner_title">HUD Navigation — Notification access required</string>
     <string name="hud_notif_banner_body">DashCast needs notification access to display navigation instructions on the cluster. Enable it in Settings → Special app access → Notification access → DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">Notification access granted ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Enable « DashCast Cluster IME » under Settings → Accessibility so the keyboard works on the cluster.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Keyboard</string>

@@ -275,6 +275,7 @@
     <string name="ime_banner_toast_cannot_open_settings">Параметрлерді ашу мүмкін емес — « Кластер авто-пернетақтасы » арнайы мүмкіндіктер қызметін қолмен қосыңыз.</string>
     <string name="hud_notif_banner_title">HUD Навигация — хабарландыруларға қатынасу қажет</string>
     <string name="hud_notif_banner_body">DashCast кластер экранында навигация нұсқаулықтарын көрсету үшін хабарландыруларға қатынасуды қажет етеді. Параметрлер → Арнайы қолданба қатынасы → Хабарландыруларға қатынасу → DashCast тармағынан қосыңыз.</string>
+    <string name="hud_notif_banner_toast_enabled">Хабарландыруларға қатынасу берілді ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Пернетақта аспаптар тақтасында жұмыс істеуі үшін Параметрлер → Арнайы мүмкіндіктер бөлімінде « DashCast Cluster IME » қызметін қосыңыз.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Пернетақта</string>
