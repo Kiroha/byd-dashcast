@@ -883,6 +883,38 @@
                         app:iconSize="20dp"
                         android:visibility="gone"/>
 
+                    <!-- Fission layout selector row (visible only when Fission mode enabled) -->
+                    <LinearLayout
+                        android:id="@+id/ll_fission_layout_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp"
+                        android:paddingStart="4dp"
+                        android:gravity="center_vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tv_main_fission_layout"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textColor="@color/md_on_surface_variant"
+                            android:text="@string/fission_layout_mode_free"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_main_switch_layout"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:textSize="12sp"
+                            android:text="@string/fission_layout_switch"/>
+
+                    </LinearLayout>
+
                     <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->
                     <LinearLayout
                         android:id="@+id/panel_cluster_control"

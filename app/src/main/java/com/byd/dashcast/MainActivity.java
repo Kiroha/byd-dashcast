@@ -189,6 +189,11 @@ public class MainActivity extends AppCompatActivity
     private float mSavedPreviewWeight = 0f;
     private int mSavedInnerLLHeight  = ViewGroup.LayoutParams.WRAP_CONTENT;
 
+    // Fission layout selector (v1.4.17)
+    private View     llFissionLayoutRow;
+    private TextView tvMainFissionLayout;
+    private com.google.android.material.button.MaterialButton btnMainSwitchLayout;
+
     // v0.9.79 — reparented control panel during fullscreen (so Ajuster doesn't shrink card)
     private android.widget.FrameLayout vRootOverlay;
     private ViewGroup mPanelOriginalParent = null;
@@ -395,7 +400,12 @@ public class MainActivity extends AppCompatActivity
         gridMainActions    = findViewById(R.id.grid_main_actions);
         svRightPane        = findViewById(R.id.sv_right_pane);
         llRightPaneContent = findViewById(R.id.ll_right_pane_content);
-        vRootOverlay       = findViewById(R.id.root_overlay);
+        vRootOverlay        = findViewById(R.id.root_overlay);
+        llFissionLayoutRow  = findViewById(R.id.ll_fission_layout_row);
+        tvMainFissionLayout = findViewById(R.id.tv_main_fission_layout);
+        btnMainSwitchLayout = findViewById(R.id.btn_main_switch_layout);
+        if (btnMainSwitchLayout != null)
+            btnMainSwitchLayout.setOnClickListener(v -> showMainLayoutSwitcher());
         if (btnExitFullscreen != null) {
             btnExitFullscreen.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { exitFullscreenMirror(); }
@@ -922,8 +932,49 @@ public class MainActivity extends AppCompatActivity
     private void refreshFissionButton() {
         View btn = findViewById(R.id.btn_fission_open);
         if (btn == null) return;
-        btn.setVisibility(com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
-                ? View.VISIBLE : View.GONE);
+        boolean enabled = com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this);
+        btn.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        if (llFissionLayoutRow != null)
+            llFissionLayoutRow.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        if (enabled) refreshFissionLayoutLabel();
+    }
+
+    private void refreshFissionLayoutLabel() {
+        if (tvMainFissionLayout == null) return;
+        com.byd.dashcast.fission.LayoutPreset fav =
+                com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this);
+        if (fav == null) {
+            tvMainFissionLayout.setText(getString(R.string.fission_layout_mode_free));
+        } else {
+            tvMainFissionLayout.setText(
+                    getString(R.string.fission_layout_active_fmt, fav.name));
+        }
+    }
+
+    private void showMainLayoutSwitcher() {
+        List<com.byd.dashcast.fission.LayoutPreset> presets =
+                com.byd.dashcast.fission.LayoutPrefs.load(this);
+        String favId = com.byd.dashcast.fission.LayoutPrefs.getFavoriteId(this);
+        String[] names = new String[presets.size() + 1];
+        names[0] = getString(R.string.fission_layout_mode_free);
+        for (int i = 0; i < presets.size(); i++) {
+            com.byd.dashcast.fission.LayoutPreset p = presets.get(i);
+            names[i + 1] = (p.id.equals(favId) ? "⭐ " : "") + p.name
+                    + "  (" + p.slots.size() + " zones)";
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.fission_layout_switch))
+                .setItems(names, (d, which) -> {
+                    if (which == 0) {
+                        com.byd.dashcast.fission.LayoutPrefs.setFavoriteId(this, null);
+                    } else {
+                        com.byd.dashcast.fission.LayoutPrefs.setFavoriteId(
+                                this, presets.get(which - 1).id);
+                    }
+                    refreshFissionLayoutLabel();
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
     }
 
     private void applyCompactAppsPanelMode() {
