@@ -71,7 +71,7 @@ public class AdbLocalClient {
         return "AutoContainer";
     }
 
-    static boolean isDiLink5Safe(Context ctx) {
+    public static boolean isDiLink5Safe(Context ctx) {
         try {
             return ctx != null
                     && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx);

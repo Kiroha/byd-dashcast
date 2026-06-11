@@ -625,4 +625,26 @@
     <string name="fission_slot_reused_toast">Slot existant réutilisé ✓</string>
     <string name="fission_auto_activating">Activation du layout favori…</string>
     <string name="fission_precreating_slots">Préparation des slots…</string>
+
+    <!-- FissionActivity runtime strings -->
+    <string name="fission_idle_hint">Appuyez sur + pour projeter une application</string>
+    <string name="fission_active_count">%1$d app(s) active(s)</string>
+    <string name="fission_no_apps">Aucune application disponible</string>
+    <string name="fission_all_projected">Toutes les apps sont déjà projetées</string>
+    <string name="fission_pick_app_title">Choisir une application</string>
+    <string name="fission_place_in">Placer %1$s dans…</string>
+    <string name="fission_launch_in">Lancer %1$s dans…</string>
+    <string name="fission_mode_free">Mode libre</string>
+    <string name="fission_slot_error">Slot %1$s : %2$s</string>
+    <string name="fission_conflict_title">Conflit de projection</string>
+    <string name="fission_conflict_message">Une projection est déjà active. La stopper pour continuer ?</string>
+    <string name="fission_conflict_stop">Stopper</string>
+    <string name="fission_resize_title">Redimensionner %1$s</string>
+    <string name="fission_resize_full">Plein écran</string>
+    <string name="fission_resize_left_half">Gauche ½</string>
+    <string name="fission_resize_right_half">Droite ½</string>
+    <string name="fission_resize_left_3q">Gauche ¾</string>
+    <string name="fission_resize_right_3q">Droite ¾</string>
+    <string name="fission_close_slot_title">Fermer %1$s ?</string>
+    <string name="fission_close_slot_confirm">Fermer</string>
 </resources>

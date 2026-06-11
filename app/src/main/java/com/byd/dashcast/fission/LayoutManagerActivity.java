@@ -406,7 +406,7 @@ public class LayoutManagerActivity extends Activity {
     }
 
     private void activateLayout(LayoutPreset preset) {
-        IBinder binder = FissionLayoutEditorActivity.sDaemonBinder;
+        IBinder binder = FissionClient.getBinderFromServiceManager();
         if (binder == null) {
             Toast.makeText(this,
                     "Daemon non connecté — lancez d'abord une projection Fission",
@@ -439,7 +439,7 @@ public class LayoutManagerActivity extends Activity {
     }
 
     private void deactivateLayout() {
-        IBinder binder = FissionLayoutEditorActivity.sDaemonBinder;
+        IBinder binder = FissionClient.getBinderFromServiceManager();
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
         getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()
