@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.R;
+import com.byd.dashcast.proxy.daemon.BinderParcelable;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
@@ -25,8 +26,7 @@ public class FissionLayoutEditorActivity extends Activity {
 
     private static final String TAG = "FissionLayoutEditor";
 
-    /** Binder shared with FissionActivity so layout activation can reach the daemon. */
-    public static volatile IBinder sDaemonBinder;
+    private IBinder mDaemonBinder;
 
     private ClusterCanvasView mCanvas;
     private LinearLayout      mLlLayouts;
@@ -74,6 +74,10 @@ public class FissionLayoutEditorActivity extends Activity {
             }
             showSaveDialog();
         });
+
+        // Receive daemon binder passed via Intent extra from FissionActivity.
+        BinderParcelable bp = getIntent().getParcelableExtra(FissionActivity.EXTRA_DAEMON_BINDER);
+        if (bp != null) mDaemonBinder = bp.binder;
 
         mPresets  = LayoutPrefs.load(this);
         mActiveId = getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE)
@@ -129,7 +133,7 @@ public class FissionLayoutEditorActivity extends Activity {
     }
 
     private void activateLayout(LayoutPreset preset) {
-        IBinder binder = sDaemonBinder;
+        IBinder binder = mDaemonBinder;
         if (binder == null) {
             Toast.makeText(this, "Daemon non connecté — lancez d'abord une projection Fission",
                     Toast.LENGTH_LONG).show();
@@ -161,7 +165,7 @@ public class FissionLayoutEditorActivity extends Activity {
     }
 
     private void deactivateLayout() {
-        IBinder binder = sDaemonBinder;
+        IBinder binder = mDaemonBinder;
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
         getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()

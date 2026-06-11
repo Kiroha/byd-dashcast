@@ -186,7 +186,7 @@ public final class ProxyClient {
      * the receiver / handshake / explicit error-clear paths; only the cheap
      * reads dropped the lock.
      */
-    private static volatile IBinder sBinder;
+    static volatile IBinder sBinder;
     /** Receiver registered once on first {@link #connect(Context)}; reused thereafter. */
     private static BroadcastReceiver sReceiver;
     /** Set just before bootstrap; counted-down by {@link #sReceiver} on arrival. */
@@ -526,27 +526,7 @@ public final class ProxyClient {
      * instead of serializing behind a single static mutex.
      */
     public static String runShell(String cmd) throws ProxyException {
-        return callWithRetry("runShell", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(cmd);
-                b.transact(ProxyDaemonContract.TXN_EXEC, data, reply, 0);
-                reply.readException();
-                int exit = reply.readInt();
-                String output = reply.readString();
-                if (exit != 0 && output != null && output.startsWith("ERR ")) {
-                    throw new ProxyException(output.substring(4));
-                }
-                return output == null ? "" : output;
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("runShell", () -> ProxyProcessVerbs.runShell(cmd));
     }
 
     /**
@@ -588,28 +568,8 @@ public final class ProxyClient {
      */
     public static void setOverscan(int displayId, int left, int top, int right, int bottom)
             throws ProxyException {
-        callWithRetry("setOverscan", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(displayId);
-                data.writeInt(left);
-                data.writeInt(top);
-                data.writeInt(right);
-                data.writeInt(bottom);
-                b.transact(ProxyDaemonContract.TXN_SET_OVERSCAN, data, reply, 0);
-                // readException() throws if the daemon side called writeException —
-                // that becomes our trigger for the legacy fallback in ShellGateway.
-                reply.readException();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return null;
-        });
+        callWithRetry("setOverscan",
+                () -> { ProxyDisplayVerbs.setOverscan(displayId, left, top, right, bottom); return null; });
     }
 
     /**
@@ -628,23 +588,7 @@ public final class ProxyClient {
      */
     public static String getPidsByPackage(String packageName) throws ProxyException {
         final String pkg = packageName == null ? "" : packageName;
-        return callWithRetry("getPidsByPackage", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(pkg);
-                b.transact(ProxyDaemonContract.TXN_GET_PIDS, data, reply, 0);
-                reply.readException();
-                String pids = reply.readString();
-                return pids == null ? "" : pids;
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("getPidsByPackage", () -> ProxyProcessVerbs.getPidsByPackage(pkg));
     }
 
     /**
@@ -664,24 +608,8 @@ public final class ProxyClient {
     public static void autoContainerSendInfo(int type, int info, String str)
             throws ProxyException {
         final String safeStr = str == null ? "" : str;
-        callWithRetry("autoContainerSendInfo", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(type);
-                data.writeInt(info);
-                data.writeString(safeStr);
-                b.transact(ProxyDaemonContract.TXN_AUTOCONTAINER_SEND_INFO, data, reply, 0);
-                reply.readException();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return null;
-        });
+        callWithRetry("autoContainerSendInfo",
+                () -> { ProxyProcessVerbs.autoContainerSendInfo(type, info, safeStr); return null; });
     }
 
     /**
@@ -696,23 +624,8 @@ public final class ProxyClient {
      */
     public static void forceStopPackage(String packageName, int userId)
             throws ProxyException {
-        callWithRetry("forceStopPackage", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(packageName);
-                data.writeInt(userId);
-                b.transact(ProxyDaemonContract.TXN_FORCE_STOP_PACKAGE, data, reply, 0);
-                reply.readException();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return null;
-        });
+        callWithRetry("forceStopPackage",
+                () -> { ProxyProcessVerbs.forceStopPackage(packageName, userId); return null; });
     }
 
     /**
@@ -744,27 +657,12 @@ public final class ProxyClient {
             throws ProxyException {
         IBinder b = sBinder;
         if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-        if (surface == null || !surface.isValid()) {
-            throw new ProxyException("surface null or invalid");
-        }
-        Parcel data = Parcel.obtain();
-        Parcel reply = Parcel.obtain();
+        if (surface == null || !surface.isValid()) throw new ProxyException("surface null or invalid");
         try {
-            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-            data.writeString(name == null ? "DashCast_VD" : name);
-            data.writeInt(width);
-            data.writeInt(height);
-            data.writeInt(densityDpi);
-            data.writeInt(flags);
-            // Mirror the inline header used by readParcelable to signal "non-null".
-            data.writeInt(1);
-            surface.writeToParcel(data, 0);
-            b.transact(ProxyDaemonContract.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0);
-            reply.readException();
-            return reply.readInt();
+            return ProxyDisplayVerbs.createVirtualDisplay(name, width, height, densityDpi, flags, surface);
         } catch (RemoteException e) {
-            // M9: unlink death recipient and guard inside LOCK — avoids leaking the
-            // DeathRecipient registration and prevents clobbering a fresh binder.
+            // M9: unlink death recipient inside LOCK — avoids leaking the registration
+            // and prevents clobbering a fresh binder from the broadcast receiver.
             synchronized (LOCK) {
                 IBinder dead = sBinder;
                 if (dead != null) {
@@ -773,9 +671,6 @@ public final class ProxyClient {
                 sBinder = null;
             }
             throw new ProxyException("transact: " + e.getMessage(), e);
-        } finally {
-            reply.recycle();
-            data.recycle();
         }
     }
 
@@ -789,22 +684,8 @@ public final class ProxyClient {
      * @since v1.2.39 build 235 — Phase 5a.
      */
     public static void releaseVirtualDisplay(int displayId) throws ProxyException {
-        callWithRetry("releaseVirtualDisplay", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(displayId);
-                b.transact(ProxyDaemonContract.TXN_RELEASE_VIRTUAL_DISPLAY, data, reply, 0);
-                reply.readException();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return null;
-        });
+        callWithRetry("releaseVirtualDisplay",
+                () -> { ProxyDisplayVerbs.releaseVirtualDisplay(displayId); return null; });
     }
 
     /**
@@ -839,31 +720,8 @@ public final class ProxyClient {
                                         int displayId, int width, int height)
             throws ProxyException {
         if (pkg == null || pkg.isEmpty()) throw new ProxyException("pkg required");
-        return callWithRetry("launchAndForce", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(pkg);
-                if (activityCls != null) {
-                    data.writeInt(1);
-                    data.writeString(activityCls);
-                } else {
-                    data.writeInt(0);
-                }
-                data.writeInt(displayId);
-                data.writeInt(width);
-                data.writeInt(height);
-                b.transact(ProxyDaemonContract.TXN_LAUNCH_AND_FORCE, data, reply, 0);
-                reply.readException();
-                return reply.readString();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("launchAndForce",
+                () -> ProxyFissionVerbs.launchAndForce(pkg, activityCls, displayId, width, height));
     }
 
     /**
@@ -880,27 +738,8 @@ public final class ProxyClient {
                                        int left, int top, int right, int bottom)
             throws ProxyException {
         if (pkg == null || pkg.isEmpty()) throw new ProxyException("pkg required");
-        return callWithRetry("moveAndResize", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(pkg);
-                data.writeInt(displayId);
-                data.writeInt(left);
-                data.writeInt(top);
-                data.writeInt(right);
-                data.writeInt(bottom);
-                b.transact(ProxyDaemonContract.TXN_MOVE_AND_RESIZE, data, reply, 0);
-                reply.readException();
-                return reply.readString();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("moveAndResize",
+                () -> ProxyFissionVerbs.moveAndResize(pkg, displayId, left, top, right, bottom));
     }
 
     /**
@@ -917,22 +756,8 @@ public final class ProxyClient {
      * @since v1.2.63
      */
     public static String cleanFissionStacks(int displayId) throws ProxyException {
-        return callWithRetry("cleanFissionStacks", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(displayId);
-                b.transact(ProxyDaemonContract.TXN_CLEAN_FISSION_STACKS, data, reply, 0);
-                reply.readException();
-                return reply.readString();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("cleanFissionStacks",
+                () -> ProxyFissionVerbs.cleanFissionStacks(displayId));
     }
 
     /**
@@ -945,22 +770,8 @@ public final class ProxyClient {
      */
     public static int findTaskIdForPackage(String packageName) throws ProxyException {
         final String pkg = packageName == null ? "" : packageName;
-        return callWithRetry("findTaskIdForPackage", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeString(pkg);
-                b.transact(ProxyDaemonContract.TXN_FIND_TASK_FOR_PACKAGE, data, reply, 0);
-                reply.readException();
-                return reply.readInt();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("findTaskIdForPackage",
+                () -> ProxyProcessVerbs.findTaskIdForPackage(pkg));
     }
 
     /**
@@ -974,22 +785,8 @@ public final class ProxyClient {
      * to {@code am task remove} via ADB in that case.
      */
     public static void removeTask(int taskId) throws ProxyException {
-        callWithRetry("removeTask", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(taskId);
-                b.transact(ProxyDaemonContract.TXN_REMOVE_TASK, data, reply, 0);
-                reply.readException();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-            return null;
-        });
+        callWithRetry("removeTask",
+                () -> { ProxyProcessVerbs.removeTask(taskId); return null; });
     }
 
     // ─── CAN bus write verbs (Phase CAN-1, v1.4.7-beta) ───────────────────
@@ -1002,22 +799,7 @@ public final class ProxyClient {
      * @return SDK result code (0 = success).
      */
     public static int canNaviStatus(int status) throws ProxyException {
-        return callWithRetry("canNaviStatus", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(status);
-                b.transact(ProxyDaemonContract.TXN_CAN_NAVI_STATUS, data, reply, 0);
-                reply.readException();
-                return reply.readInt();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("canNaviStatus", () -> ProxyCanVerbs.canNaviStatus(status));
     }
 
     /**
@@ -1031,23 +813,8 @@ public final class ProxyClient {
      * @return SDK result code (0 = success).
      */
     public static int canInstrumentInt(int featureId, int value) throws ProxyException {
-        return callWithRetry("canInstrumentInt", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(featureId);
-                data.writeInt(value);
-                b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_INT, data, reply, 0);
-                reply.readException();
-                return reply.readInt();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("canInstrumentInt",
+                () -> ProxyCanVerbs.canInstrumentInt(featureId, value));
     }
 
     /**
@@ -1059,23 +826,8 @@ public final class ProxyClient {
      */
     public static int canInstrumentBytes(int featureId, byte[] bytes) throws ProxyException {
         final byte[] payload = (bytes == null) ? new byte[0] : bytes;
-        return callWithRetry("canInstrumentBytes", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(featureId);
-                data.writeByteArray(payload);
-                b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_BYTES, data, reply, 0);
-                reply.readException();
-                return reply.readInt();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("canInstrumentBytes",
+                () -> ProxyCanVerbs.canInstrumentBytes(featureId, payload));
     }
 
     /**
@@ -1091,23 +843,8 @@ public final class ProxyClient {
      * @return SDK result code (0 = success).
      */
     public static int canSettingInt(int featureId, int value) throws ProxyException {
-        return callWithRetry("canSettingInt", () -> {
-            IBinder b = sBinder;
-            if (b == null || !b.isBinderAlive()) throw new ProxyException("not connected");
-            Parcel data = Parcel.obtain();
-            Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
-                data.writeInt(featureId);
-                data.writeInt(value);
-                b.transact(ProxyDaemonContract.TXN_CAN_SETTING_INT, data, reply, 0);
-                reply.readException();
-                return reply.readInt();
-            } finally {
-                reply.recycle();
-                data.recycle();
-            }
-        });
+        return callWithRetry("canSettingInt",
+                () -> ProxyCanVerbs.canSettingInt(featureId, value));
     }
 
     /**
