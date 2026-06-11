@@ -161,7 +161,7 @@ public class SettingsActivity extends AppCompatActivity {
             btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     UpdateChecker.checkUpdate(SettingsActivity.this,
-                            MainActivity.makeOtaProgressListener(SettingsActivity.this, true));
+                            OtaProgressUi.makeListener(SettingsActivity.this, true));
                 }
             });
         }
