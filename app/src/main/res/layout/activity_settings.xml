@@ -61,7 +61,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_apps"
                 android:contentDescription="@string/main_nav_apps"/>
             <TextView
@@ -86,7 +86,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_secondary_container"
+                app:tint="@color/md_on_secondary_container"
                 android:background="@drawable/bg_nav_pill_active"
                 android:src="@drawable/ic_tune"
                 android:contentDescription="@string/main_nav_settings"/>
@@ -115,7 +115,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_stethoscope"
                 android:contentDescription="@string/main_nav_diag"/>
             <TextView
@@ -143,7 +143,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_info"
                 android:contentDescription="@string/main_nav_sysinfo"/>
             <TextView
@@ -171,7 +171,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_notes"
                 android:contentDescription="@string/main_nav_log"/>
             <TextView
@@ -206,7 +206,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_wifi_tethering"
                 android:contentDescription="@string/main_nav_hotspot"/>
             <TextView
@@ -235,7 +235,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_dashboard"
                 android:contentDescription="@string/main_nav_layouts"/>
             <TextView
@@ -664,7 +664,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -691,7 +691,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -718,7 +718,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_speed"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -745,7 +745,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_aspect_ratio"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -772,7 +772,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_sim_card"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -802,7 +802,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -829,7 +829,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_aspect_ratio"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -878,7 +878,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -902,7 +902,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -936,7 +936,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -953,7 +953,7 @@
                                 android:layout_height="24dp"
                                 android:layout_gravity="center_vertical"
                                 android:src="@drawable/ic_open_in_new"
-                                android:tint="@color/md_on_surface_variant"/>
+                                app:tint="@color/md_on_surface_variant"/>
                         </LinearLayout>
 
                         <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
@@ -965,7 +965,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -1017,7 +1017,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -1044,7 +1044,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -1072,7 +1072,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -1099,7 +1099,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_dashboard"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -1126,7 +1126,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">

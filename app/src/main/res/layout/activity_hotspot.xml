@@ -55,7 +55,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_apps"
                 android:contentDescription="@string/main_nav_apps"/>
             <TextView
@@ -83,7 +83,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_tune"
                 android:contentDescription="@string/main_nav_settings"/>
             <TextView
@@ -111,7 +111,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_stethoscope"
                 android:contentDescription="@string/main_nav_diag"/>
             <TextView
@@ -139,7 +139,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_info"
                 android:contentDescription="@string/main_nav_sysinfo"/>
             <TextView
@@ -167,7 +167,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_notes"
                 android:contentDescription="@string/main_nav_log"/>
             <TextView
@@ -197,7 +197,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_secondary_container"
+                app:tint="@color/md_on_secondary_container"
                 android:background="@drawable/bg_nav_pill_active"
                 android:src="@drawable/ic_wifi_tethering"
                 android:contentDescription="@string/main_nav_hotspot"/>
@@ -227,7 +227,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_dashboard"
                 android:contentDescription="@string/main_nav_layouts"/>
             <TextView
@@ -327,7 +327,7 @@
                                 android:layout_height="36dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_wifi_tethering"
-                                android:tint="@color/md_on_primary_container"/>
+                                app:tint="@color/md_on_primary_container"/>
                         </FrameLayout>
 
                         <LinearLayout
@@ -483,7 +483,7 @@
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_devices"
-                                    android:tint="@color/md_primary"/>
+                                    app:tint="@color/md_primary"/>
                             </FrameLayout>
 
                             <TextView
@@ -652,7 +652,7 @@
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_monitor_heart"
-                                    android:tint="@color/md_primary"/>
+                                    app:tint="@color/md_primary"/>
                             </FrameLayout>
 
                             <TextView
@@ -724,7 +724,7 @@
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_restart_alt"
-                                    android:tint="@color/md_primary"/>
+                                    app:tint="@color/md_primary"/>
                             </FrameLayout>
 
                             <TextView
