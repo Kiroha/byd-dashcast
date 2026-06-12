@@ -577,4 +577,45 @@
     <string name="layout_manager_title">Gestor de layouts</string>
     <string name="layout_manager_new">Nuevo layout</string>
     <string name="layout_canvas_hint">Arrastra para trazar una zona</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">%1$d app activa(s)</string>
+    <string name="fission_all_projected">Todas las apps ya están proyectadas</string>
+    <string name="fission_auto_activating">Activando el layout favorito…</string>
+    <string name="fission_close_slot_confirm">Cerrar</string>
+    <string name="fission_close_slot_title">¿Cerrar %1$s?</string>
+    <string name="fission_conflict_message">Ya hay una proyección activa. ¿Detenerla para continuar?</string>
+    <string name="fission_conflict_stop">Detener</string>
+    <string name="fission_conflict_title">Conflicto de proyección</string>
+    <string name="fission_idle_hint">Pulsa + para proyectar una app</string>
+    <string name="fission_launch_in">Iniciar %1$s en…</string>
+    <string name="fission_layout_active_fmt">Layout: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Layout favorito establecido ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Modo libre</string>
+    <string name="fission_layout_set_favorite">Establecer como favorito</string>
+    <string name="fission_layout_switch">Cambiar</string>
+    <string name="fission_mode_free">Modo libre</string>
+    <string name="fission_no_apps">No hay aplicaciones disponibles</string>
+    <string name="fission_pick_app_title">Elegir una aplicación</string>
+    <string name="fission_place_in">Colocar %1$s en…</string>
+    <string name="fission_precreating_slots">Preparando los slots…</string>
+    <string name="fission_resize_full">Pantalla completa</string>
+    <string name="fission_resize_left_3q">Izquierda ¾</string>
+    <string name="fission_resize_left_half">Izquierda ½</string>
+    <string name="fission_resize_right_3q">Derecha ¾</string>
+    <string name="fission_resize_right_half">Derecha ½</string>
+    <string name="fission_resize_title">Redimensionar %1$s</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Vincular una app…</string>
+    <string name="fission_slot_pkg_none">Ninguna — zona libre</string>
+    <string name="fission_slot_reused_toast">Slot existente reutilizado ✓</string>
+    <string name="fission_slot_zone_bound_fmt">App vinculada: %1$s</string>
+    <string name="fission_slot_zone_free">Zona libre</string>
+    <string name="settings_fission_auto_layout">Layout favorito automático</string>
+    <string name="settings_fission_auto_layout_support">Activa el layout favorito al abrir Fission e inicia automáticamente las apps vinculadas</string>
+    <string name="settings_fission_precreate_slots">Precrear los slots al inicio</string>
+    <string name="settings_fission_precreate_slots_support">Prepara los Virtual Displays del layout favorito al abrir Fission (sin iniciar las apps)</string>
+    <string name="sysinfo_disp_hidden">Oculto (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">No visible mediante la API DisplayManager</string>
 </resources>

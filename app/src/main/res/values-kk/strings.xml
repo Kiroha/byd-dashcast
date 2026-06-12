@@ -577,4 +577,45 @@
     <string name="layout_manager_title">Орналасуларды басқару</string>
     <string name="layout_manager_new">Жаңа орналасу</string>
     <string name="layout_canvas_hint">Аймақ салу үшін сүйреңіз</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Белсенді қолданбалар: %1$d</string>
+    <string name="fission_all_projected">Барлық қолданбалар әлдеқашан көрсетіліп тұр</string>
+    <string name="fission_auto_activating">Таңдаулы орналасу іске қосылуда…</string>
+    <string name="fission_close_slot_confirm">Жабу</string>
+    <string name="fission_close_slot_title">%1$s жабылсын ба?</string>
+    <string name="fission_conflict_message">Проекция әлдеқашан белсенді. Жалғастыру үшін оны тоқтату керек пе?</string>
+    <string name="fission_conflict_stop">Тоқтату</string>
+    <string name="fission_conflict_title">Проекция қайшылығы</string>
+    <string name="fission_idle_hint">Қолданбаны көрсету үшін + түймесін басыңыз</string>
+    <string name="fission_launch_in">%1$s мында іске қосу…</string>
+    <string name="fission_layout_active_fmt">Орналасу: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Таңдаулы орналасу орнатылды ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Еркін режим</string>
+    <string name="fission_layout_set_favorite">Таңдаулы ету</string>
+    <string name="fission_layout_switch">Ауыстыру</string>
+    <string name="fission_mode_free">Еркін режим</string>
+    <string name="fission_no_apps">Қолжетімді қолданбалар жоқ</string>
+    <string name="fission_pick_app_title">Қолданбаны таңдаңыз</string>
+    <string name="fission_place_in">%1$s мында орналастыру…</string>
+    <string name="fission_precreating_slots">Слоттар дайындалуда…</string>
+    <string name="fission_resize_full">Толық экран</string>
+    <string name="fission_resize_left_3q">Сол жақ ¾</string>
+    <string name="fission_resize_left_half">Сол жақ ½</string>
+    <string name="fission_resize_right_3q">Оң жақ ¾</string>
+    <string name="fission_resize_right_half">Оң жақ ½</string>
+    <string name="fission_resize_title">%1$s өлшемін өзгерту</string>
+    <string name="fission_slot_error">Слот %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Қолданбаны байланыстыру…</string>
+    <string name="fission_slot_pkg_none">Жоқ — бос аймақ</string>
+    <string name="fission_slot_reused_toast">Бар слот қайта пайдаланылды ✓</string>
+    <string name="fission_slot_zone_bound_fmt">Байланысқан қолданба: %1$s</string>
+    <string name="fission_slot_zone_free">Бос аймақ</string>
+    <string name="settings_fission_auto_layout">Автоматты таңдаулы орналасу</string>
+    <string name="settings_fission_auto_layout_support">Fission ашылғанда таңдаулы орналасуды іске қосып, байланысқан қолданбаларды автоматты түрде іске қосады</string>
+    <string name="settings_fission_precreate_slots">Слоттарды іске қосылғанда алдын ала жасау</string>
+    <string name="settings_fission_precreate_slots_support">Fission ашылғанда таңдаулы орналасудың Virtual Display-лерін дайындайды (қолданбаларды іске қоспай)</string>
+    <string name="sysinfo_disp_hidden">Жасырын (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">DisplayManager API арқылы көрінбейді</string>
 </resources>
