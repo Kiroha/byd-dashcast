@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
+import com.byd.dashcast.BootDisplayCleanup;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ProxyKeeperService;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
@@ -97,7 +98,7 @@ public class BootReceiver extends BroadcastReceiver {
             pending.incrementAndGet();
             new Thread(() -> {
                 try {
-                    MainActivity.cleanupDisplayAffinityAtBoot(context);
+                    BootDisplayCleanup.cleanup(context);
                 } catch (Exception e) {
                     AppLogger.e("BootReceiver", "Display cleanup error: " + e.getMessage());
                 } finally {

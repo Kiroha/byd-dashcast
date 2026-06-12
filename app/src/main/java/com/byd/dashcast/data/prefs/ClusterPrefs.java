@@ -279,6 +279,33 @@ public final class ClusterPrefs {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Quick-switch recent apps
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final String KEY_RECENT_APPS = "recent_cluster_apps";
+    private static final int    MAX_RECENT_APPS  = 3;
+
+    /** Prepends {@code pkgName|appName} to the recent-apps list, capped at {@link #MAX_RECENT_APPS}. */
+    public static void addRecentApp(Context ctx, String pkgName, String appName) {
+        SharedPreferences p = prefs(ctx);
+        String raw = p.getString(KEY_RECENT_APPS, "");
+        java.util.LinkedList<String> entries = new java.util.LinkedList<>();
+        if (!raw.isEmpty()) {
+            for (String e : raw.split(";;")) entries.add(e);
+        }
+        String newEntry = pkgName + "|" + appName;
+        entries.remove(newEntry);
+        entries.addFirst(newEntry);
+        while (entries.size() > MAX_RECENT_APPS) entries.removeLast();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < entries.size(); i++) {
+            if (i > 0) sb.append(";;");
+            sb.append(entries.get(i));
+        }
+        p.edit().putString(KEY_RECENT_APPS, sb.toString()).apply();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Internal helpers
     // ─────────────────────────────────────────────────────────────────────────
 
