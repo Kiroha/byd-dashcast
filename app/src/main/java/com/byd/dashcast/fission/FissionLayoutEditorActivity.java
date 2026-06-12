@@ -1,4 +1,5 @@
 package com.byd.dashcast.fission;
+import android.annotation.SuppressLint;
 
 import android.app.Activity;
 import android.content.Context;
@@ -176,6 +177,7 @@ public class FissionLayoutEditorActivity extends Activity {
         Toast.makeText(this, "Mode libre activé", Toast.LENGTH_SHORT).show();
     }
 
+    @SuppressLint("SetTextI18n") // technical geometry/IDs, locale-neutral
     private void refreshLayoutList() {
         if (mLlLayouts == null) return;
         mLlLayouts.removeAllViews();
@@ -201,9 +203,9 @@ public class FissionLayoutEditorActivity extends Activity {
 
             boolean isActive = mActiveId != null && mActiveId.equals(preset.id);
             tvName.setText(preset.name + (isActive ? "  ●" : ""));
-            tvSlots.setText(preset.slots.size() + " zone(s)");
+            tvSlots.setText(getString(R.string.fission_zone_count, preset.slots.size()));
 
-            btnActivate.setText(isActive ? "Désactiver" : "Activer");
+            btnActivate.setText(isActive ? R.string.layout_preset_deactivate : R.string.layout_preset_activate);
             btnActivate.setOnClickListener(v -> {
                 if (isActive) deactivateLayout();
                 else activateLayout(preset);

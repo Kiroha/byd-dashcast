@@ -15,4 +15,66 @@
 
     <!-- Not distributed via Play Store; targetSdk29 is intentional for DiLink3 compatibility. -->
     <issue id="ExpiredTargetSdkVersion" severity="ignore" />
+
+    <!-- ── UI/design trade-offs on the fixed BYD head unit (1920x720, fixed
+         density, no accessibility services, no autofill, no font scaling).
+         Deliberate product decisions, not oversights. ─────────────────── -->
+
+    <!-- Compact 9-10sp text is deliberate on the fixed-density in-car display. -->
+    <issue id="SmallSp" severity="ignore" />
+
+    <!-- Custom car-UI button bars; Material borderless style does not fit
+         the dashboard design language. -->
+    <issue id="ButtonStyle" severity="ignore" />
+
+    <!-- Counts are displayed numerically next to the label in 13 locales;
+         a full per-locale plurals matrix adds noise for no UX gain. -->
+    <issue id="PluralsCandidate" severity="ignore" />
+
+    <!-- Custom gesture surfaces (resize frame, mirror canvas, floating button):
+         click semantics do not apply, no a11y services on the head unit. -->
+    <issue id="ClickableViewAccessibility" severity="ignore" />
+
+    <!-- No autofill framework on the head unit. -->
+    <issue id="Autofill" severity="ignore" />
+
+    <!-- Vosk/LLM native libs are downloaded and side-loaded at runtime by
+         design (VoiceLibsManager). -->
+    <issue id="UnsafeDynamicallyLoadedCode" severity="ignore" />
+
+    <!-- BYD launcher requires a fixed orientation even with the translucent
+         diag theme; harmless on this platform. -->
+    <issue id="TranslucentOrientation" severity="ignore" />
+
+    <!-- cluster_bg.png is full-screen density-independent artwork for a
+         single known display; density buckets are pointless here. -->
+    <issue id="IconLocation" severity="ignore" />
+
+    <!-- Dialog/overlay inflation with a null parent is intentional
+         (BottomSheetDialog, window overlays). -->
+    <issue id="InflateParams" severity="ignore" />
+
+    <!-- Small fixed lists (presets, diag rows); full refresh is simpler and
+         imperceptible on this hardware. -->
+    <issue id="NotifyDataSetChanged" severity="ignore" />
+
+    <!-- One-sided paddingStart is intentional spacing; start/end attributes
+         already flip correctly for the ar locale. -->
+    <issue id="RtlSymmetry" severity="ignore" />
+
+    <!-- Performance hints: kept visible in the report (informational) but
+         not counted as warnings — diag screens are intentionally dense and
+         render fine on the target hardware. -->
+    <issue id="NestedWeights" severity="informational" />
+    <issue id="TooManyViews" severity="informational" />
+    <issue id="TooDeepLayout" severity="informational" />
+    <issue id="Overdraw" severity="informational" />
+    <issue id="DisableBaselineAlignment" severity="informational" />
+
+    <!-- DiagActivity is a developer diagnostics screen rendering raw shell
+         output, counters and probe results; resource extraction is
+         meaningless there. SetTextI18n stays active everywhere else. -->
+    <issue id="SetTextI18n">
+        <ignore path="**/ui/diag/DiagActivity.java" />
+    </issue>
 </lint>

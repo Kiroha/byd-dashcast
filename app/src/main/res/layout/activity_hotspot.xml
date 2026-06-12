@@ -323,6 +323,7 @@
                             android:layout_height="64dp"
                             android:background="@drawable/bg_hero_icon">
                             <ImageView
+                                android:importantForAccessibility="no"
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
                                 android:layout_gravity="center"
@@ -479,6 +480,7 @@
                                 android:layout_height="40dp"
                                 android:background="@drawable/bg_side_icon">
                                 <ImageView
+                                    android:importantForAccessibility="no"
                                     android:layout_width="22dp"
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"
@@ -501,6 +503,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
+                                tools:ignore="HardcodedText"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/md_on_primary_container"
@@ -550,6 +553,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="—"
+                                    tools:ignore="HardcodedText"
                                     android:textSize="15sp"
                                     android:textStyle="bold"
                                     android:fontFamily="monospace"
@@ -578,6 +582,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="—"
+                                    tools:ignore="HardcodedText"
                                     android:textSize="15sp"
                                     android:textStyle="bold"
                                     android:fontFamily="monospace"
@@ -605,6 +610,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="—"
+                                    tools:ignore="HardcodedText"
                                     android:textSize="15sp"
                                     android:textStyle="bold"
                                     android:fontFamily="monospace"
@@ -648,6 +654,7 @@
                                 android:layout_height="40dp"
                                 android:background="@drawable/bg_side_icon">
                                 <ImageView
+                                    android:importantForAccessibility="no"
                                     android:layout_width="22dp"
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"
@@ -720,6 +727,7 @@
                                 android:layout_height="40dp"
                                 android:background="@drawable/bg_side_icon">
                                 <ImageView
+                                    android:importantForAccessibility="no"
                                     android:layout_width="22dp"
                                     android:layout_height="22dp"
                                     android:layout_gravity="center"

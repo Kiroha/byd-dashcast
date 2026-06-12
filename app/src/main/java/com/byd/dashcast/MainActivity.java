@@ -1615,6 +1615,7 @@ public class MainActivity extends AppCompatActivity
         mMirrorCoordinator = new MirrorCoordinator(
                 clusterMirror, frameMirror, (TextView) findViewById(R.id.tv_mirror_placeholder), this);
 
+        LinearLayout panelClusterControl = (LinearLayout) findViewById(R.id.panel_cluster_control);
         mFullscreenCoordinator = new FullscreenMirrorCoordinator(
                 btnExitFullscreen,
                 findViewById(R.id.ll_nav_rail),
@@ -1626,7 +1627,7 @@ public class MainActivity extends AppCompatActivity
                 findViewById(R.id.card_cluster_preview),
                 findViewById(R.id.ll_right_pane_content),
                 findViewById(R.id.sv_right_pane),
-                (LinearLayout) findViewById(R.id.panel_cluster_control), vRootOverlay,
+                panelClusterControl, vRootOverlay,
                 this);
 
         mAppListCoordinator = new AppListCoordinator(
@@ -1641,7 +1642,7 @@ public class MainActivity extends AppCompatActivity
                 mAppRepo, this);
 
         mClusterControlCoordinator = new ClusterControlCoordinator(
-                (LinearLayout) findViewById(R.id.panel_cluster_control),
+                panelClusterControl,
                 (LinearLayout) findViewById(R.id.panel_controls_content),
                 (LinearLayout) findViewById(R.id.panel_resize),
                 (SeekBar)  findViewById(R.id.sb_resize_w),

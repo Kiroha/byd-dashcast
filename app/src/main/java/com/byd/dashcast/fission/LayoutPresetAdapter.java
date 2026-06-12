@@ -55,7 +55,7 @@ public class LayoutPresetAdapter extends RecyclerView.Adapter<LayoutPresetAdapte
         boolean isSelected   = mSelectedId != null && mSelectedId.equals(p.id);
 
         h.tvName.setText(p.name);
-        h.tvMeta.setText(p.slots.size() + " zone(s)");
+        h.tvMeta.setText(h.tvMeta.getContext().getString(R.string.fission_zone_count, p.slots.size()));
 
         // Card background state
         if (isActive) {
@@ -71,10 +71,10 @@ public class LayoutPresetAdapter extends RecyclerView.Adapter<LayoutPresetAdapte
 
         // Activate / Deactivate button
         if (isActive) {
-            h.btnActivate.setText("Désactiver");
+            h.btnActivate.setText(R.string.layout_preset_deactivate);
             h.btnActivate.setOnClickListener(v -> mCb.onDeactivate());
         } else {
-            h.btnActivate.setText("Activer");
+            h.btnActivate.setText(R.string.layout_preset_activate);
             h.btnActivate.setOnClickListener(v -> mCb.onActivate(p));
         }
 
