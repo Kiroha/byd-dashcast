@@ -552,7 +552,6 @@
     <string name="fission_editor_save">حفظ</string>
     <string name="fission_editor_edit">تعديل</string>
     <string name="fission_editor_delete">حذف</string>
-    <string name="fission_open">Fission</string>
     <string name="main_nav_layouts">Layouts</string>
     <string name="layout_manager_title">إدارة التخطيطات</string>
     <string name="layout_manager_new">تخطيط جديد</string>

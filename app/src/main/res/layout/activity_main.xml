@@ -865,26 +865,10 @@
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
 
-                    <!-- ────── Fission mode button (visible only when PREF_FISSION_MODE enabled) ────── -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_fission_open"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/fission_open"
-                        android:textSize="14sp"
-                        android:minHeight="52dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        app:cornerRadius="26dp"
-                        app:backgroundTint="@color/md_tertiary_container"
-                        android:textColor="@color/md_on_tertiary_container"
-                        app:iconGravity="textStart"
-                        app:iconSize="20dp"
-                        android:visibility="gone"/>
+                    <!-- The "open Fission" button was removed in 1.4.24: layout activation
+                         is driven by the auto-layout setting and the Layouts screen. -->
 
-                    <!-- Fission layout selector row (visible only when Fission mode enabled) -->
+                    <!-- Fission layout selector row (visible only when Layouts mode enabled) -->
                     <LinearLayout
                         android:id="@+id/ll_fission_layout_row"
                         android:layout_width="match_parent"

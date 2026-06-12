@@ -5,9 +5,7 @@ import android.content.Intent;
 import android.view.View;
 import android.widget.TextView;
 
-import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
-import com.byd.dashcast.fission.FissionActivity;
 import com.byd.dashcast.fission.LayoutPrefs;
 import com.byd.dashcast.fission.LayoutPreset;
 import com.byd.dashcast.proxy.DaemonConfig;
@@ -15,8 +13,9 @@ import com.byd.dashcast.proxy.DaemonConfig;
 import java.util.List;
 
 /**
- * Owns the fission-mode UI in the main activity: the open button, the layout-row visibility,
- * and the layout-switcher dialog.
+ * Owns the Layouts-mode UI in the main activity: the layout-row visibility and the
+ * layout-switcher dialog. (The "open Fission" button was removed in 1.4.24 — layout
+ * activation is driven by the auto-layout setting and the Layouts screen.)
  *
  * Call {@link #refresh()} from onCreate and onResume to recompute visibility.
  */
@@ -29,27 +28,16 @@ public final class FissionCoordinator {
         void startActivity(Intent intent);
     }
 
-    private final View     mBtnFissionOpen;
     private final View     mLlFissionLayoutRow;
     private final TextView mTvMainFissionLayout;
     private final Host     mHost;
 
-    public FissionCoordinator(View btnFissionOpen, View llFissionLayoutRow,
+    public FissionCoordinator(View llFissionLayoutRow,
                                TextView tvMainFissionLayout, View btnMainSwitchLayout,
                                Host host) {
-        mBtnFissionOpen      = btnFissionOpen;
         mLlFissionLayoutRow  = llFissionLayoutRow;
         mTvMainFissionLayout = tvMainFissionLayout;
         mHost                = host;
-
-        if (btnFissionOpen != null)
-            btnFissionOpen.setOnClickListener(v -> {
-                try {
-                    mHost.startActivity(new Intent(mHost.getContext(), FissionActivity.class));
-                } catch (Exception e) {
-                    AppLogger.e(TAG, "FissionActivity launch failed", e);
-                }
-            });
 
         if (btnMainSwitchLayout != null)
             btnMainSwitchLayout.setOnClickListener(v -> showMainLayoutSwitcher());
@@ -57,11 +45,9 @@ public final class FissionCoordinator {
         refresh();
     }
 
-    /** Recomputes fission button and label visibility. Safe to call repeatedly. */
+    /** Recomputes layout-row visibility and label. Safe to call repeatedly. */
     public void refresh() {
-        if (mBtnFissionOpen == null) return;
         boolean enabled = DaemonConfig.isFissionModeEnabled(mHost.getContext());
-        mBtnFissionOpen.setVisibility(enabled ? View.VISIBLE : View.GONE);
         if (mLlFissionLayoutRow != null)
             mLlFissionLayoutRow.setVisibility(enabled ? View.VISIBLE : View.GONE);
         if (enabled) refreshFissionLayoutLabel();

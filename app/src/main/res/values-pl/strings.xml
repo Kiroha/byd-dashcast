@@ -537,7 +537,6 @@
     <string name="fission_editor_save">Zapisz</string>
     <string name="fission_editor_edit">Edytuj</string>
     <string name="fission_editor_delete">Usuń</string>
-    <string name="fission_open">Fission</string>
     <!-- v1.4 Voice commands + VD pipeline test (missing from pl) -->
     <string name="diag_voice_commands_title">Polecenia głosowe (Vosk)</string>
     <string name="diag_voice_commands_switch">Włącz</string>
