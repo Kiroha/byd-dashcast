@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity
             mBindRequested  = false; // allow a new bindService if needed
             mClusterService = null;
             if (mDashboardLauncher != null) mDashboardLauncher.setDashboardDisplayId(-1);
-            mUsageTracker.trackStop(mCurrentDashboardPkg);
+            if (mUsageTracker != null) mUsageTracker.trackStop(mCurrentDashboardPkg);
             mCurrentDashboardApp = null;
             mCurrentDashboardPkg = null;
             mMainDisplayPkg      = null;
@@ -848,8 +848,8 @@ public class MainActivity extends AppCompatActivity
                 ClusterPrefs.setClusterPkg(MainActivity.this, null);
                 ClusterPrefs.setClusterName(MainActivity.this, null);
                 if (mSplitController != null) mSplitController.clearSplitState();
-                mAppListCoordinator.setCurrentPackage(null);
-                mAppListCoordinator.setMainPackage(null);
+                if (mAppListCoordinator != null) mAppListCoordinator.setCurrentPackage(null);
+                if (mAppListCoordinator != null) mAppListCoordinator.setMainPackage(null);
                 // v0.9.73 — unified OFF state ("Projection inactive") with grey dot.
                 setDashboardOffState();
                 showAppList();
@@ -1343,7 +1343,7 @@ public class MainActivity extends AppCompatActivity
         mUsageTracker.trackStop(mCurrentDashboardPkg);
 
         final String capturedClusterPkg = mCurrentDashboardPkg;
-        final String capturedSecondPkg  = mSplitController.getSecondDashboardPkg();
+        final String capturedSecondPkg  = mSplitController != null ? mSplitController.getSecondDashboardPkg() : null;
 
         // Eagerly clear tracked cluster state BEFORE async eviction so the
         // display-state poll does not see a stale mCurrentDashboardPkg on display 0
@@ -1520,7 +1520,7 @@ public class MainActivity extends AppCompatActivity
         mUsageTracker.trackStop(mCurrentDashboardPkg);
 
         final String capturedClusterPkg = mCurrentDashboardPkg;
-        final String capturedSecondPkg  = mSplitController.getSecondDashboardPkg();
+        final String capturedSecondPkg  = mSplitController != null ? mSplitController.getSecondDashboardPkg() : null;
 
         // Eagerly clear tracked cluster state (same rationale as restoreBydDashboard).
         mCurrentDashboardApp = null;
