@@ -8,9 +8,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.HotspotActivity;
+import com.byd.dashcast.ui.hotspot.HotspotActivity;
 import com.byd.dashcast.R;
-import com.byd.dashcast.SettingsActivity;
+import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.platform.Platform;
 

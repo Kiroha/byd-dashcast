@@ -209,7 +209,7 @@ public class AdbLocalClient {
                     String cmd = "setsid sh -c 'CLASSPATH=" + apkPath
                             + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
                             + " --nice-name=byd.mirror.daemon"
-                            + " com.byd.dashcast.daemon.MirrorDaemon"
+                            + " com.byd.dashcast.proxy.daemon.MirrorDaemon"
                             + " </dev/null >" + logPath + " 2>&1' &"
                             + " ln -sf " + logPath + " " + latestLink;
                     dadb.shell(cmd);
@@ -329,7 +329,7 @@ public class AdbLocalClient {
         // the async dispatch). Qt will return to native mode as soon as sendInfo(18)
         // lands; the VirtualDisplay persists, so subsequent activate() calls must
         // take the warm path (30→6s→16) instead of the true fast path.
-        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
+        com.byd.dashcast.cluster.display.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "Restoring BYD cluster"
@@ -428,7 +428,7 @@ public class AdbLocalClient {
             final String targetPackage, // nullable: package to force-stop before restore
             final Callback callback) {
         // v1.2.78 — see restoreBydOnCluster() above for rationale.
-        com.byd.dashcast.dashboard.ClusterManager.notifyProjectionStopped();
+        com.byd.dashcast.cluster.display.ClusterManager.notifyProjectionStopped();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 AppLogger.log(TAG, "restoreOriginCluster screenSize=" + screenSizeCmd
@@ -738,8 +738,8 @@ public class AdbLocalClient {
                             "for t in $TASKS; do " +
                             "  am task remove $t 2>/dev/null; " +
                             "  export CLASSPATH=" + apkPath + "; " +
-                            "  /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover \"$t\" 2>/dev/null; " +
-                            "  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.daemon.TaskRemover \"$t\" 2>/dev/null; " +
+                            "  /system/bin/app_process64 -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
+                            "  /system/bin/app_process -Xnoimage-dex2oat /system/bin com.byd.dashcast.proxy.daemon.TaskRemover \"$t\" 2>/dev/null; " +
                             "done; ";
                     
                     AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");

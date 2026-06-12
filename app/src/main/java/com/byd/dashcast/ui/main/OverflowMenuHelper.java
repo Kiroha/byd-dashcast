@@ -8,15 +8,15 @@ import android.view.View;
 import android.widget.PopupMenu;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.DiagActivity;
-import com.byd.dashcast.LocaleHelper;
-import com.byd.dashcast.LogActivity;
-import com.byd.dashcast.OtaProgressUi;
+import com.byd.dashcast.ui.diag.DiagActivity;
+import com.byd.dashcast.util.LocaleHelper;
+import com.byd.dashcast.ui.log.LogActivity;
+import com.byd.dashcast.update.OtaProgressUi;
 import com.byd.dashcast.R;
-import com.byd.dashcast.SettingsActivity;
-import com.byd.dashcast.SysInfoActivity;
-import com.byd.dashcast.UpdateChecker;
-import com.byd.dashcast.WelcomeActivity;
+import com.byd.dashcast.ui.settings.SettingsActivity;
+import com.byd.dashcast.ui.diag.SysInfoActivity;
+import com.byd.dashcast.update.UpdateChecker;
+import com.byd.dashcast.ui.welcome.WelcomeActivity;
 
 /**
  * Builds and shows the main overflow PopupMenu. Stateless — call {@link #show(View, Host)}.

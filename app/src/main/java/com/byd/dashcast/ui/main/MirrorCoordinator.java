@@ -13,9 +13,9 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.ClusterService;
+import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
-import com.byd.dashcast.dashboard.ClusterMirrorManager;
+import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
 import com.byd.dashcast.ime.ClusterImeWatcherService;
 import com.byd.dashcast.platform.Platform;
 
@@ -231,7 +231,7 @@ public final class MirrorCoordinator {
     private void forwardTouchFromMirror(MotionEvent event) {
         ClusterService svc = mHost.getClusterServiceIfBound();
         if (svc == null) return;
-        com.byd.dashcast.dashboard.ClusterInputForwarder forwarder = svc.getInputForwarder();
+        com.byd.dashcast.cluster.mirror.ClusterInputForwarder forwarder = svc.getInputForwarder();
         if (forwarder == null) return;
 
         ClusterMirrorManager mirror = svc.getMirrorManager();

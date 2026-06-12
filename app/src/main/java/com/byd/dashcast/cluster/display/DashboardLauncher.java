@@ -1,0 +1,198 @@
+package com.byd.dashcast.cluster.display;
+
+import android.app.ActivityOptions;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Point;
+import android.graphics.Rect;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+
+import com.byd.dashcast.AppLogger;
+
+import java.lang.reflect.Method;
+
+/**
+ * DashboardLauncher — launches any application on the cluster (secondary) display.
+ *
+ * On Android 10 (API 29), ActivityOptions.setLaunchDisplayId() exists but is @hide.
+ * It is called via reflection, which works without root in an app signed with the
+ * platform key (platform.keystore in our case).
+ *
+ * Main method: launchOnMainDisplay(packageName) — moves an app back to the main display (display 0).
+ */
+@SuppressWarnings("deprecation")
+public class DashboardLauncher {
+
+    private static final String TAG = "DashboardLauncher";
+
+    private final Context mContext;
+    private int mDashboardDisplayId = -1;
+
+    // Cached reflection Methods — resolved once, reused on every launch call.
+    private static volatile boolean sLaunchMethodsCached = false;
+    private static Method sCachedSetLaunchDisplayId;
+    private static Method sCachedSetLaunchWindowingMode;  // null if absent on this ROM
+    private static Method sCachedSetLaunchBounds;          // null if absent on this ROM
+    private static volatile Method sStartActivityAsUser;
+
+    private static synchronized void ensureLaunchMethodsCached() {
+        if (sLaunchMethodsCached) return;
+        try {
+            sCachedSetLaunchDisplayId = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchDisplayId", int.class);
+            sCachedSetLaunchDisplayId.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        try {
+            sCachedSetLaunchWindowingMode = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchWindowingMode", int.class);
+            sCachedSetLaunchWindowingMode.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        try {
+            sCachedSetLaunchBounds = ActivityOptions.class
+                    .getDeclaredMethod("setLaunchBounds", Rect.class);
+            sCachedSetLaunchBounds.setAccessible(true);
+        } catch (NoSuchMethodException ignored) { }
+        sLaunchMethodsCached = true;
+    }
+
+    public DashboardLauncher(Context context) {
+        mContext = context.getApplicationContext();
+    }
+
+    public void setDashboardDisplayId(int displayId) {
+        mDashboardDisplayId = displayId;
+        AppLogger.log(TAG, "Cluster display registered: id=" + displayId);
+    }
+
+    public int getDashboardDisplayId() {
+        return mDashboardDisplayId;
+    }
+
+    /**
+     * Lance une app sur le display principal (display ID 0).
+     */
+    public boolean launchOnMainDisplay(String packageName) {
+        Intent launchIntent = mContext.getPackageManager()
+                .getLaunchIntentForPackage(packageName);
+        if (launchIntent == null) {
+            AppLogger.e(TAG, "App not installed or not found: " + packageName);
+            return false;
+        }
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        // Display 0 = main screen
+        return launchWithDisplayId(launchIntent, 0);
+    }
+
+    /**
+     * Core mechanism: calls ActivityOptions.setLaunchDisplayId() via reflection.
+     * Accessible from an app signed with platform.keystore without additional permissions.
+     *
+     * INSIGHT (confirmed by analyzing Freedom v1.9 + com.xdja.containerservice):
+     *   On BYD Seal, the cluster = VirtualDisplay created at BOOT by AutoDisplayService.
+     *   It appears in DisplayManager via DISPLAY_CATEGORY_PRESENTATION (flags PUBLIC|PRESENTATION).
+     *   Dimensions: 1920×1080 (hardcoded in AutoDisplayService.createVirtualDisplay()).
+     *   Context.startActivity() with setLaunchDisplayId works if signed with platform.keystore
+     *   + INTERNAL_SYSTEM_WINDOW declared in the Manifest.
+     *
+     * This method tries the direct path (Context.startActivity) THEN the IActivityManager path.
+     */
+    private boolean launchWithDisplayId(Intent intent, int displayId) {
+        // Remove the FREEFORM "grow-from-zero" animation that causes visual stretching on the cluster.
+        // makeCustomAnimation(ctx, 0, 0) = no enter/exit animation.
+        // FLAG_ACTIVITY_NO_ANIMATION = also suppresses the system transition animation.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        ensureLaunchMethodsCached();
+        try {
+            ActivityOptions options = ActivityOptions.makeCustomAnimation(mContext, 0, 0);
+
+            if (sCachedSetLaunchDisplayId != null) {
+                sCachedSetLaunchDisplayId.invoke(options, displayId);
+            } else {
+                throw new NoSuchMethodException("setLaunchDisplayId absent on this ROM");
+            }
+
+            // WINDOWING_MODE_FULLSCREEN (1) is rejected by DiLink 3.0 — confirmed by TEST 10.
+            // The activity appears in a small floating window. FIX (BYD Dashboard APK v1.10.5):
+            //   → WINDOWING_MODE_FREEFORM (5) + setLaunchBounds(0, 0, realW, realH)
+            if (sCachedSetLaunchWindowingMode != null) {
+                sCachedSetLaunchWindowingMode.invoke(options, 5); // WINDOWING_MODE_FREEFORM = 5
+                AppLogger.i(TAG, "setLaunchWindowingMode(FREEFORM=5) applied");
+            } else {
+                AppLogger.w(TAG, "setLaunchWindowingMode absent (ROM trop ancienne)");
+            }
+            // Bounds = actual display dimensions → fills the entire cluster
+            if (sCachedSetLaunchBounds != null) {
+                Point size = new Point(1920, 720); // fallback: fission_bg_xdjaVirtualSurface confirmed 1920×720 (dumpsys window, 03/05/2026)
+                DisplayManager dm = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
+                Display targetDisplay = (dm != null) ? dm.getDisplay(displayId) : null;
+                if (targetDisplay != null) {
+                    targetDisplay.getRealSize(size);
+                    AppLogger.i(TAG, "getRealSize display " + displayId + " → " + size.x + "×" + size.y);
+                } else {
+                    AppLogger.w(TAG, "getDisplay(" + displayId + ") null → fallback 1920×720");
+                }
+                sCachedSetLaunchBounds.invoke(options, new Rect(0, 0, size.x, size.y));
+                AppLogger.i(TAG, "setLaunchBounds(0,0," + size.x + "," + size.y + ") applied");
+            } else {
+                AppLogger.w(TAG, "setLaunchBounds absent");
+            }
+
+            // Attempt 1: Context.startActivity (works on display 0, may fail on display 1)
+            try {
+                mContext.startActivity(intent, options.toBundle());
+                AppLogger.i(TAG, "Context.startActivity OK display=" + displayId);
+                AppLogger.log(TAG, "LAUNCH OK display=" + displayId);
+                return true;
+            } catch (Exception e1) {
+                AppLogger.w(TAG, "Context.startActivity failed display=" + displayId + " — trying IActivityManager", e1);
+            }
+
+            // Essai 2 : IActivityManager.startActivityAsUser (path WindowManagement, userId=-2)
+            try {
+                Class<?> amClass = Class.forName("android.app.IActivityManager$Stub");
+                Class<?> smClass = Class.forName("android.os.ServiceManager");
+                Method getService = smClass.getDeclaredMethod("getService", String.class);
+                Object iAm = amClass.getMethod("asInterface", android.os.IBinder.class)
+                        .invoke(null, getService.invoke(null, "activity"));
+                if (iAm == null) throw new IllegalStateException("IActivityManager null");
+
+                // startActivityAsUser(null, null, intent, null, null, null, 0, 0, null, optBundle, -2)
+                Method startActivity = sStartActivityAsUser;
+                if (startActivity == null) {
+                    for (java.lang.reflect.Method m : iAm.getClass().getMethods()) {
+                        if (m.getName().equals("startActivityAsUser")) {
+                            Class<?>[] params = m.getParameterTypes();
+                            if (params.length == 11) { startActivity = m; break; }
+                        }
+                    }
+                    sStartActivityAsUser = startActivity;
+                }
+                if (startActivity == null) throw new NoSuchMethodException("startActivityAsUser(11)");
+                int result = (int) startActivity.invoke(iAm,
+                        null, null, intent, null, null, null, 0, 0, null,
+                        options.toBundle(), -2);
+                AppLogger.i(TAG, "IActivityManager.startActivityAsUser result=" + result + " display=" + displayId);
+                AppLogger.log(TAG, "LAUNCH IActMgr result=" + result + " display=" + displayId);
+                return result == 0;
+            } catch (Exception e2) {
+                AppLogger.e(TAG, "IActivityManager.startActivityAsUser failed", e2);
+                AppLogger.e(TAG, "LAUNCH IActMgr FAILED — " + e2.getClass().getSimpleName() + ": " + e2.getMessage());
+            }
+
+            return false;
+
+        } catch (NoSuchMethodException e) {
+            AppLogger.e(TAG, "setLaunchDisplayId not found on this ROM — falling back to main display", e);
+            AppLogger.log(TAG, "LAUNCH FALLBACK — setLaunchDisplayId absent");
+            mContext.startActivity(intent);
+            return true;
+
+        } catch (Exception e) {
+            AppLogger.e(TAG, "Error launching on display " + displayId, e);
+            AppLogger.log(TAG, "LAUNCH EXCEPTION display=" + displayId + " — " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return false;
+        }
+    }
+}

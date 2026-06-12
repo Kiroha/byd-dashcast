@@ -19,7 +19,7 @@ import android.annotation.SuppressLint;
 import java.util.List;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.KeyboardBridgeActivity;
+import com.byd.dashcast.ime.KeyboardBridgeActivity;
 import com.byd.dashcast.platform.Platform;
 
 /**
@@ -176,7 +176,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // actually live. Outside of that window the cluster display is dormant
         // and any focus event from a secondary display is none of our business
         // (other in-vehicle systems, external HDMI, etc.).
-        if (!com.byd.dashcast.ClusterService.isRunning()) return;
+        if (!com.byd.dashcast.cluster.ClusterService.isRunning()) return;
 
         try {
             // Cluster filter: focus events from the head-unit display are

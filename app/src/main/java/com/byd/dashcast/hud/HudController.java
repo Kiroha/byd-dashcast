@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import com.byd.dashcast.CanBusController;
+import com.byd.dashcast.system.CanBusController;
 import com.byd.dashcast.proxy.ProxyClient;
 
 import java.util.Arrays;

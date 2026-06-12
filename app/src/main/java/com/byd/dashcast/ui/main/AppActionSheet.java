@@ -8,10 +8,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.ClusterService;
+import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
-import com.byd.dashcast.cluster.ClusterDpiPrefs;
-import com.byd.dashcast.cluster.ClusterResizeActivity;
+import com.byd.dashcast.cluster.dpi.ClusterDpiPrefs;
+import com.byd.dashcast.cluster.dpi.ClusterResizeActivity;
 import com.byd.dashcast.model.AppInfo;
 
 /**

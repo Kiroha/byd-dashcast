@@ -9,8 +9,8 @@ import android.widget.TextView;
 
 import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.ClusterService;
-import com.byd.dashcast.SettingsActivity;
+import com.byd.dashcast.cluster.ClusterService;
+import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.proxy.ShellGateway;
 

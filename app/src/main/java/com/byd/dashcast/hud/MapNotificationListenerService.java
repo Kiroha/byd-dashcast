@@ -8,7 +8,7 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
-import com.byd.dashcast.CanBusController;
+import com.byd.dashcast.system.CanBusController;
 
 import java.util.Locale;
 import java.util.regex.Matcher;

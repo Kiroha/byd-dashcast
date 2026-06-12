@@ -20,7 +20,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.ClusterService;
+import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
