@@ -81,9 +81,11 @@
     <!-- ── New checks introduced by the AGP 8.10 lint (switch-kotlin). ──── -->
 
     <!-- Fixed landscape orientation is intentional: the app runs on a single
-         known 1920x720 BYD head unit, never on phones/foldables. -->
+         known 1920x720 BYD head unit (Android 10, never Android 16+), never
+         on phones/foldables. The regexp covers both the old and the new
+         (lint 8.13+) wording of the warning. -->
     <issue id="DiscouragedApi">
-        <ignore regexp="Should not restrict activity to fixed orientation" />
+        <ignore regexp="fixed orientation|Fixed screen orientations" />
     </issue>
 
     <!-- onnxruntime/vosk/jna .so are EXCLUDED from the APK (packagingOptions)
