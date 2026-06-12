@@ -4,25 +4,26 @@ export default {
   name: "O'zbekcha",
   title: "DashCast — Foydalanuvchi qo'llanmasi",
   manualName: "Foydalanuvchi qo'llanmasi",
-  meta: 'v0.9.92-alpha · BYD Seal EU · DiLink 3.0 · Android 10',
+  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
   tocTitle: '📋 Mundarija',
 
   intro: {
     title: '0. Kirish',
     lead:
-      "DashCast BYD markaziy ekranidagi har qanday Android ilovani raqamli asbob panelida (cluster) ko'rsatishga imkon beradi. Maps, Waze, Spotify yoki YouTube\'ni to'g'ridan-to'g'ri rul orqasida ko'rishingiz mumkin, shu bilan birga BYD\'ning original ko'rsatkichlari (tezlik, indikatorlar, masofa) doimo qulay bo'lib qoladi.",
+      "DashCast BYD markaziy ekranidagi istalgan Android ilovasini asboblar paneliga (raqamli klasterga) chiqaradi. Maps, Waze, Spotify yoki ABRP to'g'ridan-to'g'ri rul ortida — «Tartiblar» rejimi bilan esa bir vaqtda bir nechta ilova, har biri o'z zonasida. Bularning barchasi tizimni o'zgartirmasdan.",
     bullets: [
-      "✅ BYD Seal EU bilan mos (DiLink 3.0, Di3.0 / 6125F dasturiy ta'minot).",
-      "✅ Tizimni o'zgartirmasdan: DashCast oddiy ilova kabi o'rnatiladi.",
-      "✅ Mahalliy TCP ADB — birinchi avtorizatsiyadan keyin kompyuter kerak emas.",
-      "✅ 12 til, birinchi ishga tushirishda tanlanadi.",
-      "✅ O'rnatilgan OTA yangilanishlar (ixtiyoriy alpha kanali).",
-      "✅ Overscan chegaralari har bir ilova uchun alohida saqlanadi.",
-      "✅ Markaziy ekrandan klasterni boshqarish uchun sensorli to'liq ekran oynasi.",
-      "✅ Bo'lingan rejim (klasterda yonma-yon ikkita ilova).",
+      '✅ BYD Seal EU bilan mos (DiLink 3.0, proshivka Di3.0 / 6125F).',
+      "✅ Tizim o'zgartirilmaydi: DashCast oddiy ilova kabi o'rnatiladi.",
+      '✅ TCP orqali mahalliy ADB — birinchi avtorizatsiyadan keyin kompyuter kerak emas.',
+      '✅ 13 ta interfeys tili, birinchi ishga tushirishda tanlanadi.',
+      '✅ Real vaqtdagi sensorli oyna: klasterni markaziy ekrandan boshqaring.',
+      "✅ «Tartiblar» rejimi: klasterda yonma-yon bir nechta ilova, zonalar barmoq bilan chiziladi.",
+      '✅ Avtoishga tushirish: DashCast ochilishi bilan proyeksiya + ilova (yoki sevimli tartib).',
+      '✅ Chetlar (overscan) har bir ilova uchun saqlanadi.',
+      "✅ O'rnatilgan OTA yangilanishlari (ixtiyoriy beta-kanal).",
     ],
     note:
-      "💡 Bir martalik shart: BYD Sozlamalar → Dasturchi bo'limida simsiz ADB nosozliklarini tuzatishni yoqing. Birinchi ishga tushirishda « Nosozliklarni tuzatishga ruxsat berilsinmi? » dialogi paydo bo'ladi — « Doimo ruxsat berish » belgilang va tasdiqlang. Bu qadamni hech qachon takrorlashingiz shart emas.",
+      "💡 Yagona talab: BYD Sozlamalar → Dasturchi bo'limida simsiz ADB nosozliklarni tuzatishni yoqish. Birinchi ishga tushirishda «Tuzatishga ruxsat berilsinmi?» dialogi paydo bo'ladi — «Har doim ruxsat berish» belgilang va tasdiqlang. Buni hech qachon takrorlash kerak bo'lmaydi.",
   },
 
   sections: [
@@ -31,115 +32,101 @@ export default {
       screen: 'screen-1',
       title: '1. Salomlashish ekrani — til tanlash',
       lead:
-        "Birinchi marta ishga tushirishda DashCast 12 mavjud til bilan to'rni ko'rsatadi. Kerakli tilni bosing; tanlovingiz saqlanadi va salomlashish ekrani qaytib ko'rinmaydi. Tilni istalgan vaqtda Sozlamalar → Til orqali o'zgartirishingiz mumkin.",
-      mockupLabel: '1-ekranni ochish (Salomlashish)',
+        "Eng birinchi ishga tushirishda DashCast 13 ta mavjud til panjarasini ko'rsatadi. O'zingiznikiga teging: tanlov saqlanadi va ekran boshqa ko'rinmaydi. Tilni istalgan vaqtda Sozlamalardan o'zgartirish mumkin.",
+      mockupLabel: "1-ekranni ko'rish (Salomlashish)",
       featuresTitle: 'Tafsilotlar',
       features: [
         {
-          title: '12 ta qo\'llab-quvvatlanadigan til',
+          title: "13 ta qo'llab-quvvatlanadigan til",
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Tanlangan til qayta ishga tushirishsiz darhol qo'llaniladi.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Tanlangan til darhol qo'llanadi, qayta ishga tushirish kerak emas.",
         },
         {
-          title: 'Avtomatik o\'qish yo\'nalishi',
+          title: "Avtomatik o'qish yo'nalishi",
           text:
-            "Arab tili avtomatik tarzda o'ngdan chapga (RTL) tartibiga o'tadi: navigatsiya paneli o'ngga ko'chadi, ro'yxatlar teskari aylanadi, piktogrammalar o'qib bo'ladigan bo'lib qoladi.",
+            "Arab tili avtomatik ravishda o'ngdan chapga (RTL) joylashuvga o'tadi: navigatsiya paneli o'ngga o'tadi, ro'yxatlar aks ettiriladi.",
         },
         {
-          title: 'Istalgan vaqtda o\'zgartirish mumkin',
-          text:
-            "Keyinchalik tilni o'zgartirish uchun: yon panelning yuqorisidagi DashCast logotipini uzoq bosing → 🌐 Til. Yangi til darhol qo'llaniladi.",
+          title: "Istalgan vaqtda o'zgartirish mumkin",
+          text: "Tilni keyinroq o'zgartirish uchun: Sozlamalar → Til. Darhol qo'llanadi.",
         },
       ],
       howTo: {
-        title: 'Buni qanday qilish kerak',
+        title: 'Qanday qilish kerak',
         steps: [
-          "DashCast\'ni ishga tushiring (BYD ilovalar tortmasidagi ko'k belgi).",
-          "Salomlashish ekrani 4×3 til to'rini ko'rsatadi.",
-          "Tilingizni bosing. Interfeys darhol o'zgaradi.",
-          "Asosiy ekran ochiladi — DashCast ishlatishga tayyor.",
+          "DashCast'ni ishga tushiring (BYD ilovalar ro'yxatidagi ko'k belgi).",
+          "Tillar panjarasi bilan salomlashish ekrani ko'rinadi.",
+          "Tilingizga teging. Interfeys darhol o'zgaradi.",
+          'Bosh ekran ochiladi — tayyorsiz.',
         ],
       },
-      note:
-        "ℹ️ Agar siz proyeksiya davom etayotganda tilni o'zgartirsangiz, proyeksiya uzilmasdan davom etadi; faqat DashCast interfeysi tarjima qilinadi.",
     },
 
     {
       id: 'main',
       screen: 'screen-2',
-      title: '2. Asosiy ekran — Ilovalar va Klaster',
+      title: '2. Bosh ekran — Ilovalar va Klaster',
       lead:
-        "DashCast\'ning markaziy ekrani. Chap tarafda — qidiruv, kategoriya filtrlari va sevimlilar bilan barcha o'rnatilgan ilovalarning ro'yxati. O'ng tarafda — asosiy harakatlar bilan klasterning jonli ko'rinishi: to'liq ekran ko'rinishi, skrinshot, qayta ulanish, proyeksiyani to'xtatish.",
-      mockupLabel: '2-ekranni ochish (Asosiy)',
-      featuresTitle: 'Nima qila olasiz',
+        "DashCast markaziy ekrani. Chapda: qidiruv, filtrlar va sevimlilar bilan barcha ilovalaringiz. O'ngda: klasterning real vaqtdagi ko'rinishi, «To'liq ekranli oyna» / «Proyeksiyani to'xtatish» tugmalari va sevimli ko'p ilovali joylashuvni tanlash uchun tartiblar karuseli.",
+      mockupLabel: "2-ekranni ko'rish (Bosh)",
+      featuresTitle: 'Qila oladigan hamma narsangiz',
       features: [
         {
-          title: '🔍 Qidiruv paneli',
+          title: '👆 Qisqa teginish — proyeksiyalash',
           text:
-            "Ro\'yxatni darhol filtrlash uchun bir necha harf yozing (ilova nomida ham, paketda ham qidiradi). O\'ng tomondagi ▦ tugmasi ro\'yxat va tarmoq ko\'rinishini almashtiradi.",
+            "Ilovani klasterga yuborish uchun unga teging. Proyeksiya faol bo'lmasa, avtomatik boshlanadi (~2 s isinish), so'ng ilova rul ortida paydo bo'ladi.",
         },
         {
-          title: '🏷️ Kategoriya filtrlari',
+          title: '👆⏱️ Uzoq bosish — amallar menyusi',
           text:
-            "Rangli chiplar (Hammasi / Navigatsiya / Multimedia / Aloqa / Tizim) ilovalaringizni avtomatik guruhlaydi. Qavs ichidagi raqam — qancha ilova ko'rinishini bildiradi.",
+            "Ilovani ushlab turing: ⭐ Sevimli, Avtoishga tushirish (har DashCast ochilishida bu ilovani proyeksiyalash), Klasterga / bosh ekranga ko'chirish, ✕ Majburiy to'xtatish.",
         },
         {
-          title: '⭐ Mahkamlangan sevimlilar',
+          title: '🔍 Qidiruv va filtrlar',
           text:
-            "« Sevimlilar » bo'limi eng ko'p ishlatiladigan ilovalarni yuqorida saqlaydi. Qo'shish/olib tashlash uchun: ilovani uzoq bosing → ⭐ Sevimlilarga qo'shish/olib tashlash.",
+            "Qidiruv paneli yozish paytida filtrlaydi (nom yoki paket). Toifa chiplari (Hammasi / Navigatsiya / Media…) ilovalarni guruhlaydi; ▦ tugmasi ro'yxat/panjara o'rtasida almashtiradi.",
         },
         {
-          title: '👆 Qisqa bosish — proyeksiya',
+          title: "🚦 Real vaqtdagi klaster ko'rinishi",
           text:
-            "Ilovani bosing va u darhol klasterga yuboriladi. Agar proyeksiya ishlamayotgan bo'lsa, u avtomatik boshlanadi (~2 s).",
+            "O'ng panel klasterni jonli aks ettiradi. Ko'rinishga teginishlaringiz proyeksiyalangan ilovaga uzatiladi — aylantirish, kattalashtirish, klaviatura, hammasi ishlaydi.",
         },
         {
-          title: '👆⏱️ Uzoq bosish — harakatlar menyusi',
+          title: "👁️ To'liq ekranli oyna",
           text:
-            "Har qanday ilovani ushlab turing va to'liq ekran menyu ochiladi: ⭐ Sevimli, Avto-ishga tushirish (proyeksiya bilan), Klasterga / asosiy ekranga ko'chirish, ✕ Majburiy to'xtatish.",
+            "Ko'rinishni butun markaziy ekranga kengaytiradi: Maps'da to'liq klaviatura bilan manzil yozish uchun ideal. Hammasi real vaqtda klasterga ko'chiriladi.",
         },
         {
-          title: '🚦 Klaster jonli ko\'rinishi',
+          title: "⏹ Proyeksiyani to'xtatish",
           text:
-            "O\'ng panel klasterda nima ko\'rinayotganini aks ettiradi (tezlik, peredacha, batareya, masofa). Kechikish (12 ms) ulanish to\'g\'ri ekanligini tasdiqlaydi.",
+            "Proyeksiyani toza yakunlaydi va asl BYD panelini (tezlik, asboblar, ADAS) Sozlamalarda belgilangan o'lcham bilan tiklaydi.",
         },
         {
-          title: '👁️ To\'liq ekran ko\'rinish',
+          title: '🗂️ Tartiblar karuseli',
           text:
-            "« To'liq ekran ko'rinish »ni bosing va jonli ko'rinish butun markaziy displeyga kengayadi. Maps\'da to'liq klaviatura bilan manzil yozish uchun qulay — har bir kirish klasterga aks ettiriladi.",
+            "Tugmalar ostida har bir karta tartib zonalarining mini-ko'rinishini ko'rsatadi. Kartaga tegib, uni sevimli tartib qiling (yulduz + ko'k hoshiya). «Erkin rejim» tartiblarni o'chiradi; «＋ Boshqarish» muharrirni ochadi.",
         },
         {
-          title: '📸 Skrinshot',
+          title: '📺 Suzuvchi tugma',
           text:
-            "« Olish » tugmasi joriy klaster ko'rinishini PNG sifatida /sdcard/Pictures/DashCast/ ga saqlaydi. Yo'lni ulashish yoki muammoni hujjatlashtirish uchun foydali.",
-        },
-        {
-          title: '↻ Qayta ulanish',
-          text:
-            "Agar proyeksiya qilingan ilova qotib qolgan bo'lsa, « Qayta ulanish » asl klasterga tegmasdan video oqimini tiklaydi.",
-        },
-        {
-          title: '⏹ Oynani to\'xtatish',
-          text:
-            "Proyeksiyani toza tugatadi. Qisqa bosish = yumshoq to'xtatish (klaster ADB orqali asl BYD\'ga qaytadi). Uzoq bosish = Sozlamalardagi klaster o'lchamini tiklashga majbur qiladigan « Asl klasterni tiklash » bilan kengaytirilgan menyu.",
+            "📺 tugmasi boshqa ilovalar ustida qoladi: teginish = oynani ochish, uzoq bosish = oxirgi proyeksiyalangan ilovalar o'rtasida tez almashish.",
         },
       ],
       howTo: {
-        title: 'Ilovani klasterga qanday proyeksiya qilish',
+        title: 'Ilovani klasterga qanday proyeksiyalash',
         steps: [
-          "Asosiy ekranda kerakli ilovani toping (masalan, Maps).",
-          "Belgisini bosing → proyeksiya boshlanadi, klaster ~2 s ichida ilovani ko'rsatadi.",
-          "O\'ng panel klasterda nima ko\'rinayotganini real vaqtda ko\'rsatadi.",
-          "Matn yozish uchun (manzil qidirish): « To\'liq ekran ko\'rinish »ni bosing → ilova markaziy ekranga kengayadi → manzilni yozing → hammasi klasterga aks ettiriladi.",
-          "To'xtatish uchun: « Oynani to'xtatish »ni bosing (klaster asl BYD\'ga qaytadi).",
+          'Kerakli ilovani toping (mas. Maps) — kerak bo‘lsa qidiruv yoki filtrlar.',
+          "Belgisiga teging → proyeksiya boshlanadi, klaster ~2 s ichida ilovaga o'tadi.",
+          "O'ngdagi ko'rinish klasterdagini jonli ko'rsatadi.",
+          "Matn kiritish uchun: «To'liq ekranli oyna» → manzilingizni yozing → hammasi ko'chiriladi.",
+          "To'xtatish uchun: «Proyeksiyani to'xtatish» — klaster tug'ma BYD'ga qaytadi.",
         ],
       },
       tipsTitle: 'Maslahatlar',
       tips: [
-        "💡 Avto-ishga tushirish: ilovada ushbu kalitni yoqing va u DashCast har safar ishga tushganda avtomatik proyeksiya qilinadi.",
-        "💡 Bo'lingan rejim: ikkinchi ilovaning uzoq bosish menyusidan « Bo'lingan sifatida yuborish »ni tanlang va klasterda 2 ta ilova yonma-yon ko'rinadi.",
-        "💡 Chegaralar: agar ilova klasterdan tashqariga chiqsa, Sozlamalar → Chegaralar bo'limini oching va slayderlarni sozlang. Har bir ilova uchun saqlanadi.",
-        "💡 Sensorli to'liq ekran: to'liq ekran ko'rinishi rejimida markaziy ekrandagi barmoqlaringiz ilovani haqiqatan boshqaradi — klaviatura, aylantirish, imo-ishoralar, hammasi ishlaydi.",
+        "💡 Avtoishga tushirish: ilovani tanlang (uzoq bosish → Avtoishga tushirish), har DashCast ochilishida avtomatik proyeksiyalansin — proyeksiya o'zi faollashadi.",
+        "💡 Sevimli tartib: karuselda tanlangan karta — avtoishga tushirish faollashtiradigan karta («Tartiblar» bo'limiga qarang).",
+        '💡 Chetlar: ilova klasterdan chiqsa, Sozlamalar → Chetlar, gorizontal/vertikal slayderlar. Har bir ilova uchun saqlanadi.',
       ],
     },
 
@@ -148,242 +135,293 @@ export default {
       screen: 'screen-3',
       title: '3. Sozlamalar',
       lead:
-        "Sozlamalar ekrani global parametrlar va proyeksiyaning tasvir sozlashini birlashtiradi. Chap panel mavjud bo'lib qoladi — Ilovalar, Sozlamalar, Diagnostika, Tizim va Jurnal o'rtasida joyingizni yo'qotmasdan o'tib turishingiz mumkin.",
-      mockupLabel: '3-ekranni ochish (Sozlamalar)',
-      featuresTitle: 'Mavjud bo\'limlar',
+        "Global parametrlar: klaster o'lchami, til, chetlar, ishga tushirish xatti-harakati, «Tartiblar» rejimi va yangilanishlar. Yon panel ochiq qoladi — pozitsiyangizni yo'qotmasdan ekranlar o'rtasida almashing.",
+      mockupLabel: "3-ekranni ko'rish (Sozlamalar)",
+      featuresTitle: "Asosiy bo'limlar",
       features: [
         {
           title: '📺 Klaster turi',
           text:
-            "Asbob panelining jismoniy o'lchamini tanlang: 8.8″ (sendInfo cmd 29), 12.3″ Seal EU (cmd 30, sukut bo'yicha) yoki 10.25″ (cmd 31). Ushbu qiymat, xususan, « Asl klasterni tiklash » tomonidan ishlatiladi.",
+            "Asboblar panelining jismoniy o'lchami: 8.8″, 12.3″ (Seal EU'da tavsiya etiladi — ADAS cho'zilishini tuzatadi) yoki 10.25″. «Proyeksiyani to'xtatish» to'g'ri rejimni tiklash uchun foydalanadi.",
+        },
+        {
+          title: '↔️↕️ Chetlar (overscan)',
+          text:
+            "Kesilgan chetlarni qoplash uchun gorizontal/vertikal slayderlar (0–200 px). Har bir ilova uchun saqlanadi: Maps'da 80 px bo'lishi mumkin, Spotify esa 0 da qoladi. «Qo'llash» jonli proyeksiyani sozlaydi.",
+        },
+        {
+          title: '🚗 Avtomobil bilan ishga tushirish',
+          text:
+            "Yoqilgan bo'lsa, DashCast mashina bilan ishga tushadi va oxirgi proyeksiyalangan ilovani tiklaydi. Aks holda uni BYD ro'yxatidan ishga tushiring.",
+        },
+        {
+          title: '🗂️ «Tartiblar» rejimi',
+          text:
+            "Maxsus zonalar bilan ko'p ilovali proyeksiyani yoqadi (avtomatik boshqariladigan Proxy ADB Daemon talab qilinadi). Bosh ekranda karuselni va «Tartiblar» yorlig'ini ko'rsatadi.",
+        },
+        {
+          title: '⭐ Avtomatik sevimli tartib',
+          text:
+            "DashCast ishga tushganda: klaster proyeksiyasini, sevimli tartibni faollashtiradi va har bir zonaga bog'langan ilovalarni ochadi. Birorta teginishsiz to'liq ko'p ilovali konfiguratsiyangiz.",
+        },
+        {
+          title: '⚡ Ishga tushirishda slotlarni oldindan yaratish',
+          text:
+            "Ochilganda sevimli tartibning virtual ekranlarini tayyorlaydi (ilovalarni ochmasdan) — tartibni faollashtirish keyin deyarli oniy bo'ladi.",
+        },
+        {
+          title: '📦 OTA yangilanishlari',
+          text:
+            "DashCast har ishga tushirishda GitHub'ni tekshiradi. Beta-kanal uchun «Oldindan versiyalarni qo'shish» belgilang (yangiliklar ertaroq, barqarorlik pastroq).",
         },
         {
           title: '🌐 Til',
-          text:
-            "12 til mavjud. Almashtirish darhol — DashCast\'ni qayta ishga tushirish shart emas.",
-        },
-        {
-          title: '↔️ Gorizontal chegara (overscan)',
-          text:
-            "Slayder 0–200 px. Klasteringizdagi kesilgan chetlarni qoplash uchun chap/o'ngga qora chiziqlar qo'shadi. Har bir ilova uchun saqlanadi — Maps 80 px ishlatishi mumkin, Spotify esa 0\'da qoladi.",
-        },
-        {
-          title: '↕️ Vertikal chegara (overscan)',
-          text:
-            "Slayder 0–200 px. Yuqori/pastki uchun ham xuddi shunday. Birlashgan chegaralar VirtualDisplay darajasida qo'llaniladi, shunda ilova kesilgan zonalarni « ko'rmaydi ».",
-        },
-        {
-          title: '✅ Qo\'llash / 🔄 Tiklash',
-          text:
-            "« Qo\'llash » yangi chegaralarni darhol ishlayotgan proyeksiyaga uzatadi. « Tiklash » joriy ilovani 0/0\'ga qaytaradi.",
-        },
-        {
-          title: '📦 OTA yangilanishlar',
-          text:
-            "DashCast GitHub Releases\'ni avtomatik tekshiradi. Alpha kanali uchun « Pre-release\'larni qo'shish »ni belgilang (tez-tez, lekin eksperimental yangilanishlar).",
-        },
-        {
-          title: '🚗 Avtomobil bilan avtomatik ishga tushirish',
-          text:
-            "Yoqilganda, DashCast mashina bilan birga ishga tushadi va oxirgi proyeksiya qilingan ilovani tiklaydi. Aks holda uni qo'lda ishga tushirasiz.",
+          text: "13 til — almashish oniy.",
         },
       ],
       howTo: {
-        title: 'Ilovaning chegaralarini qanday sozlash',
+        title: 'Ilova chetlarini qanday sozlash',
         steps: [
-          "Sozlanadigan ilovani proyeksiya qiling (masalan, Waze).",
-          "Sozlamalar → Chegaralar oching.",
-          "Chap/o\'ng chetlari to\'g\'ri bo'lguncha gorizontal slayderni harakatlantiring.",
-          "Vertikal slayder bilan ham xuddi shunday.",
-          "« Qo\'llash »ni bosing → proyeksiya jonli yangilanadi, ilova qayta ishga tushmasdan.",
-          "Sozlama faqat o'sha ilova uchun saqlanadi (har bir ilovaning o'z chegaralari bor).",
+          'Sozlanadigan ilovani proyeksiyalang (mas. Waze).',
+          'Sozlamalar → Chetlar.',
+          "Chap/o'ng chetlar to'g'ri bo'lguncha gorizontal slayderni harakatlantiring.",
+          "Vertikal uchun ham xuddi shunday, keyin «Qo'llash» — ilovani qayta ishga tushirmasdan jonli sozlash.",
+          'Sozlama faqat shu ilova uchun saqlanadi.',
         ],
       },
       note:
-        "⚠️ Agar siz klaster turini o'zgartirsangiz, mos yozuvlar qiymatlari qayta hisoblanishi uchun DashCast\'ni qayta ishga tushiring.",
+        "⚠️ Klaster turini o'zgartirsangiz, tiklash to'g'ri rejimdan foydalanishi uchun proyeksiyani to'xtatib, qayta ishga tushiring.",
+    },
+
+    {
+      id: 'layouts',
+      screen: 'screen-7',
+      title: '4. Tartiblar — klasterda bir nechta ilova',
+      lead:
+        "«Tartiblar» rejimi klasterni maxsus zonalarga bo'ladi, har biri o'z ilovasini ko'rsatadi: masalan, chapda Waze, o'ngda Spotify. Zonalarni barmoq bilan chizasiz, har bir zonaga ilova bog'laysiz va tartib bitta teginish bilan — yoki ishga tushirishda o'zi — faollashadi.",
+      mockupLabel: "7-ekranni ko'rish (Tartiblar)",
+      featuresTitle: 'Imkoniyatlar',
+      features: [
+        {
+          title: '✏️ Zona chizish',
+          text:
+            "Kanvasda (1920×720 klaster nusxasi) to'rtburchak chizish uchun barmog'ingizni torting. Dialog ochiladi: nom, pikselgacha aniq pozitsiya/o'lchamlar va bog'lanadigan ilova.",
+        },
+        {
+          title: "🔗 Ilova bog'lash",
+          text:
+            "Har bir zonani ilovaga bog'lash mumkin: tartib faollashganda ilova o'z zonasida avtomatik ochiladi. Ilovasiz zona bo'sh qoladi.",
+        },
+        {
+          title: "✋ Ko'chirish va o'lchamini o'zgartirish",
+          text:
+            "Zonani ko'chirish uchun torting; burchaklardagi oq tutqichlar o'lchamni o'zgartiradi. Chetlar klaster chegaralariga va qo'shni zonalarga avtomatik yopishadi.",
+        },
+        {
+          title: "✏️ Mavjud zonani o'zgartirish",
+          text:
+            "Zonaga teging (kanvasda yoki pastdagi chipida): nomini o'zgartiring, geometriyasini sozlang, bog'langan ilovani o'zgartiring yoki o'chiring. Uzoq bosish = tez o'chirish.",
+        },
+        {
+          title: '💾 Saqlangan tartiblar',
+          text:
+            "Xohlagancha tartib saqlang («Nav+Media», «Uchlik ekran»…). Yon panel ularni Faollashtirish / O'chirish / O'zgartirish / O'chirib tashlash bilan ro'yxatlaydi.",
+        },
+        {
+          title: '⭐ Sevimli va avtoishga tushirish',
+          text:
+            "«Sevimli» tugmasi (yoki bosh ekran karuseli kartasiga teginish) «Avtomatik sevimli tartib» DashCast ishga tushganda faollashtiradigan tartibni belgilaydi — proyeksiya bilan birga.",
+        },
+      ],
+      howTo: {
+        title: 'Birinchi tartibingizni yarating',
+        steps: [
+          'Sozlamalarda «Tartiblar rejimi»ni yoqing.',
+          "«Tartiblar» yorlig'ini oching (yon panel).",
+          "Birinchi zonani chizish uchun barmog'ingizni kanvasda torting (mas. chap yarmi).",
+          "Dialogda: nomlang, «Ilova bog'lash»ga teging → Waze tanlang → Qo'shish.",
+          "Ikkinchi zonani chizing (o'ng yarmi), Spotify bog'lang.",
+          '«Saqlash» → tartibni nomlang (mas. Nav+Media).',
+          "Tanlash uchun «Sevimli», keyin faollashtiring: ikkala ilova ham o'z zonasida ochiladi.",
+        ],
+      },
+      tipsTitle: 'Maslahatlar',
+      tips: [
+        "💡 «Avtomatik sevimli tartib» (Sozlamalar) bilan birga to'liq ko'p ilovali konfiguratsiyangiz har DashCast ishga tushishida o'zi quriladi.",
+        "💡 Har bir karusel kartasining mini-ko'rinishi tartibning haqiqiy zonalarini ko'rsatadi — bir qarashda taniladi.",
+        "💡 Ilova o'z zonasida ko'rinishdan bosh tortadimi? Ba'zi ilovalar nisbatni talab qiladi; 16:9 ga yaqinroq zonani sinab ko'ring.",
+      ],
+      note:
+        "ℹ️ «Tartiblar» rejimi Proxy ADB Daemon'ga tayanadi (avtomatik ishga tushadi). Birinchi sovuq ishga tushirish: ilovalar ko'ringuncha 6–8 s kuting — bu klasterning faollashtirish ketma-ketligi.",
     },
 
     {
       id: 'diagnostics',
       screen: 'screen-4',
-      title: '4. Diagnostika',
+      title: '5. Diagnostika',
       lead:
-        "Diagnostika yorlig'i — proyeksiya kutilmagan tarzda ishlayotgan holatlar uchun mo'ljallangan ichki panel. Ko'pchilik foydalanuvchilarga hech qachon kerak bo'lmaydi — u qo'llab-quvvatlash va nosozliklarni tuzatish uchun mo'ljallangan.",
-      mockupLabel: '4-ekranni ochish (Diagnostika)',
-      featuresTitle: 'Vositalar',
+        "Proyeksiya kutilganidek ishlamaydigan holatlar uchun ichki panel. Ko'pchilik foydalanuvchilarga u hech qachon kerak bo'lmaydi — qo'llab-quvvatlash va nosozliklarni tuzatish uchun mavjud.",
+      mockupLabel: "4-ekranni ko'rish (Diagnostika)",
+      featuresTitle: 'Mavjud vositalar',
       features: [
         {
-          title: 'ClusterService holati',
+          title: 'Ulanish testlari',
           text:
-            "Proyeksiyani boshqaruvchi Android xizmati ishlab turganini tekshiradi. « bog'lanmagan » holatda tugma uni qayta ishga tushiradi.",
+            'Mahalliy ADB tunnelini (localhost:5555), ClusterService holatini va klasterning virtual ekrani mavjudligini tekshiradi.',
         },
         {
-          title: 'VirtualDisplay holati',
+          title: 'Platforma zondlari',
           text:
-            "Klaster uchun yaratilgan virtual displeyning ID\'sini, uning aniqligini va Qt Surface biriktirilganligini ko'rsatadi.",
+            'DiLink aniqlash (2/3/4/5), displeylar inventarizatsiyasi, BYD avtomobil API instansiyalash (tezlik, energiya) va BYDAUTO ruxsatlari holati.',
         },
         {
-          title: 'Mahalliy ADB ulanishi',
+          title: 'Ulashiladigan hisobot',
           text:
-            "localhost:5555 ga ADB tunnelining tezkor sinovi. Agar sinov muvaffaqiyatsiz bo'lsa, odatda BYD sozlamalarida simsiz ADB nosozliklarini tuzatish o'chirilgan.",
-        },
-        {
-          title: 'Maqsadli logcat',
-          text:
-            "DashCast / AutoContainer / xdja bo'yicha filtrlangan oxirgi 200 logcat satrini oladi. « Ulashish » tugmasi hisobotni yuboradi.",
+            "Qo'llab-quvvatlash uchun matn sifatida eksport qilinadigan to'liq hisobot yaratadi (tizim, displeylar, xizmatlar, ruxsatlar, demon ko'rsatkichlari).",
         },
       ],
       howTo: {
-        title: 'Bu yorliqdan qachon foydalanish',
+        title: "Bu yorliqni qachon ishlatish kerak",
         steps: [
-          "Ilovani bosgandan keyin klaster qora qoladi → ClusterService va VirtualDisplay holatini tekshiring.",
-          "Ilova « ADB mavjud emas » deydi → Diagnostika yorlig'i → « ADB sinovi » tugmasi.",
-          "Qo\'llab-quvvatlash hisobot so\'raydi → Diagnostika → « logcat ulashish ».",
-          "Yangilanish endigina o'rnatildi va ishlayotgan versiyani tasdiqlamoqchisiz.",
+          'Ilovaga tekkandan keyin klaster qora qoladi → ClusterService va virtual ekranni tekshiring.',
+          '«ADB mavjud emas» xabari → «ADB testi» tugmasi.',
+          "Qo'llab-quvvatlash hisobot so'raydi → yarating va ulashing.",
         ],
       },
-      note:
-        "ℹ️ Bu yorliq o'z-o'zidan hech narsani o'zgartirmaydi: tugmalar boshqacha ko'rsatilmagan bo'lsa, faqat o'qish testlarini bajaradi.",
+      note: "ℹ️ Tugmalar — aniq ko'rsatilmasa, faqat o'qish uchun testlar.",
     },
 
     {
       id: 'sysinfo',
       screen: 'screen-5',
-      title: '5. Tizim ma\'lumotlari',
+      title: '6. Tizim hisoboti',
       lead:
-        "Apparat/dasturiy ta'minot muhitingiz haqida faqat o'qish uchun panel. Bu yerda DashCast versiyasi, BYD dasturiy ta'minoti, Android versiyasi va klaster identifikatorini topasiz.",
-      mockupLabel: '5-ekranni ochish (Tizim)',
-      featuresTitle: 'Ko\'rsatilgan ma\'lumotlar',
+        "Faqat o'qish uchun panel: versiyalar, aniqlangan displeylar va DashCast xizmatlarining jonli holati. Biror narsa noto'g'ri ko'ringanda tekshiriladigan birinchi ekran.",
+      mockupLabel: "5-ekranni ko'rish (Tizim)",
+      featuresTitle: "Ko'rsatiladigan ma'lumotlar",
       features: [
         {
-          title: '🚗 Avtomobil',
+          title: '🖥️ Displeylar',
           text:
-            "Aniqlangan BYD modeli, VIN (mavjud bo'lsa), dasturiy ta'minot bildiruvi (masalan, Di3.0 / 6125F), bildiruv sanasi.",
+            'Bosh ekran (ruxsat, zichlik) va klasterning virtual displeyi (1920×720) real vaqtdagi holati bilan.',
         },
         {
-          title: '📱 Android',
+          title: '⚙️ Xizmatlar',
           text:
-            "Android versiyasi (10), API darajasi (29), xavfsizlik patch\'i, DiLink build ID.",
+            "ClusterService (proyeksiya), MirrorDaemon (oyna), Proxy ADB Daemon (imtiyozli operatsiyalar), AdbLocalClient (ADB tunneli) — har biri yashil/qizil nuqta va qayta ishga tushirish tugmasi bilan.",
         },
         {
-          title: '🔌 DashCast',
+          title: '📱 Versiyalar',
           text:
-            "O'rnatilgan versiya, versionCode, kanal (stable / alpha), oxirgi OTA tekshiruvi, release notes uchun havola.",
+            "O'rnatilgan DashCast versiyasi, BYD proshivkasi, Android/API versiyasi, DiLink qurish identifikatorlari.",
         },
         {
-          title: '🖥️ Klaster',
+          title: '🔁 Proyeksiyani takrorlash',
           text:
-            "Aniqlangan tur (8.8″ / 12.3″ / 10.25″), haqiqiy aniqlik, joriy VirtualDisplay ID, faol Qt paketi (com.xdja.containerservice).",
-        },
-        {
-          title: '📦 Kuzatilgan ilovalar',
-          text:
-            "Aniqlangan ilovalar soni, mahkamlangan sevimlilar, avto-ishga tushirish yoqilganlar.",
+            "Klasterning to'liq faollashtirish ketma-ketligini qayta o'ynatish tugmasi (panel oraliq holatda qotib qolsa foydali).",
         },
       ],
       tipsTitle: 'Maslahatlar',
       tips: [
-        "💡 Qiymatni vaqtinchalik xotiraga nusxalash uchun qatorni uzoq bosing (xato hisoboti uchun foydali).",
-        "💡 Pastdagi « Eksport » tugmasi hammasini matn fayliga saqlaydi (/sdcard/DashCast/sysinfo.txt).",
+        "💡 «Tartiblar» rejimi uchun «Proxy ADB Daemon» yashil (RUN) bo'lishi kerak — aks holda qayta ishga tushirish uchun qatoriga teging.",
+        "💡 To'liq hisobotni shu ekrandan eksport qilib, xato haqidagi xabarga qo'shish mumkin.",
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '6. Jurnal',
+      title: '7. Jurnal',
       lead:
-        "DashCast\'ning ichki jurnali: har bir muhim harakatni (proyeksiyalar, tiklashlar, ADB xatolari, yangilanishlar) kuzatadi. Kutilmagan xatti-harakatlarni tushunish yoki qo'llab-quvvatlashga hisobot yuborish uchun foydali.",
-      mockupLabel: '6-ekranni ochish (Jurnal)',
+        "DashCast ichki jurnali: barcha muhim amallar (proyeksiyalar, tiklashlar, ADB xatolari, yangilanishlar) uzluksiz qayd etiladi. Kutilmagan xatti-harakatni tushunish yoki qo'llab-quvvatlashga hisobot berish uchun foydali.",
+      mockupLabel: "6-ekranni ko'rish (Jurnal)",
       featuresTitle: 'Imkoniyatlar',
       features: [
         {
-          title: '🔍 Filtr',
+          title: '🔍 Filtrlar',
           text:
-            "Faqat tegishli qatorlarni saqlash uchun kalit so'zni kiriting (masalan, « ADB », « Maps », « error »). Filtr katta-kichik harflarga sezgir emas.",
+            "Daraja bo'yicha (DEBUG / INFO / WARN / ERROR) yoki kalit so'z bo'yicha filtrlang (mas. «ADB», «Maps», «error»).",
         },
         {
           title: '🎨 Rang kodi',
           text:
-            "🟢 INFO (yashil) — normal ish. 🟠 WARN (to'q sariq) — diqqat. 🔴 ERROR (qizil) — xato. ⚪ DEBUG (kulrang) — texnik tafsilot.",
-        },
-        {
-          title: '🗑 Tozalash',
-          text:
-            "Jurnalni bo'shatadi. Tizim logcat tracingiga ta'sir qilmaydi — faqat xotiradagi DashCast tarixi tozalanadi.",
+            "🟢 INFO — normal operatsiya. 🟠 WARN — diqqat. 🔴 ERROR — muvaffaqiyatsizlik. ⚪ DEBUG — texnik tafsilot.",
         },
         {
           title: '📤 Ulashish',
           text:
-            "Joriy jurnalni .txt sifatida eksport qiladi va Android ulashish varag'ini ochadi (e-mail, Telegram, fayl). DashCast versiyasi va BYD modelini avtomatik kiritadi.",
+            "Jurnalni .txt sifatida eksport qiladi va Android ulashish menyusini ochadi. DashCast versiyasi va BYD modelini o'z ichiga oladi.",
         },
         {
-          title: '⏰ Vaqt tamg\'alari',
+          title: '⏰ Vaqt belgilari',
           text:
-            "Har bir qator mahalliy vaqt bilan boshlanadi (HH:mm:ss.mmm). Uzoq operatsiyalar (Maps ishga tushishi, klasterni tiklash) o'lchanadi va ko'rsatiladi.",
+            "Har bir qator mahalliy vaqt bilan boshlanadi (HH:mm:ss.mmm); uzoq operatsiyalar o'lchanadi.",
         },
       ],
       howTo: {
-        title: 'Xato hisobotini qanday yuborish',
+        title: 'Xato haqida xabar yuborish',
         steps: [
-          "Muammoni qayta yarating (masalan, ilova ishga tushirilgandan keyin qora bo'lib qoladi).",
-          "Jurnalni oching.",
-          "« Ulashish »ni bosing.",
-          "Kanalni tanlang (Telegram, e-mail, GitHub Issues).",
-          "Ilova qilingan .txt to'liq trasalashni kontekst bilan birga o'z ichiga oladi (versiya, model, dasturiy ta'minot).",
+          'Muammoni takrorlang.',
+          'Jurnal → «Ulashish»ni oching.',
+          'Kanalingizni tanlang (Telegram, e-mail, GitHub Issues).',
+          "Biriktirilgan fayl izni va kontekstni o'z ichiga oladi (versiya, model, proshivka).",
         ],
       },
       note:
-        "🔒 Hech qanday shaxsiy ma'lumot (kontaktlar, GPS joylashuv, ilova tarkibi) qayd etilmaydi — faqat DashCast harakatlari va texnik qaytish kodlari.",
+        "🔒 Hech qanday shaxsiy ma'lumot (kontaktlar, GPS pozitsiyasi, ilova mazmuni) qayd etilmaydi — faqat DashCast amallari va texnik qaytarish kodlari.",
     },
   ],
 
   faq: {
-    title: '7. FAQ — Tez-tez beriladigan savollar',
+    title: "8. FAQ — Ko'p so'raladigan savollar",
     items: [
       {
-        question: '❓ Ilovani bosganimda klaster qora qoladi',
+        question: '❓ Ilovaga tekkanimda klaster qora qoladi',
         answer:
-          "Uch mumkin sabab: (1) simsiz ADB o'chirilgan — BYD Sozlamalar → Dasturchi tekshiring. (2) ClusterService ishlamayapti — Diagnostika yorlig'i, « Qayta ishga tushirish » tugmasi. (3) Ilova endigina ishdan chiqdi — o'ng panelda « Qayta ulanish »ni bosing.",
+          "Uchta mumkin sabab: (1) simsiz ADB o'chirilgan — BYD Sozlamalar → Dasturchi tekshiring. (2) To'xtagan xizmat — «Tizim» yorlig'i, qizil qatorni qayta ishga tushiring. (3) Ilova hozirgina qulagan — belgisiga qayta teging.",
       },
       {
-        question: '❓ Tasvir klasterda chiqib ketadi / kesiladi',
+        question: '❓ Tasvir klasterdan chiqadi / kesilgan',
         answer:
-          "Sozlamalar → Chegaralar oching va chetlari to'g'ri bo'lguncha gorizontal/vertikal slayderlarni sozlang. Har bir ilova uchun saqlanadi — bir martagina amalga oshiriladi.",
+          "Sozlamalar → Chetlar: chetlar to'g'ri bo'lguncha gorizontal/vertikal slayderlarni sozlang. Ilova uchun saqlanadi — faqat bir marta qilasiz.",
       },
       {
-        question: '❓ Asl BYD asbob paneliga qanday qaytaman?',
+        question: '❓ Asl BYD panelini qanday qaytaraman?',
         answer:
-          "« Oynani to\'xtatish »ni qisqa bosish 95 % holatlarda yetarli. Agar klaster qotib qolsa, xuddi shu tugmani uzoq bosing → menyu → « Asl klasterni tiklash »: DashCast klaster turingizga mos sendInfo ketma-ketligini majbur qiladi.",
+          "Bosh ekranda «Proyeksiyani to'xtatish»ga teging: DashCast tug'ma klasterni Sozlamalardagi o'lcham bilan tiklaydi. Panel qotib qolgan ko'rinsa: «Tizim» ekrani → «Proyeksiyani takrorlash», keyin yana to'xtating.",
       },
       {
-        question: '❓ DashCast 12 V akkumulyatorni quritadimi?',
+        question: '❓ Sevimli tartibim ishga tushganda ochilmaydi',
         answer:
-          "Yo'q — DashCast avtomobil o'chirilganda avtomatik to'xtaydi (Android.intent.action.SCREEN_OFF + BMS uzilish broadcast\'lari). Dvigatel o'chirilgandan keyin hech qanday fon xizmati qolmaydi.",
+          "Sozlamalardagi uch shartni tekshiring: «Tartiblar rejimi» yoqilgan, «Avtomatik sevimli tartib» yoqilgan va tartib ⭐ sevimli deb belgilangan (bosh ekran karuseli yoki «Tartiblar» yorlig'idagi «Sevimli» tugmasi). Sovuq ishga tushirishda 6–8 s kuting.",
+      },
+      {
+        question: "❓ DashCast 12 V akkumulyatorni o'tirg'izadimi?",
+        answer:
+          "Yo'q — DashCast avtomobil bilan birga to'xtaydi. Dvigatel o'chiq paytda hech qanday fon xizmati faol qolmaydi.",
+      },
+      {
+        question: '❓ Klasterda qaysi ilovalar ishlaydi?',
+        items: [
+          '✅ Navigatsiya: Google Maps, Waze, OsmAnd, ABRP, Magic Earth.',
+          "✅ Media: Spotify, YouTube, YouTube Music (gorizontal afzal).",
+          '✅ Tizim: kamera, ob-havo, kalendar.',
+          "⚠️ DRM ilovalari (Netflix, Disney+, Prime Video): virtual ekranda ko'rsatishdan bosh tortishi mumkin — Android cheklovi, DashCast emas.",
+        ],
+      },
+      {
+        question: '❓ Yangilanishlar: barqaror yoki beta?',
+        answer:
+          "Barqaror kanal (standart) nashrdan oldin avtomobilda sinaladi. Beta-kanal (Sozlamalar → Yangilanishlar → «Oldindan versiyalarni qo'shish») yangiliklarni kompilyatsiya qilinishi bilanoq oladi — erta sinash uchun foydali, vaqtinchalik regressiyalar xavfi bilan.",
       },
       {
         question: '❓ Hissa qo\'shmoqchiman yoki xato haqida xabar bermoqchiman',
         answer:
-          "GitHub: https://github.com/Kiroha/byd-dashcast — xatolar uchun Issues, savollar uchun Discussions. Diagnostikani tezlashtirish uchun har doim Jurnal eksportini ilova qiling (Jurnal → Ulashish).",
-      },
-      {
-        question: '❓ Klasterda qanday ilovalar ishlaydi?',
-        items: [
-          "✅ Navigatsiya: Google Maps, Waze, Yandex Navi, OsmAnd, Magic Earth.",
-          "✅ Multimedia: Spotify, YouTube, YouTube Music, Netflix (gorizontalni afzal ko'ring).",
-          "✅ Aloqa: Telegram (faqat o'qish rejimi), WhatsApp (bildirishnomalar).",
-          "✅ Tizim: kamera, ob-havo, taqvim.",
-          "⚠️ Widevine L1 DRM dan foydalanadigan ilovalar (Disney+, Prime Video) VirtualDisplay\'da renderlashdan bosh tortishi mumkin — bu Android cheklovi, DashCast emas.",
-        ],
-      },
-      {
-        question: '❓ Yangilanishlar: stable yoki alpha?',
-        answer:
-          "Stable kanali (sukut bo'yicha) chop etishdan oldin avtomobilda kamida 1 hafta sinovdan o'tkaziladi. Alpha kanali (Sozlamalar → Yangilanishlar) build\'larni kompilyatsiyadan keyin darhol oladi — oldindan sinov uchun foydali, lekin vaqtinchalik regressiyalarni keltirishi mumkin.",
+          "GitHub: https://github.com/Kiroha/byd-dashcast — xatolar uchun Issues, savollar uchun Discussions. Diagnostikani tezlashtirish uchun Jurnal eksportini qo'shing.",
       },
     ],
   },
 
   footer:
-    "DashCast — GPL-3.0 litsenziyasi ostida tarqatiladigan ochiq manbali loyiha. BYD Auto Co., Ltd. bilan bog'liq emas.",
+    'DashCast — MIT litsenziyasi ostida tarqatiladigan ochiq kodli loyiha. BYD Auto Co., Ltd. bilan aloqasi yo\'q.',
 };
