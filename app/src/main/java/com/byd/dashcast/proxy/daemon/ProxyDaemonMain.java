@@ -142,7 +142,12 @@ public final class ProxyDaemonMain {
                 return;
             }
             sSystemContext = systemContext;
-            sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.wrap(systemContext);
+            // Adopt our own package identity (createPackageContext + getPackageName
+            // spoof) so BYD SDK surfaces that gate on the calling package — not just
+            // the uid — accept our CAN/setting writes. Mirrors OpenBYD 2.2's
+            // SystemContext.get(). Falls back to a plain permission-bypass wrap if
+            // createPackageContext is unavailable.
+            sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.adoptIdentity(systemContext);
 
             emitBroadcast();
             installTriggerObserver();

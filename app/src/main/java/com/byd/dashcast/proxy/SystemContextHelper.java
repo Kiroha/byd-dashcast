@@ -42,6 +42,10 @@ public final class SystemContextHelper {
 
     private static final String TAG = "SystemContextHelper";
 
+    /** Our own package. Used to make the wrapped context report the app's
+     *  identity to the BYD SDK (see {@link #adoptIdentity}). */
+    public static final String SELF_PKG = "com.byd.dashcast";
+
     /** Singleton cache — reflection is expensive, the system context never changes within a process. */
     @SuppressLint("StaticFieldLeak")
     private static volatile Context sCached = null;
@@ -78,9 +82,10 @@ public final class SystemContextHelper {
                 if (sys == null) {
                     throw new IllegalStateException("ActivityThread.getSystemContext() returned null");
                 }
-                sCached = wrap(sys);
+                sCached = adoptIdentity(sys);
                 sLastError = null;
-                AppLogger.i(TAG, "system context acquired: pkg=" + sys.getPackageName());
+                AppLogger.i(TAG, "system context acquired: pkg=" + sys.getPackageName()
+                        + " → wrapped identity=" + sCached.getPackageName());
                 return sCached;
             } catch (Throwable t) {
                 sLastError = t;
@@ -108,6 +113,25 @@ public final class SystemContextHelper {
      * Used internally; exposed for tests that want to wrap an arbitrary base.
      */
     public static Context wrap(Context base) {
+        return wrap(base, null);
+    }
+
+    /**
+     * Wrap {@code base} so every permission check returns GRANTED, optionally
+     * forcing {@link Context#getPackageName()} to report {@code spoofPkg}.
+     *
+     * <p>Spoofing the package name is what lets the BYD SDK's internal
+     * identity check pass for surfaces that gate on the <em>calling package</em>
+     * rather than (or in addition to) the calling uid. This mirrors
+     * {@code BydContextWrapper.getPackageName()} in OpenBYD 2.2, which reports
+     * the app package instead of the system context's {@code "android"}.
+     *
+     * @param base     context to wrap (usually the system context, or a
+     *                 {@code createPackageContext} of our own package)
+     * @param spoofPkg package name to report from {@link Context#getPackageName()},
+     *                 or {@code null} to delegate to {@code base}
+     */
+    public static Context wrap(Context base, final String spoofPkg) {
         return new ContextWrapper(base) {
             @Override public int checkSelfPermission(String p)              { return PackageManager.PERMISSION_GRANTED; }
             @Override public int checkPermission(String p, int pid, int uid) { return PackageManager.PERMISSION_GRANTED; }
@@ -118,14 +142,56 @@ public final class SystemContextHelper {
             @Override public void enforcePermission(String p, int pid, int uid, String m) {}
             @Override public void enforceUriPermission(android.net.Uri u, int pid, int uid, int mod, String m) {}
             @Override public void enforceUriPermission(android.net.Uri u, String r, String w, int pid, int uid, int mod, String m) {}
+            // Report the app's package identity to any SDK code that keys off
+            // getPackageName() (defensive: also covers the fallback path where
+            // createPackageContext failed and base is the raw system context).
+            @Override public String getPackageName() {
+                return spoofPkg != null ? spoofPkg : super.getPackageName();
+            }
             // Propagate the wrapper to derived contexts: the BYD SDK sometimes calls
             // context.getApplicationContext().checkXxx() rather than context.checkXxx() directly.
             // Without this override the bypass would not apply to that second-hop call.
             @Override public Context getApplicationContext() {
                 Context appCtx = super.getApplicationContext();
-                return appCtx == null ? this : SystemContextHelper.wrap(appCtx);
+                return appCtx == null ? this : SystemContextHelper.wrap(appCtx, spoofPkg);
             }
         };
+    }
+
+    /**
+     * Build a permission-bypass context that ALSO adopts our own package
+     * identity — the faithful equivalent of OpenBYD 2.2's
+     * {@code SystemContext.get()} (createPackageContext + BydContextWrapper).
+     *
+     * <p>Two layers of identity adoption:
+     * <ol>
+     *   <li>{@code createPackageContext(SELF_PKG, INCLUDE_CODE | IGNORE_SECURITY)}
+     *       makes {@code getApplicationInfo()} / {@code getPackageManager()}
+     *       resolve to our package. {@code IGNORE_SECURITY} is what allows this
+     *       from the system context despite the signature mismatch.</li>
+     *   <li>{@link #wrap(Context, String)} forces {@code getPackageName()} to
+     *       {@link #SELF_PKG} and keeps every permission check at GRANTED.</li>
+     * </ol>
+     *
+     * <p>Regression-safe: if {@code createPackageContext} throws (hardened ROM),
+     * we fall back to wrapping the raw system context — identical to the prior
+     * behaviour, plus the {@code getPackageName} spoof.
+     *
+     * @param systemContext the raw system context from {@code getSystemContext()}
+     * @return a non-null wrapped, identity-adopting context
+     */
+    public static Context adoptIdentity(Context systemContext) {
+        Context base = systemContext;
+        try {
+            base = systemContext.createPackageContext(
+                    SELF_PKG,
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            AppLogger.i(TAG, "adoptIdentity: createPackageContext(" + SELF_PKG + ") ok");
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "adoptIdentity: createPackageContext(" + SELF_PKG
+                    + ") failed, using raw system context — " + t);
+        }
+        return wrap(base, SELF_PKG);
     }
 
     /** Clear the cache — used by tests that want to re-run the reflection from scratch. */
