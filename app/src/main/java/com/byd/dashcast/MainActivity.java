@@ -3,6 +3,9 @@ package com.byd.dashcast;
 import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.BootDisplayCleanup;
 import com.byd.dashcast.DaemonBinderResolver;
+import com.byd.dashcast.VoiceCommandReceiver;
+import com.byd.dashcast.ui.main.ActivateTimeoutManager;
+import com.byd.dashcast.ui.main.InsetAutoApplicator;
 import com.byd.dashcast.ui.main.AppActionSheet;
 import com.byd.dashcast.ui.main.AppListCoordinator;
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator;
@@ -94,7 +97,9 @@ public class MainActivity extends AppCompatActivity
                    FissionCoordinator.Host,
                    AppActionSheet.Host,
                    OverflowMenuHelper.Host,
-                   DisplayStatePollCoordinator.Host {
+                   DisplayStatePollCoordinator.Host,
+                   ActivateTimeoutManager.Host,
+                   InsetAutoApplicator.Host {
 
     private static final String TAG = "BYDApp";
     // Orphan sniffer kill must only run once per process lifetime (first cold start).
@@ -146,11 +151,10 @@ public class MainActivity extends AppCompatActivity
     private String mCurrentDashboardPkg = null;   // package name (for am force-stop)
     private String mMainDisplayPkg      = null;   // package sent to the main display (button "→ Cluster")
 
-    /** Timeout before re-enabling the Activate button if the cluster never connects. */
-    private static final long   ACTIVATE_TIMEOUT_MS    = 30_000;
-    private Runnable            mActivateTimeoutRunnable = null;
     /** True if the current activation was triggered by the user (not Activity restore). */
     private boolean             mWasManualActivation   = false;
+    private ActivateTimeoutManager mTimeoutManager;
+    private InsetAutoApplicator    mInsetApplicator;
 
     // Status dot colors
     // Category filter button tints
@@ -197,11 +201,7 @@ public class MainActivity extends AppCompatActivity
     // Grace period check for state poll
     private long         mLastLaunchTime = 0;
 
-    // Shared handler for state-poll runnables (was also used by the screenshot
-    // mirror fallback removed in 1.2.29 — kept for startStatePoll/stopStatePoll).
     private final Handler  mScreenshotHandler  = new Handler(Looper.getMainLooper());
-    // Guard for autoApplyInsetsIfNeeded: only one resize thread at a time.
-    private volatile Thread mAutoResizeThread;
 
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private IBinder mDaemonBinder = null;
@@ -490,31 +490,14 @@ public class MainActivity extends AppCompatActivity
 
     // ─── v1.4.0 Voice command receiver ─────────────────────────────────────────
 
-    private final BroadcastReceiver mVoiceCommandReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (isFinishing() || isDestroyed() || intent == null) return;
-            String cmd = intent.getStringExtra(com.byd.dashcast.voice.VoiceCommandRouter.EXTRA_CMD);
-            if (cmd == null) return;
-            if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_CLUSTER_ON.equals(cmd)) {
-                activateCluster();
-            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_CLUSTER_OFF.equals(cmd)) {
-                restoreBydDashboard();
-            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_OPEN_DIAG.equals(cmd)) {
-                startActivity(new Intent(MainActivity.this,
-                        com.byd.dashcast.DiagActivity.class));
-            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_OPEN_LOGS.equals(cmd)) {
-                startActivity(new Intent(MainActivity.this,
-                        com.byd.dashcast.LogActivity.class));
-            } else if (com.byd.dashcast.voice.VoiceCommandRouter.CMD_LAUNCH_ON_CLUSTER.equals(cmd)) {
-                String pkg = intent.getStringExtra(
-                        com.byd.dashcast.voice.VoiceCommandRouter.EXTRA_PKG);
-                if (pkg != null) quickSwitchToApp(pkg);
-            } else {
-                AppLogger.d(TAG, "Voice: unhandled cmd=" + cmd);
-            }
-        }
-    };
+    private final VoiceCommandReceiver mVoiceCommandReceiver = new VoiceCommandReceiver(
+            new VoiceCommandReceiver.Host() {
+                @Override public boolean isActivityAlive() { return !isFinishing() && !isDestroyed(); }
+                @Override public void activateCluster()     { MainActivity.this.activateCluster(); }
+                @Override public void restoreBydDashboard() { MainActivity.this.restoreBydDashboard(); }
+                @Override public void startActivity(Intent i) { MainActivity.this.startActivity(i); }
+                @Override public void quickSwitchToApp(String pkg) { MainActivity.this.quickSwitchToApp(pkg); }
+            });
 
     @Override
     protected void onResume() {
@@ -616,7 +599,7 @@ public class MainActivity extends AppCompatActivity
                     updateDashboardStatus(mCurrentDashboardApp);
                     updateControlLabel();
                     startClusterMirror();
-                    autoApplyInsetsIfNeeded(pkgName);
+                    mInsetApplicator.apply(pkgName);
                 }
             }
         });
@@ -763,7 +746,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 if (isFinishing() || isDestroyed()) return;
-                cancelActivateTimeout();
+                mTimeoutManager.cancel();
                 final boolean wasManual = mWasManualActivation;
                 mWasManualActivation = false;
                 updateDashboardStatus(null);
@@ -905,7 +888,7 @@ public class MainActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                cancelActivateTimeout();
+                mTimeoutManager.cancel();
                 mWasManualActivation = false;
                 mCurrentDashboardApp = null;
                 mCurrentDashboardPkg = null;
@@ -1084,7 +1067,7 @@ public class MainActivity extends AppCompatActivity
                             }
                         }, 2500L);
                     }
-                    autoApplyInsetsIfNeeded(pkgName);
+                    mInsetApplicator.apply(pkgName);
                 } else {
                     Toast.makeText(getApplicationContext(),
                             getString(R.string.toast_app_incompatible, appName),
@@ -1329,75 +1312,6 @@ public class MainActivity extends AppCompatActivity
 
 
     /**
-     * If per-app insets have been saved for {@code pkg}, automatically applies them
-     * (wm overscan + resizeActiveTask) 500 ms after a successful launch so the user
-     * doesn't have to press Apply every time.
-     */
-    private void autoApplyInsetsIfNeeded(final String pkg) {
-        if (pkg == null) return;
-        final SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        final int defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        final int defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        final int savedW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
-        final int savedH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
-        // Only apply if there are per-app custom insets (different from global defaults)
-        if (savedW == defH && savedH == defV) return;
-        AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " w=" + savedW + " h=" + savedH);
-        // Small delay: give the app time to render on the cluster before resizing
-        mScreenshotHandler.postDelayed(new Runnable() {
-            @Override public void run() {
-                if (!pkg.equals(mCurrentDashboardPkg)) return; // app changed in the meantime
-                if (mServiceBound && mClusterService != null) {
-                    final ClusterService svc = mClusterService;
-                    // DL5 fix: resolve cluster display id dynamically (was hardcoded -d 1).
-                    final int clusterId = svc.getDisplayId();
-                    if (clusterId > 0) {
-                        // v1.2.13 — wm overscan removed in API 30+ (DL5 = API 32). Skip on DL5.
-                        if (AdbLocalClient.isDiLink5Safe(MainActivity.this)) {
-                            AppLogger.d(TAG, "autoApplyInsets DL5: skipping wm overscan (cmd removed in API 30+) — resizeTask handles it");
-                        } else {
-                            ShellGateway.execShell(MainActivity.this,
-                                    "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH
-                                            + " -d " + clusterId);
-                        }
-                    } else {
-                        AppLogger.w(TAG, "autoApplyInsets: cluster display not connected — wm overscan skipped");
-                    }
-                    Thread prev = mAutoResizeThread;
-                    if (prev != null && prev.isAlive()) {
-                        AppLogger.d(TAG, "autoApplyInsets: resize thread still running, skipped for " + pkg);
-                    } else {
-                        Thread t = new Thread(new Runnable() {
-                            @Override public void run() {
-                                // LOT 4 — Waze taskId race fix: dumpsys activity recents
-                                // does not always list a freshly-launched task within the
-                                // initial 500 ms window (observed on field log
-                                // BYD_RE_Sniffer_20260523_204155.txt: Waze launched at
-                                // 20:42:25.669 but absent from recents at 20:42:26.696,
-                                // 1027 ms later → resizeActiveTask aborted with
-                                // taskId<=0). Retry up to 3 times with 500 ms backoff.
-                                int taskId = -1;
-                                for (int attempt = 1; attempt <= 3; attempt++) {
-                                    taskId = svc.findRunningTaskId(pkg);
-                                    if (taskId > 0) break;
-                                    if (!pkg.equals(mCurrentDashboardPkg)) return; // user switched app
-                                    AppLogger.d(TAG, "autoApplyInsets: taskId<=0 for " + pkg
-                                            + " (attempt " + attempt + "/3) — retrying in 500 ms");
-                                    try { Thread.sleep(500); }
-                                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
-                                }
-                                svc.resizeActiveTask(taskId, pkg);
-                            }
-                        }, "auto-resize-thread");
-                        mAutoResizeThread = t;
-                        t.start();
-                    }
-                }
-            }
-        }, 500);
-    }
-
-    /**
      * Hides the mirror and restores the app list.
      * Called from showAppList().
      */
@@ -1452,7 +1366,7 @@ public class MainActivity extends AppCompatActivity
     private void activateCluster() {
         if (mNavCoordinator != null) mNavCoordinator.setStatusActivating();
         mWasManualActivation = true;
-        startActivateTimeout();
+        mTimeoutManager.start();
         AppLogger.log(TAG, "activateCluster() — serviceBound=" + mServiceBound
                 + " bindRequested=" + mBindRequested
                 + " displayId=" + (mClusterService != null ? mClusterService.getDisplayId() : "N/A"));
@@ -1615,32 +1529,6 @@ public class MainActivity extends AppCompatActivity
         mInsetOverlay.setInsets(
                 mClusterControlCoordinator != null ? mClusterControlCoordinator.getInsetH() : 0,
                 mClusterControlCoordinator != null ? mClusterControlCoordinator.getInsetV() : 0);
-    }
-
-    // ── Activate timeout ──────────────────────────────────────────────────────
-
-    /** Posts a 30-second timeout that re-enables the Activate button if the cluster never connects. */
-    private void startActivateTimeout() {
-        cancelActivateTimeout();
-        mActivateTimeoutRunnable = new Runnable() {
-            @Override public void run() {
-                mActivateTimeoutRunnable = null;
-                mWasManualActivation = false;
-                if (mNavCoordinator != null) mNavCoordinator.setStatusDisconnected();
-                Toast.makeText(getApplicationContext(),
-                        getString(R.string.toast_activate_timeout), Toast.LENGTH_LONG).show();
-                AppLogger.w(TAG, "Activate cluster timeout (30s)");
-            }
-        };
-        mScreenshotHandler.postDelayed(mActivateTimeoutRunnable, ACTIVATE_TIMEOUT_MS);
-    }
-
-    /** Cancels the pending activate timeout if any. */
-    private void cancelActivateTimeout() {
-        if (mActivateTimeoutRunnable != null) {
-            mScreenshotHandler.removeCallbacks(mActivateTimeoutRunnable);
-            mActivateTimeoutRunnable = null;
-        }
     }
 
     // ── Relaunch current cluster app ─────────────────────────────────────────
@@ -1867,6 +1755,8 @@ public class MainActivity extends AppCompatActivity
                 this);
 
         mStatePollCoordinator = new DisplayStatePollCoordinator(this);
+        mTimeoutManager       = new ActivateTimeoutManager(this);
+        mInsetApplicator      = new InsetAutoApplicator(this);
     }
 
     // ── AppListCoordinator.Host ───────────────────────────────────────────────
@@ -2018,6 +1908,20 @@ public class MainActivity extends AppCompatActivity
         if (mAppListCoordinator != null) mAppListCoordinator.setMainPackage(null);
     }
     @Override public void runOnMainThread(Runnable r) { runOnUiThread(r); }
+
+    // ── ActivateTimeoutManager.Host ───────────────────────────────────────────
+
+    @Override public void onActivateTimeout() {
+        mWasManualActivation = false;
+        if (mNavCoordinator != null) mNavCoordinator.setStatusDisconnected();
+        Toast.makeText(getApplicationContext(),
+                getString(R.string.toast_activate_timeout), Toast.LENGTH_LONG).show();
+    }
+
+    // ── InsetAutoApplicator.Host ──────────────────────────────────────────────
+    // getContext() and getClusterServiceIfBound() already satisfied above.
+
+    @Override public String getCurrentPkg() { return mCurrentDashboardPkg; }
 
 }
 
