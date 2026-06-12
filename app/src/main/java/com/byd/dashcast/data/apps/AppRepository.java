@@ -236,8 +236,11 @@ public final class AppRepository {
                         for (android.content.pm.ShortcutInfo s : shortcuts) {
                             android.graphics.drawable.Drawable sIcon =
                                     launcherApps.getShortcutIconDrawable(s, densityDpi);
+                            CharSequence shortLabel = s.getShortLabel();
                             info.shortcuts.add(new AppShortcut(
-                                    s.getId(), s.getShortLabel().toString(), sIcon));
+                                    s.getId(),
+                                    shortLabel != null ? shortLabel.toString() : s.getId(),
+                                    sIcon));
                         }
                     }
                 } catch (Exception ignored) { }
