@@ -605,4 +605,7 @@
     <string name="layout_preset_active_badge">AKTYWNY</string>
     <string name="layout_preset_deactivate">Dezaktywuj</string>
     <string name="fission_zone_count">%1$d stref(y)</string>
+    <string name="main_layout_section">Layout klastra</string>
+    <string name="main_layout_free_sub">Brak layoutu</string>
+    <string name="main_layout_manage">Zarządzaj</string>
 </resources>

@@ -596,4 +596,7 @@
     <string name="layout_preset_active_badge">نشط</string>
     <string name="layout_preset_deactivate">إلغاء التفعيل</string>
     <string name="fission_zone_count">%1$d منطقة</string>
+    <string name="main_layout_section">تخطيط المجموعة</string>
+    <string name="main_layout_free_sub">بدون تخطيط</string>
+    <string name="main_layout_manage">إدارة</string>
 </resources>

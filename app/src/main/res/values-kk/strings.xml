@@ -596,4 +596,7 @@
     <string name="layout_preset_active_badge">БЕЛСЕНДІ</string>
     <string name="layout_preset_deactivate">Өшіру</string>
     <string name="fission_zone_count">%1$d аймақ</string>
+    <string name="main_layout_section">Кластер орналасуы</string>
+    <string name="main_layout_free_sub">Орналасу жоқ</string>
+    <string name="main_layout_manage">Басқару</string>
 </resources>

@@ -608,4 +608,7 @@
     <string name="layout_preset_active_badge">ACTIVE</string>
     <string name="layout_preset_deactivate">Deactivate</string>
     <string name="fission_zone_count">%1$d zone(s)</string>
+    <string name="main_layout_section">Cluster layout</string>
+    <string name="main_layout_free_sub">No layout</string>
+    <string name="main_layout_manage">Manage</string>
 </resources>

@@ -597,4 +597,7 @@
     <string name="layout_preset_active_badge">FAOL</string>
     <string name="layout_preset_deactivate">O\'chirish</string>
     <string name="fission_zone_count">%1$d hudud</string>
+    <string name="main_layout_section">Klaster tartibi</string>
+    <string name="main_layout_free_sub">Tartib yo\'q</string>
+    <string name="main_layout_manage">Boshqarish</string>
 </resources>

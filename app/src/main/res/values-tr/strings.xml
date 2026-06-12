@@ -596,4 +596,7 @@
     <string name="layout_preset_active_badge">ETKİN</string>
     <string name="layout_preset_deactivate">Devre dışı bırak</string>
     <string name="fission_zone_count">%1$d bölge</string>
+    <string name="main_layout_section">Küme düzeni</string>
+    <string name="main_layout_free_sub">Düzen yok</string>
+    <string name="main_layout_manage">Yönet</string>
 </resources>
