@@ -52,7 +52,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_apps"
                 android:contentDescription="@string/main_nav_apps"/>
             <TextView
@@ -80,7 +80,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_tune"
                 android:contentDescription="@string/main_nav_settings"/>
             <TextView
@@ -108,7 +108,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_stethoscope"
                 android:contentDescription="@string/main_nav_diag"/>
             <TextView
@@ -136,7 +136,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_info"
                 android:contentDescription="@string/main_nav_sysinfo"/>
             <TextView
@@ -164,7 +164,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_notes"
                 android:contentDescription="@string/main_nav_log"/>
             <TextView
@@ -199,7 +199,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                 android:src="@drawable/ic_wifi_tethering"
                 android:contentDescription="@string/main_nav_hotspot"/>
             <TextView
@@ -224,7 +224,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_secondary_container"
+                android:tint="@color/md_on_secondary_container" tools:ignore="UseAppTint"
                 android:background="@drawable/bg_nav_pill_active"
                 android:src="@drawable/ic_dashboard"
                 android:contentDescription="@string/main_nav_layouts"/>
@@ -338,7 +338,7 @@
                     android:layout_gravity="center"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_arrow_back"
-                    android:tint="@color/md_on_surface_variant"
+                    android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
                     android:contentDescription="@null"/>
 
             </FrameLayout>
@@ -366,7 +366,7 @@
                         android:layout_marginEnd="8dp"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_dashboard"
-                        android:tint="@color/md_primary"
+                        android:tint="@color/md_primary" tools:ignore="UseAppTint"
                         android:contentDescription="@null"/>
 
                     <TextView

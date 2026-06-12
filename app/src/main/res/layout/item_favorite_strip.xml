@@ -2,6 +2,7 @@
 <!-- Favorite tile for the horizontal strip on Main (v0.9.74).
      Inline ImageView attrs (BYD device quirk — see /memories/repo/byd-project.md). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="80dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -29,7 +30,7 @@
             android:layout_height="14dp"
             android:layout_gravity="top|end"
             android:src="@drawable/ic_favorite"
-            android:tint="@color/md_tertiary"
+            app:tint="@color/md_tertiary"
             android:contentDescription="@null"/>
     </FrameLayout>
 
