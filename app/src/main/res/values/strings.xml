@@ -592,7 +592,6 @@
     <string name="fission_editor_save">Enregistrer</string>
     <string name="fission_editor_edit">Modifier</string>
     <string name="fission_editor_delete">Supprimer</string>
-    <string name="fission_open">Fission</string>
 
     <!-- Fission layout selector + slot management (v1.4.17-beta+) -->
     <string name="fission_layout_mode_free">Mode libre</string>

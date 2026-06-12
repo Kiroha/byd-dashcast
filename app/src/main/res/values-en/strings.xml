@@ -570,7 +570,6 @@
     <string name="fission_editor_save">Save</string>
     <string name="fission_editor_edit">Edit</string>
     <string name="fission_editor_delete">Delete</string>
-    <string name="fission_open">Fission</string>
     <string name="fission_layout_mode_free">Free mode</string>
     <string name="fission_layout_active_fmt">Layout: %1$s</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>

@@ -553,7 +553,6 @@
     <string name="fission_editor_save">Зберегти</string>
     <string name="fission_editor_edit">Редагувати</string>
     <string name="fission_editor_delete">Видалити</string>
-    <string name="fission_open">Fission</string>
     <string name="main_nav_layouts">Layouts</string>
     <string name="layout_manager_title">Керування макетами</string>
     <string name="layout_manager_new">Новий макет</string>

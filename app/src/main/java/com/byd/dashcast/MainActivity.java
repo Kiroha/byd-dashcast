@@ -1678,7 +1678,6 @@ public class MainActivity extends AppCompatActivity
         mUsageTracker = new UsageTracker(this);
 
         mFissionCoordinator = new FissionCoordinator(
-                findViewById(R.id.btn_fission_open),
                 findViewById(R.id.ll_fission_layout_row),
                 (TextView) findViewById(R.id.tv_main_fission_layout),
                 findViewById(R.id.btn_main_switch_layout),
