@@ -190,7 +190,7 @@ public final class ClusterControlCoordinator {
             } else {
                 AppLogger.w(TAG, "applyResize: task not found for " + pkg);
             }
-        }).start();
+        }, "resize-apply").start();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

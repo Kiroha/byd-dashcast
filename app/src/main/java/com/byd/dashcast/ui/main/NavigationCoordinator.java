@@ -77,26 +77,34 @@ public final class NavigationCoordinator {
 
     public void setStatusPending() {
         setDotColor(DOT_COLOR_PENDING);
-        if (mTvDashboardStatus != null)
+        if (mTvDashboardStatus != null) {
+            mTvDashboardStatus.setTextColor(android.graphics.Color.WHITE);
             mTvDashboardStatus.setText(R.string.status_starting_cluster);
+        }
     }
 
     public void setStatusActivating() {
         setDotColor(DOT_COLOR_PENDING);
-        if (mTvDashboardStatus != null)
+        if (mTvDashboardStatus != null) {
+            mTvDashboardStatus.setTextColor(android.graphics.Color.WHITE);
             mTvDashboardStatus.setText(R.string.status_activating_cluster);
+        }
     }
 
     public void setStatusRestoring() {
         setDotColor(DOT_COLOR_PENDING);
-        if (mTvDashboardStatus != null)
+        if (mTvDashboardStatus != null) {
+            mTvDashboardStatus.setTextColor(android.graphics.Color.WHITE);
             mTvDashboardStatus.setText(R.string.status_restoring_cluster);
+        }
     }
 
     public void setStatusRestoringOrigin() {
         setDotColor(DOT_COLOR_PENDING);
-        if (mTvDashboardStatus != null)
+        if (mTvDashboardStatus != null) {
+            mTvDashboardStatus.setTextColor(android.graphics.Color.WHITE);
             mTvDashboardStatus.setText(R.string.status_restoring_origin);
+        }
     }
 
     public void setStatusDisconnected() {

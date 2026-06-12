@@ -101,9 +101,11 @@ public final class OverflowMenuHelper {
                         host.startActivity(welcome);
                         return true;
                     case 6:
-                        UpdateChecker.checkUpdate(ctx,
-                                OtaProgressUi.makeListener(
-                                        (android.app.Activity) ctx, true));
+                        if (ctx instanceof android.app.Activity) {
+                            UpdateChecker.checkUpdate(ctx,
+                                    OtaProgressUi.makeListener(
+                                            (android.app.Activity) ctx, true));
+                        }
                         return true;
                     case 9:
                         host.showUsageStats();

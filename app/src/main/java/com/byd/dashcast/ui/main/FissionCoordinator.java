@@ -100,7 +100,7 @@ public final class FissionCoordinator {
                     }
                     refreshFissionLayoutLabel();
                 })
-                .setNegativeButton("Annuler", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 }
