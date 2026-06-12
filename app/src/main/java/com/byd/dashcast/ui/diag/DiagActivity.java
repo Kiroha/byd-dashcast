@@ -1,4 +1,5 @@
 package com.byd.dashcast.ui.diag;
+import java.util.Locale;
 import com.byd.dashcast.MainActivity;
 import com.byd.dashcast.BuildConfig;
 
@@ -1063,7 +1064,7 @@ public class DiagActivity extends AppCompatActivity {
                 R.string.diag_dl2_header_subtitle_fmt, product, brand, android.os.Build.VERSION.SDK_INT));
 
         boolean dl2Sig = "alps".equalsIgnoreCase(brand)
-                && product.toLowerCase().contains("k65v1");
+                && product.toLowerCase(Locale.ROOT).contains("k65v1");
         tvDl2SignaturePill.setText(dl2Sig
                 ? R.string.diag_dl2_pill_detected
                 : R.string.diag_dl2_pill_other);
@@ -2019,7 +2020,7 @@ public class DiagActivity extends AppCompatActivity {
         for (Display d : displays) {
             String name = d.getName();
             if (name == null) continue;
-            String lc = name.toLowerCase();
+            String lc = name.toLowerCase(Locale.ROOT);
             if (lc.startsWith("fission_") || lc.contains("fission") || lc.contains("cluster")) {
                 return d.getDisplayId();
             }
@@ -2629,7 +2630,7 @@ public class DiagActivity extends AppCompatActivity {
             List<android.content.pm.PackageInfo> all = pm.getInstalledPackages(0);
             for (android.content.pm.PackageInfo pi : all) {
                 if (pi == null || pi.packageName == null) continue;
-                String low = pi.packageName.toLowerCase();
+                String low = pi.packageName.toLowerCase(Locale.ROOT);
                 boolean match = false;
                 for (String n : EXPORT_APK_NEEDLES) {
                     if (low.contains(n)) { match = true; break; }

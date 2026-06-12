@@ -1,4 +1,5 @@
 package com.byd.dashcast.dilink5;
+import java.util.Locale;
 
 import android.content.Context;
 import android.hardware.display.DisplayManager;
@@ -306,7 +307,7 @@ public final class Dl5ClusterReconRunner {
         int cluster = -1;
         for (Display d : all) {
             if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
-            String name = d.getName() == null ? "" : d.getName().toLowerCase();
+            String name = d.getName() == null ? "" : d.getName().toLowerCase(Locale.ROOT);
             if (name.contains("fission") || name.contains("xdja")
                     || name.contains("cluster") || name.contains("virtual")) {
                 cluster = d.getDisplayId();
@@ -789,12 +790,12 @@ public final class Dl5ClusterReconRunner {
         String cmd = "am compat enable " + FORCE_RESIZE_APP_ID + " " + st.targetPkg + " 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
-        if (out != null && out.toLowerCase().contains("enabled")) {
+        if (out != null && out.toLowerCase(Locale.ROOT).contains("enabled")) {
             r.status = DiLink5TestRunner.Status.PASS;
             r.message = "override enabled";
             st.overrideEnabled = true;
-        } else if (out != null && !out.toLowerCase().contains("error")
-                && !out.toLowerCase().contains("exception")) {
+        } else if (out != null && !out.toLowerCase(Locale.ROOT).contains("error")
+                && !out.toLowerCase(Locale.ROOT).contains("exception")) {
             r.status = DiLink5TestRunner.Status.PASS;
             r.message = "no error";
             st.overrideEnabled = true;
@@ -846,7 +847,7 @@ public final class Dl5ClusterReconRunner {
         String launchOut = shellSync(ctx, launchCmd);
         dt.append("$ ").append(launchCmd).append("\n").append(launchOut == null ? "<no output>" : launchOut);
         r.detail = dt.toString();
-        String lo = launchOut == null ? "" : launchOut.toLowerCase();
+        String lo = launchOut == null ? "" : launchOut.toLowerCase(Locale.ROOT);
         if (lo.contains("unable to resolve")) {
             r.status = DiLink5TestRunner.Status.FAIL;
             r.message = "unable to resolve intent on display " + displayId;
@@ -1192,7 +1193,7 @@ public final class Dl5ClusterReconRunner {
         // can't perfectly disambiguate inside a single roundtrip, but we
         // can report which verbs were even accepted (exit=0 without
         // "Unknown command").
-        String lo = out.toLowerCase();
+        String lo = out.toLowerCase(Locale.ROOT);
         StringBuilder accepted = new StringBuilder();
         if (out.contains("__exit_resizeable=0")    && !lo.contains("unknown command\nexit_resizeable")) accepted.append("resizeable, ");
         if (out.contains("__exit_am_stack_resize=0"))       accepted.append("am-stack-resize, ");
@@ -1266,7 +1267,7 @@ public final class Dl5ClusterReconRunner {
         String cmd = "am start --display 0 -n " + st.targetActivity + " 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
-        String lo = out == null ? "" : out.toLowerCase();
+        String lo = out == null ? "" : out.toLowerCase(Locale.ROOT);
         if (lo.contains("unable to resolve")) {
             r.status = DiLink5TestRunner.Status.WARN;
             r.message = "unable to resolve intent";

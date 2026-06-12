@@ -1,4 +1,5 @@
 package com.byd.dashcast.infrastructure.task;
+import java.util.Locale;
 
 import android.content.Context;
 import android.graphics.Rect;
@@ -83,9 +84,9 @@ public final class ShellTaskResizer implements TaskResizer {
             @Override public void onSuccess(String out) {
                 String trimmed = (out == null ? "" : out.trim());
                 boolean looksOk = trimmed.contains("exit=0")
-                        && !trimmed.toLowerCase().contains("unknown command")
-                        && !trimmed.toLowerCase().contains("error")
-                        && !trimmed.toLowerCase().contains("exception");
+                        && !trimmed.toLowerCase(Locale.ROOT).contains("unknown command")
+                        && !trimmed.toLowerCase(Locale.ROOT).contains("error")
+                        && !trimmed.toLowerCase(Locale.ROOT).contains("exception");
                 AppLogger.i(TAG, "am task resize → \"" + trimmed + "\" (looksOk=" + looksOk + ")");
                 if (looksOk) return;
                 AppLogger.i(TAG, "am task resize looksOk=false — falling back to cmd activity");

@@ -429,7 +429,7 @@ public class SysInfoActivity extends AppCompatActivity {
                 sb.append("(none)\n");
             } else {
                 for (java.util.Map.Entry<String, Integer> e : dpiMap.entrySet()) {
-                    sb.append(String.format("%-50s = %d dpi\n", e.getKey(), e.getValue()));
+                    sb.append(String.format(Locale.ROOT, "%-50s = %d dpi\n", e.getKey(), e.getValue()));
                 }
             }
             java.util.Map<Integer, Integer> cache =
@@ -437,7 +437,7 @@ public class SysInfoActivity extends AppCompatActivity {
             if (!cache.isEmpty()) {
                 sb.append("\nApplied right now:\n");
                 for (java.util.Map.Entry<Integer, Integer> e : cache.entrySet()) {
-                    sb.append(String.format("  display %d → %d dpi\n",
+                    sb.append(String.format(Locale.ROOT, "  display %d → %d dpi\n",
                             e.getKey(), e.getValue()));
                 }
             }
