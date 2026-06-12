@@ -1,12 +1,18 @@
 package com.byd.dashcast.ui.main;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.HotspotActivity;
 import com.byd.dashcast.R;
+import com.byd.dashcast.SettingsActivity;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * Owns the navigation rail status dot/text and wires the long-press overflow
@@ -24,20 +30,23 @@ public final class NavigationCoordinator {
     public interface Host {
         Context getContext();
         void onShowOverflowMenu(View anchor);
+        void startActivity(Intent intent);
     }
 
     private final View                                              mStatusDot;
     private final android.graphics.drawable.GradientDrawable       mStatusDotDrawable;
     private final TextView                                          mTvDashboardStatus;
     private final ImageView                                         mIvNavLogo;
+    private final View                                              mNavHotspot;
     private final Host                                              mHost;
 
     public NavigationCoordinator(View statusDot, TextView tvDashboardStatus,
-                                  ImageView ivNavLogo, Host host) {
-        mStatusDot      = statusDot;
+                                  ImageView ivNavLogo, View navHotspot, Host host) {
+        mStatusDot         = statusDot;
         mTvDashboardStatus = tvDashboardStatus;
-        mIvNavLogo      = ivNavLogo;
-        mHost           = host;
+        mIvNavLogo         = ivNavLogo;
+        mNavHotspot        = navHotspot;
+        mHost              = host;
 
         android.graphics.drawable.GradientDrawable drawable =
                 new android.graphics.drawable.GradientDrawable();
@@ -45,6 +54,7 @@ public final class NavigationCoordinator {
         if (mStatusDot != null) mStatusDot.setBackground(drawable);
         mStatusDotDrawable = drawable;
         setupOverflowMenu();
+        refreshHotspot();
     }
 
     private void setupOverflowMenu() {
@@ -122,6 +132,25 @@ public final class NavigationCoordinator {
     private void setDotColor(int color) {
         if (mStatusDotDrawable != null) {
             mStatusDotDrawable.setColor(color);
+        }
+    }
+
+    // ── Hotspot nav entry (DL3 + opt-in pref only) ────────────────────────────
+
+    /** Shows or hides the hotspot nav entry based on platform and user preference. Safe to call repeatedly. */
+    public void refreshHotspot() {
+        if (mNavHotspot == null) return;
+        Context ctx = mHost.getContext();
+        boolean isDl3 = Platform.get().isDiLink3(ctx);
+        boolean useOwnSim = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, true);
+        if (isDl3 && useOwnSim) {
+            mNavHotspot.setVisibility(View.VISIBLE);
+            mNavHotspot.setOnClickListener(v ->
+                    mHost.startActivity(new Intent(ctx, HotspotActivity.class)));
+        } else {
+            mNavHotspot.setVisibility(View.GONE);
+            mNavHotspot.setOnClickListener(null);
         }
     }
 }

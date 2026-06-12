@@ -1,8 +1,10 @@
 package com.byd.dashcast;
 
 import com.byd.dashcast.proxy.ShellGateway;
+import com.byd.dashcast.BootDisplayCleanup;
 import com.byd.dashcast.ui.main.AppActionSheet;
 import com.byd.dashcast.ui.main.AppListCoordinator;
+import com.byd.dashcast.ui.main.DisplayStatePollCoordinator;
 import com.byd.dashcast.ui.main.OverflowMenuHelper;
 import com.byd.dashcast.ui.main.ClusterControlCoordinator;
 import com.byd.dashcast.ui.main.FissionCoordinator;
@@ -90,7 +92,8 @@ public class MainActivity extends AppCompatActivity
                    UsageTracker.Host,
                    FissionCoordinator.Host,
                    AppActionSheet.Host,
-                   OverflowMenuHelper.Host {
+                   OverflowMenuHelper.Host,
+                   DisplayStatePollCoordinator.Host {
 
     private static final String TAG = "BYDApp";
     // Orphan sniffer kill must only run once per process lifetime (first cold start).
@@ -192,6 +195,7 @@ public class MainActivity extends AppCompatActivity
     private SplitController              mSplitController;
     private PermissionBannerCoordinator  mPermissionBannerCoordinator;
     private FissionCoordinator           mFissionCoordinator;
+    private DisplayStatePollCoordinator  mStatePollCoordinator;
 
     // Grace period check for state poll
     private long         mLastLaunchTime = 0;
@@ -249,7 +253,7 @@ public class MainActivity extends AppCompatActivity
             // is purely a safety-net (BootReceiver already runs it asynchronously at boot).
             final Context appCtx = getApplicationContext();
             Thread cleanupThread = new Thread(new Runnable() {
-                @Override public void run() { cleanupDisplayAffinityAtBoot(appCtx); }
+                @Override public void run() { BootDisplayCleanup.cleanup(appCtx); }
             }, "boot-cleanup-fallback");
             cleanupThread.setDaemon(true);
             cleanupThread.start();
@@ -393,8 +397,7 @@ public class MainActivity extends AppCompatActivity
                 startActivity(new Intent(MainActivity.this, LogActivity.class));
             }
         });
-        // v1.2.36 — Hotspot (DL3 only) ; v1.2.42 — conditionné sur pref "use_own_sim".
-        refreshNavHotspot();
+        // v1.2.36 — Hotspot: wired and refreshed by NavigationCoordinator (see setupCoordinators).
         // v1.4.9-beta — Layouts
         NavRailLayouts.apply(this, R.id.nav_layouts, false);
         View navHelp = findViewById(R.id.nav_help);
@@ -556,42 +559,12 @@ public class MainActivity extends AppCompatActivity
         super.onResume();
         // Hotspot navrail entry depends on the "use_own_sim" pref which can
         // change in SettingsActivity ; re-evaluate on every resume.
-        refreshNavHotspot();
+        if (mNavCoordinator != null) mNavCoordinator.refreshHotspot();
         // v1.2.45 — Compact apps panel pref is also live-applied so the user
         // sees the new column layout as soon as they leave Settings.
         applyCompactAppsPanelMode();
         // Fission button visibility follows its toggle in SettingsActivity.
         if (mFissionCoordinator != null) mFissionCoordinator.refresh();
-    }
-
-    /**
-     * Show + wire the navrail Hotspot button only when:
-     *  - the device is a DiLink 3 head-unit (TetherFi is our only path there)
-     *  - AND the user has opted in via the "use_own_sim" Setting
-     * Otherwise hide it.
-     */
-    private void refreshNavHotspot() {
-        View navHotspot = findViewById(R.id.nav_hotspot);
-        if (navHotspot == null) return;
-        boolean isDl3 = com.byd.dashcast.platform.Platform.get().isDiLink3(this);
-        // v1.2.38 fix: default is now TRUE so the navrail entry appears on DL3
-        // out of the box. Previous default (false) made the icon invisible until
-        // the user discovered the "I use my own SIM" toggle in Settings, which
-        // was reported as a missing-icon bug. Users without a personal SIM can
-        // still hide it via the same Settings toggle.
-        boolean useOwnSim = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE)
-                .getBoolean(SettingsActivity.PREF_USE_OWN_SIM, true);
-        if (isDl3 && useOwnSim) {
-            navHotspot.setVisibility(View.VISIBLE);
-            navHotspot.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    startActivity(new Intent(MainActivity.this, HotspotActivity.class));
-                }
-            });
-        } else {
-            navHotspot.setVisibility(View.GONE);
-            navHotspot.setOnClickListener(null);
-        }
     }
 
     /**
@@ -673,7 +646,7 @@ public class MainActivity extends AppCompatActivity
                         if (label != null) name = label.toString();
                     } catch (Exception ignored) {}
                     mCurrentDashboardApp = name;
-                    addToRecentApps(pkgName, name);
+                    ClusterPrefs.addRecentApp(MainActivity.this, pkgName, name);
                     mUsageTracker.trackStart();
                     ClusterPrefs.setClusterPkg(MainActivity.this, pkgName);
                     ClusterPrefs.setClusterName(MainActivity.this, name);
@@ -756,7 +729,7 @@ public class MainActivity extends AppCompatActivity
             // getDisplayId()<=0, and the fast path replays the tapped app
             // through mPendingAppAfterActivation once the service is up.
         }
-        startStatePoll();
+        if (mStatePollCoordinator != null) mStatePollCoordinator.start();
         // Register voice-command receiver here (onStart) so it is only active while
         // the Activity is visible. Moved from onCreate/onDestroy to avoid firing
         // cluster state mutations while the Activity is in the background.
@@ -769,7 +742,7 @@ public class MainActivity extends AppCompatActivity
     protected void onStop() {
         super.onStop();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStop");
-        stopStatePoll();
+        if (mStatePollCoordinator != null) mStatePollCoordinator.stop();
         // Keep the daemon mirror alive when a nav app is actively streaming on the
         // cluster display: MainActivity goes to background when the nav app takes
         // the foreground on display 0, but the mirror must survive (field bug:
@@ -1126,7 +1099,7 @@ public class MainActivity extends AppCompatActivity
                     mCurrentDashboardPkg = pkgName;
                     mSessionClusterPackages.add(pkgName);
                     persistSessionClusterPackages();
-                    addToRecentApps(pkgName, appName);
+                    ClusterPrefs.addRecentApp(MainActivity.this, pkgName, appName);
                     mUsageTracker.trackStart();
                     ClusterPrefs.setClusterPkg(MainActivity.this, pkgName);
                     ClusterPrefs.setClusterName(MainActivity.this, appName);
@@ -1382,116 +1355,6 @@ public class MainActivity extends AppCompatActivity
     //
     // Started in onStart(), stopped in onStop().
     // -------------------------------------------------------------------------
-
-    private static final long STATE_POLL_INTERVAL_MS = 5_000;
-    private Runnable mStatePollRunnable;
-
-    private void startStatePoll() {
-        if (mStatePollRunnable != null) return;
-        mStatePollRunnable = new Runnable() {
-            @Override public void run() {
-                reconcileDisplayState();
-                reconcileMainDisplayState(); // v0.9.72 — also drop stale "on main" markers
-                mScreenshotHandler.postDelayed(this, STATE_POLL_INTERVAL_MS);
-            }
-        };
-        // First poll after 5 s — let state settle after onStart.
-        mScreenshotHandler.postDelayed(mStatePollRunnable, STATE_POLL_INTERVAL_MS);
-    }
-
-    private void stopStatePoll() {
-        if (mStatePollRunnable != null) {
-            mScreenshotHandler.removeCallbacks(mStatePollRunnable);
-            mStatePollRunnable = null;
-        }
-    }
-
-    /**
-     * Checks if the cluster app process is still alive using {@code pidof}
-     * via ADB shell.  The app process itself cannot read /proc for other UIDs
-     * (hidepid=2), but ADB shell (uid 2000) can.
-     *
-     * If the process is gone, clears cluster bookkeeping and stops the mirror.
-     */
-    private void reconcileDisplayState() {
-        final String clusterPkg = mCurrentDashboardPkg;
-        if (clusterPkg == null) return;
-
-        // Grace period of 8 seconds to allow the app process to launch and register in pidof
-        if (System.currentTimeMillis() - mLastLaunchTime < 8000) {
-            AppLogger.d(TAG, "state-poll: skipping pidof check during launch grace period for " + clusterPkg);
-            return;
-        }
-
-        ShellGateway.execShellWithResult(this, "pidof " + clusterPkg,
-                new AdbLocalClient.Callback() {
-                    @Override
-                    public void onSuccess(String output) {
-                        final boolean alive = output != null && !output.trim().isEmpty();
-                        if (alive) {
-                            AppLogger.d(TAG, "state-poll: " + clusterPkg
-                                    + " alive (pid " + output.trim() + ")");
-                            return;
-                        }
-                        // Process not found → app died externally
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                // Activity may have been destroyed while pidof was in flight.
-                                if (isFinishing() || isDestroyed()) return;
-                                // Re-check: still tracking the same package?
-                                if (!clusterPkg.equals(mCurrentDashboardPkg)) return;
-                                AppLogger.w(TAG, "state-poll: " + clusterPkg
-                                        + " process died → clearing cluster state");
-                                clearClusterState();
-                                stopClusterMirror();
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(String error) {
-                        AppLogger.w(TAG, "state-poll: pidof failed: " + error);
-                    }
-                });
-    }
-
-    /**
-     * v0.9.72 — sibling of {@link #reconcileDisplayState()} for the MAIN display marker.
-     * If the user kills the app sent to the main screen (via recents / system), the
-     * adapter still tags it as "on main" until the next reload. This pidof check
-     * clears the marker so the grid tile state stays in sync within ~5 s.
-     */
-    private void reconcileMainDisplayState() {
-        final String mainPkg = mMainDisplayPkg;
-        if (mainPkg == null) return;
-
-        ShellGateway.execShellWithResult(this, "pidof " + mainPkg,
-                new AdbLocalClient.Callback() {
-                    @Override
-                    public void onSuccess(String output) {
-                        final boolean alive = output != null && !output.trim().isEmpty();
-                        if (alive) return;
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                if (isFinishing() || isDestroyed()) return;
-                                if (!mainPkg.equals(mMainDisplayPkg)) return;
-                                AppLogger.w(TAG, "state-poll: main-display app " + mainPkg
-                                        + " process died → clearing main marker");
-                                mMainDisplayPkg = null;
-                                ClusterPrefs.setMainPkg(MainActivity.this, null);
-                                if (mAppListCoordinator != null) {
-                                    mAppListCoordinator.setMainPackage(null);
-                                }
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(String error) {
-                        AppLogger.w(TAG, "state-poll: main pidof failed: " + error);
-                    }
-                });
-    }
 
     /**
      * Clears all cluster-app bookkeeping and returns to the app list.
@@ -1844,65 +1707,6 @@ public class MainActivity extends AppCompatActivity
         ClusterPrefs.setSessionClusterPkgs(this, new java.util.HashSet<>(mSessionClusterPackages));
     }
 
-    /**
-     * Boot/onCreate safety net: moves all previously-tracked cluster apps to Display 0
-     * using IActivityTaskManager reflection (no ClusterService needed).
-     * Only runs if boot_auto_start_enabled is false.
-     */
-    static void cleanupDisplayAffinityAtBoot(Context context) {
-        java.util.Set<String> pkgs = ClusterPrefs.getSessionClusterPkgs(context);
-        if (pkgs == null || pkgs.isEmpty()) {
-            AppLogger.d("DisplayCleanup", "No session cluster packages to clean up");
-            return;
-        }
-        java.util.Set<String> remaining = new java.util.HashSet<>(pkgs);
-        AppLogger.i("DisplayCleanup", "Cleaning up " + pkgs.size() + " apps → Display 0: " + pkgs);
-        for (String pkg : pkgs) {
-            if (moveTaskToDisplayZero(pkg)) {
-                remaining.remove(pkg);
-            }
-        }
-        // Keep only failed packages for a later retry (next boot/app launch).
-        if (remaining.isEmpty()) {
-            ClusterPrefs.clearSessionClusterPkgs(context);
-        } else {
-            ClusterPrefs.setSessionClusterPkgs(context, remaining);
-            AppLogger.w("DisplayCleanup", "Cleanup partially failed, keeping pending set: " + remaining);
-        }
-    }
-
-    /** Moves a single package's task to Display 0 via IActivityTaskManager reflection. */
-    private static boolean moveTaskToDisplayZero(String packageName) {
-        try {
-            // Find the task ID
-            Class<?> atmClass = Class.forName("android.app.ActivityTaskManager");
-            Object iatm = atmClass.getMethod("getService").invoke(null);
-            // Use IActivityTaskManager.getTasks(100) — hidden but available with platform signing
-            @SuppressWarnings("unchecked")
-            java.util.List<?> tasks = (java.util.List<?>) iatm.getClass()
-                    .getMethod("getTasks", int.class).invoke(iatm, 100);
-            if (tasks == null) return false;
-            for (Object taskInfo : tasks) {
-                // RecentTaskInfo or RunningTaskInfo — both extend TaskInfo with baseActivity
-                android.content.ComponentName base = (android.content.ComponentName)
-                        taskInfo.getClass().getField("baseActivity").get(taskInfo);
-                if (base != null && packageName.equals(base.getPackageName())) {
-                    int taskId = taskInfo.getClass().getField("taskId").getInt(taskInfo);
-                    iatm.getClass().getMethod("moveTaskToDisplay", int.class, int.class)
-                            .invoke(iatm, taskId, 0);
-                    AppLogger.i("DisplayCleanup", "Moved " + packageName
-                            + " (taskId=" + taskId + ") → Display 0");
-                    return true;
-                }
-            }
-            AppLogger.d("DisplayCleanup", "No running task found for " + packageName + " — already gone, skipping");
-            return true; // not an error: task no longer exists, nothing to move
-        } catch (Exception e) {
-            AppLogger.w("DisplayCleanup", "Could not move " + packageName + " to Display 0: " + e.getMessage());
-            return false;
-        }
-    }
-
     private void updateDashboardStatus(String appName) {
         if (mNavCoordinator != null) {
             if (appName == null) mNavCoordinator.setStatusDashboardByd();
@@ -2139,38 +1943,15 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // ── Quick-switch history ────────────────────────────────────────────────
-
-    private static final String PREF_RECENT_APPS = SettingsActivity.PREF_RECENT_APPS;
-    private static final int MAX_RECENT_APPS = 3;
-
-    private void addToRecentApps(String pkgName, String appName) {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String raw = prefs.getString(PREF_RECENT_APPS, "");
-        // Format: "pkg|name;;pkg|name;;pkg|name"
-        java.util.LinkedList<String> entries = new java.util.LinkedList<>();
-        if (!raw.isEmpty()) {
-            for (String e : raw.split(";;")) entries.add(e);
-        }
-        String newEntry = pkgName + "|" + appName;
-        entries.remove(newEntry); // avoid duplicates
-        entries.addFirst(newEntry);
-        while (entries.size() > MAX_RECENT_APPS) entries.removeLast();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < entries.size(); i++) {
-            if (i > 0) sb.append(";;");
-            sb.append(entries.get(i));
-        }
-        prefs.edit().putString(PREF_RECENT_APPS, sb.toString()).apply();
-    }
-
     // ── Coordinator wiring ────────────────────────────────────────────────────
 
     private void setupCoordinators() {
         mNavCoordinator = new NavigationCoordinator(
                 findViewById(R.id.view_status_dot),
                 (TextView) findViewById(R.id.tv_dashboard_status),
-                ivNavLogo, this);
+                ivNavLogo,
+                findViewById(R.id.nav_hotspot),
+                this);
 
         mMirrorCoordinator = new MirrorCoordinator(
                 clusterMirror, frameMirror, (TextView) findViewById(R.id.tv_mirror_placeholder), this);
@@ -2238,6 +2019,8 @@ public class MainActivity extends AppCompatActivity
                 (TextView) findViewById(R.id.tv_main_fission_layout),
                 findViewById(R.id.btn_main_switch_layout),
                 this);
+
+        mStatePollCoordinator = new DisplayStatePollCoordinator(this);
     }
 
     // ── AppListCoordinator.Host ───────────────────────────────────────────────
@@ -2363,7 +2146,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public String getMainDisplayPkg() {
-        return mAppListCoordinator != null ? mAppListCoordinator.getMainPackage() : null;
+        return mMainDisplayPkg;
     }
 
     // ── OverflowMenuHelper.Host ───────────────────────────────────────────────
@@ -2376,6 +2159,19 @@ public class MainActivity extends AppCompatActivity
     }
     @Override public void onOriginCluster() { originCluster(); }
     @Override public void showUsageStats()  { if (mUsageTracker != null) mUsageTracker.showStatsDialog(); }
+
+    // ── DisplayStatePollCoordinator.Host ──────────────────────────────────────
+
+    @Override public String getClusterPkg()     { return mCurrentDashboardPkg; }
+    @Override public long   getLastLaunchTime() { return mLastLaunchTime; }
+    @Override public void   onClusterPkgDied()  { clearClusterState(); stopClusterMirror(); }
+    // getMainDisplayPkg() satisfied by AppActionSheet.Host impl above
+    @Override public void   onMainPkgDied() {
+        mMainDisplayPkg = null;
+        ClusterPrefs.setMainPkg(this, null);
+        if (mAppListCoordinator != null) mAppListCoordinator.setMainPackage(null);
+    }
+    @Override public void runOnMainThread(Runnable r) { runOnUiThread(r); }
 
 }
 
