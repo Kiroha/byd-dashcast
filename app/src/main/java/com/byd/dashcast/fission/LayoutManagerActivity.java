@@ -263,9 +263,16 @@ public class LayoutManagerActivity extends Activity {
                 showPackagePickerForZone(tvBound, pickedPkg));
 
         etName.selectAll();
+        // The form is taller than the dialog's max height on the 1920x720 head unit
+        // (5 fields + binding section), and the soft keyboard shrinks it further —
+        // without a ScrollView the "link an app" button is clipped out of reach.
+        android.widget.ScrollView scroller = new android.widget.ScrollView(this);
+        scroller.setFillViewport(true);
+        scroller.addView(form, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         new AlertDialog.Builder(this)
                 .setTitle("Nouvelle zone — " + w + "×" + h + " px")
-                .setView(form)
+                .setView(scroller)
                 .setPositiveButton("Ajouter", (d, which) -> {
                     String label = etName.getText().toString().trim();
                     if (label.isEmpty()) label = mEditing.nextSlotLabel();
