@@ -47,9 +47,11 @@ public class ClusterCanvasView extends View {
 
     public interface OnZoneDrawnListener     { void onZoneDrawn(int x, int y, int w, int h); }
     public interface OnZoneLongPressListener { void onZoneLongPress(int index); }
+    public interface OnZoneTapListener       { void onZoneTap(int index); }
 
     private OnZoneDrawnListener     mDrawnListener;
     private OnZoneLongPressListener mLongPressListener;
+    private OnZoneTapListener       mTapListener;
     private GestureDetector         mGesture;
     private float                   mScaleX, mScaleY;
 
@@ -91,6 +93,13 @@ public class ClusterCanvasView extends View {
                     int idx = hitTest(e.getX(), e.getY());
                     if (idx >= 0) mLongPressListener.onZoneLongPress(idx);
                 }
+                @Override
+                public boolean onSingleTapUp(MotionEvent e) {
+                    if (mTapListener == null || mSlots == null) return false;
+                    int idx = hitTest(e.getX(), e.getY());
+                    if (idx >= 0) { mTapListener.onZoneTap(idx); return true; }
+                    return false;
+                }
             });
 
         try {
@@ -112,6 +121,7 @@ public class ClusterCanvasView extends View {
     public void setSlots(List<LayoutPreset.SlotDef> slots) { mSlots = slots; invalidate(); }
     public void setOnZoneDrawnListener(OnZoneDrawnListener l)         { mDrawnListener = l; }
     public void setOnZoneLongPressListener(OnZoneLongPressListener l) { mLongPressListener = l; }
+    public void setOnZoneTapListener(OnZoneTapListener l)             { mTapListener = l; }
 
     @Override
     protected void onMeasure(int wSpec, int hSpec) {
