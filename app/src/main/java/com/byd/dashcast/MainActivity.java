@@ -270,6 +270,10 @@ public class MainActivity extends AppCompatActivity
         if (killOrphanSniffer) sOrphanSnifferKillDone = true;
         AppStartupTasks.run(getApplicationContext(), killOrphanSniffer);
 
+        // Auto favourite layout: activate cluster projection + favourite layout at app
+        // launch (one-shot per process; no-op unless enabled in Settings).
+        com.byd.dashcast.fission.FissionOrchestrator.maybeAutoStartOnAppLaunch(this);
+
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
                 new IntentFilter(com.byd.dashcast.proxy.daemon.MirrorDaemon.ACTION_DAEMON_READY));

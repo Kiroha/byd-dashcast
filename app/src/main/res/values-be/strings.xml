@@ -224,8 +224,6 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
     <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="beta_restart_title">Патрэбен перазапуск</string>
-    <string name="beta_restart_message">Гэтая опцыя пачне дзейнічаць пры наступным запуску DashCast. Тым часам вы можаце працягваць карыстацца дадаткам як звычайна.</string>
     <string name="diag_tab_cluster">Кластар</string>
     <string name="diag_tab_display">Дысплей</string>
     <string name="diag_tab_adb_local">Лакальны ADB</string>
@@ -257,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">Мэтавы дадатак (тэст D8 — кластар)</string>
     <string name="diag_dl5_d8_running_toast">Тэст D8 на %1$s — дадатак будзе перазапушчаны і вернуты на галоўны экран.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">Рэжым DiLink 5 (эксперыментальны)</string>
-    <string name="settings_dilink5_mode_support">Адаптуе DashCast да пратакола DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Патрэбен перазапуск.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Аўта-клавіятура кластара (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Паказвае моставаную клавіятуру пры дакрананні да тэкставага поля на кластары.</string>
@@ -544,7 +539,7 @@
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
     <string name="settings_adas_window_fix">ADAS Window Fix</string>
     <string name="settings_adas_window_fix_support">Адпраўляе sendInfo(30) перад праекцыяй — выпраўляе расцяжэнне ADAS на некаторых аўтамабілях. Адключыце, калі форма кластара змяняецца пры запуску.</string>
-    <string name="settings_fission_mode">Рэжым Fission (бэта)</string>
+    <string name="settings_fission_mode">Рэжым Layouts</string>
     <string name="settings_fission_mode_support">Мультыдадатак на кластары з уласнымі зонамі. Патрабуе проксі-дэман.</string>
     <string name="fission_title">Fission — Мультыдадатак</string>
     <string name="fission_status_idle">Націсніце +, каб праецыраваць прыкладанне</string>
@@ -593,7 +588,7 @@
     <string name="fission_slot_pkg_none">Няма — вольная зона</string>
     <string name="fission_slot_zone_bound_fmt">Прывязанае прыкладанне: %1$s</string>
     <string name="settings_fission_auto_layout">Аўтаматычны ўлюбёны макет</string>
-    <string name="settings_fission_auto_layout_support">Актывуе ўлюбёны макет пры адкрыцці Fission і аўтаматычна запускае прывязаныя прыкладанні</string>
+    <string name="settings_fission_auto_layout_support">Пры запуску DashCast: актывуе праекцыю кластара, улюбёны макет і запускае прывязаныя прыкладанні</string>
     <string name="settings_fission_precreate_slots">Папярэдне ствараць слоты пры запуску</string>
     <string name="settings_fission_precreate_slots_support">Рыхтуе Virtual Display улюбёнага макета пры адкрыцці Fission (без запуску прыкладанняў)</string>
     <string name="sysinfo_disp_hidden">Схаваны (PRIVATE)</string>
