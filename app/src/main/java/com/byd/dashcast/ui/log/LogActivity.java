@@ -56,8 +56,11 @@ public class LogActivity extends AppCompatActivity {
     private AppLogger.Level        mLevelFilter = null;   // null = all
     private boolean                mPaused      = false;
     private boolean                mRunning     = false;
-    private int                    mLastEntryCount = -1;
-    private String                 mLastFilterKey  = null;
+    // Change detection uses AppLogger's mutation stamp, NOT the entry count:
+    // once the circular buffer saturates, size() stays pinned at MAX_ENTRIES
+    // and a count-based check would freeze the viewer forever.
+    private long                   mLastChangeStamp = -1;
+    private String                 mLastFilterKey   = null;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mRefreshRunnable = new Runnable() {
@@ -201,20 +204,20 @@ public class LogActivity extends AppCompatActivity {
     private int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density); }
 
     private void forceRefresh() {
-        mLastEntryCount = -1;
-        mLastFilterKey  = null;
+        mLastChangeStamp = -1;
+        mLastFilterKey   = null;
         refreshLog();
     }
 
     private boolean refreshLog() {
-        int currentCount = AppLogger.getEntriesCount();
+        long currentStamp = AppLogger.getChangeStamp();
         String filterKey = mFilter.toLowerCase(Locale.ROOT)
                 + "|" + (mLevelFilter == null ? "*" : mLevelFilter.name());
-        if (currentCount == mLastEntryCount && filterKey.equals(mLastFilterKey)) return false;
+        if (currentStamp == mLastChangeStamp && filterKey.equals(mLastFilterKey)) return false;
 
         List<AppLogger.Entry> entries = AppLogger.getEntries();
-        mLastEntryCount = entries.size();
-        mLastFilterKey  = filterKey;
+        mLastChangeStamp = currentStamp;
+        mLastFilterKey   = filterKey;
 
         // 1.2.31 — counts per level (full buffer, ignoring text filter) read
         // from incremental counters maintained in AppLogger → no more O(N)
