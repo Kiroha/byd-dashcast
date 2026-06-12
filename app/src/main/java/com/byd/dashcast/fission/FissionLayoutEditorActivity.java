@@ -146,8 +146,7 @@ public class FissionLayoutEditorActivity extends Activity {
             try {
                 boolean ok = FissionClient.activateLayout(binder, preset);
                 mActiveId = preset.id;
-                getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()
-                        .putString("active_layout_id", mActiveId).apply();
+                LayoutPrefs.setFavoriteId(FissionLayoutEditorActivity.this, mActiveId);
                 runOnUiThread(() -> {
                     refreshLayoutList();
                     Toast.makeText(this,
@@ -167,8 +166,7 @@ public class FissionLayoutEditorActivity extends Activity {
         IBinder binder = mDaemonBinder;
         mActiveId = null;
         for (LayoutPreset p : mPresets) for (LayoutPreset.SlotDef s : p.slots) s.displayId = -1;
-        getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE).edit()
-                .remove("active_layout_id").apply();
+        LayoutPrefs.setFavoriteId(this, null);
         refreshLayoutList();
         if (binder != null) {
             mExec.execute(() -> {
