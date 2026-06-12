@@ -10,6 +10,7 @@ import android.view.SurfaceHolder;
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
+import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ShellGateway;
 
@@ -197,7 +198,7 @@ public final class FissionOrchestrator {
                 mActiveLayout = favoriteLayout;
                 post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
                 if (autoLayout) {
-                    post(() -> mCallbacks.onStatusMessage("Auto-activation du layout…"));
+                    post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autoactivate)));
                     ensureClusterProjectionThen(() -> mExec.execute(this::activateFavoriteLayout));
                 } else if (precreate) {
                     precreateSlots(favoriteLayout);
@@ -221,7 +222,7 @@ public final class FissionOrchestrator {
         }
         AppLogger.i(TAG, "auto-layout: Qt in native mode — activating cluster projection first");
         post(() -> {
-            mCallbacks.onStatusMessage("Activation de la projection cluster…");
+            mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_projection));
             new com.byd.dashcast.cluster.display.ClusterManager(mAppCtx)
                     .activateClusterDisplay(
                             new com.byd.dashcast.cluster.display.ClusterManager.DisplayReadyCallback() {
@@ -254,7 +255,7 @@ public final class FissionOrchestrator {
             }));
             return;
         }
-        post(() -> mCallbacks.onStatusMessage("Démarrage de " + label + "…"));
+        post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_starting_fmt, label)));
         mExec.execute(() -> {
             try {
                 doStartSlot(pkg, label, rect, surfaceHolder);
@@ -275,7 +276,7 @@ public final class FissionOrchestrator {
 
     public void stopAll() {
         if (!mProjecting) return;
-        post(() -> mCallbacks.onStatusMessage("Arrêt…"));
+        post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
         mExec.execute(() -> {
             mProjecting  = false;
             mMirrorReady = false;
@@ -365,7 +366,7 @@ public final class FissionOrchestrator {
             post(() -> mCallbacks.onDaemonBinderAcquired(fb0));
             return true;
         }
-        post(() -> mCallbacks.onStatusMessage("Démarrage du daemon…"));
+        post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_daemon)));
         AdbLocalClient.startMirrorDaemon(mAppCtx);
         for (int i = 0; i < 16; i++) {
             try { Thread.sleep(500); } catch (InterruptedException e) {
@@ -388,14 +389,14 @@ public final class FissionOrchestrator {
             throws Exception {
         boolean isFirst = mSlots.isEmpty();
 
-        if (!ensureDaemon()) throw new RuntimeException("Daemon non disponible");
+        if (!ensureDaemon()) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_daemon));
 
         // ATTACH_SLOT or REUSE if VD already alive in daemon
         int existingId = -1;
         try { existingId = FissionClient.querySlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
         final int displayId;
         if (existingId > 0) {
-            post(() -> mCallbacks.onStatusMessage("Réutilisation du slot pour " + label + "…"));
+            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_reuse_fmt, label)));
             try {
                 FissionClient.resizeSlot(mDaemonBinder, pkg,
                         rect.left, rect.top, rect.width(), rect.height());
@@ -403,10 +404,10 @@ public final class FissionOrchestrator {
             displayId = existingId;
             AppLogger.i(TAG, "FISSION REUSE_SLOT pkg=" + pkg + " displayId=" + displayId);
         } else {
-            post(() -> mCallbacks.onStatusMessage("Création du slot pour " + label + "…"));
+            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_create_fmt, label)));
             int newId = FissionClient.attachSlot(mDaemonBinder, pkg,
                     rect.left, rect.top, rect.width(), rect.height());
-            if (newId < 0) throw new RuntimeException("ATTACH_SLOT failed pour " + pkg);
+            if (newId < 0) throw new RuntimeException(mAppCtx.getString(R.string.fo_err_attach_fmt, pkg));
             displayId = newId;
             AppLogger.i(TAG, "FISSION ATTACH_SLOT pkg=" + pkg + " displayId=" + displayId
                     + " rect=" + rect.left + "," + rect.top + "+" + rect.width() + "x" + rect.height());
@@ -414,13 +415,13 @@ public final class FissionOrchestrator {
 
         // LAUNCH_AND_FORCE via ProxyClient
         post(() -> mCallbacks.onStatusMessage(
-                "Lancement de " + label + " (displayId=" + displayId + ")…"));
+                mAppCtx.getString(R.string.fo_status_launching_fmt, label, displayId)));
         if (!ProxyClient.isConnected()) {
             AppLogger.d(TAG, "ProxyClient not connected — attempting connect…");
             boolean connected = ProxyClient.connect(mAppCtx);
             if (!connected) {
                 throw new RuntimeException(
-                        "Proxy Daemon non connecté. Activez « Proxy Daemon ADB » dans Paramètres > Beta.");
+                        mAppCtx.getString(R.string.fo_err_proxy));
             }
         }
         String launchResult = ProxyClient.launchAndForce(pkg, null, displayId,
@@ -432,7 +433,7 @@ public final class FissionOrchestrator {
         // MIRROR_START on first slot
         if (isFirst && surfaceHolder != null && surfaceHolder.getSurface() != null
                 && surfaceHolder.getSurface().isValid()) {
-            post(() -> mCallbacks.onStatusMessage("Démarrage du miroir…"));
+            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_mirror)));
             mFirstDisplayId = displayId;
             int svW = surfaceHolder.getSurfaceFrame().width();
             int svH = surfaceHolder.getSurfaceFrame().height();
@@ -490,12 +491,12 @@ public final class FissionOrchestrator {
             doSwitchToLayout(fav, null);
         } catch (Exception e) {
             AppLogger.e(TAG, "activateFavoriteLayout failed", e);
-            post(() -> mCallbacks.onStatusMessage("Erreur auto-layout: " + e.getMessage()));
+            post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autolayout_err_fmt, e.getMessage())));
         }
     }
 
     private void precreateSlots(LayoutPreset layout) {
-        post(() -> mCallbacks.onStatusMessage("Pré-création des slots…"));
+        post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_precreate)));
         if (!ensureDaemon()) { post(() -> mCallbacks.onStatusMessage(null)); return; }
         for (LayoutPreset.SlotDef s : layout.slots) {
             String key = (s.packageName != null && !s.packageName.isEmpty())
