@@ -1,4 +1,5 @@
 package com.byd.dashcast.platform;
+import java.util.Locale;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -96,9 +97,9 @@ public final class Platform {
 
     private static boolean detectDiLink5(String product, String model, String fingerprint, int api) {
         // Primary signal: ro.product.name contains "DiLink5"
-        String p = (product == null ? "" : product).toLowerCase();
-        String m = (model    == null ? "" : model).toLowerCase();
-        String f = (fingerprint == null ? "" : fingerprint).toLowerCase();
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model    == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         if (p.contains("dilink5") || m.contains("dilink5") || f.contains("dilink5")) return true;
         if (p.contains("dilink_5") || m.contains("dilink 5") || f.contains("dilink 5")) return true;
         // Secondary signal: Android 12+ on BYD device strongly implies DiLink 5
@@ -118,9 +119,9 @@ public final class Platform {
      * so DL3/DL5 logic stays unaffected on devices we have not field-validated.
      */
     private static boolean detectDiLink4(String product, String model, String fingerprint, int api) {
-        String p = (product == null ? "" : product).toLowerCase();
-        String m = (model    == null ? "" : model).toLowerCase();
-        String f = (fingerprint == null ? "" : fingerprint).toLowerCase();
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model    == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         boolean nameHit = p.contains("dilink4") || m.contains("dilink4") || f.contains("dilink4")
                        || p.contains("dilink_4") || m.contains("dilink 4") || f.contains("dilink 4");
         if (!nameHit) return false;
@@ -137,8 +138,8 @@ public final class Platform {
      * Returns false on any uncertainty so DL3/DL5 logic stays unaffected.
      */
     private static boolean detectDiLink2(String brand, String product, int api) {
-        String b = (brand   == null ? "" : brand).toLowerCase();
-        String p = (product == null ? "" : product).toLowerCase();
+        String b = (brand   == null ? "" : brand).toLowerCase(Locale.ROOT);
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
         if (!"alps".equals(b)) return false;
         if (!p.contains("k65")) return false;
         return api == 28 || api == 29;

@@ -1,4 +1,5 @@
 package com.byd.dashcast.proxy.daemon;
+import java.util.Locale;
 
 import java.lang.reflect.Method;
 
@@ -343,7 +344,7 @@ public final class Phase4TaskVerbs {
                 StringBuilder dump = new StringBuilder("ERR resizeTask: no variant. Candidates: ");
                 boolean first = true;
                 for (Method cand : methods) {
-                    if (!cand.getName().toLowerCase().contains("resize")) continue;
+                    if (!cand.getName().toLowerCase(Locale.ROOT).contains("resize")) continue;
                     if (!first) dump.append(", ");
                     dump.append(cand.getName()).append('(');
                     Class<?>[] pt = cand.getParameterTypes();
@@ -894,7 +895,7 @@ public final class Phase4TaskVerbs {
                     .append(java.util.Arrays.toString(substrings)).append(":\n");
             java.util.TreeSet<String> sorted = new java.util.TreeSet<>();
             for (Method m : iAtm.getClass().getMethods()) {
-                String nm = m.getName().toLowerCase();
+                String nm = m.getName().toLowerCase(Locale.ROOT);
                 boolean match = false;
                 for (String s : substrings) if (nm.contains(s)) { match = true; break; }
                 if (!match) continue;

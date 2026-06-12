@@ -1,4 +1,5 @@
 package com.byd.dashcast.dilink2;
+import java.util.Locale;
 
 import android.app.ActivityManager;
 import android.content.Context;
@@ -275,7 +276,7 @@ public final class DiLink2TestRunner {
                 default: break;
             }
         }
-        sb.append(String.format("Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
+        sb.append(String.format(Locale.ROOT, "Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
                 pass, fail, warn, skip));
         for (TestResult r : results) {
             sb.append('[').append(r.status).append("] ")
@@ -331,7 +332,7 @@ public final class DiLink2TestRunner {
         }
         r.detail = sb.toString();
         boolean isDl2Signature = "alps".equalsIgnoreCase(Build.BRAND)
-                && Build.PRODUCT != null && Build.PRODUCT.toLowerCase().contains("k65v1");
+                && Build.PRODUCT != null && Build.PRODUCT.toLowerCase(Locale.ROOT).contains("k65v1");
         if (isDl2Signature) {
             r.status = Status.PASS;
             r.message = "DL2 signature confirmed (brand=alps, product contains k65v1, API "
@@ -1133,7 +1134,7 @@ public final class DiLink2TestRunner {
               + "echo '--- /data fs --'; df -h /data 2>&1 | head -2", 5000);
         if (skipIfNoShell(out, r)) return;
         r.detail = safeTrim(out, 2000);
-        boolean isMtk = out.toLowerCase().contains("mt67") || out.toLowerCase().contains("mediatek");
+        boolean isMtk = out.toLowerCase(Locale.ROOT).contains("mt67") || out.toLowerCase(Locale.ROOT).contains("mediatek");
         r.status = Status.PASS;
         r.message = isMtk ? "MTK SoC confirmed" : "hardware info captured";
     }
@@ -1188,7 +1189,7 @@ public final class DiLink2TestRunner {
     };
 
     private static boolean s17IsInteresting(String pkg) {
-        String low = pkg.toLowerCase();
+        String low = pkg.toLowerCase(Locale.ROOT);
         for (String s : S17_INTERESTING) {
             if (s.contains(".")) {
                 if (low.equals(s)) return true;
@@ -1254,8 +1255,8 @@ public final class DiLink2TestRunner {
         String mkdirOut = runShellSync(ctx,
                 "mkdir -p '" + outDir + "' 2>&1 && ls -ld '" + outDir + "' 2>&1", 4000);
         if (skipIfNoShell(mkdirOut, r)) return;
-        if (mkdirOut.toLowerCase().contains("permission denied")
-                || mkdirOut.toLowerCase().contains("cannot create")) {
+        if (mkdirOut.toLowerCase(Locale.ROOT).contains("permission denied")
+                || mkdirOut.toLowerCase(Locale.ROOT).contains("cannot create")) {
             r.status = Status.FAIL;
             r.message = "Cannot create " + outDir + " — " + mkdirOut.trim();
             return;
@@ -1374,7 +1375,7 @@ public final class DiLink2TestRunner {
         String out = runShellSync(ctx,
                 "dumpsys package com.byd.cluster 2>&1 | head -250", 8000);
         if (skipIfNoShell(out, r)) return;
-        if (out.toLowerCase().contains("unable to find package")) {
+        if (out.toLowerCase(Locale.ROOT).contains("unable to find package")) {
             r.status = Status.WARN;
             r.message = "com.byd.cluster not installed on this DL2 device";
             r.detail = safeTrim(out, 1000);
@@ -1391,7 +1392,7 @@ public final class DiLink2TestRunner {
         String out = runShellSync(ctx,
                 "dumpsys package com.byd.appstartmanagement 2>&1 | head -250", 8000);
         if (skipIfNoShell(out, r)) return;
-        if (out.toLowerCase().contains("unable to find package")) {
+        if (out.toLowerCase(Locale.ROOT).contains("unable to find package")) {
             r.status = Status.WARN;
             r.message = "com.byd.appstartmanagement not installed";
             r.detail = safeTrim(out, 1000);
@@ -1441,9 +1442,9 @@ public final class DiLink2TestRunner {
                 6000);
         if (skipIfNoShell(out, r)) return;
         r.detail = safeTrim(out, 5000);
-        boolean hasIssue = out.toLowerCase().contains("tombstone_")
-                || out.toLowerCase().contains("anr_")
-                || out.toLowerCase().contains("crash");
+        boolean hasIssue = out.toLowerCase(Locale.ROOT).contains("tombstone_")
+                || out.toLowerCase(Locale.ROOT).contains("anr_")
+                || out.toLowerCase(Locale.ROOT).contains("crash");
         r.status = hasIssue ? Status.WARN : Status.PASS;
         r.message = hasIssue ? "crash artefacts present — check detail" : "no recent crash artefacts";
     }

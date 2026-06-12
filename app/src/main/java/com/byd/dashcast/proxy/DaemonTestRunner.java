@@ -1,4 +1,5 @@
 package com.byd.dashcast.proxy;
+import java.util.Locale;
 
 import android.content.Context;
 import android.os.Handler;
@@ -630,9 +631,9 @@ public final class DaemonTestRunner {
         for (TestResult r : results) {
             switch (r.status) { case PASS: pass++; break; case FAIL: fail++; break; case SKIPPED: skip++; break; default: }
         }
-        sb.append(String.format("Total: %d   ✓ %d   ✗ %d   ⊘ %d%n%n", results.size(), pass, fail, skip));
+        sb.append(String.format(Locale.ROOT, "Total: %d   ✓ %d   ✗ %d   ⊘ %d%n%n", results.size(), pass, fail, skip));
         for (TestResult r : results) {
-            sb.append(String.format("[%s] %-3s %s — %s (%d ms)%n",
+            sb.append(String.format(Locale.ROOT, "[%s] %-3s %s — %s (%d ms)%n",
                     glyph(r.status), r.def.id, r.def.title,
                     r.message == null ? "" : r.message, r.elapsedMs));
             if (r.status == Status.FAIL && r.detail != null) {

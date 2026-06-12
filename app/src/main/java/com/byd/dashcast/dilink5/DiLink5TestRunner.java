@@ -1,4 +1,5 @@
 package com.byd.dashcast.dilink5;
+import java.util.Locale;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -244,7 +245,7 @@ public final class DiLink5TestRunner {
                 default: break;
             }
         }
-        sb.append(String.format("Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
+        sb.append(String.format(Locale.ROOT, "Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
                 pass, fail, warn, skip));
         for (TestResult r : results) {
             sb.append('[').append(r.status).append("] ")
@@ -314,9 +315,9 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, "service list | grep -iE 'AutoContainer|crosscontrol|xdja|cluster|projection'", out, 4000);
         String raw = out.get();
         r.detail = raw.isEmpty() ? "(no matching service)" : raw;
-        boolean hasAutoContainer = raw.toLowerCase().contains("autocontainer");
-        boolean hasCrosscontrol  = raw.toLowerCase().contains("crosscontrol");
-        boolean hasXdja          = raw.toLowerCase().contains("xdja");
+        boolean hasAutoContainer = raw.toLowerCase(Locale.ROOT).contains("autocontainer");
+        boolean hasCrosscontrol  = raw.toLowerCase(Locale.ROOT).contains("crosscontrol");
+        boolean hasXdja          = raw.toLowerCase(Locale.ROOT).contains("xdja");
         if (hasAutoContainer) {
             r.status = Status.PASS;
             r.message = "AutoContainer service present (DL3 path)";
@@ -334,7 +335,7 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, "wm overscan 0,0,0,0 -d 0 2>&1; echo ---; wm 2>&1 | grep -i overscan", out, 4000);
         String raw = out.get();
         r.detail = raw;
-        String lower = raw.toLowerCase();
+        String lower = raw.toLowerCase(Locale.ROOT);
         if (lower.contains("unknown command") || lower.contains("no such") || lower.contains("invalid")) {
             r.status = Status.WARN;
             r.message = "wm overscan removed (Android 11+) — using app-side bounds only";
@@ -352,7 +353,7 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, "am start --help 2>&1 | grep -E -- '--display|-display'", out, 4000);
         String raw = out.get();
         r.detail = raw.isEmpty() ? "(no matching flag in 'am start --help')" : raw;
-        if (raw.toLowerCase().contains("display")) {
+        if (raw.toLowerCase(Locale.ROOT).contains("display")) {
             r.status = Status.PASS;
             r.message = "'am start --display' flag is documented";
         } else {
@@ -449,9 +450,9 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, launchCmd, out, 6000);
         String launchOut = out.get().trim();
         detail.append("\n[2] ").append(launchCmd).append('\n').append("    → ").append(launchOut).append('\n');
-        boolean launchOk = !launchOut.toLowerCase().contains("error")
-                        && !launchOut.toLowerCase().contains("securityexception")
-                        && !launchOut.toLowerCase().contains("permission denial");
+        boolean launchOk = !launchOut.toLowerCase(Locale.ROOT).contains("error")
+                        && !launchOut.toLowerCase(Locale.ROOT).contains("securityexception")
+                        && !launchOut.toLowerCase(Locale.ROOT).contains("permission denial");
 
         // 3) Wait a bit so the OS commits the launch
         try { Thread.sleep(1800); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -463,9 +464,9 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, retractCmd, out, 6000);
         String retractOut = out.get().trim();
         detail.append("\n[3] ").append(retractCmd).append('\n').append("    → ").append(retractOut).append('\n');
-        boolean retractOk = !retractOut.toLowerCase().contains("error")
-                         && !retractOut.toLowerCase().contains("securityexception")
-                         && !retractOut.toLowerCase().contains("permission denial");
+        boolean retractOk = !retractOut.toLowerCase(Locale.ROOT).contains("error")
+                         && !retractOut.toLowerCase(Locale.ROOT).contains("securityexception")
+                         && !retractOut.toLowerCase(Locale.ROOT).contains("permission denial");
 
         try { Thread.sleep(700); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 
@@ -564,7 +565,7 @@ public final class DiLink5TestRunner {
     };
 
     private static boolean d10IsInteresting(String pkg) {
-        String low = pkg.toLowerCase();
+        String low = pkg.toLowerCase(Locale.ROOT);
         for (String s : D10_INTERESTING) {
             if (s.contains(".")) {
                 if (low.equals(s)) return true;
@@ -607,8 +608,8 @@ public final class DiLink5TestRunner {
         // 2) Ensure the public Download target exists (mkdir via shell — app uid can't on A10+).
         runShellSync(ctx, "mkdir -p '" + outDir + "' 2>&1 && ls -ld '" + outDir + "' 2>&1", out, 4000);
         String mkdirOut = out.get().trim();
-        if (mkdirOut.toLowerCase().contains("permission denied")
-                || mkdirOut.toLowerCase().contains("cannot create")) {
+        if (mkdirOut.toLowerCase(Locale.ROOT).contains("permission denied")
+                || mkdirOut.toLowerCase(Locale.ROOT).contains("cannot create")) {
             r.status = Status.FAIL;
             r.message = "Cannot create " + outDir + " \u2014 " + mkdirOut;
             return;
@@ -679,7 +680,7 @@ public final class DiLink5TestRunner {
         runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
         String raw = out.get();
         r.detail = raw.isEmpty() ? "(no output)" : raw;
-        String lower = raw.toLowerCase();
+        String lower = raw.toLowerCase(Locale.ROOT);
         if (lower.contains("securityexception") || lower.contains("permission denial")) {
             r.status = Status.FAIL;
             r.message = "SecurityException \u2014 service rejects uid 2000";
@@ -706,7 +707,7 @@ public final class DiLink5TestRunner {
         try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
         sb.append("\n[sendInfo 0 / refresh]\n").append(out.get()).append('\n');
-        String all = sb.toString().toLowerCase();
+        String all = sb.toString().toLowerCase(Locale.ROOT);
         r.detail = sb.toString();
         if (all.contains("securityexception") || all.contains("permission denial")) {
             r.status = Status.FAIL;
@@ -822,7 +823,7 @@ public final class DiLink5TestRunner {
                 out, 6000);
         String raw = out.get();
         r.detail = raw;
-        String lower = raw.toLowerCase();
+        String lower = raw.toLowerCase(Locale.ROOT);
         boolean hasApp = lower.contains("/system/bin/app_process");
         boolean denied = lower.contains("permission denied") || lower.contains("avc:");
         if (hasApp && !denied) {
@@ -865,7 +866,7 @@ public final class DiLink5TestRunner {
                 out, 4000);
         String raw = out.get();
         r.detail = raw.isEmpty() ? "(no activity_task service line)" : raw;
-        if (raw.toLowerCase().contains("activitytask") || raw.toLowerCase().contains("activity_task")) {
+        if (raw.toLowerCase(Locale.ROOT).contains("activitytask") || raw.toLowerCase(Locale.ROOT).contains("activity_task")) {
             r.status = Status.PASS;
             r.message = "IActivityTaskManager binder present";
         } else {
@@ -959,7 +960,7 @@ public final class DiLink5TestRunner {
           .append("  • Si NON → binder accepté mais pas répercuté visuellement (Qt cluster déconnecté ?).\n");
         r.detail = sb.toString();
 
-        String low = (onResult + "\n" + offResult).toLowerCase();
+        String low = (onResult + "\n" + offResult).toLowerCase(Locale.ROOT);
         if (low.contains("service auto_container does not exist")) {
             r.status = Status.FAIL;
             r.message = "auto_container service absent — cycle impossible";
@@ -1006,7 +1007,7 @@ public final class DiLink5TestRunner {
                 Class<?>[] pts = m.getParameterTypes();
                 for (int i = 0; i < pts.length; i++) { if (i > 0) sig.append(','); sig.append(pts[i].getSimpleName()); }
                 sig.append(") : ").append(m.getReturnType().getSimpleName()).append('\n');
-                String n = m.getName().toLowerCase();
+                String n = m.getName().toLowerCase(Locale.ROOT);
                 if (n.contains("windowing") || n.contains("display") || n.contains("task") || n.contains("launch") || n.contains("start") || n.contains("move")) {
                     hot.append(sig);
                 } else {
@@ -1314,7 +1315,7 @@ public final class DiLink5TestRunner {
             try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 
             // Pass criterion: shell accepted both the launch and the cleanup without obvious errors.
-            String low = launchOut.toLowerCase();
+            String low = launchOut.toLowerCase(Locale.ROOT);
             boolean launchOk = !low.contains("error")
                             && !low.contains("securityexception")
                             && !low.contains("permission denial");
