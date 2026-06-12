@@ -1,4 +1,5 @@
 package com.byd.dashcast.dilink4;
+import java.util.Locale;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -12,7 +13,7 @@ import android.os.Parcel;
 import android.os.SystemClock;
 import android.view.Display;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -309,7 +310,7 @@ public final class DiLink4TestRunner {
                 default: break;
             }
         }
-        sb.append(String.format("Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
+        sb.append(String.format(Locale.ROOT, "Summary: PASS=%d  FAIL=%d  WARN=%d  SKIP=%d%n%n",
                 pass, fail, warn, skip));
         for (TestResult r : results) {
             sb.append('[').append(r.status).append("] ")
@@ -357,8 +358,8 @@ public final class DiLink4TestRunner {
         };
         for (String k : keys) sb.append(k).append(" = ").append(getProp(k)).append('\n');
         r.detail = sb.toString();
-        String prod = Build.PRODUCT == null ? "" : Build.PRODUCT.toLowerCase();
-        String fp   = Build.FINGERPRINT == null ? "" : Build.FINGERPRINT.toLowerCase();
+        String prod = Build.PRODUCT == null ? "" : Build.PRODUCT.toLowerCase(Locale.ROOT);
+        String fp   = Build.FINGERPRINT == null ? "" : Build.FINGERPRINT.toLowerCase(Locale.ROOT);
         boolean dl4 = (prod.contains("dilink4") || fp.contains("dilink4"))
                 && Build.VERSION.SDK_INT == 29;
         if (dl4) {
@@ -394,7 +395,7 @@ public final class DiLink4TestRunner {
             return;
         }
         r.detail = sb.toString();
-        if (descr != null && descr.toLowerCase().contains("autocontainer")) {
+        if (descr != null && descr.toLowerCase(Locale.ROOT).contains("autocontainer")) {
             r.status = Status.PASS;
             r.message = "AutoContainer reachable, descriptor=" + descr;
         } else {
@@ -454,7 +455,7 @@ public final class DiLink4TestRunner {
         int n = 0;
         for (PackageInfo pi : pm.getInstalledPackages(0)) {
             String name = pi.packageName == null ? "" : pi.packageName;
-            String low = name.toLowerCase();
+            String low = name.toLowerCase(Locale.ROOT);
             if (low.startsWith("com.byd.") || low.startsWith("com.xdja.")
                     || low.startsWith("com.dilink.") || low.contains("cluster")
                     || low.contains("automotive")) {
@@ -489,7 +490,7 @@ public final class DiLink4TestRunner {
         sb.append("Total services: ").append(all.size()).append('\n').append("---\n");
         int hits = 0;
         for (String s : all) {
-            String low = s.toLowerCase();
+            String low = s.toLowerCase(Locale.ROOT);
             if (low.contains("cluster") || low.contains("display")
                     || low.contains("auto") || low.contains("byd")
                     || low.contains("window") || low.contains("fission")
@@ -721,7 +722,7 @@ public final class DiLink4TestRunner {
         for (android.content.pm.ResolveInfo ri : launchables) {
             String pkg = ri.activityInfo != null ? ri.activityInfo.packageName : "";
             if (pkg == null) continue;
-            String low = pkg.toLowerCase();
+            String low = pkg.toLowerCase(Locale.ROOT);
             if (low.startsWith("com.byd.") || low.contains("cluster")) {
                 sb.append("  ").append(pkg).append("/")
                   .append(ri.activityInfo.name).append('\n');
@@ -811,7 +812,7 @@ public final class DiLink4TestRunner {
         r.detail = safeTrim(out, 2000);
         // A successful descriptor query returns a Parcel with bytes — failure
         // returns "Service AutoContainer does not exist" or "Can't find service".
-        String low = out.toLowerCase();
+        String low = out.toLowerCase(Locale.ROOT);
         if (low.contains("does not exist") || low.contains("can't find")) {
             r.status = Status.FAIL;
             r.message = "AutoContainer service NOT reachable via shell";
@@ -828,7 +829,7 @@ public final class DiLink4TestRunner {
         String out = runShellSync(ctx, "service call auto_container 1 2>&1", 5000);
         if (skipIfNoShell(out, r)) return;
         r.detail = safeTrim(out, 2000);
-        String low = out.toLowerCase();
+        String low = out.toLowerCase(Locale.ROOT);
         if (low.contains("does not exist") || low.contains("can't find")) {
             r.status = Status.PASS;
             r.message = "snake_case CORRECTLY absent (PROVES the v1.2.27 DL4 fix is needed)";
@@ -889,7 +890,7 @@ public final class DiLink4TestRunner {
                 "am start --display 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n com.byd.dashcast/.MainActivity 2>&1", 6000);
         if (skipIfNoShell(out, r)) return;
         r.detail = safeTrim(out, 2000);
-        String low = out.toLowerCase();
+        String low = out.toLowerCase(Locale.ROOT);
         if (low.contains("error type") || low.contains("not found") || low.contains("exception")) {
             r.status = Status.FAIL;
             r.message = "am start failed: " + out.split("\n")[0];
@@ -939,7 +940,7 @@ public final class DiLink4TestRunner {
               .append("  '").append(name).append('\'')
               .append("  flags=0x").append(Integer.toHexString(d.getFlags()))
               .append("  ").append(p.x).append('x').append(p.y).append('\n');
-            String low = name.toLowerCase();
+            String low = name.toLowerCase(Locale.ROOT);
             if (d.getDisplayId() != 0
                     && (low.contains("fission") || low.contains("cluster")
                         || low.contains("virtual") || low.contains("xdja"))) {
@@ -987,7 +988,7 @@ public final class DiLink4TestRunner {
                 + " (discovered name='" + sLastDiscoveredClusterName + "')\n"
                 + "target=" + target + "\n"
                 + "cmd=" + cmd + "\n---\n" + safeTrim(out, 2000);
-        String low = out.toLowerCase();
+        String low = out.toLowerCase(Locale.ROOT);
         if (low.contains("error type") || low.contains("not found") || low.contains("does not exist")) {
             r.status = Status.FAIL;
             r.message = "am start failed: " + out.split("\n")[0];
@@ -1003,7 +1004,7 @@ public final class DiLink4TestRunner {
                 "dumpsys activity activities 2>&1 | grep -E 'clusterdebug|dashcast|ResumedActivity|displayId' | head -40", 8000);
         if (skipIfNoShell(out, r)) return;
         r.detail = safeTrim(out, 4000);
-        if (out.toLowerCase().contains("clusterdebug") || out.toLowerCase().contains("dashcast")) {
+        if (out.toLowerCase(Locale.ROOT).contains("clusterdebug") || out.toLowerCase(Locale.ROOT).contains("dashcast")) {
             r.status = Status.PASS;
             r.message = "target activity found in stack — USER VISUAL CHECK on cluster screen";
         } else {
@@ -1053,7 +1054,7 @@ public final class DiLink4TestRunner {
         String out = runShellSync(ctx, cmd, 6000);
         if (skipIfNoShell(out, r)) return;
         r.detail = "cmd: " + cmd + "\n---\n" + safeTrim(out, 2000);
-        String low = out.toLowerCase();
+        String low = out.toLowerCase(Locale.ROOT);
         if (low.contains("does not exist") || low.contains("can't find")) {
             r.status = Status.FAIL;
             r.message = "AutoContainer not reachable (DL4 wrong binder name?)";
@@ -1183,8 +1184,8 @@ public final class DiLink4TestRunner {
         final java.util.concurrent.atomic.AtomicReference<String> out =
                 new java.util.concurrent.atomic.AtomicReference<>();
         try {
-            com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, cmd,
-                new com.byd.dashcast.AdbLocalClient.Callback() {
+            com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResult(ctx, cmd,
+                new com.byd.dashcast.infrastructure.AdbLocalClient.Callback() {
                     @Override public void onSuccess(String s) {
                         out.set(s == null ? "" : s);
                         latch.countDown();

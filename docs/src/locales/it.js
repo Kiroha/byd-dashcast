@@ -4,142 +4,129 @@ export default {
   name: 'Italiano',
   title: 'DashCast — Manuale utente',
   manualName: 'Manuale utente',
-  meta: 'v0.9.92-alpha · BYD Seal EU · DiLink 3.0 · Android 10',
+  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
   tocTitle: '📋 Indice',
 
   intro: {
     title: '0. Introduzione',
     lead:
-      "DashCast permette di mostrare qualsiasi app Android dallo schermo centrale BYD sul cruscotto digitale. Puoi avere Maps, Waze, Spotify o YouTube direttamente dietro al volante mantenendo accessibili in ogni momento le indicazioni native BYD (velocità, indicatori, autonomia).",
+      'DashCast mostra qualsiasi applicazione Android dello schermo centrale della tua BYD sul quadro strumenti (cluster digitale). Maps, Waze, Spotify o ABRP direttamente dietro il volante — e con la modalità Layout, più app contemporaneamente, ognuna nella sua zona. Il tutto senza modificare il sistema.',
     bullets: [
-      "✅ Compatibile con BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F).",
-      "✅ Nessuna modifica al sistema: DashCast si installa come app normale.",
-      "✅ ADB locale TCP — nessun computer dopo la prima autorizzazione.",
-      "✅ 12 lingue, scelte al primo avvio.",
-      "✅ Aggiornamenti OTA integrati (canale alpha opzionale).",
-      "✅ Margini overscan salvati per ogni app.",
-      "✅ Specchio a schermo intero touch per pilotare il cluster dalla centrale.",
-      "✅ Modalità split (due app affiancate sul cluster).",
+      '✅ Compatibile con BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F).',
+      '✅ Nessuna modifica di sistema: DashCast si installa come una normale app.',
+      '✅ ADB locale su TCP — nessun computer necessario dopo la prima autorizzazione.',
+      "✅ 13 lingue d'interfaccia, scelta al primo avvio.",
+      '✅ Mirror touch in tempo reale: controlla il cluster dallo schermo centrale.',
+      '✅ Modalità Layout: più app affiancate sul cluster, zone disegnate col dito.',
+      '✅ Avvio automatico: proiezione + app (o layout preferito) appena DashCast si apre.',
+      '✅ Margini (overscan) memorizzati per applicazione.',
+      '✅ Aggiornamenti OTA integrati (canale beta opzionale).',
     ],
     note:
-      "💡 Prerequisito unico: attivare il debug ADB wireless in Impostazioni BYD → Sviluppatore. Al primo avvio appare un dialogo « Consentire il debug? » — spunta « Consenti sempre » e conferma. Non dovrai mai ripeterlo.",
+      '💡 Unico prerequisito: attivare il debug ADB wireless in Impostazioni BYD → Sviluppatore. Al primo avvio appare la finestra «Consentire il debug?» — spunta «Consenti sempre» e conferma. Non dovrai mai ripeterlo.',
   },
 
   sections: [
     {
       id: 'welcome',
       screen: 'screen-1',
-      title: '1. Schermata di benvenuto — scelta lingua',
+      title: '1. Schermata di benvenuto — scelta della lingua',
       lead:
-        "Al primissimo avvio DashCast mostra una griglia con le 12 lingue disponibili. Tocca quella che preferisci; la scelta viene salvata e la schermata di benvenuto non riapparirà più. Puoi cambiarla in qualsiasi momento da Impostazioni → Lingua.",
-      mockupLabel: 'Apri schermata 1 (Benvenuto)',
+        'Al primissimo avvio, DashCast mostra la griglia con le 13 lingue disponibili. Tocca la tua: la scelta viene memorizzata e la schermata non riappare più. Potrai cambiare lingua in qualsiasi momento dalle Impostazioni.',
+      mockupLabel: 'Vedi schermata 1 (Benvenuto)',
       featuresTitle: 'Dettagli',
       features: [
         {
-          title: '12 lingue supportate',
+          title: '13 lingue supportate',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La lingua scelta viene applicata subito, senza riavvio.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. La lingua scelta è applicata subito, senza riavvio.",
         },
         {
           title: 'Direzione di lettura automatica',
           text:
-            "L'arabo passa automaticamente al layout da destra a sinistra (RTL): la barra di navigazione si sposta a destra, le liste si invertono, le icone restano leggibili.",
+            "L'arabo passa automaticamente al layout destra-sinistra (RTL): la barra di navigazione si sposta a destra e le liste si invertono.",
         },
         {
-          title: 'Modificabile in qualsiasi momento',
-          text:
-            "Per cambiare lingua in seguito: pressione lunga sul logo DashCast in alto nella barra laterale → 🌐 Lingua. La nuova lingua si applica al volo.",
+          title: 'Modificabile in ogni momento',
+          text: 'Per cambiare lingua più tardi: Impostazioni → Lingua. Applicata al volo.',
         },
       ],
       howTo: {
-        title: 'Come si fa',
+        title: 'Come fare',
         steps: [
-          "Avvia DashCast (icona blu nel drawer app BYD).",
-          "La schermata di benvenuto mostra la griglia 4×3 di lingue.",
+          "Avvia DashCast (icona blu nel drawer delle app BYD).",
+          'Appare la schermata di benvenuto con la griglia delle lingue.',
           "Tocca la tua lingua. L'interfaccia cambia immediatamente.",
-          "Si apre la schermata principale — DashCast è pronto.",
+          'Si apre la schermata principale — sei pronto.',
         ],
       },
-      note:
-        "ℹ️ Se cambi lingua mentre è attiva una proiezione, questa prosegue senza interruzione; viene tradotta solo l'interfaccia DashCast.",
     },
 
     {
       id: 'main',
       screen: 'screen-2',
-      title: '2. Schermata principale — App e Cluster',
+      title: '2. Schermata principale — App & Cluster',
       lead:
-        "Schermata centrale di DashCast. A sinistra la lista di tutte le app installate con ricerca, filtri di categoria e preferiti. A destra la preview live del cluster con le azioni principali: schermo intero, screenshot, riconnetti, ferma proiezione.",
-      mockupLabel: 'Apri schermata 2 (Principale)',
+        "La schermata centrale di DashCast. A sinistra: tutte le tue applicazioni con ricerca, filtri e preferiti. A destra: l'anteprima in tempo reale del cluster, i pulsanti Mirror a schermo intero / Ferma proiezione, e il carosello dei layout per scegliere la tua disposizione multi-app preferita.",
+      mockupLabel: 'Vedi schermata 2 (Principale)',
       featuresTitle: 'Tutto ciò che puoi fare',
       features: [
         {
-          title: '🔍 Barra di ricerca',
+          title: '👆 Tocco breve — proiettare',
           text:
-            "Digita qualche lettera per filtrare la lista al volo (cerca sia nel nome sia nel package). Il pulsante ▦ a destra alterna lista e griglia.",
-        },
-        {
-          title: '🏷️ Filtri di categoria',
-          text:
-            "I chip colorati (Tutte / Navigazione / Multimedia / Comunicazione / Sistema) raggruppano le app automaticamente. Il numero tra parentesi indica quante sono visibili.",
-        },
-        {
-          title: '⭐ Preferiti fissati',
-          text:
-            "La sezione « Preferiti » mantiene le tue app più usate in alto. Per aggiungere/togliere: pressione lunga sull'app → ⭐ Aggiungi/Rimuovi dai preferiti.",
-        },
-        {
-          title: '👆 Tocco breve — proietta',
-          text:
-            "Tocca un'app per inviarla subito al cluster. Se la proiezione non era attiva, parte automaticamente (warm-up cluster ~2 s).",
+            "Tocca un'app per inviarla al cluster. Se la proiezione non è attiva, parte automaticamente (~2 s di riscaldamento) e l'app appare dietro il volante.",
         },
         {
           title: '👆⏱️ Pressione lunga — menu azioni',
           text:
-            "Tieni premuta una qualsiasi app per aprire un menu a schermo intero: ⭐ Preferito, Auto-avvio (con la proiezione), Sposta su cluster / centrale, ✕ Forza arresto.",
+            "Tieni premuta un'app: ⭐ Preferito, Auto-launch (proiettare questa app a ogni avvio di DashCast), Sposta al cluster / schermo principale, ✕ Arresto forzato.",
         },
         {
-          title: '🚦 Preview live del cluster',
+          title: '🔍 Ricerca e filtri',
           text:
-            "Il pannello destro rispecchia ciò che è sul cluster (velocità, marcia, batteria, autonomia). La latenza (12 ms) conferma una connessione corretta.",
+            'La barra di ricerca filtra mentre digiti (nome o package). I chip per categoria (Tutte / Navigazione / Media…) raggruppano le app; il pulsante ▦ alterna lista/griglia.',
         },
         {
-          title: '👁️ Preview a schermo intero',
+          title: '🚦 Anteprima cluster in tempo reale',
           text:
-            "Tocca « Schermo intero » per estendere la preview a tutto il display centrale. Utile per scrivere un indirizzo in Maps con tastiera completa: tutto viene replicato sul cluster.",
+            "Il pannello destro riflette in diretta il cluster. I tuoi tocchi sull'anteprima vengono trasmessi all'app proiettata — scroll, zoom, tastiera, tutto funziona.",
         },
         {
-          title: '📸 Screenshot',
+          title: '👁️ Mirror a schermo intero',
           text:
-            "Il pulsante « Cattura » salva la vista del cluster come PNG in /sdcard/Pictures/DashCast/. Utile per condividere un percorso o documentare un problema.",
+            "Estende l'anteprima a tutto lo schermo centrale: ideale per digitare un indirizzo in Maps con la tastiera completa. Tutto è replicato sul cluster in tempo reale.",
         },
         {
-          title: '↻ Riconnetti',
+          title: '⏹ Ferma proiezione',
           text:
-            "Se l'app proiettata si è bloccata, « Riconnetti » ripristina il flusso video senza toccare il cluster originale.",
+            'Termina la proiezione in modo pulito e ripristina il quadro BYD originale (velocità, indicatori, ADAS) con la dimensione definita nelle Impostazioni.',
         },
         {
-          title: '⏹ Ferma specchio',
+          title: '🗂️ Carosello dei layout',
           text:
-            "Termina la proiezione in modo pulito. Tocco breve = stop morbido (cluster torna a BYD nativo via ADB). Pressione lunga = menu arricchito con « Ripristina cluster originale » che forza il ripristino con la dimensione cluster definita nelle Impostazioni.",
+            'Sotto i pulsanti, ogni scheda mostra una mini-anteprima delle zone di un layout. Tocca una scheda per renderla layout preferito (stella + bordo blu). «Modalità libera» disattiva i layout; «＋ Gestisci» apre l\'editor.',
+        },
+        {
+          title: '📺 Pulsante flottante',
+          text:
+            'Un pulsante 📺 resta sopra le altre app: tocco = apri il mirror, pressione lunga = cambio rapido tra le ultime app proiettate.',
         },
       ],
       howTo: {
-        title: 'Come proiettare un\'app sul cluster',
+        title: "Come proiettare un'app sul cluster",
         steps: [
-          "Nella schermata principale individua l'app (es. Maps).",
-          "Tocca l'icona → la proiezione parte, il cluster mostra l'app in ~2 s.",
-          "Il pannello destro mostra in tempo reale ciò che vede il cluster.",
-          "Per scrivere (cercare un indirizzo): tocca « Schermo intero » → l'app si estende sulla centrale → digita l'indirizzo → tutto si riflette sul cluster.",
-          "Per fermare: tocca « Ferma specchio » (il cluster torna al BYD nativo).",
+          "Trova l'app desiderata (es. Maps) — ricerca o filtri se serve.",
+          "Tocca la sua icona → la proiezione parte e il cluster passa all'app in ~2 s.",
+          "L'anteprima destra mostra in diretta ciò che è sul cluster.",
+          'Per digitare testo: «Mirror a schermo intero» → digita il tuo indirizzo → tutto è replicato.',
+          'Per fermare: «Ferma proiezione» — il cluster torna al BYD nativo.',
         ],
       },
       tipsTitle: 'Suggerimenti',
       tips: [
-        "💡 Auto-avvio: attiva questo interruttore su un'app per proiettarla automaticamente a ogni avvio di DashCast.",
-        "💡 Modalità split: dal menu lungo di una seconda app scegli « Invia come split » per avere 2 app affiancate sul cluster.",
-        "💡 Margini: se l'app deborda dal cluster, apri Impostazioni → Margini e regola i cursori. Salvato per app.",
-        "💡 Touch a schermo intero: in modalità schermo intero le tue dita sulla centrale pilotano davvero l'app — tastiera, scroll, gesture, tutto funziona.",
+        "💡 Auto-launch: scegli un'app (pressione lunga → Auto-launch) perché si proietti automaticamente a ogni avvio di DashCast — la proiezione si attiva da sola.",
+        '💡 Layout preferito: la scheda selezionata nel carosello è quella che l\'avvio automatico attiverà (vedi sezione Layout).',
+        "💡 Margini: se l'app deborda dal cluster, Impostazioni → Margini, slider orizzontale/verticale. Memorizzato per app.",
       ],
     },
 
@@ -148,242 +135,293 @@ export default {
       screen: 'screen-3',
       title: '3. Impostazioni',
       lead:
-        "Le Impostazioni raccolgono le opzioni globali e la regolazione dell'immagine della proiezione. La barra sinistra resta disponibile: puoi muoverti tra App, Impostazioni, Diag, Sistema e Diario senza perdere la posizione.",
-      mockupLabel: 'Apri schermata 3 (Impostazioni)',
-      featuresTitle: 'Sezioni disponibili',
+        'Le opzioni globali: dimensione del cluster, lingua, margini, comportamento all\'avvio, modalità Layout e aggiornamenti. La barra laterale resta disponibile — passa da una schermata all\'altra senza perdere la posizione.',
+      mockupLabel: 'Vedi schermata 3 (Impostazioni)',
+      featuresTitle: 'Sezioni principali',
       features: [
         {
           title: '📺 Tipo di cluster',
           text:
-            "Seleziona la dimensione fisica del cruscotto: 8.8″ (sendInfo cmd 29), 12.3″ Seal EU (cmd 30, default) o 10.25″ (cmd 31). Valore usato in particolare da « Ripristina cluster originale ».",
+            'Dimensione fisica del tuo quadro: 8.8″, 12.3″ (consigliata su Seal EU — corregge lo stiramento ADAS) o 10.25″. Usata da «Ferma proiezione» per ripristinare la modalità giusta.',
         },
         {
-          title: '🌐 Lingua',
+          title: '↔️↕️ Margini (overscan)',
           text:
-            "12 lingue disponibili. Cambio istantaneo, nessun riavvio.",
+            'Slider orizzontale/verticale (0–200 px) per compensare i bordi tagliati. Memorizzato per applicazione: Maps può avere 80 px mentre Spotify resta a 0. «Applica» regola la proiezione a caldo.',
         },
         {
-          title: '↔️ Margine orizzontale (overscan)',
+          title: '🚗 Avvio con il veicolo',
           text:
-            "Cursore 0–200 px. Aggiunge bande nere a sinistra/destra per compensare bordi tagliati sul tuo cluster. Salvato per app: Maps può usare 80 px e Spotify 0.",
+            "Se attivo, DashCast parte con l'auto e ripristina l'ultima app proiettata. Altrimenti lancialo dal drawer BYD.",
         },
         {
-          title: '↕️ Margine verticale (overscan)',
+          title: '🗂️ Modalità Layout',
           text:
-            "Cursore 0–200 px. Idem sopra/sotto. I margini combinati si applicano a livello di VirtualDisplay: l'app non « vede » le zone tagliate.",
+            'Attiva la proiezione multi-applicazione con zone personalizzate (richiede il Proxy ADB Daemon, gestito automaticamente). Fa apparire il carosello sulla schermata principale e la scheda Layout.',
         },
         {
-          title: '✅ Applica / 🔄 Reset',
+          title: '⭐ Layout preferito automatico',
           text:
-            "« Applica » spinge i nuovi margini sulla proiezione attiva subito. « Reset » riporta l'app corrente a 0/0.",
+            "All'avvio di DashCast: attiva la proiezione del cluster, il layout preferito, e lancia le app collegate a ogni zona. La tua configurazione multi-app completa, senza un solo tocco.",
+        },
+        {
+          title: '⚡ Pre-creare gli slot all\'avvio',
+          text:
+            "Prepara gli schermi virtuali del layout preferito all'apertura (senza lanciare le app) — l'attivazione del layout è poi quasi istantanea.",
         },
         {
           title: '📦 Aggiornamenti OTA',
           text:
-            "DashCast verifica GitHub Releases automaticamente. Spunta « Includi pre-release » per il canale alpha (più frequente ma sperimentale).",
+            'DashCast verifica GitHub a ogni avvio. Spunta «Includi pre-versioni» per il canale beta (novità prima, meno stabilità).',
         },
         {
-          title: '🚗 Avvio automatico col veicolo',
-          text:
-            "Se attivo, DashCast parte con la macchina e ripristina l'ultima app proiettata. Altrimenti lo avvii manualmente.",
+          title: '🌐 Lingua',
+          text: '13 lingue — il cambio è istantaneo.',
         },
       ],
       howTo: {
-        title: 'Come regolare i margini di un\'app',
+        title: "Come regolare i margini di un'app",
         steps: [
           "Proietta l'app da regolare (es. Waze).",
-          "Apri Impostazioni → Margini.",
-          "Sposta il cursore orizzontale finché i bordi sx/dx vanno bene.",
-          "Idem col verticale.",
-          "Tocca « Applica » → la proiezione si aggiorna in diretta, senza riavviare l'app.",
-          "L'impostazione viene salvata solo per quella app (ognuna ha i suoi margini).",
+          'Impostazioni → Margini.',
+          'Sposta lo slider orizzontale finché i bordi sinistro/destro sono corretti.',
+          "Idem in verticale, poi «Applica» — regolazione a caldo, senza riavviare l'app.",
+          "L'impostazione è salvata solo per questa app.",
         ],
       },
       note:
-        "⚠️ Se cambi il tipo di cluster, riavvia DashCast per ricalcolare i valori di riferimento.",
+        '⚠️ Se cambi il tipo di cluster, ferma e rilancia la proiezione perché il ripristino usi la modalità giusta.',
+    },
+
+    {
+      id: 'layouts',
+      screen: 'screen-7',
+      title: '4. Layout — più app sul cluster',
+      lead:
+        'La modalità Layout divide il cluster in zone personalizzate, ognuna con la propria applicazione: Waze a sinistra, Spotify a destra, per esempio. Disegni le zone col dito, colleghi un\'app a ogni zona, e il layout si attiva con un tocco — o da solo all\'avvio.',
+      mockupLabel: 'Vedi schermata 7 (Layout)',
+      featuresTitle: 'Funzionalità',
+      features: [
+        {
+          title: '✏️ Disegnare una zona',
+          text:
+            'Sul canvas (replica del cluster 1920×720), trascina il dito per tracciare un rettangolo. Si apre una finestra: nome, posizione/dimensioni al pixel, e app da collegare.',
+        },
+        {
+          title: '🔗 Collegare un\'applicazione',
+          text:
+            "Ogni zona può essere collegata a un'app: all'attivazione del layout, l'app si lancia automaticamente nella sua zona. Una zona senza app resta libera.",
+        },
+        {
+          title: '✋ Spostare e ridimensionare',
+          text:
+            'Trascina una zona per spostarla; le maniglie bianche agli angoli ridimensionano. I bordi si agganciano automaticamente ai limiti del cluster e alle zone vicine.',
+        },
+        {
+          title: '✏️ Modificare una zona esistente',
+          text:
+            "Tocca una zona (sul canvas o sul suo chip in basso): rinominala, regola la geometria, cambia l'app collegata o eliminala. Pressione lunga = eliminazione rapida.",
+        },
+        {
+          title: '💾 Layout salvati',
+          text:
+            'Salva quanti layout vuoi («Nav+Media», «Triplo schermo»…). Il pannello laterale li elenca con Attiva / Disattiva / Modifica / Elimina.',
+        },
+        {
+          title: '⭐ Preferito e avvio automatico',
+          text:
+            'Il pulsante «Preferito» (o un tocco sulla scheda del carosello della schermata principale) designa il layout che «Layout preferito automatico» attiverà all\'avvio di DashCast — proiezione inclusa.',
+        },
+      ],
+      howTo: {
+        title: 'Crea il tuo primo layout',
+        steps: [
+          'Attiva «Modalità Layout» nelle Impostazioni.',
+          'Apri la scheda Layout (barra laterale).',
+          'Trascina il dito sul canvas per disegnare la prima zona (es. metà sinistra).',
+          'Nella finestra: assegnale un nome, tocca «Collega un\'applicazione» → scegli Waze → Aggiungi.',
+          'Disegna la seconda zona (metà destra), collega Spotify.',
+          '«Salva» → dai un nome al layout (es. Nav+Media).',
+          '«Preferito» per selezionarlo, poi attivalo: le due app si lanciano, ognuna nella sua zona.',
+        ],
+      },
+      tipsTitle: 'Suggerimenti',
+      tips: [
+        '💡 Combinato con «Layout preferito automatico» (Impostazioni), la tua configurazione multi-app completa si monta da sola a ogni avvio di DashCast.',
+        '💡 La mini-anteprima di ogni scheda del carosello mostra le zone reali del layout — riconoscibile a colpo d\'occhio.',
+        "💡 Un'app rifiuta di apparire nella sua zona? Alcune app impongono il loro formato; prova una zona più vicina al 16:9.",
+      ],
+      note:
+        'ℹ️ La modalità Layout si appoggia al Proxy ADB Daemon (avviato automaticamente). Primo avvio a freddo: conta 6–8 s prima che le app appaiano — è la sequenza di attivazione del cluster.',
     },
 
     {
       id: 'diagnostics',
       screen: 'screen-4',
-      title: '4. Diagnostica',
+      title: '5. Diagnostica',
       lead:
-        "La scheda Diag è un pannello interno per casi in cui la proiezione non si comporta come previsto. La maggior parte degli utenti non ne avrà mai bisogno — è pensata per supporto e debug.",
-      mockupLabel: 'Apri schermata 4 (Diag)',
-      featuresTitle: 'Strumenti',
+        'Pannello interno per le situazioni in cui la proiezione non funziona come previsto. La maggior parte degli utenti non ne avrà mai bisogno — esiste per il supporto e il debug.',
+      mockupLabel: 'Vedi schermata 4 (Diagnostica)',
+      featuresTitle: 'Strumenti disponibili',
       features: [
         {
-          title: 'Stato di ClusterService',
+          title: 'Test di connessione',
           text:
-            "Verifica che il servizio Android responsabile della proiezione sia attivo. Se « non collegato », un pulsante lo riavvia.",
+            'Verifica il tunnel ADB locale (localhost:5555), lo stato del ClusterService e la presenza dello schermo virtuale del cluster.',
         },
         {
-          title: 'Stato del VirtualDisplay',
+          title: 'Sonde di piattaforma',
           text:
-            "Mostra l'ID del display virtuale creato per il cluster, la sua risoluzione e se è agganciato un Surface Qt.",
+            'Rilevamento DiLink (2/3/4/5), inventario dei display, istanziazione delle API veicolo BYD (velocità, energia) e stato dei permessi BYDAUTO.',
         },
         {
-          title: 'Connessione ADB locale',
+          title: 'Report condivisibile',
           text:
-            "Test rapido del tunnel ADB verso localhost:5555. Se fallisce, di solito è stato disattivato l'ADB wireless dalle Impostazioni BYD.",
-        },
-        {
-          title: 'logcat mirato',
-          text:
-            "Cattura le ultime 200 righe di logcat filtrate su DashCast / AutoContainer / xdja. Il pulsante « Condividi » invia il report.",
+            'Genera un report completo (sistema, display, servizi, permessi, metriche del daemon) esportabile come testo per il supporto.',
         },
       ],
       howTo: {
         title: 'Quando usare questa scheda',
         steps: [
-          "Cluster nero dopo aver toccato un'app → controlla ClusterService e VirtualDisplay.",
-          "L'app dice « ADB non disponibile » → Diag → pulsante « Test ADB ».",
-          "Il supporto chiede un report → Diag → « Condividi logcat ».",
-          "Hai appena installato un aggiornamento e vuoi confermare la versione attiva.",
+          "Il cluster resta nero dopo aver toccato un'app → verifica ClusterService e il display virtuale.",
+          "L'app segnala «ADB non disponibile» → pulsante «Testa ADB».",
+          'Il supporto ti chiede un report → generalo e condividilo.',
         ],
       },
-      note:
-        "ℹ️ Questa scheda non modifica nulla da sola: i pulsanti eseguono test in sola lettura salvo dove indicato.",
+      note: 'ℹ️ I pulsanti sono test in sola lettura, salvo indicazione esplicita.',
     },
 
     {
       id: 'sysinfo',
       screen: 'screen-5',
-      title: '5. Informazioni di sistema',
+      title: '6. Report di sistema',
       lead:
-        "Pannello in sola lettura sull'ambiente hardware/software. Qui trovi la versione DashCast, il firmware BYD, la versione Android e l'identificativo del cluster.",
-      mockupLabel: 'Apri schermata 5 (Sistema)',
+        'Pannello in sola lettura: versioni, display rilevati e stato in diretta dei servizi DashCast. La prima schermata da consultare quando qualcosa sembra anomalo.',
+      mockupLabel: 'Vedi schermata 5 (Sistema)',
       featuresTitle: 'Informazioni mostrate',
       features: [
         {
-          title: '🚗 Veicolo',
+          title: '🖥️ Display',
           text:
-            "Modello BYD rilevato, VIN (se disponibile), build firmware (es. Di3.0 / 6125F), data di build.",
+            'Schermo principale (risoluzione, densità) e display virtuale del cluster (1920×720) con stato in tempo reale.',
         },
         {
-          title: '📱 Android',
+          title: '⚙️ Servizi',
           text:
-            "Versione Android (10), API level (29), patch di sicurezza, build ID DiLink.",
+            'ClusterService (proiezione), MirrorDaemon (mirror), Proxy ADB Daemon (operazioni privilegiate), AdbLocalClient (tunnel ADB) — ciascuno con pallino verde/rosso e pulsante di riavvio se fermo.',
         },
         {
-          title: '🔌 DashCast',
+          title: '📱 Versioni',
           text:
-            "Versione installata, versionCode, canale (stable / alpha), ultimo controllo OTA, link alle note di rilascio.",
+            'Versione DashCast installata, firmware BYD, versione Android/API, identificativi build DiLink.',
         },
         {
-          title: '🖥️ Cluster',
+          title: '🔁 Replay proiezione',
           text:
-            "Tipo rilevato (8.8″ / 12.3″ / 10.25″), risoluzione reale, ID VirtualDisplay attivo, package Qt attivo (com.xdja.containerservice).",
-        },
-        {
-          title: '📦 App tracciate',
-          text:
-            "Numero app rilevate, preferiti fissati, app con auto-avvio.",
+            'Pulsante per ripetere la sequenza completa di attivazione del cluster (utile se il quadro è rimasto in uno stato intermedio).',
         },
       ],
       tipsTitle: 'Suggerimenti',
       tips: [
-        "💡 Pressione lunga su una riga per copiare il valore negli appunti (utile per un bug report).",
-        "💡 Il pulsante « Esporta » in fondo salva tutto in un file di testo (/sdcard/DashCast/sysinfo.txt).",
+        '💡 «Proxy ADB Daemon» deve essere verde (RUN) per la modalità Layout — altrimenti tocca la sua riga per riavviarlo.',
+        '💡 Il report completo è esportabile da questa schermata per accompagnare una segnalazione di bug.',
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '6. Diario',
+      title: '7. Registro',
       lead:
-        "Diario interno di DashCast: registra ogni azione importante (proiezioni, ripristini, errori ADB, aggiornamenti). Utile per capire un comportamento inatteso o inviare un report al supporto.",
-      mockupLabel: 'Apri schermata 6 (Diario)',
+        'Il registro interno di DashCast: tutte le azioni importanti (proiezioni, ripristini, errori ADB, aggiornamenti) sono tracciate in continuo. Utile per capire un comportamento inatteso o fornire un report al supporto.',
+      mockupLabel: 'Vedi schermata 6 (Registro)',
       featuresTitle: 'Funzionalità',
       features: [
         {
-          title: '🔍 Filtro',
+          title: '🔍 Filtri',
           text:
-            "Inserisci una parola chiave per mantenere solo le righe rilevanti (es. « ADB », « Maps », « error »). Il filtro non distingue maiuscole/minuscole.",
+            'Filtra per livello (DEBUG / INFO / WARN / ERROR) o per parola chiave (es. «ADB», «Maps», «error»).',
         },
         {
-          title: '🎨 Codice colore',
+          title: '🎨 Codice colori',
           text:
-            "🟢 INFO (verde) — funzionamento normale. 🟠 WARN (arancio) — attenzione. 🔴 ERROR (rosso) — errore. ⚪ DEBUG (grigio) — dettaglio tecnico.",
-        },
-        {
-          title: '🗑 Svuota',
-          text:
-            "Svuota il diario. Il logcat di sistema non è influenzato — viene cancellata solo la cronologia in memoria di DashCast.",
+            '🟢 INFO — operazione normale. 🟠 WARN — attenzione. 🔴 ERROR — fallimento. ⚪ DEBUG — dettaglio tecnico.',
         },
         {
           title: '📤 Condividi',
           text:
-            "Esporta il diario corrente come .txt e apre il selettore di condivisione Android (email, Telegram, file). Include automaticamente versione DashCast e modello BYD.",
+            'Esporta il registro in .txt e apre il menu di condivisione Android. Include la versione DashCast e il modello BYD.',
         },
         {
           title: '⏰ Timestamp',
           text:
-            "Ogni riga è preceduta dall'orario locale (HH:mm:ss.mmm). Le operazioni lunghe (avvio Maps, ripristino) vengono misurate e mostrate.",
+            "Ogni riga è preceduta dall'ora locale (HH:mm:ss.mmm); le operazioni lunghe sono misurate.",
         },
       ],
       howTo: {
-        title: 'Come inviare un bug report',
+        title: 'Inviare una segnalazione di bug',
         steps: [
-          "Riproduci il problema (es. l'app resta nera all'avvio).",
-          "Apri Diario.",
-          "Tocca « Condividi ».",
-          "Scegli il canale (Telegram, email, GitHub Issues).",
-          "Il .txt allegato contiene la traccia completa con il contesto (versione, modello, firmware).",
+          'Riproduci il problema.',
+          'Apri Registro → «Condividi».',
+          'Scegli il tuo canale (Telegram, e-mail, GitHub Issues).',
+          'Il file allegato contiene la traccia e il contesto (versione, modello, firmware).',
         ],
       },
       note:
-        "🔒 Nessun dato personale (contatti, GPS, contenuti delle app) viene registrato — solo azioni DashCast e codici tecnici di ritorno.",
+        '🔒 Nessun dato personale (contatti, posizione GPS, contenuto delle app) viene registrato — solo le azioni DashCast e i codici di ritorno tecnici.',
     },
   ],
 
   faq: {
-    title: '7. FAQ — Domande frequenti',
+    title: '8. FAQ — Domande frequenti',
     items: [
       {
-        question: '❓ Il cluster resta nero quando tocco un\'app',
+        question: "❓ Il cluster resta nero quando tocco un'app",
         answer:
-          "Tre cause possibili: (1) ADB wireless disattivato — controlla Impostazioni BYD → Sviluppatore. (2) ClusterService non attivo — Diag, pulsante « Riavvia ». (3) L'app è appena crashata — tocca « Riconnetti » nel pannello destro.",
+          'Tre cause possibili: (1) ADB wireless disattivato — verifica Impostazioni BYD → Sviluppatore. (2) Un servizio fermo — scheda Sistema, riavvia la riga rossa. (3) L\'app è appena crashata — ritocca la sua icona.',
       },
       {
-        question: '❓ L\'immagine deborda / viene tagliata sul cluster',
+        question: "❓ L'immagine deborda / è tagliata sul cluster",
         answer:
-          "Apri Impostazioni → Margini e regola i cursori orizzontale/verticale finché i bordi vanno bene. Salvato per app, una volta sola.",
+          'Impostazioni → Margini: regola gli slider orizzontale/verticale finché i bordi sono corretti. Memorizzato per app — lo farai una sola volta.',
       },
       {
-        question: '❓ Come torno al cruscotto BYD originale?',
+        question: '❓ Come torno al quadro BYD originale?',
         answer:
-          "Un tocco breve su « Ferma specchio » basta nel 95 % dei casi. Se il cluster si blocca, pressione lunga sullo stesso pulsante → menu → « Ripristina cluster originale »: DashCast forza la sequenza sendInfo del tipo di cluster.",
+          'Tocca «Ferma proiezione» sulla schermata principale: DashCast ripristina il cluster nativo con la dimensione definita nelle Impostazioni. Se il quadro sembra bloccato: schermata Sistema → «Replay proiezione», poi ferma di nuovo.',
+      },
+      {
+        question: '❓ Il mio layout preferito non parte all\'avvio',
+        answer:
+          'Verifica le tre condizioni nelle Impostazioni: «Modalità Layout» attiva, «Layout preferito automatico» attivo, e un layout marcato ⭐ preferito (carosello della schermata principale o pulsante Preferito della scheda Layout). Al primo avvio a freddo, conta 6–8 s.',
       },
       {
         question: '❓ DashCast scarica la batteria 12 V?',
         answer:
-          "No — DashCast si ferma automaticamente allo spegnimento dell'auto (Android.intent.action.SCREEN_OFF + broadcast di disconnessione BMS). Nessun servizio resta attivo a motore spento.",
-      },
-      {
-        question: '❓ Voglio contribuire o segnalare un bug',
-        answer:
-          "GitHub: https://github.com/Kiroha/byd-dashcast — Issues per i bug, Discussions per le domande. Allega sempre un'esportazione del Diario (Diario → Condividi) per accelerare la diagnosi.",
+          "No — DashCast si ferma con l'auto. Nessun servizio in background resta attivo a motore spento.",
       },
       {
         question: '❓ Quali app funzionano sul cluster?',
         items: [
-          "✅ Navigazione: Google Maps, Waze, Yandex Navi, OsmAnd, Magic Earth.",
-          "✅ Multimedia: Spotify, YouTube, YouTube Music, Netflix (preferire l'orizzontale).",
-          "✅ Comunicazione: Telegram (modalità lettura), WhatsApp (notifiche).",
-          "✅ Sistema: fotocamera, meteo, calendario.",
-          "⚠️ App con DRM Widevine L1 (Disney+, Prime Video) possono rifiutare di renderizzare su VirtualDisplay — limitazione Android, non DashCast.",
+          '✅ Navigazione: Google Maps, Waze, Yandex Navi, OsmAnd, ABRP, Magic Earth.',
+          '✅ Media: Spotify, YouTube, YouTube Music (preferire orizzontale).',
+          '✅ Sistema: fotocamera, meteo, calendario.',
+          '⚠️ App con DRM (Netflix, Disney+, Prime Video): possono rifiutare di mostrarsi su uno schermo virtuale — limitazione Android, non DashCast.',
         ],
       },
       {
-        question: '❓ Aggiornamenti: stable o alpha?',
+        question: '❓ Aggiornamenti: stabile o beta?',
         answer:
-          "Il canale stable (default) è testato in auto per almeno 1 settimana prima della pubblicazione. L'alpha (Impostazioni → Aggiornamenti) riceve i build appena compilati — utile per anticipare, ma può introdurre regressioni temporanee.",
+          'Il canale stabile (predefinito) è testato su veicolo prima della pubblicazione. Il canale beta (Impostazioni → Aggiornamenti → «Includi pre-versioni») riceve le novità appena compilate — utile per testare in anticipo, con rischio di regressioni temporanee.',
+      },
+      {
+        question: '❓ Voglio contribuire o segnalare un bug',
+        answer:
+          'GitHub: https://github.com/Kiroha/byd-dashcast — Issues per i bug, Discussions per le domande. Allega un export del Registro per accelerare la diagnosi.',
       },
     ],
   },
 
   footer:
-    'DashCast è un progetto open-source distribuito con licenza GPL-3.0. Nessuna affiliazione con BYD Auto Co., Ltd.',
+    'DashCast è un progetto open-source distribuito sotto licenza MIT. Nessuna affiliazione con BYD Auto Co., Ltd.',
 };

@@ -61,7 +61,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_apps"
                 android:contentDescription="@string/main_nav_apps"/>
             <TextView
@@ -86,7 +86,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_secondary_container"
+                app:tint="@color/md_on_secondary_container"
                 android:background="@drawable/bg_nav_pill_active"
                 android:src="@drawable/ic_tune"
                 android:contentDescription="@string/main_nav_settings"/>
@@ -115,7 +115,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_stethoscope"
                 android:contentDescription="@string/main_nav_diag"/>
             <TextView
@@ -143,7 +143,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_info"
                 android:contentDescription="@string/main_nav_sysinfo"/>
             <TextView
@@ -171,7 +171,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_notes"
                 android:contentDescription="@string/main_nav_log"/>
             <TextView
@@ -206,7 +206,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_wifi_tethering"
                 android:contentDescription="@string/main_nav_hotspot"/>
             <TextView
@@ -214,6 +214,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/main_nav_hotspot"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Layouts (v1.4.9-beta) -->
+        <LinearLayout
+            android:id="@+id/nav_layouts_set"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_dashboard"
+                android:contentDescription="@string/main_nav_layouts"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_layouts"
                 android:textSize="11sp"
                 android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
@@ -635,7 +664,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_restart_alt"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -662,7 +691,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_autorenew"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -689,7 +718,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_speed"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -707,6 +736,33 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
+                        <!-- ADAS Window Fix — sendInfo(30) avant la projection -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                app:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_aspect_ratio"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_adas_window_fix"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_adas_window_fix_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_adas_window_fix"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
                         <!-- v1.2.42 — Carte SIM personnelle : conditionne le bouton Hotspot du navrail -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
@@ -716,7 +772,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_sim_card"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -746,7 +802,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_filter_list"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -773,7 +829,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_aspect_ratio"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -822,7 +878,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_info_outline"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -846,7 +902,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_system_update"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -880,7 +936,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_code"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -897,7 +953,7 @@
                                 android:layout_height="24dp"
                                 android:layout_gravity="center_vertical"
                                 android:src="@drawable/ic_open_in_new"
-                                android:tint="@color/md_on_surface_variant"/>
+                                app:tint="@color/md_on_surface_variant"/>
                         </LinearLayout>
 
                         <!-- Pre-release channel (different icon to avoid duplicating system_update) -->
@@ -909,7 +965,7 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
@@ -931,12 +987,12 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- ════════════════════════════════════════════════════════ -->
-                <!-- Section: BETA ENGINE — Experimental                       -->
+                <!-- Section: ADVANCED                                         -->
                 <!-- ════════════════════════════════════════════════════════ -->
                 <TextView
                     style="@style/Widget.DashCast.SectionHead"
                     android:layout_marginTop="20dp"
-                    android:text="@string/settings_section_beta_engine"/>
+                    android:text="@string/settings_section_advanced"/>
 
                 <com.google.android.material.card.MaterialCardView
                     style="@style/Widget.DashCast.Card.Filled"
@@ -952,31 +1008,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <!-- Warning banner -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:padding="12dp"
-                            android:layout_marginBottom="4dp"
-                            android:background="@drawable/bg_beta_warning">
-                            <ImageView
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_marginEnd="10dp"
-                                android:src="@drawable/ic_science"
-                                android:tint="#FFB300"/>
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_beta_warning"
-                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                android:textColor="#FFB300"/>
-                        </LinearLayout>
-
-                        <!-- Switch A : proxy daemon -->
+                        <!-- Switch : legacy ADB path -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
@@ -985,25 +1017,28 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_beta_proxy_daemon"/>
+                                    android:text="@string/settings_legacy_path"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_beta_proxy_daemon_support"/>
+                                    android:text="@string/settings_legacy_path_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/cb_beta_proxy_daemon"
+                                android:id="@+id/sw_legacy_path"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
-                        <!-- Switch B : system context bypass -->
+                        <!-- DiLink 5 is auto-detected via Platform; the manual override
+                             toggle was removed in 1.4.23 (detection is reliable). -->
+
+                        <!-- Switch Layouts : multi-app zone projection -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
@@ -1012,25 +1047,25 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_science"/>
+                                app:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_dashboard"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_beta_system_context"/>
+                                    android:text="@string/settings_fission_mode"/>
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_beta_system_context_support"/>
+                                    android:text="@string/settings_fission_mode_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/cb_beta_system_context"
+                                android:id="@+id/cb_fission_mode"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
-                        <!-- Switch DiLink5 : platform override -->
+                        <!-- Fission: activate favourite layout automatically -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
@@ -1039,20 +1074,46 @@
                                 android:layout_marginEnd="16dp"
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
-                                android:tint="@color/md_on_surface_variant"
+                                app:tint="@color/md_on_surface_variant"
+                                android:src="@drawable/ic_dashboard"/>
+                            <LinearLayout
+                                style="@style/Widget.DashCast.ListItem.Content">
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Headline"
+                                    android:text="@string/settings_fission_auto_layout"/>
+                                <TextView
+                                    style="@style/Widget.DashCast.ListItem.Support"
+                                    android:text="@string/settings_fission_auto_layout_support"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/sw_fission_auto_layout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"/>
+                        </LinearLayout>
+
+                        <!-- Fission: pre-create VD slots on Fission open -->
+                        <LinearLayout
+                            style="@style/Widget.DashCast.ListItem">
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginEnd="16dp"
+                                android:layout_gravity="center_vertical"
+                                android:scaleType="fitCenter"
+                                app:tint="@color/md_on_surface_variant"
                                 android:src="@drawable/ic_science"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView
                                     style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_dilink5_mode"/>
+                                    android:text="@string/settings_fission_precreate_slots"/>
                                 <TextView
-                                    android:id="@+id/tv_beta_dilink5_support"
                                     style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_dilink5_mode_support"/>
+                                    android:text="@string/settings_fission_precreate_slots_support"/>
                             </LinearLayout>
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/sw_dilink5_mode"
+                                android:id="@+id/sw_fission_precreate_slots"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center_vertical"/>

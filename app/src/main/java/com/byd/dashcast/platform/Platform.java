@@ -1,4 +1,5 @@
 package com.byd.dashcast.platform;
+import java.util.Locale;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -55,6 +56,9 @@ public final class Platform {
     private static volatile Boolean sCachedIsDiLink5 = null;
     private static volatile Boolean sCachedClusterResizeSupported = null;
 
+    /** Cached reflection handle for android.os.SystemProperties#get — resolved once. */
+    private static volatile Method sCachedSysPropGet = null;
+
     private final String  rawProductName;   // ro.product.name
     private final String  rawModel;          // Build.MODEL
     private final String  rawBrand;          // Build.BRAND
@@ -93,9 +97,9 @@ public final class Platform {
 
     private static boolean detectDiLink5(String product, String model, String fingerprint, int api) {
         // Primary signal: ro.product.name contains "DiLink5"
-        String p = (product == null ? "" : product).toLowerCase();
-        String m = (model    == null ? "" : model).toLowerCase();
-        String f = (fingerprint == null ? "" : fingerprint).toLowerCase();
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model    == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         if (p.contains("dilink5") || m.contains("dilink5") || f.contains("dilink5")) return true;
         if (p.contains("dilink_5") || m.contains("dilink 5") || f.contains("dilink 5")) return true;
         // Secondary signal: Android 12+ on BYD device strongly implies DiLink 5
@@ -115,9 +119,9 @@ public final class Platform {
      * so DL3/DL5 logic stays unaffected on devices we have not field-validated.
      */
     private static boolean detectDiLink4(String product, String model, String fingerprint, int api) {
-        String p = (product == null ? "" : product).toLowerCase();
-        String m = (model    == null ? "" : model).toLowerCase();
-        String f = (fingerprint == null ? "" : fingerprint).toLowerCase();
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model    == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         boolean nameHit = p.contains("dilink4") || m.contains("dilink4") || f.contains("dilink4")
                        || p.contains("dilink_4") || m.contains("dilink 4") || f.contains("dilink 4");
         if (!nameHit) return false;
@@ -134,8 +138,8 @@ public final class Platform {
      * Returns false on any uncertainty so DL3/DL5 logic stays unaffected.
      */
     private static boolean detectDiLink2(String brand, String product, int api) {
-        String b = (brand   == null ? "" : brand).toLowerCase();
-        String p = (product == null ? "" : product).toLowerCase();
+        String b = (brand   == null ? "" : brand).toLowerCase(Locale.ROOT);
+        String p = (product == null ? "" : product).toLowerCase(Locale.ROOT);
         if (!"alps".equals(b)) return false;
         if (!p.contains("k65")) return false;
         return api == 28 || api == 29;
@@ -203,17 +207,21 @@ public final class Platform {
         if (autoDiLink4) return false;
         Boolean cached = sCachedIsDiLink5;
         if (cached != null) return cached;
-        String ov = readOverride(ctx);
-        boolean val;
-        if (OV_FORCE_ON.equals(ov)) {
-            val = true;
-        } else if (OV_FORCE_OFF.equals(ov)) {
-            val = false;
-        } else {
-            val = autoDiLink5;
+        synchronized (Platform.class) {
+            cached = sCachedIsDiLink5;
+            if (cached != null) return cached;
+            String ov = readOverride(ctx);
+            boolean val;
+            if (OV_FORCE_ON.equals(ov)) {
+                val = true;
+            } else if (OV_FORCE_OFF.equals(ov)) {
+                val = false;
+            } else {
+                val = autoDiLink5;
+            }
+            sCachedIsDiLink5 = val;
+            return val;
         }
-        sCachedIsDiLink5 = val;
-        return val;
     }
 
     /** Short summary used for diagnostics ("AUTO=on", "FORCED off", …). */
@@ -322,14 +330,15 @@ public final class Platform {
                 "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?"
             });
             final Process proc = p;
-            final StringBuilder out = new StringBuilder();
+            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             Thread r = new Thread(new Runnable() {
                 @Override public void run() {
                     byte[] buf = new byte[1024];
                     try (java.io.InputStream is = proc.getInputStream()) {
                         int n;
                         while ((n = is.read(buf)) > 0) {
-                            out.append(new String(buf, 0, n));
+                            // ByteArrayOutputStream.write() is synchronized — safe from reader thread
+                            baos.write(buf, 0, n);
                         }
                     } catch (Throwable ignore) {}
                 }
@@ -342,7 +351,8 @@ public final class Platform {
                 return true;  // timeout → assume supported, don't downgrade UX
             }
             r.join(200);
-            String s = out.toString();
+            // Decode only after join() — reader thread has stopped writing.
+            String s = baos.toString();
             if (s.contains("Unknown command")) return false;
             // exit=255 with "Unknown command" wording is the canonical strip
             // signature on AOSP. Plain exit=255 without the wording could also
@@ -359,8 +369,12 @@ public final class Platform {
 
     private static String readProp(String key) {
         try {
-            Class<?> sp = Class.forName("android.os.SystemProperties");
-            Method m = sp.getMethod("get", String.class, String.class);
+            Method m = sCachedSysPropGet;
+            if (m == null) {
+                Class<?> sp = Class.forName("android.os.SystemProperties");
+                m = sp.getMethod("get", String.class, String.class);
+                sCachedSysPropGet = m;
+            }
             Object v = m.invoke(null, key, "");
             return v == null ? "" : v.toString();
         } catch (Throwable t) {

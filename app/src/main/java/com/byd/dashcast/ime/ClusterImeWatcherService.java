@@ -15,10 +15,11 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import android.annotation.SuppressLint;
 import java.util.List;
 
-import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.KeyboardBridgeActivity;
+import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.ime.KeyboardBridgeActivity;
 import com.byd.dashcast.platform.Platform;
 
 /**
@@ -61,7 +62,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
      *  Volatile because read from the bridge activity's UI thread. */
     private static volatile ClusterImeWatcherService sInstance = null;
 
-    private long mLastLaunchAt = 0L;
+    private volatile long mLastLaunchAt = 0L;
     private boolean mIsDiLink5  = false;
 
     // v1.2.24 — Background worker for setTextOnCluster / performImeEnterOnCluster.
@@ -165,6 +166,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         super.onDestroy();
     }
 
+    @SuppressLint("NewApi")
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (!mIsDiLink5 || event == null) return;
@@ -174,7 +176,7 @@ public class ClusterImeWatcherService extends AccessibilityService {
         // actually live. Outside of that window the cluster display is dormant
         // and any focus event from a secondary display is none of our business
         // (other in-vehicle systems, external HDMI, etc.).
-        if (!com.byd.dashcast.ClusterService.sIsRunning) return;
+        if (!com.byd.dashcast.cluster.ClusterService.isRunning()) return;
 
         try {
             // Cluster filter: focus events from the head-unit display are
@@ -363,6 +365,41 @@ public class ClusterImeWatcherService extends AccessibilityService {
             }
         });
         return true;
+    }
+
+    /**
+     * v1.3.3 — Touch-driven keyboard auto-trigger. Called by MainActivity's
+     * {@code forwardTouchFromMirror} after an ACTION_UP is forwarded to the
+     * cluster mirror (350 ms delay to let the cluster app process the tap and
+     * move input focus). Posts the editable-detection work to the background
+     * worker so {@code getWindowsOnAllDisplays()} is never called on the UI
+     * thread. No-op when the bridge is already showing, the service is not
+     * bound, or the debounce window has not elapsed.
+     *
+     * <p>This complements the existing event-driven path (TYPE_VIEW_FOCUSED
+     * from the accessibility subsystem). Both paths share the same debounce
+     * gate so they cannot double-launch the bridge.
+     */
+    public static void checkAndLaunchBridgeIfNeeded(Context ctx) {
+        ClusterImeWatcherService self = sInstance;
+        if (self == null) return;                          // service not enabled
+        if (KeyboardBridgeActivity.isShowing()) return;    // already open
+        long now = android.os.SystemClock.uptimeMillis();
+        if (now - self.mLastLaunchAt < DEBOUNCE_MS) return; // debounce
+        android.os.Handler worker = self.mWorker;
+        if (worker == null) return;
+        final ClusterImeWatcherService svc = self;
+        worker.post(new Runnable() {
+            @Override public void run() {
+                if (KeyboardBridgeActivity.isShowing()) return;
+                AccessibilityNodeInfo node = svc.findClusterFocusedEditable();
+                if (node == null) return;
+                try { node.recycle(); } catch (Throwable ignored) { }
+                svc.mLastLaunchAt = android.os.SystemClock.uptimeMillis();
+                AppLogger.d(TAG, "checkAndLaunchBridgeIfNeeded — cluster editable detected after touch, launching bridge");
+                svc.launchBridge();
+            }
+        });
     }
 
     /**

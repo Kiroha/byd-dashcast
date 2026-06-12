@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Аспаптар панелі контроллері</string>
     <string name="welcome_select_lang">Тілді таңдаңыз\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">BYD кластерінде дисплейді қолдайды</string>
     <string name="notif_cluster_initializing">Кластер: инициализация…</string>
     <string name="notif_cluster_active">Кластер белсенді — экран %1$d</string>
-    <string name="notif_cluster_stopped">Кластер: тоқтатылды</string>
     <string name="notif_cluster_disconnected">Кластер: ажыратылды</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Тор режимі</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Жаңа нұсқаның бар-жоғын тексереді</string>
     <string name="settings_check_update_button">Тексеру</string>
     <string name="settings_source_code_title">Бастапқы код</string>
-    <string name="main_title_dashboard">Бақылау тақтасы</string>
     <string name="main_nav_apps">Қосымшалар</string>
     <string name="main_nav_settings">Бапт.</string>
     <string name="main_nav_diag">Диаг.</string>
@@ -200,6 +198,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof бақылауда · 500 мс</string>
+    <string name="sysinfo_svc_checking">Тексеру…</string>
     <string name="sysinfo_svc_stopped">Тоқтатылды</string>
     <string name="sysinfo_svc_adb_unreachable">5555 қолжетімсіз</string>
     <string name="sysinfo_svc_conn">CONN</string>
@@ -222,14 +221,9 @@
     <string name="log_saved_toast">Журнал сақталды: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">Эксперименттік қозғалтқыш (бета)</string>
-    <string name="settings_beta_warning">Эксперименттік мүмкіндіктер. Қателік болса, қолданба автоматты түрде тұрақты қозғалтқышқа ауысады. Өзгертуден кейін қайта іске қосу қажет.</string>
-    <string name="settings_beta_proxy_daemon">Артықшылықты прокси-демон</string>
-    <string name="settings_beta_proxy_daemon_support">Жүйелік пәрмендерді орындау үшін жергілікті ADB (UID 2000) арқылы тұрақты демонды іске қосады. OpenBYD идеясы.</string>
-    <string name="settings_beta_system_context">Жүйелік контекст (рефлексия)</string>
-    <string name="settings_beta_system_context_support">BYD SDK рұқсаттарын айналып өту үшін ActivityThread.systemMain() арқылы жүйелік Context алады.</string>
-    <string name="beta_restart_title">Қайта іске қосу қажет</string>
-    <string name="beta_restart_message">Бұл параметр DashCast-тың келесі іске қосылуында күшіне енеді. Сол кезге дейін қолданбаны қалыпты пайдалана аласыз.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="diag_tab_cluster">Кластер</string>
     <string name="diag_tab_display">Дисплей</string>
     <string name="diag_tab_adb_local">Жергілікті ADB</string>
@@ -239,10 +233,9 @@
     <string name="diag_coming_soon_subtitle">Бұл бөлім келесі нұсқада іске асырылады. Ағымдағы тестілер үшін «Beta Engine» қойындысын қараңыз.</string>
     <string name="diag_beta_header_title">Эксперименттік қозғалтқыш</string>
     <string name="diag_beta_header_subtitle">Component A (демон) және Component B (жүйелік контекст) тестілері. 1-кезең.</string>
-    <string name="diag_beta_pill_a_off">A · Демон: OFF</string>
-    <string name="diag_beta_pill_a_on">A · Демон: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
     <string name="diag_beta_counters_idle">Бастау үшін «Барлығын іске қосу» түймесін басыңыз</string>
     <string name="diag_beta_counters_running">Орындалуда…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -262,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">Мақсатты қолданба (D8 тесті — кластер)</string>
     <string name="diag_dl5_d8_running_toast">D8 тесті %1$s бойынша — қолданба қайта іске қосылып, негізгі экранға қайтарылады.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">DiLink 5 режимі (эксперименттік)</string>
-    <string name="settings_dilink5_mode_support">DashCast-ты DiLink 5.0 / Android 12 хаттамасына бейімдейді.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Қайта іске қосу қажет.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Кластердің авто-пернетақтасы (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Кластердегі мәтін өрісін түрткенде көпір пернетақтасын көрсетеді.</string>
@@ -276,6 +266,9 @@
     <string name="ime_banner_btn_dismiss">Қайта көрсетпеу</string>
     <string name="ime_banner_toast_enabled">Авто-пернетақта белсенді ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Параметрлерді ашу мүмкін емес — « Кластер авто-пернетақтасы » арнайы мүмкіндіктер қызметін қолмен қосыңыз.</string>
+    <string name="hud_notif_banner_title">HUD Навигация — хабарландыруларға қатынасу қажет</string>
+    <string name="hud_notif_banner_body">DashCast кластер экранында навигация нұсқаулықтарын көрсету үшін хабарландыруларға қатынасуды қажет етеді. Параметрлер → Арнайы қолданба қатынасы → Хабарландыруларға қатынасу → DashCast тармағынан қосыңыз.</string>
+    <string name="hud_notif_banner_toast_enabled">Хабарландыруларға қатынасу берілді ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Пернетақта аспаптар тақтасында жұмыс істеуі үшін Параметрлер → Арнайы мүмкіндіктер бөлімінде « DashCast Cluster IME » қызметін қосыңыз.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Пернетақта</string>
@@ -371,14 +364,15 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · тексеру…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Fission тесті</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивті нақты тест: таңдалған қолданбаны fission экранында іске қосады, өлшемін мәжбүрлеп өзгертеді, негізгі экранға қайтарады, содан кейін тазалайды. Тек DiLink 5 үшін, негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission тесті — деструктивті</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Мақсат: %1$s\n\nБұл сериал:\n\n• Қолданбада FORCE_RESIZE_APP compat-ты қосады\n• Қолданбаны мәжбүрлеп тоқтатады\n• Оны fission экранында (id ≠ 0) freeform режимінде іске қосады\n• Тапсырманы өлшемін өзгертуді тексереді\n• Жылжытуды растау үшін негізгі экранға (id 0) қайтарады\n• Қолданбаны мәжбүрлеп тоқтатып, compat-ты қалпына келтіреді (тазалау)\n\nНегізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.\nЖалғастыру керек пе?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Тестті іске қосу</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Сынайтын қолданбаны таңдау</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline сынағы</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon конвейерін 7 қадаммен тексереді: VD жасау, VD-да қолданбаны іске қосу, кластер бетіне айналу. Тек DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline сынағы</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Мақсат: %1$s\n\nБұл топтама:\n\n• V01: кластер проекциясын белсендіру (auto_container)\n• V02: қолданбаны іске қосуға болатынын тексеру\n• V03: 1920×720 VirtualDisplay жасау\n• V04: қолданбаны VD-да іске қосу\n• V05: MirrorDaemon арқылы айналуды бастау\n• V06: кластер рендерингін визуалды тексеру\n• V07: тазалау (айналуды тоқтату, VD жою, force-stop)\n\nТек DiLink 5. Мақсатты қолданба сынақ кезінде мәжбүрлі тоқтатылады.\nЖалғастыру?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Сынақты бастау</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline сынағы тек DiLink 5 үшін.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Сынауға арналған қолданбаны таңдаңыз</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
     <string name="diag_dl5_fission_prompt_title">Кластерді тексеру</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s кластер экранында көрінеді ме?\n\n(%2$d экранын сынау)</string>
     <string name="diag_dl5_fission_prompt_yes">Иә</string>
@@ -404,7 +398,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Дауыс (alpha)</string>
     <string name="diag_voice_header_title">Дауыспен басқару — аудио-тізбек PoC</string>
-    <string name="diag_voice_header_subtitle">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
     <string name="diag_voice_btn_start">Тыңдауды бастау</string>
     <string name="diag_voice_btn_stop">Тоқтату</string>
     <string name="diag_voice_state_idle">Қызмет тоқтатылған</string>
@@ -423,20 +417,37 @@
     <string name="diag_voice_notif_text">Аудио деңгейі жергілікті талданады, ештеңе жазылмайды.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-    <string name="diag_voice_wakeword_card_title">Ояту сөзі (openWakeWord)</string>
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Дауыстық пәрмендер (Vosk)</string>
+    <string name="diag_voice_commands_switch">Қосу</string>
+    <string name="diag_voice_commands_hint">«Hey Jarvis» деп айтыңыз, содан кейін пәрменіңізді: «кластер», «кластерді жабу», «YouTube іске қосу», «диагностика», «журналдар».</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API кілті (міндетті емес — Jarvis ЖИ-ні іске қосады)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Ояту сөзі (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Сөйлеуді тану үлгісі</string>
+    <string name="diag_voice_model_small_label">Шағын үлгі (~40 МБ)</string>
+    <string name="diag_voice_model_small_desc">Жылдам жүктеу, қысқа командалар үшін жақсы дәлдік.</string>
+    <string name="diag_voice_model_large_label">Үлкен үлгі (~1,3 ГБ) — жоғары дәлдік</string>
+    <string name="diag_voice_model_large_desc">Жақсырақ тану, Wi-Fi болғанда ұсынылады.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d МБ қолжетімді</string>
+    <string name="diag_voice_model_download_btn">Жүктеу</string>
+    <string name="diag_voice_model_delete_btn">Жою</string>
+    <string name="diag_voice_model_status_downloaded">✓ Үлгі орнатылды</string>
+    <string name="diag_voice_model_status_not_downloaded">Орнатылмаған</string>
+    <string name="diag_voice_model_progress_fmt">%1$d МБ / %2$d МБ (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Шығарылуда…</string>
     <string name="diag_voice_wakeword_switch">Қосу</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid бағасы (босаға 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Үлгі: hey_jarvis_v0.1 («Ok DashCast» үшін орынбасар)</string>
     <string name="diag_voice_wakeword_last_fmt">Соңғы анықтау: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Соңғы анықтау: %1$s (баға %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime қол жетімсіз — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -525,4 +536,110 @@
     <string name="dpi_custom">Қолданушы…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Келесі іске қосуда қолданылады</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Проекция алдында sendInfo(30) жібереді — кейбір көліктерде ADAS созылуын түзетеді. Іске қосылу кезінде кластер пішіні өзгерсе өшіріңіз.</string>
+    <string name="settings_fission_mode">Layouts режимі</string>
+    <string name="settings_fission_mode_support">Кластерде реттелетін аймақтармен көп қолданбалы проекция. Прокси демонды қажет етеді.</string>
+    <string name="fission_title">Fission — Көп қолданбалы кластер</string>
+    <string name="fission_status_idle">Қолданбаны көрсету үшін + түймесін басыңыз</string>
+    <string name="fission_btn_add">+ Қолданба қосу</string>
+    <string name="fission_btn_stop">Барлығын тоқтату</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Layout өңдегіші</string>
+    <string name="fission_editor_clear">Тазалау</string>
+    <string name="fission_editor_save">Сақтау</string>
+    <string name="fission_editor_edit">Өңдеу</string>
+    <string name="fission_editor_delete">Жою</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Орналасуларды басқару</string>
+    <string name="layout_manager_new">Жаңа орналасу</string>
+    <string name="layout_canvas_hint">Аймақ салу үшін сүйреңіз</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Белсенді қолданбалар: %1$d</string>
+    <string name="fission_all_projected">Барлық қолданбалар әлдеқашан көрсетіліп тұр</string>
+    <string name="fission_close_slot_confirm">Жабу</string>
+    <string name="fission_close_slot_title">%1$s жабылсын ба?</string>
+    <string name="fission_conflict_message">Проекция әлдеқашан белсенді. Жалғастыру үшін оны тоқтату керек пе?</string>
+    <string name="fission_conflict_stop">Тоқтату</string>
+    <string name="fission_conflict_title">Проекция қайшылығы</string>
+    <string name="fission_idle_hint">Қолданбаны көрсету үшін + түймесін басыңыз</string>
+    <string name="fission_launch_in">%1$s мында іске қосу…</string>
+    <string name="fission_layout_active_fmt">Орналасу: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Таңдаулы орналасу орнатылды ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Еркін режим</string>
+    <string name="fission_layout_switch">Ауыстыру</string>
+    <string name="fission_mode_free">Еркін режим</string>
+    <string name="fission_no_apps">Қолжетімді қолданбалар жоқ</string>
+    <string name="fission_pick_app_title">Қолданбаны таңдаңыз</string>
+    <string name="fission_place_in">%1$s мында орналастыру…</string>
+    <string name="fission_resize_full">Толық экран</string>
+    <string name="fission_resize_left_3q">Сол жақ ¾</string>
+    <string name="fission_resize_left_half">Сол жақ ½</string>
+    <string name="fission_resize_right_3q">Оң жақ ¾</string>
+    <string name="fission_resize_right_half">Оң жақ ½</string>
+    <string name="fission_resize_title">%1$s өлшемін өзгерту</string>
+    <string name="fission_slot_error">Слот %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Қолданбаны байланыстыру…</string>
+    <string name="fission_slot_pkg_none">Жоқ — бос аймақ</string>
+    <string name="fission_slot_zone_bound_fmt">Байланысқан қолданба: %1$s</string>
+    <string name="settings_fission_auto_layout">Автоматты таңдаулы орналасу</string>
+    <string name="settings_fission_auto_layout_support">DashCast іске қосылғанда: кластер проекциясын, таңдаулы орналасуды іске қосып, байланысқан қолданбаларды ашады</string>
+    <string name="settings_fission_precreate_slots">Слоттарды іске қосылғанда алдын ала жасау</string>
+    <string name="settings_fission_precreate_slots_support">Fission ашылғанда таңдаулы орналасудың Virtual Display-лерін дайындайды (қолданбаларды іске қоспай)</string>
+    <string name="sysinfo_disp_hidden">Жасырын (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">DisplayManager API арқылы көрінбейді</string>
+    <string name="layout_preset_activate">Іске қосу</string>
+    <string name="layout_preset_active_badge">БЕЛСЕНДІ</string>
+    <string name="layout_preset_deactivate">Өшіру</string>
+    <string name="fission_zone_count">%1$d аймақ</string>
+    <string name="fo_err_attach_fmt">%1$s үшін слот жасалмады</string>
+    <string name="fo_err_daemon">Демон қолжетімсіз</string>
+    <string name="fo_err_proxy">Proxy ADB Daemon қосылмаған. Оны Параметрлерден қосыңыз.</string>
+    <string name="fo_status_autoactivate">Орналасу автоматты іске қосылуда…</string>
+    <string name="fo_status_autolayout_err_fmt">Авто-орналасу қатесі: %1$s</string>
+    <string name="fo_status_create_fmt">%1$s үшін слот жасалуда…</string>
+    <string name="fo_status_daemon">Демон іске қосылуда…</string>
+    <string name="fo_status_launching_fmt">%1$s іске қосылуда (%2$d дисплей)…</string>
+    <string name="fo_status_mirror">Айна іске қосылуда…</string>
+    <string name="fo_status_precreate">Слоттар алдын ала жасалуда…</string>
+    <string name="fo_status_projection">Кластер проекциясы іске қосылуда…</string>
+    <string name="fo_status_reuse_fmt">%1$s үшін слот қайта пайдаланылуда…</string>
+    <string name="fo_status_starting_fmt">%1$s іске қосылуда…</string>
+    <string name="fo_status_stopping">Тоқтатылуда…</string>
+    <string name="lm_action_add">Қосу</string>
+    <string name="lm_action_delete">Жою</string>
+    <string name="lm_action_save">Сақтау</string>
+    <string name="lm_activated_ok_fmt">%1$s іске қосылды ✓</string>
+    <string name="lm_activated_partial_fmt">%1$s іске қосылды (кейбір слоттар сәтсіз)</string>
+    <string name="lm_activating_fmt">%1$s іске қосылуда…</string>
+    <string name="lm_daemon_not_connected">Демон қосылмаған — алдымен Fission проекциясын іске қосыңыз</string>
+    <string name="lm_delete_confirm_fmt">«%1$s» жойылсын ба?</string>
+    <string name="lm_draw_zone_first">Кемінде бір аймақ салыңыз</string>
+    <string name="lm_edit_zones_hint">Аймақтарды өзгертіп, сақтаңыз</string>
+    <string name="lm_error_fmt">Қате: %1$s</string>
+    <string name="lm_free_mode_toast">Еркін режим қосылды</string>
+    <string name="lm_layout_default_name_fmt">Орналасу %1$d</string>
+    <string name="lm_layout_name_hint">Орналасу атауы</string>
+    <string name="lm_layout_save_title">Орналасуды сақтау</string>
+    <string name="lm_layout_saved_toast">Орналасу сақталды ✓</string>
+    <string name="lm_new_layout_name">Жаңа орналасу</string>
+    <string name="lm_no_layout_loaded">Орналасу жүктелмеген</string>
+    <string name="lm_no_saved_layouts">Сақталған орналасулар жоқ\nЖоғарыда аймақтар салып, сақтаңыз.</string>
+    <string name="lm_save_before_favorite">Таңдаулы етпес бұрын орналасуды сақтаңыз</string>
+    <string name="lm_zone_delete_title">Аймақ жойылсын ба?</string>
+    <string name="lm_zone_edit_title_fmt">«%1$s» өзгерту</string>
+    <string name="lm_zone_height">Биіктігі (px)</string>
+    <string name="lm_zone_name_hint">Аймақ атауы</string>
+    <string name="lm_zone_new_title_fmt">Жаңа аймақ — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">Орны және өлшемдері</string>
+    <string name="lm_zone_width">Ені (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">Кластер орналасуы</string>
+    <string name="main_layout_free_sub">Орналасу жоқ</string>
+    <string name="main_layout_manage">Басқару</string>
 </resources>
