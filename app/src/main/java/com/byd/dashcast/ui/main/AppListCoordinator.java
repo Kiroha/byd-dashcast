@@ -78,7 +78,7 @@ public final class AppListCoordinator {
 
     private void setup() {
         Context ctx = mHost.getContext();
-        mAdapter = new AppListAdapter(mHost.getSendListener());
+        mAdapter = new AppListAdapter(ctx, mHost.getSendListener());
         applyLayoutManager(ctx);
         mRvApps.setAdapter(mAdapter);
 

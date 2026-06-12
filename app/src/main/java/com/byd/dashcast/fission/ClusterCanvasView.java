@@ -16,8 +16,6 @@ import java.util.List;
 
 public class ClusterCanvasView extends View {
 
-    private static final java.util.regex.Pattern P_NL = java.util.regex.Pattern.compile("\n");
-
     private static final int   CW             = 1920;
     private static final int   CH             = 720;
     private static final int   COLOR_XDJA     = 0x99000000;
@@ -174,14 +172,22 @@ public class ClusterCanvasView extends View {
         }
     }
 
+    // Runs once per slot per onDraw, i.e. every frame while a zone is dragged —
+    // lines are scanned by index instead of regex-split into a fresh String[].
     private void drawCenteredText(Canvas c, String text, float cx, float cy) {
-        String[] lines = P_NL.split(text);
+        int lineCount = 1;
+        for (int i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineCount++;
         float lh = mPaintLabel.getTextSize() * 1.3f;
-        float startY = cy - lh * (lines.length - 1) / 2f;
-        for (String line : lines) {
-            float tw = mPaintLabel.measureText(line);
-            c.drawText(line, cx - tw / 2f, startY, mPaintLabel);
-            startY += lh;
+        float y = cy - lh * (lineCount - 1) / 2f;
+        int start = 0;
+        while (true) {
+            int end = text.indexOf('\n', start);
+            if (end < 0) end = text.length();
+            float tw = mPaintLabel.measureText(text, start, end);
+            c.drawText(text, start, end, cx - tw / 2f, y, mPaintLabel);
+            y += lh;
+            if (end >= text.length()) break;
+            start = end + 1;
         }
     }
 
@@ -308,20 +314,23 @@ public class ClusterCanvasView extends View {
         return -1;
     }
 
+    // snapX/snapY run several times per ACTION_MOVE event — candidate edges are
+    // compared inline rather than packed into throwaway float[] arrays.
+
     private float snapX(float x, int excludeIdx) {
         float best = x, bestDist = SNAP_THRESHOLD;
-        for (float c : new float[]{ mLeft, CW - mRight }) {
-            float d = Math.abs(x - c);
-            if (d < bestDist) { bestDist = d; best = c; }
-        }
+        float d = Math.abs(x - mLeft);
+        if (d < bestDist) { bestDist = d; best = mLeft; }
+        d = Math.abs(x - (CW - mRight));
+        if (d < bestDist) { bestDist = d; best = CW - mRight; }
         if (mSlots != null) {
             for (int i = 0; i < mSlots.size(); i++) {
                 if (i == excludeIdx) continue;
                 LayoutPreset.SlotDef s = mSlots.get(i);
-                for (float c : new float[]{ s.x, s.x + s.w }) {
-                    float d = Math.abs(x - c);
-                    if (d < bestDist) { bestDist = d; best = c; }
-                }
+                d = Math.abs(x - s.x);
+                if (d < bestDist) { bestDist = d; best = s.x; }
+                d = Math.abs(x - (s.x + s.w));
+                if (d < bestDist) { bestDist = d; best = s.x + s.w; }
             }
         }
         return best;
@@ -329,18 +338,18 @@ public class ClusterCanvasView extends View {
 
     private float snapY(float y, int excludeIdx) {
         float best = y, bestDist = SNAP_THRESHOLD;
-        for (float c : new float[]{ mTop, CH - mBottom }) {
-            float d = Math.abs(y - c);
-            if (d < bestDist) { bestDist = d; best = c; }
-        }
+        float d = Math.abs(y - mTop);
+        if (d < bestDist) { bestDist = d; best = mTop; }
+        d = Math.abs(y - (CH - mBottom));
+        if (d < bestDist) { bestDist = d; best = CH - mBottom; }
         if (mSlots != null) {
             for (int i = 0; i < mSlots.size(); i++) {
                 if (i == excludeIdx) continue;
                 LayoutPreset.SlotDef s = mSlots.get(i);
-                for (float c : new float[]{ s.y, s.y + s.h }) {
-                    float d = Math.abs(y - c);
-                    if (d < bestDist) { bestDist = d; best = c; }
-                }
+                d = Math.abs(y - s.y);
+                if (d < bestDist) { bestDist = d; best = s.y; }
+                d = Math.abs(y - (s.y + s.h));
+                if (d < bestDist) { bestDist = d; best = s.y + s.h; }
             }
         }
         return best;
