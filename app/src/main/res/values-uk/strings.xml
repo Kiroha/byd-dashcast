@@ -597,4 +597,7 @@
     <string name="layout_preset_active_badge">АКТИВНИЙ</string>
     <string name="layout_preset_deactivate">Деактивувати</string>
     <string name="fission_zone_count">%1$d зон(и)</string>
+    <string name="main_layout_section">Макет кластера</string>
+    <string name="main_layout_free_sub">Без макета</string>
+    <string name="main_layout_manage">Керування</string>
 </resources>

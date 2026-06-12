@@ -596,4 +596,7 @@
     <string name="layout_preset_active_badge">ACTIVO</string>
     <string name="layout_preset_deactivate">Desactivar</string>
     <string name="fission_zone_count">%1$d zona(s)</string>
+    <string name="main_layout_section">Layout del cluster</string>
+    <string name="main_layout_free_sub">Sin layout</string>
+    <string name="main_layout_manage">Gestionar</string>
 </resources>

@@ -865,39 +865,42 @@
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
 
-                    <!-- The "open Fission" button was removed in 1.4.24: layout activation
-                         is driven by the auto-layout setting and the Layouts screen. -->
-
-                    <!-- Fission layout selector row (visible only when Layouts mode enabled) -->
+                    <!-- ────── Layout carousel (visible only when Layouts mode enabled).
+                         Cards are built dynamically by FissionCoordinator: free mode,
+                         one card per saved preset (mini zone preview), manage card. -->
                     <LinearLayout
-                        android:id="@+id/ll_fission_layout_row"
+                        android:id="@+id/ll_layout_carousel_section"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="6dp"
-                        android:paddingStart="4dp"
-                        android:gravity="center_vertical"
+                        android:orientation="vertical"
+                        android:layout_marginTop="14dp"
                         android:visibility="gone">
 
                         <TextView
-                            android:id="@+id/tv_main_fission_layout"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textSize="12sp"
-                            android:textColor="@color/md_on_surface_variant"
-                            android:text="@string/fission_layout_mode_free"/>
+                            android:layout_marginBottom="8dp"
+                            android:text="@string/main_layout_section"
+                            android:textAllCaps="true"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12"
+                            android:textColor="@color/md_on_surface_variant"/>
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_main_switch_layout"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:textSize="12sp"
-                            android:text="@string/fission_layout_switch"/>
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:scrollbars="none"
+                            android:clipToPadding="false"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp">
 
+                            <LinearLayout
+                                android:id="@+id/ll_layout_carousel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"/>
+                        </HorizontalScrollView>
                     </LinearLayout>
 
                     <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->

@@ -628,4 +628,7 @@
     <string name="layout_preset_active_badge">ACTIF</string>
     <string name="layout_preset_deactivate">Désactiver</string>
     <string name="fission_zone_count">%1$d zone(s)</string>
+    <string name="main_layout_section">Layout cluster</string>
+    <string name="main_layout_free_sub">Aucun layout</string>
+    <string name="main_layout_manage">Gérer</string>
 </resources>
