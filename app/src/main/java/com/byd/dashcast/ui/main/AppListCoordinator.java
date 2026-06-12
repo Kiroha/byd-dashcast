@@ -39,6 +39,8 @@ public final class AppListCoordinator {
         Context getContext();
         AppListAdapter.OnSendToDashboardListener getSendListener();
         void onShowAppActions(com.byd.dashcast.model.AppInfo app);
+        /** Called once on first app launch if the welcome tip has never been shown. */
+        void onFirstLaunchTip();
     }
 
     private final RecyclerView  mRvApps;
@@ -189,6 +191,24 @@ public final class AppListCoordinator {
     public String  getMainPackage()    { return mAdapter != null ? mAdapter.getMainPackage()    : null; }
     public boolean isGridMode()        { return mAdapter != null && mAdapter.isGridMode(); }
     public void    setApps(List<AppInfo> apps) { if (mAdapter != null) mAdapter.setApps(apps); }
+
+    /**
+     * Splits {@code apps} into favorites (strip) and non-favorites (grid), pushes both to the
+     * UI, and fires {@link Host#onFirstLaunchTip()} on first use.
+     */
+    public void deliver(List<AppInfo> apps, boolean showFirstTip) {
+        if (apps == null) return;
+        List<AppInfo> nonFavs = new java.util.ArrayList<>(apps.size());
+        for (AppInfo a : apps) {
+            if (!a.isFavorite) nonFavs.add(a);
+        }
+        setApps(nonFavs);
+        refreshFavoritesStrip(apps);
+        if (showFirstTip && !ClusterPrefs.isFirstLaunchTipShown(mHost.getContext())) {
+            ClusterPrefs.setFirstLaunchTipShown(mHost.getContext());
+            mMainHandler.postDelayed(mHost::onFirstLaunchTip, 1200);
+        }
+    }
 
     /** Rebuilds the favorites strip from the given app list (call from deliverAppsToUI). */
     public void refreshFavoritesStrip(List<AppInfo> apps) {

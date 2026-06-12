@@ -1,5 +1,9 @@
 package com.byd.dashcast;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -24,6 +28,27 @@ public final class DaemonBinderResolver {
         void onFound(IBinder binder);
     }
 
+    /**
+     * Returns a {@link BroadcastReceiver} for {@code MirrorDaemon.ACTION_DAEMON_READY}.
+     * Extracts the Binder from the intent extras and fires {@code callback.onFound()} if present.
+     * Register/unregister this receiver in onCreate/onDestroy via {@code registerReceiver}.
+     */
+    public static BroadcastReceiver createActionReceiver(Callback callback) {
+        return new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Bundle extras = intent.getExtras();
+                if (extras == null) return;
+                IBinder binder = extras.getBinder("daemon_binder");
+                if (binder != null) {
+                    AppLogger.i(TAG, "DaemonBinder received via broadcast ✓");
+                    callback.onFound(binder);
+                }
+            }
+        };
+    }
+
+    /** Spawns a background thread to look up the daemon Binder via ServiceManager reflection. */
     public static void fetch(Callback callback) {
         new Thread(() -> {
             try {
