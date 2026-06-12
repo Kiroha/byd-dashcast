@@ -634,11 +634,20 @@ public class MainActivity extends AppCompatActivity
                 if (mNavCoordinator != null) mNavCoordinator.setStatusPending();
                 Intent svcIntent = new Intent(this, ClusterService.class);
                 bindService(svcIntent, mServiceConn, BIND_AUTO_CREATE);
+            } else if (mPendingAutoLaunchPkg != null && !isLayoutAutoStartConfigured()) {
+                // v1.4.24 — an explicitly configured auto-launch app overrides the
+                // v1.2.38 "don't wake the cluster on open" rule: the user asked for
+                // this app to be projected at startup. Activate projection here; the
+                // pending package is consumed in onClusterDisplayConnected once the
+                // display is up. Skipped when the Layouts auto-start owns the launch.
+                AppLogger.i(TAG, "auto-launch app configured (" + mPendingAutoLaunchPkg
+                        + ") — activating projection on startup");
+                activateCluster();
             }
-            // v1.2.38: do NOT auto-activate projection on launch anymore. User
-            // feedback: opening DashCast just to browse the app grid should not
-            // wake the cluster surface. Auto-activation is preserved on the app
-            // launch path — see onSendToDashboard() which already calls
+            // v1.2.38: do NOT auto-activate projection on launch anymore (general
+            // case). User feedback: opening DashCast just to browse the app grid
+            // should not wake the cluster surface. Auto-activation is preserved on
+            // the app launch path — see onSendToDashboard() which already calls
             // activateCluster() (slow path) when mClusterService==null or
             // getDisplayId()<=0, and the fast path replays the tapped app
             // through mPendingAppAfterActivation once the service is up.
@@ -1351,6 +1360,17 @@ public class MainActivity extends AppCompatActivity
             mClusterService.restartProjection();
             // onClusterDisplayConnected / onClusterDisplayDisconnected will re-enable the button
         }
+    }
+
+    /**
+     * True when the Layouts auto-start owns the startup launch (option enabled,
+     * Layouts mode on, favourite layout saved) — the classic auto-launch app
+     * activation must then stand down to avoid a projection conflict.
+     */
+    private boolean isLayoutAutoStartConfigured() {
+        return ClusterPrefs.isFissionAutoLayout(this)
+                && com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
+                && com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this) != null;
     }
 
     /** ⋮ menu — developer tools accessible without cluttering the toolbar. */
