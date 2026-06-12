@@ -51,8 +51,10 @@ public class MirrorDaemon {
     // Actions broadcast
     public static final String ACTION_DAEMON_READY  = "com.byd.dashcast.MIRROR_DAEMON_READY";
 
-    // Interface Binder
-    public static final String DESCRIPTOR            = "com.byd.dashcast.proxy.daemon.IMirrorDaemon";
+    // Interface Binder — wire-protocol ID, must stay stable across package moves:
+    // a daemon spawned by an older APK build keeps running across app updates and
+    // enforces this exact token in onTransact().
+    public static final String DESCRIPTOR            = "com.byd.dashcast.daemon.IMirrorDaemon";
     public static final int    TRANSACT_MIRROR_START  = 1;
     public static final int    TRANSACT_INJECT_MOTION = 2;
     public static final int    TRANSACT_INJECT_KEY    = 3;

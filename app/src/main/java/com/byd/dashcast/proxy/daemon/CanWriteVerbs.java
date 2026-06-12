@@ -25,10 +25,10 @@ import java.lang.reflect.Method;
  *
  * <p>Feature ID constants are copied verbatim from the OpenBYD 2.2 RE (CarControlImpl.java).
  * They encode both the CAN device type and the event ID in a single opaque integer.
- * Use the high-level helpers in {@link com.byd.dashcast.CanBusController} rather than
+ * Use the high-level helpers in {@link com.byd.dashcast.system.CanBusController} rather than
  * passing raw IDs unless you know exactly what you are doing.
  *
- * @see com.byd.dashcast.CanBusController
+ * @see com.byd.dashcast.system.CanBusController
  * @since v1.4.7-beta (Phase CAN-1)
  */
 public final class CanWriteVerbs {

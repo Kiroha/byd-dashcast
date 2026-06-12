@@ -1,4 +1,6 @@
 package com.byd.dashcast.ui.hotspot;
+import com.byd.dashcast.MainActivity;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
 
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;

@@ -8,7 +8,7 @@ package com.byd.dashcast.hud;
  * appropriate values to the BYD instrument cluster HUD via {@code CanBusController}.
  *
  * <p>Turn icon IDs ({@link #iconId}) are BYD-internal constants; see the
- * {@code ICON_*} constants in {@link com.byd.dashcast.CanBusController} for the full list
+ * {@code ICON_*} constants in {@link com.byd.dashcast.system.CanBusController} for the full list
  * of 49 values from the OpenBYD 2.2 reverse-engineering.
  */
 public final class HudNavigationData {

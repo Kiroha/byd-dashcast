@@ -1,4 +1,6 @@
 package com.byd.dashcast.ui.settings;
+import com.byd.dashcast.MainActivity;
+import com.byd.dashcast.BuildConfig;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
@@ -51,7 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
     // Delegates to ClusterPrefs — the single source of truth for this string.
-    static final String PREFS_NAME      = ClusterPrefs.PREFS_NAME;
+    public static final String PREFS_NAME = ClusterPrefs.PREFS_NAME;
 
     // ── Cluster type ─────────────────────────────────────────────────────────
     static final String PREF_CLUSTER_TYPE = ClusterPrefs.KEY_CLUSTER_TYPE;

@@ -1,4 +1,8 @@
 package com.byd.dashcast.ui.log;
+import com.byd.dashcast.MainActivity;
+import com.byd.dashcast.ui.settings.SettingsActivity;
+import com.byd.dashcast.ui.diag.DiagActivity;
+import com.byd.dashcast.ui.diag.SysInfoActivity;
 
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;

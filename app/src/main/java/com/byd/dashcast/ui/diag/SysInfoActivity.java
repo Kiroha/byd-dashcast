@@ -1,4 +1,5 @@
 package com.byd.dashcast.ui.diag;
+import com.byd.dashcast.MainActivity;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
