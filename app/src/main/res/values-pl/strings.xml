@@ -266,8 +266,6 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
     <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="beta_restart_title">Wymagany restart</string>
-    <string name="beta_restart_message">Ta zmiana zacznie obowiązywać przy następnym uruchomieniu DashCast. W międzyczasie możesz normalnie korzystać z aplikacji.</string>
 
     <string name="diag_tab_cluster">Klaster DL3</string>
     <string name="diag_tab_cluster_dl5">Klaster DL5</string>
@@ -373,9 +371,6 @@
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- Settings — DiLink 5 -->
-    <string name="settings_dilink5_mode">Tryb DiLink 5 (eksperymentalny)</string>
-    <string name="settings_dilink5_mode_support">Dostosuj DashCast do protokołu DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Wymagany restart.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Klaster auto-klawiatura (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Pokazuje pomostową klawiaturę, gdy dotykasz pola tekstowego na klastrze.</string>
@@ -529,7 +524,7 @@
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
     <string name="settings_adas_window_fix">ADAS Window Fix</string>
     <string name="settings_adas_window_fix_support">Wysyła sendInfo(30) przed projekcją — naprawia rozciąganie ADAS na niektórych pojazdach. Wyłącz, jeśli kształt klastra zmienia się przy uruchomieniu.</string>
-    <string name="settings_fission_mode">Tryb Fission (beta)</string>
+    <string name="settings_fission_mode">Tryb Layouts</string>
     <string name="settings_fission_mode_support">Wieloaplikacyjna projekcja na klastrze z niestandardowymi strefami. Wymaga demona proxy.</string>
     <string name="fission_title">Fission — Klaster wieloaplikacyjny</string>
     <string name="fission_status_idle">Naciśnij +, aby wyświetlić aplikację</string>
@@ -602,7 +597,7 @@
     <string name="fission_slot_pkg_none">Brak — wolna strefa</string>
     <string name="fission_slot_zone_bound_fmt">Powiązana aplikacja: %1$s</string>
     <string name="settings_fission_auto_layout">Automatyczny ulubiony układ</string>
-    <string name="settings_fission_auto_layout_support">Aktywuje ulubiony układ po otwarciu Fission i automatycznie uruchamia powiązane aplikacje</string>
+    <string name="settings_fission_auto_layout_support">Przy starcie DashCast: aktywuje projekcję klastra, ulubiony układ i uruchamia powiązane aplikacje</string>
     <string name="settings_fission_precreate_slots">Wstępnie twórz sloty przy starcie</string>
     <string name="settings_fission_precreate_slots_support">Przygotowuje Virtual Displays ulubionego układu po otwarciu Fission (bez uruchamiania aplikacji)</string>
     <string name="sysinfo_disp_hidden">Ukryty (PRIVATE)</string>

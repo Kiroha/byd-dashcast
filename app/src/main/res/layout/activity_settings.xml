@@ -1035,35 +1035,10 @@
                                 android:layout_gravity="center_vertical"/>
                         </LinearLayout>
 
-                        <!-- Switch DiLink5 : platform override -->
-                        <LinearLayout
-                            style="@style/Widget.DashCast.ListItem">
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_marginEnd="16dp"
-                                android:layout_gravity="center_vertical"
-                                android:scaleType="fitCenter"
-                                app:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_science"/>
-                            <LinearLayout
-                                style="@style/Widget.DashCast.ListItem.Content">
-                                <TextView
-                                    style="@style/Widget.DashCast.ListItem.Headline"
-                                    android:text="@string/settings_dilink5_mode"/>
-                                <TextView
-                                    android:id="@+id/tv_beta_dilink5_support"
-                                    style="@style/Widget.DashCast.ListItem.Support"
-                                    android:text="@string/settings_dilink5_mode_support"/>
-                            </LinearLayout>
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/sw_dilink5_mode"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_vertical"/>
-                        </LinearLayout>
+                        <!-- DiLink 5 is auto-detected via Platform; the manual override
+                             toggle was removed in 1.4.23 (detection is reliable). -->
 
-                        <!-- Switch Fission : multi-app slot projection (beta) -->
+                        <!-- Switch Layouts : multi-app zone projection -->
                         <LinearLayout
                             style="@style/Widget.DashCast.ListItem">
                             <ImageView
@@ -1073,7 +1048,7 @@
                                 android:layout_gravity="center_vertical"
                                 android:scaleType="fitCenter"
                                 app:tint="@color/md_on_surface_variant"
-                                android:src="@drawable/ic_science"/>
+                                android:src="@drawable/ic_dashboard"/>
                             <LinearLayout
                                 style="@style/Widget.DashCast.ListItem.Content">
                                 <TextView

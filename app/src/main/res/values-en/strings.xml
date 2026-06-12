@@ -268,8 +268,6 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
     <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="beta_restart_title">Restart required</string>
-    <string name="beta_restart_message">This change will take effect on the next DashCast launch. You can keep using the app normally in the meantime.</string>
 
     <string name="diag_tab_cluster">Cluster DL3</string>
     <string name="diag_tab_cluster_dl5">Cluster DL5</string>
@@ -402,9 +400,6 @@
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- Settings — DiLink 5 -->
-    <string name="settings_dilink5_mode">DiLink 5 mode (experimental)</string>
-    <string name="settings_dilink5_mode_support">Adapt DashCast to the DiLink 5.0 / Android 12 protocol.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Restart required.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Cluster auto-keyboard (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Shows the bridged keyboard when you tap a text field on the cluster.</string>
@@ -558,10 +553,10 @@
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
     <string name="settings_adas_window_fix">ADAS Window Fix</string>
     <string name="settings_adas_window_fix_support">Sends sendInfo(30) before projection — fixes ADAS stretching on some vehicles. Disable if cluster shape changes on startup.</string>
-    <string name="settings_fission_mode">Fission Mode (beta)</string>
+    <string name="settings_fission_mode">Layouts mode</string>
     <string name="settings_fission_mode_support">Multi-app projection on the cluster with custom zones. Requires proxy daemon.</string>
     <string name="settings_fission_auto_layout">Automatic favourite layout</string>
-    <string name="settings_fission_auto_layout_support">Activates the favourite layout when opening Fission and auto-launches all bound apps</string>
+    <string name="settings_fission_auto_layout_support">On DashCast launch: activates cluster projection, the favourite layout, then launches all bound apps</string>
     <string name="settings_fission_precreate_slots">Pre-create slots on startup</string>
     <string name="settings_fission_precreate_slots_support">Prepares the favourite layout\'s Virtual Displays when Fission opens (without launching apps)</string>
     <string name="fission_title">Fission — Multi-app cluster</string>

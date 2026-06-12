@@ -315,8 +315,6 @@
     <string name="settings_section_advanced">Avancé</string>
     <string name="settings_legacy_path">Proxy daemon non fonctionnel. Utiliser le chemin Legacy</string>
     <string name="settings_legacy_path_support">Utilise le shell ADB classique au lieu du proxy daemon. À activer si le daemon ne répond pas ou cause des problèmes.</string>
-    <string name="beta_restart_title">Redémarrage requis</string>
-    <string name="beta_restart_message">Cette option prendra effet au prochain lancement de DashCast. Vous pouvez continuer à utiliser l\'application normalement entre temps.</string>
 
     <!-- Diag tabs -->
     <string name="diag_tab_cluster">Cluster DL3</string>
@@ -480,13 +478,10 @@
     <string name="diag_mirror_send_log">Envoyer (.log)</string>
 
     <!-- Settings — DiLink 5 -->
-    <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
-    <string name="settings_dilink5_mode_support">Adapte DashCast au protocole DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Redémarrage requis.</string>
-    <string name="settings_fission_mode">Mode Fission (beta)</string>
+    <string name="settings_fission_mode">Mode Layouts</string>
     <string name="settings_fission_mode_support">Projection multi-apps sur le cluster avec zones personnalisées. Nécessite le daemon de proxy.</string>
     <string name="settings_fission_auto_layout">Layout favori automatique</string>
-    <string name="settings_fission_auto_layout_support">Active le layout favori dès l\'ouverture de Fission et lance automatiquement les apps liées</string>
+    <string name="settings_fission_auto_layout_support">Au lancement de DashCast : active la projection cluster, le layout favori, puis lance les apps liées</string>
     <string name="settings_fission_precreate_slots">Pré-créer les slots au démarrage</string>
     <string name="settings_fission_precreate_slots_support">Prépare les Virtual Displays du layout favori à l\'ouverture de Fission (sans lancer les apps)</string>
     <!-- v1.2.18 — Shown when the user taps the keyboard icon while the

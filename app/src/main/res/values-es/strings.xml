@@ -224,8 +224,6 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
     <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
-    <string name="beta_restart_title">Reinicio necesario</string>
-    <string name="beta_restart_message">Esta opción surtirá efecto en el próximo arranque de DashCast. Puedes seguir usando la app con normalidad mientras tanto.</string>
     <string name="diag_tab_cluster">Cluster</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">ADB local</string>
@@ -257,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">App objetivo (prueba D8 — cluster)</string>
     <string name="diag_dl5_d8_running_toast">Prueba D8 en %1$s — la app se relanzará y luego volverá a la pantalla principal.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">Modo DiLink 5 (experimental)</string>
-    <string name="settings_dilink5_mode_support">Adapta DashCast al protocolo DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Reinicio necesario.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Teclado auto del clúster (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Muestra el teclado puenteado cuando toca un campo de texto en el clúster.</string>
@@ -544,7 +539,7 @@
     <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
     <string name="settings_adas_window_fix">ADAS Window Fix</string>
     <string name="settings_adas_window_fix_support">Envía sendInfo(30) antes de la proyección — corrige el estiramiento ADAS en algunos vehículos. Desactivar si la forma del cluster cambia al inicio.</string>
-    <string name="settings_fission_mode">Modo Fission (beta)</string>
+    <string name="settings_fission_mode">Modo Layouts</string>
     <string name="settings_fission_mode_support">Proyección multiaplicación en el cluster con zonas personalizadas. Requiere daemon proxy.</string>
     <string name="fission_title">Fission — Cluster multiapp</string>
     <string name="fission_status_idle">Pulsa + para proyectar una app</string>
@@ -593,7 +588,7 @@
     <string name="fission_slot_pkg_none">Ninguna — zona libre</string>
     <string name="fission_slot_zone_bound_fmt">App vinculada: %1$s</string>
     <string name="settings_fission_auto_layout">Layout favorito automático</string>
-    <string name="settings_fission_auto_layout_support">Activa el layout favorito al abrir Fission e inicia automáticamente las apps vinculadas</string>
+    <string name="settings_fission_auto_layout_support">Al iniciar DashCast: activa la proyección del cluster, el layout favorito y lanza las apps vinculadas</string>
     <string name="settings_fission_precreate_slots">Precrear los slots al inicio</string>
     <string name="settings_fission_precreate_slots_support">Prepara los Virtual Displays del layout favorito al abrir Fission (sin iniciar las apps)</string>
     <string name="sysinfo_disp_hidden">Oculto (PRIVATE)</string>

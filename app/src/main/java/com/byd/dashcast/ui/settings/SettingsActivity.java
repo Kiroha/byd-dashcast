@@ -28,7 +28,6 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AlertDialog;
 
 import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.proxy.ShellGateway;
@@ -127,8 +126,6 @@ public class SettingsActivity extends AppCompatActivity {
     private CompoundButton cbFissionMode;
     private CompoundButton swFissionAutoLayout;
     private CompoundButton swFissionPrecreateSlots;
-    private CompoundButton swDilink5Mode;
-    private TextView tvBetaDilink5Support;
     private View        llSlidersMode;
     private View        llVisualMode;
     private View        flSafeZone;
@@ -266,8 +263,6 @@ public class SettingsActivity extends AppCompatActivity {
         cbFissionMode           = findViewById(R.id.cb_fission_mode);
         swFissionAutoLayout     = findViewById(R.id.sw_fission_auto_layout);
         swFissionPrecreateSlots = findViewById(R.id.sw_fission_precreate_slots);
-        swDilink5Mode           = findViewById(R.id.sw_dilink5_mode);
-        tvBetaDilink5Support = findViewById(R.id.tv_beta_dilink5_support);
     }
 
     private void loadPreferences() {
@@ -337,19 +332,8 @@ public class SettingsActivity extends AppCompatActivity {
         cbFissionMode.setChecked(DaemonConfig.isFissionModeEnabled(this));
         swFissionAutoLayout.setChecked(ClusterPrefs.isFissionAutoLayout(this));
         swFissionPrecreateSlots.setChecked(ClusterPrefs.isFissionPrecreateSlots(this));
-
-        // DiLink 5 mode: tri-state override (AUTO / FORCE_ON / FORCE_OFF).
-        // Switch ON ↔ effective DL5; if user has never touched it (AUTO),
-        // the initial position mirrors the auto-detect result.
-        com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
-        swDilink5Mode.setChecked(p.isDiLink5(this));
-        if (tvBetaDilink5Support != null) {
-            String prod = p.rawProductName();
-            if (prod == null || prod.isEmpty()) prod = "?";
-            tvBetaDilink5Support.setText(getString(
-                    R.string.settings_dilink5_mode_support_fmt,
-                    prod, p.androidApi(), p.describeMode(this)));
-        }
+        // DiLink 5 is auto-detected via Platform — the manual override toggle
+        // was removed in 1.4.23.
     }
 
     private void wireListeners() {
@@ -519,32 +503,6 @@ public class SettingsActivity extends AppCompatActivity {
             ClusterPrefs.setFissionPrecreateSlots(this, isChecked);
             AppLogger.i("SettingsActivity", "fission_precreate_slots=" + isChecked);
         });
-        swDilink5Mode.setOnCheckedChangeListener((b, isChecked) -> {
-            com.byd.dashcast.platform.Platform.setForcedBoolean(this, isChecked);
-            AppLogger.i("SettingsActivity", "dilink5_mode override=" + isChecked);
-            if (tvBetaDilink5Support != null) {
-                com.byd.dashcast.platform.Platform p = com.byd.dashcast.platform.Platform.get();
-                String prod = p.rawProductName();
-                if (prod == null || prod.isEmpty()) prod = "?";
-                tvBetaDilink5Support.setText(getString(
-                        R.string.settings_dilink5_mode_support_fmt,
-                        prod, p.androidApi(), p.describeMode(this)));
-            }
-            showRestartRequiredDialog();
-        });
-    }
-
-    /**
-     * Beta Engine toggles take effect on next launch — show a non-blocking
-     * dialog so the user knows their change isn't live yet.
-     */
-    private void showRestartRequiredDialog() {
-        if (mDestroyed || isFinishing()) return;
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.beta_restart_title)
-                .setMessage(R.string.beta_restart_message)
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
     }
 
     private void updateVisualModeState(boolean visual) {

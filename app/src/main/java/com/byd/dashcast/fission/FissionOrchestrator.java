@@ -105,6 +105,66 @@ public final class FissionOrchestrator {
         mCallbacks       = callbacks;
     }
 
+    // ── App-launch auto-start ─────────────────────────────────────────────────
+
+    /** One-shot per process: avoids re-activating the layout on every MainActivity return. */
+    private static volatile boolean sAutoStartFired = false;
+
+    /** Keeps the headless orchestrator reachable while its executor works. */
+    @SuppressWarnings("unused")
+    private static FissionOrchestrator sAutoStartOrchestrator;
+
+    /**
+     * Launch-time entry point: when "auto favourite layout" is enabled, activates the
+     * cluster projection and the favourite layout (which then launches the bound apps)
+     * as soon as DashCast starts — without requiring the user to open the Fission screen.
+     *
+     * <p>No-op when the option is off, Layouts mode is disabled, no favourite layout
+     * exists, classic projection is already running, or it already fired this process.
+     */
+    public static void maybeAutoStartOnAppLaunch(Context context) {
+        if (sAutoStartFired) return;
+        final Context appCtx = context.getApplicationContext();
+        if (!com.byd.dashcast.data.prefs.ClusterPrefs.isFissionAutoLayout(appCtx)) return;
+        if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
+        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
+        if (fav == null) return;
+        if (com.byd.dashcast.cluster.ClusterService.sIsRunning) {
+            AppLogger.d(TAG, "auto-start skipped: classic projection already active");
+            return;
+        }
+        sAutoStartFired = true;
+        AppLogger.i(TAG, "auto-start on app launch: projection + layout « " + fav.name + " »");
+
+        ProjectionStateProvider psp = new ProjectionStateProvider() {
+            @Override public boolean isProjectionActive() {
+                return com.byd.dashcast.cluster.ClusterService.sIsRunning;
+            }
+            @Override public void stopProjectionIfActive(Runnable onStopped) {
+                com.byd.dashcast.cluster.ClusterService cs =
+                        com.byd.dashcast.cluster.ClusterService.getInstance();
+                if (cs != null) cs.stopProjectionNoAdb();
+                if (onStopped != null) new Handler(Looper.getMainLooper()).post(onStopped);
+            }
+        };
+        Callbacks headless = new Callbacks() {
+            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) {}
+            @Override public void onDaemonBinderAcquired(IBinder binder) {}
+            @Override public void onStatusMessage(String message) {
+                if (message != null) AppLogger.d(TAG, "auto-start: " + message);
+            }
+            @Override public void onSlotError(String pkg, String message) {
+                AppLogger.w(TAG, "auto-start slot error " + pkg + ": " + message);
+            }
+            @Override public void onProjectionConflict(Runnable proceedCallback) {
+                AppLogger.w(TAG, "auto-start: projection conflict — aborting (no UI to ask)");
+            }
+        };
+        FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        sAutoStartOrchestrator = orch;
+        orch.initAsync(fav, true, false);
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     /** Called on Activity.onDestroy() — shuts down executor and releases slots if finishing. */
@@ -138,11 +198,44 @@ public final class FissionOrchestrator {
                 post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
                 if (autoLayout) {
                     post(() -> mCallbacks.onStatusMessage("Auto-activation du layout…"));
-                    activateFavoriteLayout();
+                    ensureClusterProjectionThen(() -> mExec.execute(this::activateFavoriteLayout));
                 } else if (precreate) {
                     precreateSlots(favoriteLayout);
                 }
             }
+        });
+    }
+
+    /**
+     * Drives Qt into projection mode before running {@code next}, if it isn't already.
+     *
+     * <p>Auto-layout used to launch the bound apps without checking the cluster state:
+     * after a "restore BYD" (sendInfo 18+0) Qt renders natively, the mirror layerStack
+     * targets a surface Qt owns, and every launched app stays invisible. The full
+     * activation sequence (30→16→35 or warm path) must complete first.
+     */
+    private void ensureClusterProjectionThen(Runnable next) {
+        if (com.byd.dashcast.cluster.display.ClusterManager.isQtInProjectionMode()) {
+            next.run();
+            return;
+        }
+        AppLogger.i(TAG, "auto-layout: Qt in native mode — activating cluster projection first");
+        post(() -> {
+            mCallbacks.onStatusMessage("Activation de la projection cluster…");
+            new com.byd.dashcast.cluster.display.ClusterManager(mAppCtx)
+                    .activateClusterDisplay(
+                            new com.byd.dashcast.cluster.display.ClusterManager.DisplayReadyCallback() {
+                        @Override public void onDisplayReady(android.view.Display display,
+                                                              int displayId) {
+                            AppLogger.i(TAG, "auto-layout: cluster projection ready (display="
+                                    + displayId + ")");
+                            next.run();
+                        }
+                        @Override public void onDisplayTimeout() {
+                            AppLogger.w(TAG, "auto-layout: cluster activation timed out — aborted");
+                            post(() -> mCallbacks.onStatusMessage(null));
+                        }
+                    });
         });
     }
 
