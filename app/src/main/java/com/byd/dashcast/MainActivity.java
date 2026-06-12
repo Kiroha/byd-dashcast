@@ -156,11 +156,6 @@ public class MainActivity extends AppCompatActivity
     private ActivateTimeoutManager mTimeoutManager;
     private InsetAutoApplicator    mInsetApplicator;
 
-    // Status dot colors
-    // Category filter button tints
-    private static final int FILTER_TINT_ACTIVE   = 0xFF1976D2;
-    private static final int FILTER_TINT_INACTIVE = 0xFF607D8B;
-
     // UI — barre statut
     private View     llAppListSection;  // wrapper for title header + search bar
                                           // The 8 setEnabled() callsites below are wrapped by setActivateBtnEnabled(),
@@ -351,11 +346,9 @@ public class MainActivity extends AppCompatActivity
         clusterMirror       = (TextureView) findViewById(R.id.cluster_mirror);
                 mInsetOverlay       = (InsetOverlayView) findViewById(R.id.inset_overlay);
 
-        // Restore mMainDisplayPkg (lost if Activity is destroyed and recreated)
+        // Read persisted mMainDisplayPkg early so it is available for display-connected
+        // callbacks, but push the coordinator update to after setupCoordinators() below.
         mMainDisplayPkg = ClusterPrefs.getMainPkg(this);
-        if (mMainDisplayPkg != null) {
-            mAppListCoordinator.setMainPackage(mMainDisplayPkg);
-        }
 
         // TextureView optimizations
         clusterMirror.setOpaque(true);  // No alpha blending overhead
@@ -423,6 +416,12 @@ public class MainActivity extends AppCompatActivity
         // Wire coordinator layer (status dot, mirror lifecycle, fullscreen state machine).
         // Touch forwarding is wired internally by MirrorCoordinator.
         setupCoordinators();
+
+        // Restore main-display pkg into the adapter now that mAppListCoordinator exists.
+        // (Cannot be done before setupCoordinators — mAppListCoordinator was null.)
+        if (mMainDisplayPkg != null) {
+            mAppListCoordinator.setMainPackage(mMainDisplayPkg);
+        }
 
         // Async loading of the app list (async to avoid blocking the UI)
         loadAppsAsync();
