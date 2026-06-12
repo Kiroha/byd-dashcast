@@ -52,25 +52,25 @@ public class FissionLayoutEditorActivity extends Activity {
         MaterialButton btnClear = findViewById(R.id.btn_fission_clear);
         MaterialButton btnSave  = findViewById(R.id.btn_fission_save);
 
-        mEditing = new LayoutPreset("Nouveau layout");
+        mEditing = new LayoutPreset(getString(R.string.lm_new_layout_name));
         mCanvas.setSlots(mEditing.slots);
 
         mCanvas.setOnZoneDrawnListener((x, y, w, h) -> showAddZoneDialog(x, y, w, h));
         mCanvas.setOnZoneLongPressListener(idx -> {
             new AlertDialog.Builder(this)
-                    .setTitle("Supprimer la zone ?")
-                    .setPositiveButton("Supprimer", (d, w2) -> {
+                    .setTitle(R.string.lm_zone_delete_title)
+                    .setPositiveButton(R.string.lm_action_delete, (d, w2) -> {
                         mEditing.slots.remove(idx);
                         mCanvas.invalidate();
                     })
-                    .setNegativeButton("Annuler", null)
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show();
         });
 
         btnClear.setOnClickListener(v -> { mEditing.slots.clear(); mCanvas.invalidate(); });
         btnSave.setOnClickListener(v -> {
             if (mEditing.slots.isEmpty()) {
-                Toast.makeText(this, "Dessinez au moins une zone", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.lm_draw_zone_first, Toast.LENGTH_SHORT).show();
                 return;
             }
             showSaveDialog();
@@ -87,33 +87,33 @@ public class FissionLayoutEditorActivity extends Activity {
 
     private void showAddZoneDialog(int x, int y, int w, int h) {
         EditText et = new EditText(this);
-        et.setHint("Nom de la zone");
+        et.setHint(R.string.lm_zone_name_hint);
         et.setText(mEditing.nextSlotLabel());
         et.selectAll();
         new AlertDialog.Builder(this)
-                .setTitle("Nouvelle zone — " + w + "×" + h + " px")
+                .setTitle(getString(R.string.lm_zone_new_title_fmt, w, h))
                 .setView(et)
-                .setPositiveButton("Ajouter", (d, which) -> {
+                .setPositiveButton(R.string.lm_action_add, (d, which) -> {
                     String label = et.getText().toString().trim();
                     if (label.isEmpty()) label = mEditing.nextSlotLabel();
                     mEditing.slots.add(new LayoutPreset.SlotDef(label, x, y, w, h));
                     mCanvas.invalidate();
                 })
-                .setNegativeButton("Annuler", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
     private void showSaveDialog() {
         EditText et = new EditText(this);
-        et.setHint("Nom du layout");
+        et.setHint(R.string.lm_layout_name_hint);
         et.setText(mEditing.name);
         et.selectAll();
         new AlertDialog.Builder(this)
-                .setTitle("Enregistrer le layout")
+                .setTitle(R.string.lm_layout_save_title)
                 .setView(et)
-                .setPositiveButton("Enregistrer", (d, which) -> {
+                .setPositiveButton(R.string.lm_action_save, (d, which) -> {
                     String name = et.getText().toString().trim();
-                    if (name.isEmpty()) name = "Layout " + (mPresets.size() + 1);
+                    if (name.isEmpty()) name = getString(R.string.lm_layout_default_name_fmt, mPresets.size() + 1);
                     mEditing.name = name;
                     boolean replaced = false;
                     for (int i = 0; i < mPresets.size(); i++) {
@@ -123,23 +123,23 @@ public class FissionLayoutEditorActivity extends Activity {
                     }
                     if (!replaced) mPresets.add(mEditing);
                     LayoutPrefs.save(this, mPresets);
-                    mEditing = new LayoutPreset("Nouveau layout");
+                    mEditing = new LayoutPreset(getString(R.string.lm_new_layout_name));
                     mCanvas.setSlots(mEditing.slots);
                     refreshLayoutList();
-                    Toast.makeText(this, "Layout enregistré", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.lm_layout_saved_toast, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Annuler", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
     private void activateLayout(LayoutPreset preset) {
         IBinder binder = mDaemonBinder;
         if (binder == null) {
-            Toast.makeText(this, "Daemon non connecté — lancez d'abord une projection Fission",
+            Toast.makeText(this, getString(R.string.lm_daemon_not_connected),
                     Toast.LENGTH_LONG).show();
             return;
         }
-        Toast.makeText(this, "Activation de " + preset.name + "…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getString(R.string.lm_activating_fmt, preset.name), Toast.LENGTH_SHORT).show();
         mExec.execute(() -> {
             if (mActiveId != null && !mActiveId.equals(preset.id)) {
                 try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
@@ -151,13 +151,13 @@ public class FissionLayoutEditorActivity extends Activity {
                 runOnUiThread(() -> {
                     refreshLayoutList();
                     Toast.makeText(this,
-                            ok ? preset.name + " activé ✓"
-                               : preset.name + " activé (certains slots ont échoué)",
+                            ok ? getString(R.string.lm_activated_ok_fmt, preset.name)
+                               : getString(R.string.lm_activated_partial_fmt, preset.name),
                             Toast.LENGTH_SHORT).show();
                 });
             } catch (Exception e) {
                 AppLogger.e(TAG, "activateLayout error", e);
-                runOnUiThread(() -> Toast.makeText(this, "Erreur: " + e.getMessage(),
+                runOnUiThread(() -> Toast.makeText(this, getString(R.string.lm_error_fmt, e.getMessage()),
                         Toast.LENGTH_LONG).show());
             }
         });
@@ -174,7 +174,7 @@ public class FissionLayoutEditorActivity extends Activity {
                 try { FissionClient.deactivateLayout(binder); } catch (Exception ignored) {}
             });
         }
-        Toast.makeText(this, "Mode libre activé", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.lm_free_mode_toast, Toast.LENGTH_SHORT).show();
     }
 
     @SuppressLint("SetTextI18n") // technical geometry/IDs, locale-neutral
@@ -184,7 +184,7 @@ public class FissionLayoutEditorActivity extends Activity {
 
         if (mPresets.isEmpty()) {
             TextView tv = new TextView(this);
-            tv.setText("Aucun layout sauvegardé\nDessinez des zones ci-dessus et enregistrez.");
+            tv.setText(R.string.lm_no_saved_layouts);
             tv.setPadding(16, 16, 16, 16);
             mLlLayouts.addView(tv);
             return;
@@ -218,19 +218,19 @@ public class FissionLayoutEditorActivity extends Activity {
                     mEditing.slots.add(new LayoutPreset.SlotDef(s.label, s.x, s.y, s.w, s.h));
                 mCanvas.setSlots(mEditing.slots);
                 mCanvas.invalidate();
-                Toast.makeText(this, "Modifiez les zones puis enregistrez", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.lm_edit_zones_hint, Toast.LENGTH_SHORT).show();
             });
 
             btnDelete.setOnClickListener(v ->
                     new AlertDialog.Builder(this)
-                            .setTitle("Supprimer " + preset.name + " ?")
-                            .setPositiveButton("Supprimer", (d, w) -> {
+                            .setTitle(getString(R.string.lm_delete_confirm_fmt, preset.name))
+                            .setPositiveButton(R.string.lm_action_delete, (d, w) -> {
                                 if (preset.id.equals(mActiveId)) deactivateLayout();
                                 mPresets.remove(preset);
                                 LayoutPrefs.save(this, mPresets);
                                 refreshLayoutList();
                             })
-                            .setNegativeButton("Annuler", null)
+                            .setNegativeButton(android.R.string.cancel, null)
                             .show());
 
             if (isActive && llActive != null) {
