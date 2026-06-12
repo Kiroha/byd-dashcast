@@ -198,6 +198,13 @@ public class AdbLocalClient {
                         Thread.sleep(500);
                     }
                     String apkPath = context.getPackageCodePath();
+                    // Prune old per-launch daemon logs, keeping the 5 most recent:
+                    // one file is created per daemon start and nothing ever deleted
+                    // them — /data/local/tmp accumulated hundreds over weeks
+                    // (user report, June 2026). The glob targets mirrordaemon_2*
+                    // so the mirrordaemon_latest.log symlink is never matched.
+                    dadb.shell("ls -t /data/local/tmp/mirrordaemon_2*.log 2>/dev/null"
+                            + " | tail -n +6 | xargs -r rm -f");
                     // Java timestamp → unique filename per launch
                     String ts = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
                             .format(new java.util.Date());
