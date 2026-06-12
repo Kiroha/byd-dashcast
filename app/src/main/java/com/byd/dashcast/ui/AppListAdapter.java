@@ -55,8 +55,25 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
     private boolean mIsGridMode = false;
 
-    public AppListAdapter(OnSendToDashboardListener listener) {
-        mListener = listener;
+    // Resolved once at construction — onBindViewHolder runs on every scroll
+    // recycle, so per-bind getString()/getColor() lookups are avoidable work.
+    private final String mFavoritePrefix;
+    private final String mCategoryNavLabel;
+    private final String mCategoryMediaLabel;
+    private final int    mColorFavorite;
+    private final int    mColorTextPrimary;
+    private final int    mColorShortcutBg;
+    private final int    mColorShortcutText;
+
+    public AppListAdapter(android.content.Context ctx, OnSendToDashboardListener listener) {
+        mListener           = listener;
+        mFavoritePrefix     = ctx.getString(R.string.favorite_prefix);
+        mCategoryNavLabel   = ctx.getString(R.string.category_navigation);
+        mCategoryMediaLabel = ctx.getString(R.string.category_media);
+        mColorFavorite      = ctx.getColor(R.color.favorite_gold);
+        mColorTextPrimary   = ctx.getColor(R.color.text_primary);
+        mColorShortcutBg    = ctx.getColor(R.color.shortcut_btn_bg);
+        mColorShortcutText  = ctx.getColor(R.color.shortcut_btn_text);
     }
 
     @android.annotation.SuppressLint("NotifyDataSetChanged") // full layout swap
@@ -166,47 +183,66 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         
         // Indicate pinned state with a star prefix
         if (app.isFavorite) {
-            holder.tvName.setText(holder.tvName.getContext().getString(R.string.favorite_prefix) + app.appName);
-            holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.favorite_gold));
+            holder.tvName.setText(mFavoritePrefix + app.appName);
+            holder.tvName.setTextColor(mColorFavorite);
         } else {
             holder.tvName.setText(app.appName);
-            holder.tvName.setTextColor(holder.tvName.getContext().getColor(R.color.text_primary));
+            holder.tvName.setTextColor(mColorTextPrimary);
         }
 
         if (holder.tvCategory != null) {
             if (app.category == AppInfo.CATEGORY_NAVIGATION) {
-                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_navigation));
+                holder.tvCategory.setText(mCategoryNavLabel);
                 holder.tvCategory.setVisibility(View.VISIBLE);
             } else if (app.category == AppInfo.CATEGORY_MEDIA) {
-                holder.tvCategory.setText(holder.tvCategory.getContext().getString(R.string.category_media));
+                holder.tvCategory.setText(mCategoryMediaLabel);
                 holder.tvCategory.setVisibility(View.VISIBLE);
             } else {
                 holder.tvCategory.setVisibility(View.GONE);
             }
         }
 
-        // Render shortcuts if available
+        // Render shortcuts if available. Existing child buttons are reused
+        // (retext + relisten) instead of removeAllViews() + new Button per bind:
+        // inflating Buttons on every scroll recycle caused allocation and
+        // layout-pass churn. Only this adapter ever adds children here.
         if (holder.llShortcutsContainer != null) {
-            holder.llShortcutsContainer.removeAllViews();
-            if (app.shortcuts != null && !app.shortcuts.isEmpty()) {
+            int want = (app.shortcuts != null) ? app.shortcuts.size() : 0;
+            if (want == 0) {
+                holder.llShortcutsContainer.setVisibility(View.GONE);
+                if (holder.llShortcutsContainer.getChildCount() > 0) {
+                    holder.llShortcutsContainer.removeAllViews();
+                }
+            } else {
                 holder.llShortcutsContainer.setVisibility(View.VISIBLE);
-                for (final com.byd.dashcast.model.AppShortcut shortcut : app.shortcuts) {
-                    Button btn = new Button(holder.llShortcutsContainer.getContext());
+                while (holder.llShortcutsContainer.getChildCount() > want) {
+                    holder.llShortcutsContainer.removeViewAt(
+                            holder.llShortcutsContainer.getChildCount() - 1);
+                }
+                for (int i = 0; i < want; i++) {
+                    final com.byd.dashcast.model.AppShortcut shortcut = app.shortcuts.get(i);
+                    Button btn;
+                    if (i < holder.llShortcutsContainer.getChildCount()) {
+                        btn = (Button) holder.llShortcutsContainer.getChildAt(i);
+                    } else {
+                        btn = new Button(holder.llShortcutsContainer.getContext());
+                        btn.setTextSize(9);
+                        btn.setAllCaps(false);
+                        btn.setPadding(8, 0, 8, 0);
+
+                        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            48
+                        );
+                        params.setMarginEnd(8);
+                        btn.setLayoutParams(params);
+
+                        btn.setBackgroundColor(mColorShortcutBg);
+                        btn.setTextColor(mColorShortcutText);
+
+                        holder.llShortcutsContainer.addView(btn);
+                    }
                     btn.setText(shortcut.label);
-                    btn.setTextSize(9);
-                    btn.setAllCaps(false);
-                    btn.setPadding(8, 0, 8, 0);
-                    
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        48
-                    );
-                    params.setMarginEnd(8);
-                    btn.setLayoutParams(params);
-                    
-                    btn.setBackgroundColor(btn.getContext().getColor(R.color.shortcut_btn_bg));
-                    btn.setTextColor(btn.getContext().getColor(R.color.shortcut_btn_text));
-                    
                     btn.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -223,11 +259,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                             }
                         }
                     });
-                    
-                    holder.llShortcutsContainer.addView(btn);
                 }
-            } else {
-                holder.llShortcutsContainer.setVisibility(View.GONE);
             }
         }
         
@@ -298,13 +330,19 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
             }
         }
 
-        // Subtle background tint on the active row — preserves the ripple via setForeground()
-        if (isActive) {
-            holder.itemView.setForeground(CS_FG_ACTIVE.newDrawable());
-        } else if (isOnMain) {
-            holder.itemView.setForeground(CS_FG_ON_MAIN.newDrawable());
-        } else {
-            holder.itemView.setForeground(null);
+        // Subtle background tint on the active row — preserves the ripple via setForeground().
+        // Skipped when the holder already shows the right state: newDrawable()
+        // allocates, and at most two rows ever change state per update.
+        int fgState = isActive ? 1 : (isOnMain ? 2 : 0);
+        if (holder.lastFgState != fgState) {
+            holder.lastFgState = fgState;
+            if (fgState == 1) {
+                holder.itemView.setForeground(CS_FG_ACTIVE.newDrawable());
+            } else if (fgState == 2) {
+                holder.itemView.setForeground(CS_FG_ON_MAIN.newDrawable());
+            } else {
+                holder.itemView.setForeground(null);
+            }
         }
 
         // Auto-launch badge on the app icon (list + grid). The toggle itself
@@ -341,6 +379,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         final Button    btnKill;
         final TextView  badgeAutoLaunch;
         final android.content.pm.LauncherApps launcherApps;
+        /** Foreground tint currently applied to itemView: -1 unknown, 0 none, 1 active, 2 on-main. */
+        int lastFgState = -1;
 
         ViewHolder(View itemView, final OnSendToDashboardListener listener, final AppListAdapter adapter) {
             super(itemView);

@@ -71,16 +71,18 @@ public final class DisplayStatePollCoordinator {
 
         // Grace period of 8 s after a launch so the process has time to register in pidof.
         if (System.currentTimeMillis() - mHost.getLastLaunchTime() < 8_000) {
-            AppLogger.d(TAG, "skipping pidof during launch grace period for " + clusterPkg);
             return;
         }
 
+        // Steady-state "alive" results are intentionally NOT logged: at one poll
+        // per 5 s they kept the AppLogger buffer perpetually dirty, which locked
+        // LogActivity into its 500 ms refresh cadence. Only the death transition
+        // (below, WARN) is an event worth recording.
         ShellGateway.execShellWithResult(mHost.getContext(), "pidof " + clusterPkg,
                 new AdbLocalClient.Callback() {
                     @Override public void onSuccess(String output) {
                         boolean alive = output != null && !output.trim().isEmpty();
                         if (alive) {
-                            AppLogger.d(TAG, clusterPkg + " alive (pid " + output.trim() + ")");
                             return;
                         }
                         mHost.runOnMainThread(new Runnable() {

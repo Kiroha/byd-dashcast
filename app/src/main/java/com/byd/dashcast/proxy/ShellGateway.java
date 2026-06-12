@@ -214,11 +214,10 @@ public final class ShellGateway {
         if (mp.matches()) {
             try {
                 String pkg = mp.group(1);
-                String pids = ProxyClient.getPidsByPackage(pkg);
-                long dt = SystemClock.elapsedRealtime() - t0;
-                AppLogger.d(TAG, "beta pidof typed ok (" + dt + "ms): " + pkg
-                        + " → \"" + pids + "\"");
-                return pids;
+                // Success is not logged: pidof is fired by the 5 s display-state
+                // poll, and a log line per call kept the AppLogger buffer dirty
+                // (see DisplayStatePollCoordinator). Failures below stay logged.
+                return ProxyClient.getPidsByPackage(pkg);
             } catch (Throwable th) {
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.w(TAG, "beta pidof typed failed after " + dt

@@ -241,15 +241,26 @@ public class AdbLocalClient {
      *  simultaneously on first launch (before .key/.pub files exist). */
     private static final Object sKeyLock = new Object();
 
+    /** Parsed key pair cached for the process lifetime. The .key/.pub files are
+     *  immutable after first generation (cleanupFiles explicitly preserves them),
+     *  so re-reading + RSA-parsing them on every command was pure waste — the
+     *  5 s pidof poll on the legacy path paid it twice per tick. */
+    private static volatile AdbKeyPair sKeyPair;
+
     private static Dadb connect(Context context) throws Exception {
-        File privateKey = new File(context.getFilesDir(), "adb.key");
-        File publicKey  = new File(context.getFilesDir(), "adb.pub");
-        AdbKeyPair keyPair;
-        synchronized (sKeyLock) {
-            if (!privateKey.exists() || !publicKey.exists()) {
-                AdbKeyPair.generate(privateKey, publicKey);
+        AdbKeyPair keyPair = sKeyPair;
+        if (keyPair == null) {
+            synchronized (sKeyLock) {
+                if (sKeyPair == null) {
+                    File privateKey = new File(context.getFilesDir(), "adb.key");
+                    File publicKey  = new File(context.getFilesDir(), "adb.pub");
+                    if (!privateKey.exists() || !publicKey.exists()) {
+                        AdbKeyPair.generate(privateKey, publicKey);
+                    }
+                    sKeyPair = AdbKeyPair.read(privateKey, publicKey);
+                }
+                keyPair = sKeyPair;
             }
-            keyPair = AdbKeyPair.read(privateKey, publicKey);
         }
         
         // Retry loop to give the user time to click 'Allow USB Debugging' if the popup appears
