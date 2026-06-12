@@ -51,12 +51,12 @@ public final class InsetAutoApplicator {
         if (pkg == null) return;
         Context ctx = mHost.getContext();
         SharedPreferences p = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
-        int defH   = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        int defV   = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        int savedW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
-        int savedH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
-        if (savedW == defH && savedH == defV) return;
-        AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " w=" + savedW + " h=" + savedH);
+        int defH    = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
+        int defV    = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
+        int savedH  = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
+        int savedV  = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
+        if (savedH == defH && savedV == defV) return;
+        AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " h=" + savedH + " v=" + savedV);
 
         mHandler.postDelayed(() -> {
             if (!pkg.equals(mHost.getCurrentPkg())) return;
@@ -69,7 +69,7 @@ public final class InsetAutoApplicator {
                     AppLogger.d(TAG, "DL5: skipping wm overscan (API 30+ removed) — resizeTask handles it");
                 } else {
                     ShellGateway.execShell(ctx,
-                            "wm overscan " + savedW + "," + savedH + "," + savedW + "," + savedH
+                            "wm overscan " + savedH + "," + savedV + "," + savedH + "," + savedV
                                     + " -d " + clusterId);
                 }
             } else {

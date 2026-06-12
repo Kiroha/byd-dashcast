@@ -1,6 +1,5 @@
 package com.byd.dashcast.ui.main;
 
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -17,7 +16,6 @@ public final class ActivateTimeoutManager {
     private static final long   TIMEOUT_MS = 30_000;
 
     public interface Host {
-        Context getContext();
         void onActivateTimeout();
     }
 
