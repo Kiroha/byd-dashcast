@@ -13,7 +13,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

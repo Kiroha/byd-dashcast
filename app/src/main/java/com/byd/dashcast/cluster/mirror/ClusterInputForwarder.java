@@ -5,7 +5,7 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.SystemClock;
 import android.view.Display;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;

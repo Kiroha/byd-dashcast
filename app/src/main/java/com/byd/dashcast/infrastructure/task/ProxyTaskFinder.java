@@ -1,6 +1,6 @@
 package com.byd.dashcast.infrastructure.task;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.ProxyClient;
 
 import java.util.regex.Matcher;

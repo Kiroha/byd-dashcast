@@ -3,7 +3,7 @@ package com.byd.dashcast.fission;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 
 public class FissionClient {

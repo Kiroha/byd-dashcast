@@ -20,7 +20,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ui.diag.DiagActivity;
 import com.byd.dashcast.ui.hotspot.HotspotActivity;
 import com.byd.dashcast.ui.log.LogActivity;

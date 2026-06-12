@@ -1,6 +1,6 @@
 package com.byd.dashcast.infrastructure.task;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.util.Arrays;
 import java.util.List;

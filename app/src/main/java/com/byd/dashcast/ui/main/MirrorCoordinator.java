@@ -12,7 +12,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.R;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;

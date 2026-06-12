@@ -4,6 +4,7 @@ import android.app.Application;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import com.byd.dashcast.platform.Platform;
+import com.byd.dashcast.util.AppLogger;
 
 public class DashCastApp extends Application {
     @Override

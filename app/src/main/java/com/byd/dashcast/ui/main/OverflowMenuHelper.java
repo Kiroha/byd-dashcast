@@ -7,7 +7,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.PopupMenu;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ui.diag.DiagActivity;
 import com.byd.dashcast.util.LocaleHelper;
 import com.byd.dashcast.ui.log.LogActivity;

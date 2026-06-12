@@ -6,7 +6,7 @@ import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
 import android.os.Looper;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.lang.reflect.Method;
 

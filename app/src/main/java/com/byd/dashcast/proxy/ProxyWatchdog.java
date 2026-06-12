@@ -9,7 +9,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

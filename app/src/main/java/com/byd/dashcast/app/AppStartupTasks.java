@@ -2,7 +2,7 @@ package com.byd.dashcast.app;
 
 import android.content.Context;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.ShellGateway;
 
 /**

@@ -6,7 +6,7 @@ import android.content.Intent;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.io.BufferedInputStream;
 import java.io.File;

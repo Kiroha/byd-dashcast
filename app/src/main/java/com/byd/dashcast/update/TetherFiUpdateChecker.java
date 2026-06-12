@@ -1,6 +1,6 @@
 package com.byd.dashcast.update;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Handler;

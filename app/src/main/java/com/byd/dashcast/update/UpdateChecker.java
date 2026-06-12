@@ -1,7 +1,7 @@
 package com.byd.dashcast.update;
 
 import android.app.PendingIntent;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.app.InstallResultReceiver;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import android.content.Context;

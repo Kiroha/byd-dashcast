@@ -10,8 +10,8 @@ import android.os.Parcel;
 import android.view.Display;
 import android.view.Surface;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 import com.byd.dashcast.platform.Platform;
 

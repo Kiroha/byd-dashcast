@@ -10,7 +10,7 @@ import android.os.Looper;
 
 import java.lang.reflect.Method;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 /**
  * Retrieves the MirrorDaemon Binder from ServiceManager via reflection.

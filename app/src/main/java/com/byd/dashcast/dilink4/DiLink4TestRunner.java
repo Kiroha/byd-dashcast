@@ -12,7 +12,7 @@ import android.os.Parcel;
 import android.os.SystemClock;
 import android.view.Display;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.io.File;
 import java.lang.reflect.Method;

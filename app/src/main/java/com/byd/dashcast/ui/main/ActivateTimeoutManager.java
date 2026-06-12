@@ -3,7 +3,7 @@ package com.byd.dashcast.ui.main;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 /**
  * Manages the 30-second watchdog that fires if the cluster display never connects

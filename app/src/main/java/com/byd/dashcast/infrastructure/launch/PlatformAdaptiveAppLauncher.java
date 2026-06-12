@@ -4,7 +4,7 @@ import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 
-import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
 
 /**
  * Selects the right launcher at runtime based on the detected BYD DiLink version.

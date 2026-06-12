@@ -12,7 +12,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.daemon.BinderParcelable;
 import com.google.android.material.appbar.MaterialToolbar;

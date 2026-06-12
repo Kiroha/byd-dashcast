@@ -1,4 +1,4 @@
-package com.byd.dashcast;
+package com.byd.dashcast.infrastructure;
 
 import android.content.Context;
 // LOT 4 — Bitmap/BitmapFactory imports removed (captureClusterDisplay deleted).
@@ -6,6 +6,7 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.util.AppLogger;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;

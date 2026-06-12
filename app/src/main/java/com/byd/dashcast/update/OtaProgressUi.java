@@ -1,6 +1,6 @@
 package com.byd.dashcast.update;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import android.app.AlertDialog;
 import android.graphics.Typeface;

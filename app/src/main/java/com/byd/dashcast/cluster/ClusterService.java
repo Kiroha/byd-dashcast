@@ -1,7 +1,7 @@
 package com.byd.dashcast.cluster;
 
-import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.MainActivity;
 import com.byd.dashcast.R;
 import com.byd.dashcast.ime.KeyboardBridgeActivity;
