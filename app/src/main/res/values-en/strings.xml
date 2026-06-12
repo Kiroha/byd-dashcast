@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -90,7 +90,6 @@
     <string name="notif_cluster_channel_desc">Maintains the display on the BYD cluster</string>
     <string name="notif_cluster_initializing">Cluster: initializing…</string>
     <string name="notif_cluster_active">Cluster active — display %1$d</string>
-    <string name="notif_cluster_stopped">Cluster: stopped</string>
     <string name="notif_cluster_disconnected">Cluster: disconnected</string>
     <string name="sysinfo_file_saved">\n\nFile: %1$s\nADB command: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Grid Mode</string>
@@ -144,7 +143,6 @@
     <string name="settings_check_update_support">Checks if a new version is available</string>
     <string name="settings_check_update_button">Check</string>
     <string name="settings_source_code_title">Source code</string>
-    <string name="main_title_dashboard">Dashboard</string>
     <string name="main_nav_apps">Apps</string>
     <string name="main_nav_settings">Settings</string>
     <string name="main_nav_diag">Diag</string>
@@ -280,7 +278,7 @@
 
     <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
     <string name="diag_voice_header_title">Voice control — audio-chain PoC</string>
-    <string name="diag_voice_header_subtitle">Step 1/3: validates that the microphone is reachable from the app on this platform. No ML model is loaded yet.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Step 1/3: validates that the microphone is reachable from the app on this platform. No ML model is loaded yet.</string>
     <string name="diag_voice_btn_start">Start listening</string>
     <string name="diag_voice_btn_stop">Stop</string>
     <string name="diag_voice_state_idle">Service stopped</string>
@@ -292,7 +290,7 @@
     <string name="diag_voice_meter_peak">Instant peak</string>
     <string name="diag_voice_stats_fmt">RMS %1$d • peak %2$d • clip %3$d • frames %4$d</string>
     <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">This PoC starts a foreground service that reads the mic at 16 kHz mono 16-bit and displays the audio level locally. No data is recorded, transmitted or analysed. The “Ok DashCast” wake word will be added in v1.2.44 (openWakeWord), speech recognition in v1.2.45 (Vosk).</string>
+    <string name="diag_voice_hint" tools:ignore="Typos">This PoC starts a foreground service that reads the mic at 16 kHz mono 16-bit and displays the audio level locally. No data is recorded, transmitted or analysed. The “Ok DashCast” wake word will be added in v1.2.44 (openWakeWord), speech recognition in v1.2.45 (Vosk).</string>
     <string name="diag_voice_sample_rate_fmt">Sample rate: %1$d Hz mono 16-bit • source VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — Voice PoC</string>
     <string name="diag_voice_notif_title">DashCast — mic listening (PoC)</string>
@@ -323,9 +321,8 @@
     <string name="diag_voice_model_unzipping">Extracting…</string>
     <string name="diag_voice_wakeword_switch">Enable</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid score (threshold 0.5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (placeholder for “Ok DashCast”)</string>
+    <string name="diag_voice_wakeword_model_fmt" tools:ignore="Typos">Model: hey_jarvis_v0.1 (placeholder for “Ok DashCast”)</string>
     <string name="diag_voice_wakeword_last_fmt">Last detection: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Last detection: %1$s (score %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime unavailable — %1$s</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
@@ -358,14 +355,6 @@
     <string name="diag_dl5_cluster_toast_no_results">Run the recon first before exporting.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Destructive live test: launches the chosen app on the fission display, forces a resize, moves it back to the main display, then cleans up. DiLink 5 only, no resize command ever sent to the main display (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructive</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Target: %1$s\n\nThis suite will:\n\n• Enable FORCE_RESIZE_APP compat on the app\n• Force-stop the app\n• Launch it on the fission display (id ≠ 0) in freeform windowingMode\n• Test a task resize\n• Move it back to the main display (id 0) to validate the move pipeline\n• Force-stop the app then reset the compat (cleanup)\n\nNo resize command is ever sent against the main display (id 0).\nContinue?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Run the test</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission is DiLink 5 only.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Choose app to test</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">No launchable apps found.</string>
     <!-- v1.3.12 — VD pipeline test battery. -->
     <string name="diag_dl5_cluster_test_vd">VD Pipeline Test</string>
     <string name="diag_dl5_cluster_test_vd_hint">Validates the VirtualDisplay → MirrorDaemon pipeline in 7 steps: VD creation, app launch on VD, mirror to cluster surface. DiLink 5 only.</string>
@@ -392,7 +381,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Click "Run all" to start</string>
     <string name="diag_beta_counters_running">Running…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -547,9 +535,6 @@
     <string name="diag_cluster_poc_status_idle">Ready. Tap « Enumerate » to view displays, then « Launch on fission » to start target. Then adjust sliders X/Y/W/H and press « Apply rect » (or enable « Auto »).</string>
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="proxy_keeper_channel_name">Proxy daemon</string>
     <string name="proxy_keeper_channel_desc">Keeps the proxy daemon available in background</string>
     <string name="proxy_keeper_notif_title">DashCast — proxy active</string>
@@ -595,15 +580,10 @@
     <string name="fission_layout_active_fmt">Layout: %1$s</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_switch">Switch</string>
-    <string name="fission_layout_set_favorite">Set as favourite</string>
     <string name="fission_layout_favorite_set_toast">Favourite layout set ✓</string>
-    <string name="fission_slot_zone_free">Free zone</string>
     <string name="fission_slot_zone_bound_fmt">Bound app: %1$s</string>
     <string name="fission_slot_pick_pkg">Bind an application…</string>
     <string name="fission_slot_pkg_none">None — free zone</string>
-    <string name="fission_slot_reused_toast">Existing slot reused ✓</string>
-    <string name="fission_auto_activating">Activating favourite layout…</string>
-    <string name="fission_precreating_slots">Preparing slots…</string>
     <string name="main_nav_layouts">Layouts</string>
     <string name="layout_manager_title">Layout manager</string>
     <string name="layout_manager_new">New layout</string>
@@ -630,4 +610,8 @@
     <string name="fission_resize_right_half">Right ½</string>
     <string name="fission_resize_title">Resize %1$s</string>
     <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="layout_preset_activate">Activate</string>
+    <string name="layout_preset_active_badge">ACTIVE</string>
+    <string name="layout_preset_deactivate">Deactivate</string>
+    <string name="fission_zone_count">%1$d zone(s)</string>
 </resources>

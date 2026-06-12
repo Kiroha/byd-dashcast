@@ -194,7 +194,8 @@
                         android:layout_marginStart="8dp"
                         android:singleLine="true"
                         android:inputType="text"
-                        android:text="com.waze"/>
+                        android:text="com.waze"
+                        tools:ignore="HardcodedText"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -238,7 +239,8 @@
                     android:fontFamily="monospace"
                     android:textSize="13sp"
                     android:textColor="?attr/colorOnSurface"
-                    android:text="rect = (0, 0) 400×400"/>
+                    android:text="rect = (0, 0) 400×400"
+                    tools:ignore="HardcodedText"/>
 
                 <!-- X slider -->
                 <TextView

@@ -110,7 +110,6 @@
     <string name="notif_cluster_channel_desc">Maintient l\'affichage sur le cluster BYD</string>
     <string name="notif_cluster_initializing">Cluster : initialisation…</string>
     <string name="notif_cluster_active">Cluster actif — écran %1$d</string>
-    <string name="notif_cluster_stopped">Cluster : arrêté</string>
     <string name="notif_cluster_disconnected">Cluster : déconnecté</string>
     <string name="proxy_keeper_channel_name">Daemon proxy</string>
     <string name="proxy_keeper_channel_desc">Maintient le daemon proxy disponible en arrière-plan</string>
@@ -189,7 +188,6 @@
     <string name="settings_check_update_support">Vérifie si une nouvelle version est disponible</string>
     <string name="settings_check_update_button">Vérifier</string>
     <string name="settings_source_code_title">Code source</string>
-    <string name="main_title_dashboard">Tableau de bord</string>
     <string name="main_nav_apps">Apps</string>
     <string name="main_nav_settings">Réglages</string>
     <string name="main_nav_diag">Diag</string>
@@ -329,7 +327,7 @@
 
     <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
     <string name="diag_voice_header_title">Pilotage vocal — PoC chaîne audio</string>
-    <string name="diag_voice_header_subtitle">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
     <string name="diag_voice_btn_start">Démarrer l’écoute</string>
     <string name="diag_voice_btn_stop">Arrêter</string>
     <string name="diag_voice_state_idle">Service arrêté</string>
@@ -372,7 +370,6 @@
     <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Modèle : hey_jarvis_v0.1 (placeholder pour « Ok DashCast »)</string>
     <string name="diag_voice_wakeword_last_fmt">Dernière détection : —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Dernière détection : %1$s (score %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime indisponible — %1$s</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
@@ -405,14 +402,6 @@
     <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Test live destructif : lance l’application choisie sur l’écran fission, force-resize, la ramène sur l’écran principal, puis nettoie. DiLink 5 uniquement, aucune commande de resize sur l’écran principal (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructif</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Cible : %1$s\n\nCette suite va :\n\n• Activer le compat FORCE_RESIZE_APP sur l’application\n• Force-stop l’application\n• La lancer sur l’écran fission (id ≠ 0) en windowingMode freeform\n• Tester un resize de la tâche\n• La ramener sur l’écran principal (id 0) pour valider le move\n• Force-stop puis reset du compat (nettoyage)\n\nAucune commande de resize n’est envoyée sur l’écran principal (id 0).\nContinuer ?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Choisir l’application à tester</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Aucune application lançable trouvée.</string>    <!-- v1.3.12 — VD pipeline test battery (replaces Fission). -->
     <string name="diag_dl5_cluster_test_vd">Test VD Pipeline</string>
     <string name="diag_dl5_cluster_test_vd_hint">Valide le pipeline VirtualDisplay → MirrorDaemon en 7 étapes : création VD, lancement app sur VD, miroir vers la surface cluster. DiLink 5 uniquement.</string>
     <string name="diag_dl5_cluster_test_vd_confirm_title">Test VD Pipeline</string>
@@ -440,7 +429,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Cliquer sur « Lancer tous » pour démarrer</string>
     <string name="diag_beta_counters_running">Exécution en cours…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -616,15 +604,10 @@
     <string name="fission_layout_active_fmt">Layout : %1$s</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_switch">Changer</string>
-    <string name="fission_layout_set_favorite">Définir comme favori</string>
     <string name="fission_layout_favorite_set_toast">Layout favori défini ✓</string>
-    <string name="fission_slot_zone_free">Zone libre</string>
     <string name="fission_slot_zone_bound_fmt">App liée : %1$s</string>
     <string name="fission_slot_pick_pkg">Lier une application…</string>
     <string name="fission_slot_pkg_none">Aucune — zone libre</string>
-    <string name="fission_slot_reused_toast">Slot existant réutilisé ✓</string>
-    <string name="fission_auto_activating">Activation du layout favori…</string>
-    <string name="fission_precreating_slots">Préparation des slots…</string>
 
     <!-- FissionActivity runtime strings -->
     <string name="fission_idle_hint">Appuyez sur + pour projeter une application</string>
@@ -647,4 +630,8 @@
     <string name="fission_resize_right_3q">Droite ¾</string>
     <string name="fission_close_slot_title">Fermer %1$s ?</string>
     <string name="fission_close_slot_confirm">Fermer</string>
+    <string name="layout_preset_activate">Activer</string>
+    <string name="layout_preset_active_badge">ACTIF</string>
+    <string name="layout_preset_deactivate">Désactiver</string>
+    <string name="fission_zone_count">%1$d zone(s)</string>
 </resources>

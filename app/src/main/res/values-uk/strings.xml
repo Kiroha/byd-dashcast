@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Контролер панелі приладів</string>
     <string name="welcome_select_lang">Виберіть мову\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">Підтримує відображення на кластері BYD</string>
     <string name="notif_cluster_initializing">Кластер: ініціалізація…</string>
     <string name="notif_cluster_active">Кластер активний — екран %1$d</string>
-    <string name="notif_cluster_stopped">Кластер: зупинено</string>
     <string name="notif_cluster_disconnected">Кластер: від\'єднано</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nКоманда ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Режим сітки</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Перевіряє наявність нової версії</string>
     <string name="settings_check_update_button">Перевірити</string>
     <string name="settings_source_code_title">Сирцевий код</string>
-    <string name="main_title_dashboard">Панель</string>
     <string name="main_nav_apps">Дод.</string>
     <string name="main_nav_settings">Налашт.</string>
     <string name="main_nav_diag">Діаг.</string>
@@ -240,7 +238,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Натисніть «Запустити всі», щоб почати</string>
     <string name="diag_beta_counters_running">Виконується…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -372,14 +369,6 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · перевірка…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Тест Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивний живий тест: запускає вибраний застосунок на екрані fission, примусово змінює розмір, повертає на головний екран, потім очищає. Лише DiLink 5, жодна команда зміни розміру ніколи не надсилається на головний екран (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Тест Fission — деструктивний</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Ціль: %1$s\n\nЦя серія:\n\n• Увімкне compat FORCE_RESIZE_APP для застосунку\n• Примусово зупинить застосунок\n• Запустить його на екрані fission (id ≠ 0) у режимі freeform\n• Перевірить зміну розміру завдання\n• Поверне його на головний екран (id 0) для перевірки переміщення\n• Примусово зупинить застосунок і скине compat (очищення)\n\nЖодна команда зміни розміру ніколи не надсилається на головний екран (id 0).\nПродовжити?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Запустити тест</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Тест Fission лише для DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Виберіть застосунок для тесту</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Запускні застосунки не знайдено.</string>
     <!-- v1.3.12 — VD pipeline test battery. -->
     <string name="diag_dl5_cluster_test_vd">Тест VD Pipeline</string>
     <string name="diag_dl5_cluster_test_vd_hint">Перевіряє pipeline VirtualDisplay → MirrorDaemon у 7 кроків: створення VD, запуск застосунку на VD, дзеркалювання на поверхню кластера. Лише DiLink 5.</string>
@@ -414,7 +403,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Голос (alpha)</string>
     <string name="diag_voice_header_title">Голосове керування — PoC аудіо-ланцюга</string>
-    <string name="diag_voice_header_subtitle">Крок 1/3: перевіряє, що мікрофон доступний застосунку на цій платформі. ML-модель ще не завантажено.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Крок 1/3: перевіряє, що мікрофон доступний застосунку на цій платформі. ML-модель ще не завантажено.</string>
     <string name="diag_voice_btn_start">Почати прослуховування</string>
     <string name="diag_voice_btn_stop">Зупинити</string>
     <string name="diag_voice_state_idle">Сервіс зупинено</string>
@@ -460,15 +449,11 @@
     <string name="diag_voice_wakeword_score_label">Sigmoid-оцінка (поріг 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Модель: hey_jarvis_v0.1 (замінник для «Ok DashCast»)</string>
     <string name="diag_voice_wakeword_last_fmt">Останнє виявлення: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Останнє виявлення: %1$s (оцінка %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime недоступний — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -582,7 +567,6 @@
     <!-- Fission — multi-app cluster -->
     <string name="fission_active_count">Активних додатків: %1$d</string>
     <string name="fission_all_projected">Усі додатки вже проецюються</string>
-    <string name="fission_auto_activating">Активація улюбленого макета…</string>
     <string name="fission_close_slot_confirm">Закрити</string>
     <string name="fission_close_slot_title">Закрити %1$s?</string>
     <string name="fission_conflict_message">Проекція вже активна. Зупинити її, щоб продовжити?</string>
@@ -594,13 +578,11 @@
     <string name="fission_layout_favorite_set_toast">Улюблений макет встановлено ✓</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Вільний режим</string>
-    <string name="fission_layout_set_favorite">Зробити улюбленим</string>
     <string name="fission_layout_switch">Змінити</string>
     <string name="fission_mode_free">Вільний режим</string>
     <string name="fission_no_apps">Немає доступних додатків</string>
     <string name="fission_pick_app_title">Виберіть додаток</string>
     <string name="fission_place_in">Розмістити %1$s у…</string>
-    <string name="fission_precreating_slots">Підготовка слотів…</string>
     <string name="fission_resize_full">На весь екран</string>
     <string name="fission_resize_left_3q">Ліворуч ¾</string>
     <string name="fission_resize_left_half">Ліворуч ½</string>
@@ -610,13 +592,15 @@
     <string name="fission_slot_error">Слот %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Прив\'язати додаток…</string>
     <string name="fission_slot_pkg_none">Немає — вільна зона</string>
-    <string name="fission_slot_reused_toast">Використано наявний слот ✓</string>
     <string name="fission_slot_zone_bound_fmt">Прив\'язаний додаток: %1$s</string>
-    <string name="fission_slot_zone_free">Вільна зона</string>
     <string name="settings_fission_auto_layout">Автоматичний улюблений макет</string>
     <string name="settings_fission_auto_layout_support">Активує улюблений макет під час відкриття Fission і автоматично запускає прив\'язані додатки</string>
     <string name="settings_fission_precreate_slots">Попередньо створювати слоти під час запуску</string>
     <string name="settings_fission_precreate_slots_support">Готує Virtual Display улюбленого макета під час відкриття Fission (без запуску додатків)</string>
     <string name="sysinfo_disp_hidden">Прихований (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">Не видно через DisplayManager API</string>
+    <string name="layout_preset_activate">Активувати</string>
+    <string name="layout_preset_active_badge">АКТИВНИЙ</string>
+    <string name="layout_preset_deactivate">Деактивувати</string>
+    <string name="fission_zone_count">%1$d зон(и)</string>
 </resources>

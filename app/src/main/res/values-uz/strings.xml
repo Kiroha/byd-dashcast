@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Asboblar paneli boshqaruvchisi</string>
     <string name="welcome_select_lang">Tilni tanlang\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">BYD klasterida ekranni saqlab turadi</string>
     <string name="notif_cluster_initializing">Klaster: ishga tushirilmoqda…</string>
     <string name="notif_cluster_active">Klaster faol — ekran %1$d</string>
-    <string name="notif_cluster_stopped">Klaster: toʻxtatildi</string>
     <string name="notif_cluster_disconnected">Klaster: uzildi</string>
     <string name="sysinfo_file_saved">\n\nFayl: %1$s\nADB buyrug\'i: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ To\'r rejimi</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Yangi versiya mavjudligini tekshiradi</string>
     <string name="settings_check_update_button">Tekshirish</string>
     <string name="settings_source_code_title">Manba kodi</string>
-    <string name="main_title_dashboard">Boshqaruv paneli</string>
     <string name="main_nav_apps">Ilovalar</string>
     <string name="main_nav_settings">Sozla.</string>
     <string name="main_nav_diag">Diag.</string>
@@ -240,7 +238,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Boshlash uchun «Hammasini ishga tushirish»ni bosing</string>
     <string name="diag_beta_counters_running">Bajarilmoqda…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -372,14 +369,6 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · tekshiruv…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Fission testi</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Buzg\'uvchi jonli test: tanlangan ilovani fission ekranida ishga tushiradi, o\'lchamini majburiy o\'zgartiradi, asosiy ekranga qaytaradi, so\'ngra tozalaydi. Faqat DiLink 5, asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission testi — buzg\'uvchi</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Maqsad: %1$s\n\nUshbu seriya:\n\n• Ilovada FORCE_RESIZE_APP compat-ni yoqadi\n• Ilovani majburiy to\'xtatadi\n• Uni fission ekranida (id ≠ 0) freeform rejimida ishga tushiradi\n• Vazifa o\'lchamini o\'zgartirishni sinab ko\'radi\n• Ko\'chirishni tasdiqlash uchun uni asosiy ekranga (id 0) qaytaradi\n• Ilovani majburiy to\'xtatadi va compat-ni qayta tiklaydi (tozalash)\n\nAsosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.\nDavom etilsinmi?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Testni ishga tushirish</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Sinov uchun ilovani tanlang</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
     <!-- v1.3.12 — VD pipeline test battery. -->
     <string name="diag_dl5_cluster_test_vd">VD Pipeline testi</string>
     <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon quvurini 7 bosqichda tekshiradi: VD yaratish, VD-da ilovani ishga tushirish, klaster yuzasiga aks ettirish. Faqat DiLink 5.</string>
@@ -414,7 +403,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Ovoz (alpha)</string>
     <string name="diag_voice_header_title">Ovozli boshqaruv — audio-zanjir PoC</string>
-    <string name="diag_voice_header_subtitle">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
     <string name="diag_voice_btn_start">Tinglashni boshlash</string>
     <string name="diag_voice_btn_stop">To‘xtatish</string>
     <string name="diag_voice_state_idle">Xizmat to‘xtatilgan</string>
@@ -460,15 +449,11 @@
     <string name="diag_voice_wakeword_score_label">Sigmoid baho (chegara 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 («Ok DashCast» uchun oʻrindiq)</string>
     <string name="diag_voice_wakeword_last_fmt">Oxirgi aniqlash: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Oxirgi aniqlash: %1$s (baho %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime mavjud emas — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -582,7 +567,6 @@
     <!-- Fission — multi-app cluster -->
     <string name="fission_active_count">Faol ilovalar: %1$d</string>
     <string name="fission_all_projected">Barcha ilovalar allaqachon ko\'rsatilmoqda</string>
-    <string name="fission_auto_activating">Sevimli tartib faollashtirilmoqda…</string>
     <string name="fission_close_slot_confirm">Yopish</string>
     <string name="fission_close_slot_title">%1$s yopilsinmi?</string>
     <string name="fission_conflict_message">Proyeksiya allaqachon faol. Davom etish uchun uni to\'xtatasizmi?</string>
@@ -594,13 +578,11 @@
     <string name="fission_layout_favorite_set_toast">Sevimli tartib o\'rnatildi ✓</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Erkin rejim</string>
-    <string name="fission_layout_set_favorite">Sevimli sifatida belgilash</string>
     <string name="fission_layout_switch">Almashtirish</string>
     <string name="fission_mode_free">Erkin rejim</string>
     <string name="fission_no_apps">Mavjud ilovalar yo\'q</string>
     <string name="fission_pick_app_title">Ilovani tanlang</string>
     <string name="fission_place_in">%1$s shu yerga joylashtirish…</string>
-    <string name="fission_precreating_slots">Slotlar tayyorlanmoqda…</string>
     <string name="fission_resize_full">To\'liq ekran</string>
     <string name="fission_resize_left_3q">Chap ¾</string>
     <string name="fission_resize_left_half">Chap ½</string>
@@ -610,13 +592,15 @@
     <string name="fission_slot_error">Slot %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Ilovani bog\'lash…</string>
     <string name="fission_slot_pkg_none">Yo\'q — bo\'sh hudud</string>
-    <string name="fission_slot_reused_toast">Mavjud slot qayta ishlatildi ✓</string>
     <string name="fission_slot_zone_bound_fmt">Bog\'langan ilova: %1$s</string>
-    <string name="fission_slot_zone_free">Bo\'sh hudud</string>
     <string name="settings_fission_auto_layout">Avtomatik sevimli tartib</string>
     <string name="settings_fission_auto_layout_support">Fission ochilganda sevimli tartibni faollashtiradi va bog\'langan ilovalarni avtomatik ishga tushiradi</string>
     <string name="settings_fission_precreate_slots">Slotlarni ishga tushirishda oldindan yaratish</string>
     <string name="settings_fission_precreate_slots_support">Fission ochilganda sevimli tartibning Virtual Display\'larini tayyorlaydi (ilovalarni ishga tushirmasdan)</string>
     <string name="sysinfo_disp_hidden">Yashirin (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">DisplayManager API orqali ko\'rinmaydi</string>
+    <string name="layout_preset_activate">Faollashtirish</string>
+    <string name="layout_preset_active_badge">FAOL</string>
+    <string name="layout_preset_deactivate">O\'chirish</string>
+    <string name="fission_zone_count">%1$d hudud</string>
 </resources>

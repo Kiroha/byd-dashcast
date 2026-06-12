@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Аспаптар панелі контроллері</string>
     <string name="welcome_select_lang">Тілді таңдаңыз\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">BYD кластерінде дисплейді қолдайды</string>
     <string name="notif_cluster_initializing">Кластер: инициализация…</string>
     <string name="notif_cluster_active">Кластер белсенді — экран %1$d</string>
-    <string name="notif_cluster_stopped">Кластер: тоқтатылды</string>
     <string name="notif_cluster_disconnected">Кластер: ажыратылды</string>
     <string name="sysinfo_file_saved">\n\nФайл: %1$s\nADB пәрмені: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Тор режимі</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Жаңа нұсқаның бар-жоғын тексереді</string>
     <string name="settings_check_update_button">Тексеру</string>
     <string name="settings_source_code_title">Бастапқы код</string>
-    <string name="main_title_dashboard">Бақылау тақтасы</string>
     <string name="main_nav_apps">Қосымшалар</string>
     <string name="main_nav_settings">Бапт.</string>
     <string name="main_nav_diag">Диаг.</string>
@@ -240,7 +238,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Бастау үшін «Барлығын іске қосу» түймесін басыңыз</string>
     <string name="diag_beta_counters_running">Орындалуда…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -372,14 +369,6 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · тексеру…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Fission тесті</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Деструктивті нақты тест: таңдалған қолданбаны fission экранында іске қосады, өлшемін мәжбүрлеп өзгертеді, негізгі экранға қайтарады, содан кейін тазалайды. Тек DiLink 5 үшін, негізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission тесті — деструктивті</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Мақсат: %1$s\n\nБұл сериал:\n\n• Қолданбада FORCE_RESIZE_APP compat-ты қосады\n• Қолданбаны мәжбүрлеп тоқтатады\n• Оны fission экранында (id ≠ 0) freeform режимінде іске қосады\n• Тапсырманы өлшемін өзгертуді тексереді\n• Жылжытуды растау үшін негізгі экранға (id 0) қайтарады\n• Қолданбаны мәжбүрлеп тоқтатып, compat-ты қалпына келтіреді (тазалау)\n\nНегізгі экранға (id 0) ешқашан өлшем өзгерту командасы жіберілмейді.\nЖалғастыру керек пе?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Тестті іске қосу</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission тесті тек DiLink 5 үшін.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Сынайтын қолданбаны таңдау</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
     <!-- v1.3.12 — VD pipeline test battery. -->
     <string name="diag_dl5_cluster_test_vd">VD Pipeline сынағы</string>
     <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon конвейерін 7 қадаммен тексереді: VD жасау, VD-да қолданбаны іске қосу, кластер бетіне айналу. Тек DiLink 5.</string>
@@ -414,7 +403,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Дауыс (alpha)</string>
     <string name="diag_voice_header_title">Дауыспен басқару — аудио-тізбек PoC</string>
-    <string name="diag_voice_header_subtitle">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
     <string name="diag_voice_btn_start">Тыңдауды бастау</string>
     <string name="diag_voice_btn_stop">Тоқтату</string>
     <string name="diag_voice_state_idle">Қызмет тоқтатылған</string>
@@ -459,15 +448,11 @@
     <string name="diag_voice_wakeword_score_label">Sigmoid бағасы (босаға 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Үлгі: hey_jarvis_v0.1 («Ok DashCast» үшін орынбасар)</string>
     <string name="diag_voice_wakeword_last_fmt">Соңғы анықтау: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Соңғы анықтау: %1$s (баға %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime қол жетімсіз — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -581,7 +566,6 @@
     <!-- Fission — multi-app cluster -->
     <string name="fission_active_count">Белсенді қолданбалар: %1$d</string>
     <string name="fission_all_projected">Барлық қолданбалар әлдеқашан көрсетіліп тұр</string>
-    <string name="fission_auto_activating">Таңдаулы орналасу іске қосылуда…</string>
     <string name="fission_close_slot_confirm">Жабу</string>
     <string name="fission_close_slot_title">%1$s жабылсын ба?</string>
     <string name="fission_conflict_message">Проекция әлдеқашан белсенді. Жалғастыру үшін оны тоқтату керек пе?</string>
@@ -593,13 +577,11 @@
     <string name="fission_layout_favorite_set_toast">Таңдаулы орналасу орнатылды ✓</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Еркін режим</string>
-    <string name="fission_layout_set_favorite">Таңдаулы ету</string>
     <string name="fission_layout_switch">Ауыстыру</string>
     <string name="fission_mode_free">Еркін режим</string>
     <string name="fission_no_apps">Қолжетімді қолданбалар жоқ</string>
     <string name="fission_pick_app_title">Қолданбаны таңдаңыз</string>
     <string name="fission_place_in">%1$s мында орналастыру…</string>
-    <string name="fission_precreating_slots">Слоттар дайындалуда…</string>
     <string name="fission_resize_full">Толық экран</string>
     <string name="fission_resize_left_3q">Сол жақ ¾</string>
     <string name="fission_resize_left_half">Сол жақ ½</string>
@@ -609,13 +591,15 @@
     <string name="fission_slot_error">Слот %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Қолданбаны байланыстыру…</string>
     <string name="fission_slot_pkg_none">Жоқ — бос аймақ</string>
-    <string name="fission_slot_reused_toast">Бар слот қайта пайдаланылды ✓</string>
     <string name="fission_slot_zone_bound_fmt">Байланысқан қолданба: %1$s</string>
-    <string name="fission_slot_zone_free">Бос аймақ</string>
     <string name="settings_fission_auto_layout">Автоматты таңдаулы орналасу</string>
     <string name="settings_fission_auto_layout_support">Fission ашылғанда таңдаулы орналасуды іске қосып, байланысқан қолданбаларды автоматты түрде іске қосады</string>
     <string name="settings_fission_precreate_slots">Слоттарды іске қосылғанда алдын ала жасау</string>
     <string name="settings_fission_precreate_slots_support">Fission ашылғанда таңдаулы орналасудың Virtual Display-лерін дайындайды (қолданбаларды іске қоспай)</string>
     <string name="sysinfo_disp_hidden">Жасырын (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">DisplayManager API арқылы көрінбейді</string>
+    <string name="layout_preset_activate">Іске қосу</string>
+    <string name="layout_preset_active_badge">БЕЛСЕНДІ</string>
+    <string name="layout_preset_deactivate">Өшіру</string>
+    <string name="fission_zone_count">%1$d аймақ</string>
 </resources>

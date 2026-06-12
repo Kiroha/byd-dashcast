@@ -1,4 +1,5 @@
 package com.byd.dashcast.fission;
+import android.annotation.SuppressLint;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -192,6 +193,7 @@ public class LayoutManagerActivity extends Activity {
         if (mTvToolbarName  != null) mTvToolbarName.setText(name);
     }
 
+    @SuppressLint("SetTextI18n") // technical geometry/IDs, locale-neutral
     private void refreshChips() {
         if (mChipsContainer == null) return;
         mChipsContainer.removeAllViews();

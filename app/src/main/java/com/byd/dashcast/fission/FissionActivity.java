@@ -1,4 +1,5 @@
 package com.byd.dashcast.fission;
+import android.annotation.SuppressLint;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -406,6 +407,7 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
 
     // ── UI helpers ─────────────────────────────────────────────────────────────────
 
+    @SuppressLint("SetTextI18n") // technical geometry/IDs, locale-neutral
     private void updateSlotsUi(java.util.Collection<FissionOrchestrator.SlotState> slots) {
         if (llSlots == null) return;
         llSlots.removeAllViews();

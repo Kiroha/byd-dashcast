@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Sterownik tablicy rozdzielczej</string>
     <string name="welcome_select_lang">Choisissez votre langue\nWybierz swój język</string>
@@ -90,7 +90,6 @@
     <string name="notif_cluster_channel_desc">Utrzymuje wyświetlanie na klastrze BYD</string>
     <string name="notif_cluster_initializing">Klaster: inicjalizacja…</string>
     <string name="notif_cluster_active">Klaster aktywny — ekran %1$d</string>
-    <string name="notif_cluster_stopped">Klaster: zatrzymany</string>
     <string name="notif_cluster_disconnected">Klaster: rozłączony</string>
     <string name="sysinfo_file_saved">\n\nPlik: %1$s\nKomenda ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Tryb siatki</string>
@@ -144,7 +143,6 @@
     <string name="settings_check_update_support">Sprawdza, czy dostępna jest nowa wersja</string>
     <string name="settings_check_update_button">Sprawdź</string>
     <string name="settings_source_code_title">Kod źródłowy</string>
-    <string name="main_title_dashboard">Tablica rozdzielcza</string>
     <string name="main_nav_apps">Aplikacje</string>
     <string name="main_nav_settings">Ustawienia</string>
     <string name="main_nav_diag">Diag</string>
@@ -278,7 +276,7 @@
 
     <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
     <string name="diag_voice_header_title">Sterowanie głosem — PoC łańcucha audio</string>
-    <string name="diag_voice_header_subtitle">Krok 1/3: sprawdza, czy mikrofon jest dostępny z poziomu aplikacji na tej platformie. Żaden model ML nie jest jeszcze załadowany.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Krok 1/3: sprawdza, czy mikrofon jest dostępny z poziomu aplikacji na tej platformie. Żaden model ML nie jest jeszcze załadowany.</string>
     <string name="diag_voice_btn_start">Rozpocznij nasłuch</string>
     <string name="diag_voice_btn_stop">Zatrzymaj</string>
     <string name="diag_voice_state_idle">Usługa zatrzymana</string>
@@ -302,7 +300,6 @@
     <string name="diag_voice_wakeword_score_label">Wynik sigmoid (próg 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (zastępczy dla „Ok DashCast”)</string>
     <string name="diag_voice_wakeword_last_fmt">Ostatnie wykrycie: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Ostatnie wykrycie: %1$s (wynik %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime niedostępny — %1$s</string>
     <!-- v1.4.2-beta — LLM API key -->
     <string name="diag_voice_apikey_label">Klucz API OpenAI (opcjonalny — aktywuje Jarvis AI)</string>
@@ -338,14 +335,6 @@
     <string name="diag_dl5_cluster_toast_no_results">Najpierw uruchom recon przed eksportem.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Destrukcyjny test na żywo: uruchamia wybraną aplikację na ekranie fission, wymusza zmianę rozmiaru, przenosi ją z powrotem na główny ekran, następnie czyści. Tylko DiLink 5, żadna komenda zmiany rozmiaru nigdy nie jest wysyłana do ekranu głównego (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destrukcyjny</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Cel: %1$s\n\nTen pakiet:\n\n• Włączy kompatybilność FORCE_RESIZE_APP dla aplikacji\n• Wymusi zatrzymanie aplikacji\n• Uruchomi ją na ekranie fission (id ≠ 0) w trybie windowingMode freeform\n• Sprawdzi zmianę rozmiaru zadania\n• Przeniesie ją z powrotem na główny ekran (id 0), aby zweryfikować pipeline przenoszenia\n• Wymusi zatrzymanie aplikacji, a następnie zresetuje kompatybilność (czyszczenie)\n\nŻadna komenda zmiany rozmiaru nie jest wysyłana do ekranu głównego (id 0).\nKontynuować?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Uruchom test</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission jest tylko dla DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Wybierz aplikację do testu</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Nie znaleziono uruchamialnych aplikacji.</string>
     <string name="diag_dl5_fission_prompt_title">Weryfikacja klastra</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">Czy %1$s jest widoczne na ekranie klastra?\n\n(testowanie ekranu %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Tak</string>
@@ -363,7 +352,6 @@
     <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
     <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
     <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_pill_b_on">B · N/A</string>
     <string name="diag_beta_counters_idle">Kliknij „Uruchom wszystko”, aby rozpocząć</string>
     <string name="diag_beta_counters_running">Wykonywanie…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -518,9 +506,6 @@
     <string name="diag_cluster_poc_status_idle">Gotowe. Dotknij „Wymień”, aby zobaczyć ekrany, następnie „Uruchom na fission”, aby uruchomić cel. Następnie dostosuj suwaki X/Y/W/H i naciśnij „Zastosuj prostokąt” (lub włącz „Auto”).</string>
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="proxy_keeper_channel_name">Demon proxy</string>
     <string name="proxy_keeper_channel_desc">Utrzymuje demona proxy dostępnego w tle</string>
     <string name="proxy_keeper_notif_title">DashCast — proxy aktywny</string>
@@ -590,7 +575,6 @@
     <!-- Fission — multi-app cluster -->
     <string name="fission_active_count">Aktywne aplikacje: %1$d</string>
     <string name="fission_all_projected">Wszystkie aplikacje są już wyświetlane</string>
-    <string name="fission_auto_activating">Aktywowanie ulubionego układu…</string>
     <string name="fission_close_slot_confirm">Zamknij</string>
     <string name="fission_close_slot_title">Zamknąć %1$s?</string>
     <string name="fission_conflict_message">Projekcja jest już aktywna. Zatrzymać ją, aby kontynuować?</string>
@@ -602,13 +586,11 @@
     <string name="fission_layout_favorite_set_toast">Ustawiono ulubiony układ ✓</string>
     <string name="fission_layout_favorite_suffix"> ⭐</string>
     <string name="fission_layout_mode_free">Tryb swobodny</string>
-    <string name="fission_layout_set_favorite">Ustaw jako ulubiony</string>
     <string name="fission_layout_switch">Zmień</string>
     <string name="fission_mode_free">Tryb swobodny</string>
     <string name="fission_no_apps">Brak dostępnych aplikacji</string>
     <string name="fission_pick_app_title">Wybierz aplikację</string>
     <string name="fission_place_in">Umieść %1$s w…</string>
-    <string name="fission_precreating_slots">Przygotowywanie slotów…</string>
     <string name="fission_resize_full">Pełny ekran</string>
     <string name="fission_resize_left_3q">Lewa ¾</string>
     <string name="fission_resize_left_half">Lewa ½</string>
@@ -618,13 +600,15 @@
     <string name="fission_slot_error">Slot %1$s: %2$s</string>
     <string name="fission_slot_pick_pkg">Powiąż aplikację…</string>
     <string name="fission_slot_pkg_none">Brak — wolna strefa</string>
-    <string name="fission_slot_reused_toast">Wykorzystano istniejący slot ✓</string>
     <string name="fission_slot_zone_bound_fmt">Powiązana aplikacja: %1$s</string>
-    <string name="fission_slot_zone_free">Wolna strefa</string>
     <string name="settings_fission_auto_layout">Automatyczny ulubiony układ</string>
     <string name="settings_fission_auto_layout_support">Aktywuje ulubiony układ po otwarciu Fission i automatycznie uruchamia powiązane aplikacje</string>
     <string name="settings_fission_precreate_slots">Wstępnie twórz sloty przy starcie</string>
     <string name="settings_fission_precreate_slots_support">Przygotowuje Virtual Displays ulubionego układu po otwarciu Fission (bez uruchamiania aplikacji)</string>
     <string name="sysinfo_disp_hidden">Ukryty (PRIVATE)</string>
     <string name="sysinfo_disp_hidden_sub">Niewidoczny przez API DisplayManager</string>
+    <string name="layout_preset_activate">Aktywuj</string>
+    <string name="layout_preset_active_badge">AKTYWNY</string>
+    <string name="layout_preset_deactivate">Dezaktywuj</string>
+    <string name="fission_zone_count">%1$d stref(y)</string>
 </resources>
