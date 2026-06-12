@@ -63,6 +63,12 @@ public class AppLogger {
     // Lets LogActivity.refreshLog() update the level-filter chips without walking
     // the entire 3000-entry buffer twice on every 500 ms tick.
     private static final int[] sCountByLevel = new int[Level.values().length];
+    // Monotonic stamp bumped on every mutation (add or clear). Pollers must use
+    // this instead of getEntriesCount(): once the circular buffer saturates at
+    // MAX_ENTRIES, every add also evicts one entry so size() stays pinned at
+    // 3000 — a size-based change check then reports "no change" forever and the
+    // log viewer silently freezes.
+    private static long sChangeStamp = 0;
 
     // SimpleDateFormat is not thread-safe — one instance per thread via ThreadLocal
     // avoids repeated allocations without risk of corruption.
@@ -90,6 +96,7 @@ public class AppLogger {
             }
             sEntries.addLast(e);
             sCountByLevel[level.ordinal()]++;
+            sChangeStamp++;
         }
     }
 
@@ -164,6 +171,14 @@ public class AppLogger {
         }
     }
 
+    /** Returns the mutation stamp — increases on every add and clear. See
+     *  {@link #sChangeStamp} for why pollers must not rely on getEntriesCount(). */
+    public static long getChangeStamp() {
+        synchronized (LOCK) {
+            return sChangeStamp;
+        }
+    }
+
     /** Returns an immutable copy of the buffer (used by LogActivity). */
     public static List<Entry> getEntries() {
         synchronized (LOCK) {
@@ -208,6 +223,7 @@ public class AppLogger {
         synchronized (LOCK) {
             sEntries.clear();
             java.util.Arrays.fill(sCountByLevel, 0);
+            sChangeStamp++; // clear is a mutation too — viewers must refresh
         }
     }
 
