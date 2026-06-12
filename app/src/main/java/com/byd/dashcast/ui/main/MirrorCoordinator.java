@@ -5,6 +5,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.display.DisplayManager;
 import android.os.IBinder;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -15,6 +16,8 @@ import com.byd.dashcast.AppLogger;
 import com.byd.dashcast.ClusterService;
 import com.byd.dashcast.R;
 import com.byd.dashcast.dashboard.ClusterMirrorManager;
+import com.byd.dashcast.ime.ClusterImeWatcherService;
+import com.byd.dashcast.platform.Platform;
 
 /**
  * Owns the TextureView / SurfaceTexture / Surface lifecycle for the cluster preview mirror.
@@ -24,6 +27,13 @@ import com.byd.dashcast.dashboard.ClusterMirrorManager;
 public final class MirrorCoordinator {
 
     private static final String TAG = "MirrorCoordinator";
+
+    // Reusable arrays for touch forwarding — avoids per-event allocation at 60-120 Hz.
+    // Cap at 16 pointers (= Android InputDispatcher limit, matches ClusterInputForwarder.MAX_POINTERS).
+    private static final int MAX_FWD_POINTERS = 16;
+    private final int[]   mFwdPointerIds = new int[MAX_FWD_POINTERS];
+    private final float[] mFwdClusterXs  = new float[MAX_FWD_POINTERS];
+    private final float[] mFwdClusterYs  = new float[MAX_FWD_POINTERS];
 
     public interface Host {
         Context getContext();
@@ -93,6 +103,21 @@ public final class MirrorCoordinator {
         }
 
         mFrameMirror.setOnClickListener(v -> mHost.onPreviewClicked());
+
+        // Touch → map coordinates → inject on cluster display
+        mTextureView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                // v0.9.79 — prevent NestedScrollView (or any ancestor) from stealing the
+                // gesture once the finger moves past touchSlop, otherwise vertical drags
+                // and pinch gestures get cancelled mid-flight.
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                forwardTouchFromMirror(event);
+                return true;
+            }
+        });
     }
 
     /** Called when a daemon Binder arrives after Activity start. */
@@ -197,6 +222,97 @@ public final class MirrorCoordinator {
 
     public Surface getMirrorSurface() { return mMirrorSurface; }
     public boolean isPreviewVisible() { return mFrameMirror.getVisibility() == View.VISIBLE; }
+
+    /**
+     * Maps touch coordinates from the mirror TextureView to the cluster display and injects them.
+     * The SurfaceControl projection preserves the ratio (letterboxing), so we recalculate
+     * the offset the same way setDisplayProjection did.
+     */
+    private void forwardTouchFromMirror(MotionEvent event) {
+        ClusterService svc = mHost.getClusterServiceIfBound();
+        if (svc == null) return;
+        com.byd.dashcast.dashboard.ClusterInputForwarder forwarder = svc.getInputForwarder();
+        if (forwarder == null) return;
+
+        ClusterMirrorManager mirror = svc.getMirrorManager();
+        if (mirror == null) return;
+
+        // Use the projection params stored when setDisplayProjection was called.
+        // This guarantees the touch offset/scale matches the actual rendered projection,
+        // even if the view was resized since mirror start (avoids touch offset bugs).
+        float scale   = mirror.getProjScale();
+        if (scale <= 0f) return;  // Mirror not yet fully initialized
+
+        float offsetX = mirror.getProjOffsetX();
+        float offsetY = mirror.getProjOffsetY();
+        int   clusterW = mirror.getClusterWidth();
+        int   clusterH = mirror.getClusterHeight();
+        if (clusterW <= 0 || clusterH <= 0) return;
+
+        int pointerCount = Math.min(event.getPointerCount(), MAX_FWD_POINTERS);
+        if (pointerCount <= 0) return;
+
+        for (int i = 0; i < pointerCount; i++) {
+            mFwdPointerIds[i] = event.getPointerId(i);
+            float cx = (event.getX(i) - offsetX) / scale;
+            float cy = (event.getY(i) - offsetY) / scale;
+            mFwdClusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
+            mFwdClusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
+        }
+
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
+            int ai = event.getActionIndex();
+            if (ai >= 0 && ai < pointerCount) {
+                AppLogger.d(TAG, "touch → ptrs=" + pointerCount
+                        + " action=" + event.getActionMasked()
+                        + " idx=" + ai
+                        + " view(" + (int)event.getX(ai) + "," + (int)event.getY(ai) + ")"
+                        + " off=(" + (int)offsetX + "," + (int)offsetY + ")"
+                        + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
+                        + " cluster=(" + (int)mFwdClusterXs[ai] + "," + (int)mFwdClusterYs[ai]
+                        + ")/" + clusterW + "×" + clusterH);
+            }
+        }
+
+        forwarder.forwardTouchFinalMulti(
+                mFwdPointerIds,
+                mFwdClusterXs,
+                mFwdClusterYs,
+                event.getActionMasked(),
+                event.getActionIndex(),
+                pointerCount
+        );
+
+        // v1.3.3 — DL5 only: after the finger is lifted from the cluster mirror,
+        // wait 350 ms (enough for the cluster app to move input focus) then check
+        // whether a focused editable node is visible on the cluster. If so,
+        // auto-launch the keyboard bridge. This is additive to the event-driven
+        // path in ClusterImeWatcherService (TYPE_VIEW_FOCUSED), which can miss
+        // events when the ROM returns displayId=-1 on secondary-display a11y events.
+        // Guard: only on DL5, only on ACTION_UP (lift), only when mirror is active.
+        int actionMasked = event.getActionMasked();
+        if ((actionMasked == MotionEvent.ACTION_UP
+                || actionMasked == MotionEvent.ACTION_POINTER_UP)
+                && ClusterService.sIsRunning) {
+            try {
+                if (Platform.get().isDiLink5(mHost.getContext())) {
+                    mTextureView.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                ClusterImeWatcherService
+                                        .checkAndLaunchBridgeIfNeeded(mHost.getContext());
+                            } catch (Throwable t) {
+                                AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
+                            }
+                        }
+                    }, 350);
+                }
+            } catch (Throwable t) {
+                AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
+            }
+        }
+    }
 
     public void destroy() {
         stopMirror();
