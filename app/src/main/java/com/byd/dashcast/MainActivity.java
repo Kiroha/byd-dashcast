@@ -2,6 +2,7 @@ package com.byd.dashcast;
 
 import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.BootDisplayCleanup;
+import com.byd.dashcast.DaemonBinderResolver;
 import com.byd.dashcast.ui.main.AppActionSheet;
 import com.byd.dashcast.ui.main.AppListCoordinator;
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator;
@@ -177,11 +178,7 @@ public class MainActivity extends AppCompatActivity
 
     private UsageTracker                 mUsageTracker;
 
-    // Session-scoped set of all packages that were launched on the cluster (display != 0).
-    // Used to move them all back to Display 0 when the user stops the projection,
-    // so Android doesn't re-launch them on the (still-alive) VirtualDisplay later.
-    // Persisted to SharedPreferences so it survives a process kill (car shutdown).
-    private final java.util.Set<String> mSessionClusterPackages = new java.util.LinkedHashSet<>();
+    private ClusterSessionTracker mSessionTracker;
     // UI — cluster control panel
     private InsetOverlayView mInsetOverlay;
     private android.widget.FrameLayout frameMirror;
@@ -372,47 +369,10 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        // ── v0.9.7 — Nav rail clicks (left M3 navigation rail) ─────────────────
-        View navSettings = findViewById(R.id.nav_settings);
-        if (navSettings != null) navSettings.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
-            }
-        });
-        View navDiag = findViewById(R.id.nav_diag);
-        if (navDiag != null) navDiag.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, DiagActivity.class));
-            }
-        });
-        View navSysinfo = findViewById(R.id.nav_sysinfo);
-        if (navSysinfo != null) navSysinfo.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SysInfoActivity.class));
-            }
-        });
-        View navLog = findViewById(R.id.nav_log);
-        if (navLog != null) navLog.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, LogActivity.class));
-            }
-        });
-        // v1.2.36 — Hotspot: wired and refreshed by NavigationCoordinator (see setupCoordinators).
-        // v1.4.9-beta — Layouts
+        // Static nav rail entries (Settings/Diag/SysInfo/Log/Help).
+        // Hotspot is wired by NavigationCoordinator; Layouts by NavRailLayouts.
+        NavRailSetup.wire(this);
         NavRailLayouts.apply(this, R.id.nav_layouts, false);
-        View navHelp = findViewById(R.id.nav_help);
-        if (navHelp != null) navHelp.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                try {
-                    Intent it = new Intent(Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/Kiroha/byd-dashcast"));
-                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(it);
-                } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), R.string.main_nav_help, Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
 
         // ── v0.9.7 — Capture button removed in v1.2.76 (was a coming-soon placeholder).
 
@@ -505,6 +465,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         // Banners and fission wired in setupCoordinators() below
+
+        mSessionTracker = new ClusterSessionTracker(this);
 
         // Wire coordinator layer (status dot, mirror lifecycle, fullscreen state machine).
         // Touch forwarding is wired internally by MirrorCoordinator.
@@ -636,8 +598,7 @@ public class MainActivity extends AppCompatActivity
                 if (launched) {
                     mLastLaunchTime = System.currentTimeMillis(); // set grace period on quick-switch launch
                     mCurrentDashboardPkg = pkgName;
-                    mSessionClusterPackages.add(pkgName);
-                    persistSessionClusterPackages();
+                    mSessionTracker.add(pkgName);
                     // Resolve app name
                     String name = pkgName;
                     try {
@@ -1068,8 +1029,7 @@ public class MainActivity extends AppCompatActivity
                         mLastLaunchTime = System.currentTimeMillis(); // set grace period on split launch
                         mSplitController.setSecondDashboardApp(appName);
                         mSplitController.setSecondDashboardPkg(pkgName);
-                        mSessionClusterPackages.add(pkgName);
-                        persistSessionClusterPackages();
+                        mSessionTracker.add(pkgName);
                         updateControlLabel();
                     } else {
                         Toast.makeText(getApplicationContext(),
@@ -1097,8 +1057,7 @@ public class MainActivity extends AppCompatActivity
                     mUsageTracker.trackStop(mCurrentDashboardPkg);
                     mCurrentDashboardApp = appName;
                     mCurrentDashboardPkg = pkgName;
-                    mSessionClusterPackages.add(pkgName);
-                    persistSessionClusterPackages();
+                    mSessionTracker.add(pkgName);
                     ClusterPrefs.addRecentApp(MainActivity.this, pkgName, appName);
                     mUsageTracker.trackStart();
                     ClusterPrefs.setClusterPkg(MainActivity.this, pkgName);
@@ -1250,87 +1209,50 @@ public class MainActivity extends AppCompatActivity
             }
         };
 
-        if (mSessionClusterPackages.contains(app.packageName)
+        if (mSessionTracker.contains(app.packageName)
                 && mServiceBound && mClusterService != null) {
             mClusterService.moveTaskToDisplay(app.packageName, 0,
                     new com.byd.dashcast.ClusterService.LaunchCallback() {
                 @Override public void onResult(boolean ok) {
                     AppLogger.i(TAG, "doKillApp: move→display0 " + (ok ? "OK" : "KO")
                             + " for " + app.packageName + " — now force-stop");
-                    mSessionClusterPackages.remove(app.packageName);
-                    persistSessionClusterPackages();
+                    mSessionTracker.remove(app.packageName);
                     AdbLocalClient.forceStopApp(MainActivity.this, app.packageName, killCallback);
                 }
             });
         } else {
-            mSessionClusterPackages.remove(app.packageName);
-            persistSessionClusterPackages();
-            // 3. am force-stop via ADB
+            mSessionTracker.remove(app.packageName);
             AdbLocalClient.forceStopApp(this, app.packageName, killCallback);
         }
     }
 
     // ---- Miroir cluster ----
 
-    /**
-     * Attempts to retrieve the daemon Binder from ServiceManager (via reflection).
-     * Called in onStart() if mDaemonBinder == null (daemon already running, app returned to foreground).
-     * Thread-safe: must be called from the main thread.
-     */
     private void tryGetDaemonBinderFromServiceManager() {
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    Class<?> smClass = Class.forName("android.os.ServiceManager");
-                    java.lang.reflect.Method getService = smClass.getDeclaredMethod(
-                            "getService", String.class);
-                    getService.setAccessible(true);
-                    IBinder binder = (IBinder) getService.invoke(null, "byd_mirror_daemon");
-                    if (binder != null) {
-                        AppLogger.i(TAG, "DaemonBinder retrieved from ServiceManager ✓");
-                        runOnUiThread(new Runnable() {
-                            @Override public void run() {
-                                // 1.2.30 — activity teardown guard: the lookup is async
-                                // (separate Thread) and may resolve after onDestroy()
-                                // when the user backs out during daemon startup. Touching
-                                // mClusterService / panelClusterControl after destroy
-                                // can NPE the input forwarder.
-                                if (isFinishing() || isDestroyed()) return;
-                                mDaemonBinder = binder;
-                                // Capture once — onServiceDisconnected() (main thread) can
-                                // null mClusterService concurrently with this background thread.
-                                final ClusterService svc = mClusterService;
-                                if (mServiceBound && svc != null) {
-                                    svc.getInputForwarder().setDaemonBinder(binder);
-                                }
-                        // Restart the mirror if it is currently shown.
-                        // v1.2.85 — was panelClusterControl (now fullscreen-only).
-                        if (mCurrentDashboardApp != null
-                                        && frameMirror != null
-                                        && frameMirror.getVisibility() == View.VISIBLE) {
-                                    // v1.2.55-beta — symmetric to the receiver path:
-                                    // tear down any direct-path mirror so the daemon path
-                                    // can take over and surface actual frames.
-                                    if (svc != null) {
-                                        com.byd.dashcast.dashboard.ClusterMirrorManager mm =
-                                                svc.getMirrorManager();
-                                        if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
-                                            AppLogger.i(TAG, "Daemon resolved late — restarting mirror via daemon");
-                                            stopClusterMirror();
-                                        }
-                                    }
-                                    attemptStartMirrorWithCurrentHolder();
-                                }
-                            }
-                        });
-                    } else {
-                        AppLogger.d(TAG, "DaemonBinder not found in ServiceManager (daemon not yet started?)");
+        DaemonBinderResolver.fetch(binder -> {
+            // Guard: lookup is async and may resolve after onDestroy() (user backed out
+            // during daemon startup). Touching mClusterService after destroy NPEs the forwarder.
+            if (isFinishing() || isDestroyed()) return;
+            mDaemonBinder = binder;
+            // Capture once — onServiceDisconnected() (main thread) can null mClusterService
+            // concurrently with this callback.
+            final ClusterService svc = mServiceBound ? mClusterService : null;
+            if (svc != null) svc.getInputForwarder().setDaemonBinder(binder);
+            // Restart mirror if currently shown so the daemon path can take over and surface
+            // actual frames (v1.2.55-beta — symmetric to the broadcast receiver path).
+            if (mCurrentDashboardApp != null
+                    && frameMirror != null
+                    && frameMirror.getVisibility() == View.VISIBLE) {
+                if (svc != null) {
+                    com.byd.dashcast.dashboard.ClusterMirrorManager mm = svc.getMirrorManager();
+                    if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
+                        AppLogger.i(TAG, "Daemon resolved late — restarting mirror via daemon");
+                        stopClusterMirror();
                     }
-                } catch (Exception e) {
-                    AppLogger.w(TAG, "tryGetDaemonBinderFromServiceManager: " + e.getMessage());
                 }
+                attemptStartMirrorWithCurrentHolder();
             }
-        }, "sm-daemon-lookup").start();
+        });
     }
 
     /**
@@ -1581,11 +1503,12 @@ public class MainActivity extends AppCompatActivity
         // the long-press « kill » action. This replaces the v1.2.9 workaround that
         // force-stopped the cluster pkg in place on display 1 (which left the user
         // without any feedback that the app had really returned to the tablet).
-        moveSessionAppsToMainDisplay();
+        mSessionTracker.moveToMainDisplay(mServiceBound ? mClusterService : null);
 
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)");
 
-        evictClusterAppsThen(buildEvictList(capturedClusterPkg, capturedSecondPkg), new Runnable() {
+        mSessionTracker.evictAllThen(mServiceBound ? mClusterService : null,
+                capturedClusterPkg, capturedSecondPkg, new Runnable() {
             @Override public void run() {
                 // Cluster pkg already killed → pass null targetPackage so the helper
                 // only sends sendInfo(18+0) without re-issuing force-stop.
@@ -1627,84 +1550,6 @@ public class MainActivity extends AppCompatActivity
         });
             }
         });
-    }
-
-    /**
-     * Moves every app that was launched on the cluster during this session back to Display 0.
-     * Uses moveTaskToDisplay(pkg, 0) via ClusterService so Android remembers Display 0
-     * as the last display for each app. Clears the session set afterwards.
-     */
-    private void moveSessionAppsToMainDisplay() {
-        if (mSessionClusterPackages.isEmpty()) return;
-        if (!mServiceBound || mClusterService == null) {
-            // Keep the persisted set intact so boot/onCreate cleanup can still recover.
-            AppLogger.w(TAG, "moveSessionAppsToMainDisplay: service not bound, preserving set for later cleanup");
-            return;
-        }
-        AppLogger.i(TAG, "moveSessionAppsToMainDisplay: " + mSessionClusterPackages.size()
-                + " apps → " + mSessionClusterPackages);
-        for (String pkg : mSessionClusterPackages) {
-            mClusterService.moveTaskToDisplay(pkg, 0, null);
-        }
-        mSessionClusterPackages.clear();
-        persistSessionClusterPackages();
-    }
-
-    /** v1.2.81 — Builds the deduped list of packages that occupy the cluster and must
-     *  be evicted (moved to display 0 + force-stopped) before sendInfo(18). */
-    private java.util.List<String> buildEvictList(String main, String second) {
-        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
-        if (main   != null && !main.isEmpty())   set.add(main);
-        if (second != null && !second.isEmpty()) set.add(second);
-        return new java.util.ArrayList<>(set);
-    }
-
-    /** v1.2.81 — Sequentially moves each cluster app back to display 0 then calls
-     *  AdbLocalClient.forceStopApp (which does am force-stop + task remove), exactly
-     *  like {@link #doKillApp(AppInfo)} does for the long-press kill button.
-     *  Runs {@code onAllDone} on the main thread once every app has been processed
-     *  (success or failure). */
-    private void evictClusterAppsThen(final java.util.List<String> pkgs, final Runnable onAllDone) {
-        if (pkgs == null || pkgs.isEmpty()) { onAllDone.run(); return; }
-        if (!mServiceBound || mClusterService == null) {
-            // Service not bound: fall back to bare force-stop and a short settle delay.
-            for (String p : pkgs) {
-                if (p != null && !p.isEmpty()) AdbLocalClient.forceStopApp(this, p, null);
-            }
-            new android.os.Handler(android.os.Looper.getMainLooper())
-                    .postDelayed(onAllDone, 800L);
-            return;
-        }
-        evictNext(pkgs, 0, onAllDone);
-    }
-
-    private void evictNext(final java.util.List<String> pkgs, final int idx, final Runnable onAllDone) {
-        if (idx >= pkgs.size()) {
-            runOnUiThread(onAllDone);
-            return;
-        }
-        final String pkg = pkgs.get(idx);
-        if (pkg == null || pkg.isEmpty()) { evictNext(pkgs, idx + 1, onAllDone); return; }
-        AppLogger.i(TAG, "evictClusterApp: move→display0 " + pkg);
-        mClusterService.moveTaskToDisplay(pkg, 0, new com.byd.dashcast.ClusterService.LaunchCallback() {
-            @Override public void onResult(boolean ok) {
-                AppLogger.i(TAG, "evictClusterApp: move " + pkg + " → " + (ok ? "OK" : "KO") + " — force-stop");
-                mSessionClusterPackages.remove(pkg);
-                persistSessionClusterPackages();
-                AdbLocalClient.forceStopApp(MainActivity.this, pkg, new AdbLocalClient.Callback() {
-                    @Override public void onSuccess(String r) { evictNext(pkgs, idx + 1, onAllDone); }
-                    @Override public void onError(String e) {
-                        AppLogger.w(TAG, "evictClusterApp: forceStop " + pkg + " ERR: " + e);
-                        evictNext(pkgs, idx + 1, onAllDone);
-                    }
-                });
-            }
-        });
-    }
-
-    /** Persists the session cluster packages set to SharedPreferences. */
-    private void persistSessionClusterPackages() {
-        ClusterPrefs.setSessionClusterPkgs(this, new java.util.HashSet<>(mSessionClusterPackages));
     }
 
     private void updateDashboardStatus(String appName) {
@@ -1854,10 +1699,11 @@ public class MainActivity extends AppCompatActivity
         mAppListCoordinator.setCurrentPackage(null);
 
         // v1.2.81 — see restoreBydDashboard for the unified eviction rationale.
-        moveSessionAppsToMainDisplay();
+        mSessionTracker.moveToMainDisplay(mServiceBound ? mClusterService : null);
         AppLogger.log(TAG, "originCluster() cmd=" + ClusterPrefs.getClusterType(this));
 
-        evictClusterAppsThen(buildEvictList(capturedClusterPkg, capturedSecondPkg), new Runnable() {
+        mSessionTracker.evictAllThen(mServiceBound ? mClusterService : null,
+                capturedClusterPkg, capturedSecondPkg, new Runnable() {
             @Override public void run() {
                 AdbLocalClient.restoreOriginCluster(MainActivity.this, ClusterPrefs.getClusterType(MainActivity.this), null, new AdbLocalClient.Callback() {
             @Override
