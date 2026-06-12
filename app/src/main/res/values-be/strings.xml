@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Паказаць фільтры па катэгорыях (Усе / Нав / Медыя)</string>
     <string name="settings_reconnect_popup">Прапанаваць перазапуск апошняй прыкладкі пры перападлучэнні кластара</string>
     <string name="quick_switch_title">Апошнія дадаткі</string>
-    <string name="quick_switch_empty">Няма апошніх дадаткаў</string>
     <string name="menu_usage_stats">📊 Статыстыка выкарыстання</string>
     <string name="usage_title">Час выкарыстання на кластэры</string>
     <string name="usage_empty">Няма дадзеных выкарыстання</string>
@@ -642,4 +641,20 @@
     <string name="main_layout_section">Макет кластара</string>
     <string name="main_layout_free_sub">Без макета</string>
     <string name="main_layout_manage">Кіраванне</string>
+    <string name="main_nav_bug_report">Паведаміць</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Паведаміць пра памылку</string>
+    <string name="bug_title_header">Паведаміць пра памылку</string>
+    <string name="bug_subtitle">Апішыце праблему. Тэхнічны журнал дадаецца аўтаматычна.</string>
+    <string name="bug_field_title">Загаловак</string>
+    <string name="bug_field_steps">Крокі для ўзнаўлення</string>
+    <string name="bug_field_result">Назіраны вынік</string>
+    <string name="bug_title_required">Увядзіце загаловак</string>
+    <string name="bug_send">Адправіць</string>
+    <string name="bug_status_capturing">Збор журнала…</string>
+    <string name="bug_status_sending">Адпраўка…</string>
+    <string name="bug_status_error_fmt">Памылка: %1$s</string>
+    <string name="bug_sent_ok">Справаздача адпраўлена ✓ Дзякуй!</string>
+    <string name="bug_share_subject">DashCast — Справаздача пра памылку</string>
+    <string name="bug_share_chooser">Адправіць справаздачу праз…</string>
 </resources>
