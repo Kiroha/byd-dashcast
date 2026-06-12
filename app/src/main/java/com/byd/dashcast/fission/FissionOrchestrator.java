@@ -7,8 +7,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.view.SurfaceHolder;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.domain.cluster.ProjectionStateProvider;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ShellGateway;

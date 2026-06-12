@@ -5,8 +5,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.ShellGateway;
 
 /**

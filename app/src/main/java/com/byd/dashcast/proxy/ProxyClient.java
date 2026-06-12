@@ -11,8 +11,8 @@ import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.SystemClock;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.daemon.BinderParcelable;
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
 

@@ -1,6 +1,6 @@
 package com.byd.dashcast.ui.log;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.ui.nav.NavRailHotspot;
 import com.byd.dashcast.ui.nav.NavRailLayouts;

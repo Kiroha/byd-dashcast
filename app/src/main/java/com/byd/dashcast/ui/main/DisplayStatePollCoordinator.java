@@ -4,10 +4,10 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.proxy.ShellGateway;
-import com.byd.dashcast.AdbLocalClient;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
 
 /**
  * Polls the cluster and main-display app processes every 5 s via {@code pidof} (uid 2000)

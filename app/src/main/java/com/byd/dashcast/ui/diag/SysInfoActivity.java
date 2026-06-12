@@ -1,7 +1,7 @@
 package com.byd.dashcast.ui.diag;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import android.content.Context;

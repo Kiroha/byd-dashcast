@@ -8,7 +8,7 @@ import android.content.pm.ResolveInfo;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;
 import com.byd.dashcast.model.AppShortcut;

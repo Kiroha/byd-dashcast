@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 import org.vosk.Model;

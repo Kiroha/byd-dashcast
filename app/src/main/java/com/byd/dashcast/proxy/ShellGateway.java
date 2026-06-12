@@ -3,8 +3,8 @@ package com.byd.dashcast.proxy;
 import android.content.Context;
 import android.os.SystemClock;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;

@@ -18,7 +18,7 @@ import android.view.accessibility.AccessibilityWindowInfo;
 import android.annotation.SuppressLint;
 import java.util.List;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ime.KeyboardBridgeActivity;
 import com.byd.dashcast.platform.Platform;
 

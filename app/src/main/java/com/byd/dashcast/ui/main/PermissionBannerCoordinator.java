@@ -3,8 +3,8 @@ package com.byd.dashcast.ui.main;
 import android.content.Context;
 import android.view.View;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.ime.ClusterImeWatcherService;

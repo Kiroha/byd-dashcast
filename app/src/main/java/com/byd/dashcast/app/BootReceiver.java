@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.proxy.ProxyClient;

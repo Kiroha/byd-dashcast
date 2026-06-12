@@ -4,7 +4,7 @@ import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 /**
  * Launches via {@code IActivityManager.startActivityAsUser()} (userId=-2 = current user).

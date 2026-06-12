@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.widget.Toast;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 
 /**

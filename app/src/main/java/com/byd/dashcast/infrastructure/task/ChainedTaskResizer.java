@@ -3,7 +3,7 @@ package com.byd.dashcast.infrastructure.task;
 import android.content.Context;
 import android.graphics.Rect;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 /**
  * Tries {@link ReflectionTaskResizer} first; if it throws {@link ResizeException}

@@ -1,6 +1,6 @@
 package com.byd.dashcast.ui.log;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import android.content.Context;
 import android.graphics.Color;

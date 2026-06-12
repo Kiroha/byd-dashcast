@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.view.View;
 import android.widget.TextView;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.fission.FissionActivity;
 import com.byd.dashcast.fission.LayoutPrefs;

@@ -21,7 +21,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;

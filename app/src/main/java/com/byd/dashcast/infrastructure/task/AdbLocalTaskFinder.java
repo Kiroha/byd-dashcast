@@ -2,8 +2,8 @@ package com.byd.dashcast.infrastructure.task;
 
 import android.content.Context;
 
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

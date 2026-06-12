@@ -1,4 +1,4 @@
-package com.byd.dashcast;
+package com.byd.dashcast.util;
 
 import android.content.Context;
 import android.content.Intent;

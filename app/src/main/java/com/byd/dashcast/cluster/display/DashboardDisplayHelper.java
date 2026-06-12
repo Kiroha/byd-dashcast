@@ -3,8 +3,8 @@ package com.byd.dashcast.cluster.display;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
-import com.byd.dashcast.AdbLocalClient;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.util.AppLogger;
 
 /**
  * DashboardDisplayHelper — detects the secondary display (instrument cluster).

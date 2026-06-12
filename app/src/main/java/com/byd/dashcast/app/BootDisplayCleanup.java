@@ -3,7 +3,7 @@ package com.byd.dashcast.app;
 import android.content.Context;
 import android.content.ComponentName;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 /**

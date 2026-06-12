@@ -1,6 +1,6 @@
 package com.byd.dashcast.ui.welcome;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.BuildConfig;
 import com.byd.dashcast.MainActivity;
 import com.byd.dashcast.R;

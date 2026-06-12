@@ -15,7 +15,7 @@ import android.os.Parcel;
 import android.os.SystemClock;
 import android.view.Display;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -42,7 +42,7 @@ import java.util.concurrent.Executors;
  *       {@code AdbLocalClient}.</li>
  *   <li><b>S1–S15 (shell, ADB-driven)</b> — added 22/05/2026 once the user enabled
  *       ADB-over-TCP on DL2 (port 5555 open, RSA key accepted). Use
- *       {@link com.byd.dashcast.AdbLocalClient#executeShellWithResult} via a
+ *       {@link com.byd.dashcast.infrastructure.AdbLocalClient#executeShellWithResult} via a
  *       synchronous wrapper; each test self-marks SKIPPED if the shell call
  *       returns an error or times out (legacy DL2 without ADB still passes
  *       cleanly through the L tier).</li>

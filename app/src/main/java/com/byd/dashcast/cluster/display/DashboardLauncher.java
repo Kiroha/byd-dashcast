@@ -8,7 +8,7 @@ import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.lang.reflect.Method;
 

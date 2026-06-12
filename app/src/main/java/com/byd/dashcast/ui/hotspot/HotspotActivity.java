@@ -1,6 +1,6 @@
 package com.byd.dashcast.ui.hotspot;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.ui.diag.DiagActivity;
 import com.byd.dashcast.ui.diag.SysInfoActivity;

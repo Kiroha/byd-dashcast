@@ -2,7 +2,7 @@ package com.byd.dashcast.infrastructure.task;
 
 import android.graphics.Rect;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 
 import java.lang.reflect.InvocationTargetException;
 

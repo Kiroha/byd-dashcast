@@ -9,7 +9,7 @@ import android.os.Parcel;
 import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceControl;
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 
