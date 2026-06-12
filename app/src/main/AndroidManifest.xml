@@ -131,7 +131,7 @@
 
         <!-- Welcome screen: language selection (first launch only) -->
         <activity
-            android:name=".WelcomeActivity"
+            android:name=".ui.welcome.WelcomeActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar">
@@ -149,7 +149,7 @@
 
         <!-- v1.2.8 — Keyboard bridge for DL5 cluster mirror (IME relay) -->
         <activity
-            android:name=".KeyboardBridgeActivity"
+            android:name=".ime.KeyboardBridgeActivity"
             android:label="@string/keyboard_bridge_title"
             android:screenOrientation="landscape"
             android:launchMode="singleTask"
@@ -174,13 +174,13 @@
 
         <!-- Compatibility diagnostic screen -->
         <activity
-            android:name=".DiagActivity"
+            android:name=".ui.diag.DiagActivity"
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
 
         <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
         <activity
-            android:name=".cluster.ClusterResizeActivity"
+            android:name=".cluster.dpi.ClusterResizeActivity"
             android:screenOrientation="landscape"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
@@ -188,13 +188,13 @@
 
         <!-- Full system report screen -->
         <activity
-            android:name=".SysInfoActivity"
+            android:name=".ui.diag.SysInfoActivity"
             android:label="System report"
             android:screenOrientation="landscape"/>
 
         <!-- Real-time log viewer -->
         <activity
-            android:name=".LogActivity"
+            android:name=".ui.log.LogActivity"
             android:label="Journal"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
@@ -203,7 +203,7 @@
         <!-- v1.2.36 — AOSP hotspot launcher (DL3 only — nav rail entry is
              runtime-gated by Platform.isDiLink3()). Activity is exported=false. -->
         <activity
-            android:name=".HotspotActivity"
+            android:name=".ui.hotspot.HotspotActivity"
             android:label="Hotspot AOSP"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme.NoActionBar"
@@ -211,7 +211,7 @@
 
         <!-- User-facing settings (overscan tuning, cluster type) -->
         <activity
-            android:name=".SettingsActivity"
+            android:name=".ui.settings.SettingsActivity"
             android:label="@string/settings_header"
             android:screenOrientation="landscape"
             android:parentActivityName=".MainActivity"/>
@@ -241,7 +241,7 @@
 
         <!-- Foreground Service : maintient la projection cluster en background -->
         <service
-            android:name=".ClusterService"
+            android:name=".cluster.ClusterService"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
@@ -256,7 +256,7 @@
 
         <!-- Overlay service: quick-return icon to the streaming view -->
         <service
-            android:name=".FloatingRemoteButton"
+            android:name=".system.FloatingRemoteButton"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>
 
@@ -285,7 +285,7 @@
 
         <!-- OTA: receives PackageInstaller session result -->
         <receiver
-            android:name=".InstallResultReceiver"
+            android:name=".app.InstallResultReceiver"
             android:exported="false"/>
 
         <!-- FileProvider : partage de fichiers .log avec les apps externes (email, messagerie…) -->
@@ -301,7 +301,7 @@
 
         <!-- Auto-Boot Overscan restoration + v1.2.75 proxy daemon revive on OTA -->
         <receiver
-            android:name=".BootReceiver"
+            android:name=".app.BootReceiver"
             android:exported="true"
             android:enabled="true">
             <intent-filter>

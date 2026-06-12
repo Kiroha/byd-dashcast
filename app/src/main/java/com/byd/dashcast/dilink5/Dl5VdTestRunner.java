@@ -12,7 +12,7 @@ import android.view.Surface;
 
 import com.byd.dashcast.AdbLocalClient;
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.daemon.MirrorDaemon;
+import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 import com.byd.dashcast.platform.Platform;
 
 import java.lang.reflect.Method;

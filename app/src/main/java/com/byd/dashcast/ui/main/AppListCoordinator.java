@@ -14,9 +14,9 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.byd.dashcast.AppListAdapter;
+import com.byd.dashcast.ui.AppListAdapter;
 import com.byd.dashcast.AppLogger;
-import com.byd.dashcast.SettingsActivity;
+import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.data.apps.AppRepository;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;

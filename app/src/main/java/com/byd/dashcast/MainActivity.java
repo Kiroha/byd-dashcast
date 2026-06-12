@@ -1,9 +1,22 @@
 package com.byd.dashcast;
 
 import com.byd.dashcast.proxy.ShellGateway;
-import com.byd.dashcast.BootDisplayCleanup;
-import com.byd.dashcast.DaemonBinderResolver;
-import com.byd.dashcast.VoiceCommandReceiver;
+import com.byd.dashcast.app.AppStartupTasks;
+import com.byd.dashcast.system.FloatingRemoteButton;
+import com.byd.dashcast.ui.AppListAdapter;
+import com.byd.dashcast.update.OtaProgressUi;
+import com.byd.dashcast.update.UpdateChecker;
+import com.byd.dashcast.ui.nav.NavRailLayouts;
+import com.byd.dashcast.ui.nav.NavRailSetup;
+import com.byd.dashcast.app.BootDisplayCleanup;
+import com.byd.dashcast.proxy.DaemonBinderResolver;
+import com.byd.dashcast.ui.InsetOverlayView;
+import com.byd.dashcast.util.LocaleHelper;
+import com.byd.dashcast.cluster.ClusterService;
+import com.byd.dashcast.cluster.ClusterSessionTracker;
+import com.byd.dashcast.ime.KeyboardBridgeActivity;
+import com.byd.dashcast.voice.VoiceCommandReceiver;
+import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.ui.main.ActivateTimeoutManager;
 import com.byd.dashcast.ui.main.InsetAutoApplicator;
 import com.byd.dashcast.ui.main.AppActionSheet;
@@ -60,7 +73,7 @@ import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.graphics.Typeface;
 
-import com.byd.dashcast.dashboard.DashboardLauncher;
+import com.byd.dashcast.cluster.display.DashboardLauncher;
 import com.byd.dashcast.data.apps.AppRepository;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.model.AppInfo;
@@ -246,7 +259,7 @@ public class MainActivity extends AppCompatActivity
         // Unlock hidden Android APIs (SurfaceControl, etc.)
         // Must be called before any call to ClusterMirrorManager.startMirror(this, ).
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
-        com.byd.dashcast.dashboard.ClusterMirrorManager.unlockHiddenApis();
+        com.byd.dashcast.cluster.mirror.ClusterMirrorManager.unlockHiddenApis();
 
         // v1.2.55-beta — log pruning + orphan-sniffer cleanup, off-loaded to a daemon thread.
         // Gate evaluated here (main thread) so the "run once per process" invariant holds
@@ -257,7 +270,7 @@ public class MainActivity extends AppCompatActivity
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
-                new IntentFilter(com.byd.dashcast.daemon.MirrorDaemon.ACTION_DAEMON_READY));
+                new IntentFilter(com.byd.dashcast.proxy.daemon.MirrorDaemon.ACTION_DAEMON_READY));
 
         // Floating 📺 mirror button — started once, visibility controlled by show()/hide()
         startService(new Intent(this, FloatingRemoteButton.class));
@@ -1138,7 +1151,7 @@ public class MainActivity extends AppCompatActivity
         if (mSessionTracker.contains(app.packageName)
                 && mServiceBound && mClusterService != null) {
             mClusterService.moveTaskToDisplay(app.packageName, 0,
-                    new com.byd.dashcast.ClusterService.LaunchCallback() {
+                    new com.byd.dashcast.cluster.ClusterService.LaunchCallback() {
                 @Override public void onResult(boolean ok) {
                     AppLogger.i(TAG, "doKillApp: move→display0 " + (ok ? "OK" : "KO")
                             + " for " + app.packageName + " — now force-stop");
@@ -1170,7 +1183,7 @@ public class MainActivity extends AppCompatActivity
                     && frameMirror != null
                     && frameMirror.getVisibility() == View.VISIBLE) {
                 if (svc != null) {
-                    com.byd.dashcast.dashboard.ClusterMirrorManager mm = svc.getMirrorManager();
+                    com.byd.dashcast.cluster.mirror.ClusterMirrorManager mm = svc.getMirrorManager();
                     if (mm.isMirrorActive() && !mm.isMirrorViaDaemon()) {
                         AppLogger.i(TAG, "Daemon resolved late — restarting mirror via daemon");
                         stopClusterMirror();
@@ -1467,7 +1480,7 @@ public class MainActivity extends AppCompatActivity
     /** Refreshes the InsetOverlayView projection params from the current mirror state. */
     private void refreshInsetOverlay() {
         if (mInsetOverlay == null || !mServiceBound || mClusterService == null) return;
-        com.byd.dashcast.dashboard.ClusterMirrorManager mirror = mClusterService.getMirrorManager();
+        com.byd.dashcast.cluster.mirror.ClusterMirrorManager mirror = mClusterService.getMirrorManager();
         mInsetOverlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX(), mirror.getProjOffsetY());
         mInsetOverlay.setInsets(
                 mClusterControlCoordinator != null ? mClusterControlCoordinator.getInsetH() : 0,

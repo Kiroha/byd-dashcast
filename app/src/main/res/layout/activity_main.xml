@@ -805,7 +805,7 @@
                                 android:textSize="14sp"
                                 android:visibility="gone"/>
 
-                            <com.byd.dashcast.InsetOverlayView
+                            <com.byd.dashcast.ui.InsetOverlayView
                                 android:id="@+id/inset_overlay"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
