@@ -96,7 +96,12 @@ public class LayoutManagerActivity extends Activity {
         mRecycler.setAdapter(mAdapter);
 
         // Canvas listeners
-        mCanvas.setOnZoneDrawnListener((x, y, w, h) -> showAddZoneDialog(x, y, w, h));
+        mCanvas.setOnZoneDrawnListener((x, y, w, h) -> showZoneDialog(-1, x, y, w, h));
+        mCanvas.setOnZoneTapListener(idx -> {
+            if (mEditing == null || idx < 0 || idx >= mEditing.slots.size()) return;
+            LayoutPreset.SlotDef s = mEditing.slots.get(idx);
+            showZoneDialog(idx, s.x, s.y, s.w, s.h);
+        });
         mCanvas.setOnZoneLongPressListener(idx -> {
             if (mEditing == null || idx < 0 || idx >= mEditing.slots.size()) return;
             String label = mEditing.slots.get(idx).label;
@@ -206,7 +211,7 @@ public class LayoutManagerActivity extends Activity {
             TextView chip = new TextView(this);
             String pkgSuffix = (s.packageName != null && !s.packageName.isEmpty())
                     ? "  🔗 " + s.packageName : "";
-            chip.setText(s.label + "  " + s.w + "×" + s.h + " @ (" + s.x + "," + s.y + ")" + pkgSuffix + "  ✕");
+            chip.setText(s.label + "  " + s.w + "×" + s.h + " @ (" + s.x + "," + s.y + ")" + pkgSuffix);
             chip.setTextSize(12f);
             chip.setTextColor(Color.parseColor("#2A5EA8"));
             chip.setBackgroundResource(R.drawable.bg_log_filter);
@@ -217,22 +222,33 @@ public class LayoutManagerActivity extends Activity {
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.setMarginEnd(dpToPx(6));
             chip.setLayoutParams(lp);
+            // Tapping a chip used to delete the slot instantly; it now opens the
+            // edit dialog (rename / geometry / app binding / delete).
             chip.setOnClickListener(v -> {
-                mEditing.slots.remove(idx);
-                mCanvas.invalidate();
-                refreshChips();
+                if (idx >= mEditing.slots.size()) return;
+                LayoutPreset.SlotDef sd = mEditing.slots.get(idx);
+                showZoneDialog(idx, sd.x, sd.y, sd.w, sd.h);
             });
             mChipsContainer.addView(chip);
         }
     }
 
-    private void showAddZoneDialog(int x, int y, int w, int h) {
+    /**
+     * Zone create/edit dialog. {@code editIdx == -1} creates a new slot from the
+     * drawn rect; {@code editIdx >= 0} edits the existing slot in place (rename,
+     * geometry, app binding) and offers deletion via the neutral button.
+     */
+    private void showZoneDialog(final int editIdx, int x, int y, int w, int h) {
+        final boolean editMode = editIdx >= 0;
+        final LayoutPreset.SlotDef existing = editMode ? mEditing.slots.get(editIdx) : null;
+
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         int p = dpToPx(16);
         form.setPadding(p, p, p, 0);
 
-        EditText etName = addField(form, "Nom de la zone", mEditing.nextSlotLabel());
+        EditText etName = addField(form, "Nom de la zone",
+                editMode ? existing.label : mEditing.nextSlotLabel());
         addDivider(form, "Position & dimensions");
         EditText etX = addField(form, "X (px)", String.valueOf(x));
         EditText etY = addField(form, "Y (px)", String.valueOf(y));
@@ -240,9 +256,11 @@ public class LayoutManagerActivity extends Activity {
         EditText etH = addField(form, "Hauteur (px)", String.valueOf(h));
 
         addDivider(form, getString(R.string.fission_slot_pick_pkg));
-        final String[] pickedPkg = {null};
+        final String[] pickedPkg = {editMode ? existing.packageName : null};
         TextView tvBound = new TextView(this);
-        tvBound.setText(getString(R.string.fission_slot_pkg_none));
+        tvBound.setText((pickedPkg[0] != null && !pickedPkg[0].isEmpty())
+                ? getString(R.string.fission_slot_zone_bound_fmt, pickedPkg[0])
+                : getString(R.string.fission_slot_pkg_none));
         tvBound.setTextSize(13f);
         tvBound.setTextColor(Color.parseColor("#74777F"));
         LinearLayout.LayoutParams tvLp = new LinearLayout.LayoutParams(
@@ -262,7 +280,7 @@ public class LayoutManagerActivity extends Activity {
         btnPickPkg.setOnClickListener(v ->
                 showPackagePickerForZone(tvBound, pickedPkg));
 
-        etName.selectAll();
+        if (!editMode) etName.selectAll();
         // The form is taller than the dialog's max height on the 1920x720 head unit
         // (5 fields + binding section), and the soft keyboard shrinks it further —
         // without a ScrollView the "link an app" button is clipped out of reach.
@@ -270,23 +288,38 @@ public class LayoutManagerActivity extends Activity {
         scroller.setFillViewport(true);
         scroller.addView(form, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        new AlertDialog.Builder(this)
-                .setTitle("Nouvelle zone — " + w + "×" + h + " px")
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(editMode
+                        ? "Modifier « " + existing.label + " »"
+                        : "Nouvelle zone — " + w + "×" + h + " px")
                 .setView(scroller)
-                .setPositiveButton("Ajouter", (d, which) -> {
+                .setPositiveButton(editMode ? "Enregistrer" : "Ajouter", (d, which) -> {
                     String label = etName.getText().toString().trim();
-                    if (label.isEmpty()) label = mEditing.nextSlotLabel();
+                    if (label.isEmpty())
+                        label = editMode ? existing.label : mEditing.nextSlotLabel();
                     int fx = parseInt(etX, x), fy = parseInt(etY, y);
                     int fw = parseInt(etW, w), fh = parseInt(etH, h);
-                    LayoutPreset.SlotDef slot = new LayoutPreset.SlotDef(label, fx, fy, fw, fh);
+                    LayoutPreset.SlotDef slot = editMode
+                            ? existing : new LayoutPreset.SlotDef(label, fx, fy, fw, fh);
+                    if (editMode) {
+                        slot.label = label;
+                        slot.x = fx; slot.y = fy; slot.w = fw; slot.h = fh;
+                    }
                     slot.packageName = (pickedPkg[0] != null && !pickedPkg[0].isEmpty())
                             ? pickedPkg[0] : null;
-                    mEditing.slots.add(slot);
+                    if (!editMode) mEditing.slots.add(slot);
                     mCanvas.invalidate();
                     refreshChips();
                 })
-                .setNegativeButton("Annuler", null)
-                .show();
+                .setNegativeButton("Annuler", null);
+        if (editMode) {
+            builder.setNeutralButton("Supprimer", (d, which) -> {
+                if (editIdx < mEditing.slots.size()) mEditing.slots.remove(editIdx);
+                mCanvas.invalidate();
+                refreshChips();
+            });
+        }
+        builder.show();
     }
 
     /** Opens an app-picker dialog and writes the selected package into {@code pickedPkg[0]}. */
