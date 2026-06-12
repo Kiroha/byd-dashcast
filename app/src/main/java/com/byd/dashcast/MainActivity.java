@@ -1111,7 +1111,7 @@ public class MainActivity extends AppCompatActivity
                         // Cluster state already cleared eagerly above (before async ops).
                         if (app.packageName != null && app.packageName.equals(mSplitController.getSecondDashboardPkg())) {
                             mSplitController.setSecondDashboardPkg(null);
-                            if (mSplitController != null) mSplitController.clearSplitState();
+                            mSplitController.clearSplitState();
                         }
                         showAppList();
                         Toast.makeText(getApplicationContext(),

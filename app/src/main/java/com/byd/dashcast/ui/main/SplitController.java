@@ -1,6 +1,7 @@
 package com.byd.dashcast.ui.main;
 
 import android.content.Context;
+import android.os.Looper;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.PopupMenu;
@@ -17,10 +18,10 @@ import com.byd.dashcast.R;
  * <p>Owns: {@code mCurrentSplitSlot}, {@code mSecondDashboardPkg/App}.
  * Extracted from MainActivity to keep split bookkeeping out of the god-class.
  *
- * <p>Callers in MainActivity use {@link #trySplitInsertion} to let the controller handle
- * the "second app goes into the other slot" case inside {@code onSendToDashboard},
- * and delegate {@link #showSplitMenu}, {@link #applySplitSlot}, {@link #clearSplitState}
- * entirely.
+ * <p>MainActivity delegates {@link #showSplitMenu}, {@link #applySplitSlot},
+ * and {@link #clearSplitState} to this controller. The second-app insertion logic
+ * inside {@code onSendToDashboard} is handled inline by MainActivity (requires
+ * updating {@code mLastLaunchTime} for the state-poll grace period).
  */
 public final class SplitController {
 
@@ -61,54 +62,6 @@ public final class SplitController {
     public void setSecondDashboardApp(String app) { mSecondDashboardApp = app; }
 
     // ── Public API ────────────────────────────────────────────────────────────
-
-    /**
-     * Called inside {@code onSendToDashboard} when a split slot is already active.
-     * Handles the case where the new app goes into the opposite slot.
-     *
-     * @return {@code true} if the insertion was fully handled (caller should return immediately),
-     *         {@code false} if normal single-app launch should proceed.
-     */
-    public boolean trySplitInsertion(String pkgName, String appName) {
-        if (mCurrentSplitSlot == 0 || mHost.getCurrentDashboardPkg() == null) return false;
-
-        if (pkgName.equals(mHost.getCurrentDashboardPkg()) || pkgName.equals(mSecondDashboardPkg)) {
-            AppLogger.w(TAG, "split: duplicate ignored pkg=" + pkgName
-                    + " (main=" + mHost.getCurrentDashboardPkg()
-                    + " second=" + mSecondDashboardPkg + ")");
-            Toast.makeText(mHost.getContext(),
-                    mHost.getContext().getString(R.string.toast_app_already_cluster),
-                    Toast.LENGTH_SHORT).show();
-            return true;
-        }
-
-        ClusterService svc = mHost.getClusterServiceIfBound();
-        if (svc == null) return false;
-
-        int[] dims = getClusterDimensions(svc);
-        int W = dims[0], H = dims[1];
-        final int newLeft  = (mCurrentSplitSlot == 1) ? W / 2 : 0;
-        final int newRight = (mCurrentSplitSlot == 1) ? W     : W / 2;
-        AppLogger.log(TAG, "split — slot courant=" + mCurrentSplitSlot
-                + " newApp=" + pkgName
-                + " bounds=[" + newLeft + ",0," + newRight + "," + H + "]");
-
-        if (mSecondDashboardPkg != null) {
-            AdbLocalClient.forceStopApp(mHost.getContext(), mSecondDashboardPkg, null);
-        }
-
-        final String capPkg = pkgName;
-        final String capApp = appName;
-        svc.launchOnDashboardWithBounds(capPkg, newLeft, 0, newRight, H,
-                launched -> mHost.runOnUiThread(() -> {
-                    if (launched) {
-                        mSecondDashboardApp = capApp;
-                        mSecondDashboardPkg = capPkg;
-                        mHost.onSplitStateChanged();
-                    }
-                }));
-        return true;
-    }
 
     /** Shows a popup to choose full-screen / left-50% / right-50% for the current cluster app. */
     public void showSplitMenu(View anchor) {
@@ -202,7 +155,13 @@ public final class SplitController {
         mSecondDashboardApp = null;
         mSecondDashboardPkg = null;
         mCurrentSplitSlot   = 0;
-        mHost.runOnUiThread(mHost::onSplitStateChanged);
+        // Use direct call when already on main thread so callers see the updated
+        // isInSplitMode() immediately; post only when invoked from a bg thread.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            mHost.onSplitStateChanged();
+        } else {
+            mHost.runOnUiThread(mHost::onSplitStateChanged);
+        }
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
