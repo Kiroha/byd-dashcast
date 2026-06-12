@@ -586,4 +586,45 @@
     <string name="layout_manager_title">Menedżer układów</string>
     <string name="layout_manager_new">Nowy układ</string>
     <string name="layout_canvas_hint">Przeciągnij, aby narysować strefę</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Aktywne aplikacje: %1$d</string>
+    <string name="fission_all_projected">Wszystkie aplikacje są już wyświetlane</string>
+    <string name="fission_auto_activating">Aktywowanie ulubionego układu…</string>
+    <string name="fission_close_slot_confirm">Zamknij</string>
+    <string name="fission_close_slot_title">Zamknąć %1$s?</string>
+    <string name="fission_conflict_message">Projekcja jest już aktywna. Zatrzymać ją, aby kontynuować?</string>
+    <string name="fission_conflict_stop">Zatrzymaj</string>
+    <string name="fission_conflict_title">Konflikt projekcji</string>
+    <string name="fission_idle_hint">Naciśnij +, aby wyświetlić aplikację</string>
+    <string name="fission_launch_in">Uruchom %1$s w…</string>
+    <string name="fission_layout_active_fmt">Układ: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Ustawiono ulubiony układ ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Tryb swobodny</string>
+    <string name="fission_layout_set_favorite">Ustaw jako ulubiony</string>
+    <string name="fission_layout_switch">Zmień</string>
+    <string name="fission_mode_free">Tryb swobodny</string>
+    <string name="fission_no_apps">Brak dostępnych aplikacji</string>
+    <string name="fission_pick_app_title">Wybierz aplikację</string>
+    <string name="fission_place_in">Umieść %1$s w…</string>
+    <string name="fission_precreating_slots">Przygotowywanie slotów…</string>
+    <string name="fission_resize_full">Pełny ekran</string>
+    <string name="fission_resize_left_3q">Lewa ¾</string>
+    <string name="fission_resize_left_half">Lewa ½</string>
+    <string name="fission_resize_right_3q">Prawa ¾</string>
+    <string name="fission_resize_right_half">Prawa ½</string>
+    <string name="fission_resize_title">Zmień rozmiar %1$s</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Powiąż aplikację…</string>
+    <string name="fission_slot_pkg_none">Brak — wolna strefa</string>
+    <string name="fission_slot_reused_toast">Wykorzystano istniejący slot ✓</string>
+    <string name="fission_slot_zone_bound_fmt">Powiązana aplikacja: %1$s</string>
+    <string name="fission_slot_zone_free">Wolna strefa</string>
+    <string name="settings_fission_auto_layout">Automatyczny ulubiony układ</string>
+    <string name="settings_fission_auto_layout_support">Aktywuje ulubiony układ po otwarciu Fission i automatycznie uruchamia powiązane aplikacje</string>
+    <string name="settings_fission_precreate_slots">Wstępnie twórz sloty przy starcie</string>
+    <string name="settings_fission_precreate_slots_support">Przygotowuje Virtual Displays ulubionego układu po otwarciu Fission (bez uruchamiania aplikacji)</string>
+    <string name="sysinfo_disp_hidden">Ukryty (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">Niewidoczny przez API DisplayManager</string>
 </resources>

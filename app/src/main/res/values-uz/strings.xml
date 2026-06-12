@@ -578,4 +578,45 @@
     <string name="layout_manager_title">Tartiblarni boshqarish</string>
     <string name="layout_manager_new">Yangi tartib</string>
     <string name="layout_canvas_hint">Zona chizish uchun torting</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Faol ilovalar: %1$d</string>
+    <string name="fission_all_projected">Barcha ilovalar allaqachon ko\'rsatilmoqda</string>
+    <string name="fission_auto_activating">Sevimli tartib faollashtirilmoqda…</string>
+    <string name="fission_close_slot_confirm">Yopish</string>
+    <string name="fission_close_slot_title">%1$s yopilsinmi?</string>
+    <string name="fission_conflict_message">Proyeksiya allaqachon faol. Davom etish uchun uni to\'xtatasizmi?</string>
+    <string name="fission_conflict_stop">To\'xtatish</string>
+    <string name="fission_conflict_title">Proyeksiya ziddiyati</string>
+    <string name="fission_idle_hint">Ilovani ko\'rsatish uchun + ni bosing</string>
+    <string name="fission_launch_in">%1$s shu yerda ishga tushirish…</string>
+    <string name="fission_layout_active_fmt">Tartib: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Sevimli tartib o\'rnatildi ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Erkin rejim</string>
+    <string name="fission_layout_set_favorite">Sevimli sifatida belgilash</string>
+    <string name="fission_layout_switch">Almashtirish</string>
+    <string name="fission_mode_free">Erkin rejim</string>
+    <string name="fission_no_apps">Mavjud ilovalar yo\'q</string>
+    <string name="fission_pick_app_title">Ilovani tanlang</string>
+    <string name="fission_place_in">%1$s shu yerga joylashtirish…</string>
+    <string name="fission_precreating_slots">Slotlar tayyorlanmoqda…</string>
+    <string name="fission_resize_full">To\'liq ekran</string>
+    <string name="fission_resize_left_3q">Chap ¾</string>
+    <string name="fission_resize_left_half">Chap ½</string>
+    <string name="fission_resize_right_3q">O\'ng ¾</string>
+    <string name="fission_resize_right_half">O\'ng ½</string>
+    <string name="fission_resize_title">%1$s o\'lchamini o\'zgartirish</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Ilovani bog\'lash…</string>
+    <string name="fission_slot_pkg_none">Yo\'q — bo\'sh hudud</string>
+    <string name="fission_slot_reused_toast">Mavjud slot qayta ishlatildi ✓</string>
+    <string name="fission_slot_zone_bound_fmt">Bog\'langan ilova: %1$s</string>
+    <string name="fission_slot_zone_free">Bo\'sh hudud</string>
+    <string name="settings_fission_auto_layout">Avtomatik sevimli tartib</string>
+    <string name="settings_fission_auto_layout_support">Fission ochilganda sevimli tartibni faollashtiradi va bog\'langan ilovalarni avtomatik ishga tushiradi</string>
+    <string name="settings_fission_precreate_slots">Slotlarni ishga tushirishda oldindan yaratish</string>
+    <string name="settings_fission_precreate_slots_support">Fission ochilganda sevimli tartibning Virtual Display\'larini tayyorlaydi (ilovalarni ishga tushirmasdan)</string>
+    <string name="sysinfo_disp_hidden">Yashirin (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">DisplayManager API orqali ko\'rinmaydi</string>
 </resources>

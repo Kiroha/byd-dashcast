@@ -577,4 +577,45 @@
     <string name="layout_manager_title">إدارة التخطيطات</string>
     <string name="layout_manager_new">تخطيط جديد</string>
     <string name="layout_canvas_hint">اسحب لرسم منطقة</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">%1$d تطبيق نشط</string>
+    <string name="fission_all_projected">جميع التطبيقات معروضة بالفعل</string>
+    <string name="fission_auto_activating">جارٍ تفعيل التخطيط المفضل…</string>
+    <string name="fission_close_slot_confirm">إغلاق</string>
+    <string name="fission_close_slot_title">إغلاق %1$s؟</string>
+    <string name="fission_conflict_message">يوجد عرض نشط بالفعل. هل تريد إيقافه للمتابعة؟</string>
+    <string name="fission_conflict_stop">إيقاف</string>
+    <string name="fission_conflict_title">تعارض في العرض</string>
+    <string name="fission_idle_hint">اضغط + لعرض تطبيق</string>
+    <string name="fission_launch_in">تشغيل %1$s في…</string>
+    <string name="fission_layout_active_fmt">التخطيط: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">تم تعيين التخطيط المفضل ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">وضع حر</string>
+    <string name="fission_layout_set_favorite">تعيين كمفضل</string>
+    <string name="fission_layout_switch">تغيير</string>
+    <string name="fission_mode_free">وضع حر</string>
+    <string name="fission_no_apps">لا توجد تطبيقات متاحة</string>
+    <string name="fission_pick_app_title">اختر تطبيقًا</string>
+    <string name="fission_place_in">وضع %1$s في…</string>
+    <string name="fission_precreating_slots">جارٍ تجهيز الفتحات…</string>
+    <string name="fission_resize_full">ملء الشاشة</string>
+    <string name="fission_resize_left_3q">يسار ¾</string>
+    <string name="fission_resize_left_half">يسار ½</string>
+    <string name="fission_resize_right_3q">يمين ¾</string>
+    <string name="fission_resize_right_half">يمين ½</string>
+    <string name="fission_resize_title">تغيير حجم %1$s</string>
+    <string name="fission_slot_error">الفتحة %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">ربط تطبيق…</string>
+    <string name="fission_slot_pkg_none">لا شيء — منطقة حرة</string>
+    <string name="fission_slot_reused_toast">أُعيد استخدام فتحة موجودة ✓</string>
+    <string name="fission_slot_zone_bound_fmt">التطبيق المرتبط: %1$s</string>
+    <string name="fission_slot_zone_free">منطقة حرة</string>
+    <string name="settings_fission_auto_layout">التخطيط المفضل التلقائي</string>
+    <string name="settings_fission_auto_layout_support">يفعّل التخطيط المفضل عند فتح Fission ويشغّل التطبيقات المرتبطة تلقائيًا</string>
+    <string name="settings_fission_precreate_slots">إنشاء الفتحات مسبقًا عند البدء</string>
+    <string name="settings_fission_precreate_slots_support">يجهّز شاشات Virtual Display للتخطيط المفضل عند فتح Fission (دون تشغيل التطبيقات)</string>
+    <string name="sysinfo_disp_hidden">مخفي (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">غير مرئي عبر DisplayManager API</string>
 </resources>

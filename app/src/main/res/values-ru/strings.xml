@@ -577,4 +577,45 @@
     <string name="layout_manager_title">Управление макетами</string>
     <string name="layout_manager_new">Новый макет</string>
     <string name="layout_canvas_hint">Перетащите, чтобы нарисовать зону</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Активных приложений: %1$d</string>
+    <string name="fission_all_projected">Все приложения уже проецируются</string>
+    <string name="fission_auto_activating">Активация избранного макета…</string>
+    <string name="fission_close_slot_confirm">Закрыть</string>
+    <string name="fission_close_slot_title">Закрыть %1$s?</string>
+    <string name="fission_conflict_message">Проекция уже активна. Остановить её, чтобы продолжить?</string>
+    <string name="fission_conflict_stop">Остановить</string>
+    <string name="fission_conflict_title">Конфликт проекции</string>
+    <string name="fission_idle_hint">Нажмите +, чтобы проецировать приложение</string>
+    <string name="fission_launch_in">Запустить %1$s в…</string>
+    <string name="fission_layout_active_fmt">Макет: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Избранный макет установлен ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Свободный режим</string>
+    <string name="fission_layout_set_favorite">Сделать избранным</string>
+    <string name="fission_layout_switch">Сменить</string>
+    <string name="fission_mode_free">Свободный режим</string>
+    <string name="fission_no_apps">Нет доступных приложений</string>
+    <string name="fission_pick_app_title">Выберите приложение</string>
+    <string name="fission_place_in">Разместить %1$s в…</string>
+    <string name="fission_precreating_slots">Подготовка слотов…</string>
+    <string name="fission_resize_full">Во весь экран</string>
+    <string name="fission_resize_left_3q">Слева ¾</string>
+    <string name="fission_resize_left_half">Слева ½</string>
+    <string name="fission_resize_right_3q">Справа ¾</string>
+    <string name="fission_resize_right_half">Справа ½</string>
+    <string name="fission_resize_title">Изменить размер %1$s</string>
+    <string name="fission_slot_error">Слот %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Привязать приложение…</string>
+    <string name="fission_slot_pkg_none">Нет — свободная зона</string>
+    <string name="fission_slot_reused_toast">Использован существующий слот ✓</string>
+    <string name="fission_slot_zone_bound_fmt">Привязанное приложение: %1$s</string>
+    <string name="fission_slot_zone_free">Свободная зона</string>
+    <string name="settings_fission_auto_layout">Автоматический избранный макет</string>
+    <string name="settings_fission_auto_layout_support">Активирует избранный макет при открытии Fission и автоматически запускает привязанные приложения</string>
+    <string name="settings_fission_precreate_slots">Предсоздавать слоты при запуске</string>
+    <string name="settings_fission_precreate_slots_support">Готовит Virtual Display избранного макета при открытии Fission (без запуска приложений)</string>
+    <string name="sysinfo_disp_hidden">Скрыт (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">Не виден через DisplayManager API</string>
 </resources>

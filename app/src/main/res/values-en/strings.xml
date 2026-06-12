@@ -608,4 +608,26 @@
     <string name="layout_manager_title">Layout manager</string>
     <string name="layout_manager_new">New layout</string>
     <string name="layout_canvas_hint">Drag to draw a zone</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">%1$d active app(s)</string>
+    <string name="fission_all_projected">All apps are already projected</string>
+    <string name="fission_close_slot_confirm">Close</string>
+    <string name="fission_close_slot_title">Close %1$s?</string>
+    <string name="fission_conflict_message">A projection is already active. Stop it to continue?</string>
+    <string name="fission_conflict_stop">Stop</string>
+    <string name="fission_conflict_title">Projection conflict</string>
+    <string name="fission_idle_hint">Tap + to project an app</string>
+    <string name="fission_launch_in">Launch %1$s in…</string>
+    <string name="fission_mode_free">Free mode</string>
+    <string name="fission_no_apps">No apps available</string>
+    <string name="fission_pick_app_title">Pick an app</string>
+    <string name="fission_place_in">Place %1$s in…</string>
+    <string name="fission_resize_full">Full screen</string>
+    <string name="fission_resize_left_3q">Left ¾</string>
+    <string name="fission_resize_left_half">Left ½</string>
+    <string name="fission_resize_right_3q">Right ¾</string>
+    <string name="fission_resize_right_half">Right ½</string>
+    <string name="fission_resize_title">Resize %1$s</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
 </resources>
