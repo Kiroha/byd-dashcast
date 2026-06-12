@@ -99,6 +99,10 @@ public final class SplitController {
      */
     public void applySplitSlot(final int slot, final int l, final int t, final int r, final int b) {
         ClusterService svc = mHost.getClusterServiceIfBound();
+        if (svc == null) {
+            AppLogger.w(TAG, "applySplitSlot: service not bound — ignored");
+            return;
+        }
         final String splitPkg = mHost.getCurrentDashboardPkg();
         final String splitApp = mHost.getCurrentDashboardApp();
         AppLogger.i(TAG, "applySplitSlot slot=" + slot

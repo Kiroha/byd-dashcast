@@ -380,7 +380,7 @@ public class KeyboardBridgeActivity extends Activity {
                 "COMP=" + comp + ";"
                 + " CUR=$(settings get secure enabled_accessibility_services);"
                 + " if [ -z \"$CUR\" ] || [ \"$CUR\" = \"null\" ]; then NEW=\"$COMP\";"
-                + " else case \"$CUR\" in *\"|$COMP|\"*) NEW=\"$CUR\";;"
+                + " else case \":$CUR:\" in *\":$COMP:\"*) NEW=\"$CUR\";;"
                 + "             *) NEW=\"$CUR:$COMP\";; esac; fi;"
                 + " settings put secure enabled_accessibility_services \"$NEW\""
                 + " && settings put secure accessibility_enabled 1"

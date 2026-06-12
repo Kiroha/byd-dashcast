@@ -1052,7 +1052,7 @@ public class MainActivity extends AppCompatActivity
         ClusterPrefs.setClusterPkg(this, null);
         ClusterPrefs.setClusterName(this, null);
         // Force-stop the secondary slot in split mode (prevents it from staying on display 1)
-        if (mSplitController.getSecondDashboardPkg() != null) {
+        if (mSplitController != null && mSplitController.getSecondDashboardPkg() != null) {
             AdbLocalClient.forceStopApp(this, mSplitController.getSecondDashboardPkg(), null);
         }
         if (mSplitController != null) mSplitController.clearSplitState();
