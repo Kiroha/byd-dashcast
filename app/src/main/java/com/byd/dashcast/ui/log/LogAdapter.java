@@ -23,7 +23,7 @@ public class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
 
     private final List<AppLogger.Entry> mEntries = new ArrayList<>();
     private final SimpleDateFormat mTimeFmt =
-            new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            new SimpleDateFormat("HH:mm:ss", Locale.ROOT);
     private final Date mDateBuf = new Date();
 
     private final int mColorOk;

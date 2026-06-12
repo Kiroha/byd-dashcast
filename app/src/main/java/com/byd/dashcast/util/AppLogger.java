@@ -72,14 +72,17 @@ public class AppLogger {
 
     // SimpleDateFormat is not thread-safe — one instance per thread via ThreadLocal
     // avoids repeated allocations without risk of corruption.
+    // Locale.ROOT, not getDefault(): under the Arabic locale getDefault() renders
+    // Eastern Arabic digits — filenames like byd_log_٢٠٢٦٠٦١٢_٢٣٥٠٥٩.log and
+    // unsearchable timestamps in shared logs (seen in a user report, June 2026).
     private static final ThreadLocal<SimpleDateFormat> sFmt = new ThreadLocal<SimpleDateFormat>() {
         @Override protected SimpleDateFormat initialValue() {
-            return new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
+            return new SimpleDateFormat("HH:mm:ss.SSS", Locale.ROOT);
         }
     };
     private static final ThreadLocal<SimpleDateFormat> sFileFmt = new ThreadLocal<SimpleDateFormat>() {
         @Override protected SimpleDateFormat initialValue() {
-            return new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+            return new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT);
         }
     };
     private AppLogger() {}
