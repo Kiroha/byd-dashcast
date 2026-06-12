@@ -6,6 +6,7 @@ import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.MainActivity;
 import com.byd.dashcast.R;
 import com.byd.dashcast.ime.KeyboardBridgeActivity;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import android.app.Notification;
@@ -300,6 +301,19 @@ public class ClusterService extends Service
         int insetV = getInsetV(packageName);
         Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
 
+        // Primary: daemon-backed FREEFORM flip + resize (uid=2000 bypasses permission check).
+        // The containing stack stays FULLSCREEN when the task is launched via startActivity,
+        // and am task resize rejects non-FREEFORM tasks. Phase4TaskVerbs.moveAndResize()
+        // calls setTaskWindowingMode(FREEFORM) on both the task and stack before resizing.
+        try {
+            String log = ProxyClient.moveAndResize(packageName, clusterId,
+                    bounds.left, bounds.top, bounds.right, bounds.bottom);
+            AppLogger.i(TAG, "resizeActiveTask via daemon: " + log);
+            return;
+        } catch (Exception daemonEx) {
+            AppLogger.w(TAG, "resizeActiveTask daemon unavailable — fallback: " + daemonEx.getMessage());
+        }
+        // Fallback: ChainedTaskResizer (reflection → shell)
         try {
             mTaskResizer.resize(taskId, packageName, bounds);
         } catch (TaskResizer.ResizeException e) {
