@@ -6,9 +6,9 @@
 
 | Élément | Valeur | Impact migration |
 |---|---|---|
-| AGP | 7.4.2 | Compatible Kotlin 2.2.x — **pas de bump AGP requis** |
-| Gradle | 7.6.4 | Dans la fenêtre de support de KGP 2.2.0 (Gradle 7.6.3+) |
-| Java | source/target 11 | Plafond d'AGP 7.4 ; `kotlinOptions.jvmTarget = '11'` aligné |
+| AGP | 8.10.1 | Plafond de la fenêtre testée de KGP 2.2.0 |
+| Gradle | 8.11.1 | Minimum requis par AGP 8.10 ; dans la fenêtre KGP 2.2.0 |
+| Java | source/target 17 | Débloqué par AGP 8 ; `kotlinOptions.jvmTarget = '17'` aligné |
 | compileSdk / target / min | 33 / 29 / 28 | Aucun blocage Kotlin |
 | SDK | android.jar BYD custom (bydauto APIs) | Kotlin compile contre le même jar — vérifié OK |
 | Tests | **aucun** | Le build + lint 0/0 sont les seuls filets de sécurité → migration par petits lots obligatoire |
@@ -25,10 +25,18 @@
 
 | Cible | Bloqué par | Pour lever |
 |---|---|---|
-| Java 11 (actuel) | — | D8 d'AGP 7.4 desugar toutes les features Java 11 jusqu'à minSdk 28 ✅ |
-| Java 17 source | AGP 7.4 | Bump AGP 8.1+ + Gradle 8.x — chantier séparé : vérifier le SDK BYD custom, non-transitive R classes, defaults buildConfig |
-| Kotlin 2.2.0 (actuel) | — | K2 vérifié vert sur AGP 7.4.2 / Gradle 7.6.4 ✅ |
-| Kotlin 2.3+ futur | Fenêtre AGP/Gradle de KGP | Vérifier la matrice de compat JetBrains à chaque bump |
+| Java 17 (actuel) | — | Débloqué par AGP 8 (D8 desugar records & co jusqu'à minSdk 28) ✅ |
+| Kotlin 2.2.0 (actuel) | — | K2 vérifié vert sur AGP 8.10.1 / Gradle 8.11.1 ✅ |
+| AGP 8.10.1 (actuel) | Fenêtre testée de KGP 2.2.0 (≤ 8.10) | Bumper Kotlin d'abord, puis AGP/Gradle — toujours dans la matrice JetBrains |
+| Kotlin 2.3+ / AGP 8.11+ futur | Matrice de compat JetBrains | Vérifier la matrice à chaque bump ; le SDK BYD custom (android-33) a passé AGP 8 sans problème |
+
+### Adaptations AGP 8 réalisées (toutes vérifiées : debug + release + lint 0/0)
+
+- `buildFeatures { buildConfig true }` — AGP 8 ne génère plus BuildConfig par défaut (7 classes l'utilisent).
+- `lintOptions` → `lint` (l'ancien bloc a été supprimé d'AGP 8).
+- `android:extractNativeLibs="false"` du manifest → `packaging.jniLibs.useLegacyPackaging = false` (équivalent exact).
+- `org.gradle.unsafe.configuration-cache` → `org.gradle.configuration-cache` (clé stabilisée Gradle 8).
+- `app/lint.xml` : 4 nouveaux checks du lint 8.10 documentés et neutralisés (orientation fixe = produit voiture ; Aligned16KB = .so exclus de l'APK + matériel 4 Ko ; UnspecifiedRegisterReceiverFlag = no-op sous API 33 **et dangereux à "corriger"** car le daemon hors-process envoie ces broadcasts ; AndroidGradlePluginVersion = pin volontaire).
 
 **Prérequis machine** : `sourceCompatibility ≥ 9` déclenche le `JdkImageTransform` d'AGP qui exige un **JDK complet avec `jlink`** (un JRE ne suffit pas). Sur cette machine : Temurin 17 dans `~/.jdks/jdk-17.0.19+10`, déclaré via `org.gradle.java.home` dans `~/.gradle/gradle.properties`. Le `core-for-system-modules.jar` requis est bien présent dans le SDK BYD (platforms/android-33).
 
