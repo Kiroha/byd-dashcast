@@ -2,144 +2,131 @@ export default {
   code: 'tr',
   flag: '🇹🇷',
   name: 'Türkçe',
-  title: 'DashCast — Kullanıcı Kılavuzu',
-  manualName: 'Kullanıcı Kılavuzu',
-  meta: 'v0.9.92-alpha · BYD Seal EU · DiLink 3.0 · Android 10',
+  title: 'DashCast — Kullanım Kılavuzu',
+  manualName: 'Kullanım Kılavuzu',
+  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
   tocTitle: '📋 İçindekiler',
 
   intro: {
     title: '0. Giriş',
     lead:
-      "DashCast, BYD merkezi ekrandan herhangi bir Android uygulamasını dijital gösterge paneli (cluster) üzerine yansıtmanızı sağlar. Maps, Waze, Spotify veya YouTube\'u doğrudan direksiyonun arkasında görebilir, aynı zamanda yerel BYD göstergelerine (hız, göstergeler, menzil) her an erişebilirsiniz.",
+      'DashCast, BYD merkez ekranınızdaki herhangi bir Android uygulamasını gösterge paneline (dijital kümeye) yansıtır. Maps, Waze, Spotify veya ABRP doğrudan direksiyonun arkasında — Düzenler modu ile aynı anda birden fazla uygulama, her biri kendi bölgesinde. Hepsi sistemi değiştirmeden.',
     bullets: [
-      "✅ BYD Seal EU ile uyumlu (DiLink 3.0, Di3.0 / 6125F yazılım).",
-      "✅ Sistem değişikliği yok: DashCast normal bir uygulama gibi kurulur.",
-      "✅ Yerel TCP ADB — ilk yetkilendirmeden sonra bilgisayara gerek yok.",
-      "✅ 12 dil, ilk başlatmada seçilir.",
-      "✅ Yerleşik OTA güncellemeleri (isteğe bağlı alfa kanal).",
-      "✅ Overscan kenar boşlukları her uygulama için ayrı saklanır.",
-      "✅ Cluster\'ı merkezi ekrandan kontrol edebilen dokunmatik tam ekran ayna.",
-      "✅ Bölünmüş mod (cluster üzerinde yan yana iki uygulama).",
+      '✅ BYD Seal EU ile uyumlu (DiLink 3.0, firmware Di3.0 / 6125F).',
+      '✅ Sistem değişikliği yok: DashCast normal bir uygulama gibi kurulur.',
+      '✅ TCP üzerinden yerel ADB — ilk yetkilendirmeden sonra bilgisayar gerekmez.',
+      '✅ 13 arayüz dili, ilk açılışta seçilir.',
+      '✅ Gerçek zamanlı dokunmatik ayna: kümeyi merkez ekrandan kontrol edin.',
+      '✅ Düzenler modu: kümede yan yana birden fazla uygulama, parmakla çizilen bölgeler.',
+      '✅ Otomatik başlatma: DashCast açılır açılmaz projeksiyon + uygulama (veya favori düzen).',
+      '✅ Kenar boşlukları (overscan) uygulama başına kaydedilir.',
+      '✅ Yerleşik OTA güncellemeleri (isteğe bağlı beta kanalı).',
     ],
     note:
-      "💡 Tek seferlik ön koşul: BYD Ayarlar → Geliştirici altında kablosuz ADB hata ayıklamayı etkinleştirin. İlk açılışta « Hata ayıklamaya izin ver? » diyaloğu görünür — « Her zaman izin ver »\'i işaretleyin ve onaylayın. Bu adımı asla tekrarlamanız gerekmez.",
+      '💡 Tek önkoşul: BYD Ayarlar → Geliştirici bölümünde kablosuz ADB hata ayıklamayı etkinleştirin. İlk açılışta «Hata ayıklamaya izin verilsin mi?» penceresi görünür — «Her zaman izin ver» işaretleyin ve onaylayın. Bunu bir daha asla yapmanız gerekmez.',
   },
 
   sections: [
     {
       id: 'welcome',
       screen: 'screen-1',
-      title: '1. Hoş geldiniz ekranı — dil seçimi',
+      title: '1. Karşılama ekranı — dil seçimi',
       lead:
-        "İlk açılışta DashCast, mevcut 12 dilden oluşan bir ızgara gösterir. İstediğinize dokunun; seçim kaydedilir ve hoş geldiniz ekranı bir daha görünmez. Dili istediğiniz zaman Ayarlar → Dil bölümünden değiştirebilirsiniz.",
-      mockupLabel: 'Ekran 1\'i aç (Hoş geldiniz)',
-      featuresTitle: 'Detaylar',
+        'İlk açılışta DashCast, mevcut 13 dilin ızgarasını gösterir. Dilinize dokunun: seçim kaydedilir ve ekran bir daha görünmez. Dili istediğiniz zaman Ayarlardan değiştirebilirsiniz.',
+      mockupLabel: 'Ekran 1\'i gör (Karşılama)',
+      featuresTitle: 'Ayrıntılar',
       features: [
         {
-          title: '12 desteklenen dil',
+          title: '13 desteklenen dil',
           text:
-            "Français, English, Deutsch, Italiano, Türkçe, Español, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Seçilen dil yeniden başlatma olmadan anında uygulanır.",
+            "Français, English, Deutsch, Italiano, Türkçe, Español, Polski, Русский, Українська, العربية, O'zbekcha, Қазақша, Беларуская. Seçilen dil anında uygulanır, yeniden başlatma gerekmez.",
         },
         {
           title: 'Otomatik okuma yönü',
           text:
-            "Arapça otomatik olarak sağdan sola düzene (RTL) geçer: gezinme çubuğu sağa taşınır, listeler ters çevrilir, simgeler okunabilir kalır.",
+            'Arapça otomatik olarak sağdan sola (RTL) düzene geçer: gezinme çubuğu sağa kayar, listeler ters çevrilir.',
         },
         {
           title: 'Her zaman değiştirilebilir',
-          text:
-            "Sonradan dili değiştirmek için: yan çubuğun üstündeki DashCast logosuna uzun basın → 🌐 Dil. Yeni dil anında uygulanır.",
+          text: 'Dili sonradan değiştirmek için: Ayarlar → Dil. Anında uygulanır.',
         },
       ],
       howTo: {
         title: 'Nasıl yapılır',
         steps: [
-          "DashCast\'i başlatın (BYD uygulama çekmecesindeki mavi simge).",
-          "Hoş geldiniz ekranı 4×3\'lük dil ızgarasını gösterir.",
-          "Dilinize dokunun. Arayüz hemen değişir.",
-          "Ana ekran açılır — DashCast kullanıma hazır.",
+          'DashCast\'i başlatın (BYD uygulama çekmecesindeki mavi simge).',
+          'Dil ızgarasıyla karşılama ekranı görünür.',
+          'Dilinize dokunun. Arayüz anında değişir.',
+          'Ana ekran açılır — hazırsınız.',
         ],
       },
-      note:
-        "ℹ️ Bir yansıtma çalışırken dili değiştirirseniz, yansıtma kesintisiz devam eder; yalnızca DashCast arayüzü çevrilir.",
     },
 
     {
       id: 'main',
       screen: 'screen-2',
-      title: '2. Ana ekran — Uygulamalar ve Cluster',
+      title: '2. Ana ekran — Uygulamalar ve Küme',
       lead:
-        "DashCast\'in merkezi ekranı. Solda arama, kategori filtreleri ve favorilerle birlikte tüm yüklü uygulamaların listesi. Sağda ana eylemleriyle birlikte cluster\'ın canlı önizlemesi: tam ekran önizleme, ekran görüntüsü, yeniden bağlan, yansıtmayı durdur.",
-      mockupLabel: 'Ekran 2\'yi aç (Ana)',
+        'DashCast\'in merkez ekranı. Solda: arama, filtreler ve favorilerle tüm uygulamalarınız. Sağda: kümenin gerçek zamanlı önizlemesi, Tam ekran ayna / Projeksiyonu durdur düğmeleri ve favori çoklu uygulama düzeninizi seçmek için düzen karuseli.',
+      mockupLabel: 'Ekran 2\'yi gör (Ana)',
       featuresTitle: 'Yapabileceğiniz her şey',
       features: [
         {
-          title: '🔍 Arama çubuğu',
-          text:
-            "Listeyi anında filtrelemek için birkaç harf yazın (hem uygulama adında hem pakette arar). Sağdaki ▦ düğmesi liste/ızgara görünümleri arasında geçiş yapar.",
-        },
-        {
-          title: '🏷️ Kategori filtreleri',
-          text:
-            "Renkli çipler (Tümü / Navigasyon / Multimedya / İletişim / Sistem) uygulamalarınızı otomatik gruplar. Parantez içindeki sayı kaç uygulamanın görünür olduğunu söyler.",
-        },
-        {
-          title: '⭐ Sabitlenmiş favoriler',
-          text:
-            "« Favoriler » bölümü en çok kullandığınız uygulamaları üstte tutar. Eklemek/çıkarmak için: uygulamaya uzun basın → ⭐ Favorilere ekle/çıkar.",
-        },
-        {
           title: '👆 Kısa dokunuş — yansıt',
           text:
-            "Bir uygulamaya dokunarak hemen cluster\'a gönderin. Yansıtma henüz çalışmıyorsa otomatik başlar (cluster ısınma ~2 sn).",
+            'Bir uygulamaya dokunarak kümeye gönderin. Projeksiyon aktif değilse otomatik başlar (~2 sn ısınma), ardından uygulama direksiyonun arkasında belirir.',
         },
         {
-          title: '👆⏱️ Uzun basış — eylemler menüsü',
+          title: '👆⏱️ Uzun basma — eylem menüsü',
           text:
-            "Herhangi bir uygulamaya basılı tutarak tam ekran menü açın: ⭐ Favori, Otomatik başlat (yansıtmayla), Cluster / ana ekrana taşı, ✕ Zorla durdur.",
+            'Bir uygulamayı basılı tutun: ⭐ Favori, Otomatik başlatma (her DashCast açılışında bu uygulamayı yansıt), Kümeye / ana ekrana taşı, ✕ Durmaya zorla.',
         },
         {
-          title: '🚦 Cluster canlı önizleme',
+          title: '🔍 Arama ve filtreler',
           text:
-            "Sağ panel cluster\'da görüneni yansıtır (hız, vites, batarya, menzil). Gecikme (12 ms) bağlantının iyi olduğunu doğrular.",
+            'Arama çubuğu yazarken filtreler (ad veya paket). Kategori çipleri (Tümü / Navigasyon / Medya…) uygulamaları gruplar; ▦ düğmesi liste/ızgara arasında geçiş yapar.',
         },
         {
-          title: '👁️ Tam ekran önizleme',
+          title: '🚦 Gerçek zamanlı küme önizlemesi',
           text:
-            "« Tam ekran önizleme »\'ye dokunarak canlı önizlemeyi tüm merkezi ekrana yayın. Maps\'te tam klavyeyle adres yazmak için ideal: her giriş cluster\'a yansıtılır.",
+            'Sağ panel kümeyi canlı yansıtır. Önizlemedeki dokunuşlarınız yansıtılan uygulamaya iletilir — kaydırma, yakınlaştırma, klavye, her şey çalışır.',
         },
         {
-          title: '📸 Ekran görüntüsü',
+          title: '👁️ Tam ekran ayna',
           text:
-            "« Yakala » düğmesi mevcut cluster görünümünü PNG olarak /sdcard/Pictures/DashCast/ altına kaydeder. Bir rotayı paylaşmak veya sorun belgelemek için faydalıdır.",
+            'Önizlemeyi tüm merkez ekrana genişletir: Maps\'te tam klavyeyle adres yazmak için ideal. Her şey gerçek zamanlı olarak kümeye kopyalanır.',
         },
         {
-          title: '↻ Yeniden bağlan',
+          title: '⏹ Projeksiyonu durdur',
           text:
-            "Yansıtılan uygulama dondu ya da yanıt vermiyorsa « Yeniden bağlan » video akışını orijinal cluster\'a dokunmadan kurar.",
+            'Projeksiyonu temizce sonlandırır ve orijinal BYD panelini (hız, göstergeler, ADAS) Ayarlarda tanımlanan boyutla geri yükler.',
         },
         {
-          title: '⏹ Aynayı durdur',
+          title: '🗂️ Düzen karuseli',
           text:
-            "Yansıtmayı temiz şekilde sonlandırır. Kısa dokunuş = yumuşak durdurma (cluster ADB üzerinden yerel BYD\'ye döner). Uzun basış = Ayarlar\'daki cluster boyutuyla geri yüklemeyi zorlayan « Orijinal cluster\'ı geri yükle » seçeneği bulunan zenginleştirilmiş menü.",
+            'Düğmelerin altında her kart, bir düzenin bölgelerinin mini önizlemesini gösterir. Bir karta dokunarak favori düzen yapın (yıldız + mavi kenarlık). «Serbest mod» düzenleri devre dışı bırakır; «＋ Yönet» düzenleyiciyi açar.',
+        },
+        {
+          title: '📺 Yüzen düğme',
+          text:
+            'Bir 📺 düğmesi diğer uygulamaların üzerinde kalır: dokunma = aynayı aç, uzun basma = son yansıtılan uygulamalar arasında hızlı geçiş.',
         },
       ],
       howTo: {
-        title: 'Bir uygulamayı cluster\'a nasıl yansıtırsınız',
+        title: 'Bir uygulama kümeye nasıl yansıtılır',
         steps: [
-          "Ana ekranda istediğiniz uygulamayı bulun (örn. Maps).",
-          "Simgesine dokunun → yansıtma başlar, cluster ~2 sn içinde uygulamayı gösterir.",
-          "Sağ panel cluster\'da görüneni canlı gösterir.",
-          "Metin yazmak için (adres aramak): « Tam ekran önizleme »\'ye dokunun → uygulama merkezi ekrana yayılır → adresi yazın → her şey cluster\'a yansır.",
-          "Durdurmak için: « Aynayı durdur »\'a dokunun (cluster yerel BYD\'ye döner).",
+          'İstediğiniz uygulamayı bulun (örn. Maps) — gerekirse arama veya filtreler.',
+          'Simgesine dokunun → projeksiyon başlar, küme ~2 sn içinde uygulamaya geçer.',
+          'Sağdaki önizleme kümede olanı canlı gösterir.',
+          'Metin girmek için: «Tam ekran ayna» → adresinizi yazın → her şey kopyalanır.',
+          'Durdurmak için: «Projeksiyonu durdur» — küme yerel BYD\'ye döner.',
         ],
       },
       tipsTitle: 'İpuçları',
       tips: [
-        "💡 Otomatik başlat: Bir uygulamada bu anahtarı açarak DashCast her başladığında otomatik yansıtın.",
-        "💡 Bölünmüş mod: ikinci uygulamanın uzun basış menüsünden « Bölünmüş gönder »\'i seçerek cluster\'da yan yana 2 uygulama görüntüleyin.",
-        "💡 Kenar boşlukları: uygulama cluster\'dan taşıyorsa Ayarlar → Kenar boşlukları açıp kaydırıcıları ayarlayın. Uygulama başına saklanır.",
-        "💡 Dokunmatik tam ekran: tam ekran modunda merkezi ekrandaki parmaklarınız uygulamayı gerçekten yönetir — klavye, kaydırma, hareketler tümü çalışır.",
+        '💡 Otomatik başlatma: bir uygulama seçin (uzun basma → Otomatik başlatma), her DashCast açılışında otomatik yansıtılsın — projeksiyon kendiliğinden etkinleşir.',
+        '💡 Favori düzen: karuselde seçilen kart, otomatik başlatmanın etkinleştireceği karttır (Düzenler bölümüne bakın).',
+        '💡 Kenar boşlukları: uygulama kümeden taşıyorsa, Ayarlar → Kenar boşlukları, yatay/dikey kaydırıcılar. Uygulama başına kaydedilir.',
       ],
     },
 
@@ -148,242 +135,293 @@ export default {
       screen: 'screen-3',
       title: '3. Ayarlar',
       lead:
-        "Ayarlar ekranı küresel seçenekleri ve yansıtma görüntü ayarını bir araya getirir. Sol çubuk her zaman erişilebilir kalır — Uygulamalar, Ayarlar, Tanı, Sistem ve Günlük arasında konumunuzu kaybetmeden geçebilirsiniz.",
-      mockupLabel: 'Ekran 3\'ü aç (Ayarlar)',
-      featuresTitle: 'Mevcut bölümler',
+        'Genel seçenekler: küme boyutu, dil, kenar boşlukları, başlangıç davranışı, Düzenler modu ve güncellemeler. Yan çubuk erişilebilir kalır — konumunuzu kaybetmeden ekranlar arasında geçiş yapın.',
+      mockupLabel: 'Ekran 3\'ü gör (Ayarlar)',
+      featuresTitle: 'Ana bölümler',
       features: [
         {
-          title: '📺 Cluster türü',
+          title: '📺 Küme tipi',
           text:
-            "Gösterge panelinizin fiziksel boyutunu seçin: 8.8″ (sendInfo cmd 29), 12.3″ Seal EU (cmd 30, varsayılan) veya 10.25″ (cmd 31). Bu değer özellikle « Orijinal cluster\'ı geri yükle » tarafından kullanılır.",
+            'Gösterge panelinizin fiziksel boyutu: 8.8″, 12.3″ (Seal EU\'da önerilir — ADAS gerilmesini düzeltir) veya 10.25″. «Projeksiyonu durdur» doğru modu geri yüklemek için kullanır.',
         },
         {
-          title: '🌐 Dil',
+          title: '↔️↕️ Kenar boşlukları (overscan)',
           text:
-            "12 dil mevcut. Anlık değişim — DashCast yeniden başlatması gerekmez.",
+            'Kesik kenarları telafi eden yatay/dikey kaydırıcılar (0–200 px). Uygulama başına kaydedilir: Maps 80 px olabilirken Spotify 0\'da kalır. «Uygula» canlı projeksiyonu ayarlar.',
         },
         {
-          title: '↔️ Yatay kenar boşluğu (overscan)',
+          title: '🚗 Araçla başlat',
           text:
-            "Kaydırıcı 0–200 px. Cluster\'ınızdaki kırpılan kenarları telafi etmek için sol/sağa siyah çubuklar ekler. Uygulama başına saklanır — Maps 80 px kullanırken Spotify 0\'da kalabilir.",
+            'Etkinse, DashCast arabayla başlar ve son yansıtılan uygulamayı geri yükler. Aksi halde BYD çekmecesinden başlatın.',
         },
         {
-          title: '↕️ Dikey kenar boşluğu (overscan)',
+          title: '🗂️ Düzenler modu',
           text:
-            "Kaydırıcı 0–200 px. Üst/alt için aynı. Birleştirilen kenar boşlukları VirtualDisplay düzeyinde uygulanır; uygulama kırpılan alanları « görmez ».",
+            'Özel bölgelerle çoklu uygulama projeksiyonunu etkinleştirir (otomatik yönetilen Proxy ADB Daemon gerektirir). Ana ekranda karuseli ve Düzenler sekmesini gösterir.',
         },
         {
-          title: '✅ Uygula / 🔄 Sıfırla',
+          title: '⭐ Otomatik favori düzen',
           text:
-            "« Uygula » yeni kenar boşluklarını aktif yansıtmaya hemen aktarır. « Sıfırla » mevcut uygulamayı 0/0\'a döndürür.",
+            'DashCast açılışında: küme projeksiyonunu, favori düzeni etkinleştirir ve her bölgeye bağlı uygulamaları başlatır. Tek dokunuş olmadan eksiksiz çoklu uygulama kurulumunuz.',
+        },
+        {
+          title: '⚡ Başlangıçta slotları önceden oluştur',
+          text:
+            'Favori düzenin sanal ekranlarını açılışta hazırlar (uygulamaları başlatmadan) — düzenin etkinleştirilmesi sonra neredeyse anlıktır.',
         },
         {
           title: '📦 OTA güncellemeleri',
           text:
-            "DashCast GitHub Releases\'i otomatik kontrol eder. Alfa kanalı için « Pre-release\'leri dahil et »\'i işaretleyin (daha sık ama deneysel).",
+            'DashCast her açılışta GitHub\'ı kontrol eder. Beta kanalı için «Ön sürümleri dahil et» işaretleyin (yenilikler daha erken, daha az kararlılık).',
         },
         {
-          title: '🚗 Araçla otomatik başlatma',
-          text:
-            "Etkinleştirildiğinde DashCast araçla başlar ve son yansıtılan uygulamayı geri yükler. Aksi halde elle başlatırsınız.",
+          title: '🌐 Dil',
+          text: '13 dil — değişim anlıktır.',
         },
       ],
       howTo: {
-        title: 'Bir uygulamanın kenar boşluklarını ince ayar nasıl yapılır',
+        title: 'Bir uygulamanın kenar boşlukları nasıl ayarlanır',
         steps: [
-          "Ayarlanacak uygulamayı yansıtın (örn. Waze).",
-          "Ayarlar → Kenar boşlukları açın.",
-          "Sol/sağ kenarlar uygun olana kadar yatay kaydırıcıyı hareket ettirin.",
-          "Aynısını dikey kaydırıcıyla yapın.",
-          "« Uygula »\'ya dokunun → yansıtma canlı güncellenir, uygulama yeniden başlamaz.",
-          "Ayar yalnızca o uygulama için saklanır (her uygulamanın kendi kenar boşlukları olur).",
+          'Ayarlanacak uygulamayı yansıtın (örn. Waze).',
+          'Ayarlar → Kenar boşlukları.',
+          'Sol/sağ kenarlar doğru olana kadar yatay kaydırıcıyı hareket ettirin.',
+          'Dikey için aynısı, sonra «Uygula» — uygulamayı yeniden başlatmadan canlı ayar.',
+          'Ayar yalnızca bu uygulama için kaydedilir.',
         ],
       },
       note:
-        "⚠️ Cluster türünü değiştirirseniz, referans değerlerin yeniden hesaplanması için DashCast\'i yeniden başlatın.",
+        '⚠️ Küme tipini değiştirirseniz, geri yüklemenin doğru modu kullanması için projeksiyonu durdurup yeniden başlatın.',
+    },
+
+    {
+      id: 'layouts',
+      screen: 'screen-7',
+      title: '4. Düzenler — kümede birden fazla uygulama',
+      lead:
+        'Düzenler modu kümeyi özel bölgelere ayırır, her biri kendi uygulamasını gösterir: örneğin solda Waze, sağda Spotify. Bölgeleri parmakla çizersiniz, her bölgeye bir uygulama bağlarsınız ve düzen tek dokunuşla — veya açılışta kendiliğinden — etkinleşir.',
+      mockupLabel: 'Ekran 7\'yi gör (Düzenler)',
+      featuresTitle: 'Özellikler',
+      features: [
+        {
+          title: '✏️ Bölge çizme',
+          text:
+            'Tuval üzerinde (1920×720 kümenin kopyası) parmağınızı sürükleyerek bir dikdörtgen çizin. Bir pencere açılır: ad, piksel hassasiyetinde konum/boyutlar ve bağlanacak uygulama.',
+        },
+        {
+          title: '🔗 Uygulama bağlama',
+          text:
+            'Her bölge bir uygulamaya bağlanabilir: düzen etkinleştiğinde uygulama kendi bölgesinde otomatik başlar. Uygulamasız bölge serbest kalır.',
+        },
+        {
+          title: '✋ Taşıma ve yeniden boyutlandırma',
+          text:
+            'Bölgeyi sürükleyerek taşıyın; köşelerdeki beyaz tutamaçlar boyutlandırır. Kenarlar küme sınırlarına ve komşu bölgelere otomatik yapışır.',
+        },
+        {
+          title: '✏️ Mevcut bölgeyi düzenleme',
+          text:
+            'Bir bölgeye dokunun (tuvalde veya alttaki çipinde): yeniden adlandırın, geometrisini ayarlayın, bağlı uygulamayı değiştirin veya silin. Uzun basma = hızlı silme.',
+        },
+        {
+          title: '💾 Kaydedilen düzenler',
+          text:
+            'İstediğiniz kadar düzen kaydedin («Nav+Media», «Üçlü ekran»…). Yan panel bunları Etkinleştir / Devre dışı bırak / Düzenle / Sil ile listeler.',
+        },
+        {
+          title: '⭐ Favori ve otomatik başlatma',
+          text:
+            '«Favori» düğmesi (veya ana ekran karuselindeki karta dokunma), «Otomatik favori düzen»in DashCast açılışında etkinleştireceği düzeni belirler — projeksiyon dahil.',
+        },
+      ],
+      howTo: {
+        title: 'İlk düzeninizi oluşturun',
+        steps: [
+          'Ayarlarda «Düzenler modu»nu etkinleştirin.',
+          'Düzenler sekmesini açın (yan çubuk).',
+          'İlk bölgeyi çizmek için parmağınızı tuvalde sürükleyin (örn. sol yarı).',
+          'Pencerede: adlandırın, «Uygulama bağla»ya dokunun → Waze\'i seçin → Ekle.',
+          'İkinci bölgeyi çizin (sağ yarı), Spotify\'ı bağlayın.',
+          '«Kaydet» → düzeni adlandırın (örn. Nav+Media).',
+          'Seçmek için «Favori», sonra etkinleştirin: iki uygulama da kendi bölgesinde başlar.',
+        ],
+      },
+      tipsTitle: 'İpuçları',
+      tips: [
+        '💡 «Otomatik favori düzen» (Ayarlar) ile birlikte, eksiksiz çoklu uygulama kurulumunuz her DashCast açılışında kendiliğinden kurulur.',
+        '💡 Her karusel kartının mini önizlemesi düzenin gerçek bölgelerini gösterir — bir bakışta tanınır.',
+        '💡 Bir uygulama bölgesinde görünmeyi reddediyor mu? Bazı uygulamalar en-boy oranını dayatır; 16:9\'a daha yakın bir bölge deneyin.',
+      ],
+      note:
+        'ℹ️ Düzenler modu Proxy ADB Daemon\'a dayanır (otomatik başlatılır). İlk soğuk başlatma: uygulamalar görünmeden önce 6–8 sn bekleyin — bu, kümenin etkinleştirme dizisidir.',
     },
 
     {
       id: 'diagnostics',
       screen: 'screen-4',
-      title: '4. Tanılama',
+      title: '5. Tanılama',
       lead:
-        "Tanılama sekmesi, yansıtmanın beklendiği gibi davranmadığı durumlar için ayrılmış dahili bir paneldir. Çoğu kullanıcı bunu hiç kullanmaz — destek ve hata ayıklama içindir.",
-      mockupLabel: 'Ekran 4\'ü aç (Tanı)',
-      featuresTitle: 'Araçlar',
+        'Projeksiyonun beklendiği gibi çalışmadığı durumlar için dahili panel. Çoğu kullanıcının asla ihtiyacı olmayacak — destek ve hata ayıklama için var.',
+      mockupLabel: 'Ekran 4\'ü gör (Tanılama)',
+      featuresTitle: 'Mevcut araçlar',
       features: [
         {
-          title: 'ClusterService durumu',
+          title: 'Bağlantı testleri',
           text:
-            "Yansıtmayı yöneten Android servisinin çalıştığını doğrular. « bağlanmadı » durumunda bir düğme yeniden başlatır.",
+            'Yerel ADB tünelini (localhost:5555), ClusterService durumunu ve kümenin sanal ekranının varlığını kontrol eder.',
         },
         {
-          title: 'VirtualDisplay durumu',
+          title: 'Platform sondaları',
           text:
-            "Cluster için oluşturulan sanal ekranın ID\'sini, çözünürlüğünü ve bir Qt Surface bağlı olup olmadığını gösterir.",
+            'DiLink algılama (2/3/4/5), ekran envanteri, BYD araç API örnekleme (hız, enerji) ve BYDAUTO izin durumu.',
         },
         {
-          title: 'Yerel ADB bağlantısı',
+          title: 'Paylaşılabilir rapor',
           text:
-            "localhost:5555\'e ADB tünelinin hızlı testi. Test başarısızsa genelde BYD ayarlarında kablosuz hata ayıklama kapatılmıştır.",
-        },
-        {
-          title: 'Hedeflenmiş logcat',
-          text:
-            "DashCast / AutoContainer / xdja\'ya filtrelenmiş son 200 logcat satırını yakalar. « Paylaş » düğmesi raporu gönderir.",
+            'Destek için metin olarak dışa aktarılabilir eksiksiz bir rapor üretir (sistem, ekranlar, hizmetler, izinler, daemon metrikleri).',
         },
       ],
       howTo: {
         title: 'Bu sekme ne zaman kullanılır',
         steps: [
-          "Bir uygulamaya dokunduktan sonra cluster siyah kalıyor → ClusterService ve VirtualDisplay durumunu kontrol edin.",
-          "Uygulama « ADB kullanılamıyor » diyor → Tanı sekmesi → « ADB Test » düğmesi.",
-          "Destek bir rapor istiyor → Tanı → « logcat paylaş ».",
-          "Bir güncelleme yeni yüklendi ve çalışan sürümü doğrulamak istiyorsunuz.",
+          'Uygulamaya dokunduktan sonra küme siyah kalıyor → ClusterService ve sanal ekranı kontrol edin.',
+          'Uygulama «ADB kullanılamıyor» bildiriyor → «ADB testi» düğmesi.',
+          'Destek rapor istiyor → oluşturun ve paylaşın.',
         ],
       },
-      note:
-        "ℹ️ Bu sekme tek başına bir şey değiştirmez: aksi belirtilmedikçe düğmeler salt okunur testler çalıştırır.",
+      note: 'ℹ️ Düğmeler, açıkça belirtilmedikçe salt okunur testlerdir.',
     },
 
     {
       id: 'sysinfo',
       screen: 'screen-5',
-      title: '5. Sistem Bilgileri',
+      title: '6. Sistem raporu',
       lead:
-        "Donanım/yazılım ortamınız hakkında salt okunur panel. DashCast sürümü, BYD yazılımı, Android sürümü ve cluster kimliğinizi burada bulursunuz.",
-      mockupLabel: 'Ekran 5\'i aç (Sistem)',
+        'Salt okunur panel: sürümler, algılanan ekranlar ve DashCast hizmetlerinin canlı durumu. Bir şey anormal göründüğünde bakılacak ilk ekran.',
+      mockupLabel: 'Ekran 5\'i gör (Sistem)',
       featuresTitle: 'Gösterilen bilgiler',
       features: [
         {
-          title: '🚗 Araç',
+          title: '🖥️ Ekranlar',
           text:
-            "Algılanan BYD modeli, VIN (varsa), yazılım build (örn. Di3.0 / 6125F), build tarihi.",
+            'Ana ekran (çözünürlük, yoğunluk) ve kümenin sanal ekranı (1920×720), gerçek zamanlı durumla.',
         },
         {
-          title: '📱 Android',
+          title: '⚙️ Hizmetler',
           text:
-            "Android sürümü (10), API seviyesi (29), güvenlik yaması, DiLink build ID.",
+            'ClusterService (projeksiyon), MirrorDaemon (ayna), Proxy ADB Daemon (ayrıcalıklı işlemler), AdbLocalClient (ADB tüneli) — her biri yeşil/kırmızı nokta ve durduğunda yeniden başlatma düğmesiyle.',
         },
         {
-          title: '🔌 DashCast',
+          title: '📱 Sürümler',
           text:
-            "Yüklü sürüm, versionCode, kanal (stable / alpha), son OTA kontrolü, sürüm notları bağlantısı.",
+            'Kurulu DashCast sürümü, BYD firmware, Android/API sürümü, DiLink derleme kimlikleri.',
         },
         {
-          title: '🖥️ Cluster',
+          title: '🔁 Projeksiyon tekrarı',
           text:
-            "Algılanan tür (8.8″ / 12.3″ / 10.25″), gerçek çözünürlük, aktif VirtualDisplay ID, aktif Qt paketi (com.xdja.containerservice).",
-        },
-        {
-          title: '📦 Takip edilen uygulamalar',
-          text:
-            "Algılanan uygulama sayısı, sabitlenen favoriler, otomatik başlatma açık olanlar.",
+            'Kümenin tam etkinleştirme dizisini yeniden oynatma düğmesi (gösterge paneli ara durumda takılı kaldıysa kullanışlı).',
         },
       ],
       tipsTitle: 'İpuçları',
       tips: [
-        "💡 Bir satıra uzun basarak değeri panoya kopyalayın (hata raporu için yararlı).",
-        "💡 Alttaki « Dışa aktar » düğmesi her şeyi metin dosyasına yazar (/sdcard/DashCast/sysinfo.txt).",
+        '💡 Düzenler modu için «Proxy ADB Daemon» yeşil (RUN) olmalı — değilse satırına dokunarak yeniden başlatın.',
+        '💡 Tam rapor, bir hata bildirimini desteklemek için bu ekrandan dışa aktarılabilir.',
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '6. Günlük',
+      title: '7. Günlük',
       lead:
-        "DashCast\'in dahili günlüğü: önemli eylemleri (yansıtma, geri yükleme, ADB hataları, güncellemeler) izler. Beklenmedik davranışı anlamak veya destek raporu göndermek için faydalıdır.",
-      mockupLabel: 'Ekran 6\'yı aç (Günlük)',
+        'DashCast\'in dahili günlüğü: tüm önemli eylemler (projeksiyonlar, geri yüklemeler, ADB hataları, güncellemeler) sürekli izlenir. Beklenmedik davranışı anlamak veya desteğe rapor sağlamak için kullanışlı.',
+      mockupLabel: 'Ekran 6\'yı gör (Günlük)',
       featuresTitle: 'Özellikler',
       features: [
         {
-          title: '🔍 Filtre',
+          title: '🔍 Filtreler',
           text:
-            "Yalnızca ilgili satırları tutmak için anahtar kelime girin (örn. « ADB », « Maps », « error »). Filtre büyük/küçük harfe duyarsızdır.",
+            'Düzeye (DEBUG / INFO / WARN / ERROR) veya anahtar kelimeye göre filtreleyin (örn. «ADB», «Maps», «error»).',
         },
         {
           title: '🎨 Renk kodu',
           text:
-            "🟢 INFO (yeşil) — normal işleyiş. 🟠 WARN (turuncu) — dikkat. 🔴 ERROR (kırmızı) — hata. ⚪ DEBUG (gri) — teknik detay.",
-        },
-        {
-          title: '🗑 Temizle',
-          text:
-            "Günlüğü boşaltır. Sistem logcat izi etkilenmez — yalnızca bellekteki DashCast geçmişi silinir.",
+            '🟢 INFO — normal işlem. 🟠 WARN — dikkat. 🔴 ERROR — başarısızlık. ⚪ DEBUG — teknik ayrıntı.',
         },
         {
           title: '📤 Paylaş',
           text:
-            "Mevcut günlüğü .txt olarak dışa aktarır ve Android paylaşım sayfasını açar (e-posta, Telegram, dosya). DashCast sürümü ve BYD modelini otomatik içerir.",
+            'Günlüğü .txt olarak dışa aktarır ve Android paylaşım menüsünü açar. DashCast sürümünü ve BYD modelini içerir.',
         },
         {
           title: '⏰ Zaman damgaları',
           text:
-            "Her satırın başında yerel saat (HH:mm:ss.mmm) bulunur. Uzun süren işlemler (Maps başlatma, cluster geri yükleme) ölçülür ve gösterilir.",
+            'Her satır yerel saatle (HH:mm:ss.mmm) başlar; uzun işlemler ölçülür.',
         },
       ],
       howTo: {
-        title: 'Hata raporu nasıl gönderilir',
+        title: 'Hata raporu gönderme',
         steps: [
-          "Sorunu yeniden oluşturun (örn. uygulama başlatıldıktan sonra siyah kalıyor).",
-          "Günlük\'ü açın.",
-          "« Paylaş »\'a dokunun.",
-          "Kanalı seçin (Telegram, e-posta, GitHub Issues).",
-          "Eklenen .txt tam izlemeyi bağlamla birlikte içerir (sürüm, model, yazılım).",
+          'Sorunu yeniden oluşturun.',
+          'Günlük → «Paylaş»ı açın.',
+          'Kanalınızı seçin (Telegram, e-posta, GitHub Issues).',
+          'Ekli dosya izi ve bağlamı içerir (sürüm, model, firmware).',
         ],
       },
       note:
-        "🔒 Hiçbir kişisel veri (kişiler, GPS konumu, uygulama içeriği) kaydedilmez — yalnızca DashCast eylemleri ve teknik dönüş kodları.",
+        '🔒 Hiçbir kişisel veri (kişiler, GPS konumu, uygulama içeriği) kaydedilmez — yalnızca DashCast eylemleri ve teknik dönüş kodları.',
     },
   ],
 
   faq: {
-    title: '7. SSS — Sık Sorulan Sorular',
+    title: '8. SSS — Sık sorulan sorular',
     items: [
       {
-        question: '❓ Bir uygulamaya dokunduğumda cluster siyah kalıyor',
+        question: '❓ Bir uygulamaya dokunduğumda küme siyah kalıyor',
         answer:
-          "Üç olası neden: (1) kablosuz ADB devre dışı — BYD Ayarlar → Geliştirici\'yi kontrol edin. (2) ClusterService çalışmıyor — Tanı sekmesi, « Yeniden başlat » düğmesi. (3) Uygulama yeni çöktü — sağ panelde « Yeniden bağlan »\'a dokunun.",
+          'Üç olası neden: (1) kablosuz ADB devre dışı — BYD Ayarlar → Geliştirici kontrol edin. (2) Durmuş bir hizmet — Sistem sekmesi, kırmızı satırı yeniden başlatın. (3) Uygulama az önce çöktü — simgesine tekrar dokunun.',
       },
       {
-        question: '❓ Görüntü taşıyor / cluster\'da kırpılıyor',
+        question: '❓ Görüntü kümeden taşıyor / kırpılıyor',
         answer:
-          "Ayarlar → Kenar boşlukları açın ve kenarlar düzgün olana kadar yatay/dikey kaydırıcıları ayarlayın. Uygulama başına saklanır — bir kez yapılır.",
+          'Ayarlar → Kenar boşlukları: kenarlar doğru olana kadar yatay/dikey kaydırıcıları ayarlayın. Uygulama başına kaydedilir — yalnızca bir kez yaparsınız.',
       },
       {
-        question: '❓ Orijinal BYD gösterge paneline nasıl dönerim?',
+        question: '❓ Orijinal BYD paneline nasıl dönerim?',
         answer:
-          "« Aynayı durdur » üzerine kısa dokunmak %95 oranında yeterlidir. Cluster takılırsa aynı düğmeye uzun basın → menü → « Orijinal cluster\'ı geri yükle »: DashCast cluster türünüze uygun sendInfo dizisini zorlar.",
+          'Ana ekranda «Projeksiyonu durdur»a dokunun: DashCast, yerel kümeyi Ayarlarda tanımlanan boyutla geri yükler. Panel takılı görünüyorsa: Sistem ekranı → «Projeksiyon tekrarı», sonra tekrar durdurun.',
       },
       {
-        question: '❓ DashCast 12 V aküyü tüketir mi?',
+        question: '❓ Favori düzenim açılışta başlamıyor',
         answer:
-          "Hayır — DashCast araç kapanırken otomatik olarak durur (Android.intent.action.SCREEN_OFF + BMS bağlantı kesme yayınları). Motor kapandıktan sonra arka planda hizmet kalmaz.",
+          'Ayarlardaki üç koşulu kontrol edin: «Düzenler modu» etkin, «Otomatik favori düzen» etkin ve bir düzen ⭐ favori olarak işaretli (ana ekran karuseli veya Düzenler sekmesindeki Favori düğmesi). Soğuk başlatmada 6–8 sn bekleyin.',
+      },
+      {
+        question: '❓ DashCast 12 V aküyü boşaltır mı?',
+        answer:
+          'Hayır — DashCast arabayla birlikte durur. Motor kapalıyken hiçbir arka plan hizmeti aktif kalmaz.',
+      },
+      {
+        question: '❓ Hangi uygulamalar kümede çalışır?',
+        items: [
+          '✅ Navigasyon: Google Maps, Waze, Yandex Navi, OsmAnd, ABRP, Magic Earth.',
+          '✅ Medya: Spotify, YouTube, YouTube Music (yatay tercih edin).',
+          '✅ Sistem: kamera, hava durumu, takvim.',
+          '⚠️ DRM\'li uygulamalar (Netflix, Disney+, Prime Video): sanal ekranda görüntülenmeyi reddedebilir — Android sınırlaması, DashCast değil.',
+        ],
+      },
+      {
+        question: '❓ Güncellemeler: kararlı mı beta mı?',
+        answer:
+          'Kararlı kanal (varsayılan) yayından önce araçta test edilir. Beta kanalı (Ayarlar → Güncellemeler → «Ön sürümleri dahil et») yenilikleri derlenir derlenmez alır — erken test için kullanışlı, geçici gerileme riskiyle.',
       },
       {
         question: '❓ Katkıda bulunmak veya hata bildirmek istiyorum',
         answer:
-          "GitHub: https://github.com/Kiroha/byd-dashcast — hatalar için Issues, sorular için Discussions. Tanıyı hızlandırmak için her zaman bir Günlük dışa aktarımı ekleyin (Günlük → Paylaş).",
-      },
-      {
-        question: '❓ Cluster\'da hangi uygulamalar çalışır?',
-        items: [
-          "✅ Navigasyon: Google Maps, Waze, Yandex Navi, OsmAnd, Magic Earth.",
-          "✅ Multimedya: Spotify, YouTube, YouTube Music, Netflix (yatayı tercih edin).",
-          "✅ İletişim: Telegram (yalnızca okuma), WhatsApp (bildirimler).",
-          "✅ Sistem: kamera, hava durumu, takvim.",
-          "⚠️ Widevine L1 DRM kullanan uygulamalar (Disney+, Prime Video) VirtualDisplay üzerinde işlemeyi reddedebilir — Android sınırlaması, DashCast değil.",
-        ],
-      },
-      {
-        question: '❓ Güncellemeler: stable mı alpha mı?',
-        answer:
-          "Stable kanal (varsayılan) yayınlanmadan en az 1 hafta araçta test edilir. Alpha (Ayarlar → Güncellemeler\'de etkinleştirilir) derlenir derlenmez yeni build\'leri alır — önceden test için iyi, ancak geçici regresyonlar getirebilir.",
+          'GitHub: https://github.com/Kiroha/byd-dashcast — hatalar için Issues, sorular için Discussions. Tanıyı hızlandırmak için bir Günlük dışa aktarımı ekleyin.',
       },
     ],
   },
 
   footer:
-    'DashCast, GPL-3.0 lisansı altında dağıtılan açık kaynaklı bir projedir. BYD Auto Co., Ltd. ile bağlantılı değildir.',
+    'DashCast, MIT lisansı altında dağıtılan açık kaynaklı bir projedir. BYD Auto Co., Ltd. ile bağlantısı yoktur.',
 };
