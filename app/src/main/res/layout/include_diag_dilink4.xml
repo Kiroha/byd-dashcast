@@ -41,10 +41,11 @@
                     android:gravity="center_vertical">
 
                     <ImageView
+                        android:importantForAccessibility="no"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:src="@drawable/ic_science"
-                        android:tint="@color/md_primary"
+                        app:tint="@color/md_primary"
                         android:layout_marginEnd="14dp"/>
 
                     <LinearLayout

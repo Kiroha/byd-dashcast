@@ -14,6 +14,7 @@ android {
     // La Seal EU tourne sur Android 10 (API 29) — DiLink 3.0
     // compileSdk bumpé à 33 pour pouvoir utiliser Material 3 (com.google.android.material 1.9.x).
     // targetSdkVersion reste à 29 → comportement runtime inchangé sur la Seal.
+    namespace "com.byd.dashcast"
     compileSdkVersion 33
     // buildToolsVersion omis : AGP 7.4.2 utilise automatiquement 30.0.3
 
@@ -236,8 +237,36 @@ android {
         //   `ActivityRecord{... <pkg>/<class> t<N>}`. This restores the
         //   moveTaskToDisplay fast path (no fresh launch, no 2 s delay)
         //   on devices where a non-stock launcher is the home component.
-        versionCode 349
-        versionName "1.3.4"
+        // v1.3.6-beta (build 351) — merge v1.3.3 daemon fix + v1.3.4
+        //   launcher-agnostic findRunningTaskId fallback into the voice
+        //   beta line. No new feature beyond bringing the beta back in
+        //   sync with main so DL3 testers benefit from both fixes.
+        // v1.3.7-beta (build 352) — log noise reduction + ROM-strip handling.
+        //   ClusterService.findRunningTaskId: intermediate "not found in
+        //   dumpsys recents/activities" lines downgraded from WARN to DEBUG
+        //   (they are part of a normal Path 1→2→3 cascade; only the final
+        //   outcome matters and is already logged at the call site).
+        //   ClusterService.moveTaskToDisplayInternal: cache one-shot probe
+        //   for IActivityTaskManager.moveTaskToDisplay(int,int) — observed
+        //   stripped on the BYD DiLink 3 API 29 ROM (field log
+        //   byd_log_20260529_170731 errored on every cluster tap). On the
+        //   first NoSuchMethodException, log a single WARN explaining the
+        //   ROM lacks the hidden API, then skip the reflection entirely on
+        //   subsequent calls and go straight to the launcher fallback.
+        // v1.3.9-beta (build 354) — fix DL3 "black screen on restore".
+        //   Field log byd_log_20260529_234318 (DL3, v1.3.7-beta) showed: at
+        //   startup, the saved cluster pkg (com.waze) is restored from prefs
+        //   and the pending auto-send fires onSendToDashboard, which takes
+        //   the "already on cluster → show mirror only" shortcut without
+        //   verifying the process is alive. When Android killed Waze while
+        //   DashCast was in background, the user saw an empty mirror (black
+        //   screen) until state-poll cleared the state ~8 s later.
+        //   Fix in MainActivity.onActivationOk auto-send path: when the
+        //   pending app matches the restored cluster pkg, pidof first; if
+        //   the process is dead, clearClusterState() before delegating to
+        //   onSendToDashboard so it takes the normal fresh-launch path.
+        versionCode 436
+        versionName "1.5.0"
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to
@@ -272,12 +301,20 @@ android {
         exclude 'META-INF/NOTICE.txt'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/*.kotlin_module'
+        // v1.3.32-beta — voice native libs excluded from APK (~44 MB saved).
+        // Downloaded on demand by VoiceLibsManager when voice is first enabled.
+        // See scripts/prepare_voice_libs.sh to produce the zip for hosting.
+        exclude '**/libonnxruntime.so'
+        exclude '**/libonnxruntime4j_jni.so'
+        exclude '**/libvosk.so'
+        exclude '**/libjnidispatch.so'
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
 
     android.applicationVariants.all { variant ->
         variant.outputs.all { output ->
@@ -314,4 +351,10 @@ dependencies {
     // production paths never reach this code unless the user toggles the wake-word
     // switch in the Diagnostic tab.
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
+    // v1.4.0 — Vosk offline speech recognition (post-wake transcription).
+    // Small FR model (~40 MB) downloaded on first use via StorageService.unpack().
+    implementation 'com.alphacephei:vosk-android:0.3.47'
+
+    // v1.4.2 — Encrypted storage for OpenAI API key
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 }

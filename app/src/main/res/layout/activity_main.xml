@@ -65,7 +65,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_secondary_container"
+                app:tint="@color/md_on_secondary_container"
                 android:background="@drawable/bg_nav_pill_active"
                 android:src="@drawable/ic_apps"
                 android:contentDescription="@string/main_nav_apps"/>
@@ -95,7 +95,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_tune"
                 android:contentDescription="@string/main_nav_settings"/>
             <TextView
@@ -124,7 +124,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_stethoscope"
                 android:contentDescription="@string/main_nav_diag"/>
             <TextView
@@ -153,7 +153,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_info"
                 android:contentDescription="@string/main_nav_sysinfo"/>
             <TextView
@@ -182,7 +182,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_notes"
                 android:contentDescription="@string/main_nav_log"/>
             <TextView
@@ -217,7 +217,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_wifi_tethering"
                 android:contentDescription="@string/main_nav_hotspot"/>
             <TextView
@@ -225,6 +225,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/main_nav_hotspot"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Layouts (v1.4.9-beta) -->
+        <LinearLayout
+            android:id="@+id/nav_layouts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_dashboard"
+                android:contentDescription="@string/main_nav_layouts"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_layouts"
                 android:textSize="11sp"
                 android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
@@ -246,7 +275,7 @@
                 android:layout_height="32dp"
                 android:padding="4dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/md_on_surface_variant"
+                app:tint="@color/md_on_surface_variant"
                 android:src="@drawable/ic_help_outline"
                 android:contentDescription="@string/main_nav_help"/>
             <TextView
@@ -282,7 +311,8 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:orientation="horizontal"
-            android:visibility="gone"/>
+            android:visibility="gone"
+            tools:ignore="Suspicious0dp"/>
 
         <!-- v1.2.9 — DL5-only onboarding banner for the auto keyboard a11y service.
              Hidden by default; MainActivity reveals it on DL5 when the service is
@@ -367,6 +397,89 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- v1.4.12-beta — HUD navigation onboarding banner.
+             Hidden by default; shown when notification listener access is not
+             granted so the user can open the exact Settings screen to enable it. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_hud_notif_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/md_tertiary_container"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tv_hud_banner_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/hud_notif_banner_title"
+                    android:textColor="@color/md_on_tertiary_container"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tv_hud_banner_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/hud_notif_banner_body"
+                    android:textColor="@color/md_on_tertiary_container"
+                    android:textSize="12sp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_dismiss"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_dismiss"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:backgroundTint="@android:color/transparent"
+                        android:textColor="@color/md_on_tertiary_container"/>
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_later"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_later"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="4dp"
+                        android:backgroundTint="@android:color/transparent"
+                        android:textColor="@color/md_on_tertiary_container"/>
+
+                    <Button
+                        android:id="@+id/btn_hud_banner_enable"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/ime_banner_btn_enable"
+                        android:textSize="11sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:backgroundTint="@color/md_primary"
+                        android:textColor="@color/md_on_primary"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- ────── CONTENT ROW (left pane + right pane) ────── -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -404,7 +517,7 @@
                         android:layout_marginEnd="8dp"
                         android:layout_gravity="center_vertical"
                         android:scaleType="fitCenter"
-                        android:tint="@color/md_on_surface_variant"
+                        app:tint="@color/md_on_surface_variant"
                         android:src="@drawable/ic_search"
                         android:contentDescription="@null"/>
 
@@ -693,7 +806,7 @@
                                 android:textSize="14sp"
                                 android:visibility="gone"/>
 
-                            <com.byd.dashcast.InsetOverlayView
+                            <com.byd.dashcast.ui.InsetOverlayView
                                 android:id="@+id/inset_overlay"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
@@ -751,6 +864,44 @@
                             app:iconSize="20dp"
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
+
+                    <!-- ────── Layout carousel (visible only when Layouts mode enabled).
+                         Cards are built dynamically by FissionCoordinator: free mode,
+                         one card per saved preset (mini zone preview), manage card. -->
+                    <LinearLayout
+                        android:id="@+id/ll_layout_carousel_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="14dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:text="@string/main_layout_section"
+                            android:textAllCaps="true"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12"
+                            android:textColor="@color/md_on_surface_variant"/>
+
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:scrollbars="none"
+                            android:clipToPadding="false"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp">
+
+                            <LinearLayout
+                                android:id="@+id/ll_layout_carousel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"/>
+                        </HorizontalScrollView>
+                    </LinearLayout>
 
                     <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->
                     <LinearLayout
@@ -869,6 +1020,7 @@
                                     android:insetBottom="0dp"
                                     android:backgroundTint="@color/md_surface_container_high"
                                     android:textColor="@color/md_on_surface"/>
+
 
                                 <Button
                                     android:id="@+id/btn_keyboard_bridge"

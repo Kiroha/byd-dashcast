@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">يحافظ على العرض على عنقود BYD</string>
     <string name="notif_cluster_initializing">العنقود: تهيئة…</string>
     <string name="notif_cluster_active">العنقود نشط — الشاشة %1$d</string>
-    <string name="notif_cluster_stopped">العنقود: متوقف</string>
     <string name="notif_cluster_disconnected">العنقود: غير متصل</string>
     <string name="sysinfo_file_saved">\n\nالملف: %1$s\nأمر ADB: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ وضع الشبكة</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">يتحقق مما إذا كان هناك إصدار جديد متاح</string>
     <string name="settings_check_update_button">تحقق</string>
     <string name="settings_source_code_title">الكود المصدري</string>
-    <string name="main_title_dashboard">لوحة القيادة</string>
     <string name="main_nav_apps">تطبيقات</string>
     <string name="main_nav_settings">إعدادات</string>
     <string name="main_nav_diag">تشخيص</string>
@@ -200,6 +198,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">يراقب pidof · 500 مللي ثانية</string>
+    <string name="sysinfo_svc_checking">جارٍ التحقق…</string>
     <string name="sysinfo_svc_stopped">متوقف</string>
     <string name="sysinfo_svc_adb_unreachable">5555 غير متاح</string>
     <string name="sysinfo_svc_conn">CONN</string>
@@ -222,14 +221,9 @@
     <string name="log_saved_toast">تم حفظ السجل: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">محرك تجريبي (بيتا)</string>
-    <string name="settings_beta_warning">ميزات تجريبية. في حالة وجود مشكلة، يعود التطبيق تلقائيًا إلى المحرك المستقر. يلزم إعادة التشغيل بعد التغيير.</string>
-    <string name="settings_beta_proxy_daemon">خفي وكيل مميز</string>
-    <string name="settings_beta_proxy_daemon_support">يشغّل خفيًا دائمًا عبر ADB محلي (UID 2000) لتنفيذ أوامر النظام. مستوحى من OpenBYD.</string>
-    <string name="settings_beta_system_context">سياق النظام (انعكاس)</string>
-    <string name="settings_beta_system_context_support">يحصل على Context للنظام عبر ActivityThread.systemMain() لتجاوز فحوصات أذونات SDK من BYD.</string>
-    <string name="beta_restart_title">يلزم إعادة التشغيل</string>
-    <string name="beta_restart_message">سيُطبَّق هذا الخيار عند تشغيل DashCast التالي. يمكنك متابعة استخدام التطبيق بشكل طبيعي حتى ذلك الحين.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="diag_tab_cluster">العداد</string>
     <string name="diag_tab_display">العرض</string>
     <string name="diag_tab_adb_local">ADB محلي</string>
@@ -239,10 +233,9 @@
     <string name="diag_coming_soon_subtitle">سيُضاف هذا القسم في إصدار قادم. راجع علامة التبويب «Beta Engine» للاختبارات الحالية.</string>
     <string name="diag_beta_header_title">محرك تجريبي</string>
     <string name="diag_beta_header_subtitle">اختبارات Component A (الخفي) وComponent B (سياق النظام). المرحلة 1.</string>
-    <string name="diag_beta_pill_a_off">A · الخفي: OFF</string>
-    <string name="diag_beta_pill_a_on">A · الخفي: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
     <string name="diag_beta_counters_idle">اضغط «تشغيل الكل» للبدء</string>
     <string name="diag_beta_counters_running">قيد التنفيذ…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -262,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">التطبيق المستهدف (اختبار D8 — العنقود)</string>
     <string name="diag_dl5_d8_running_toast">اختبار D8 على %1$s — سيُعاد تشغيل التطبيق ثم استدعاؤه إلى الشاشة الرئيسية.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">وضع DiLink 5 (تجريبي)</string>
-    <string name="settings_dilink5_mode_support">يكيّف DashCast مع بروتوكول DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. يلزم إعادة التشغيل.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">لوحة المفاتيح التلقائية للعنقود (DashCast)</string>
     <string name="a11y_ime_watcher_summary">تعرض لوحة المفاتيح الجسرية عند لمس حقل نص على العنقود.</string>
@@ -276,6 +266,9 @@
     <string name="ime_banner_btn_dismiss">عدم الإظهار مرة أخرى</string>
     <string name="ime_banner_toast_enabled">لوحة المفاتيح التلقائية نشطة ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">تعذر فتح الإعدادات — فعّل يدويًا خدمة إمكانية الوصول « لوحة المفاتيح التلقائية للعنقود ».</string>
+    <string name="hud_notif_banner_title">HUD ملاحة — مطلوب الوصول إلى الإشعارات</string>
+    <string name="hud_notif_banner_body">يحتاج DashCast إلى الوصول إلى الإشعارات لعرض تعليمات الملاحة على لوحة العدادات. فعّله من الإعدادات ← الوصول الخاص للتطبيقات ← الوصول إلى الإشعارات ← DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">تم تفعيل الوصول إلى الإشعارات ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">فعّل « DashCast Cluster IME » من الإعدادات ← إمكانية الوصول حتى تعمل لوحة المفاتيح على لوحة العدادات.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">لوحة المفاتيح</string>
@@ -371,14 +364,15 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · جارٍ التحقق…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">اختبار Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">اختبار مباشر مدمر: يشغل التطبيق المختار على شاشة الـ fission، ويفرض تغيير الحجم، ثم يعيده إلى الشاشة الرئيسية، ثم ينظف. DiLink 5 فقط، لا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">اختبار Fission — مدمر</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">الهدف: %1$s\n\nستقوم هذه المجموعة بـ:\n\n• تفعيل FORCE_RESIZE_APP على التطبيق\n• إيقاف التطبيق قسريًا\n• تشغيله على شاشة الـ fission (id ≠ 0) في وضع freeform\n• اختبار تغيير حجم المهمة\n• إعادته إلى الشاشة الرئيسية (id 0) للتحقق من النقل\n• إيقاف التطبيق قسريًا ثم إعادة تعيين compat (تنظيف)\n\nلا يتم إرسال أي أمر تغيير حجم إلى الشاشة الرئيسية (id 0).\nمتابعة؟</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">تشغيل الاختبار</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">اختبار Fission مخصص لـ DiLink 5 فقط.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">اختر التطبيق للاختبار</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">اختبار VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">يتحقق من مسار VirtualDisplay → MirrorDaemon في 7 خطوات: إنشاء VD، تشغيل التطبيق على VD، عكس الصورة على سطح الكتلة. لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">اختبار VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">الهدف: %1$s\n\nستقوم هذه المجموعة بـ:\n\n• V01: تفعيل إسقاط الكتلة (auto_container)\n• V02: التحقق من إمكانية تشغيل التطبيق\n• V03: إنشاء VirtualDisplay 1920×720\n• V04: تشغيل التطبيق على VD\n• V05: بدء النسخ المرآوي عبر MirrorDaemon\n• V06: التحقق البصري من عرض الكتلة\n• V07: التنظيف (إيقاف المرآة، حذف VD، force-stop)\n\nلـ DiLink 5 فقط. سيتم إيقاف التطبيق المستهدف قسرًا خلال الاختبار.\nهل تريد المتابعة؟</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">تشغيل الاختبار</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">اختبار VD Pipeline مخصص لـ DiLink 5 فقط.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">اختر التطبيق للاختبار</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">لم يتم العثور على تطبيقات قابلة للتشغيل.</string>
     <string name="diag_dl5_fission_prompt_title">التحقق من شاشة العنقود</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">هل %1$s مرئي على شاشة العنقود؟\n\n(اختبار الشاشة %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">نعم</string>
@@ -404,7 +398,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">صوت (تجريبي)</string>
     <string name="diag_voice_header_title">التحكم الصوتي — اختبار سلسلة الصوت</string>
-    <string name="diag_voice_header_subtitle">الخطوة 1/3: التحقق من وصول الميكروفون إلى التطبيق على هذا الجهاز. لم يتم تحميل أي نموذج ML بعد.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">الخطوة 1/3: التحقق من وصول الميكروفون إلى التطبيق على هذا الجهاز. لم يتم تحميل أي نموذج ML بعد.</string>
     <string name="diag_voice_btn_start">بدء الاستماع</string>
     <string name="diag_voice_btn_stop">إيقاف</string>
     <string name="diag_voice_state_idle">الخدمة متوقفة</string>
@@ -423,20 +417,37 @@
     <string name="diag_voice_notif_text">تحليل مستوى الصوت محليًا، لا يتم تسجيل أي شيء.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">الأوامر الصوتية (Vosk)</string>
+    <string name="diag_voice_commands_switch">تفعيل</string>
+    <string name="diag_voice_commands_hint">قل "Hey Jarvis" ثم أمرك: "الكتلة"، "إغلاق الكتلة"، "تشغيل YouTube"، "التشخيص"، "السجلات".</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">مفتاح OpenAI API (اختياري — يُفعّل Jarvis الذكاء الاصطناعي)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">كلمة التنشيط (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">نموذج التعرف على الصوت</string>
+    <string name="diag_voice_model_small_label">نموذج صغير (~40 ميغابايت)</string>
+    <string name="diag_voice_model_small_desc">تنزيل سريع، دقة جيدة للأوامر القصيرة.</string>
+    <string name="diag_voice_model_large_label">نموذج كبير (~1.3 جيجابايت) — دقة عالية</string>
+    <string name="diag_voice_model_large_desc">تعرف أفضل، يوصى به عند الاتصال بالواي فاي.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d ميغابايت متاح</string>
+    <string name="diag_voice_model_download_btn">تنزيل</string>
+    <string name="diag_voice_model_delete_btn">حذف</string>
+    <string name="diag_voice_model_status_downloaded">✓ النموذج مثبّت</string>
+    <string name="diag_voice_model_status_not_downloaded">غير مثبّت</string>
+    <string name="diag_voice_model_progress_fmt">%1$d ميغابايت / %2$d ميغابايت (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">جار الاستخراج…</string>
     <string name="diag_voice_wakeword_switch">تفعيل</string>
     <string name="diag_voice_wakeword_score_label">درجة السيجمويد (عتبة 0٫5)</string>
     <string name="diag_voice_wakeword_model_fmt">النموذج: hey_jarvis_v0.1 (نائب لـ «Ok DashCast»)</string>
     <string name="diag_voice_wakeword_last_fmt">آخر اكتشاف: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">آخر اكتشاف: %1$s (درجة %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime غير متوفر — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -525,4 +536,110 @@
     <string name="dpi_custom">مخصص…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">سيُطبَّق عند الإطلاق التالي</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">يرسل sendInfo(30) قبل الإسقاط — يصلح تمدد ADAS في بعض المركبات. قم بالتعطيل إذا تغير شكل المجموعة عند البدء.</string>
+    <string name="settings_fission_mode">وضع Layouts</string>
+    <string name="settings_fission_mode_support">إسقاط تطبيقات متعددة على المجموعة بمناطق مخصصة. يتطلب خادم الوكيل.</string>
+    <string name="fission_title">Fission — مجموعة متعددة التطبيقات</string>
+    <string name="fission_status_idle">اضغط + لعرض تطبيق</string>
+    <string name="fission_btn_add">+ إضافة تطبيق</string>
+    <string name="fission_btn_stop">إيقاف الكل</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">محرر التخطيطات</string>
+    <string name="fission_editor_clear">مسح</string>
+    <string name="fission_editor_save">حفظ</string>
+    <string name="fission_editor_edit">تعديل</string>
+    <string name="fission_editor_delete">حذف</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">إدارة التخطيطات</string>
+    <string name="layout_manager_new">تخطيط جديد</string>
+    <string name="layout_canvas_hint">اسحب لرسم منطقة</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">%1$d تطبيق نشط</string>
+    <string name="fission_all_projected">جميع التطبيقات معروضة بالفعل</string>
+    <string name="fission_close_slot_confirm">إغلاق</string>
+    <string name="fission_close_slot_title">إغلاق %1$s؟</string>
+    <string name="fission_conflict_message">يوجد عرض نشط بالفعل. هل تريد إيقافه للمتابعة؟</string>
+    <string name="fission_conflict_stop">إيقاف</string>
+    <string name="fission_conflict_title">تعارض في العرض</string>
+    <string name="fission_idle_hint">اضغط + لعرض تطبيق</string>
+    <string name="fission_launch_in">تشغيل %1$s في…</string>
+    <string name="fission_layout_active_fmt">التخطيط: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">تم تعيين التخطيط المفضل ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">وضع حر</string>
+    <string name="fission_layout_switch">تغيير</string>
+    <string name="fission_mode_free">وضع حر</string>
+    <string name="fission_no_apps">لا توجد تطبيقات متاحة</string>
+    <string name="fission_pick_app_title">اختر تطبيقًا</string>
+    <string name="fission_place_in">وضع %1$s في…</string>
+    <string name="fission_resize_full">ملء الشاشة</string>
+    <string name="fission_resize_left_3q">يسار ¾</string>
+    <string name="fission_resize_left_half">يسار ½</string>
+    <string name="fission_resize_right_3q">يمين ¾</string>
+    <string name="fission_resize_right_half">يمين ½</string>
+    <string name="fission_resize_title">تغيير حجم %1$s</string>
+    <string name="fission_slot_error">الفتحة %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">ربط تطبيق…</string>
+    <string name="fission_slot_pkg_none">لا شيء — منطقة حرة</string>
+    <string name="fission_slot_zone_bound_fmt">التطبيق المرتبط: %1$s</string>
+    <string name="settings_fission_auto_layout">التخطيط المفضل التلقائي</string>
+    <string name="settings_fission_auto_layout_support">عند تشغيل DashCast: يفعّل إسقاط المجموعة والتخطيط المفضل ثم يشغّل التطبيقات المرتبطة</string>
+    <string name="settings_fission_precreate_slots">إنشاء الفتحات مسبقًا عند البدء</string>
+    <string name="settings_fission_precreate_slots_support">يجهّز شاشات Virtual Display للتخطيط المفضل عند فتح Fission (دون تشغيل التطبيقات)</string>
+    <string name="sysinfo_disp_hidden">مخفي (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">غير مرئي عبر DisplayManager API</string>
+    <string name="layout_preset_activate">تفعيل</string>
+    <string name="layout_preset_active_badge">نشط</string>
+    <string name="layout_preset_deactivate">إلغاء التفعيل</string>
+    <string name="fission_zone_count">%1$d منطقة</string>
+    <string name="fo_err_attach_fmt">تعذّر إنشاء الفتحة لـ %1$s</string>
+    <string name="fo_err_daemon">الخادم غير متاح</string>
+    <string name="fo_err_proxy">Proxy ADB Daemon غير متصل. فعّله من الإعدادات.</string>
+    <string name="fo_status_autoactivate">جارٍ التفعيل التلقائي للتخطيط…</string>
+    <string name="fo_status_autolayout_err_fmt">خطأ التخطيط التلقائي: %1$s</string>
+    <string name="fo_status_create_fmt">جارٍ إنشاء الفتحة لـ %1$s…</string>
+    <string name="fo_status_daemon">جارٍ تشغيل الخادم…</string>
+    <string name="fo_status_launching_fmt">جارٍ تشغيل %1$s (الشاشة %2$d)…</string>
+    <string name="fo_status_mirror">جارٍ تشغيل المرآة…</string>
+    <string name="fo_status_precreate">جارٍ إنشاء الفتحات مسبقًا…</string>
+    <string name="fo_status_projection">جارٍ تفعيل إسقاط المجموعة…</string>
+    <string name="fo_status_reuse_fmt">جارٍ إعادة استخدام الفتحة لـ %1$s…</string>
+    <string name="fo_status_starting_fmt">جارٍ تشغيل %1$s…</string>
+    <string name="fo_status_stopping">جارٍ الإيقاف…</string>
+    <string name="lm_action_add">إضافة</string>
+    <string name="lm_action_delete">حذف</string>
+    <string name="lm_action_save">حفظ</string>
+    <string name="lm_activated_ok_fmt">تم تفعيل %1$s ✓</string>
+    <string name="lm_activated_partial_fmt">تم تفعيل %1$s (فشلت بعض الفتحات)</string>
+    <string name="lm_activating_fmt">جارٍ تفعيل %1$s…</string>
+    <string name="lm_daemon_not_connected">الخادم غير متصل — ابدأ إسقاط Fission أولاً</string>
+    <string name="lm_delete_confirm_fmt">حذف «%1$s»؟</string>
+    <string name="lm_draw_zone_first">ارسم منطقة واحدة على الأقل</string>
+    <string name="lm_edit_zones_hint">عدّل المناطق ثم احفظ</string>
+    <string name="lm_error_fmt">خطأ: %1$s</string>
+    <string name="lm_free_mode_toast">تم تفعيل الوضع الحر</string>
+    <string name="lm_layout_default_name_fmt">تخطيط %1$d</string>
+    <string name="lm_layout_name_hint">اسم التخطيط</string>
+    <string name="lm_layout_save_title">حفظ التخطيط</string>
+    <string name="lm_layout_saved_toast">تم حفظ التخطيط ✓</string>
+    <string name="lm_new_layout_name">تخطيط جديد</string>
+    <string name="lm_no_layout_loaded">لا يوجد تخطيط محمّل</string>
+    <string name="lm_no_saved_layouts">لا توجد تخطيطات محفوظة\nارسم المناطق أعلاه ثم احفظ.</string>
+    <string name="lm_save_before_favorite">احفظ التخطيط أولاً قبل تعيينه كمفضل</string>
+    <string name="lm_zone_delete_title">حذف المنطقة؟</string>
+    <string name="lm_zone_edit_title_fmt">تعديل «%1$s»</string>
+    <string name="lm_zone_height">الارتفاع (px)</string>
+    <string name="lm_zone_name_hint">اسم المنطقة</string>
+    <string name="lm_zone_new_title_fmt">منطقة جديدة — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">الموضع والأبعاد</string>
+    <string name="lm_zone_width">العرض (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">تخطيط المجموعة</string>
+    <string name="main_layout_free_sub">بدون تخطيط</string>
+    <string name="main_layout_manage">إدارة</string>
 </resources>

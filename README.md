@@ -11,13 +11,9 @@
 [![Docs](https://img.shields.io/badge/docs-kiroha.github.io-blue)](https://kiroha.github.io/byd-dashcast/)
 [![Telegram](https://img.shields.io/badge/Telegram-community-2CA5E0?logo=telegram)](https://t.me/+QPk_dmTVaNkxMjFk)
 
-Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app
-onto the instrument cluster display, control it via a real-time touch mirror, and diagnose
-BYD APIs.
+Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app onto the instrument cluster display, control it via a real-time touch mirror, run multiple apps simultaneously on the cluster with the **Fission** layout engine, and interact with the car using **voice commands**.
 
 > **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F) — Android 10 (API 29)
-
-**v1.0.0 — Official Stable Release.** DashCast has graduated from alpha/beta. The interface has been fully redesigned in **Material 3**, the projection start/stop flow has been hardened to prevent edge-case bugs, and the documentation has been rewritten from scratch.
 
 - **Documentation**: https://kiroha.github.io/byd-dashcast/
 - **Community (Telegram)**: https://t.me/+QPk_dmTVaNkxMjFk
@@ -46,39 +42,37 @@ BYD APIs.
 
 | # | Feature | Description |
 |---|---|---|
-| 1 | **App list** | All installed apps (sorted RecyclerView) |
-| 2 | **→ Cluster** | Push an app to the cluster (ADB trampoline uid=2000 + display=1 FREEFORM) |
+| 1 | **App list** | All installed apps (sorted RecyclerView, category filters) |
+| 2 | **→ Cluster** | Push any app to the cluster display (uid=2000 ADB trampoline + FREEFORM) |
 | 3 | **→ Main screen** | Move an app from the cluster back to display 0 |
-| 4 | **Touch mirror** | Real-time TextureView of the cluster via `SurfaceControl.createDisplay()` + touch forwarding |
-| 5 | **Split 50/50** | Two apps side by side on the cluster (force-stop + relaunch with `--bounds`) |
-| 6 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
-| 7 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
-| 8 | **⚙ Settings** | Cluster screen size: 8.8" / 12.3" (Seal EU default) / 10.25" |
-| 9 | **🔧 Diagnostic** | Placeholder screen — new diagnostic tools will be added here in upcoming releases |
-| 10 | **📋 System report** | Displays, permissions, build tags, APK signature |
-| 11 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, share |
-| 12 | **Multilingual** | French / English / German / Italian / **Spanish** / Turkish / Russian / Ukrainian / **Arabic** / Uzbek / Kazakh / Belarusian (12 languages), selected on first launch |
-| 13 | **Floating mirror overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
-| 14 | **Category filters** | Filter app list by All / Navigation / Media (toggle in Settings) |
-| 15 | **Launch profiles** | Driving/Parking profiles with per-profile app selection |
-| 16 | **Usage statistics** | Tracks per-app cluster usage time with reset option |
-| 17 | **Smart activation prompt** | If projection is off, launching an app shows a dialog to activate projection first |
+| 4 | **Touch mirror** | Real-time TextureView of the cluster via `SurfaceControl` + full touch & key forwarding |
+| 5 | **Fission** | Multi-app layout engine: run several apps simultaneously on the cluster, with layout presets, per-slot app binding, auto-activation on open, and a visual editor |
+| 6 | **Voice commands** | Wake-word detection → offline speech recognition (Vosk) → LLM processing → TTS response. Models downloaded at first use via `VoiceLibsManager` |
+| 7 | **HUD overlay** | Navigation data extracted from active map notifications and rendered on the cluster (speed, direction, next instruction, ETA) |
+| 8 | **Per-app DPI override** | Adjustable cluster display DPI per package — corrects apps that render incorrectly at 320 dpi |
+| 9 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
+| 10 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
+| 11 | **Settings** | Cluster screen size, auto-launch, Fission auto-layout, beta OTA channel, per-app insets |
+| 12 | **Diagnostics** | Shell probes, BYD API instantiation tests, live CAN data, display enumeration |
+| 13 | **System report** | Displays, system properties, BYD packages, permissions, proxy metrics, DiLink probe results |
+| 14 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, auto-scroll, share |
+| 15 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (13 languages), selected on first launch |
+| 16 | **Floating overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
+| 17 | **Hotspot control** | Toggle and monitor Wi-Fi hotspot from within the app |
 | 18 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
 | 19 | **OTA update** | Auto-check against GitHub Releases API, silent install via `PackageInstaller` (platform key), fallback to system dialog |
 
 ---
 
+## Architecture overview
 
-## WindowManagement v1.2 — Reverse Engineering
+DashCast is organized around three runtime layers:
 
-`WindowManagement v1.2` is a third-party app used on DiLink systems to control the cluster
-display surface. Its internal Binder API was reverse-engineered to identify the hidden method
-names used to interact with `SurfaceControl`:
-`openTransaction`, `setDisplaySurface`, `setDisplayProjection`,
-`setDisplayLayerStack`, `closeTransaction`.
+**App layer** (`uid=10080`) — MainActivity and all UI coordinators. Handles user interaction, app list, settings, mirror rendering, Fission layout UI, and voice commands.
 
-DashCast uses the same static `SurfaceControl` API directly, confirming compatibility
-with DiLink 3.0.
+**ClusterService** (`uid=10080`, foreground service) — Manages cluster projection independently of the Activity lifecycle. Owns the display connection, mirror pipeline, touch forwarding, and task resize.
+
+**Beta Proxy Daemon** (`uid=2000` / shell) — A background `app_process64` daemon that runs with shell-level permissions. Handles operations that require elevated access: `sendInfo` calls to `AutoContainer`, `SurfaceControl` mirror transactions, task windowing mode changes, FREEFORM stack management, and CAN bus writes. Kept alive by `ProxyKeeperService`. The app falls back gracefully if the daemon is unavailable.
 
 ---
 
@@ -86,26 +80,93 @@ with DiLink 3.0.
 
 ```
 app/src/main/java/com/byd/dashcast/
-├── MainActivity.java           — Main 15.6" screen: app list, cluster mirror, split
-├── WelcomeActivity.java        — Language selection (first launch)
-├── DiagActivity.java           — Placeholder (clean slate; new diagnostic tools will land here)
-├── SysInfoActivity.java        — System report + share
-├── ClusterService.java         — Foreground service: cluster projection independent of Activity lifecycle
-├── AdbLocalClient.java         — All ADB logic (dadb, localhost:5555)
-├── AppListAdapter.java         — RecyclerView (→ Cluster / ← Main / → Cluster / ✕)
-├── AppLogger.java              — Singleton logger (levels, 3000 entries, saveToFile, share)
-├── LogActivity.java            — Real-time log (filters, auto-scroll, share)
-├── FloatingRemoteButton.java   — Floating overlay: tap=mirror view, long press=quick-switch popup
-├── LocaleHelper.java           — Language persistence (SharedPreferences)
-├── daemon/
-│   └── MirrorDaemon.java        — Core proxy class mirroring cluster display
-└── dashboard/
-    ├── ClusterManager.java          — Cluster activation sequence (sendInfo 30→16→35, autonomous)
-    ├── DashboardDisplayHelper.java  — Cluster VirtualDisplay detection (DisplayManager + polling)
-    ├── DashboardLauncher.java       — Launch app on main display (setLaunchDisplayId)
-    ├── ClusterTrampolineActivity.java — Exported trampoline launched via ADB uid=2000 on display 1
-    ├── ClusterMirrorManager.java    — SurfaceControl mirror (createDisplay + Transaction + touch)
-    └── ClusterInputForwarder.java   — MotionEvent/KeyEvent injection to the cluster
+│
+├── MainActivity.java              — Orchestrator: nav rail, mirror, app list, cluster control
+├── DashCastApp.java               — Application class, startup hooks
+│
+├── cluster/                       — Cluster projection & mirror pipeline
+│   ├── ClusterService.java        — Foreground service: owns projection lifecycle
+│   ├── ClusterSessionTracker.java — Per-session app tracking
+│   ├── display/                   — Display detection & app launching
+│   │   ├── ClusterManager.java    — sendInfo activation sequence (30→16→35)
+│   │   ├── DashboardDisplayHelper.java
+│   │   └── DashboardLauncher.java
+│   ├── mirror/                    — SurfaceControl mirror + touch injection
+│   │   ├── ClusterMirrorManager.java
+│   │   └── ClusterInputForwarder.java
+│   └── dpi/                       — Per-app DPI override
+│       ├── ClusterDpiManager.java
+│       ├── ClusterResizeActivity.java
+│       └── ResizeFrameView.java
+│
+├── fission/                       — Multi-app cluster layout engine
+│   ├── FissionActivity.java       — Main multi-slot UI
+│   ├── FissionOrchestrator.java   — Slot lifecycle, conflict resolution
+│   ├── FissionLayoutEditorActivity.java
+│   ├── LayoutManagerActivity.java
+│   ├── LayoutPreset.java / LayoutPrefs.java
+│   ├── LayoutPresetAdapter.java
+│   ├── FissionClient.java         — Proxy client for fission verbs
+│   └── ClusterCanvasView.java     — Visual layout canvas
+│
+├── voice/                         — Offline voice command pipeline
+│   ├── VoiceService.java          — Foreground service, audio capture loop
+│   ├── wakeword/WakeWordEngine.java — Wake-word detection
+│   ├── VoskTranscriber.java       — Vosk offline speech recognition
+│   ├── LlmVoiceEngine.java        — LLM intent resolution
+│   ├── VoiceCommandRouter.java    — Routes intents to app actions
+│   └── VoiceLibsManager.java      — Runtime model download & management
+│
+├── proxy/                         — Beta Proxy Daemon client interface
+│   ├── ProxyClient.java           — All Binder calls to the daemon
+│   ├── ProxyKeeperService.java    — Keeps the daemon alive (10 s heartbeat)
+│   ├── ProxyWatchdog.java         — Periodic connectivity check
+│   ├── ShellGateway.java          — Fire-and-forget / result shell dispatcher
+│   ├── ProxyFissionVerbs.java     — launchAndForce, moveAndResize, cleanStacks
+│   ├── ProxyDisplayVerbs.java     — Overscan, display size
+│   ├── ProxyCanVerbs.java         — CAN bus write verbs
+│   └── daemon/                    — Daemon process (runs as uid=2000)
+│       ├── ProxyDaemonMain.java   — Entry point, Binder onTransact()
+│       ├── ProxyDaemonContract.java — TXN constants
+│       ├── MirrorDaemon.java      — SurfaceControl mirror transactions
+│       ├── Phase4TaskVerbs.java   — FREEFORM mode, task resize, move
+│       ├── Phase4DisplayVerbs.java
+│       ├── Phase4ProcessVerbs.java
+│       ├── CanWriteVerbs.java     — CAN bus writes
+│       └── TaskRemover.java
+│
+├── hud/                           — Navigation HUD overlay
+│   ├── HudController.java
+│   ├── HudNavigationData.java
+│   └── MapNotificationListenerService.java
+│
+├── system/                        — System-level services
+│   ├── CanBusController.java
+│   └── FloatingRemoteButton.java  — Persistent overlay (📺 button)
+│
+├── infrastructure/                — Platform-adaptive strategy layer
+│   ├── AdbLocalClient.java        — ADB TCP/IP (dadb, localhost:5555)
+│   ├── launch/                    — App launcher strategies (IAM, shell, fallback)
+│   └── task/                      — Task finder & resizer strategies (reflection, shell, daemon)
+│
+├── ui/                            — All UI code
+│   ├── main/                      — MainActivity coordinators
+│   │   ├── ClusterControlCoordinator.java
+│   │   ├── InsetAutoApplicator.java
+│   │   ├── AppActionSheet.java
+│   │   ├── FissionCoordinator.java
+│   │   └── …
+│   ├── settings/SettingsActivity.java
+│   ├── diag/                      — Diagnostics & system info
+│   ├── log/LogActivity.java       — Live log viewer
+│   ├── hotspot/HotspotActivity.java
+│   └── welcome/WelcomeActivity.java
+│
+├── platform/Platform.java         — DiLink version detection (DL2/3/4/5)
+├── update/UpdateChecker.java      — GitHub Releases OTA
+└── util/
+    ├── AppLogger.java             — Circular log buffer (3000 entries, share)
+    └── LocaleHelper.java
 ```
 
 ---
@@ -133,35 +194,34 @@ sendInfo(1000, 35)                  → Di4.0 mode — triggers VirtualDisplay c
 ```
 
 The VirtualDisplay is ready **~280ms after sendInfo(35)**. It is owned by
-`com.xdja.containerservice` (uid=1000) and has `FLAG_OWN_CONTENT_ONLY`, meaning only its
-owner can write to it. Apps are launched on it via `am start --display 1`.
+`com.xdja.containerservice` (uid=1000) and has `FLAG_OWN_CONTENT_ONLY`.
 
 ### Cluster activation
 
 ```
-sendInfo(1000, 30)   → switch the cluster to the Qt surface reserved for 12.3" screens —
-                       this fixes the ADAS window layout issue that occurs on 10.25" panels
+sendInfo(1000, 30)   → switch the cluster to the Qt surface reserved for 12.3" screens
 wait ~1 s
 sendInfo(1000, 16)   → Qt standby (全屏投屏开启) — releases the surface for our app
 wait ~2 s
-am start --display 1 --windowingMode 5 ClusterTrampolineActivity --es target_package <pkg>
+am start --display 1 --windowingMode 5 <pkg>
 ```
 
-`sendInfo` is sent via **ADB relay** (uid=2000) because our app (uid=10xxx) is blocked
-by `AutoContainerService.checkSendPermissionAndAllowType()`.
+`sendInfo` is sent via the **Beta Proxy Daemon** (uid=2000) because our app (uid=10080) is
+blocked by `AutoContainerService.checkSendPermissionAndAllowType()`.
 
 ### Launching an app on the cluster
 
 `ClusterService` calls `startActivityViaIAM()`, which invokes
 `IActivityManager.startActivityAsUser()` via reflection with
-`ActivityOptions.setLaunchDisplayId(clusterDisplayId)` set to the cluster display.
-This requires `INTERNAL_SYSTEM_WINDOW` — granted because the APK is signed with
-`platform.keystore` (AOSP testkey, recognised as the platform cert on this ROM).
+`ActivityOptions.setLaunchDisplayId(clusterDisplayId)`.
 A `Context.startActivity()` fallback is used if the IAM call fails.
 
-> `ClusterTrampolineActivity` is still present in the manifest but is not exported
-> (`exported="false"`) and its body is a no-op (`finish()` immediately) — kept as
-> an emergency fallback only.
+The `fission_bg_xdjaVirtualSurface` display does **not** have
+`FLAG_SUPPORTS_FREEFORM_WINDOW_MANAGEMENT`. ActivityOptions FREEFORM requests are silently
+ignored by the ROM. After launch, `ClusterService.resizeActiveTask()` routes through the
+Beta Proxy Daemon (`ProxyClient.moveAndResize`) which calls
+`IActivityTaskManager.setTaskWindowingMode(FREEFORM)` with uid=2000 permissions before
+resizing — the only sequence confirmed to work on this platform.
 
 ### Real-time mirror
 
@@ -171,7 +231,7 @@ VMRuntime.setHiddenApiExemptions(["Landroid/", "Lcom/android/", "Ljava/lang/"]);
 
 // 2. Create a virtual mirror display
 IBinder token = SurfaceControl.createDisplay("byd_cluster_mirror", true);
-// secure=true required on DiLink 3.0 (same as WindowManagement v1.2)
+// secure=true required on DiLink 3.0
 
 // 3. Project the cluster display onto the TextureView surface
 SurfaceControl.openTransaction();
@@ -181,6 +241,31 @@ SurfaceControl.setDisplayProjection(token, 0, srcRect, dstRect);
 SurfaceControl.closeTransaction();
 ```
 
+### Beta Proxy Daemon
+
+The daemon is a long-running `app_process64` process loaded from the app's own APK:
+
+```bash
+CLASSPATH=<apk> exec /system/bin/app_process64 /system/bin \
+  --nice-name=dashcast_proxy \
+  com.byd.dashcast.proxy.daemon.ProxyDaemonMain
+```
+
+It exposes a Binder interface (registered in `ServiceManager` as `dashcast_proxy`) with
+19 transactions. Key verbs:
+
+| TXN | Method | Purpose |
+|-----|--------|---------|
+| 3 | `exec` | Run arbitrary shell command |
+| 7 | `autocontainerSendInfo` | sendInfo to AutoContainer (uid=2000 bypasses permission check) |
+| 11 | `launchAndForce` | Launch app on VirtualDisplay with FREEFORM placement |
+| 12 | `moveAndResize` | Move existing task to display + force FREEFORM + resize |
+| 13 | `cleanFissionStacks` | Remove zombie split-screen stacks |
+| 16 | `canNaviStatus` | Write CAN navigation status |
+
+`ProxyKeeperService` reconnects to the daemon every 10 s if the Binder is dead.
+`ProxyWatchdog` polls every 30 s during active sessions.
+
 ### Restore
 
 ```
@@ -188,6 +273,19 @@ am force-stop <app>                  → releases the Qt surface
 sendInfo(1000, 18)                   → 投屏关闭 — close projection
 sendInfo(1000, 0)                    → 主机恢复仪表视频流 — Qt resumes
 ```
+
+---
+
+## WindowManagement v1.2 — Reverse Engineering
+
+`WindowManagement v1.2` is a third-party app used on DiLink systems to control the cluster
+display surface. Its internal Binder API was reverse-engineered to identify the hidden method
+names used to interact with `SurfaceControl`:
+`openTransaction`, `setDisplaySurface`, `setDisplayProjection`,
+`setDisplayLayerStack`, `closeTransaction`.
+
+DashCast uses the same static `SurfaceControl` API directly, confirming compatibility
+with DiLink 3.0.
 
 ---
 
@@ -247,9 +345,10 @@ Once DashCast is installed, future updates are automatic:
 
 ## Known issues
 
-- **First-launch mirror touch**: On the very first run after install, touch input on the mirror may be inactive. Force-stop the app and relaunch — touch is reliable from the second start onwards.
+- **BYD vehicle data permissions**: On some units, `BYDAUTO_*` permissions are denied at the platform level regardless of signing. Speed, energy, and instrument data will be unavailable; all other features are unaffected.
+- **resizeTask on first install**: On a fresh install, the cluster task may not resize to fill the display on the first launch. This resolves automatically after the first successful `moveAndResize` cycle through the daemon.
 - **App persistence**: Apps launched on the cluster may return to the main display after a phone call or ADAS event (Qt reclaims the surface).
-- **Split 50/50**: Experimental — may fail depending on the target app's window mode.
+- **Voice models**: Vosk and LLM models are several hundred MB and are downloaded on first voice activation. Requires an active internet connection during the initial setup.
 
 ---
 
@@ -284,7 +383,7 @@ app/keystore/platform.keystore
   alias: androiddebugkey | storepass/keypass: android
 ```
 
-The `app/build.gradle` signing config applies this keystore for both debug and release.
+The `app/build.gradle` signing config applies this keystore for both debug and release builds.
 
 ---
 
@@ -308,9 +407,11 @@ cd MyBYDApp   # repo folder name
 |---|---|---|
 | `INJECT_EVENTS` | signature | Touch/key injection to the cluster |
 | `SYSTEM_ALERT_WINDOW` | dangerous | Floating overlay (FloatingRemoteButton) |
-| `FOREGROUND_SERVICE` | normal | ClusterService |
-| `INTERNET` | normal | Network access (reserved for future use) |
-| `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs (declared, not yet used) |
+| `FOREGROUND_SERVICE` | normal | ClusterService, VoiceService |
+| `RECORD_AUDIO` | dangerous | Voice command pipeline |
+| `INTERNET` | normal | OTA update check, voice model download |
+| `BIND_NOTIFICATION_LISTENER_SERVICE` | signature | Navigation HUD (map notification parsing) |
+| `BYDAUTO_*_COMMON` (×11) | dangerous | BYD vehicle APIs |
 | `BYDAUTO_*_GET` | signature | Extended read (not grantable without real BYD key) |
 
 `dangerous` permissions are typically pre-granted by the ROM at install time on DiLink 3.0 (platform-signed APK).

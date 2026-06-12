@@ -907,6 +907,14 @@ body.embed .car-screen {
           <div class="icon-pill"><span class="material-symbols-rounded">notes</span></div>
           <div class="lbl">Journal</div>
         </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div>
+          <div class="lbl">Hotspot</div>
+        </div>
+        <div class="nav-item-rail">
+          <div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div>
+          <div class="lbl">Layouts</div>
+        </div>
         <div class="spacer"></div>
         <div class="nav-item-rail">
           <div class="icon-pill"><span class="material-symbols-rounded">help</span></div>
@@ -988,17 +996,32 @@ body.embed .car-screen {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
               <button class="btn btn-filled-tonal">
-                <span class="material-symbols-rounded">visibility</span>Aperçu plein écran
-              </button>
-              <button class="btn btn-filled-tonal">
-                <span class="material-symbols-rounded">screenshot</span>Capturer
-              </button>
-              <button class="btn btn-outlined">
-                <span class="material-symbols-rounded">refresh</span>Reconnecter
+                <span class="material-symbols-rounded">visibility</span>Miroir plein écran
               </button>
               <button class="btn btn-error">
-                <span class="material-symbols-rounded">stop</span>Arrêter mirror
+                <span class="material-symbols-rounded">stop</span>Arrêter projection
               </button>
+            </div>
+
+            <div class="section-head" style="margin-top: 14px;">Layout cluster</div>
+            <div style="display: flex; gap: 10px; overflow: hidden;">
+              <div class="card" style="min-width: 118px; padding: 9px; border: 1.5px solid var(--md-outline-variant);">
+                <div style="aspect-ratio: 1920/720; background: #060810; border-radius: 6px; border: 1px solid #20283a; display: flex; align-items: center; justify-content: center; color: #9ba1ac; font-size: 13px;">∅</div>
+                <div style="font-size: 12px; font-weight: 600; margin-top: 6px;">Mode libre</div>
+                <div style="font-size: 10px; color: var(--md-on-surface-variant);">Aucun layout</div>
+              </div>
+              <div class="card" style="min-width: 118px; padding: 9px; border: 2px solid var(--md-primary); background: var(--md-secondary-container);">
+                <div style="aspect-ratio: 1920/720; background: #060810; border-radius: 6px; border: 1px solid #20283a; position: relative; overflow: hidden;">
+                  <div style="position: absolute; left: 2%; top: 5%; width: 60%; height: 90%; background: #3949AB; border-radius: 3px;"></div>
+                  <div style="position: absolute; left: 64%; top: 5%; width: 34%; height: 90%; background: #388E3C; border-radius: 3px;"></div>
+                </div>
+                <div style="font-size: 12px; font-weight: 700; margin-top: 6px; color: var(--md-primary);">⭐ Nav+Media</div>
+                <div style="font-size: 10px; color: var(--md-on-surface-variant);">2 zone(s)</div>
+              </div>
+              <div class="card" style="min-width: 78px; padding: 9px; border: 1.5px solid var(--md-outline-variant); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="font-size: 20px; color: var(--md-primary);">＋</div>
+                <div style="font-size: 11px; color: var(--md-on-surface-variant);">Gérer</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1019,6 +1042,8 @@ body.embed .car-screen {
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div><div class="lbl">Hotspot</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div><div class="lbl">Layouts</div></div>
       </div>
       <div class="main-area">
         <div class="top-bar">
@@ -1142,7 +1167,7 @@ body.embed .car-screen {
                 <div class="leading"><span class="material-symbols-rounded">info</span></div>
                 <div class="content">
                   <div class="headline">Version</div>
-                  <div class="support">0.8.6 · alpha/0.7 · build 117</div>
+                  <div class="support">1.4.25-beta · build 435</div>
                 </div>
               </div>
               <div class="list-item">
@@ -1182,6 +1207,8 @@ body.embed .car-screen {
         <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div><div class="lbl">Hotspot</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div><div class="lbl">Layouts</div></div>
       </div>
       <div class="main-area">
         <div class="top-bar">
@@ -1317,6 +1344,8 @@ body.embed .car-screen {
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
         <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div><div class="lbl">Hotspot</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div><div class="lbl">Layouts</div></div>
       </div>
       <div class="main-area">
         <div class="top-bar">
@@ -1468,6 +1497,8 @@ wifi:         <span class="val">Seal-Hotspot · -42 dBm</span>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
         <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
         <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div><div class="lbl">Hotspot</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div><div class="lbl">Layouts</div></div>
       </div>
       <div class="main-area">
         <div class="top-bar">
@@ -1565,6 +1596,101 @@ wifi:         <span class="val">Seal-Hotspot · -42 dBm</span>
 <!-- ════════════════════════════════════════════════
      DESIGN NOTES
      ════════════════════════════════════════════════ -->
+  <!-- ════════════════════════════════════════════════
+       SCREEN 7 — LAYOUTS (zone editor + presets)
+       ════════════════════════════════════════════════ -->
+  <div class="screen-wrap" id="screen-7">
+    <div class="screen-label">7. Layouts · éditeur de zones <span class="ratio">1920×1080</span></div>
+    <div class="car-screen">
+      <div class="nav-rail">
+        <div class="rail-logo"><img src="ic_launcher.png" alt="DashCast" class="rail-logo-img"></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">apps</span></div><div class="lbl">Apps</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">tune</span></div><div class="lbl">Réglages</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">stethoscope</span></div><div class="lbl">Diag</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">info</span></div><div class="lbl">Système</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">notes</span></div><div class="lbl">Journal</div></div>
+        <div class="nav-item-rail"><div class="icon-pill"><span class="material-symbols-rounded">wifi_tethering</span></div><div class="lbl">Hotspot</div></div>
+        <div class="nav-item-rail active"><div class="icon-pill"><span class="material-symbols-rounded">dashboard_customize</span></div><div class="lbl">Layouts</div></div>
+      </div>
+      <div class="main-area">
+        <div class="top-bar">
+          <span class="title">Nav+Media</span>
+          <button class="btn btn-text btn-sm"><span class="material-symbols-rounded">add</span>Nouveau</button>
+          <button class="btn btn-text btn-sm"><span class="material-symbols-rounded">backspace</span>Effacer tout</button>
+          <button class="btn btn-filled-tonal btn-sm"><span class="material-symbols-rounded">save</span>Enregistrer</button>
+          <button class="btn btn-filled-tonal btn-sm"><span class="material-symbols-rounded">star</span>Favori</button>
+          <span class="clock" style="margin-left: 12px;">14:35</span>
+        </div>
+
+        <div class="content" style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; padding-right: 24px;">
+          <!-- LEFT: zone canvas -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Canvas cluster — dessinez une zone du doigt</div>
+            <div class="card" style="padding: 10px;">
+              <div style="aspect-ratio: 1920/720; background: #060810; border-radius: 8px; border: 1px solid #20283a; position: relative; overflow: hidden;">
+                <div style="position: absolute; left: 2%; top: 4%; width: 60%; height: 92%; background: rgba(57,73,171,.55); border: 2px solid #3949AB; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff;">
+                  <div style="font-weight: 700;">Navigation</div>
+                  <div style="font-size: 11px; opacity: .8;">1152×662 · 🔗 Waze</div>
+                </div>
+                <div style="position: absolute; left: 64%; top: 4%; width: 34%; height: 92%; background: rgba(56,142,60,.55); border: 2px solid #388E3C; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff;">
+                  <div style="font-weight: 700;">Média</div>
+                  <div style="font-size: 11px; opacity: .8;">652×662 · 🔗 Spotify</div>
+                </div>
+                <div style="position: absolute; left: 1.2%; top: 3%; width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                <div style="position: absolute; left: 61%; top: 3%; width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                <div style="position: absolute; left: 1.2%; bottom: 3%; width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+                <div style="position: absolute; left: 61%; bottom: 3%; width: 8px; height: 8px; background: #fff; border-radius: 50%;"></div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <span class="chip">Navigation  1152×662 @ (38,28)  🔗 com.waze</span>
+              <span class="chip">Média  652×662 @ (1228,28)  🔗 com.spotify.music</span>
+            </div>
+          </div>
+
+          <!-- RIGHT: saved presets -->
+          <div>
+            <div class="section-head" style="padding-top: 0;">Layouts enregistrés</div>
+            <div class="card" style="padding: 8px 12px;">
+              <div class="list-item">
+                <div class="leading" style="background: var(--md-secondary-container);"><span class="material-symbols-rounded">star</span></div>
+                <div class="content">
+                  <div class="headline">Nav+Media ⭐</div>
+                  <div class="support">2 zone(s) · 2 apps liées · ACTIF</div>
+                </div>
+                <button class="btn btn-text btn-sm">Désactiver</button>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">dashboard</span></div>
+                <div class="content">
+                  <div class="headline">Triple écran</div>
+                  <div class="support">3 zone(s) · 3 apps liées</div>
+                </div>
+                <button class="btn btn-text btn-sm">Activer</button>
+              </div>
+              <div class="list-item">
+                <div class="leading"><span class="material-symbols-rounded">crop_free</span></div>
+                <div class="content">
+                  <div class="headline">Solo centré</div>
+                  <div class="support">1 zone(s) · 1 app liée</div>
+                </div>
+                <button class="btn btn-text btn-sm">Activer</button>
+              </div>
+            </div>
+
+            <div class="section-head">Édition d'une zone</div>
+            <div class="card" style="padding: 12px;">
+              <div style="font-size: 13px; line-height: 1.6; color: var(--md-on-surface-variant);">
+                <strong style="color: var(--md-on-surface);">Tap sur une zone</strong> → renommer, position/dimensions, lier une application, supprimer.<br>
+                <strong style="color: var(--md-on-surface);">Glisser</strong> une zone pour la déplacer, <strong style="color: var(--md-on-surface);">poignées</strong> blanches pour redimensionner — aimantation automatique aux bords.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <div class="notes">
   <h2>Design notes — Material 3 sur écran auto 15.6"</h2>
 

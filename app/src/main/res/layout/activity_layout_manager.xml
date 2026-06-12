@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LayoutManagerActivity — 2-pane editor with collapsible preset list (v1.4.9-beta)
+     Left: navRail (Layouts active) + collapsible preset list (300dp).
+     Right: canvas toolbar + ClusterCanvasView (wrap_content — never clipped) + chips + actions.
+     Canvas height is auto-computed by ClusterCanvasView.onMeasure = width * 720/1920.
+     When the panel collapses, the canvas gains ~300dp width and re-measures. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:baselineAligned="false"
+    android:background="@color/md_background"
+    tools:ignore="Overdraw,HardcodedText">
+
+    <!-- ════════════════ NAV RAIL (Layouts active) ════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_nav_rail_lm"
+        android:layout_width="96dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/md_surface_container_low"
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
+
+        <ImageView
+            android:id="@+id/iv_nav_logo_lm"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:scaleType="fitCenter"
+            android:src="@mipmap/ic_launcher"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/app_name"/>
+
+        <LinearLayout
+            android:id="@+id/nav_apps_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_apps"
+                android:contentDescription="@string/main_nav_apps"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_apps"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_settings_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_tune"
+                android:contentDescription="@string/main_nav_settings"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_settings"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_diag_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_stethoscope"
+                android:contentDescription="@string/main_nav_diag"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_diag"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_sysinfo_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_info"
+                android:contentDescription="@string/main_nav_sysinfo"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_sysinfo"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/nav_log_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_notes"
+                android:contentDescription="@string/main_nav_log"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_log"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Hotspot (DL3 + use_own_sim runtime-gated) -->
+        <LinearLayout
+            android:id="@+id/nav_hotspot_lm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                android:src="@drawable/ic_wifi_tethering"
+                android:contentDescription="@string/main_nav_hotspot"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_hotspot"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
+        <!-- Layouts (ACTIVE) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/md_on_secondary_container" tools:ignore="UseAppTint"
+                android:background="@drawable/bg_nav_pill_active"
+                android:src="@drawable/ic_dashboard"
+                android:contentDescription="@string/main_nav_layouts"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_layouts"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/md_on_surface"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ════════════════ CONTENT AREA ════════════════ -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- ── Top bar ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="12dp"
+            android:background="@color/md_surface_container_low">
+
+            <TextView
+                android:id="@+id/lm_canvas_title"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/md_on_surface"
+                android:text="@string/layout_manager_title"
+                android:ellipsize="end"
+                android:maxLines="1"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/lm_btn_new_layout"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/layout_manager_new"
+                android:textSize="13sp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="18dp"
+                app:icon="@drawable/ic_add"
+                app:iconSize="16dp"
+                app:iconGravity="textStart"/>
+
+        </LinearLayout>
+
+        <!-- ── Body: panel + toggle + canvas ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- LEFT PANEL (collapsible via ValueAnimator in Java) -->
+            <LinearLayout
+                android:id="@+id/lm_panel_container"
+                android:layout_width="300dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:background="@color/md_surface_container_low">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="14dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp"
+                    android:text="MES LAYOUTS"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06"
+                    android:textColor="@color/md_on_surface_variant"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/lm_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:paddingTop="4dp"
+                    android:clipToPadding="false"/>
+
+            </LinearLayout>
+
+            <!-- TOGGLE BUTTON (panel collapse / expand) -->
+            <FrameLayout
+                android:id="@+id/lm_toggle_btn"
+                android:layout_width="22dp"
+                android:layout_height="match_parent"
+                android:background="@color/md_surface_container"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/lm_toggle_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_arrow_back"
+                    android:tint="@color/md_on_surface_variant" tools:ignore="UseAppTint"
+                    android:contentDescription="@null"/>
+
+            </FrameLayout>
+
+            <!-- CANVAS SIDE (takes all remaining width) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <!-- Canvas toolbar -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="10dp"
+                    android:background="@color/md_surface_container_low">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="8dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_dashboard"
+                        android:tint="@color/md_primary" tools:ignore="UseAppTint"
+                        android:contentDescription="@null"/>
+
+                    <TextView
+                        android:id="@+id/lm_canvas_toolbar_name"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/md_on_surface"
+                        android:ellipsize="end"
+                        android:maxLines="1"/>
+
+                </LinearLayout>
+
+                <!-- Canvas card wrapper -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginTop="10dp"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="#0A0A0A"
+                    app:contentPadding="0dp">
+
+                    <!-- ClusterCanvasView: height = width * 720/1920 via onMeasure — never clipped -->
+                    <com.byd.dashcast.fission.ClusterCanvasView
+                        android:id="@+id/lm_canvas"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"/>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Zone chips -->
+                <HorizontalScrollView
+                    android:id="@+id/lm_chips_scroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/lm_chips_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"/>
+
+                </HorizontalScrollView>
+
+                <!-- Canvas hint -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="14dp"
+                    android:paddingTop="4dp"
+                    android:text="@string/layout_canvas_hint"
+                    android:textSize="11sp"
+                    android:textColor="@color/md_on_surface_variant"/>
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"/>
+
+                <!-- Action bar -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:background="@color/md_surface_container_low">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lm_btn_clear"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Effacer tout"
+                        android:textSize="13sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="8dp"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_close"
+                        app:iconSize="15dp"
+                        app:iconGravity="textStart"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lm_btn_save"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Enregistrer"
+                        android:textSize="13sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:layout_marginEnd="8dp"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_save"
+                        app:iconSize="15dp"
+                        app:iconGravity="textStart"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/lm_btn_set_favorite"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="⭐ Favori"
+                        android:textSize="13sp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="18dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

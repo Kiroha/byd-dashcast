@@ -110,7 +110,6 @@
     <string name="notif_cluster_channel_desc">Maintient l\'affichage sur le cluster BYD</string>
     <string name="notif_cluster_initializing">Cluster : initialisation…</string>
     <string name="notif_cluster_active">Cluster actif — écran %1$d</string>
-    <string name="notif_cluster_stopped">Cluster : arrêté</string>
     <string name="notif_cluster_disconnected">Cluster : déconnecté</string>
     <string name="proxy_keeper_channel_name">Daemon proxy</string>
     <string name="proxy_keeper_channel_desc">Maintient le daemon proxy disponible en arrière-plan</string>
@@ -139,6 +138,9 @@
     <string name="ime_banner_btn_dismiss">Ne plus afficher</string>
     <string name="ime_banner_toast_enabled">Clavier automatique actif ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Impossible d\'ouvrir les Réglages — activez manuellement le service d\'accessibilité « Clavier auto cluster ».</string>
+    <string name="hud_notif_banner_title">HUD Navigation — Accès aux notifications requis</string>
+    <string name="hud_notif_banner_body">DashCast doit pouvoir lire les notifications pour afficher les instructions de navigation sur le cluster. Activez l\'accès dans Paramètres → Accès spéciaux → Accès aux notifications → DashCast.</string>
+    <string name="hud_notif_banner_toast_enabled">Accès aux notifications activé ✓</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
@@ -175,6 +177,8 @@
     <string name="settings_reconnect_popup_support">Restaure si déconnecté inopinément</string>
     <string name="settings_quick_stop">Arrêt rapide (sans restaurer le cluster d\'origine)</string>
     <string name="settings_quick_stop_support">Envoie seulement sendInfo 18 + 0, sans changer la taille</string>
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Envoie sendInfo(30) avant la projection — corrige l\'étirement ADAS sur certains véhicules. Désactiver si la shape du cluster change au démarrage.</string>
     <string name="settings_category_filters_support">Affiche les chips dans le menu apps</string>
     <string name="settings_compact_apps_panel">Mode compact (liste apps étroite)</string>
     <string name="settings_compact_apps_panel_support">Libère de l\'espace pour le preview cluster — 2 colonnes au lieu de 5</string>
@@ -184,7 +188,6 @@
     <string name="settings_check_update_support">Vérifie si une nouvelle version est disponible</string>
     <string name="settings_check_update_button">Vérifier</string>
     <string name="settings_source_code_title">Code source</string>
-    <string name="main_title_dashboard">Tableau de bord</string>
     <string name="main_nav_apps">Apps</string>
     <string name="main_nav_settings">Réglages</string>
     <string name="main_nav_diag">Diag</string>
@@ -193,6 +196,11 @@
     <string name="main_nav_help">Aide</string>
     <!-- v1.2.37 / v1.2.42 — Hotspot screen (TetherFi-only since v1.2.42) -->
     <string name="main_nav_hotspot">Hotspot</string>
+    <!-- v1.4.9-beta — Layouts manager -->
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Gestion des layouts</string>
+    <string name="layout_manager_new">Nouveau layout</string>
+    <string name="layout_canvas_hint">Tirez pour dessiner une zone</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Retour</string>
     <string name="hotspot_hero_title">Hotspot 4G via TetherFi</string>
@@ -290,10 +298,13 @@
     <string name="sysinfo_disp_cluster">Cluster</string>
     <string name="sysinfo_disp_virtual">Virtual (mirror)</string>
     <string name="sysinfo_disp_row_headline">Display %1$d — %2$s</string>
+    <string name="sysinfo_disp_hidden">Caché (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">Non visible via DisplayManager API</string>
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">Surveille pidof · 500 ms</string>
     <string name="sysinfo_svc_stopped">Arrêté</string>
+    <string name="sysinfo_svc_checking">Vérification…</string>
     <string name="sysinfo_svc_adb_unreachable">5555 inaccessible</string>
     <string name="sysinfo_svc_conn">CONN</string>
     <string name="sysinfo_tile_dashcast_platform_signed">platform-signed</string>
@@ -301,14 +312,9 @@
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
     <!-- Settings -->
-    <string name="settings_section_beta_engine">Moteur expérimental (beta)</string>
-    <string name="settings_beta_warning">Fonctionnalités expérimentales. En cas de souci, l\'application bascule automatiquement sur le moteur stable. Redémarrage requis après modification.</string>
-    <string name="settings_beta_proxy_daemon">Daemon de proxy privilégié</string>
-    <string name="settings_beta_proxy_daemon_support">Lance un démon persistant via ADB local (UID 2000) pour exécuter les commandes système. Inspiré d\'OpenBYD.</string>
-    <string name="settings_beta_system_context">Contexte système (réflexion)</string>
-    <string name="settings_beta_system_context_support">Récupère un Context système via ActivityThread.systemMain() pour contourner les permissions du SDK BYD.</string>
-    <string name="beta_restart_title">Redémarrage requis</string>
-    <string name="beta_restart_message">Cette option prendra effet au prochain lancement de DashCast. Vous pouvez continuer à utiliser l\'application normalement entre temps.</string>
+    <string name="settings_section_advanced">Avancé</string>
+    <string name="settings_legacy_path">Proxy daemon non fonctionnel. Utiliser le chemin Legacy</string>
+    <string name="settings_legacy_path_support">Utilise le shell ADB classique au lieu du proxy daemon. À activer si le daemon ne répond pas ou cause des problèmes.</string>
 
     <!-- Diag tabs -->
     <string name="diag_tab_cluster">Cluster DL3</string>
@@ -319,7 +325,7 @@
 
     <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
     <string name="diag_voice_header_title">Pilotage vocal — PoC chaîne audio</string>
-    <string name="diag_voice_header_subtitle">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Étape 1/3 : valide que le micro arrive jusqu’à l’app sur cette plateforme. Aucun modèle ML n’est encore chargé.</string>
     <string name="diag_voice_btn_start">Démarrer l’écoute</string>
     <string name="diag_voice_btn_stop">Arrêter</string>
     <string name="diag_voice_state_idle">Service arrêté</string>
@@ -338,12 +344,30 @@
     <string name="diag_voice_notif_text">Niveau audio analysé localement, rien n’est enregistré.</string>
 
     <!-- Diag — Voice wake-word card (v1.2.50-beta, openWakeWord ONNX) -->
-    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Commandes vocales (Vosk)</string>
+    <string name="diag_voice_commands_switch">Activer</string>
+    <string name="diag_voice_commands_hint">Dites « Hey Jarvis » puis votre commande : « cluster », « ferme le cluster », « lance YouTube », « diagnostics », « logs ».</string>
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">Clé API OpenAI (optionnel — active Jarvis IA)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Modèle de reconnaissance vocale</string>
+    <string name="diag_voice_model_small_label">Petit modèle (~40 Mo)</string>
+    <string name="diag_voice_model_small_desc">Téléchargement rapide, bonne précision pour les commandes courtes.</string>
+    <string name="diag_voice_model_large_label">Grand modèle (~1,3 Go) — haute précision</string>
+    <string name="diag_voice_model_large_desc">Meilleure reconnaissance du français, recommandé si vous avez le Wi-Fi.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d Mo disponibles</string>
+    <string name="diag_voice_model_download_btn">Télécharger</string>
+    <string name="diag_voice_model_delete_btn">Supprimer</string>
+    <string name="diag_voice_model_status_downloaded">✓ Modèle installé</string>
+    <string name="diag_voice_model_status_not_downloaded">Non installé</string>
+    <string name="diag_voice_model_progress_fmt">%1$d Mo / %2$d Mo (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Décompression en cours…</string>    <string name="diag_voice_wakeword_card_title">Mot d’éveil (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Activer</string>
     <string name="diag_voice_wakeword_score_label">Score sigmoïde (seuil 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Modèle : hey_jarvis_v0.1 (placeholder pour « Ok DashCast »)</string>
     <string name="diag_voice_wakeword_last_fmt">Dernière détection : —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Dernière détection : %1$s (score %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime indisponible — %1$s</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
@@ -376,15 +400,14 @@
     <string name="diag_dl5_cluster_toast_no_results">Lance d’abord la recon avant d’exporter.</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Test Fission</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Test live destructif : lance l’application choisie sur l’écran fission, force-resize, la ramène sur l’écran principal, puis nettoie. DiLink 5 uniquement, aucune commande de resize sur l’écran principal (id 0).</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Test Fission — destructif</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Cible : %1$s\n\nCette suite va :\n\n• Activer le compat FORCE_RESIZE_APP sur l’application\n• Force-stop l’application\n• La lancer sur l’écran fission (id ≠ 0) en windowingMode freeform\n• Tester un resize de la tâche\n• La ramener sur l’écran principal (id 0) pour valider le move\n• Force-stop puis reset du compat (nettoyage)\n\nAucune commande de resize n’est envoyée sur l’écran principal (id 0).\nContinuer ?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Lancer le test</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Test Fission réservé à DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Choisir l’application à tester</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Aucune application lançable trouvée.</string>
-    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
+    <string name="diag_dl5_cluster_test_vd">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_hint">Valide le pipeline VirtualDisplay → MirrorDaemon en 7 étapes : création VD, lancement app sur VD, miroir vers la surface cluster. DiLink 5 uniquement.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">Test VD Pipeline</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Cible : %1$s\n\nCette suite va :\n\n• V01 : activer la projection cluster (auto_container)\n• V02 : vérifier que l\'application est lançable\n• V03 : créer un VirtualDisplay 1920×720\n• V04 : lancer l\'application sur le VD\n• V05 : démarrer le miroir via MirrorDaemon\n• V06 : vérifier visuellement le rendu cluster\n• V07 : nettoyer (stop miroir, supprimer VD, force-stop)\n\nDiLink 5 uniquement. L\'application cible sera force-stoppée pendant le test.\nContinuer ?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Lancer le test</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">Test VD Pipeline réservé à DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Choisir l\'application à tester</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Aucune application lançable trouvée.</string>    <!-- v1.2.48 — interactive cluster verification prompt (Diag → DL5 Cluster → Test Fission). -->
     <string name="diag_dl5_fission_prompt_title">Vérification cluster</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s est-il visible sur l\'écran cluster ?\n\n(test sur le display %2$d)</string>
     <string name="diag_dl5_fission_prompt_yes">Oui</string>
@@ -401,10 +424,9 @@
     <!-- Diag — Beta Engine panel -->
     <string name="diag_beta_header_title">Moteur expérimental</string>
     <string name="diag_beta_header_subtitle">Tests de Component A (daemon) et Component B (system context). Phase 1.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon : OFF</string>
-    <string name="diag_beta_pill_a_on">A · Daemon : ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx : OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx : ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
     <string name="diag_beta_counters_idle">Cliquer sur « Lancer tous » pour démarrer</string>
     <string name="diag_beta_counters_running">Exécution en cours…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -456,9 +478,12 @@
     <string name="diag_mirror_send_log">Envoyer (.log)</string>
 
     <!-- Settings — DiLink 5 -->
-    <string name="settings_dilink5_mode">Mode DiLink 5 (expérimental)</string>
-    <string name="settings_dilink5_mode_support">Adapte DashCast au protocole DiLink 5.0 / Android 12.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Redémarrage requis.</string>
+    <string name="settings_fission_mode">Mode Layouts</string>
+    <string name="settings_fission_mode_support">Projection multi-apps sur le cluster avec zones personnalisées. Nécessite le daemon de proxy.</string>
+    <string name="settings_fission_auto_layout">Layout favori automatique</string>
+    <string name="settings_fission_auto_layout_support">Au lancement de DashCast : active la projection cluster, le layout favori, puis lance les apps liées</string>
+    <string name="settings_fission_precreate_slots">Pré-créer les slots au démarrage</string>
+    <string name="settings_fission_precreate_slots_support">Prépare les Virtual Displays du layout favori à l\'ouverture de Fission (sans lancer les apps)</string>
     <!-- v1.2.18 — Shown when the user taps the keyboard icon while the
          ClusterImeWatcherService accessibility service is not enabled. -->
     <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
@@ -554,4 +579,99 @@
     <string name="dpi_applied_next_launch">Sera appliqué au prochain lancement</string>
     <string name="sheet_dpi_value_fmt" translatable="false">%1$d dpi</string>
     <string name="dpi_value_fmt" translatable="false">%1$d dpi</string>
+
+    <!-- Fission multi-app projection (v1.3.30-beta+) -->
+    <string name="fission_title">Fission — Multi-apps cluster</string>
+    <string name="fission_status_idle">Appuyez sur + pour projeter une application</string>
+    <string name="fission_btn_add">+ Ajouter une app</string>
+    <string name="fission_btn_stop">Tout arrêter</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Éditeur de layouts</string>
+    <string name="fission_editor_clear">Effacer</string>
+    <string name="fission_editor_save">Enregistrer</string>
+    <string name="fission_editor_edit">Modifier</string>
+    <string name="fission_editor_delete">Supprimer</string>
+
+    <!-- Fission layout selector + slot management (v1.4.17-beta+) -->
+    <string name="fission_layout_mode_free">Mode libre</string>
+    <string name="fission_layout_active_fmt">Layout : %1$s</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_switch">Changer</string>
+    <string name="fission_layout_favorite_set_toast">Layout favori défini ✓</string>
+    <string name="fission_slot_zone_bound_fmt">App liée : %1$s</string>
+    <string name="fission_slot_pick_pkg">Lier une application…</string>
+    <string name="fission_slot_pkg_none">Aucune — zone libre</string>
+
+    <!-- FissionActivity runtime strings -->
+    <string name="fission_idle_hint">Appuyez sur + pour projeter une application</string>
+    <string name="fission_active_count">%1$d app(s) active(s)</string>
+    <string name="fission_no_apps">Aucune application disponible</string>
+    <string name="fission_all_projected">Toutes les apps sont déjà projetées</string>
+    <string name="fission_pick_app_title">Choisir une application</string>
+    <string name="fission_place_in">Placer %1$s dans…</string>
+    <string name="fission_launch_in">Lancer %1$s dans…</string>
+    <string name="fission_mode_free">Mode libre</string>
+    <string name="fission_slot_error">Slot %1$s : %2$s</string>
+    <string name="fission_conflict_title">Conflit de projection</string>
+    <string name="fission_conflict_message">Une projection est déjà active. La stopper pour continuer ?</string>
+    <string name="fission_conflict_stop">Stopper</string>
+    <string name="fission_resize_title">Redimensionner %1$s</string>
+    <string name="fission_resize_full">Plein écran</string>
+    <string name="fission_resize_left_half">Gauche ½</string>
+    <string name="fission_resize_right_half">Droite ½</string>
+    <string name="fission_resize_left_3q">Gauche ¾</string>
+    <string name="fission_resize_right_3q">Droite ¾</string>
+    <string name="fission_close_slot_title">Fermer %1$s ?</string>
+    <string name="fission_close_slot_confirm">Fermer</string>
+    <string name="layout_preset_activate">Activer</string>
+    <string name="layout_preset_active_badge">ACTIF</string>
+    <string name="layout_preset_deactivate">Désactiver</string>
+    <string name="fission_zone_count">%1$d zone(s)</string>
+    <string name="fo_err_attach_fmt">Création du slot impossible pour %1$s</string>
+    <string name="fo_err_daemon">Daemon non disponible</string>
+    <string name="fo_err_proxy">Proxy ADB Daemon non connecté. Activez-le dans Paramètres.</string>
+    <string name="fo_status_autoactivate">Auto-activation du layout…</string>
+    <string name="fo_status_autolayout_err_fmt">Erreur auto-layout : %1$s</string>
+    <string name="fo_status_create_fmt">Création du slot pour %1$s…</string>
+    <string name="fo_status_daemon">Démarrage du daemon…</string>
+    <string name="fo_status_launching_fmt">Lancement de %1$s (display %2$d)…</string>
+    <string name="fo_status_mirror">Démarrage du miroir…</string>
+    <string name="fo_status_precreate">Pré-création des slots…</string>
+    <string name="fo_status_projection">Activation de la projection cluster…</string>
+    <string name="fo_status_reuse_fmt">Réutilisation du slot pour %1$s…</string>
+    <string name="fo_status_starting_fmt">Démarrage de %1$s…</string>
+    <string name="fo_status_stopping">Arrêt…</string>
+    <string name="lm_action_add">Ajouter</string>
+    <string name="lm_action_delete">Supprimer</string>
+    <string name="lm_action_save">Enregistrer</string>
+    <string name="lm_activated_ok_fmt">%1$s activé ✓</string>
+    <string name="lm_activated_partial_fmt">%1$s activé (certains slots ont échoué)</string>
+    <string name="lm_activating_fmt">Activation de %1$s…</string>
+    <string name="lm_daemon_not_connected">Daemon non connecté — lancez d\'abord une projection Fission</string>
+    <string name="lm_delete_confirm_fmt">Supprimer « %1$s » ?</string>
+    <string name="lm_draw_zone_first">Dessinez au moins une zone</string>
+    <string name="lm_edit_zones_hint">Modifiez les zones puis enregistrez</string>
+    <string name="lm_error_fmt">Erreur : %1$s</string>
+    <string name="lm_free_mode_toast">Mode libre activé</string>
+    <string name="lm_layout_default_name_fmt">Layout %1$d</string>
+    <string name="lm_layout_name_hint">Nom du layout</string>
+    <string name="lm_layout_save_title">Enregistrer le layout</string>
+    <string name="lm_layout_saved_toast">Layout enregistré ✓</string>
+    <string name="lm_new_layout_name">Nouveau layout</string>
+    <string name="lm_no_layout_loaded">Aucun layout chargé</string>
+    <string name="lm_no_saved_layouts">Aucun layout sauvegardé\nDessinez des zones ci-dessus et enregistrez.</string>
+    <string name="lm_save_before_favorite">Enregistrez d\'abord le layout avant de le définir en favori</string>
+    <string name="lm_zone_delete_title">Supprimer la zone ?</string>
+    <string name="lm_zone_edit_title_fmt">Modifier « %1$s »</string>
+    <string name="lm_zone_height">Hauteur (px)</string>
+    <string name="lm_zone_name_hint">Nom de la zone</string>
+    <string name="lm_zone_new_title_fmt">Nouvelle zone — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">Position &amp; dimensions</string>
+    <string name="lm_zone_width">Largeur (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">Layout cluster</string>
+    <string name="main_layout_free_sub">Aucun layout</string>
+    <string name="main_layout_manage">Gérer</string>
 </resources>

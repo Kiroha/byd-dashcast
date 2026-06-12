@@ -10,12 +10,13 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.annotation.SuppressLint;
 import android.os.IBinder;
 import android.os.SystemClock;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.byd.dashcast.AppLogger;
+import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 
 /**
@@ -91,10 +92,60 @@ public final class VoiceService extends Service {
     private Thread           mCaptureThread;
     private AudioRecord      mRecord;
     private volatile boolean mErrorSignaled;
+    // Pre-allocated level broadcast intent — reused on every 50ms tick.
+    // LocalBroadcastManager delivers synchronously so reuse is safe.
+    private final Intent mLevelIntent = new Intent(ACTION_LEVEL);
 
     /** Singleton "is running" probe used by the UI to render the correct button. */
     private static volatile boolean sIsRunning;
     public  static boolean isRunning() { return sIsRunning; }
+
+    // ─── v1.4.2-beta pre-roll ring buffer ─────────────────────────────────
+    //
+    // Always keep the last PRE_ROLL_SAMPLES of audio in a circular buffer.
+    // VoskTranscriber calls getPreRollCopy() right before installing its
+    // SampleConsumer so that audio captured during and just after wake-word
+    // detection (while the Recognizer object is being created) is not lost.
+    // Without this, the first 100-200 ms of the command is missed, turning
+    // "diagnostic" into "stic".
+
+    /** 500 ms of pre-roll at 16 kHz — enough to cover Recognizer init delay. */
+    private static final int PRE_ROLL_SAMPLES = SAMPLE_RATE_HZ / 2; // 8 000
+    private static final short[] sPreRollBuf  = new short[PRE_ROLL_SAMPLES];
+    private static int     sPreRollHead  = 0;   // next write position
+    private static boolean sPreRollFull  = false;
+    private static final Object PRE_ROLL_LOCK = new Object();
+
+    private static void pushPreRoll(short[] pcm, int n) {
+        synchronized (PRE_ROLL_LOCK) {
+            for (int i = 0; i < n; i++) {
+                sPreRollBuf[sPreRollHead] = pcm[i];
+                sPreRollHead = (sPreRollHead + 1) % PRE_ROLL_SAMPLES;
+                if (sPreRollHead == 0) sPreRollFull = true;
+            }
+        }
+    }
+
+    /**
+     * Returns a linearised copy of the pre-roll ring buffer (oldest sample
+     * first). The returned array is a snapshot — safe to use from any thread.
+     */
+    public static short[] getPreRollCopy() {
+        synchronized (PRE_ROLL_LOCK) {
+            if (!sPreRollFull && sPreRollHead == 0) return new short[0];
+            int len = sPreRollFull ? PRE_ROLL_SAMPLES : sPreRollHead;
+            short[] out = new short[len];
+            if (sPreRollFull) {
+                // oldest data starts at sPreRollHead
+                int part1 = PRE_ROLL_SAMPLES - sPreRollHead;
+                System.arraycopy(sPreRollBuf, sPreRollHead, out, 0,     part1);
+                System.arraycopy(sPreRollBuf, 0,            out, part1, sPreRollHead);
+            } else {
+                System.arraycopy(sPreRollBuf, 0, out, 0, sPreRollHead);
+            }
+            return out;
+        }
+    }
 
     // ─── v1.2.50-beta wake-word hook ───────────────────────────────────────
     //
@@ -117,6 +168,25 @@ public final class VoiceService extends Service {
     /** Returns the currently installed consumer (or null). */
     public static SampleConsumer getSampleConsumer() { return sSampleConsumer; }
 
+    // ─── v1.4.0-beta voice command hook ───────────────────────────────────
+    //
+    // When the user enables voice commands in the Diag tab, a VoskTranscriber
+    // is installed here.  The capture loop calls triggerTranscription() each
+    // time the wake-word engine fires a DETECTED broadcast so that Vosk can
+    // open its own short AudioRecord window (VoiceService's own record is
+    // paused for MAX_LISTEN_MS to avoid capturing both).
+
+    private static volatile VoskTranscriber sTranscriber;
+
+    /** Installs (or removes, with {@code null}) the post-wake transcriber. */
+    public static void setTranscriber(VoskTranscriber t) { sTranscriber = t; }
+
+    /** Triggers a Vosk listen window; no-op if no transcriber is installed. */
+    public static void triggerTranscription() {
+        VoskTranscriber t = sTranscriber;
+        if (t != null) t.startListening();
+    }
+
     // ─── Service lifecycle ─────────────────────────────────────────────────
 
     @Override public IBinder onBind(Intent intent) { return null; }
@@ -127,7 +197,13 @@ public final class VoiceService extends Service {
             AppLogger.d(TAG, "onStartCommand: already running, ignored");
             return START_STICKY;
         }
-        startForeground(NOTIF_ID, buildNotification());
+        try {
+            startForeground(NOTIF_ID, buildNotification());
+        } catch (Exception e) {
+            AppLogger.e(TAG, "startForeground failed", e);
+            broadcastError("foreground_start_failed");
+            return START_NOT_STICKY;
+        }
         startCapture();
         return START_STICKY;
     }
@@ -135,13 +211,20 @@ public final class VoiceService extends Service {
     @Override
     public void onDestroy() {
         stopCapture();
+        sSampleConsumer = null;
+        sTranscriber    = null;
         super.onDestroy();
     }
 
     // ─── Capture loop ──────────────────────────────────────────────────────
 
+    @SuppressLint("MissingPermission")
     private void startCapture() {
         mErrorSignaled = false;
+        synchronized (PRE_ROLL_LOCK) {
+            sPreRollHead = 0;
+            sPreRollFull = false;
+        }
         final int channel = AudioFormat.CHANNEL_IN_MONO;
         final int format  = AudioFormat.ENCODING_PCM_16BIT;
         final int minBuf  = AudioRecord.getMinBufferSize(SAMPLE_RATE_HZ, channel, format);
@@ -218,6 +301,7 @@ public final class VoiceService extends Service {
             // if one is currently installed. Null = production behaviour =
             // zero overhead. try/catch keeps a misbehaving consumer from
             // killing the capture loop.
+            pushPreRoll(frame, read); // v1.4.2 pre-roll (always, low cost)
             SampleConsumer c = sSampleConsumer;
             if (c != null) {
                 try { c.onFrame(frame, read); }
@@ -227,13 +311,12 @@ public final class VoiceService extends Service {
             long now = SystemClock.elapsedRealtime();
             if (now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {
                 lastBroadcastAt = now;
-                Intent i = new Intent(ACTION_LEVEL);
-                i.putExtra(EXTRA_RMS, rms);
-                i.putExtra(EXTRA_PEAK, peak);
-                i.putExtra(EXTRA_CLIP, clipCount);
-                i.putExtra(EXTRA_FRAMES, frameCount);
-                i.putExtra(EXTRA_RUN_MS, now - startedAt);
-                LocalBroadcastManager.getInstance(this).sendBroadcast(i);
+                mLevelIntent.putExtra(EXTRA_RMS, rms);
+                mLevelIntent.putExtra(EXTRA_PEAK, peak);
+                mLevelIntent.putExtra(EXTRA_CLIP, clipCount);
+                mLevelIntent.putExtra(EXTRA_FRAMES, frameCount);
+                mLevelIntent.putExtra(EXTRA_RUN_MS, now - startedAt);
+                LocalBroadcastManager.getInstance(this).sendBroadcast(mLevelIntent);
             }
         }
         AppLogger.i(TAG, "Capture loop ended — frames=" + frameCount + " clip=" + clipCount);
@@ -244,12 +327,16 @@ public final class VoiceService extends Service {
         sIsRunning = false;
         if (mRecord != null) {
             try { mRecord.stop(); } catch (Throwable ignore) {}
-            safeReleaseRecord();
         }
         Thread t = mCaptureThread;
         if (t != null) {
             try { t.join(500L); } catch (InterruptedException ignore) { Thread.currentThread().interrupt(); }
             mCaptureThread = null;
+        }
+        // Release only after the capture thread has exited to avoid use-after-release
+        // of the native AudioRecord while read() may still be in progress.
+        if (mRecord != null) {
+            safeReleaseRecord();
         }
         if (!mErrorSignaled) {
             broadcastState(STATE_STOPPED, null);
@@ -284,7 +371,7 @@ public final class VoiceService extends Service {
 
     private Notification buildNotification() {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
+        if (nm != null) {
             NotificationChannel ch = nm.getNotificationChannel(CHANNEL_ID);
             if (ch == null) {
                 ch = new NotificationChannel(CHANNEL_ID,
@@ -294,9 +381,7 @@ public final class VoiceService extends Service {
                 nm.createNotificationChannel(ch);
             }
         }
-        Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
+        Notification.Builder b = new Notification.Builder(this, CHANNEL_ID);
         b.setContentTitle(getString(R.string.diag_voice_notif_title))
          .setContentText(getString(R.string.diag_voice_notif_text))
          .setSmallIcon(android.R.drawable.ic_btn_speak_now)
@@ -310,11 +395,7 @@ public final class VoiceService extends Service {
     /** Convenience: start the service. */
     public static void start(Context ctx) {
         Intent i = new Intent(ctx, VoiceService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ctx.startForegroundService(i);
-        } else {
-            ctx.startService(i);
-        }
+        ctx.startForegroundService(i);
     }
 
     /** Convenience: stop the service. */

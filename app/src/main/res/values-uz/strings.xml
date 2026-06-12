@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Asboblar paneli boshqaruvchisi</string>
     <string name="welcome_select_lang">Tilni tanlang\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">BYD klasterida ekranni saqlab turadi</string>
     <string name="notif_cluster_initializing">Klaster: ishga tushirilmoqda…</string>
     <string name="notif_cluster_active">Klaster faol — ekran %1$d</string>
-    <string name="notif_cluster_stopped">Klaster: toʻxtatildi</string>
     <string name="notif_cluster_disconnected">Klaster: uzildi</string>
     <string name="sysinfo_file_saved">\n\nFayl: %1$s\nADB buyrug\'i: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ To\'r rejimi</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Yangi versiya mavjudligini tekshiradi</string>
     <string name="settings_check_update_button">Tekshirish</string>
     <string name="settings_source_code_title">Manba kodi</string>
-    <string name="main_title_dashboard">Boshqaruv paneli</string>
     <string name="main_nav_apps">Ilovalar</string>
     <string name="main_nav_settings">Sozla.</string>
     <string name="main_nav_diag">Diag.</string>
@@ -200,6 +198,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof kuzatilmoqda · 500 ms</string>
+    <string name="sysinfo_svc_checking">Tekshirish…</string>
     <string name="sysinfo_svc_stopped">To‘xtatilgan</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ishlamayapti</string>
     <string name="sysinfo_svc_conn">CONN</string>
@@ -222,14 +221,9 @@
     <string name="log_saved_toast">Jurnal saqlandi: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">Eksperimental dvigatel (beta)</string>
-    <string name="settings_beta_warning">Eksperimental funksiyalar. Muammo yuz bersa, ilova avtomatik tarzda barqaror dvigatelga qaytadi. O\'zgartirishdan keyin qayta ishga tushirish kerak.</string>
-    <string name="settings_beta_proxy_daemon">Imtiyozli proksi-demon</string>
-    <string name="settings_beta_proxy_daemon_support">Tizim buyruqlarini bajarish uchun lokal ADB (UID 2000) orqali doimiy demonni ishga tushiradi. OpenBYD\'dan ilhomlangan.</string>
-    <string name="settings_beta_system_context">Tizim konteksti (refleksiya)</string>
-    <string name="settings_beta_system_context_support">BYD SDK\'sining ruxsat tekshiruvini chetlab o\'tish uchun ActivityThread.systemMain() orqali tizim Context\'ini oladi.</string>
-    <string name="beta_restart_title">Qayta ishga tushirish kerak</string>
-    <string name="beta_restart_message">Ushbu sozlama DashCast\'ning keyingi ishga tushishida kuchga kiradi. Shu vaqtgacha ilovadan odatdagidek foydalanishingiz mumkin.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="diag_tab_cluster">Klaster</string>
     <string name="diag_tab_display">Displey</string>
     <string name="diag_tab_adb_local">Lokal ADB</string>
@@ -239,10 +233,9 @@
     <string name="diag_coming_soon_subtitle">Ushbu bo\'lim keyingi versiyada amalga oshiriladi. Joriy testlar uchun «Beta Engine» yorlig\'iga qarang.</string>
     <string name="diag_beta_header_title">Eksperimental dvigatel</string>
     <string name="diag_beta_header_subtitle">Component A (demon) va Component B (tizim konteksti) testlari. 1-bosqich.</string>
-    <string name="diag_beta_pill_a_off">A · Demon: OFF</string>
-    <string name="diag_beta_pill_a_on">A · Demon: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
     <string name="diag_beta_counters_idle">Boshlash uchun «Hammasini ishga tushirish»ni bosing</string>
     <string name="diag_beta_counters_running">Bajarilmoqda…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -262,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">Maqsadli ilova (D8 testi — klaster)</string>
     <string name="diag_dl5_d8_running_toast">%1$s da D8 testi — ilova qayta ishga tushiriladi va asosiy ekranga qaytariladi.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">DiLink 5 rejimi (eksperimental)</string>
-    <string name="settings_dilink5_mode_support">DashCast\'ni DiLink 5.0 / Android 12 protokoliga moslashtiradi.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Qayta ishga tushirish kerak.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Klaster avto-klaviaturasi (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Klasterdagi matn maydoniga tegsangiz, ko\'prikli klaviaturani ko\'rsatadi.</string>
@@ -276,6 +266,9 @@
     <string name="ime_banner_btn_dismiss">Boshqa ko\'rsatilmasin</string>
     <string name="ime_banner_toast_enabled">Avto-klaviatura faol ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Sozlamalarni ochib bo\'lmadi — « Klaster avto-klaviaturasi » maxsus imkoniyatlar xizmatini qo\'lda yoqing.</string>
+    <string name="hud_notif_banner_title">HUD Navigatsiya — bildirishnomaga kirish talab qilinadi</string>
+    <string name="hud_notif_banner_body">DashCast klaster ekranida navigatsiya ko\'rsatmalarini ko\'rsatish uchun bildirishnomalarga kirishni talab qiladi. Sozlamalar → Maxsus ilova kirishi → Bildirishnomalarga kirish → DashCast bo\'limidan yoqing.</string>
+    <string name="hud_notif_banner_toast_enabled">Bildirishnomalarga kirish berildi ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Klaviatura asboblar paneli ekranida ishlashi uchun Sozlamalar → Maxsus imkoniyatlar bo\'limidan « DashCast Cluster IME » xizmatini yoqing.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klaviatura</string>
@@ -371,14 +364,15 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · tekshiruv…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Fission testi</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Buzg\'uvchi jonli test: tanlangan ilovani fission ekranida ishga tushiradi, o\'lchamini majburiy o\'zgartiradi, asosiy ekranga qaytaradi, so\'ngra tozalaydi. Faqat DiLink 5, asosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission testi — buzg\'uvchi</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Maqsad: %1$s\n\nUshbu seriya:\n\n• Ilovada FORCE_RESIZE_APP compat-ni yoqadi\n• Ilovani majburiy to\'xtatadi\n• Uni fission ekranida (id ≠ 0) freeform rejimida ishga tushiradi\n• Vazifa o\'lchamini o\'zgartirishni sinab ko\'radi\n• Ko\'chirishni tasdiqlash uchun uni asosiy ekranga (id 0) qaytaradi\n• Ilovani majburiy to\'xtatadi va compat-ni qayta tiklaydi (tozalash)\n\nAsosiy ekranga (id 0) hech qachon o\'lcham o\'zgartirish buyrug\'i yuborilmaydi.\nDavom etilsinmi?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Testni ishga tushirish</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission testi faqat DiLink 5 uchun.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Sinov uchun ilovani tanlang</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline testi</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon quvurini 7 bosqichda tekshiradi: VD yaratish, VD-da ilovani ishga tushirish, klaster yuzasiga aks ettirish. Faqat DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline testi</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Maqsad: %1$s\n\nBu to\'plam:\n\n• V01: klaster proeksiyasini faollashtirish (auto_container)\n• V02: ilova ishga tushirilishi mumkinligini tekshirish\n• V03: 1920×720 VirtualDisplay yaratish\n• V04: ilovani VD-da ishga tushirish\n• V05: MirrorDaemon orqali ko\'zguni boshlash\n• V06: klaster renderingini vizual tekshirish\n• V07: tozalash (ko\'zguni to\'xtatish, VD o\'chirish, force-stop)\n\nFaqat DiLink 5. Maqsad ilova test vaqtida majburan to\'xtatiladi.\nDavom etish?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testni boshlash</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline testi faqat DiLink 5 uchun.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Sinab ko\'rish uchun ilovani tanlang</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
     <string name="diag_dl5_fission_prompt_title">Klaster tekshiruvi</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s klaster ekranida ko\'rinadimi?\n\n(displey %2$d sinovi)</string>
     <string name="diag_dl5_fission_prompt_yes">Ha</string>
@@ -404,7 +398,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Ovoz (alpha)</string>
     <string name="diag_voice_header_title">Ovozli boshqaruv — audio-zanjir PoC</string>
-    <string name="diag_voice_header_subtitle">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
     <string name="diag_voice_btn_start">Tinglashni boshlash</string>
     <string name="diag_voice_btn_stop">To‘xtatish</string>
     <string name="diag_voice_state_idle">Xizmat to‘xtatilgan</string>
@@ -423,20 +417,38 @@
     <string name="diag_voice_notif_text">Audio darajasi lokal tahlil qilinadi, hech narsa yozilmaydi.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Ovozli buyruqlar (Vosk)</string>
+    <string name="diag_voice_commands_switch">Yoqish</string>
+    <string name="diag_voice_commands_hint">"Hey Jarvis" deb ayting, so\'ng buyrug\'ingizni: "klaster", "klasterni yoping", "YouTube ni ishga tushiring", "diagnostika", "jurnallar".</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API kaliti (ixtiyoriy — Jarvis Sun\'iy intellektini faollashtiradi)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Nutqni tanish modeli</string>
+    <string name="diag_voice_model_small_label">Kichik model (~40 MB)</string>
+    <string name="diag_voice_model_small_desc">Tez yuklab olish, qisqa buyruqlar uchun yaxshi aniqlik.</string>
+    <string name="diag_voice_model_large_label">Katta model (~1,3 GB) — yuqori aniqlik</string>
+    <string name="diag_voice_model_large_desc">Yaxshiroq tanish, Wi-Fi bo\'lganida tavsiya etiladi.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d MB mavjud</string>
+    <string name="diag_voice_model_download_btn">Yuklab olish</string>
+    <string name="diag_voice_model_delete_btn">O\'chirish</string>
+    <string name="diag_voice_model_status_downloaded">✓ Model o\'rnatildi</string>
+    <string name="diag_voice_model_status_not_downloaded">O\'rnatilmagan</string>
+    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Chiqarilmoqda…</string>
     <string name="diag_voice_wakeword_card_title">Faollashtirish soʻzi (openWakeWord)</string>
     <string name="diag_voice_wakeword_switch">Yoqish</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid baho (chegara 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 («Ok DashCast» uchun oʻrindiq)</string>
     <string name="diag_voice_wakeword_last_fmt">Oxirgi aniqlash: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Oxirgi aniqlash: %1$s (baho %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime mavjud emas — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -525,4 +537,110 @@
     <string name="dpi_custom">Maxsus…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Keyingi ishga tushirishda qo\'llaniladi</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Proyeksiyadan oldin sendInfo(30) yuboradi — ba\'zi transport vositalarida ADAS cho\'zilishini tuzatadi. Ishga tushirishda klaster shakli o\'zgarsa o\'chiring.</string>
+    <string name="settings_fission_mode">Layouts rejimi</string>
+    <string name="settings_fission_mode_support">Klasterdagi maxsus zonalar bilan ko\'p ilovali proyeksiya. Proksi daemonni talab qiladi.</string>
+    <string name="fission_title">Fission — Ko\'p ilovali klaster</string>
+    <string name="fission_status_idle">Ilovani ko\'rsatish uchun + ni bosing</string>
+    <string name="fission_btn_add">+ Ilova qo\'shish</string>
+    <string name="fission_btn_stop">Hammasini to\'xtatish</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Layout muharriri</string>
+    <string name="fission_editor_clear">Tozalash</string>
+    <string name="fission_editor_save">Saqlash</string>
+    <string name="fission_editor_edit">Tahrirlash</string>
+    <string name="fission_editor_delete">O\'chirish</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Tartiblarni boshqarish</string>
+    <string name="layout_manager_new">Yangi tartib</string>
+    <string name="layout_canvas_hint">Zona chizish uchun torting</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">Faol ilovalar: %1$d</string>
+    <string name="fission_all_projected">Barcha ilovalar allaqachon ko\'rsatilmoqda</string>
+    <string name="fission_close_slot_confirm">Yopish</string>
+    <string name="fission_close_slot_title">%1$s yopilsinmi?</string>
+    <string name="fission_conflict_message">Proyeksiya allaqachon faol. Davom etish uchun uni to\'xtatasizmi?</string>
+    <string name="fission_conflict_stop">To\'xtatish</string>
+    <string name="fission_conflict_title">Proyeksiya ziddiyati</string>
+    <string name="fission_idle_hint">Ilovani ko\'rsatish uchun + ni bosing</string>
+    <string name="fission_launch_in">%1$s shu yerda ishga tushirish…</string>
+    <string name="fission_layout_active_fmt">Tartib: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Sevimli tartib o\'rnatildi ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Erkin rejim</string>
+    <string name="fission_layout_switch">Almashtirish</string>
+    <string name="fission_mode_free">Erkin rejim</string>
+    <string name="fission_no_apps">Mavjud ilovalar yo\'q</string>
+    <string name="fission_pick_app_title">Ilovani tanlang</string>
+    <string name="fission_place_in">%1$s shu yerga joylashtirish…</string>
+    <string name="fission_resize_full">To\'liq ekran</string>
+    <string name="fission_resize_left_3q">Chap ¾</string>
+    <string name="fission_resize_left_half">Chap ½</string>
+    <string name="fission_resize_right_3q">O\'ng ¾</string>
+    <string name="fission_resize_right_half">O\'ng ½</string>
+    <string name="fission_resize_title">%1$s o\'lchamini o\'zgartirish</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Ilovani bog\'lash…</string>
+    <string name="fission_slot_pkg_none">Yo\'q — bo\'sh hudud</string>
+    <string name="fission_slot_zone_bound_fmt">Bog\'langan ilova: %1$s</string>
+    <string name="settings_fission_auto_layout">Avtomatik sevimli tartib</string>
+    <string name="settings_fission_auto_layout_support">DashCast ishga tushganda: klaster proyeksiyasini, sevimli tartibni faollashtiradi va bog\'langan ilovalarni ishga tushiradi</string>
+    <string name="settings_fission_precreate_slots">Slotlarni ishga tushirishda oldindan yaratish</string>
+    <string name="settings_fission_precreate_slots_support">Fission ochilganda sevimli tartibning Virtual Display\'larini tayyorlaydi (ilovalarni ishga tushirmasdan)</string>
+    <string name="sysinfo_disp_hidden">Yashirin (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">DisplayManager API orqali ko\'rinmaydi</string>
+    <string name="layout_preset_activate">Faollashtirish</string>
+    <string name="layout_preset_active_badge">FAOL</string>
+    <string name="layout_preset_deactivate">O\'chirish</string>
+    <string name="fission_zone_count">%1$d hudud</string>
+    <string name="fo_err_attach_fmt">%1$s uchun slot yaratib bo\'lmadi</string>
+    <string name="fo_err_daemon">Daemon mavjud emas</string>
+    <string name="fo_err_proxy">Proxy ADB Daemon ulanmagan. Uni Sozlamalarda yoqing.</string>
+    <string name="fo_status_autoactivate">Tartib avtomatik faollashtirilmoqda…</string>
+    <string name="fo_status_autolayout_err_fmt">Avto-tartib xatosi: %1$s</string>
+    <string name="fo_status_create_fmt">%1$s uchun slot yaratilmoqda…</string>
+    <string name="fo_status_daemon">Daemon ishga tushirilmoqda…</string>
+    <string name="fo_status_launching_fmt">%1$s ishga tushirilmoqda (displey %2$d)…</string>
+    <string name="fo_status_mirror">Oyna ishga tushirilmoqda…</string>
+    <string name="fo_status_precreate">Slotlar oldindan yaratilmoqda…</string>
+    <string name="fo_status_projection">Klaster proyeksiyasi faollashtirilmoqda…</string>
+    <string name="fo_status_reuse_fmt">%1$s uchun slot qayta ishlatilmoqda…</string>
+    <string name="fo_status_starting_fmt">%1$s ishga tushirilmoqda…</string>
+    <string name="fo_status_stopping">To\'xtatilmoqda…</string>
+    <string name="lm_action_add">Qo\'shish</string>
+    <string name="lm_action_delete">O\'chirish</string>
+    <string name="lm_action_save">Saqlash</string>
+    <string name="lm_activated_ok_fmt">%1$s faollashtirildi ✓</string>
+    <string name="lm_activated_partial_fmt">%1$s faollashtirildi (ba\'zi slotlar muvaffaqiyatsiz)</string>
+    <string name="lm_activating_fmt">%1$s faollashtirilmoqda…</string>
+    <string name="lm_daemon_not_connected">Daemon ulanmagan — avval Fission proyeksiyasini ishga tushiring</string>
+    <string name="lm_delete_confirm_fmt">«%1$s» o\'chirilsinmi?</string>
+    <string name="lm_draw_zone_first">Kamida bitta zona chizing</string>
+    <string name="lm_edit_zones_hint">Zonalarni tahrirlang va saqlang</string>
+    <string name="lm_error_fmt">Xato: %1$s</string>
+    <string name="lm_free_mode_toast">Erkin rejim yoqildi</string>
+    <string name="lm_layout_default_name_fmt">Tartib %1$d</string>
+    <string name="lm_layout_name_hint">Tartib nomi</string>
+    <string name="lm_layout_save_title">Tartibni saqlash</string>
+    <string name="lm_layout_saved_toast">Tartib saqlandi ✓</string>
+    <string name="lm_new_layout_name">Yangi tartib</string>
+    <string name="lm_no_layout_loaded">Tartib yuklanmagan</string>
+    <string name="lm_no_saved_layouts">Saqlangan tartiblar yo\'q\nYuqorida zonalar chizib, saqlang.</string>
+    <string name="lm_save_before_favorite">Sevimli qilishdan oldin tartibni saqlang</string>
+    <string name="lm_zone_delete_title">Zona o\'chirilsinmi?</string>
+    <string name="lm_zone_edit_title_fmt">«%1$s» tahrirlash</string>
+    <string name="lm_zone_height">Balandlik (px)</string>
+    <string name="lm_zone_name_hint">Zona nomi</string>
+    <string name="lm_zone_new_title_fmt">Yangi zona — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">Joylashuv va o\'lchamlar</string>
+    <string name="lm_zone_width">Kenglik (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">Klaster tartibi</string>
+    <string name="main_layout_free_sub">Tartib yo\'q</string>
+    <string name="main_layout_manage">Boshqarish</string>
 </resources>

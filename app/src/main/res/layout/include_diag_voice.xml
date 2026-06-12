@@ -10,6 +10,7 @@
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -285,6 +286,254 @@
             android:textColor="@color/md_on_surface_variant"
             android:textSize="12sp"
             android:lineSpacingExtra="2dp"/>
+
+        <!-- v1.4.0 — Voice Commands card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/md_surface_container"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/diag_voice_commands_title"
+                        android:textColor="@color/md_on_surface"
+                        android:textSize="14sp"
+                        android:textStyle="bold"/>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/sw_voice_commands"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:text="@string/diag_voice_commands_switch"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/diag_voice_commands_hint"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="2dp"/>
+
+                <TextView
+                    android:id="@+id/tv_voice_transcript"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/md_primary"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace"
+                    android:text=""/>
+
+                <!-- v1.4.2-beta — OpenAI API key for LLM voice engine -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/diag_voice_apikey_label"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"/>
+
+                <EditText
+                    android:id="@+id/et_openai_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="@string/diag_voice_apikey_hint"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:imeOptions="actionDone"
+                    android:textColor="@color/md_on_surface"
+                    android:textColorHint="@color/md_on_surface_variant"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace"
+                    tools:ignore="HardcodedText"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- v1.4.3-beta — ASR model selection card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardBackgroundColor="@color/md_surface_container"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_voice_model_card_title"
+                    android:textColor="@color/md_on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp"/>
+
+                <!-- Small model option -->
+                <RadioGroup
+                    android:id="@+id/rg_vosk_model"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/rb_model_small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_voice_model_small_label"
+                        android:textColor="@color/md_on_surface"
+                        android:textSize="13sp"
+                        android:checked="true"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="36dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/diag_voice_model_small_desc"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+
+                    <RadioButton
+                        android:id="@+id/rb_model_large"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_voice_model_large_label"
+                        android:textColor="@color/md_on_surface"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="36dp"
+                        android:text="@string/diag_voice_model_large_desc"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+
+                </RadioGroup>
+
+                <!-- Storage info -->
+                <TextView
+                    android:id="@+id/tv_model_storage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:textSize="12sp"
+                    android:text=""/>
+
+                <!-- Download section — shown when large selected + not downloaded -->
+                <LinearLayout
+                    android:id="@+id/ll_model_download"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/diag_voice_model_status_not_downloaded"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_download_model"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_voice_model_download_btn"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <!-- Progress section — shown during download -->
+                <LinearLayout
+                    android:id="@+id/ll_model_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+
+                    <ProgressBar
+                        android:id="@+id/pb_model_download"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="100"
+                        android:progress="0"/>
+
+                    <TextView
+                        android:id="@+id/tv_model_progress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:text=""/>
+                </LinearLayout>
+
+                <!-- Installed section — shown when large model is downloaded -->
+                <LinearLayout
+                    android:id="@+id/ll_model_installed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/diag_voice_model_status_downloaded"
+                        android:textColor="@color/md_on_surface_variant"
+                        android:textSize="12sp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_delete_model"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diag_voice_model_delete_btn"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

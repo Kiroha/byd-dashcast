@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">DashCast</string>
     <string name="welcome_subtitle">Dashboard Controller</string>
     <string name="welcome_select_lang">Choisissez votre langue\nPlease select your language</string>
@@ -89,7 +89,6 @@
     <string name="notif_cluster_channel_desc">BYD küme üzerinde ekranı korur</string>
     <string name="notif_cluster_initializing">Küme: başlatılıyor…</string>
     <string name="notif_cluster_active">Küme etkin — ekran %1$d</string>
-    <string name="notif_cluster_stopped">Küme: durduruldu</string>
     <string name="notif_cluster_disconnected">Küme: bağlantı kesildi</string>
     <string name="sysinfo_file_saved">\n\nDosya: %1$s\nADB komutu: adb pull \"%1$s\"</string>
     <string name="menu_view_grid">⊞ Izgara Modu</string>
@@ -143,7 +142,6 @@
     <string name="settings_check_update_support">Yeni bir sürümün mevcut olup olmadığını kontrol eder</string>
     <string name="settings_check_update_button">Kontrol et</string>
     <string name="settings_source_code_title">Kaynak kodu</string>
-    <string name="main_title_dashboard">Gösterge paneli</string>
     <string name="main_nav_apps">Uygulamalar</string>
     <string name="main_nav_settings">Ayarlar</string>
     <string name="main_nav_diag">Tanılama</string>
@@ -200,6 +198,7 @@
     <string name="sysinfo_svc_run">RUN</string>
     <string name="sysinfo_svc_off">OFF</string>
     <string name="sysinfo_svc_mirror_sub">pidof izleniyor · 500 ms</string>
+    <string name="sysinfo_svc_checking">Kontrol ediliyor…</string>
     <string name="sysinfo_svc_stopped">Durduruldu</string>
     <string name="sysinfo_svc_adb_unreachable">5555 ulaşılamıyor</string>
     <string name="sysinfo_svc_conn">CONN</string>
@@ -222,14 +221,9 @@
     <string name="log_saved_toast">Günlük kaydedildi: %1$s</string>
 
     <!-- ═══════════════ Beta Engine (v1.1.0) ═══════════════ -->
-    <string name="settings_section_beta_engine">Deneysel motor (beta)</string>
-    <string name="settings_beta_warning">Deneysel özellikler. Bir sorun olursa uygulama otomatik olarak kararlı motora geri döner. Değişiklikten sonra yeniden başlatma gerekir.</string>
-    <string name="settings_beta_proxy_daemon">Ayrıcalıklı proxy daemon</string>
-    <string name="settings_beta_proxy_daemon_support">Sistem komutlarını çalıştırmak için yerel ADB (UID 2000) üzerinden kalıcı bir daemon başlatır. OpenBYD\'den esinlenilmiştir.</string>
-    <string name="settings_beta_system_context">Sistem context (yansıma)</string>
-    <string name="settings_beta_system_context_support">BYD SDK\'nın izin denetimini atlamak için ActivityThread.systemMain() ile sistem Context\'i alır.</string>
-    <string name="beta_restart_title">Yeniden başlatma gerekli</string>
-    <string name="beta_restart_message">Bu seçenek DashCast\'in bir sonraki başlatılmasında etkili olur. Bu sırada uygulamayı normal şekilde kullanmaya devam edebilirsiniz.</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_legacy_path">Proxy daemon not working. Use Legacy Path</string>
+    <string name="settings_legacy_path_support">Routes all privileged commands through the legacy ADB shell instead of the proxy daemon. Enable if the daemon is unresponsive or causing issues.</string>
     <string name="diag_tab_cluster">Cluster</string>
     <string name="diag_tab_display">Display</string>
     <string name="diag_tab_adb_local">Yerel ADB</string>
@@ -239,10 +233,9 @@
     <string name="diag_coming_soon_subtitle">Bu bölüm bir sonraki sürümde uygulanacaktır. Mevcut testler için «Beta Engine» sekmesine bakın.</string>
     <string name="diag_beta_header_title">Deneysel motor</string>
     <string name="diag_beta_header_subtitle">Component A (daemon) ve Component B (sistem context) testleri. Aşama 1.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon: OFF</string>
-    <string name="diag_beta_pill_a_on">A · Daemon: ON</string>
-    <string name="diag_beta_pill_b_off">B · SysCtx: OFF</string>
-    <string name="diag_beta_pill_b_on">B · SysCtx: ON</string>
+    <string name="diag_beta_pill_a_off">A · Daemon: Active</string>
+    <string name="diag_beta_pill_a_on">A · Legacy: ON</string>
+    <string name="diag_beta_pill_b_off">B · N/A</string>
     <string name="diag_beta_counters_idle">Başlatmak için «Tümünü çalıştır»a basın</string>
     <string name="diag_beta_counters_running">Çalışıyor…</string>
     <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
@@ -262,9 +255,6 @@
     <string name="diag_dl5_d8_target_label">Hedef uygulama (D8 testi — kümeleme)</string>
     <string name="diag_dl5_d8_running_toast">%1$s üzerinde D8 testi — uygulama yeniden başlatılacak ve ana ekrana geri çağrılacak.</string>
     <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="settings_dilink5_mode">DiLink 5 modu (deneysel)</string>
-    <string name="settings_dilink5_mode_support">DashCast\'i DiLink 5.0 / Android 12 protokolüne uyarlar.</string>
-    <string name="settings_dilink5_mode_support_fmt">%1$s · API %2$d — %3$s. Yeniden başlatma gerekli.</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Küme otomatik klavyesi (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Küme ekranındaki bir metin alanına dokunduğunuzda köprü klavyesini gösterir.</string>
@@ -276,6 +266,9 @@
     <string name="ime_banner_btn_dismiss">Bir daha gösterme</string>
     <string name="ime_banner_toast_enabled">Otomatik klavye aktif ✓</string>
     <string name="ime_banner_toast_cannot_open_settings">Ayarlar açılamadı — « Küme otomatik klavyesi » erişilebilirlik hizmetini elle etkinleştirin.</string>
+    <string name="hud_notif_banner_title">HUD Navigasyon — Bildirim erişimi gerekli</string>
+    <string name="hud_notif_banner_body">DashCast, navigasyon talimatlarını küme ekranında göstermek için bildirim erişimine ihtiyaç duyar. Ayarlar → Özel uygulama erişimi → Bildirim erişimi → DashCast yolundan etkinleştirin.</string>
+    <string name="hud_notif_banner_toast_enabled">Bildirim erişimi verildi ✓</string>
     <string name="keyboard_bridge_a11y_required_toast">Klavyenin gösterge panelinde çalışması için Ayarlar → Erişilebilirlik bölümünden « DashCast Cluster IME »\'yi etkinleştirin.</string>
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klavye</string>
@@ -371,14 +364,15 @@
     <string name="sysinfo_svc_force_resizable_checking">DL5 · kontrol…</string>
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
-    <string name="diag_dl5_cluster_test_fission">Fission Testi</string>
-    <string name="diag_dl5_cluster_test_fission_hint">Yıkıcı canlı test: seçilen uygulamayı fission ekranında başlatır, yeniden boyutlandırmayı zorlar, ana ekrana geri taşır, sonra temizler. Yalnızca DiLink 5, ana ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_title">Fission Testi — yıkıcı</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_msg">Hedef: %1$s\n\nBu seri:\n\n• Uygulamada FORCE_RESIZE_APP compat\'i etkinleştirecek\n• Uygulamayı zorla durduracak\n• Onu fission ekranında (id ≠ 0) freeform modunda başlatacak\n• Görev yeniden boyutlandırmayı test edecek\n• Taşımayı doğrulamak için onu ana ekrana (id 0) geri taşıyacak\n• Uygulamayı zorla durduracak ve compat\'i sıfırlayacak (temizlik)\n\nAna ekrana (id 0) asla yeniden boyutlandırma komutu gönderilmez.\nDevam edilsin mi?</string>
-    <string name="diag_dl5_cluster_test_fission_confirm_ok">Testi çalıştır</string>
-    <string name="diag_dl5_cluster_test_fission_only_dl5">Fission Testi yalnızca DiLink 5 içindir.</string>
-    <string name="diag_dl5_cluster_test_fission_pick_title">Test edilecek uygulamayı seç</string>
-    <string name="diag_dl5_cluster_test_fission_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
+    <!-- v1.3.12 — VD pipeline test battery. -->
+    <string name="diag_dl5_cluster_test_vd">VD Pipeline Testi</string>
+    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon hattını 7 adımda doğrular: VD oluşturma, VD üzerinde uygulama başlatma, küme yüzeyine yansıtma. Yalnızca DiLink 5.</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline Testi</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_msg">Hedef: %1$s\n\nBu paket:\n\n• V01: küme projeksiyonunu etkinleştir (auto_container)\n• V02: uygulamanın başlatılabilir olduğunu doğrula\n• V03: 1920×720 VirtualDisplay oluştur\n• V04: uygulamayı VD üzerinde başlat\n• V05: MirrorDaemon aracılığıyla yansıtmayı başlat\n• V06: küme oluşturma işlemini görsel olarak doğrula\n• V07: temizle (yansıtmayı durdur, VD\'yi sil, force-stop)\n\nYalnızca DiLink 5. Hedef uygulama test sırasında zorla durdurulacak.\nDevam edilsin mi?</string>
+    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testi başlat</string>
+    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline Testi yalnızca DiLink 5 içindir.</string>
+    <string name="diag_dl5_cluster_test_vd_pick_title">Test edilecek uygulamayı seçin</string>
+    <string name="diag_dl5_cluster_test_vd_pick_empty">Başlatılabilir uygulama bulunamadı.</string>
     <string name="diag_dl5_fission_prompt_title">Cluster doğrulama</string>
     <string name="diag_dl5_fission_prompt_msg_fmt">%1$s cluster ekranında görünüyor mu?\n\n(ekran %2$d testi)</string>
     <string name="diag_dl5_fission_prompt_yes">Evet</string>
@@ -404,7 +398,7 @@
     <!-- v1.2.43-beta — Voice PoC panel -->
     <string name="diag_tab_voice">Ses (alpha)</string>
     <string name="diag_voice_header_title">Sesli kontrol — ses zinciri PoC</string>
-    <string name="diag_voice_header_subtitle">Adım 1/3: mikrofonun bu platformda uygulamaya ulaştığını doğrular. Henüz hiçbir ML modeli yüklenmedi.</string>
+    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Adım 1/3: mikrofonun bu platformda uygulamaya ulaştığını doğrular. Henüz hiçbir ML modeli yüklenmedi.</string>
     <string name="diag_voice_btn_start">Dinlemeyi başlat</string>
     <string name="diag_voice_btn_stop">Durdur</string>
     <string name="diag_voice_state_idle">Servis durdu</string>
@@ -423,20 +417,37 @@
     <string name="diag_voice_notif_text">Ses seviyesi yerel olarak analiz ediliyor, hiçbir şey kaydedilmiyor.</string>
 
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
-    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
+
+    <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
+    <string name="diag_voice_commands_title">Sesli komutlar (Vosk)</string>
+    <string name="diag_voice_commands_switch">Etkinleştir</string>
+    <string name="diag_voice_commands_hint">"Hey Jarvis" deyin, ardından komutunuzu: "küme", "kümeyi kapat", "YouTube başlat", "tanılama", "günlükler".</string>
+
+    <!-- v1.4.2-beta — LLM API key -->
+    <string name="diag_voice_apikey_label">OpenAI API anahtarı (isteğe bağlı — Jarvis Yapay Zekasını etkinleştirir)</string>
+    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Uyandırma kelimesi (openWakeWord)</string>
+    <!-- v1.4.3-beta — ASR model selection -->
+    <string name="diag_voice_model_card_title">Ses tanıma modeli</string>
+    <string name="diag_voice_model_small_label">Küçük model (~40 MB)</string>
+    <string name="diag_voice_model_small_desc">Hızlı indirme, kısa komutlar için iyi doğruluk.</string>
+    <string name="diag_voice_model_large_label">Büyük model (~1,3 GB) — yüksek doğruluk</string>
+    <string name="diag_voice_model_large_desc">Daha iyi tanıma, Wi-Fi bağlantısında önerilir.</string>
+    <string name="diag_voice_model_storage_fmt">%1$d MB kullanılabilir</string>
+    <string name="diag_voice_model_download_btn">İndir</string>
+    <string name="diag_voice_model_delete_btn">Sil</string>
+    <string name="diag_voice_model_status_downloaded">✓ Model kuruldu</string>
+    <string name="diag_voice_model_status_not_downloaded">Kurulu değil</string>
+    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="diag_voice_model_unzipping">Çıkarılıyor…</string>
     <string name="diag_voice_wakeword_switch">Etkinleştir</string>
     <string name="diag_voice_wakeword_score_label">Sigmoid puanı (eşik 0,5)</string>
     <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 (“Ok DashCast” için yer tutucu)</string>
     <string name="diag_voice_wakeword_last_fmt">Son algılama: —</string>
-    <string name="diag_voice_wakeword_last_at_fmt">Son algılama: %1$s (puan %2$.2f)</string>
     <string name="diag_voice_wakeword_unavailable">ONNX Runtime kullanılamıyor — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
-    <string name="ota_version_label">DashCast %1$s</string>
-    <string name="ota_progress_unknown">…</string>
-    <string name="ota_progress_percent">%1$d %%</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
@@ -525,4 +536,110 @@
     <string name="dpi_custom">Özel…</string>
     <string name="dpi_custom_hint">DPI (%1$d–%2$d)</string>
     <string name="dpi_applied_next_launch">Sonraki başlatmada uygulanacak</string>
+    <!-- v1.3 ADAS Window Fix + v1.4 Fission mode -->
+    <string name="settings_adas_window_fix">ADAS Window Fix</string>
+    <string name="settings_adas_window_fix_support">Projeksiyon öncesinde sendInfo(30) gönderir — bazı araçlarda ADAS bozulmasını düzeltir. Küme şekli başlangıçta değişirse devre dışı bırakın.</string>
+    <string name="settings_fission_mode">Layouts modu</string>
+    <string name="settings_fission_mode_support">Özel bölgelerle kümede çoklu uygulama projeksiyonu. Proxy daemon gerektirir.</string>
+    <string name="fission_title">Fission — Çoklu uygulama kümesi</string>
+    <string name="fission_status_idle">Uygulama yansıtmak için + tuşuna dokunun</string>
+    <string name="fission_btn_add">+ Uygulama ekle</string>
+    <string name="fission_btn_stop">Tümünü durdur</string>
+    <string name="fission_slot_resize">Resize</string>
+    <string name="fission_menu_layouts">Layouts</string>
+    <string name="fission_editor_title">Düzen düzenleyicisi</string>
+    <string name="fission_editor_clear">Temizle</string>
+    <string name="fission_editor_save">Kaydet</string>
+    <string name="fission_editor_edit">Düzenle</string>
+    <string name="fission_editor_delete">Sil</string>
+    <string name="main_nav_layouts">Layouts</string>
+    <string name="layout_manager_title">Düzen yöneticisi</string>
+    <string name="layout_manager_new">Yeni düzen</string>
+    <string name="layout_canvas_hint">Bir bölge çizmek için sürükleyin</string>
+
+    <!-- Fission — multi-app cluster -->
+    <string name="fission_active_count">%1$d etkin uygulama</string>
+    <string name="fission_all_projected">Tüm uygulamalar zaten yansıtılıyor</string>
+    <string name="fission_close_slot_confirm">Kapat</string>
+    <string name="fission_close_slot_title">%1$s kapatılsın mı?</string>
+    <string name="fission_conflict_message">Zaten etkin bir yansıtma var. Devam etmek için durdurulsun mu?</string>
+    <string name="fission_conflict_stop">Durdur</string>
+    <string name="fission_conflict_title">Yansıtma çakışması</string>
+    <string name="fission_idle_hint">Uygulama yansıtmak için + tuşuna dokunun</string>
+    <string name="fission_launch_in">%1$s şurada başlatılsın…</string>
+    <string name="fission_layout_active_fmt">Düzen: %1$s</string>
+    <string name="fission_layout_favorite_set_toast">Favori düzen ayarlandı ✓</string>
+    <string name="fission_layout_favorite_suffix"> ⭐</string>
+    <string name="fission_layout_mode_free">Serbest mod</string>
+    <string name="fission_layout_switch">Değiştir</string>
+    <string name="fission_mode_free">Serbest mod</string>
+    <string name="fission_no_apps">Kullanılabilir uygulama yok</string>
+    <string name="fission_pick_app_title">Bir uygulama seçin</string>
+    <string name="fission_place_in">%1$s şuraya yerleştirilsin…</string>
+    <string name="fission_resize_full">Tam ekran</string>
+    <string name="fission_resize_left_3q">Sol ¾</string>
+    <string name="fission_resize_left_half">Sol ½</string>
+    <string name="fission_resize_right_3q">Sağ ¾</string>
+    <string name="fission_resize_right_half">Sağ ½</string>
+    <string name="fission_resize_title">%1$s yeniden boyutlandır</string>
+    <string name="fission_slot_error">Slot %1$s: %2$s</string>
+    <string name="fission_slot_pick_pkg">Bir uygulama bağla…</string>
+    <string name="fission_slot_pkg_none">Yok — serbest bölge</string>
+    <string name="fission_slot_zone_bound_fmt">Bağlı uygulama: %1$s</string>
+    <string name="settings_fission_auto_layout">Otomatik favori düzen</string>
+    <string name="settings_fission_auto_layout_support">DashCast başlatıldığında: küme projeksiyonunu ve favori düzeni etkinleştirir, bağlı uygulamaları başlatır</string>
+    <string name="settings_fission_precreate_slots">Slotları başlangıçta önceden oluştur</string>
+    <string name="settings_fission_precreate_slots_support">Fission açıldığında favori düzenin Virtual Display\'lerini hazırlar (uygulamaları başlatmadan)</string>
+    <string name="sysinfo_disp_hidden">Gizli (PRIVATE)</string>
+    <string name="sysinfo_disp_hidden_sub">DisplayManager API üzerinden görünmez</string>
+    <string name="layout_preset_activate">Etkinleştir</string>
+    <string name="layout_preset_active_badge">ETKİN</string>
+    <string name="layout_preset_deactivate">Devre dışı bırak</string>
+    <string name="fission_zone_count">%1$d bölge</string>
+    <string name="fo_err_attach_fmt">%1$s için slot oluşturulamadı</string>
+    <string name="fo_err_daemon">Daemon kullanılamıyor</string>
+    <string name="fo_err_proxy">Proxy ADB Daemon bağlı değil. Ayarlardan etkinleştirin.</string>
+    <string name="fo_status_autoactivate">Düzen otomatik etkinleştiriliyor…</string>
+    <string name="fo_status_autolayout_err_fmt">Otomatik düzen hatası: %1$s</string>
+    <string name="fo_status_create_fmt">%1$s için slot oluşturuluyor…</string>
+    <string name="fo_status_daemon">Daemon başlatılıyor…</string>
+    <string name="fo_status_launching_fmt">%1$s başlatılıyor (ekran %2$d)…</string>
+    <string name="fo_status_mirror">Ayna başlatılıyor…</string>
+    <string name="fo_status_precreate">Slotlar önceden oluşturuluyor…</string>
+    <string name="fo_status_projection">Küme projeksiyonu etkinleştiriliyor…</string>
+    <string name="fo_status_reuse_fmt">%1$s için slot yeniden kullanılıyor…</string>
+    <string name="fo_status_starting_fmt">%1$s başlatılıyor…</string>
+    <string name="fo_status_stopping">Durduruluyor…</string>
+    <string name="lm_action_add">Ekle</string>
+    <string name="lm_action_delete">Sil</string>
+    <string name="lm_action_save">Kaydet</string>
+    <string name="lm_activated_ok_fmt">%1$s etkinleştirildi ✓</string>
+    <string name="lm_activated_partial_fmt">%1$s etkinleştirildi (bazı slotlar başarısız)</string>
+    <string name="lm_activating_fmt">%1$s etkinleştiriliyor…</string>
+    <string name="lm_daemon_not_connected">Daemon bağlı değil — önce bir Fission projeksiyonu başlatın</string>
+    <string name="lm_delete_confirm_fmt">“%1$s” silinsin mi?</string>
+    <string name="lm_draw_zone_first">En az bir bölge çizin</string>
+    <string name="lm_edit_zones_hint">Bölgeleri düzenleyin ve kaydedin</string>
+    <string name="lm_error_fmt">Hata: %1$s</string>
+    <string name="lm_free_mode_toast">Serbest mod etkin</string>
+    <string name="lm_layout_default_name_fmt">Düzen %1$d</string>
+    <string name="lm_layout_name_hint">Düzen adı</string>
+    <string name="lm_layout_save_title">Düzeni kaydet</string>
+    <string name="lm_layout_saved_toast">Düzen kaydedildi ✓</string>
+    <string name="lm_new_layout_name">Yeni düzen</string>
+    <string name="lm_no_layout_loaded">Yüklü düzen yok</string>
+    <string name="lm_no_saved_layouts">Kayıtlı düzen yok\nYukarıda bölgeler çizin ve kaydedin.</string>
+    <string name="lm_save_before_favorite">Favori olarak ayarlamadan önce düzeni kaydedin</string>
+    <string name="lm_zone_delete_title">Bölge silinsin mi?</string>
+    <string name="lm_zone_edit_title_fmt">“%1$s” düzenle</string>
+    <string name="lm_zone_height">Yükseklik (px)</string>
+    <string name="lm_zone_name_hint">Bölge adı</string>
+    <string name="lm_zone_new_title_fmt">Yeni bölge — %1$d×%2$d px</string>
+    <string name="lm_zone_position_section">Konum ve boyutlar</string>
+    <string name="lm_zone_width">Genişlik (px)</string>
+    <string name="lm_zone_x">X (px)</string>
+    <string name="lm_zone_y">Y (px)</string>
+    <string name="main_layout_section">Küme düzeni</string>
+    <string name="main_layout_free_sub">Düzen yok</string>
+    <string name="main_layout_manage">Yönet</string>
 </resources>

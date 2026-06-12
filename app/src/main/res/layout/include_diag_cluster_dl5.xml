@@ -40,10 +40,11 @@
                     android:gravity="center_vertical">
 
                     <ImageView
+                        android:importantForAccessibility="no"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:src="@drawable/ic_science"
-                        android:tint="@color/md_primary"
+                        app:tint="@color/md_primary"
                         android:layout_marginEnd="14dp"/>
 
                     <LinearLayout
@@ -126,7 +127,7 @@
                         android:text="@string/diag_dl5_cluster_send_telegram"/>
                 </LinearLayout>
 
-                <!-- Action row 2 — live Fission test (DL5 only) -->
+                <!-- Action row 2 — VD pipeline test (DL5 only) -->
                 <LinearLayout
                     android:id="@+id/ll_dl5_cluster_fission_row"
                     android:layout_width="match_parent"
@@ -140,7 +141,7 @@
                         style="@style/Widget.Material3.Button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/diag_dl5_cluster_test_fission"
+                        android:text="@string/diag_dl5_cluster_test_vd"
                         app:icon="@drawable/ic_science"
                         app:iconGravity="textStart"
                         app:backgroundTint="@color/md_tertiary"
@@ -150,7 +151,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="@string/diag_dl5_cluster_test_fission_hint"
+                        android:text="@string/diag_dl5_cluster_test_vd_hint"
                         android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                         android:textColor="@color/md_on_surface_variant"/>
                 </LinearLayout>
