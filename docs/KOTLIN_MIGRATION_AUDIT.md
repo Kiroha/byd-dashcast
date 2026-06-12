@@ -6,8 +6,8 @@
 
 | Élément | Valeur | Impact migration |
 |---|---|---|
-| AGP | 8.10.1 | Plafond de la fenêtre testée de KGP 2.2.0 |
-| Gradle | 8.11.1 | Minimum requis par AGP 8.10 ; dans la fenêtre KGP 2.2.0 |
+| AGP | 8.13.2 | Dernier 8.x ; AGP 9.x = migration majeure séparée (voir plafonds) |
+| Gradle | 8.14.5 | Dernier 8.x ; ≥ 8.13 requis par AGP 8.13 ; dans la fenêtre KGP 2.4.0 |
 | Java | source/target 17 | Débloqué par AGP 8 ; `kotlinOptions.jvmTarget = '17'` aligné |
 | compileSdk / target / min | 33 / 29 / 28 | Aucun blocage Kotlin |
 | SDK | android.jar BYD custom (bydauto APIs) | Kotlin compile contre le même jar — vérifié OK |
@@ -21,14 +21,14 @@
 - `packagingOptions` excluait déjà `META-INF/*.kotlin_module` : sans effet négatif pour un APK applicatif, conservé tel quel.
 - Coût APK : kotlin-stdlib ≈ +1,7 Mo avant minify (minifyEnabled est false).
 
-### Plafonds de version et comment les lever
+### Plafonds de version et comment les lever (état juin 2026)
 
 | Cible | Bloqué par | Pour lever |
 |---|---|---|
-| Java 17 (actuel) | — | Débloqué par AGP 8 (D8 desugar records & co jusqu'à minSdk 28) ✅ |
-| Kotlin 2.2.0 (actuel) | — | K2 vérifié vert sur AGP 8.10.1 / Gradle 8.11.1 ✅ |
-| AGP 8.10.1 (actuel) | Fenêtre testée de KGP 2.2.0 (≤ 8.10) | Bumper Kotlin d'abord, puis AGP/Gradle — toujours dans la matrice JetBrains |
-| Kotlin 2.3+ / AGP 8.11+ futur | Matrice de compat JetBrains | Vérifier la matrice à chaque bump ; le SDK BYD custom (android-33) a passé AGP 8 sans problème |
+| Kotlin 2.4.0 (actuel) | — | Dernière version publiée ✅ (fenêtre : Gradle 7.6.3–9.5.0, AGP 8.5.2–9.1.0) |
+| Java 17 (actuel) | — | Java 21 source n'apporterait rien (code converti en Kotlin, ART API 29) et exigerait un JDK 21 local |
+| AGP 8.13.2 / Gradle 8.14.5 (actuels) | Migration AGP 9 | Voir checklist ci-dessous |
+| AGP 9.0/9.1 + Gradle 9.x | Chantier dédié | **Checklist AGP 9** : ① réécrire `applicationVariants.all` (nommage APK) en `androidComponents.onVariants()` — l'ancienne Variant API est supprimée ; ② Kotlin intégré par défaut (`kotlin-android` incompatible — opt-out `android.builtInKotlin=false` possible) ; ③ Build Tools 36.0.0 minimum à installer dans le SDK BYD custom ; ④ nouveaux defaults (`enableAppCompileTimeRClass`, R8 resource shrinking…) ; ⑤ Gradle 9.1+ requis. Plafond Kotlin : KGP 2.4.0 supporte AGP ≤ 9.1.0 → **AGP 9.2.x exclu** tant que KGP ne l'étend pas |
 
 ### Adaptations AGP 8 réalisées (toutes vérifiées : debug + release + lint 0/0)
 
