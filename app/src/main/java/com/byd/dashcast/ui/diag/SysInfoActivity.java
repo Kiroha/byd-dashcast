@@ -1126,7 +1126,7 @@ public class SysInfoActivity extends AppCompatActivity {
         // BetaProxy daemon — uid=2000 process (dashcast_proxy). Status via ProxyClient.isConnected()
         // (volatile read, ~5 µs). PID and metrics resolved on a background thread.
         final boolean proxyConnected = com.byd.dashcast.proxy.ProxyClient.isConnected();
-        final View proxyRow = addServiceRow(inf, container, "BetaProxy",
+        final View proxyRow = addServiceRow(inf, container, "Proxy ADB Daemon",
                 proxyConnected ? getString(R.string.sysinfo_svc_checking)
                                : getString(R.string.sysinfo_svc_stopped),
                 proxyConnected, false,
