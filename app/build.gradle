@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
     signingConfigs {
@@ -313,6 +314,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // Kotlin migration — must match compileOptions (Java 8) so mixed
+    // Java/Kotlin compilation stays consistent during the transition.
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
 
 

@@ -6,6 +6,9 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:7.4.2'
+        // Kotlin migration (branch switch-kotlin) — 1.9.24 is the last 1.9.x,
+        // compatible with AGP 7.4.2 + Gradle 7.6.4 + jvmTarget 1.8.
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24'
     }
 }
 
