@@ -3,6 +3,7 @@ package com.byd.dashcast;
 import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.ui.main.AppListCoordinator;
 import com.byd.dashcast.ui.main.ClusterControlCoordinator;
+import com.byd.dashcast.ui.main.FissionCoordinator;
 import com.byd.dashcast.ui.main.NavigationCoordinator;
 import com.byd.dashcast.ui.main.MirrorCoordinator;
 import com.byd.dashcast.ui.main.FullscreenMirrorCoordinator;
@@ -90,7 +91,8 @@ public class MainActivity extends AppCompatActivity
                    FullscreenMirrorCoordinator.Host,
                    SplitController.Host,
                    PermissionBannerCoordinator.Host,
-                   UsageTracker.Host {
+                   UsageTracker.Host,
+                   FissionCoordinator.Host {
 
     private static final String TAG = "BYDApp";
     // Orphan sniffer kill must only run once per process lifetime (first cold start).
@@ -166,11 +168,6 @@ public class MainActivity extends AppCompatActivity
     // v0.9.74 — Pseudo-fullscreen mirror state (managed by FullscreenMirrorCoordinator)
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnExitFullscreen;
 
-    // Fission layout selector (v1.4.17)
-    private View     llFissionLayoutRow;
-    private TextView tvMainFissionLayout;
-    private com.google.android.material.button.MaterialButton btnMainSwitchLayout;
-
     // v0.9.79 — root overlay for reparented control panel (managed by FullscreenMirrorCoordinator)
     private android.widget.FrameLayout vRootOverlay;
 
@@ -196,6 +193,7 @@ public class MainActivity extends AppCompatActivity
     private FullscreenMirrorCoordinator  mFullscreenCoordinator;
     private SplitController              mSplitController;
     private PermissionBannerCoordinator  mPermissionBannerCoordinator;
+    private FissionCoordinator           mFissionCoordinator;
 
     // Grace period check for state poll
     private long         mLastLaunchTime = 0;
@@ -330,11 +328,6 @@ public class MainActivity extends AppCompatActivity
         // v0.9.74 — Favorites strip + fullscreen overlay refs.
         btnExitFullscreen  = findViewById(R.id.btn_exit_fullscreen);
         vRootOverlay        = findViewById(R.id.root_overlay);
-        llFissionLayoutRow  = findViewById(R.id.ll_fission_layout_row);
-        tvMainFissionLayout = findViewById(R.id.tv_main_fission_layout);
-        btnMainSwitchLayout = findViewById(R.id.btn_main_switch_layout);
-        if (btnMainSwitchLayout != null)
-            btnMainSwitchLayout.setOnClickListener(v -> showMainLayoutSwitcher());
         // Category filter container visibility (coordinator owns the buttons' click listeners)
         llCategoryFilters = findViewById(R.id.ll_category_filters);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -510,38 +503,10 @@ public class MainActivity extends AppCompatActivity
             });
         }
 
-        // Fission button — wired once in onCreate, visibility refreshed in onResume.
-        Button btnFissionOpen = (Button) findViewById(R.id.btn_fission_open);
-        if (btnFissionOpen != null) {
-            btnFissionOpen.setOnClickListener(v -> {
-                try {
-                    startActivity(new android.content.Intent(
-                            MainActivity.this, com.byd.dashcast.fission.FissionActivity.class));
-                } catch (Exception e) {
-                    AppLogger.e("MainActivity", "FissionActivity launch failed", e);
-                }
-            });
-        }
-        refreshFissionButton();
-
-        // Banners wired in setupCoordinators() below
-
-        // Cluster mirror: touch → map coordinates → inject on display 1
-        clusterMirror.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // v0.9.79 — prevent NestedScrollView (or any ancestor) from stealing the
-                // gesture once the finger moves past touchSlop, otherwise vertical drags
-                // and pinch gestures get cancelled mid-flight.
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    v.getParent().requestDisallowInterceptTouchEvent(true);
-                }
-                forwardTouchFromMirror(v, event);
-                return true;
-            }
-        });
+        // Banners and fission wired in setupCoordinators() below
 
         // Wire coordinator layer (status dot, mirror lifecycle, fullscreen state machine).
+        // Touch forwarding is wired internally by MirrorCoordinator.
         setupCoordinators();
 
         // Async loading of the app list (async to avoid blocking the UI)
@@ -598,7 +563,7 @@ public class MainActivity extends AppCompatActivity
         // sees the new column layout as soon as they leave Settings.
         applyCompactAppsPanelMode();
         // Fission button visibility follows its toggle in SettingsActivity.
-        refreshFissionButton();
+        if (mFissionCoordinator != null) mFissionCoordinator.refresh();
     }
 
     /**
@@ -641,54 +606,6 @@ public class MainActivity extends AppCompatActivity
      * PREF_SHOW_CATEGORY_FILTERS pref). Safe to call multiple times — purely
      * idempotent layout adjustments, no allocation of new fields.
      */
-    private void refreshFissionButton() {
-        View btn = findViewById(R.id.btn_fission_open);
-        if (btn == null) return;
-        boolean enabled = com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this);
-        btn.setVisibility(enabled ? View.VISIBLE : View.GONE);
-        if (llFissionLayoutRow != null)
-            llFissionLayoutRow.setVisibility(enabled ? View.VISIBLE : View.GONE);
-        if (enabled) refreshFissionLayoutLabel();
-    }
-
-    private void refreshFissionLayoutLabel() {
-        if (tvMainFissionLayout == null) return;
-        com.byd.dashcast.fission.LayoutPreset fav =
-                com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this);
-        if (fav == null) {
-            tvMainFissionLayout.setText(getString(R.string.fission_layout_mode_free));
-        } else {
-            tvMainFissionLayout.setText(
-                    getString(R.string.fission_layout_active_fmt, fav.name));
-        }
-    }
-
-    private void showMainLayoutSwitcher() {
-        List<com.byd.dashcast.fission.LayoutPreset> presets =
-                com.byd.dashcast.fission.LayoutPrefs.load(this);
-        String favId = com.byd.dashcast.fission.LayoutPrefs.getFavoriteId(this);
-        String[] names = new String[presets.size() + 1];
-        names[0] = getString(R.string.fission_layout_mode_free);
-        for (int i = 0; i < presets.size(); i++) {
-            com.byd.dashcast.fission.LayoutPreset p = presets.get(i);
-            names[i + 1] = (p.id.equals(favId) ? "⭐ " : "") + p.name
-                    + "  (" + p.slots.size() + " zones)";
-        }
-        new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.fission_layout_switch))
-                .setItems(names, (d, which) -> {
-                    if (which == 0) {
-                        com.byd.dashcast.fission.LayoutPrefs.setFavoriteId(this, null);
-                    } else {
-                        com.byd.dashcast.fission.LayoutPrefs.setFavoriteId(
-                                this, presets.get(which - 1).id);
-                    }
-                    refreshFissionLayoutLabel();
-                })
-                .setNegativeButton("Annuler", null)
-                .show();
-    }
-
     private void applyCompactAppsPanelMode() {
         if (llAppListSection == null) return;
 
@@ -1598,14 +1515,6 @@ public class MainActivity extends AppCompatActivity
 
     // ---- Miroir cluster ----
 
-    /** Returns the ClusterInputForwarder from the service if bound, otherwise returns null. */
-    private com.byd.dashcast.dashboard.ClusterInputForwarder getInputForwarder() {
-        if (mServiceBound && mClusterService != null) {
-            return mClusterService.getInputForwarder();
-        }
-        return null;
-    }
-
     /**
      * Attempts to retrieve the daemon Binder from ServiceManager (via reflection).
      * Called in onStart() if mDaemonBinder == null (daemon already running, app returned to foreground).
@@ -1970,109 +1879,6 @@ public class MainActivity extends AppCompatActivity
             if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK");
         }
     }
-
-    // 1.2.31 — pre-allocated touch-forwarding scratch arrays. The mirror
-    // touch path runs at 60-120 Hz, so a fresh int[] + 2 float[] per event was
-    // ~180 array allocations/sec just for transcoding view coords → cluster
-    // coords. Cap at 16 pointers (= Android InputDispatcher limit and matches
-    // ClusterInputForwarder.MAX_POINTERS). The forwarder copies values into its
-    // own MotionEvent so we can safely reuse these arrays on the next event.
-    private static final int MAX_FWD_POINTERS = 16;
-    private final int[]   mFwdPointerIds = new int[MAX_FWD_POINTERS];
-    private final float[] mFwdClusterXs  = new float[MAX_FWD_POINTERS];
-    private final float[] mFwdClusterYs  = new float[MAX_FWD_POINTERS];
-
-    /**
-     * Maps touch coordinates from the mirror TextureView to the cluster display.
-     * The SurfaceControl projection preserves the ratio (letterboxing), so we recalculate
-     * the offset the same way setDisplayProjection did.
-     */
-    private void forwardTouchFromMirror(View mirrorView, MotionEvent event) {
-        com.byd.dashcast.dashboard.ClusterInputForwarder forwarder = getInputForwarder();
-        if (forwarder == null) return;
-
-        com.byd.dashcast.dashboard.ClusterMirrorManager mirror =
-                mServiceBound && mClusterService != null
-                        ? mClusterService.getMirrorManager() : null;
-        if (mirror == null) return;
-
-        // Use the projection params stored when setDisplayProjection was called.
-        // This guarantees the touch offset/scale matches the actual rendered projection,
-        // even if the view was resized since mirror start (avoids touch offset bugs).
-        float scale   = mirror.getProjScale();
-        if (scale <= 0f) return;  // Mirror not yet fully initialized
-
-        float offsetX = mirror.getProjOffsetX();
-        float offsetY = mirror.getProjOffsetY();
-        int   clusterW = mirror.getClusterWidth();
-        int   clusterH = mirror.getClusterHeight();
-        if (clusterW <= 0 || clusterH <= 0) return;
-
-        int pointerCount = Math.min(event.getPointerCount(), MAX_FWD_POINTERS);
-        if (pointerCount <= 0) return;
-
-        for (int i = 0; i < pointerCount; i++) {
-            mFwdPointerIds[i] = event.getPointerId(i);
-            float cx = (event.getX(i) - offsetX) / scale;
-            float cy = (event.getY(i) - offsetY) / scale;
-            mFwdClusterXs[i] = Math.max(0, Math.min(cx, clusterW - 1));
-            mFwdClusterYs[i] = Math.max(0, Math.min(cy, clusterH - 1));
-        }
-
-        if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
-                || event.getActionMasked() == android.view.MotionEvent.ACTION_POINTER_DOWN) {
-            int ai = event.getActionIndex();
-            if (ai >= 0 && ai < pointerCount) {
-                AppLogger.d(TAG, "touch → ptrs=" + pointerCount
-                        + " action=" + event.getActionMasked()
-                        + " idx=" + ai
-                        + " view(" + (int)event.getX(ai) + "," + (int)event.getY(ai) + ")"
-                        + " off=(" + (int)offsetX + "," + (int)offsetY + ")"
-                        + " scale=" + String.format(java.util.Locale.US, "%.3f", scale)
-                        + " cluster=(" + (int)mFwdClusterXs[ai] + "," + (int)mFwdClusterYs[ai]
-                        + ")/" + clusterW + "×" + clusterH);
-            }
-        }
-
-        forwarder.forwardTouchFinalMulti(
-                mFwdPointerIds,
-                mFwdClusterXs,
-                mFwdClusterYs,
-                event.getActionMasked(),
-                event.getActionIndex(),
-                pointerCount
-        );
-
-        // v1.3.3 — DL5 only: after the finger is lifted from the cluster mirror,
-        // wait 350 ms (enough for the cluster app to move input focus) then check
-        // whether a focused editable node is visible on the cluster. If so,
-        // auto-launch the keyboard bridge. This is additive to the event-driven
-        // path in ClusterImeWatcherService (TYPE_VIEW_FOCUSED), which can miss
-        // events when the ROM returns displayId=-1 on secondary-display a11y events.
-        // Guard: only on DL5, only on ACTION_UP (lift), only when mirror is active.
-        int actionMasked = event.getActionMasked();
-        if ((actionMasked == MotionEvent.ACTION_UP
-                || actionMasked == MotionEvent.ACTION_POINTER_UP)
-                && ClusterService.sIsRunning) {
-            try {
-                if (com.byd.dashcast.platform.Platform.get().isDiLink5(MainActivity.this)) {
-                    clusterMirror.postDelayed(new Runnable() {
-                        @Override public void run() {
-                            try {
-                                com.byd.dashcast.ime.ClusterImeWatcherService
-                                        .checkAndLaunchBridgeIfNeeded(MainActivity.this);
-                            } catch (Throwable t) {
-                                AppLogger.e(TAG, "auto-keyboard post-touch check failed", t);
-                            }
-                        }
-                    }, 350);
-                }
-            } catch (Throwable t) {
-                AppLogger.e(TAG, "auto-keyboard DL5 guard check failed", t);
-            }
-        }
-    }
-
 
     private void activateCluster() {
         if (mNavCoordinator != null) mNavCoordinator.setStatusActivating();
@@ -2699,6 +2505,13 @@ public class MainActivity extends AppCompatActivity
                 this);
 
         mUsageTracker = new UsageTracker(this);
+
+        mFissionCoordinator = new FissionCoordinator(
+                findViewById(R.id.btn_fission_open),
+                findViewById(R.id.ll_fission_layout_row),
+                (TextView) findViewById(R.id.tv_main_fission_layout),
+                findViewById(R.id.btn_main_switch_layout),
+                this);
     }
 
     // ── AppListCoordinator.Host ───────────────────────────────────────────────
