@@ -80,8 +80,7 @@ public class FissionLayoutEditorActivity extends Activity {
         if (bp != null) mDaemonBinder = bp.binder;
 
         mPresets  = LayoutPrefs.load(this);
-        mActiveId = getSharedPreferences("dashcast_fission_layouts_v1", Context.MODE_PRIVATE)
-                .getString("active_layout_id", null);
+        mActiveId = LayoutPrefs.getFavoriteId(this);
         refreshLayoutList();
     }
 

@@ -213,10 +213,11 @@ public final class VoiceCommandRouter {
         }
         mLastSpeakAt = now;
         AppLogger.d(TAG, "speak: " + text);
-        if (mTtsReady && mTts != null) {
+        TextToSpeech tts = mTts;
+        if (mTtsReady && tts != null) {
             Bundle params = new Bundle();
             params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
-            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dashcast_voice");
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dashcast_voice");
         } else {
             AppLogger.d(TAG, "TTS not ready — showing Toast: " + text);
             sMain.post(() -> Toast.makeText(mCtx, text, Toast.LENGTH_SHORT).show());

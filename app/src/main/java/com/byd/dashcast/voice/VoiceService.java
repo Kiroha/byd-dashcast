@@ -197,7 +197,13 @@ public final class VoiceService extends Service {
             AppLogger.d(TAG, "onStartCommand: already running, ignored");
             return START_STICKY;
         }
-        startForeground(NOTIF_ID, buildNotification());
+        try {
+            startForeground(NOTIF_ID, buildNotification());
+        } catch (Exception e) {
+            AppLogger.e(TAG, "startForeground failed", e);
+            broadcastError("foreground_start_failed");
+            return START_NOT_STICKY;
+        }
         startCapture();
         return START_STICKY;
     }
