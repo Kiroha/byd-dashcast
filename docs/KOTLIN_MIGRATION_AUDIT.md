@@ -6,20 +6,31 @@
 
 | Élément | Valeur | Impact migration |
 |---|---|---|
-| AGP | 7.4.2 | Compatible Kotlin 1.9.x — **pas de bump AGP requis** |
-| Gradle | 7.6.4 | Compatible KGP 1.9.24 |
-| Java | sourceCompatibility 1.8 | `kotlinOptions.jvmTarget = '1.8'` aligné |
+| AGP | 7.4.2 | Compatible Kotlin 2.2.x — **pas de bump AGP requis** |
+| Gradle | 7.6.4 | Dans la fenêtre de support de KGP 2.2.0 (Gradle 7.6.3+) |
+| Java | source/target 11 | Plafond d'AGP 7.4 ; `kotlinOptions.jvmTarget = '11'` aligné |
 | compileSdk / target / min | 33 / 29 / 28 | Aucun blocage Kotlin |
 | SDK | android.jar BYD custom (bydauto APIs) | Kotlin compile contre le même jar — vérifié OK |
 | Tests | **aucun** | Le build + lint 0/0 sont les seuls filets de sécurité → migration par petits lots obligatoire |
 
 ### Toolchain mis en place sur cette branche (vérifié : `assembleDebug` BUILD SUCCESSFUL)
 
-- `build.gradle` racine : `kotlin-gradle-plugin:1.9.24` (dernière 1.9.x, compatible AGP 7.4.2).
-- `app/build.gradle` : `apply plugin: 'kotlin-android'` + `kotlinOptions { jvmTarget = '1.8' }`.
+- `build.gradle` racine : `kotlin-gradle-plugin:2.2.0` (compilateur K2 ; fenêtre de support Gradle 7.6.3+ / AGP 7.3.1+ → couvre notre stack sans bump AGP).
+- `app/build.gradle` : `apply plugin: 'kotlin-android'` + `kotlinOptions { jvmTarget = '11' }` + `compileOptions` Java 11.
 - Les `.kt` vivent dans `src/main/java/` (ramassés automatiquement par KGP) — pas de réorganisation de dossiers.
 - `packagingOptions` excluait déjà `META-INF/*.kotlin_module` : sans effet négatif pour un APK applicatif, conservé tel quel.
 - Coût APK : kotlin-stdlib ≈ +1,7 Mo avant minify (minifyEnabled est false).
+
+### Plafonds de version et comment les lever
+
+| Cible | Bloqué par | Pour lever |
+|---|---|---|
+| Java 11 (actuel) | — | D8 d'AGP 7.4 desugar toutes les features Java 11 jusqu'à minSdk 28 ✅ |
+| Java 17 source | AGP 7.4 | Bump AGP 8.1+ + Gradle 8.x — chantier séparé : vérifier le SDK BYD custom, non-transitive R classes, defaults buildConfig |
+| Kotlin 2.2.0 (actuel) | — | K2 vérifié vert sur AGP 7.4.2 / Gradle 7.6.4 ✅ |
+| Kotlin 2.3+ futur | Fenêtre AGP/Gradle de KGP | Vérifier la matrice de compat JetBrains à chaque bump |
+
+**Prérequis machine** : `sourceCompatibility ≥ 9` déclenche le `JdkImageTransform` d'AGP qui exige un **JDK complet avec `jlink`** (un JRE ne suffit pas). Sur cette machine : Temurin 17 dans `~/.jdks/jdk-17.0.19+10`, déclaré via `org.gradle.java.home` dans `~/.gradle/gradle.properties`. Le `core-for-system-modules.jar` requis est bien présent dans le SDK BYD (platforms/android-33).
 
 ## 2. Cartographie des risques par package
 

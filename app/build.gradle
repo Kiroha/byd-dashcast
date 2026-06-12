@@ -311,15 +311,18 @@ android {
         exclude '**/libjnidispatch.so'
     }
 
+    // Java 11 is the ceiling on AGP 7.4 (D8 desugars all Java 11 language
+    // features down to API 28). Java 17 source would need AGP 8.1+ — see
+    // docs/KOTLIN_MIGRATION_AUDIT.md.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
-    // Kotlin migration — must match compileOptions (Java 8) so mixed
+    // Kotlin migration — must match compileOptions (Java 11) so mixed
     // Java/Kotlin compilation stays consistent during the transition.
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
 
 
