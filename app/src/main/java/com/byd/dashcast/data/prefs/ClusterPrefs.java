@@ -279,6 +279,19 @@ public final class ClusterPrefs {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Per-app launch counters (used for popularity sorting)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final String KEY_LAUNCH_COUNT_PREFIX = "launch_count_";
+
+    public static void incrementLaunchCount(Context ctx, String pkgName) {
+        if (pkgName == null) return;
+        String key = KEY_LAUNCH_COUNT_PREFIX + pkgName;
+        SharedPreferences p = prefs(ctx);
+        p.edit().putInt(key, p.getInt(key, 0) + 1).apply();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Quick-switch recent apps
     // ─────────────────────────────────────────────────────────────────────────
 

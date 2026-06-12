@@ -205,25 +205,13 @@ public class MainActivity extends AppCompatActivity
 
     // MirrorDaemon — Binder received via broadcast ACTION_DAEMON_READY
     private IBinder mDaemonBinder = null;
-    private final BroadcastReceiver mDaemonReadyReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Bundle extras = intent.getExtras();
-            if (extras == null) return;
-            IBinder binder = extras.getBinder("daemon_binder");
-            if (binder == null) return;
-            mDaemonBinder = binder;
-            AppLogger.i(TAG, "Daemon Binder received OK");
-            // Forward to the forwarder for touch/key injection via uid=2000
-            if (mServiceBound && mClusterService != null) {
-                mClusterService.getInputForwarder().setDaemonBinder(mDaemonBinder);
-            }
-            // Delegate daemon-arrival mirror restart to the MirrorCoordinator.
-            if (mMirrorCoordinator != null) {
-                mMirrorCoordinator.onDaemonBinderAvailable(mDaemonBinder);
-            }
-        }
-    };
+    private final BroadcastReceiver mDaemonReadyReceiver = DaemonBinderResolver.createActionReceiver(
+            binder -> {
+                mDaemonBinder = binder;
+                final ClusterService svc = mServiceBound ? mClusterService : null;
+                if (svc != null) svc.getInputForwarder().setDaemonBinder(binder);
+                if (mMirrorCoordinator != null) mMirrorCoordinator.onDaemonBinderAvailable(binder);
+            });
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -265,48 +253,12 @@ public class MainActivity extends AppCompatActivity
         // Same mechanism as WindowManagement v1.2 (VMRuntime.setHiddenApiExemptions).
         com.byd.dashcast.dashboard.ClusterMirrorManager.unlockHiddenApis();
 
-        // v1.2.55-beta — storage hygiene + orphan-sniffer cleanup.
-        // Both are file/shell I/O — off-loaded to a daemon thread to keep
-        // onCreate non-blocking. The sOrphanSnifferKillDone gate is evaluated
-        // here (main thread) before the thread starts so the "run once per
-        // process" invariant is preserved even when MainActivity is re-created
-        // during in-app navigation.
-        final Context hygieneCtx = getApplicationContext();
+        // v1.2.55-beta — log pruning + orphan-sniffer cleanup, off-loaded to a daemon thread.
+        // Gate evaluated here (main thread) so the "run once per process" invariant holds
+        // across Activity re-creates.
         final boolean killOrphanSniffer = !sOrphanSnifferKillDone;
         if (killOrphanSniffer) sOrphanSnifferKillDone = true;
-        Thread hygieneThread = new Thread(() -> {
-            try {
-                AppLogger.pruneOldFiles(hygieneCtx, 3);
-            } catch (Throwable t) {
-                AppLogger.w(TAG, "pruneOldFiles failed: " + t.getMessage());
-            }
-            if (killOrphanSniffer) {
-                try {
-                    // Orphan-sniffer cleanup: tag file lives on tmpfs and
-                    // disappears at boot, so a present tag without a pref
-                    // means orphan processes from a previous force-stop.
-                    String savedSnifferPath = hygieneCtx
-                            .getSharedPreferences("byd_diag_prefs", MODE_PRIVATE)
-                            .getString("re_sniffer_file_path", null);
-                    if (savedSnifferPath == null)
-                        com.byd.dashcast.proxy.ShellGateway.execShell(hygieneCtx,
-                            "if [ -f /data/local/tmp/.re_sniffer_run ]; then"
-                          + "  rm -f /data/local/tmp/.re_sniffer_run;"
-                          + "  if [ -f /data/local/tmp/.re_sniffer_pids ]; then"
-                          + "    while IFS= read -r pid; do"
-                          + "      [ -n \"$pid\" ] && kill -9 \"$pid\" 2>/dev/null;"
-                          + "    done < /data/local/tmp/.re_sniffer_pids;"
-                          + "    rm -f /data/local/tmp/.re_sniffer_pids;"
-                          + "  fi;"
-                          + "  pkill -f BYD_RE_Sniffer_ 2>/dev/null; true;"
-                          + "fi");
-                } catch (Throwable t) {
-                    AppLogger.w(TAG, "orphan-sniffer cleanup failed: " + t.getMessage());
-                }
-            }
-        }, "storage-hygiene");
-        hygieneThread.setDaemon(true);
-        hygieneThread.start();
+        AppStartupTasks.run(getApplicationContext(), killOrphanSniffer);
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver,
@@ -922,7 +874,7 @@ public class MainActivity extends AppCompatActivity
     public void onToggleFavorite(AppInfo app) {
         // setFavorite patches the in-memory cache and re-sorts — no PackageManager re-query.
         mAppRepo.setFavorite(this, app.packageName, !app.isFavorite);
-        deliverAppsToUI(mAppRepo.getApps(), false);
+        mAppListCoordinator.deliver(mAppRepo.getApps(), false);
     }
 
     // v0.9.72 — long-press opens a bottom sheet with the per-app actions.
@@ -933,7 +885,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSendToDashboard(AppInfo app) {
-        incrementLaunchCount(app.packageName);
+        ClusterPrefs.incrementLaunchCount(this, app.packageName);
         // Java displayId may not be resolved even when the cluster is active
         // (internal state unreliable on DiLink 3.0). We no longer block here:
         // ClusterService.launchOnDashboard() tries direct Binder then ADB relay
@@ -1077,17 +1029,9 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private void incrementLaunchCount(String pkgName) {
-        if (pkgName == null) return;
-        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String key = "launch_count_" + pkgName;
-        int count = prefs.getInt(key, 0);
-        prefs.edit().putInt(key, count + 1).apply();
-    }
-
     @Override
     public void onSendToMain(AppInfo app) {
-        incrementLaunchCount(app.packageName);
+        ClusterPrefs.incrementLaunchCount(this, app.packageName);
         // Track usage: stop timer for the app leaving the cluster
         mUsageTracker.trackStop(mCurrentDashboardPkg);
         // Clean up cluster state before move
@@ -1637,44 +1581,11 @@ public class MainActivity extends AppCompatActivity
 
     // ---- Async loading of the app list ----
 
-    /**
-     * Triggers an app list load via {@link AppRepository}.
-     * If a cached list is already available it is delivered immediately (zero latency
-     * on rotation); a background PackageManager refresh always follows.
-     * The result is split into favorites (strip) and non-favorites (grid) by
-     * {@link #deliverAppsToUI}.
-     */
     private void loadAppsAsync() {
         mAppRepo.loadApps(this, apps -> {
             if (isFinishing() || isDestroyed()) return;
-            deliverAppsToUI(apps, true);
+            mAppListCoordinator.deliver(apps, true);
         });
-    }
-
-    /**
-     * Splits {@code apps} into favorites (strip) and non-favorites (grid),
-     * then pushes both to the UI. Must be called on the main thread.
-     *
-     * @param apps             full sorted list from {@link AppRepository}
-     * @param showFirstLaunchTip show the one-shot welcome tip if not yet shown
-     */
-    private void deliverAppsToUI(List<AppInfo> apps, boolean showFirstLaunchTip) {
-        if (isFinishing() || isDestroyed()) return;
-        // Favorites shown in the dedicated strip above the list; hide from the main grid.
-        List<AppInfo> nonFavs = new ArrayList<>(apps.size());
-        for (AppInfo a : apps) {
-            if (!a.isFavorite) nonFavs.add(a);
-        }
-        mAppListCoordinator.setApps(nonFavs);
-        if (mAppListCoordinator != null) mAppListCoordinator.refreshFavoritesStrip(apps);
-        if (showFirstLaunchTip && !ClusterPrefs.isFirstLaunchTipShown(this)) {
-            ClusterPrefs.setFirstLaunchTipShown(this);
-            mScreenshotHandler.postDelayed(() ->
-                    Toast.makeText(getApplicationContext(),
-                            getString(R.string.tooltip_tap_send),
-                            Toast.LENGTH_LONG).show(),
-                    1200);
-        }
     }
 
     // ── Coordinator wiring ────────────────────────────────────────────────────
@@ -1766,6 +1677,12 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onShowAppActions(com.byd.dashcast.model.AppInfo app) { onShowActions(app); }
+
+    @Override
+    public void onFirstLaunchTip() {
+        Toast.makeText(getApplicationContext(), getString(R.string.tooltip_tap_send),
+                Toast.LENGTH_LONG).show();
+    }
 
     // ── ClusterControlCoordinator.Host ────────────────────────────────────────
 
