@@ -1,7 +1,9 @@
 package com.byd.dashcast;
 
 import com.byd.dashcast.proxy.ShellGateway;
+import com.byd.dashcast.ui.main.AppActionSheet;
 import com.byd.dashcast.ui.main.AppListCoordinator;
+import com.byd.dashcast.ui.main.OverflowMenuHelper;
 import com.byd.dashcast.ui.main.ClusterControlCoordinator;
 import com.byd.dashcast.ui.main.FissionCoordinator;
 import com.byd.dashcast.ui.main.NavigationCoordinator;
@@ -17,8 +19,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -31,7 +31,6 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.hardware.display.DisplayManager;
 import android.view.Display;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.graphics.SurfaceTexture;
 import android.view.Surface;
@@ -39,10 +38,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -92,7 +88,9 @@ public class MainActivity extends AppCompatActivity
                    SplitController.Host,
                    PermissionBannerCoordinator.Host,
                    UsageTracker.Host,
-                   FissionCoordinator.Host {
+                   FissionCoordinator.Host,
+                   AppActionSheet.Host,
+                   OverflowMenuHelper.Host {
 
     private static final String TAG = "BYDApp";
     // Orphan sniffer kill must only run once per process lifetime (first cold start).
@@ -1010,224 +1008,10 @@ public class MainActivity extends AppCompatActivity
         deliverAppsToUI(mAppRepo.getApps(), false);
     }
 
-    // v0.9.72 — long-press opens a bottom sheet with the per-app actions that
-    // used to live as cramped chips inside each grid cell.
+    // v0.9.72 — long-press opens a bottom sheet with the per-app actions.
     @Override
-    @android.annotation.SuppressLint("InflateParams") // BottomSheetDialog content has no parent at inflation
-    public void onShowActions(final AppInfo app) {
-        if (app == null || isFinishing() || isDestroyed()) return;
-        final com.google.android.material.bottomsheet.BottomSheetDialog dialog =
-                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
-        View v = getLayoutInflater().inflate(R.layout.dialog_app_actions, null);
-        dialog.setContentView(v);
-
-        ImageView icon  = v.findViewById(R.id.sheet_icon);
-        TextView  name  = v.findViewById(R.id.sheet_name);
-        TextView  pkg   = v.findViewById(R.id.sheet_pkg);
-        com.google.android.material.materialswitch.MaterialSwitch swAuto =
-                v.findViewById(R.id.sheet_sw_auto);
-        View      rowFav     = v.findViewById(R.id.sheet_action_favorite);
-        TextView  lblFav     = v.findViewById(R.id.sheet_lbl_favorite);
-        View      rowToMain  = v.findViewById(R.id.sheet_action_to_main);
-        View      rowToClus  = v.findViewById(R.id.sheet_action_to_cluster);
-        View      rowResize  = v.findViewById(R.id.sheet_action_resize);
-        View      rowDpi     = v.findViewById(R.id.sheet_action_dpi);
-        TextView  tvDpiVal   = v.findViewById(R.id.sheet_dpi_value);
-        View      rowKill    = v.findViewById(R.id.sheet_action_kill);
-
-        icon.setImageDrawable(app.icon);
-        name.setText(app.appName);
-        pkg.setText(app.packageName);
-        lblFav.setText(app.isFavorite
-                ? R.string.sheet_remove_favorite
-                : R.string.sheet_add_favorite);
-
-        swAuto.setChecked(app.isAutoLaunch);
-        swAuto.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
-                onSetAutoLaunch(app, checked);
-            }
-        });
-
-        rowFav.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                onToggleFavorite(app);
-                dialog.dismiss();
-            }
-        });
-
-        // Visibility for screen-move actions mirrors the previous inline-chip logic.
-        final boolean isActive = app.packageName != null
-                && app.packageName.equals(mAppListCoordinator.getCurrentPackage());
-        final boolean isOnMain = app.packageName != null
-                && app.packageName.equals(mAppListCoordinator.getMainPackage());
-        rowToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        rowToClus.setVisibility(isOnMain || (!isActive && !isOnMain) ? View.VISIBLE : View.GONE);
-        rowResize.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        rowKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
-
-        rowToMain.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                onSendToMain(app);
-                dialog.dismiss();
-            }
-        });
-        rowToClus.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                onSendToDashboard(app);
-                dialog.dismiss();
-            }
-        });
-        rowResize.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                int displayId = mClusterService != null ? mClusterService.getDisplayId() : 1;
-                if (displayId < 0) displayId = 1; // Seal EU fission fallback
-                Intent it = new Intent(MainActivity.this,
-                        com.byd.dashcast.cluster.ClusterResizeActivity.class);
-                it.putExtra(com.byd.dashcast.cluster.ClusterResizeActivity.EXTRA_PACKAGE,
-                        app.packageName);
-                it.putExtra(com.byd.dashcast.cluster.ClusterResizeActivity.EXTRA_DISPLAY_ID,
-                        displayId);
-                startActivity(it);
-                dialog.dismiss();
-            }
-        });
-
-        // v1.2.81 — per-app cluster DPI override. Always visible; the dialog
-        // is read-only of the current display, applies on next launch.
-        final int curDpi = com.byd.dashcast.cluster.ClusterDpiPrefs.getDpi(this, app.packageName);
-        if (curDpi > 0) {
-            tvDpiVal.setText(getString(R.string.sheet_dpi_value_fmt, curDpi));
-        } else {
-            tvDpiVal.setText(R.string.sheet_dpi_value_default);
-        }
-        rowDpi.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                dialog.dismiss();
-                showClusterDpiDialog(app);
-            }
-        });
-        rowKill.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                onKillApp(app);
-                dialog.dismiss();
-            }
-        });
-
-        dialog.show();
-        // v0.9.73 — open fully expanded (skip the half-collapsed peek that hides actions).
-        try {
-            com.google.android.material.bottomsheet.BottomSheetBehavior<?> b = dialog.getBehavior();
-            b.setSkipCollapsed(true);
-            b.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "BottomSheet expand failed: " + t.getMessage());
-        }
-    }
-
-    // v1.2.81 — Cluster per-app DPI override picker.
-    // Presets cover the common cluster-friendly densities (Waze, Netflix,
-    // dashboards built for phones/tablets); "Custom" accepts 96..480 dpi.
-    // The override is applied at the next launch on the cluster display
-    // (ClusterDpiManager.applyForLaunch) — never on display 0 (head unit).
-    @android.annotation.SuppressLint("InflateParams")
-    private void showClusterDpiDialog(final com.byd.dashcast.model.AppInfo app) {
-        if (app == null || app.packageName == null || isFinishing() || isDestroyed()) return;
-
-        final int[] presets = { 120, 160, 200, 240, 280, 320 };
-        final int current = com.byd.dashcast.cluster.ClusterDpiPrefs.getDpi(this, app.packageName);
-
-        // Build entries: "Default" + presets + "Custom…"
-        final String[] labels = new String[presets.length + 2];
-        labels[0] = getString(R.string.dpi_default);
-        for (int i = 0; i < presets.length; i++) {
-            labels[i + 1] = getString(R.string.dpi_value_fmt, presets[i]);
-        }
-        labels[labels.length - 1] = getString(R.string.dpi_custom);
-
-        // Pre-select current
-        int checked = 0; // default
-        if (current > 0) {
-            checked = labels.length - 1; // custom by default
-            for (int i = 0; i < presets.length; i++) {
-                if (presets[i] == current) {
-                    checked = i + 1;
-                    break;
-                }
-            }
-        }
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.dpi_dialog_title, app.appName))
-                .setSingleChoiceItems(labels, checked, new android.content.DialogInterface.OnClickListener() {
-                    @Override public void onClick(android.content.DialogInterface d, int which) {
-                        if (which == 0) {
-                            // Default — clear override
-                            com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
-                                    MainActivity.this, app.packageName, 0);
-                            d.dismiss();
-                            android.widget.Toast.makeText(MainActivity.this,
-                                    R.string.dpi_applied_next_launch,
-                                    android.widget.Toast.LENGTH_SHORT).show();
-                        } else if (which == labels.length - 1) {
-                            d.dismiss();
-                            showClusterDpiCustomDialog(app, current);
-                        } else {
-                            int dpi = presets[which - 1];
-                            com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
-                                    MainActivity.this, app.packageName, dpi);
-                            d.dismiss();
-                            android.widget.Toast.makeText(MainActivity.this,
-                                    R.string.dpi_applied_next_launch,
-                                    android.widget.Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
-    }
-
-    @android.annotation.SuppressLint("InflateParams")
-    private void showClusterDpiCustomDialog(final com.byd.dashcast.model.AppInfo app,
-                                            final int prefill) {
-        final android.widget.EditText input = new android.widget.EditText(this);
-        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        input.setHint(getString(R.string.dpi_custom_hint,
-                com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI,
-                com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI));
-        if (prefill > 0) input.setText(String.valueOf(prefill));
-
-        int pad = (int) (16 * getResources().getDisplayMetrics().density);
-        android.widget.FrameLayout wrap = new android.widget.FrameLayout(this);
-        wrap.setPadding(pad, pad / 2, pad, 0);
-        wrap.addView(input);
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.dpi_custom)
-                .setView(wrap)
-                .setPositiveButton(android.R.string.ok, new android.content.DialogInterface.OnClickListener() {
-                    @Override public void onClick(android.content.DialogInterface d, int w) {
-                        int dpi;
-                        try { dpi = Integer.parseInt(input.getText().toString().trim()); }
-                        catch (NumberFormatException e) { dpi = 0; }
-                        if (dpi < com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI
-                                || dpi > com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI) {
-                            android.widget.Toast.makeText(MainActivity.this,
-                                    getString(R.string.dpi_custom_hint,
-                                            com.byd.dashcast.cluster.ClusterDpiPrefs.MIN_DPI,
-                                            com.byd.dashcast.cluster.ClusterDpiPrefs.MAX_DPI),
-                                    android.widget.Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        com.byd.dashcast.cluster.ClusterDpiPrefs.setDpi(
-                                MainActivity.this, app.packageName, dpi);
-                        android.widget.Toast.makeText(MainActivity.this,
-                                R.string.dpi_applied_next_launch,
-                                android.widget.Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+    public void onShowActions(AppInfo app) {
+        AppActionSheet.show(app, this);
     }
 
     @Override
@@ -1911,64 +1695,6 @@ public class MainActivity extends AppCompatActivity
     /** ⋮ menu — developer tools accessible without cluttering the toolbar. */
     // ── OTA progress dialog ───────────────────────────────────────────────────
 
-    // ── Overflow menu ─────────────────────────────────────────────────────────
-
-    private void showOverflowMenu(View anchor) {
-        PopupMenu popup = new PopupMenu(this, anchor);
-        // Group 0: user actions (Settings, Language, Updates, View toggle)
-        popup.getMenu().add(0, 1, 0, getString(R.string.menu_settings));
-        popup.getMenu().add(0, 5, 1, getString(R.string.menu_language));
-        popup.getMenu().add(0, 6, 2, getString(R.string.menu_check_updates));
-        popup.getMenu().add(0, 7, 3, mAppListCoordinator.isGridMode() ? getString(R.string.menu_view_list) : getString(R.string.menu_view_grid));
-        popup.getMenu().add(0, 8, 4, getString(R.string.btn_origin_cluster));
-        popup.getMenu().add(0, 9, 5, getString(R.string.menu_usage_stats));
-        // Group 1: dev tools (with divider)
-        popup.getMenu().add(1, 2, 6, getString(R.string.menu_diagnostic));
-        popup.getMenu().add(1, 3, 7, getString(R.string.menu_system_report));
-        popup.getMenu().add(1, 4, 8, getString(R.string.menu_log));
-        // Enable visual divider between groups (API 28+, safe on our API 29 target)
-        try {
-            popup.getMenu().getClass()
-                    .getDeclaredMethod("setGroupDividerEnabled", boolean.class)
-                    .invoke(popup.getMenu(), true);
-        } catch (Exception ignored) {
-            AppLogger.d(TAG, "setGroupDividerEnabled unavailable: " + ignored.getMessage());
-        }
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                switch (item.getItemId()) {
-                    case 1: startActivity(new Intent(MainActivity.this, SettingsActivity.class)); return true;
-                    case 7:
-                        if (mAppListCoordinator != null) mAppListCoordinator.toggleViewMode();
-                        Toast.makeText(getApplicationContext(), mAppListCoordinator.isGridMode() ? getString(R.string.toast_grid_mode_enabled) : getString(R.string.toast_list_mode_enabled), Toast.LENGTH_SHORT).show();
-                        return true;
-                    case 8: originCluster(); return true;
-                    case 2: startActivity(new Intent(MainActivity.this, DiagActivity.class)); return true;
-                    case 3: startActivity(new Intent(MainActivity.this, SysInfoActivity.class)); return true;
-                    case 4: startActivity(new Intent(MainActivity.this, LogActivity.class)); return true;
-                    case 5:
-                        SharedPreferences p = getSharedPreferences(
-                                LocaleHelper.PREF_FILE, MODE_PRIVATE);
-                        p.edit().remove(LocaleHelper.PREF_SETUP_DONE).apply();
-                        Intent intent = new Intent(MainActivity.this, WelcomeActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        return true;
-                    case 6:
-                        UpdateChecker.checkUpdate(MainActivity.this,
-                                OtaProgressUi.makeListener(MainActivity.this, true));
-                        return true;
-                    case 9:
-                        mUsageTracker.showStatsDialog();
-                        return true;
-                }
-                return false;
-            }
-        });
-        popup.show();
-    }
-
     private void restoreBydDashboard() {
         btnRestoreCluster.setEnabled(false);
         if (mNavCoordinator != null) mNavCoordinator.setStatusRestoring();
@@ -2560,7 +2286,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onShowOverflowMenu(View anchor) {
-        showOverflowMenu(anchor);
+        OverflowMenuHelper.show(anchor, this);
     }
 
     // ── MirrorCoordinator.Host ────────────────────────────────────────────────
@@ -2627,6 +2353,29 @@ public class MainActivity extends AppCompatActivity
 
     @Override public boolean isActivityAlive() { return !isFinishing() && !isDestroyed(); }
     // getContext() and startActivity(Intent) are already provided by Activity / AppCompatActivity.
+
+    // ── AppActionSheet.Host ───────────────────────────────────────────────────
+
+    @Override
+    public String getCurrentClusterPkg() {
+        return mAppListCoordinator != null ? mAppListCoordinator.getCurrentPackage() : null;
+    }
+
+    @Override
+    public String getMainDisplayPkg() {
+        return mAppListCoordinator != null ? mAppListCoordinator.getMainPackage() : null;
+    }
+
+    // ── OverflowMenuHelper.Host ───────────────────────────────────────────────
+
+    @Override public boolean isAppListGridMode() {
+        return mAppListCoordinator != null && mAppListCoordinator.isGridMode();
+    }
+    @Override public void toggleAppListViewMode() {
+        if (mAppListCoordinator != null) mAppListCoordinator.toggleViewMode();
+    }
+    @Override public void onOriginCluster() { originCluster(); }
+    @Override public void showUsageStats()  { if (mUsageTracker != null) mUsageTracker.showStatsDialog(); }
 
 }
 
