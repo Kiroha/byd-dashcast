@@ -1183,8 +1183,8 @@ public final class DiLink4TestRunner {
         final java.util.concurrent.atomic.AtomicReference<String> out =
                 new java.util.concurrent.atomic.AtomicReference<>();
         try {
-            com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, cmd,
-                new com.byd.dashcast.AdbLocalClient.Callback() {
+            com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResult(ctx, cmd,
+                new com.byd.dashcast.infrastructure.AdbLocalClient.Callback() {
                     @Override public void onSuccess(String s) {
                         out.set(s == null ? "" : s);
                         latch.countDown();

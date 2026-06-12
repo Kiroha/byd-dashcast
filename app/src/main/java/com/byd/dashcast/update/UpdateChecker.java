@@ -1,4 +1,5 @@
 package com.byd.dashcast.update;
+import com.byd.dashcast.BuildConfig;
 
 import android.app.PendingIntent;
 import com.byd.dashcast.util.AppLogger;

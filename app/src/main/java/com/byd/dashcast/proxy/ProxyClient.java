@@ -806,7 +806,7 @@ public final class ProxyClient {
      * Write an integer value to a CAN instrument feature ID.
      *
      * <p>Use the constants in {@link com.byd.dashcast.proxy.daemon.CanWriteVerbs}
-     * or call the higher-level helpers in {@link com.byd.dashcast.CanBusController}.
+     * or call the higher-level helpers in {@link com.byd.dashcast.system.CanBusController}.
      *
      * @param featureId raw BYD CAN feature constant
      * @param value     integer to write

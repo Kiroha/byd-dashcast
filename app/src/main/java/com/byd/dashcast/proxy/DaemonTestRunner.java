@@ -464,8 +464,8 @@ public final class DaemonTestRunner {
         long t0 = SystemClock.elapsedRealtime();
         final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         final java.util.concurrent.atomic.AtomicReference<String> legacyOut = new java.util.concurrent.atomic.AtomicReference<>();
-        com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, "id -u",
-            new com.byd.dashcast.AdbLocalClient.Callback() {
+        com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResult(ctx, "id -u",
+            new com.byd.dashcast.infrastructure.AdbLocalClient.Callback() {
                 @Override public void onSuccess(String s) { legacyOut.set(s); latch.countDown(); }
                 @Override public void onError(String e)   { legacyOut.set("ERR " + e); latch.countDown(); }
             });
@@ -513,8 +513,8 @@ public final class DaemonTestRunner {
         }
         final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
         final java.util.concurrent.atomic.AtomicReference<String> legacyOut = new java.util.concurrent.atomic.AtomicReference<>();
-        com.byd.dashcast.AdbLocalClient.executeShellWithResult(ctx, "id -u",
-            new com.byd.dashcast.AdbLocalClient.Callback() {
+        com.byd.dashcast.infrastructure.AdbLocalClient.executeShellWithResult(ctx, "id -u",
+            new com.byd.dashcast.infrastructure.AdbLocalClient.Callback() {
                 @Override public void onSuccess(String s) { legacyOut.set(s); latch.countDown(); }
                 @Override public void onError(String e)   { legacyOut.set("ERR " + e); latch.countDown(); }
             });

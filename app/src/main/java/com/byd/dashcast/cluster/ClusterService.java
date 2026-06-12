@@ -1,4 +1,5 @@
 package com.byd.dashcast.cluster;
+import com.byd.dashcast.BuildConfig;
 
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.infrastructure.AdbLocalClient;
