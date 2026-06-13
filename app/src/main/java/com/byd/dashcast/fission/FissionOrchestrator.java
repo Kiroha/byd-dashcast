@@ -219,10 +219,12 @@ public final class FissionOrchestrator {
             final IBinder binder = mDaemonBinder;
             final List<String> pkgs = new ArrayList<>(mSlots.keySet());
             mExec.execute(() -> {
+                boolean keepVds = com.byd.dashcast.data.prefs.ClusterPrefs
+                        .isFissionPrecreateSlots(mAppCtx);
                 for (String pkg : pkgs) {
                     // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
-                    try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
-                    if (binder != null) {
+                    if (binder != null) FissionClient.moveToDisplay0(binder, pkg);
+                    if (!keepVds && binder != null) {
                         try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
                     }
                     ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
@@ -325,10 +327,14 @@ public final class FissionOrchestrator {
         mExec.execute(() -> {
             mProjecting  = false;
             mMirrorReady = false;
+            // When "Pre-create slots on startup" is on, keep VDs alive so they persist
+            // for the next session — only kill apps and move them back to display 0.
+            boolean keepVds = com.byd.dashcast.data.prefs.ClusterPrefs
+                    .isFissionPrecreateSlots(mAppCtx);
             for (String pkg : mSlots.keySet()) {
                 // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
-                try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
-                if (mDaemonBinder != null) {
+                if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
+                if (!keepVds && mDaemonBinder != null) {
                     try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Throwable ignored) {}
                 }
                 ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
@@ -350,7 +356,7 @@ public final class FissionOrchestrator {
     public void releaseSlotAsync(String pkg) {
         mExec.execute(() -> {
             // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
-            try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
+            if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
             if (mDaemonBinder != null) {
                 try { FissionClient.releaseSlot(mDaemonBinder, pkg); }
                 catch (Exception e) { AppLogger.e(TAG, "releaseSlot error", e); }

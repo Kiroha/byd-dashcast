@@ -76,6 +76,8 @@ public class MirrorDaemon {
     public static final int TRANSACT_DEACTIVATE_LAYOUT = 13;
     /** TRANSACT 14 — query the displayId for a named slot; returns -1 if not alive. */
     public static final int TRANSACT_QUERY_SLOT        = 14;
+    /** TRANSACT 15 — move a package's task back to display 0 (teardown repatriation). */
+    public static final int TRANSACT_MOVE_TO_DISPLAY0  = 15;
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
@@ -300,6 +302,7 @@ public class MirrorDaemon {
                 case TRANSACT_ACTIVATE_LAYOUT:   return handleActivateLayout(data, reply);
                 case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
                 case TRANSACT_QUERY_SLOT:        return handleQuerySlot(data, reply);
+                case TRANSACT_MOVE_TO_DISPLAY0:  return handleMoveToDisplay0(data, reply);
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
@@ -681,6 +684,22 @@ public class MirrorDaemon {
         out("[Fission] QUERY_SLOT pkg=" + pkg + " → displayId=" + displayId);
         reply.writeNoException();
         reply.writeInt(displayId);
+        return true;
+    }
+
+    private static boolean handleMoveToDisplay0(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        out("[Fission] MOVE_TO_DISPLAY0 pkg=" + pkg);
+        int taskId = Phase4TaskVerbs.findTaskIdForPackage(pkg);
+        String result;
+        if (taskId <= 0) {
+            result = "no task for " + pkg;
+        } else {
+            result = Phase4TaskVerbs.moveTaskToDisplay(taskId, 0);
+        }
+        out("[Fission] MOVE_TO_DISPLAY0 result: " + result);
+        reply.writeNoException();
+        reply.writeString(result);
         return true;
     }
 
