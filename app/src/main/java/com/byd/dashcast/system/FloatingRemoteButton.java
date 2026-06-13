@@ -335,7 +335,7 @@ badge.setOnTouchListener(new View.OnTouchListener() {
                 .setItems(names, (dialog, which) -> {
                     if (which == 0) {
                         Intent bug = new Intent(FloatingRemoteButton.this,
-                                com.byd.dashcast.report.BugReportActivity.class);
+                                com.byd.dashcast.report.BugWizardActivity.class);
                         bug.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(bug);
                         AppLogger.d(TAG, "Floating → bug reporter");

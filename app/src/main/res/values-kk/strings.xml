@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Есеп жіберілді ✓ Рақмет!</string>
     <string name="bug_share_subject">DashCast — Қате туралы есеп</string>
     <string name="bug_share_chooser">Есепті мынамен жіберу…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Қандай мәселе түрі?</string>
+    <string name="bug_wizard_step_app">Қай қосымша зардап шекті?</string>
+    <string name="bug_wizard_step_issue">Нақты не болды?</string>
+    <string name="bug_wizard_detecting">Кластердегі қосымша анықталуда…</string>
+    <string name="bug_wizard_no_app">Нақты қосымша жоқ</string>
+    <string name="bug_wizard_other_app">Басқа / Белгісіз қосымша</string>
+    <string name="bug_wizard_back">← Артқа</string>
+    <string-array name="bug_categories">
+        <item>Айна</item>
+        <item>Қосымша көрінісі</item>
+        <item>Дыбыс</item>
+        <item>Қосылым</item>
+        <item>Тоқтау/Бұзылу</item>
+        <item>Басқа</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Қара экран</item>
+        <item>Қате өлшем/орын</item>
+        <item>Қосымша көрінбейді</item>
+        <item>Ажыратылды</item>
+        <item>Жыпылықтау</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Қосымша тоқтады</item>
+        <item>Қара экран</item>
+        <item>Қате орын</item>
+        <item>Қосымша бұзылды</item>
+        <item>Мазмұн жоқ</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Дыбыс жоқ</item>
+        <item>Бұрмаланған дыбыс</item>
+        <item>Тым тыныш</item>
+        <item>Микрофон мәселесі</item>
+        <item>Жаңғырық</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Қосылу мүмкін емес</item>
+        <item>Жиі үзілістер</item>
+        <item>Өте баяу</item>
+        <item>Кластер дисплейі жоқ</item>
+        <item>Wi-Fi мәселесі</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Қосымша бұзылды</item>
+        <item>Экран тоқтады</item>
+        <item>DashCast бұзылды</item>
+        <item>Автомобиль экраны қара</item>
+        <item>Қайта іске қосуға мәжбүр болды</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Өнімділік мәселесі</item>
+        <item>Батарея разряды</item>
+        <item>Дисплей параметрлері</item>
+        <item>Ұсыныс</item>
+        <item>Басқа нәрсе</item>
+    </string-array>
 </resources>

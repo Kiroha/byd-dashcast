@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Отчёт отправлен ✓ Спасибо!</string>
     <string name="bug_share_subject">DashCast — Отчёт об ошибке</string>
     <string name="bug_share_chooser">Отправить отчёт через…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Какой тип проблемы?</string>
+    <string name="bug_wizard_step_app">Какое приложение затронуто?</string>
+    <string name="bug_wizard_step_issue">Что именно произошло?</string>
+    <string name="bug_wizard_detecting">Определение приложения на кластере…</string>
+    <string name="bug_wizard_no_app">Без конкретного приложения</string>
+    <string name="bug_wizard_other_app">Другое / Неизвестное приложение</string>
+    <string name="bug_wizard_back">← Назад</string>
+    <string-array name="bug_categories">
+        <item>Зеркало</item>
+        <item>Отображение</item>
+        <item>Звук</item>
+        <item>Подключение</item>
+        <item>Зависание/Сбой</item>
+        <item>Другое</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Чёрный экран</item>
+        <item>Неверный размер/позиция</item>
+        <item>Приложение не отображается</item>
+        <item>Отключено</item>
+        <item>Мерцание</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Приложение зависло</item>
+        <item>Чёрный экран</item>
+        <item>Неверная позиция</item>
+        <item>Приложение упало</item>
+        <item>Контент отсутствует</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Нет звука</item>
+        <item>Искажённый звук</item>
+        <item>Слишком тихо</item>
+        <item>Проблема с микрофоном</item>
+        <item>Эхо</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Не удаётся подключиться</item>
+        <item>Частые отключения</item>
+        <item>Очень медленно</item>
+        <item>Нет дисплея кластера</item>
+        <item>Проблема Wi-Fi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Приложение упало</item>
+        <item>Экран завис</item>
+        <item>DashCast упал</item>
+        <item>Экран авто чёрный</item>
+        <item>Пришлось перезапустить</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Проблема производительности</item>
+        <item>Расход батареи</item>
+        <item>Настройки дисплея</item>
+        <item>Предложение</item>
+        <item>Другое</item>
+    </string-array>
 </resources>

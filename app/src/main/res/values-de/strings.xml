@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Bericht gesendet ✓ Danke!</string>
     <string name="bug_share_subject">DashCast — Fehlerbericht</string>
     <string name="bug_share_chooser">Bericht senden über…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Welche Art von Problem?</string>
+    <string name="bug_wizard_step_app">Welche App ist betroffen?</string>
+    <string name="bug_wizard_step_issue">Was genau ist passiert?</string>
+    <string name="bug_wizard_detecting">App auf Cluster wird erkannt…</string>
+    <string name="bug_wizard_no_app">Keine bestimmte App</string>
+    <string name="bug_wizard_other_app">Andere / Unbekannte App</string>
+    <string name="bug_wizard_back">← Zurück</string>
+    <string-array name="bug_categories">
+        <item>Spiegelung</item>
+        <item>App-Anzeige</item>
+        <item>Ton</item>
+        <item>Verbindung</item>
+        <item>Einfrieren/Absturz</item>
+        <item>Sonstiges</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Schwarzer Bildschirm</item>
+        <item>Falsche Größe/Position</item>
+        <item>App nicht angezeigt</item>
+        <item>Getrennt</item>
+        <item>Flackern</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App eingefroren</item>
+        <item>Schwarzer Bildschirm</item>
+        <item>Falsche Position</item>
+        <item>App abgestürzt</item>
+        <item>Inhalt fehlt</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Kein Ton</item>
+        <item>Verzerrter Ton</item>
+        <item>Zu leise</item>
+        <item>Mikrofonproblem</item>
+        <item>Echo</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Keine Verbindung</item>
+        <item>Häufige Unterbrechungen</item>
+        <item>Sehr langsam</item>
+        <item>Kein Cluster-Display</item>
+        <item>WLAN-Problem</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App abgestürzt</item>
+        <item>Bildschirm eingefroren</item>
+        <item>DashCast abgestürzt</item>
+        <item>Auto-Bildschirm schwarz</item>
+        <item>Neustart erforderlich</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Leistungsproblem</item>
+        <item>Akkuverbrauch</item>
+        <item>Anzeigeeinstellungen</item>
+        <item>Vorschlag</item>
+        <item>Etwas anderes</item>
+    </string-array>
 </resources>

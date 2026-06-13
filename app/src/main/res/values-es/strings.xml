@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Informe enviado ✓ ¡Gracias!</string>
     <string name="bug_share_subject">DashCast — Informe de error</string>
     <string name="bug_share_chooser">Enviar el informe vía…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">¿Qué tipo de problema?</string>
+    <string name="bug_wizard_step_app">¿Qué aplicación está afectada?</string>
+    <string name="bug_wizard_step_issue">¿Qué ocurrió exactamente?</string>
+    <string name="bug_wizard_detecting">Detectando app en el cluster…</string>
+    <string name="bug_wizard_no_app">Ninguna app específica</string>
+    <string name="bug_wizard_other_app">Otra / App desconocida</string>
+    <string name="bug_wizard_back">← Volver</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Proyección</item>
+        <item>Pantalla app</item>
+        <item>Sonido</item>
+        <item>Conexión</item>
+        <item>Bloqueo / Crash</item>
+        <item>Otro</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Pantalla negra</item>
+        <item>Tamaño/posición incorrectos</item>
+        <item>App no mostrada</item>
+        <item>Desconectado</item>
+        <item>Parpadeo</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App bloqueada</item>
+        <item>Pantalla negra</item>
+        <item>Posición incorrecta</item>
+        <item>App cerrada</item>
+        <item>Contenido ausente</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Sin sonido</item>
+        <item>Audio distorsionado</item>
+        <item>Demasiado bajo</item>
+        <item>Problema de micrófono</item>
+        <item>Eco</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>No puede conectar</item>
+        <item>Desconexiones frecuentes</item>
+        <item>Muy lento</item>
+        <item>Sin pantalla cluster</item>
+        <item>Problema WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App cerrada</item>
+        <item>Pantalla congelada</item>
+        <item>DashCast cerrado</item>
+        <item>Pantalla del coche negra</item>
+        <item>Tuvo que reiniciar</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problema de rendimiento</item>
+        <item>Consumo de batería</item>
+        <item>Ajustes de pantalla</item>
+        <item>Sugerencia</item>
+        <item>Otra cosa</item>
+    </string-array>
 </resources>

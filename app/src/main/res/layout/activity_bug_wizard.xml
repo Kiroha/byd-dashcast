@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#CC000000">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:fillViewport="false"
+        android:clipToPadding="false"
+        android:padding="24dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/md_surface_container_high">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Progress dots -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/dot_wizard_1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textSize="18sp"
+                        android:textColor="@color/md_primary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="  "/>
+
+                    <TextView
+                        android:id="@+id/dot_wizard_2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textSize="18sp"
+                        android:textColor="@color/md_primary"
+                        android:alpha="0.3"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="  "/>
+
+                    <TextView
+                        android:id="@+id/dot_wizard_3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textSize="18sp"
+                        android:textColor="@color/md_primary"
+                        android:alpha="0.3"/>
+
+                </LinearLayout>
+
+                <!-- Step title -->
+                <TextView
+                    android:id="@+id/tv_wizard_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_on_surface"/>
+
+                <!-- 3-page ViewFlipper -->
+                <ViewFlipper
+                    android:id="@+id/bug_wizard_flipper"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <!-- Page 0: category grid (2 columns, populated in Java) -->
+                    <GridLayout
+                        android:id="@+id/grid_wizard_categories"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:useDefaultMargins="false"/>
+
+                    <!-- Page 1: app list (populated in Java) -->
+                    <LinearLayout
+                        android:id="@+id/ll_wizard_apps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+
+                    <!-- Page 2: issue list (populated in Java) -->
+                    <LinearLayout
+                        android:id="@+id/ll_wizard_issues"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+
+                </ViewFlipper>
+
+                <!-- Status (capturing / sending) -->
+                <TextView
+                    android:id="@+id/tv_wizard_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/md_primary"
+                    android:visibility="gone"/>
+
+                <!-- Bottom bar: Back ←  …  Cancel -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_wizard_back"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/bug_wizard_back"
+                        android:visibility="gone"/>
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_wizard_cancel"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@android:string/cancel"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
+</FrameLayout>

@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Rapor gönderildi ✓ Teşekkürler!</string>
     <string name="bug_share_subject">DashCast — Hata raporu</string>
     <string name="bug_share_chooser">Raporu şununla gönder…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Ne tür bir sorun?</string>
+    <string name="bug_wizard_step_app">Hangi uygulama etkilendi?</string>
+    <string name="bug_wizard_step_issue">Tam olarak ne oldu?</string>
+    <string name="bug_wizard_detecting">Kümede uygulama algılanıyor…</string>
+    <string name="bug_wizard_no_app">Belirli bir uygulama yok</string>
+    <string name="bug_wizard_other_app">Diğer / Bilinmeyen uygulama</string>
+    <string name="bug_wizard_back">← Geri</string>
+    <string-array name="bug_categories">
+        <item>Yansıtma</item>
+        <item>Uygulama görünümü</item>
+        <item>Ses</item>
+        <item>Bağlantı</item>
+        <item>Donma/Çökme</item>
+        <item>Diğer</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Siyah ekran</item>
+        <item>Yanlış boyut/konum</item>
+        <item>Uygulama görünmüyor</item>
+        <item>Bağlantı kesildi</item>
+        <item>Titreme</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Uygulama dondu</item>
+        <item>Siyah ekran</item>
+        <item>Yanlış konum</item>
+        <item>Uygulama çöktü</item>
+        <item>İçerik eksik</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Ses yok</item>
+        <item>Bozuk ses</item>
+        <item>Çok sessiz</item>
+        <item>Mikrofon sorunu</item>
+        <item>Yankı</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Bağlanamıyor</item>
+        <item>Sık bağlantı kesilmesi</item>
+        <item>Çok yavaş</item>
+        <item>Küme ekranı yok</item>
+        <item>WiFi sorunu</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Uygulama çöktü</item>
+        <item>Ekran dondu</item>
+        <item>DashCast çöktü</item>
+        <item>Araba ekranı siyah</item>
+        <item>Yeniden başlatmak zorunda kaldı</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Performans sorunu</item>
+        <item>Batarya tüketimi</item>
+        <item>Görüntü ayarları</item>
+        <item>Öneri</item>
+        <item>Başka bir şey</item>
+    </string-array>
 </resources>

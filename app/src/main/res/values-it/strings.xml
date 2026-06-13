@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Segnalazione inviata ✓ Grazie!</string>
     <string name="bug_share_subject">DashCast — Segnalazione bug</string>
     <string name="bug_share_chooser">Invia la segnalazione tramite…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Che tipo di problema?</string>
+    <string name="bug_wizard_step_app">Quale app è coinvolta?</string>
+    <string name="bug_wizard_step_issue">Cosa è successo esattamente?</string>
+    <string name="bug_wizard_detecting">Rilevamento app sul cluster…</string>
+    <string name="bug_wizard_no_app">Nessuna app specifica</string>
+    <string name="bug_wizard_other_app">Altra / App sconosciuta</string>
+    <string name="bug_wizard_back">← Indietro</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Proiezione</item>
+        <item>Display app</item>
+        <item>Audio</item>
+        <item>Connessione</item>
+        <item>Blocco / Crash</item>
+        <item>Altro</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Schermo nero</item>
+        <item>Dimensione/posizione errata</item>
+        <item>App non mostrata</item>
+        <item>Disconnesso</item>
+        <item>Sfarfallio</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App bloccata</item>
+        <item>Schermo nero</item>
+        <item>Posizione errata</item>
+        <item>App crashata</item>
+        <item>Contenuto mancante</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Nessun suono</item>
+        <item>Audio distorto</item>
+        <item>Troppo basso</item>
+        <item>Problema microfono</item>
+        <item>Eco</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Impossibile connettersi</item>
+        <item>Disconnessioni frequenti</item>
+        <item>Molto lento</item>
+        <item>Nessun display cluster</item>
+        <item>Problema WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App crashata</item>
+        <item>Schermo bloccato</item>
+        <item>DashCast crashato</item>
+        <item>Schermo auto nero</item>
+        <item>Dovuto riavviare</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problema prestazioni</item>
+        <item>Consumo batteria</item>
+        <item>Impostazioni display</item>
+        <item>Suggerimento</item>
+        <item>Altro</item>
+    </string-array>
 </resources>
