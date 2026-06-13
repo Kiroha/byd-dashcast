@@ -38,34 +38,26 @@
                         android:id="@+id/dot_wizard_1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="●"
+                        android:text="@string/wizard_progress_dot"
                         android:textSize="18sp"
                         android:textColor="@color/md_primary"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="  "/>
 
                     <TextView
                         android:id="@+id/dot_wizard_2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="●"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/wizard_progress_dot"
                         android:textSize="18sp"
                         android:textColor="@color/md_primary"
                         android:alpha="0.3"/>
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="  "/>
-
-                    <TextView
                         android:id="@+id/dot_wizard_3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="●"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/wizard_progress_dot"
                         android:textSize="18sp"
                         android:textColor="@color/md_primary"
                         android:alpha="0.3"/>

@@ -699,6 +699,8 @@
     <string name="bug_wizard_no_app">Aucune application spécifique</string>
     <string name="bug_wizard_other_app">Autre / Application inconnue</string>
     <string name="bug_wizard_back">← Retour</string>
+    <!-- Decorative progress-dot glyph (bug wizard) — not user-facing text. -->
+    <string name="wizard_progress_dot" translatable="false">●</string>
     <string-array name="bug_categories">
         <item>Mirror / Projection</item>
         <item>Affichage app</item>
