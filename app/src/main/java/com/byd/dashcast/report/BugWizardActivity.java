@@ -46,9 +46,10 @@ public class BugWizardActivity extends Activity {
     private static final int CAT_SOUND   = 2;
     private static final int CAT_CONNECT = 3;
     private static final int CAT_FREEZE  = 4;
-    private static final int CAT_OTHER   = 5;
+    private static final int CAT_SIMPLE  = 5;
+    private static final int CAT_OTHER   = 6;
 
-    private static final String[] CAT_EMOJIS = {"📺", "📱", "🔊", "🔗", "❄️", "❓"};
+    private static final String[] CAT_EMOJIS = {"📺", "📱", "🔊", "🔗", "❄️", "🖥️", "❓"};
 
     private static final int[] ISSUE_ARRAYS = {
         R.array.bug_issues_mirror,
@@ -56,6 +57,7 @@ public class BugWizardActivity extends Activity {
         R.array.bug_issues_sound,
         R.array.bug_issues_connect,
         R.array.bug_issues_freeze,
+        R.array.bug_issues_simple,
         R.array.bug_issues_other,
     };
 

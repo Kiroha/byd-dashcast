@@ -680,6 +680,7 @@
         <item>Дыбыс</item>
         <item>Қосылым</item>
         <item>Тоқтау/Бұзылу</item>
+        <item>Кластер қарапайым режим</item>
         <item>Басқа</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -716,6 +717,13 @@
         <item>DashCast бұзылды</item>
         <item>Автомобиль экраны қара</item>
         <item>Қайта іске қосуға мәжбүр болды</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Тоңды</item>
+        <item>Қара экран</item>
+        <item>Қате мазмұн</item>
+        <item>Ақпарат жоқ</item>
+        <item>Көрсетілмейді</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Өнімділік мәселесі</item>

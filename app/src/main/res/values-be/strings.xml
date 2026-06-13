@@ -680,6 +680,7 @@
         <item>Гук</item>
         <item>Злучэнне</item>
         <item>Завісанне/Збой</item>
+        <item>Кластар просты рэжым</item>
         <item>Іншае</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -716,6 +717,13 @@
         <item>DashCast ўпаў</item>
         <item>Экран аўта чорны</item>
         <item>Прыйшлося перазапусціць</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Замарожаны</item>
+        <item>Чорны экран</item>
+        <item>Няправільны кантэнт</item>
+        <item>Адсутнічае інфармацыя</item>
+        <item>Не паказваецца</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Праблема прадукцыйнасці</item>

@@ -692,6 +692,7 @@
         <item>Sound</item>
         <item>Connection</item>
         <item>Freeze / Crash</item>
+        <item>Cluster simple mode</item>
         <item>Other</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -728,6 +729,13 @@
         <item>DashCast crashed</item>
         <item>Car screen black</item>
         <item>Had to restart</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Frozen</item>
+        <item>Black screen</item>
+        <item>Wrong content</item>
+        <item>Missing info</item>
+        <item>Not showing</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Performance problem</item>
