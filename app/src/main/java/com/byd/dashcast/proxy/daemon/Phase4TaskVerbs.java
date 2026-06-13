@@ -45,6 +45,80 @@ public final class Phase4TaskVerbs {
         }
     }
 
+    // ─── Android 12 / RootTask compatibility (DiLink 5) ──────────────────
+
+    /**
+     * Returns the stack/root-task list from ATM.
+     * Tries getAllStackInfos() (Android ≤11, DiLink 3) first, then falls back to
+     * getAllRootTaskInfos() (Android 12+, DiLink 5) when the former is absent.
+     */
+    private static java.util.List<?> getAtmTaskList(Object iAtm) throws Throwable {
+        Object res;
+        try {
+            res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
+        } catch (NoSuchMethodException e) {
+            // Android 12+ (DiLink 5): getAllStackInfos was renamed to getAllRootTaskInfos
+            res = iAtm.getClass().getMethod("getAllRootTaskInfos").invoke(iAtm);
+        }
+        if (res instanceof java.util.List) return (java.util.List<?>) res;
+        if (res != null && res.getClass().isArray())
+            return java.util.Arrays.asList((Object[]) res);
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Returns the "stack / root-task" ID from a StackInfo or RootTaskInfo object.
+     * Tries stackId (StackInfo, Android ≤11, DiLink 3) then taskId (RootTaskInfo, Android 12+, DiLink 5).
+     */
+    private static int getStackOrRootTaskId(Object info) {
+        Object v = readFieldNoThrow(info, "stackId");
+        if (v instanceof Integer) return (Integer) v;
+        v = readFieldNoThrow(info, "taskId");
+        if (v instanceof Integer) return (Integer) v;
+        return -1;
+    }
+
+    /**
+     * Returns child task IDs from a StackInfo or RootTaskInfo.
+     * Tries taskIds (Android ≤11, DiLink 3) then childTaskIds (Android 12+, DiLink 5).
+     */
+    private static int[] getChildTaskIds(Object info) {
+        Object v = readFieldNoThrow(info, "taskIds");
+        if (v instanceof int[]) return (int[]) v;
+        v = readFieldNoThrow(info, "childTaskIds");
+        if (v instanceof int[]) return (int[]) v;
+        return null;
+    }
+
+    /**
+     * Moves a stack/root task to the target display.
+     * Tries moveStackToDisplay (Android ≤11, DiLink 3) then
+     * moveRootTaskToDisplay (Android 12+, DiLink 5).
+     */
+    private static String moveStackOrRootTask(Object iAtm, int stackOrTaskId, int displayId) {
+        try {
+            iAtm.getClass().getMethod("moveStackToDisplay", int.class, int.class)
+                    .invoke(iAtm, stackOrTaskId, displayId);
+            return "OK moveStackToDisplay(" + stackOrTaskId + "," + displayId + ")";
+        } catch (NoSuchMethodException e) {
+            try {
+                iAtm.getClass().getMethod("moveRootTaskToDisplay", int.class, int.class)
+                        .invoke(iAtm, stackOrTaskId, displayId);
+                return "OK moveRootTaskToDisplay(" + stackOrTaskId + "," + displayId + ")";
+            } catch (Throwable t2) {
+                Throwable c = (t2 instanceof java.lang.reflect.InvocationTargetException
+                        && t2.getCause() != null) ? t2.getCause() : t2;
+                return "ERR moveRootTaskToDisplay: " + c.getClass().getSimpleName()
+                        + " — " + c.getMessage();
+            }
+        } catch (Throwable t) {
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                    && t.getCause() != null) ? t.getCause() : t;
+            return "ERR moveStackToDisplay: " + c.getClass().getSimpleName()
+                    + " — " + c.getMessage();
+        }
+    }
+
     // ─── Task query ───────────────────────────────────────────────────────
 
     /**
@@ -231,44 +305,26 @@ public final class Phase4TaskVerbs {
             log.append(" ; ");
 
             // Step B: find stackId AND its current displayId.
+            // Tries getAllStackInfos (DiLink 3) then getAllRootTaskInfos (DiLink 5 / Android 12).
             int stackId = -1, currentDisplayId = -1;
             try {
-                Method getAll = iAtm.getClass().getMethod("getAllStackInfos");
-                Object res = getAll.invoke(iAtm);
-                java.util.List<?> stacks;
-                if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-                else if (res != null && res.getClass().isArray())
-                    stacks = java.util.Arrays.asList((Object[]) res);
-                else stacks = java.util.Collections.emptyList();
+                java.util.List<?> stacks = getAtmTaskList(iAtm);
                 for (Object si : stacks) {
                     if (si == null) continue;
-                    int sid = -1, did = -1;
-                    int[] tids = null;
-                    try {
-                        java.lang.reflect.Field fStack = si.getClass().getField("stackId");
-                        sid = fStack.getInt(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    try {
-                        java.lang.reflect.Field fDid = si.getClass().getField("displayId");
-                        did = fDid.getInt(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    try {
-                        java.lang.reflect.Field fTaskIds = si.getClass().getField("taskIds");
-                        tids = (int[]) fTaskIds.get(si);
-                    } catch (NoSuchFieldException ignore) {}
-                    if (tids != null) {
-                        for (int t : tids) {
-                            if (t == taskId) {
-                                stackId = sid;
-                                currentDisplayId = did;
-                                break;
-                            }
+                    int[] tids = getChildTaskIds(si);
+                    if (tids == null) continue;
+                    for (int t : tids) {
+                        if (t == taskId) {
+                            stackId = getStackOrRootTaskId(si);
+                            Object did = readFieldNoThrow(si, "displayId");
+                            if (did instanceof Integer) currentDisplayId = (Integer) did;
+                            break;
                         }
                     }
                     if (stackId != -1) break;
                 }
             } catch (Throwable lookupEx) {
-                log.append("WARN getAllStackInfos: ").append(lookupEx.getClass().getSimpleName())
+                log.append("WARN getAtmTaskList: ").append(lookupEx.getClass().getSimpleName())
                    .append(" — ").append(lookupEx.getMessage()).append(" ; ");
             }
             log.append("stackId=").append(stackId).append(" currentDisplay=")
@@ -278,17 +334,12 @@ public final class Phase4TaskVerbs {
                 return log.toString();
             }
 
-            // Step C: moveStackToDisplay — only if not already on target.
+            // Step C: moveStackToDisplay (DiLink 3) or moveRootTaskToDisplay (DiLink 5 / Android 12).
             if (currentDisplayId == displayId) {
-                log.append("SKIP moveStackToDisplay (already on display ")
-                   .append(displayId).append(')');
+                log.append("SKIP move (already on display ").append(displayId).append(')');
                 return log.toString();
             }
-            Method mv = iAtm.getClass().getMethod(
-                    "moveStackToDisplay", int.class, int.class);
-            mv.invoke(iAtm, stackId, displayId);
-            log.append("OK moveStackToDisplay(").append(stackId).append(',')
-               .append(displayId).append(')');
+            log.append(moveStackOrRootTask(iAtm, stackId, displayId));
             return log.toString();
         } catch (Throwable t) {
             Throwable cause = (t instanceof java.lang.reflect.InvocationTargetException
@@ -545,53 +596,41 @@ public final class Phase4TaskVerbs {
             log.append("  ").append(Phase4DisplayVerbs.setDisplayToSingleTaskInstance(displayId)).append('\n');
             log.append("  ").append(setTaskResizeable(taskId, 4 /*FORCE_RESIZEABLE*/)).append('\n');
 
-            // Resolve real stackId via getAllStackInfos (same as DevTool Step 3b).
+            // Resolve real stackId via getAllStackInfos (DiLink 3) or getAllRootTaskInfos (DiLink 5 / Android 12).
             int stackId = -1;
             try {
                 Class<?> ac = Class.forName("android.app.ActivityTaskManager");
                 Object ia = ac.getMethod("getService").invoke(null);
-                Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
-                java.util.List<?> ss;
-                if (res instanceof java.util.List) ss = (java.util.List<?>) res;
-                else if (res != null && res.getClass().isArray())
-                    ss = java.util.Arrays.asList((Object[]) res);
-                else ss = java.util.Collections.emptyList();
+                java.util.List<?> ss = getAtmTaskList(ia);
                 outer2:
                 for (Object si : ss) {
-                    int[] tids;
-                    try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
-                    catch (Exception ignore) { continue; }
+                    int[] tids = getChildTaskIds(si);
                     if (tids == null) continue;
                     for (int t : tids) {
                         if (t == taskId) {
-                            try { stackId = si.getClass().getField("stackId").getInt(si); }
-                            catch (Exception ignore) {}
+                            stackId = getStackOrRootTaskId(si);
                             break outer2;
                         }
                     }
                 }
                 log.append("  stackId=").append(stackId).append('\n');
             } catch (Throwable ex) {
-                log.append("  WARN getAllStackInfos: ").append(ex.getMessage()).append('\n');
+                log.append("  WARN getAtmTaskList: ").append(ex.getMessage()).append('\n');
             }
 
             // FREEFORM pre-move: flip task+stack to FREEFORM before the move.
             log.append("  ").append(setTaskWindowingModeFreeform(taskId)).append('\n');
 
-            // moveStackToDisplay: creates the FREEFORM stack context that allows resizeTask.
+            // moveStackToDisplay (DiLink 3) or moveRootTaskToDisplay (DiLink 5 / Android 12).
             if (stackId >= 0) {
                 try {
                     Class<?> ac = Class.forName("android.app.ActivityTaskManager");
                     Object ia = ac.getMethod("getService").invoke(null);
-                    java.lang.reflect.Method mv = ia.getClass().getMethod(
-                            "moveStackToDisplay", int.class, int.class);
-                    mv.invoke(ia, stackId, displayId);
-                    log.append("  OK moveStackToDisplay(").append(stackId).append(',')
-                       .append(displayId).append(")\n");
+                    log.append("  ").append(moveStackOrRootTask(ia, stackId, displayId)).append('\n');
                 } catch (Throwable ex) {
                     Throwable c = (ex instanceof java.lang.reflect.InvocationTargetException
                             && ex.getCause() != null) ? ex.getCause() : ex;
-                    log.append("  moveStackToDisplay: ").append(c.getClass().getSimpleName())
+                    log.append("  moveStackOrRootTask: ").append(c.getClass().getSimpleName())
                        .append(" — ").append(c.getMessage()).append('\n');
                 }
             }
@@ -619,23 +658,16 @@ public final class Phase4TaskVerbs {
                         try {
                             Class<?> ac = Class.forName("android.app.ActivityTaskManager");
                             Object ia = ac.getMethod("getService").invoke(null);
-                            Object res = ia.getClass().getMethod("getAllStackInfos").invoke(ia);
-                            java.util.List<?> ss;
-                            if (res instanceof java.util.List) ss = (java.util.List<?>) res;
-                            else if (res != null && res.getClass().isArray())
-                                ss = java.util.Arrays.asList((Object[]) res);
-                            else ss = java.util.Collections.emptyList();
+                            // DiLink 3: getAllStackInfos / DiLink 5 Android 12: getAllRootTaskInfos
+                            java.util.List<?> ss = getAtmTaskList(ia);
                             outer:
                             for (Object si : ss) {
-                                int[] tids;
-                                try { tids = (int[]) si.getClass().getField("taskIds").get(si); }
-                                catch (Exception ignore) { continue; }
+                                int[] tids = getChildTaskIds(si);
                                 if (tids == null) continue;
                                 for (int t : tids) {
                                     if (t == wTaskId) {
-                                        try { curDisplay = si.getClass()
-                                                .getField("displayId").getInt(si); }
-                                        catch (Exception ignore) {}
+                                        Object did = readFieldNoThrow(si, "displayId");
+                                        if (did instanceof Integer) curDisplay = (Integer) did;
                                         break outer;
                                     }
                                 }
@@ -702,27 +734,34 @@ public final class Phase4TaskVerbs {
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
-            java.util.List<?> stacks;
-            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-            else if (res != null && res.getClass().isArray())
-                stacks = java.util.Arrays.asList((Object[]) res);
-            else { log.append("no stacks returned\n"); return log.toString(); }
+            // DiLink 3: getAllStackInfos / DiLink 5 Android 12: getAllRootTaskInfos
+            java.util.List<?> stacks = getAtmTaskList(iAtm);
+            if (stacks.isEmpty()) { log.append("no stacks returned\n"); return log.toString(); }
 
+            // DiLink 3: removeStack(int) / DiLink 5 Android 12: removeTask(int)
             Method removeStack = null;
-            for (Method cand : iAtm.getClass().getMethods()) {
-                if (!"removeStack".equals(cand.getName())) continue;
-                Class<?>[] pt = cand.getParameterTypes();
-                if (pt.length == 1 && pt[0] == int.class) { removeStack = cand; break; }
+            outer:
+            for (String verb : new String[]{"removeStack", "removeTask"}) {
+                for (Method cand : iAtm.getClass().getMethods()) {
+                    if (!verb.equals(cand.getName())) continue;
+                    Class<?>[] pt = cand.getParameterTypes();
+                    if (pt.length == 1 && pt[0] == int.class) { removeStack = cand; break outer; }
+                }
             }
             if (removeStack == null) {
-                log.append("WARN: no removeStack(int) on ATM proxy\n");
+                log.append("WARN: no removeStack/removeTask(int) on ATM proxy\n");
             }
 
             int removed = 0, kept = 0;
             for (Object si : stacks) {
                 if (si == null) continue;
-                Integer sid = (Integer) readFieldNoThrow(si, "stackId");
+                // DiLink 3: stackId field / DiLink 5 Android 12: taskId field
+                Integer sid = null;
+                {
+                    Object v = readFieldNoThrow(si, "stackId");
+                    if (v == null) v = readFieldNoThrow(si, "taskId");
+                    if (v instanceof Integer) sid = (Integer) v;
+                }
                 Integer did = (Integer) readFieldNoThrow(si, "displayId");
                 Integer wm  = (Integer) readFieldNoThrow(si, "windowingMode");
                 Integer at  = (Integer) readFieldNoThrow(si, "activityType");
@@ -771,27 +810,20 @@ public final class Phase4TaskVerbs {
         return log.toString();
     }
 
-    /** Look up the stackId containing {@code taskId} via getAllStackInfos(). Returns -1 if not found. */
+    /**
+     * Look up the stack/root-task ID containing {@code taskId}.
+     * Tries getAllStackInfos (DiLink 3) then getAllRootTaskInfos (DiLink 5 / Android 12).
+     * Returns -1 if not found.
+     */
     public static int findStackIdForTask(int taskId) {
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Object res = iAtm.getClass().getMethod("getAllStackInfos").invoke(iAtm);
-            java.util.List<?> stacks;
-            if (res instanceof java.util.List) stacks = (java.util.List<?>) res;
-            else if (res != null && res.getClass().isArray())
-                stacks = java.util.Arrays.asList((Object[]) res);
-            else return -1;
-            for (Object si : stacks) {
+            for (Object si : getAtmTaskList(iAtm)) {
                 if (si == null) continue;
-                int sid;
-                int[] tids;
-                try {
-                    sid = si.getClass().getField("stackId").getInt(si);
-                    tids = (int[]) si.getClass().getField("taskIds").get(si);
-                } catch (NoSuchFieldException e) { continue; }
+                int[] tids = getChildTaskIds(si);
                 if (tids == null) continue;
-                for (int t : tids) if (t == taskId) return sid;
+                for (int t : tids) if (t == taskId) return getStackOrRootTaskId(si);
             }
         } catch (Throwable ignore) {}
         return -1;
