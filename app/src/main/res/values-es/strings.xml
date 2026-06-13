@@ -667,6 +667,13 @@
     <string name="bug_wizard_no_app">Ninguna app específica</string>
     <string name="bug_wizard_other_app">Otra / App desconocida</string>
     <string name="bug_wizard_back">← Volver</string>
+    <string name="bug_tg_title">Tu nombre de usuario de Telegram</string>
+    <string name="bug_tg_message">Cuando haya una corrección disponible para tu problema, te contactaremos directamente en Telegram para pedirte que lo pruebes primero.\n\n⚠️ Asegúrate de introducir el nombre correcto (ejemplo: @john_doe). Sin él, no podremos contactarte.\n\nTu nombre se almacena únicamente en este dispositivo y nunca se comparte.</string>
+    <string name="bug_tg_hint">@tu_nombre</string>
+    <string name="bug_tg_confirm">Confirmar</string>
+    <string name="bug_tg_skip">Más tarde</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Nombre de Telegram no definido — toca para definirlo</string>
     <string-array name="bug_categories">
         <item>Mirror / Proyección</item>
         <item>Pantalla app</item>

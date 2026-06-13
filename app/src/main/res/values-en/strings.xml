@@ -679,6 +679,13 @@
     <string name="bug_wizard_no_app">No specific app</string>
     <string name="bug_wizard_other_app">Other / Unknown app</string>
     <string name="bug_wizard_back">← Back</string>
+    <string name="bug_tg_title">Your Telegram handle</string>
+    <string name="bug_tg_message">When a fix is available for your issue, we\'ll contact you directly on Telegram to ask you to test it first.\n\n⚠️ Make sure you enter the correct handle (example: @john_doe). Without it, we won\'t be able to reach you.\n\nYour handle is stored only on this device and is never shared.</string>
+    <string name="bug_tg_hint">@your_handle</string>
+    <string name="bug_tg_confirm">Confirm</string>
+    <string name="bug_tg_skip">Later</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Telegram handle not set — tap to define</string>
     <string-array name="bug_categories">
         <item>Mirror / Projection</item>
         <item>App display</item>

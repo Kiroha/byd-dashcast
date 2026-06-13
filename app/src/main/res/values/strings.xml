@@ -699,6 +699,17 @@
     <string name="bug_wizard_no_app">Aucune application spécifique</string>
     <string name="bug_wizard_other_app">Autre / Application inconnue</string>
     <string name="bug_wizard_back">← Retour</string>
+
+    <!-- Telegram handle — first-time dialog -->
+    <string name="bug_tg_title">Ton pseudo Telegram</string>
+    <string name="bug_tg_message">Lorsqu\'un correctif est disponible pour ton problème, nous te contacterons directement sur Telegram pour te demander de le tester en priorité.\n\n⚠️ Entre bien le bon pseudo (exemple : @john_doe). Sans lui, nous ne pourrons pas te joindre.\n\nTon pseudo est stocké uniquement sur cet appareil et n\'est jamais partagé.</string>
+    <string name="bug_tg_hint">@ton_pseudo</string>
+    <string name="bug_tg_confirm">Confirmer</string>
+    <string name="bug_tg_skip">Plus tard</string>
+    <!-- Telegram handle — persistent banner in wizard -->
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Pseudo Telegram non renseigné — appuyer pour définir</string>
+
     <!-- Decorative progress-dot glyph (bug wizard) — not user-facing text. -->
     <string name="wizard_progress_dot" translatable="false">●</string>
     <string-array name="bug_categories">

@@ -667,6 +667,13 @@
     <string name="bug_wizard_no_app">Нақты қосымша жоқ</string>
     <string name="bug_wizard_other_app">Басқа / Белгісіз қосымша</string>
     <string name="bug_wizard_back">← Артқа</string>
+    <string name="bug_tg_title">Telegram лақабыңыз</string>
+    <string name="bug_tg_message">Мәселеңіз бойынша түзету дайын болған кезде, оны бірінші болып сынап көруіңізді сұрау үшін Telegram арқылы тікелей хабарласамыз.\n\n⚠️ Дұрыс лақапты енгізгеніңізге көз жеткізіңіз (мысалы: @john_doe). Онсыз сізбен байланыса алмаймыз.\n\nЛақабыңыз тек осы құрылғыда сақталады және ешқашан бөлісілмейді.</string>
+    <string name="bug_tg_hint">@лақабыңыз</string>
+    <string name="bug_tg_confirm">Растау</string>
+    <string name="bug_tg_skip">Кейінірек</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Telegram лақабы орнатылмаған — орнату үшін басыңыз</string>
     <string-array name="bug_categories">
         <item>Айна</item>
         <item>Қосымша көрінісі</item>
