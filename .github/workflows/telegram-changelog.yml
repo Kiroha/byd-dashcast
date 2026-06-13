@@ -1,0 +1,141 @@
+name: Post changelog to Telegram
+
+# Fires on every GitHub pre-release (beta channel).
+# Flow: reopen topic → send formatted changelog → pin → close topic.
+# The topic stays closed between releases so members can't post there.
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  telegram-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send changelog to Telegram (reopen → post → pin → close)
+        env:
+          TG_TOKEN:    ${{ secrets.TG_CHANGELOG_BOT_TOKEN }}
+          TG_CHAT_ID:  ${{ secrets.TG_CHANGELOG_CHAT_ID }}
+          TG_THREAD:   ${{ secrets.TG_CHANGELOG_THREAD_ID }}
+          RELEASE_TAG:  ${{ github.event.release.tag_name }}
+          RELEASE_URL:  ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          python3 << 'EOF'
+          import os, re, json, urllib.request, urllib.error, sys
+
+          token    = os.environ['TG_TOKEN']
+          chat_id  = os.environ['TG_CHAT_ID']
+          thread   = os.environ['TG_THREAD'].strip()
+          tag      = os.environ['RELEASE_TAG']
+          url      = os.environ['RELEASE_URL']
+          body     = os.environ['RELEASE_BODY']
+
+          # ── Helpers ────────────────────────────────────────────────────────
+
+          def html_esc(s):
+              return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+          def inline_html(text):
+              """Convert inline Markdown to Telegram HTML, escaping plain text."""
+              pattern = re.compile(
+                  r'(\*\*(.+?)\*\*'          # **bold**
+                  r'|`(.+?)`'                 # `code`
+                  r'|\[([^\]]+)\]\((https?://[^\)]+)\))',  # [text](url)
+                  re.DOTALL
+              )
+              parts = pattern.split(text)
+              # split() with a capturing group returns interleaved plain/match segments;
+              # use finditer for cleaner handling.
+              result, last = '', 0
+              for m in pattern.finditer(text):
+                  result += html_esc(text[last:m.start()])
+                  full = m.group(0)
+                  if full.startswith('**'):
+                      result += f'<b>{html_esc(m.group(2))}</b>'
+                  elif full.startswith('`'):
+                      result += f'<code>{html_esc(m.group(3))}</code>'
+                  else:
+                      result += f'<a href="{m.group(5)}">{html_esc(m.group(4))}</a>'
+                  last = m.end()
+              return result + html_esc(text[last:])
+
+          def md_to_html(text):
+              out = []
+              for line in text.split('\n'):
+                  h = re.match(r'^#{1,4}\s+(.*)', line)
+                  if h:
+                      out.append(f'<b>{inline_html(h.group(1))}</b>')
+                      continue
+                  if re.match(r'^-{3,}\s*$', line.strip()):
+                      out.append('')
+                      continue
+                  li = re.match(r'^[\-\*]\s+(.*)', line)
+                  if li:
+                      out.append(f'• {inline_html(li.group(1))}')
+                      continue
+                  out.append(inline_html(line))
+              # Collapse more than 2 consecutive blank lines
+              result = re.sub(r'\n{3,}', '\n\n', '\n'.join(out))
+              return result.strip()
+
+          # ── Build message ──────────────────────────────────────────────────
+
+          header    = f'🚀 <b>DashCast {html_esc(tag)}</b>\n\n'
+          footer    = f'\n\n<a href="{url}">→ Changelog complet sur GitHub</a>'
+          body_html = md_to_html(body)
+
+          # Telegram hard limit: 4096 chars
+          max_body = 4096 - len(header) - len(footer) - 10
+          if len(body_html) > max_body:
+              body_html = body_html[:max_body].rsplit('\n', 1)[0] + '\n[…]'
+
+          message = header + body_html + footer
+
+          # ── Bot API call ───────────────────────────────────────────────────
+
+          def tg(method, payload):
+              req = urllib.request.Request(
+                  f'https://api.telegram.org/bot{token}/{method}',
+                  data=json.dumps(payload).encode(),
+                  headers={'Content-Type': 'application/json'},
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return json.loads(r.read())
+              except urllib.error.HTTPError as e:
+                  body_err = e.read().decode()
+                  print(f'[{method}] HTTP {e.code}: {body_err}', file=sys.stderr)
+                  raise
+
+          # 1. Reopen topic so the bot can post
+          res = tg('reopenForumTopic', {'chat_id': chat_id, 'message_thread_id': int(thread)})
+          print(f'reopen: {res.get("ok")}')
+
+          # 2. Send changelog
+          payload = {
+              'chat_id':               chat_id,
+              'text':                  message,
+              'parse_mode':            'HTML',
+              'disable_web_page_preview': True,
+              'disable_notification':  False,   # notify members for real releases
+          }
+          if thread:
+              payload['message_thread_id'] = int(thread)
+
+          sent   = tg('sendMessage', payload)
+          msg_id = sent['result']['message_id']
+          print(f'sent: message_id={msg_id}')
+
+          # 3. Pin (replaces previous pin — members see the latest changelog)
+          pin = tg('pinChatMessage', {
+              'chat_id':              chat_id,
+              'message_id':           msg_id,
+              'disable_notification': True,
+          })
+          print(f'pinned: {pin.get("ok")}')
+
+          # 4. Close topic again — members can read but not reply
+          res = tg('closeForumTopic', {'chat_id': chat_id, 'message_thread_id': int(thread)})
+          print(f'closed: {res.get("ok")}')
+
+          EOF
