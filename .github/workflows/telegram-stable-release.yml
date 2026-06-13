@@ -4,7 +4,7 @@ name: Post stable release changelog to Telegram
 # Flow: reopen topic → send formatted changelog → pin → close topic.
 on:
   release:
-    types: [released]
+    types: [published]
 
 jobs:
   telegram-stable:
