@@ -281,9 +281,10 @@ android {
         // 438/439 are taken by the 1.6.x-beta channel (Kotlin migration).
         // 440 = 1.5.2 (Locale.ROOT + daemon log pruning).
         // 441 = 1.5.3 (in-app bug reporter with direct Telegram upload).
-        // 442 = 1.5.4 (bug wizard). Next 1.6.x-beta: use 443+.
-        versionCode 439
-        versionName "1.6.1-beta"
+        // 442 = 1.5.4 (bug wizard).
+        // 443 = 1.6.2-beta (DiLink 5 layout mode fix + merged 1.5.x features).
+        versionCode 443
+        versionName "1.6.2-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
