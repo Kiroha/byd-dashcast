@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Показати фільтри за категоріями (Всі / Нав / Медіа)</string>
     <string name="settings_reconnect_popup">Пропонувати перезапуск останнього додатку при перепідключенні кластера</string>
     <string name="quick_switch_title">Останні додатки</string>
-    <string name="quick_switch_empty">Немає останніх додатків</string>
     <string name="menu_usage_stats">📊 Статистика використання</string>
     <string name="usage_title">Час використання на кластері</string>
     <string name="usage_empty">Немає даних використання</string>
@@ -643,4 +642,20 @@
     <string name="main_layout_section">Макет кластера</string>
     <string name="main_layout_free_sub">Без макета</string>
     <string name="main_layout_manage">Керування</string>
+    <string name="main_nav_bug_report">Повідомити</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Повідомити про помилку</string>
+    <string name="bug_title_header">Повідомити про помилку</string>
+    <string name="bug_subtitle">Опишіть проблему. Технічний журнал додається автоматично.</string>
+    <string name="bug_field_title">Заголовок</string>
+    <string name="bug_field_steps">Кроки для відтворення</string>
+    <string name="bug_field_result">Спостережуваний результат</string>
+    <string name="bug_title_required">Введіть заголовок</string>
+    <string name="bug_send">Надіслати</string>
+    <string name="bug_status_capturing">Збір журналу…</string>
+    <string name="bug_status_sending">Надсилання…</string>
+    <string name="bug_status_error_fmt">Помилка: %1$s</string>
+    <string name="bug_sent_ok">Звіт надіслано ✓ Дякуємо!</string>
+    <string name="bug_share_subject">DashCast — Звіт про помилку</string>
+    <string name="bug_share_chooser">Надіслати звіт через…</string>
 </resources>

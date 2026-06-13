@@ -258,6 +258,35 @@
                 android:textColor="@color/md_on_surface_variant"/>
         </LinearLayout>
 
+        <!-- Report a bug (1.5.x) -->
+        <LinearLayout
+            android:id="@+id/nav_bug_report"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground">
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/md_on_surface_variant"
+                android:src="@drawable/ic_bug_report"
+                android:contentDescription="@string/bug_report_menu"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_nav_bug_report"
+                android:textSize="11sp"
+                android:textColor="@color/md_on_surface_variant"/>
+        </LinearLayout>
+
         <!-- Help (bottom) -->
         <LinearLayout
             android:id="@+id/nav_help"

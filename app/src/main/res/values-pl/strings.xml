@@ -118,7 +118,6 @@
     <string name="settings_show_category_filters">Pokaż filtry kategorii (Wszystkie / Nawi / Multimedia)</string>
     <string name="settings_reconnect_popup">Proponuj ponowne uruchomienie ostatniej aplikacji po połączeniu z klastrem</string>
     <string name="quick_switch_title">Ostatnie aplikacje</string>
-    <string name="quick_switch_empty">Brak ostatnich aplikacji</string>
     <string name="menu_usage_stats">📊 Statystyki użycia</string>
     <string name="usage_title">Czas użytkowania klastra</string>
     <string name="usage_empty">Brak danych o użytkowaniu</string>
@@ -651,4 +650,20 @@
     <string name="main_layout_section">Layout klastra</string>
     <string name="main_layout_free_sub">Brak layoutu</string>
     <string name="main_layout_manage">Zarządzaj</string>
+    <string name="main_nav_bug_report">Zgłoś</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Zgłoś błąd</string>
+    <string name="bug_title_header">Zgłoś błąd</string>
+    <string name="bug_subtitle">Opisz problem. Dziennik techniczny zostanie dołączony automatycznie.</string>
+    <string name="bug_field_title">Tytuł</string>
+    <string name="bug_field_steps">Kroki do odtworzenia</string>
+    <string name="bug_field_result">Zaobserwowany wynik</string>
+    <string name="bug_title_required">Wpisz tytuł</string>
+    <string name="bug_send">Wyślij</string>
+    <string name="bug_status_capturing">Przechwytywanie dziennika…</string>
+    <string name="bug_status_sending">Wysyłanie…</string>
+    <string name="bug_status_error_fmt">Błąd: %1$s</string>
+    <string name="bug_sent_ok">Zgłoszenie wysłane ✓ Dziękujemy!</string>
+    <string name="bug_share_subject">DashCast — Zgłoszenie błędu</string>
+    <string name="bug_share_chooser">Wyślij zgłoszenie przez…</string>
 </resources>

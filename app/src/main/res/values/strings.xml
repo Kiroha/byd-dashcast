@@ -160,7 +160,22 @@
     <string name="settings_reconnect_popup">Proposer de relancer la dernière app à la reconnexion du cluster</string>
     <!-- Feature: Quick-switch -->
     <string name="quick_switch_title">Apps récentes</string>
-    <string name="quick_switch_empty">Aucune app récente</string>
+    <!-- Bug reporter -->
+    <string name="main_nav_bug_report">Signaler</string>
+    <string name="bug_report_menu">🐞 Signaler un bug</string>
+    <string name="bug_title_header">Signaler un bug</string>
+    <string name="bug_subtitle">Décrivez le problème. Un journal technique est joint automatiquement.</string>
+    <string name="bug_field_title">Titre</string>
+    <string name="bug_field_steps">Étapes pour reproduire</string>
+    <string name="bug_field_result">Résultat observé</string>
+    <string name="bug_title_required">Indiquez un titre</string>
+    <string name="bug_send">Envoyer</string>
+    <string name="bug_status_capturing">Capture du journal…</string>
+    <string name="bug_status_sending">Envoi en cours…</string>
+    <string name="bug_status_error_fmt">Erreur : %1$s</string>
+    <string name="bug_sent_ok">Rapport envoyé ✓ Merci !</string>
+    <string name="bug_share_subject">DashCast — Rapport de bug</string>
+    <string name="bug_share_chooser">Envoyer le rapport via…</string>
     <!-- Feature: Usage stats -->
     <string name="menu_usage_stats">📊 Statistiques d\'utilisation</string>
     <string name="usage_title">Temps d\'utilisation sur le cluster</string>

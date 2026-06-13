@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">إظهار فلاتر الفئات (الكل / ملاحة / وسائط)</string>
     <string name="settings_reconnect_popup">اقتراح إعادة تشغيل آخر تطبيق عند إعادة الاتصال بالكلاستر</string>
     <string name="quick_switch_title">التطبيقات الأخيرة</string>
-    <string name="quick_switch_empty">لا توجد تطبيقات أخيرة</string>
     <string name="menu_usage_stats">📊 إحصائيات الاستخدام</string>
     <string name="usage_title">وقت الاستخدام على الكلستر</string>
     <string name="usage_empty">لا توجد بيانات استخدام</string>
@@ -642,4 +641,20 @@
     <string name="main_layout_section">تخطيط المجموعة</string>
     <string name="main_layout_free_sub">بدون تخطيط</string>
     <string name="main_layout_manage">إدارة</string>
+    <string name="main_nav_bug_report">إبلاغ</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 الإبلاغ عن خطأ</string>
+    <string name="bug_title_header">الإبلاغ عن خطأ</string>
+    <string name="bug_subtitle">صف المشكلة. يُرفق سجل تقني تلقائيًا.</string>
+    <string name="bug_field_title">العنوان</string>
+    <string name="bug_field_steps">خطوات إعادة الإنتاج</string>
+    <string name="bug_field_result">النتيجة الملاحَظة</string>
+    <string name="bug_title_required">الرجاء إدخال عنوان</string>
+    <string name="bug_send">إرسال</string>
+    <string name="bug_status_capturing">جارٍ التقاط السجل…</string>
+    <string name="bug_status_sending">جارٍ الإرسال…</string>
+    <string name="bug_status_error_fmt">خطأ: %1$s</string>
+    <string name="bug_sent_ok">تم إرسال التقرير ✓ شكرًا!</string>
+    <string name="bug_share_subject">DashCast — تقرير خطأ</string>
+    <string name="bug_share_chooser">إرسال التقرير عبر…</string>
 </resources>

@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Kategoriefilter anzeigen (Alle / Nav / Medien)</string>
     <string name="settings_reconnect_popup">Letzte App bei Cluster-Neuverbindung erneut starten</string>
     <string name="quick_switch_title">Letzte Apps</string>
-    <string name="quick_switch_empty">Keine letzten Apps</string>
     <string name="menu_usage_stats">📊 Nutzungsstatistiken</string>
     <string name="usage_title">Cluster-Nutzungszeit</string>
     <string name="usage_empty">Keine Nutzungsdaten</string>
@@ -642,4 +641,20 @@
     <string name="main_layout_section">Cluster-Layout</string>
     <string name="main_layout_free_sub">Kein Layout</string>
     <string name="main_layout_manage">Verwalten</string>
+    <string name="main_nav_bug_report">Melden</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Fehler melden</string>
+    <string name="bug_title_header">Fehler melden</string>
+    <string name="bug_subtitle">Beschreiben Sie das Problem. Ein technisches Protokoll wird automatisch angehängt.</string>
+    <string name="bug_field_title">Titel</string>
+    <string name="bug_field_steps">Schritte zur Reproduktion</string>
+    <string name="bug_field_result">Beobachtetes Ergebnis</string>
+    <string name="bug_title_required">Bitte einen Titel eingeben</string>
+    <string name="bug_send">Senden</string>
+    <string name="bug_status_capturing">Protokoll wird erfasst…</string>
+    <string name="bug_status_sending">Wird gesendet…</string>
+    <string name="bug_status_error_fmt">Fehler: %1$s</string>
+    <string name="bug_sent_ok">Bericht gesendet ✓ Danke!</string>
+    <string name="bug_share_subject">DashCast — Fehlerbericht</string>
+    <string name="bug_share_chooser">Bericht senden über…</string>
 </resources>
