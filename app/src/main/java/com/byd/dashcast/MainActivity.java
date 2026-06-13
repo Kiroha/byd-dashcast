@@ -1586,6 +1586,7 @@ public class MainActivity extends AppCompatActivity
 
     /** Original cluster — sendInfo(screenSize) + sendInfo(18) + sendInfo(0). */
     private void originCluster() {
+        btnRestoreCluster.setEnabled(false);
         if (mNavCoordinator != null) mNavCoordinator.setStatusRestoringOrigin();
         mUsageTracker.trackStop(mCurrentDashboardPkg);
 
@@ -1618,6 +1619,7 @@ public class MainActivity extends AppCompatActivity
                         if (mSplitController != null) mSplitController.clearSplitState();
                         updateDashboardStatus(null);
                         showAppList();
+                        btnRestoreCluster.setEnabled(true);
                         AppLogger.log(TAG, "Original cluster restored ✓");
                     }
                 });
@@ -1626,6 +1628,7 @@ public class MainActivity extends AppCompatActivity
             public void onError(final String error) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
+                        btnRestoreCluster.setEnabled(true);
                         Toast.makeText(getApplicationContext(),
                                 getString(R.string.toast_origin_failed, error), Toast.LENGTH_LONG).show();
                         AppLogger.log(TAG, "originCluster FAILED: " + error);
