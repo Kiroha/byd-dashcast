@@ -5,11 +5,13 @@ name: Post changelog to Telegram
 # The topic stays closed between releases so members can't post there.
 on:
   release:
-    types: [prereleased]
+    types: [published]
 
 jobs:
   telegram-changelog:
     runs-on: ubuntu-latest
+    # Only fire for pre-releases (beta channel). Full releases go to telegram-stable-release.yml.
+    if: ${{ github.event.release.prerelease }}
     steps:
       - name: Send changelog to Telegram (reopen → post → pin → close)
         env:
