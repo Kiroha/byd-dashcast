@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Kategori filtrelerini göster (Tümü / Nav / Medya)</string>
     <string name="settings_reconnect_popup">Cluster yeniden bağlandığında son uygulamayı yeniden başlatmayı öner</string>
     <string name="quick_switch_title">Son uygulamalar</string>
-    <string name="quick_switch_empty">Son uygulama yok</string>
     <string name="menu_usage_stats">📊 Kullanım istatistikleri</string>
     <string name="usage_title">Cluster kullanım süresi</string>
     <string name="usage_empty">Kullanım verisi yok</string>
@@ -642,4 +641,20 @@
     <string name="main_layout_section">Küme düzeni</string>
     <string name="main_layout_free_sub">Düzen yok</string>
     <string name="main_layout_manage">Yönet</string>
+    <string name="main_nav_bug_report">Bildir</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Hata bildir</string>
+    <string name="bug_title_header">Hata bildir</string>
+    <string name="bug_subtitle">Sorunu açıklayın. Teknik bir günlük otomatik olarak eklenir.</string>
+    <string name="bug_field_title">Başlık</string>
+    <string name="bug_field_steps">Yeniden oluşturma adımları</string>
+    <string name="bug_field_result">Gözlenen sonuç</string>
+    <string name="bug_title_required">Lütfen bir başlık girin</string>
+    <string name="bug_send">Gönder</string>
+    <string name="bug_status_capturing">Günlük yakalanıyor…</string>
+    <string name="bug_status_sending">Gönderiliyor…</string>
+    <string name="bug_status_error_fmt">Hata: %1$s</string>
+    <string name="bug_sent_ok">Rapor gönderildi ✓ Teşekkürler!</string>
+    <string name="bug_share_subject">DashCast — Hata raporu</string>
+    <string name="bug_share_chooser">Raporu şununla gönder…</string>
 </resources>

@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Turkum filtrlarini koʻrsatish (Barchasi / Nav / Media)</string>
     <string name="settings_reconnect_popup">Klaster qayta ulanganda oxirgi ilovani qayta ishga tushirishni taklif qilish</string>
     <string name="quick_switch_title">Soʻnggi ilovalar</string>
-    <string name="quick_switch_empty">Soʻnggi ilova yoʻq</string>
     <string name="menu_usage_stats">📊 Foydalanish statistikasi</string>
     <string name="usage_title">Klasterda foydalanish vaqti</string>
     <string name="usage_empty">Foydalanish maʻlumoti yoʻq</string>
@@ -643,4 +642,20 @@
     <string name="main_layout_section">Klaster tartibi</string>
     <string name="main_layout_free_sub">Tartib yo\'q</string>
     <string name="main_layout_manage">Boshqarish</string>
+    <string name="main_nav_bug_report">Xabar berish</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Xato haqida xabar berish</string>
+    <string name="bug_title_header">Xato haqida xabar berish</string>
+    <string name="bug_subtitle">Muammoni tasvirlang. Texnik jurnal avtomatik biriktiriladi.</string>
+    <string name="bug_field_title">Sarlavha</string>
+    <string name="bug_field_steps">Qayta ishlab chiqarish bosqichlari</string>
+    <string name="bug_field_result">Kuzatilgan natija</string>
+    <string name="bug_title_required">Sarlavha kiriting</string>
+    <string name="bug_send">Yuborish</string>
+    <string name="bug_status_capturing">Jurnal olinmoqda…</string>
+    <string name="bug_status_sending">Yuborilmoqda…</string>
+    <string name="bug_status_error_fmt">Xato: %1$s</string>
+    <string name="bug_sent_ok">Hisobot yuborildi ✓ Rahmat!</string>
+    <string name="bug_share_subject">DashCast — Xato hisoboti</string>
+    <string name="bug_share_chooser">Hisobotni yuborish…</string>
 </resources>

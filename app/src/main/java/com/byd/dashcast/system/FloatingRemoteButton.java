@@ -314,24 +314,33 @@ badge.setOnTouchListener(new View.OnTouchListener() {
     public static final String EXTRA_QUICK_SWITCH_PKG = "quick_switch_pkg";
 
     private void showQuickSwitchPopup() {
+        // The dialog always offers "Report a bug" as the first entry (so the bug
+        // reporter is reachable over any app at the moment it breaks), followed by
+        // the recent apps for quick-switching.
         String raw = mPrefs.getString(SettingsActivity.PREF_RECENT_APPS, "");
-        if (raw.isEmpty()) {
-            android.widget.Toast.makeText(this,
-                    getString(R.string.quick_switch_empty), android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String[] entries = raw.split(";;");
-        final String[] names = new String[entries.length];
-        final String[] pkgs  = new String[entries.length];
-        for (int i = 0; i < entries.length; i++) {
+        String[] entries = raw.isEmpty() ? new String[0] : raw.split(";;");
+        final int n = entries.length;
+        final String[] names = new String[n + 1];
+        final String[] pkgs  = new String[n + 1];
+        names[0] = getString(R.string.bug_report_menu);
+        pkgs[0]  = null; // sentinel → bug reporter
+        for (int i = 0; i < n; i++) {
             String[] parts = entries[i].split("\\|", 2);
-            pkgs[i]  = parts[0];
-            names[i] = parts.length > 1 ? parts[1] : parts[0];
+            pkgs[i + 1]  = parts[0];
+            names[i + 1] = parts.length > 1 ? parts[1] : parts[0];
         }
         android.app.AlertDialog dlg = new android.app.AlertDialog.Builder(this,
                 android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(getString(R.string.quick_switch_title))
                 .setItems(names, (dialog, which) -> {
+                    if (which == 0) {
+                        Intent bug = new Intent(FloatingRemoteButton.this,
+                                com.byd.dashcast.report.BugReportActivity.class);
+                        bug.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(bug);
+                        AppLogger.d(TAG, "Floating → bug reporter");
+                        return;
+                    }
                     Intent intent = new Intent(FloatingRemoteButton.this, MainActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                             | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
