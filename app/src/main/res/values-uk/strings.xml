@@ -153,6 +153,7 @@
     <string name="main_preview_section">Перегляд</string>
     <string name="main_btn_full_preview">Повноекранне віддзеркалення</string>
     <string name="main_btn_stop_mirror">Зупинити проекцію</string>
+    <string name="main_btn_launch_layout_apps">Запустити додатки макета</string>
     <string name="main_section_favorites">ОБРАНЕ</string>
     <string name="main_section_all_apps">Усі додатки</string>
     <string name="sheet_auto_launch">Автозапуск при старті</string>

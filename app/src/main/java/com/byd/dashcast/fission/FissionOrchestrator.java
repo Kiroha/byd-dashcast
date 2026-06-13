@@ -166,6 +166,49 @@ public final class FissionOrchestrator {
         orch.initAsync(fav, true, false);
     }
 
+    /**
+     * Manually launches the apps configured in the favourite layout.
+     * Same flow as {@link #maybeAutoStartOnAppLaunch} but user-triggered — skips the
+     * {@code isFissionAutoLayout} guard so it works when the auto-launch option is OFF.
+     */
+    public static void launchFavoriteLayoutApps(Context context) {
+        final Context appCtx = context.getApplicationContext();
+        if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
+        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
+        if (fav == null) return;
+        if (com.byd.dashcast.cluster.ClusterService.sIsRunning) {
+            AppLogger.d(TAG, "launchFavoriteLayoutApps skipped: classic projection active");
+            return;
+        }
+        AppLogger.i(TAG, "manual launch layout apps: « " + fav.name + " »");
+
+        ProjectionStateProvider psp = new ProjectionStateProvider() {
+            @Override public boolean isProjectionActive() {
+                return com.byd.dashcast.cluster.ClusterService.sIsRunning;
+            }
+            @Override public void stopProjectionIfActive(Runnable onStopped) {
+                com.byd.dashcast.cluster.ClusterService cs =
+                        com.byd.dashcast.cluster.ClusterService.getInstance();
+                if (cs != null) cs.stopProjectionNoAdb();
+                if (onStopped != null) new Handler(Looper.getMainLooper()).post(onStopped);
+            }
+        };
+        Callbacks headless = new Callbacks() {
+            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) {}
+            @Override public void onDaemonBinderAcquired(IBinder binder) {}
+            @Override public void onStatusMessage(String msg) {
+                if (msg != null) AppLogger.d(TAG, "launch-layout: " + msg);
+            }
+            @Override public void onSlotError(String pkg, String msg) {
+                AppLogger.w(TAG, "launch-layout slot error " + pkg + ": " + msg);
+            }
+            @Override public void onProjectionConflict(Runnable proceedCallback) {
+                AppLogger.w(TAG, "launch-layout: projection conflict — aborting");
+            }
+        };
+        new FissionOrchestrator(appCtx, psp, headless).initAsync(fav, true, false);
+    }
+
     // ── Public API ────────────────────────────────────────────────────────────
 
     /** Called on Activity.onDestroy() — shuts down executor and releases slots if finishing. */

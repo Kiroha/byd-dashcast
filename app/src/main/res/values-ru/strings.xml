@@ -153,6 +153,7 @@
     <string name="main_preview_section">Превью</string>
     <string name="main_btn_full_preview">Полноэкранное отражение</string>
     <string name="main_btn_stop_mirror">Остановить проекцию</string>
+    <string name="main_btn_launch_layout_apps">Запустить приложения макета</string>
     <string name="main_section_favorites">ИЗБРАННОЕ</string>
     <string name="main_section_all_apps">Все приложения</string>
     <string name="sheet_auto_launch">Автозапуск при старте</string>

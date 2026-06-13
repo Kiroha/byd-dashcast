@@ -153,6 +153,7 @@
     <string name="main_preview_section">Папярэдні прагляд</string>
     <string name="main_btn_full_preview">Поўнаэкраннае люстра</string>
     <string name="main_btn_stop_mirror">Спыніць праекцыю</string>
+    <string name="main_btn_launch_layout_apps">Запусціць прыкладанні макета</string>
     <string name="main_section_favorites">УЛЮБЁНЫЯ</string>
     <string name="main_section_all_apps">Усе праграмы</string>
     <string name="sheet_auto_launch">Аўтазапуск пры старце</string>

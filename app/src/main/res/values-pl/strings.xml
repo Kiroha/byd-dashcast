@@ -195,6 +195,7 @@
     <string name="main_preview_section">Podgląd na żywo</string>
     <string name="main_btn_full_preview">Lustro pełnoekranowe</string>
     <string name="main_btn_stop_mirror">Zatrzymaj projekcję</string>
+    <string name="main_btn_launch_layout_apps">Uruchom aplikacje układu</string>
     <string name="main_section_favorites">ULUBIONE</string>
     <string name="main_section_all_apps">Wszystkie aplikacje</string>
     <string name="sheet_auto_launch">Auto-uruchamianie przy starcie</string>

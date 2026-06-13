@@ -865,6 +865,25 @@
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
 
+                    <!-- Lancer manuellement les apps du layout favori.
+                         Visible only when Layouts mode is ON, a favourite layout with
+                         apps is set, and the "Automatic favourite layout" option is OFF. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_launch_layout_apps"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/main_btn_launch_layout_apps"
+                        android:minHeight="52dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="26dp"
+                        app:icon="@drawable/ic_play"
+                        app:iconGravity="textStart"
+                        app:iconSize="20dp"
+                        android:visibility="gone"/>
+
                     <!-- ────── Layout carousel (visible only when Layouts mode enabled).
                          Cards are built dynamically by FissionCoordinator: free mode,
                          one card per saved preset (mini zone preview), manage card. -->

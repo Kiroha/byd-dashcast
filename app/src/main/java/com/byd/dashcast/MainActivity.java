@@ -178,6 +178,7 @@ public class MainActivity extends AppCompatActivity
     private Button   btnRestoreCluster;
     private android.widget.ImageView ivNavLogo; // v0.9.81: long-press = overflow menu
     private Button   btnShowMirror;
+    private com.google.android.material.button.MaterialButton btnLaunchLayoutApps;
 
     // v0.9.74 — Favorites horizontal strip
 
@@ -285,9 +286,12 @@ public class MainActivity extends AppCompatActivity
         // (Activity exists in back stack → onNewIntent fires instead of onCreate)
         handleShowMirrorIntent(getIntent());
 
-        btnRestoreCluster   = (Button)   findViewById(R.id.btn_restore_cluster);
-        ivNavLogo           = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
-        btnShowMirror       = (Button)   findViewById(R.id.btn_show_mirror);
+        btnRestoreCluster      = (Button) findViewById(R.id.btn_restore_cluster);
+        ivNavLogo              = (android.widget.ImageView) findViewById(R.id.iv_nav_logo);
+        btnShowMirror          = (Button) findViewById(R.id.btn_show_mirror);
+        btnLaunchLayoutApps    = findViewById(R.id.btn_launch_layout_apps);
+        btnLaunchLayoutApps.setOnClickListener(v ->
+                com.byd.dashcast.fission.FissionOrchestrator.launchFavoriteLayoutApps(this));
         llAppListSection    =            findViewById(R.id.ll_app_list_section);
 
         // v0.9.74 — Favorites strip + fullscreen overlay refs.
@@ -480,6 +484,25 @@ public class MainActivity extends AppCompatActivity
         applyCompactAppsPanelMode();
         // Fission button visibility follows its toggle in SettingsActivity.
         if (mFissionCoordinator != null) mFissionCoordinator.refresh();
+        updateLaunchLayoutAppsButton();
+    }
+
+    private void updateLaunchLayoutAppsButton() {
+        if (btnLaunchLayoutApps == null) return;
+        boolean show = !com.byd.dashcast.data.prefs.ClusterPrefs.isFissionAutoLayout(this)
+                && com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
+                && favoriteLayoutHasApps();
+        btnLaunchLayoutApps.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean favoriteLayoutHasApps() {
+        com.byd.dashcast.fission.LayoutPreset fav =
+                com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this);
+        if (fav == null) return false;
+        for (com.byd.dashcast.fission.LayoutPreset.SlotDef s : fav.slots) {
+            if (s.packageName != null && !s.packageName.isEmpty()) return true;
+        }
+        return false;
     }
 
     /**

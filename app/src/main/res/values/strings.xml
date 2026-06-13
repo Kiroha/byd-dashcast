@@ -245,6 +245,7 @@
     <string name="main_preview_section">Aperçu temps réel</string>
     <string name="main_btn_full_preview">Miroir plein écran</string>
     <string name="main_btn_stop_mirror">Arrêter la projection</string>
+    <string name="main_btn_launch_layout_apps">Lancer les apps du layout</string>
     <string name="main_section_favorites">FAVORIS</string>
     <string name="main_section_all_apps">Toutes les applications</string>
     <string name="sheet_auto_launch">Lancement automatique au démarrage</string>
