@@ -79,14 +79,21 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - ✅ `LocaleHelper.java` → `.kt` (`object` + `@JvmStatic` + `const val` ; les 2 écritures prefs inline via l'extension core-ktx `edit { }` — déjà au classpath via appcompat — pour garder lint UseKtx à 0).
 - ✅ `LayoutPreset.java` → `.kt` (`@JvmField` sur tous les champs publics mutés en place ; `@JvmStatic fromJson` ; `@Throws(Exception)` pour préserver le try/catch de LayoutPrefs ; `optString(name, null)` réécrit via `has()`+`isNull()` → strictement équivalent, sans passer null à un arg `@NonNull`).
 - ✅ `ClusterPrefs.java` → `.kt` (`object` + `@JvmStatic` + `const val` ; constantes de clés package-private passées `private` (aucun lecteur externe, vérifié grep) ; setters recevant `null` au call site gardés `String?` → pas de NPE Kotlin ; surcharge `isGridMode` via `@JvmOverloads`).
-- **AppLogger sorti du lot 1** : 556 lignes avec `synchronized`/`static volatile`/compteurs incrémentaux, appelé par tous les threads workers → lot dédié avec relecture concurrence approfondie.
-- Vérif : compile Kotlin+Java forcée sans warning sur les 4 fichiers, `assembleDebug`+`assembleRelease` verts. (Les 5 warnings lint restants sont dans `activity_bug_wizard.xml`, hors périmètre.)
+- **AppLogger sorti du lot 1** : voir lot 1 bis ci-dessous.
+- Vérif : compile Kotlin+Java forcée sans warning sur les 4 fichiers, `assembleDebug`+`assembleRelease` verts. Validé en test terrain (1.6.5-beta).
+
+## 4 ter. Réalisé — lot 1 bis (`util/AppLogger`, concurrence)
+
+- ✅ `AppLogger.java` → `.kt` (`object` + `@JvmStatic`). Concurrence préservée à l'identique : `LOCK` (`Any()`), blocs `synchronized(LOCK)`, `java.util.ArrayDeque.pollFirst()` (contrat null-si-vide, ≠ `kotlin.collections.ArrayDeque`), compteurs `IntArray` incrémentaux, `sChangeStamp`, snapshot hors-lock dans `get()`.
+- `enum class Level` et `class Entry` (constructeur `internal`, personne ne l'instancie hors AppLogger) ; champs `Entry` en `@JvmField val` (lus directement par LogActivity/LogAdapter/SysInfoActivity).
+- Nullabilité fidèle : `tag`/`msg` non-null (vérifié — aucun appelant ne passe null, les `null` trouvés étaient dans des `x==null?"":x`) ; `Throwable?`, `content`/`reportText`/`file` nullable, `context` de `pruneOldFiles` nullable (tous gérés explicitement comme en Java).
+- `ThreadLocal.withInitial` + `!!` documenté aux 2 call sites (jamais null par construction) ; `@Suppress("DEPRECATION")` sur `shareReportToTelegram` (`getPackageInfo(String,int)` obligatoire en API 29).
+- Vérif : compile forcée 0 warning sur AppLogger, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 1 bis | `util/AppLogger` (concurrence — relecture champ par champ) | build + lint 0/0 + smoke test log |
 | 2 | data/apps/AppRepository + adapters UI simples | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
