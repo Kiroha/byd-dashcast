@@ -118,7 +118,22 @@
     <string name="settings_show_category_filters">Show category filters (All / Nav / Media)</string>
     <string name="settings_reconnect_popup">Offer to relaunch last app on cluster reconnection</string>
     <string name="quick_switch_title">Recent apps</string>
-    <string name="quick_switch_empty">No recent apps</string>
+    <!-- Bug reporter -->
+    <string name="main_nav_bug_report">Report</string>
+    <string name="bug_report_menu">🐞 Report a bug</string>
+    <string name="bug_title_header">Report a bug</string>
+    <string name="bug_subtitle">Describe the problem. A technical log is attached automatically.</string>
+    <string name="bug_field_title">Title</string>
+    <string name="bug_field_steps">Steps to reproduce</string>
+    <string name="bug_field_result">Observed result</string>
+    <string name="bug_title_required">Please enter a title</string>
+    <string name="bug_send">Send</string>
+    <string name="bug_status_capturing">Capturing log…</string>
+    <string name="bug_status_sending">Sending…</string>
+    <string name="bug_status_error_fmt">Error: %1$s</string>
+    <string name="bug_sent_ok">Report sent ✓ Thank you!</string>
+    <string name="bug_share_subject">DashCast — Bug report</string>
+    <string name="bug_share_chooser">Send the report via…</string>
     <string name="menu_usage_stats">📊 Usage statistics</string>
     <string name="usage_title">Cluster usage time</string>
     <string name="usage_empty">No usage data</string>
@@ -655,4 +670,63 @@
     <string name="main_layout_section">Cluster layout</string>
     <string name="main_layout_free_sub">No layout</string>
     <string name="main_layout_manage">Manage</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">What type of problem?</string>
+    <string name="bug_wizard_step_app">Which app is affected?</string>
+    <string name="bug_wizard_step_issue">What exactly happened?</string>
+    <string name="bug_wizard_detecting">Detecting app on cluster…</string>
+    <string name="bug_wizard_no_app">No specific app</string>
+    <string name="bug_wizard_other_app">Other / Unknown app</string>
+    <string name="bug_wizard_back">← Back</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Projection</item>
+        <item>App display</item>
+        <item>Sound</item>
+        <item>Connection</item>
+        <item>Freeze / Crash</item>
+        <item>Other</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Black screen</item>
+        <item>Wrong size / position</item>
+        <item>App not shown</item>
+        <item>Disconnected</item>
+        <item>Flickering</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App frozen</item>
+        <item>Black screen</item>
+        <item>Wrong position</item>
+        <item>App crashed</item>
+        <item>Content missing</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>No sound</item>
+        <item>Distorted audio</item>
+        <item>Too quiet</item>
+        <item>Microphone issue</item>
+        <item>Echo / feedback</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Cannot connect</item>
+        <item>Frequent disconnections</item>
+        <item>Very slow</item>
+        <item>No cluster display</item>
+        <item>WiFi problem</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App crashed</item>
+        <item>Screen frozen</item>
+        <item>DashCast crashed</item>
+        <item>Car screen black</item>
+        <item>Had to restart</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Performance problem</item>
+        <item>Battery drain</item>
+        <item>Display settings</item>
+        <item>Suggestion</item>
+        <item>Something else</item>
+    </string-array>
 </resources>

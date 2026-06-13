@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Kategori filtrelerini göster (Tümü / Nav / Medya)</string>
     <string name="settings_reconnect_popup">Cluster yeniden bağlandığında son uygulamayı yeniden başlatmayı öner</string>
     <string name="quick_switch_title">Son uygulamalar</string>
-    <string name="quick_switch_empty">Son uygulama yok</string>
     <string name="menu_usage_stats">📊 Kullanım istatistikleri</string>
     <string name="usage_title">Cluster kullanım süresi</string>
     <string name="usage_empty">Kullanım verisi yok</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">Küme düzeni</string>
     <string name="main_layout_free_sub">Düzen yok</string>
     <string name="main_layout_manage">Yönet</string>
+    <string name="main_nav_bug_report">Bildir</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Hata bildir</string>
+    <string name="bug_title_header">Hata bildir</string>
+    <string name="bug_subtitle">Sorunu açıklayın. Teknik bir günlük otomatik olarak eklenir.</string>
+    <string name="bug_field_title">Başlık</string>
+    <string name="bug_field_steps">Yeniden oluşturma adımları</string>
+    <string name="bug_field_result">Gözlenen sonuç</string>
+    <string name="bug_title_required">Lütfen bir başlık girin</string>
+    <string name="bug_send">Gönder</string>
+    <string name="bug_status_capturing">Günlük yakalanıyor…</string>
+    <string name="bug_status_sending">Gönderiliyor…</string>
+    <string name="bug_status_error_fmt">Hata: %1$s</string>
+    <string name="bug_sent_ok">Rapor gönderildi ✓ Teşekkürler!</string>
+    <string name="bug_share_subject">DashCast — Hata raporu</string>
+    <string name="bug_share_chooser">Raporu şununla gönder…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Ne tür bir sorun?</string>
+    <string name="bug_wizard_step_app">Hangi uygulama etkilendi?</string>
+    <string name="bug_wizard_step_issue">Tam olarak ne oldu?</string>
+    <string name="bug_wizard_detecting">Kümede uygulama algılanıyor…</string>
+    <string name="bug_wizard_no_app">Belirli bir uygulama yok</string>
+    <string name="bug_wizard_other_app">Diğer / Bilinmeyen uygulama</string>
+    <string name="bug_wizard_back">← Geri</string>
+    <string-array name="bug_categories">
+        <item>Yansıtma</item>
+        <item>Uygulama görünümü</item>
+        <item>Ses</item>
+        <item>Bağlantı</item>
+        <item>Donma/Çökme</item>
+        <item>Diğer</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Siyah ekran</item>
+        <item>Yanlış boyut/konum</item>
+        <item>Uygulama görünmüyor</item>
+        <item>Bağlantı kesildi</item>
+        <item>Titreme</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Uygulama dondu</item>
+        <item>Siyah ekran</item>
+        <item>Yanlış konum</item>
+        <item>Uygulama çöktü</item>
+        <item>İçerik eksik</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Ses yok</item>
+        <item>Bozuk ses</item>
+        <item>Çok sessiz</item>
+        <item>Mikrofon sorunu</item>
+        <item>Yankı</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Bağlanamıyor</item>
+        <item>Sık bağlantı kesilmesi</item>
+        <item>Çok yavaş</item>
+        <item>Küme ekranı yok</item>
+        <item>WiFi sorunu</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Uygulama çöktü</item>
+        <item>Ekran dondu</item>
+        <item>DashCast çöktü</item>
+        <item>Araba ekranı siyah</item>
+        <item>Yeniden başlatmak zorunda kaldı</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Performans sorunu</item>
+        <item>Batarya tüketimi</item>
+        <item>Görüntü ayarları</item>
+        <item>Öneri</item>
+        <item>Başka bir şey</item>
+    </string-array>
 </resources>

@@ -146,6 +146,25 @@
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustPan|stateHidden"/>
 
+        <!-- 1.5.x — One-screen bug reporter (fallback / direct form). -->
+        <activity
+            android:name=".report.BugReportActivity"
+            android:label="@string/bug_title_header"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@style/AppTheme.NoActionBar"/>
+
+        <!-- 1.5.4 — Keyboard-free 3-step wizard (replaces BugReportActivity as
+             the primary entry point from floating button and nav rail). -->
+        <activity
+            android:name=".report.BugWizardActivity"
+            android:label="@string/bug_title_header"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@style/AppTheme.NoActionBar"/>
+
         <!-- v1.2.8 — Keyboard bridge for DL5 cluster mirror (IME relay) -->
         <activity
             android:name=".ime.KeyboardBridgeActivity"

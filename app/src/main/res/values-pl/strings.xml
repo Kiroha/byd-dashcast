@@ -118,7 +118,6 @@
     <string name="settings_show_category_filters">Pokaż filtry kategorii (Wszystkie / Nawi / Multimedia)</string>
     <string name="settings_reconnect_popup">Proponuj ponowne uruchomienie ostatniej aplikacji po połączeniu z klastrem</string>
     <string name="quick_switch_title">Ostatnie aplikacje</string>
-    <string name="quick_switch_empty">Brak ostatnich aplikacji</string>
     <string name="menu_usage_stats">📊 Statystyki użycia</string>
     <string name="usage_title">Czas użytkowania klastra</string>
     <string name="usage_empty">Brak danych o użytkowaniu</string>
@@ -652,4 +651,79 @@
     <string name="main_layout_section">Layout klastra</string>
     <string name="main_layout_free_sub">Brak layoutu</string>
     <string name="main_layout_manage">Zarządzaj</string>
+    <string name="main_nav_bug_report">Zgłoś</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Zgłoś błąd</string>
+    <string name="bug_title_header">Zgłoś błąd</string>
+    <string name="bug_subtitle">Opisz problem. Dziennik techniczny zostanie dołączony automatycznie.</string>
+    <string name="bug_field_title">Tytuł</string>
+    <string name="bug_field_steps">Kroki do odtworzenia</string>
+    <string name="bug_field_result">Zaobserwowany wynik</string>
+    <string name="bug_title_required">Wpisz tytuł</string>
+    <string name="bug_send">Wyślij</string>
+    <string name="bug_status_capturing">Przechwytywanie dziennika…</string>
+    <string name="bug_status_sending">Wysyłanie…</string>
+    <string name="bug_status_error_fmt">Błąd: %1$s</string>
+    <string name="bug_sent_ok">Zgłoszenie wysłane ✓ Dziękujemy!</string>
+    <string name="bug_share_subject">DashCast — Zgłoszenie błędu</string>
+    <string name="bug_share_chooser">Wyślij zgłoszenie przez…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Jaki rodzaj problemu?</string>
+    <string name="bug_wizard_step_app">Która aplikacja jest dotknięta?</string>
+    <string name="bug_wizard_step_issue">Co dokładnie się stało?</string>
+    <string name="bug_wizard_detecting">Wykrywanie aplikacji na klastrze…</string>
+    <string name="bug_wizard_no_app">Brak konkretnej aplikacji</string>
+    <string name="bug_wizard_other_app">Inna / Nieznana aplikacja</string>
+    <string name="bug_wizard_back">← Wstecz</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Projekcja</item>
+        <item>Wyświetlanie app</item>
+        <item>Dźwięk</item>
+        <item>Połączenie</item>
+        <item>Zawieszenie/Crash</item>
+        <item>Inne</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Czarny ekran</item>
+        <item>Zły rozmiar/pozycja</item>
+        <item>Aplikacja nie widoczna</item>
+        <item>Rozłączony</item>
+        <item>Migotanie</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Aplikacja zawieszona</item>
+        <item>Czarny ekran</item>
+        <item>Zła pozycja</item>
+        <item>Aplikacja się zamknęła</item>
+        <item>Brak treści</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Brak dźwięku</item>
+        <item>Zniekształcony dźwięk</item>
+        <item>Za cicho</item>
+        <item>Problem z mikrofonem</item>
+        <item>Echo</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Nie można połączyć</item>
+        <item>Częste rozłączenia</item>
+        <item>Bardzo wolno</item>
+        <item>Brak wyświetlacza klastra</item>
+        <item>Problem z WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Aplikacja się zamknęła</item>
+        <item>Ekran zamrożony</item>
+        <item>DashCast się zamknął</item>
+        <item>Czarny ekran auta</item>
+        <item>Trzeba było uruchomić ponownie</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problem z wydajnością</item>
+        <item>Zużycie baterii</item>
+        <item>Ustawienia wyświetlacza</item>
+        <item>Sugestia</item>
+        <item>Coś innego</item>
+    </string-array>
 </resources>

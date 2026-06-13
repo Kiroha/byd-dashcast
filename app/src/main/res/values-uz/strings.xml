@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Turkum filtrlarini koʻrsatish (Barchasi / Nav / Media)</string>
     <string name="settings_reconnect_popup">Klaster qayta ulanganda oxirgi ilovani qayta ishga tushirishni taklif qilish</string>
     <string name="quick_switch_title">Soʻnggi ilovalar</string>
-    <string name="quick_switch_empty">Soʻnggi ilova yoʻq</string>
     <string name="menu_usage_stats">📊 Foydalanish statistikasi</string>
     <string name="usage_title">Klasterda foydalanish vaqti</string>
     <string name="usage_empty">Foydalanish maʻlumoti yoʻq</string>
@@ -644,4 +643,79 @@
     <string name="main_layout_section">Klaster tartibi</string>
     <string name="main_layout_free_sub">Tartib yo\'q</string>
     <string name="main_layout_manage">Boshqarish</string>
+    <string name="main_nav_bug_report">Xabar berish</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Xato haqida xabar berish</string>
+    <string name="bug_title_header">Xato haqida xabar berish</string>
+    <string name="bug_subtitle">Muammoni tasvirlang. Texnik jurnal avtomatik biriktiriladi.</string>
+    <string name="bug_field_title">Sarlavha</string>
+    <string name="bug_field_steps">Qayta ishlab chiqarish bosqichlari</string>
+    <string name="bug_field_result">Kuzatilgan natija</string>
+    <string name="bug_title_required">Sarlavha kiriting</string>
+    <string name="bug_send">Yuborish</string>
+    <string name="bug_status_capturing">Jurnal olinmoqda…</string>
+    <string name="bug_status_sending">Yuborilmoqda…</string>
+    <string name="bug_status_error_fmt">Xato: %1$s</string>
+    <string name="bug_sent_ok">Hisobot yuborildi ✓ Rahmat!</string>
+    <string name="bug_share_subject">DashCast — Xato hisoboti</string>
+    <string name="bug_share_chooser">Hisobotni yuborish…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Qanday muammo turi?</string>
+    <string name="bug_wizard_step_app">Qaysi ilova ta’sirlangan?</string>
+    <string name="bug_wizard_step_issue">Aynan nima bo’ldi?</string>
+    <string name="bug_wizard_detecting">Klasterdagi ilova aniqlanmoqda…</string>
+    <string name="bug_wizard_no_app">Aniq ilova yo’q</string>
+    <string name="bug_wizard_other_app">Boshqa / Noma’lum ilova</string>
+    <string name="bug_wizard_back">← Orqaga</string>
+    <string-array name="bug_categories">
+        <item>Ko’zgu</item>
+        <item>Ilova ko’rinishi</item>
+        <item>Ovoz</item>
+        <item>Ulanish</item>
+        <item>Muzlash/Crash</item>
+        <item>Boshqa</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Qora ekran</item>
+        <item>Noto’g’ri o’lcham/joylashuv</item>
+        <item>Ilova ko’rinmaydi</item>
+        <item>Uzilgan</item>
+        <item>Miltillash</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Ilova muzladi</item>
+        <item>Qora ekran</item>
+        <item>Noto’g’ri joylashuv</item>
+        <item>Ilova ishdan chiqdi</item>
+        <item>Kontent yo’q</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Ovoz yo’q</item>
+        <item>Buzilgan ovoz</item>
+        <item>Juda past</item>
+        <item>Mikrofon muammosi</item>
+        <item>Aks-sado</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Ulanib bo’lmaydi</item>
+        <item>Tez-tez uzilish</item>
+        <item>Juda sekin</item>
+        <item>Klaster ekrani yo’q</item>
+        <item>WiFi muammosi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Ilova ishdan chiqdi</item>
+        <item>Ekran muzladi</item>
+        <item>DashCast ishdan chiqdi</item>
+        <item>Avtomobil ekrani qora</item>
+        <item>Qayta ishga tushirishga to’g’ri keldi</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Ishlash muammosi</item>
+        <item>Batareya sarfi</item>
+        <item>Ekran sozlamalari</item>
+        <item>Taklif</item>
+        <item>Boshqa narsa</item>
+    </string-array>
 </resources>

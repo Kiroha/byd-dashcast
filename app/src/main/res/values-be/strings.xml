@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Паказаць фільтры па катэгорыях (Усе / Нав / Медыя)</string>
     <string name="settings_reconnect_popup">Прапанаваць перазапуск апошняй прыкладкі пры перападлучэнні кластара</string>
     <string name="quick_switch_title">Апошнія дадаткі</string>
-    <string name="quick_switch_empty">Няма апошніх дадаткаў</string>
     <string name="menu_usage_stats">📊 Статыстыка выкарыстання</string>
     <string name="usage_title">Час выкарыстання на кластэры</string>
     <string name="usage_empty">Няма дадзеных выкарыстання</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">Макет кластара</string>
     <string name="main_layout_free_sub">Без макета</string>
     <string name="main_layout_manage">Кіраванне</string>
+    <string name="main_nav_bug_report">Паведаміць</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Паведаміць пра памылку</string>
+    <string name="bug_title_header">Паведаміць пра памылку</string>
+    <string name="bug_subtitle">Апішыце праблему. Тэхнічны журнал дадаецца аўтаматычна.</string>
+    <string name="bug_field_title">Загаловак</string>
+    <string name="bug_field_steps">Крокі для ўзнаўлення</string>
+    <string name="bug_field_result">Назіраны вынік</string>
+    <string name="bug_title_required">Увядзіце загаловак</string>
+    <string name="bug_send">Адправіць</string>
+    <string name="bug_status_capturing">Збор журнала…</string>
+    <string name="bug_status_sending">Адпраўка…</string>
+    <string name="bug_status_error_fmt">Памылка: %1$s</string>
+    <string name="bug_sent_ok">Справаздача адпраўлена ✓ Дзякуй!</string>
+    <string name="bug_share_subject">DashCast — Справаздача пра памылку</string>
+    <string name="bug_share_chooser">Адправіць справаздачу праз…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Які тып праблемы?</string>
+    <string name="bug_wizard_step_app">Якое прыкладанне пацярпела?</string>
+    <string name="bug_wizard_step_issue">Што менавіта адбылася?</string>
+    <string name="bug_wizard_detecting">Выяўленне прыкладання на кластары…</string>
+    <string name="bug_wizard_no_app">Без канкрэтнага прыкладання</string>
+    <string name="bug_wizard_other_app">Іншае / Невядомае прыкладанне</string>
+    <string name="bug_wizard_back">← Назад</string>
+    <string-array name="bug_categories">
+        <item>Люстра</item>
+        <item>Адлюстраванне</item>
+        <item>Гук</item>
+        <item>Злучэнне</item>
+        <item>Завісанне/Збой</item>
+        <item>Іншае</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Чорны экран</item>
+        <item>Няправільны памер/пазіцыя</item>
+        <item>Прыкладанне не паказана</item>
+        <item>Адключана</item>
+        <item>Мільгаценне</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Прыкладанне завісла</item>
+        <item>Чорны экран</item>
+        <item>Няправільная пазіцыя</item>
+        <item>Прыкладанне ўпала</item>
+        <item>Кантэнт адсутнічае</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Няма гуку</item>
+        <item>Спатвораны гук</item>
+        <item>Занадта ціха</item>
+        <item>Праблема з мікрафонам</item>
+        <item>Рэха</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Не ўдаецца падключыцца</item>
+        <item>Частыя адключэнні</item>
+        <item>Вельмі павольна</item>
+        <item>Няма дысплея кластара</item>
+        <item>Праблема Wi-Fi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Прыкладанне ўпала</item>
+        <item>Экран завіс</item>
+        <item>DashCast ўпаў</item>
+        <item>Экран аўта чорны</item>
+        <item>Прыйшлося перазапусціць</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Праблема прадукцыйнасці</item>
+        <item>Разрад батарэі</item>
+        <item>Налады дысплея</item>
+        <item>Прапанова</item>
+        <item>Іншае</item>
+    </string-array>
 </resources>
