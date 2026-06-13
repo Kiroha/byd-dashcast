@@ -658,4 +658,63 @@
     <string name="bug_sent_ok">Hisobot yuborildi ✓ Rahmat!</string>
     <string name="bug_share_subject">DashCast — Xato hisoboti</string>
     <string name="bug_share_chooser">Hisobotni yuborish…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Qanday muammo turi?</string>
+    <string name="bug_wizard_step_app">Qaysi ilova ta’sirlangan?</string>
+    <string name="bug_wizard_step_issue">Aynan nima bo’ldi?</string>
+    <string name="bug_wizard_detecting">Klasterdagi ilova aniqlanmoqda…</string>
+    <string name="bug_wizard_no_app">Aniq ilova yo’q</string>
+    <string name="bug_wizard_other_app">Boshqa / Noma’lum ilova</string>
+    <string name="bug_wizard_back">← Orqaga</string>
+    <string-array name="bug_categories">
+        <item>Ko’zgu</item>
+        <item>Ilova ko’rinishi</item>
+        <item>Ovoz</item>
+        <item>Ulanish</item>
+        <item>Muzlash/Crash</item>
+        <item>Boshqa</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Qora ekran</item>
+        <item>Noto’g’ri o’lcham/joylashuv</item>
+        <item>Ilova ko’rinmaydi</item>
+        <item>Uzilgan</item>
+        <item>Miltillash</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Ilova muzladi</item>
+        <item>Qora ekran</item>
+        <item>Noto’g’ri joylashuv</item>
+        <item>Ilova ishdan chiqdi</item>
+        <item>Kontent yo’q</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Ovoz yo’q</item>
+        <item>Buzilgan ovoz</item>
+        <item>Juda past</item>
+        <item>Mikrofon muammosi</item>
+        <item>Aks-sado</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Ulanib bo’lmaydi</item>
+        <item>Tez-tez uzilish</item>
+        <item>Juda sekin</item>
+        <item>Klaster ekrani yo’q</item>
+        <item>WiFi muammosi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Ilova ishdan chiqdi</item>
+        <item>Ekran muzladi</item>
+        <item>DashCast ishdan chiqdi</item>
+        <item>Avtomobil ekrani qora</item>
+        <item>Qayta ishga tushirishga to’g’ri keldi</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Ishlash muammosi</item>
+        <item>Batareya sarfi</item>
+        <item>Ekran sozlamalari</item>
+        <item>Taklif</item>
+        <item>Boshqa narsa</item>
+    </string-array>
 </resources>

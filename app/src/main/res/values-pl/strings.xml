@@ -666,4 +666,63 @@
     <string name="bug_sent_ok">Zgłoszenie wysłane ✓ Dziękujemy!</string>
     <string name="bug_share_subject">DashCast — Zgłoszenie błędu</string>
     <string name="bug_share_chooser">Wyślij zgłoszenie przez…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Jaki rodzaj problemu?</string>
+    <string name="bug_wizard_step_app">Która aplikacja jest dotknięta?</string>
+    <string name="bug_wizard_step_issue">Co dokładnie się stało?</string>
+    <string name="bug_wizard_detecting">Wykrywanie aplikacji na klastrze…</string>
+    <string name="bug_wizard_no_app">Brak konkretnej aplikacji</string>
+    <string name="bug_wizard_other_app">Inna / Nieznana aplikacja</string>
+    <string name="bug_wizard_back">← Wstecz</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Projekcja</item>
+        <item>Wyświetlanie app</item>
+        <item>Dźwięk</item>
+        <item>Połączenie</item>
+        <item>Zawieszenie/Crash</item>
+        <item>Inne</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Czarny ekran</item>
+        <item>Zły rozmiar/pozycja</item>
+        <item>Aplikacja nie widoczna</item>
+        <item>Rozłączony</item>
+        <item>Migotanie</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Aplikacja zawieszona</item>
+        <item>Czarny ekran</item>
+        <item>Zła pozycja</item>
+        <item>Aplikacja się zamknęła</item>
+        <item>Brak treści</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Brak dźwięku</item>
+        <item>Zniekształcony dźwięk</item>
+        <item>Za cicho</item>
+        <item>Problem z mikrofonem</item>
+        <item>Echo</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Nie można połączyć</item>
+        <item>Częste rozłączenia</item>
+        <item>Bardzo wolno</item>
+        <item>Brak wyświetlacza klastra</item>
+        <item>Problem z WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Aplikacja się zamknęła</item>
+        <item>Ekran zamrożony</item>
+        <item>DashCast się zamknął</item>
+        <item>Czarny ekran auta</item>
+        <item>Trzeba było uruchomić ponownie</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problem z wydajnością</item>
+        <item>Zużycie baterii</item>
+        <item>Ustawienia wyświetlacza</item>
+        <item>Sugestia</item>
+        <item>Coś innego</item>
+    </string-array>
 </resources>

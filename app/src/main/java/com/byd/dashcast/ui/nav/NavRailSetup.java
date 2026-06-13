@@ -8,7 +8,7 @@ import android.widget.Toast;
 import com.byd.dashcast.ui.diag.DiagActivity;
 import com.byd.dashcast.ui.log.LogActivity;
 import com.byd.dashcast.R;
-import com.byd.dashcast.report.BugReportActivity;
+import com.byd.dashcast.report.BugWizardActivity;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.ui.diag.SysInfoActivity;
 
@@ -28,7 +28,7 @@ public final class NavRailSetup {
         wireNav(host, R.id.nav_diag,       DiagActivity.class);
         wireNav(host, R.id.nav_sysinfo,    SysInfoActivity.class);
         wireNav(host, R.id.nav_log,        LogActivity.class);
-        wireNav(host, R.id.nav_bug_report, BugReportActivity.class);
+        wireNav(host, R.id.nav_bug_report, BugWizardActivity.class);
 
         View navHelp = host.findViewById(R.id.nav_help);
         if (navHelp != null) navHelp.setOnClickListener(v -> {

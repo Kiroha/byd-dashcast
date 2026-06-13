@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">تم إرسال التقرير ✓ شكرًا!</string>
     <string name="bug_share_subject">DashCast — تقرير خطأ</string>
     <string name="bug_share_chooser">إرسال التقرير عبر…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">ما نوع المشكلة؟</string>
+    <string name="bug_wizard_step_app">ما التطبيق المتأثر؟</string>
+    <string name="bug_wizard_step_issue">ماذا حدث بالضبط؟</string>
+    <string name="bug_wizard_detecting">جارٍ اكتشاف التطبيق على الشاشة…</string>
+    <string name="bug_wizard_no_app">لا يوجد تطبيق محدد</string>
+    <string name="bug_wizard_other_app">تطبيق آخر / غير معروف</string>
+    <string name="bug_wizard_back">← رجوع</string>
+    <string-array name="bug_categories">
+        <item>مرآة</item>
+        <item>عرض التطبيق</item>
+        <item>الصوت</item>
+        <item>الاتصال</item>
+        <item>تجمد/تعطل</item>
+        <item>أخرى</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>شاشة سوداء</item>
+        <item>حجم/موضع خاطئ</item>
+        <item>التطبيق لا يظهر</item>
+        <item>انقطع الاتصال</item>
+        <item>وميض</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>التطبيق متجمد</item>
+        <item>شاشة سوداء</item>
+        <item>موضع خاطئ</item>
+        <item>تعطل التطبيق</item>
+        <item>محتوى مفقود</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>لا يوجد صوت</item>
+        <item>صوت مشوه</item>
+        <item>صوت منخفض جداً</item>
+        <item>مشكلة الميكروفون</item>
+        <item>صدى</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>لا يمكن الاتصال</item>
+        <item>انقطاعات متكررة</item>
+        <item>بطيء جداً</item>
+        <item>لا يوجد عرض كلاستر</item>
+        <item>مشكلة WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>تعطل التطبيق</item>
+        <item>تجمدت الشاشة</item>
+        <item>تعطل DashCast</item>
+        <item>شاشة السيارة سوداء</item>
+        <item>اضطررت للإعادة</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>مشكلة أداء</item>
+        <item>استنزاف البطارية</item>
+        <item>إعدادات العرض</item>
+        <item>اقتراح</item>
+        <item>شيء آخر</item>
+    </string-array>
 </resources>
