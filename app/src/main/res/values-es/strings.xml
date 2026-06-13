@@ -153,6 +153,7 @@
     <string name="main_preview_section">Vista previa en vivo</string>
     <string name="main_btn_full_preview">Espejo a pantalla completa</string>
     <string name="main_btn_stop_mirror">Detener proyección</string>
+    <string name="main_btn_launch_layout_apps">Lanzar apps del layout</string>
     <string name="main_section_favorites">FAVORITOS</string>
     <string name="main_section_all_apps">Todas las apps</string>
     <string name="sheet_auto_launch">Lanzamiento automático al inicio</string>

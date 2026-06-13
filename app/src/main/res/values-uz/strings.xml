@@ -153,6 +153,7 @@
     <string name="main_preview_section">Jonli ko\'rish</string>
     <string name="main_btn_full_preview">Toʻliq ekran oynasi</string>
     <string name="main_btn_stop_mirror">Proyeksiyani toʻxtatish</string>
+    <string name="main_btn_launch_layout_apps">Layout ilovalarini ishga tushirish</string>
     <string name="main_section_favorites">SEVIMLILAR</string>
     <string name="main_section_all_apps">Barcha ilovalar</string>
     <string name="sheet_auto_launch">Ishga tushishda avtomatik ochish</string>

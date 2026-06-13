@@ -153,6 +153,7 @@
     <string name="main_preview_section">معاينة مباشرة</string>
     <string name="main_btn_full_preview">العرض المرآة بملء الشاشة</string>
     <string name="main_btn_stop_mirror">إيقاف العرض</string>
+    <string name="main_btn_launch_layout_apps">تشغيل تطبيقات التخطيط</string>
     <string name="main_section_favorites">المفضلة</string>
     <string name="main_section_all_apps">كل التطبيقات</string>
     <string name="sheet_auto_launch">تشغيل تلقائي عند البدء</string>

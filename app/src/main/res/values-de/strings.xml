@@ -153,6 +153,7 @@
     <string name="main_preview_section">Live-Vorschau</string>
     <string name="main_btn_full_preview">Vollbild-Spiegelung</string>
     <string name="main_btn_stop_mirror">Projektion stoppen</string>
+    <string name="main_btn_launch_layout_apps">Layout-Apps starten</string>
     <string name="main_section_favorites">FAVORITEN</string>
     <string name="main_section_all_apps">Alle Apps</string>
     <string name="sheet_auto_launch">Beim Start automatisch öffnen</string>

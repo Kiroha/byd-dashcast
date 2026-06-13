@@ -153,6 +153,7 @@
     <string name="main_preview_section">Canlı önizleme</string>
     <string name="main_btn_full_preview">Tam ekran yansıtma</string>
     <string name="main_btn_stop_mirror">Yansıtmayı durdur</string>
+    <string name="main_btn_launch_layout_apps">Düzen uygulamalarını başlat</string>
     <string name="main_section_favorites">FAVORİLER</string>
     <string name="main_section_all_apps">Tüm uygulamalar</string>
     <string name="sheet_auto_launch">Başlangıçta otomatik aç</string>
