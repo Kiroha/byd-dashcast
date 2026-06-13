@@ -66,6 +66,7 @@ public final class Platform {
     private final int     androidApi;        // Build.VERSION.SDK_INT
     private final boolean autoDiLink5;       // pure auto-detection result
     private final boolean autoDiLink4;       // pure auto-detection result (BYD-AUTO/DiLink4.0, API 29)
+    private final boolean autoDiLink3;       // explicit DL3 product-name detection (DiLink3.0, API 29)
     private final boolean autoDiLink2;       // pure auto-detection result (alps/MT6765/API 28)
 
     private Platform() {
@@ -76,6 +77,7 @@ public final class Platform {
         this.androidApi     = Build.VERSION.SDK_INT;
         this.autoDiLink5    = detectDiLink5(rawProductName, rawModel, rawFingerprint, androidApi);
         this.autoDiLink4    = detectDiLink4(rawProductName, rawModel, rawFingerprint, androidApi);
+        this.autoDiLink3    = detectDiLink3(rawProductName, rawModel, rawFingerprint);
         this.autoDiLink2    = detectDiLink2(rawBrand, rawProductName, androidApi);
     }
 
@@ -131,6 +133,29 @@ public final class Platform {
     }
 
     /**
+     * DiLink 3 explicit name detection.
+     *
+     * <p>Returns true when the product name, model, or fingerprint explicitly contains
+     * "DiLink3" (case-insensitive). Used only as a hard guard inside
+     * {@link #isDiLink5(Context)} to prevent a user-forced FORCE_ON from routing a
+     * genuine DL3 device onto the {@code auto_container} (snake_case) activation path
+     * that does not exist on DL3. See INC-20260613-175043 (DiLink3.0, Android 10):
+     * same symptom as the DL4 incident (BYD_RE_Sniffer_20260523_173033) — user had
+     * FORCE_ON set, sendInfo(16) via auto_container returned "Service does not exist",
+     * VD creation timed out, projection appeared at wrong size/position.
+     *
+     * <p>Conservative: only fires when the product explicitly announces "dilink3".
+     * Generic Android 10 devices that DashCast cannot identify as any generation are
+     * unaffected and may still use the FORCE_ON override.
+     */
+    private static boolean detectDiLink3(String product, String model, String fingerprint) {
+        String p = (product     == null ? "" : product).toLowerCase(Locale.ROOT);
+        String m = (model       == null ? "" : model).toLowerCase(Locale.ROOT);
+        String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
+        return p.contains("dilink3") || m.contains("dilink3") || f.contains("dilink3");
+    }
+
+    /**
      * DiLink 2 auto-detection — based on the alps / k65v1_64_bsp / MT6765 / Android 9
      * signature confirmed by two field reports (21/05/2026):
      *   Build.BRAND = "alps", ro.product.name contains "k65v1", Build.VERSION.SDK_INT == 28.
@@ -154,6 +179,7 @@ public final class Platform {
     public int     androidApi()      { return androidApi; }
     public boolean isAutoDetectedDiLink5() { return autoDiLink5; }
     public boolean isAutoDetectedDiLink4() { return autoDiLink4; }
+    public boolean isAutoDetectedDiLink3() { return autoDiLink3; }
     public boolean isAutoDetectedDiLink2() { return autoDiLink2; }
 
     /**
@@ -162,7 +188,8 @@ public final class Platform {
      * neutralises any FORCE_ON DL5 override when {@code autoDiLink4} is true, so a
      * mis-flipped switch in Settings does not push a DL4 device onto the DL5
      * activation path (which calls the snake_case {@code auto_container} binder
-     * that does not exist on the DL3/DL4 service namespace).
+     * that does not exist on the DL3/DL4 service namespace). The same guard now
+     * applies to explicitly-named DL3 products via the {@code autoDiLink3} field.
      */
     public boolean isDiLink4(Context ctx) {
         return autoDiLink4;
@@ -205,6 +232,11 @@ public final class Platform {
         // attempt at the non-existent snake_case binder. This guard absorbs the
         // mistake transparently so misconfigured Settings cannot break DL4 cars.
         if (autoDiLink4) return false;
+        // Same guard for explicitly-named DiLink 3 products. INC-20260613-175043
+        // caught a DL3 user (product=DiLink3.0, Android 10) with FORCE_ON set:
+        // sendInfo(16) via auto_container returned "Service does not exist", VD
+        // creation timed out, and projection appeared at wrong size/position.
+        if (autoDiLink3) return false;
         Boolean cached = sCachedIsDiLink5;
         if (cached != null) return cached;
         synchronized (Platform.class) {
@@ -230,6 +262,11 @@ public final class Platform {
             String ov = readOverride(ctx);
             if (OV_FORCE_ON.equals(ov)) return "AUTO=off (DL4 detected — DL5 FORCE_ON ignored)";
             return "AUTO=off (DL4 detected)";
+        }
+        if (autoDiLink3) {
+            String ov = readOverride(ctx);
+            if (OV_FORCE_ON.equals(ov)) return "AUTO=off (DL3 detected — DL5 FORCE_ON ignored)";
+            return "AUTO=off (DL3 detected)";
         }
         String ov = readOverride(ctx);
         if (OV_FORCE_ON.equals(ov))  return "FORCED on";
