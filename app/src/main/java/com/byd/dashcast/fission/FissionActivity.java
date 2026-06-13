@@ -128,6 +128,10 @@ public class FissionActivity extends Activity implements FissionOrchestrator.Cal
         btnAdd.setOnClickListener(v -> pickApp());
         btnStopAll.setOnClickListener(v -> mOrchestrator.stopAll());
 
+        // Stop any headless auto-start orchestrator so its apps are moved back to display 0
+        // and killed before we create a fresh interactive orchestrator.
+        FissionOrchestrator.stopAutoOrchestrator();
+
         // Build the projection-state provider from the live ClusterService, or a safe default.
         ProjectionStateProvider psp = buildProjectionStateProvider();
 
