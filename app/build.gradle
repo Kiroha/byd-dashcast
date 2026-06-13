@@ -285,8 +285,8 @@ android {
         // 443 = 1.6.2-beta (DiLink 5 layout mode fix + merged 1.5.x features).
         // 444 = 1.6.3-beta (Fission teardown: move apps to display 0 before force-stop).
         // 445 = 1.6.4-beta (proper MOVE_TO_DISPLAY0 transaction + pre-create VD persistence).
-        versionCode 445
-        versionName "1.6.4-beta"
+        versionCode 446
+        versionName "1.6.5-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
