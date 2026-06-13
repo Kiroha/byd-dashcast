@@ -657,4 +657,63 @@
     <string name="bug_sent_ok">Справаздача адпраўлена ✓ Дзякуй!</string>
     <string name="bug_share_subject">DashCast — Справаздача пра памылку</string>
     <string name="bug_share_chooser">Адправіць справаздачу праз…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Які тып праблемы?</string>
+    <string name="bug_wizard_step_app">Якое прыкладанне пацярпела?</string>
+    <string name="bug_wizard_step_issue">Што менавіта адбылася?</string>
+    <string name="bug_wizard_detecting">Выяўленне прыкладання на кластары…</string>
+    <string name="bug_wizard_no_app">Без канкрэтнага прыкладання</string>
+    <string name="bug_wizard_other_app">Іншае / Невядомае прыкладанне</string>
+    <string name="bug_wizard_back">← Назад</string>
+    <string-array name="bug_categories">
+        <item>Люстра</item>
+        <item>Адлюстраванне</item>
+        <item>Гук</item>
+        <item>Злучэнне</item>
+        <item>Завісанне/Збой</item>
+        <item>Іншае</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Чорны экран</item>
+        <item>Няправільны памер/пазіцыя</item>
+        <item>Прыкладанне не паказана</item>
+        <item>Адключана</item>
+        <item>Мільгаценне</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Прыкладанне завісла</item>
+        <item>Чорны экран</item>
+        <item>Няправільная пазіцыя</item>
+        <item>Прыкладанне ўпала</item>
+        <item>Кантэнт адсутнічае</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Няма гуку</item>
+        <item>Спатвораны гук</item>
+        <item>Занадта ціха</item>
+        <item>Праблема з мікрафонам</item>
+        <item>Рэха</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Не ўдаецца падключыцца</item>
+        <item>Частыя адключэнні</item>
+        <item>Вельмі павольна</item>
+        <item>Няма дысплея кластара</item>
+        <item>Праблема Wi-Fi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Прыкладанне ўпала</item>
+        <item>Экран завіс</item>
+        <item>DashCast ўпаў</item>
+        <item>Экран аўта чорны</item>
+        <item>Прыйшлося перазапусціць</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Праблема прадукцыйнасці</item>
+        <item>Разрад батарэі</item>
+        <item>Налады дысплея</item>
+        <item>Прапанова</item>
+        <item>Іншае</item>
+    </string-array>
 </resources>

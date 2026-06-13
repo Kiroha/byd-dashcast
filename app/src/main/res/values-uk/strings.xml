@@ -658,4 +658,63 @@
     <string name="bug_sent_ok">Звіт надіслано ✓ Дякуємо!</string>
     <string name="bug_share_subject">DashCast — Звіт про помилку</string>
     <string name="bug_share_chooser">Надіслати звіт через…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Який тип проблеми?</string>
+    <string name="bug_wizard_step_app">Який додаток постраждав?</string>
+    <string name="bug_wizard_step_issue">Що саме сталося?</string>
+    <string name="bug_wizard_detecting">Визначення додатку на кластері…</string>
+    <string name="bug_wizard_no_app">Без конкретного додатку</string>
+    <string name="bug_wizard_other_app">Інший / Невідомий додаток</string>
+    <string name="bug_wizard_back">← Назад</string>
+    <string-array name="bug_categories">
+        <item>Дзеркало</item>
+        <item>Відображення</item>
+        <item>Звук</item>
+        <item>Підключення</item>
+        <item>Зависання/Збій</item>
+        <item>Інше</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Чорний екран</item>
+        <item>Невірний розмір/позиція</item>
+        <item>Додаток не відображається</item>
+        <item>Відключено</item>
+        <item>Мерехтіння</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Додаток завис</item>
+        <item>Чорний екран</item>
+        <item>Невірна позиція</item>
+        <item>Додаток впав</item>
+        <item>Контент відсутній</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Немає звуку</item>
+        <item>Спотворений звук</item>
+        <item>Занадто тихо</item>
+        <item>Проблема з мікрофоном</item>
+        <item>Луна</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Не вдається підключитись</item>
+        <item>Часті відключення</item>
+        <item>Дуже повільно</item>
+        <item>Немає дисплея кластера</item>
+        <item>Проблема Wi-Fi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Додаток впав</item>
+        <item>Екран завис</item>
+        <item>DashCast впав</item>
+        <item>Екран авто чорний</item>
+        <item>Довелось перезапустити</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Проблема продуктивності</item>
+        <item>Розряд батареї</item>
+        <item>Налаштування дисплея</item>
+        <item>Пропозиція</item>
+        <item>Інше</item>
+    </string-array>
 </resources>
