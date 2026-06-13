@@ -1,6 +1,18 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+// Bug-report Telegram bot credentials are read from local.properties (never
+// committed): they end up in the compiled APK but not in the public repo.
+// Keys (all optional — absent → the app falls back to the Telegram share sheet):
+//   bugReport.botToken=123456789:ABC...
+//   bugReport.chatId=-1003712642112
+//   bugReport.threadId=4
+def _localProps = new Properties()
+def _localPropsFile = rootProject.file('local.properties')
+if (_localPropsFile.exists()) {
+    _localPropsFile.withInputStream { _localProps.load(it) }
+}
+
 android {
     signingConfigs {
         // BYD signature required to access bydauto system APIs
@@ -266,8 +278,20 @@ android {
         //   pending app matches the restored cluster pkg, pidof first; if
         //   the process is dead, clearClusterState() before delegating to
         //   onSendToDashboard so it takes the normal fresh-launch path.
+        // 438/439 are taken by the 1.6.x-beta channel (Kotlin migration).
+        // 440 = 1.5.2 (Locale.ROOT + daemon log pruning).
+        // 441 = 1.5.3 (in-app bug reporter with direct Telegram upload).
+        // 442 = 1.5.4 (bug wizard). Next 1.6.x-beta: use 443+.
         versionCode 439
         versionName "1.6.1-beta"
+
+        // Bug-report bot credentials (see note at top of file).
+        buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
+                "\"${_localProps.getProperty('bugReport.botToken', '')}\""
+        buildConfigField "String", "BUG_REPORT_CHAT_ID",
+                "\"${_localProps.getProperty('bugReport.chatId', '')}\""
+        buildConfigField "String", "BUG_REPORT_THREAD_ID",
+                "\"${_localProps.getProperty('bugReport.threadId', '')}\""
 
         // ONNX Runtime ships pre-built .so for x86, x86_64, armeabi-v7a,
         // arm64-v8a. DiLink hardware is exclusively ARM, so restrict to

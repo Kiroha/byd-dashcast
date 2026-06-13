@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Санат сүзгілерін көрсету (Барлығы / Нав / Медиа)</string>
     <string name="settings_reconnect_popup">Кластер қайта қосылғанда соңғы қолданбаны қайта іске қосуды ұсыну</string>
     <string name="quick_switch_title">Соңғы қолданбалар</string>
-    <string name="quick_switch_empty">Соңғы қолданба жоқ</string>
     <string name="menu_usage_stats">📊 Пайдалану статистикасы</string>
     <string name="usage_title">Кластерде пайдалану уақыты</string>
     <string name="usage_empty">Пайдалану деректері жоқ</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">Кластер орналасуы</string>
     <string name="main_layout_free_sub">Орналасу жоқ</string>
     <string name="main_layout_manage">Басқару</string>
+    <string name="main_nav_bug_report">Хабарлау</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Қате туралы хабарлау</string>
+    <string name="bug_title_header">Қате туралы хабарлау</string>
+    <string name="bug_subtitle">Мәселені сипаттаңыз. Техникалық журнал автоматты түрде тіркеледі.</string>
+    <string name="bug_field_title">Тақырып</string>
+    <string name="bug_field_steps">Қайталау қадамдары</string>
+    <string name="bug_field_result">Байқалған нәтиже</string>
+    <string name="bug_title_required">Тақырып енгізіңіз</string>
+    <string name="bug_send">Жіберу</string>
+    <string name="bug_status_capturing">Журнал жиналуда…</string>
+    <string name="bug_status_sending">Жіберілуде…</string>
+    <string name="bug_status_error_fmt">Қате: %1$s</string>
+    <string name="bug_sent_ok">Есеп жіберілді ✓ Рақмет!</string>
+    <string name="bug_share_subject">DashCast — Қате туралы есеп</string>
+    <string name="bug_share_chooser">Есепті мынамен жіберу…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Қандай мәселе түрі?</string>
+    <string name="bug_wizard_step_app">Қай қосымша зардап шекті?</string>
+    <string name="bug_wizard_step_issue">Нақты не болды?</string>
+    <string name="bug_wizard_detecting">Кластердегі қосымша анықталуда…</string>
+    <string name="bug_wizard_no_app">Нақты қосымша жоқ</string>
+    <string name="bug_wizard_other_app">Басқа / Белгісіз қосымша</string>
+    <string name="bug_wizard_back">← Артқа</string>
+    <string-array name="bug_categories">
+        <item>Айна</item>
+        <item>Қосымша көрінісі</item>
+        <item>Дыбыс</item>
+        <item>Қосылым</item>
+        <item>Тоқтау/Бұзылу</item>
+        <item>Басқа</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Қара экран</item>
+        <item>Қате өлшем/орын</item>
+        <item>Қосымша көрінбейді</item>
+        <item>Ажыратылды</item>
+        <item>Жыпылықтау</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>Қосымша тоқтады</item>
+        <item>Қара экран</item>
+        <item>Қате орын</item>
+        <item>Қосымша бұзылды</item>
+        <item>Мазмұн жоқ</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Дыбыс жоқ</item>
+        <item>Бұрмаланған дыбыс</item>
+        <item>Тым тыныш</item>
+        <item>Микрофон мәселесі</item>
+        <item>Жаңғырық</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Қосылу мүмкін емес</item>
+        <item>Жиі үзілістер</item>
+        <item>Өте баяу</item>
+        <item>Кластер дисплейі жоқ</item>
+        <item>Wi-Fi мәселесі</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>Қосымша бұзылды</item>
+        <item>Экран тоқтады</item>
+        <item>DashCast бұзылды</item>
+        <item>Автомобиль экраны қара</item>
+        <item>Қайта іске қосуға мәжбүр болды</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Өнімділік мәселесі</item>
+        <item>Батарея разряды</item>
+        <item>Дисплей параметрлері</item>
+        <item>Ұсыныс</item>
+        <item>Басқа нәрсе</item>
+    </string-array>
 </resources>

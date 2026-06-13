@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Mostra filtri per categoria (Tutto / Nav / Media)</string>
     <string name="settings_reconnect_popup">Proporre di rilanciare l\'ultima app alla riconnessione del cluster</string>
     <string name="quick_switch_title">App recenti</string>
-    <string name="quick_switch_empty">Nessuna app recente</string>
     <string name="menu_usage_stats">📊 Statistiche di utilizzo</string>
     <string name="usage_title">Tempo di utilizzo sul cluster</string>
     <string name="usage_empty">Nessun dato di utilizzo</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">Layout del cluster</string>
     <string name="main_layout_free_sub">Nessun layout</string>
     <string name="main_layout_manage">Gestisci</string>
+    <string name="main_nav_bug_report">Segnala</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Segnala un bug</string>
+    <string name="bug_title_header">Segnala un bug</string>
+    <string name="bug_subtitle">Descrivi il problema. Un log tecnico viene allegato automaticamente.</string>
+    <string name="bug_field_title">Titolo</string>
+    <string name="bug_field_steps">Passi per riprodurre</string>
+    <string name="bug_field_result">Risultato osservato</string>
+    <string name="bug_title_required">Inserisci un titolo</string>
+    <string name="bug_send">Invia</string>
+    <string name="bug_status_capturing">Acquisizione log…</string>
+    <string name="bug_status_sending">Invio in corso…</string>
+    <string name="bug_status_error_fmt">Errore: %1$s</string>
+    <string name="bug_sent_ok">Segnalazione inviata ✓ Grazie!</string>
+    <string name="bug_share_subject">DashCast — Segnalazione bug</string>
+    <string name="bug_share_chooser">Invia la segnalazione tramite…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Che tipo di problema?</string>
+    <string name="bug_wizard_step_app">Quale app è coinvolta?</string>
+    <string name="bug_wizard_step_issue">Cosa è successo esattamente?</string>
+    <string name="bug_wizard_detecting">Rilevamento app sul cluster…</string>
+    <string name="bug_wizard_no_app">Nessuna app specifica</string>
+    <string name="bug_wizard_other_app">Altra / App sconosciuta</string>
+    <string name="bug_wizard_back">← Indietro</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Proiezione</item>
+        <item>Display app</item>
+        <item>Audio</item>
+        <item>Connessione</item>
+        <item>Blocco / Crash</item>
+        <item>Altro</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Schermo nero</item>
+        <item>Dimensione/posizione errata</item>
+        <item>App non mostrata</item>
+        <item>Disconnesso</item>
+        <item>Sfarfallio</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App bloccata</item>
+        <item>Schermo nero</item>
+        <item>Posizione errata</item>
+        <item>App crashata</item>
+        <item>Contenuto mancante</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Nessun suono</item>
+        <item>Audio distorto</item>
+        <item>Troppo basso</item>
+        <item>Problema microfono</item>
+        <item>Eco</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Impossibile connettersi</item>
+        <item>Disconnessioni frequenti</item>
+        <item>Molto lento</item>
+        <item>Nessun display cluster</item>
+        <item>Problema WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App crashata</item>
+        <item>Schermo bloccato</item>
+        <item>DashCast crashato</item>
+        <item>Schermo auto nero</item>
+        <item>Dovuto riavviare</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problema prestazioni</item>
+        <item>Consumo batteria</item>
+        <item>Impostazioni display</item>
+        <item>Suggerimento</item>
+        <item>Altro</item>
+    </string-array>
 </resources>

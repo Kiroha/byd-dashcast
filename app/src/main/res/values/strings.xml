@@ -160,7 +160,22 @@
     <string name="settings_reconnect_popup">Proposer de relancer la dernière app à la reconnexion du cluster</string>
     <!-- Feature: Quick-switch -->
     <string name="quick_switch_title">Apps récentes</string>
-    <string name="quick_switch_empty">Aucune app récente</string>
+    <!-- Bug reporter -->
+    <string name="main_nav_bug_report">Signaler</string>
+    <string name="bug_report_menu">🐞 Signaler un bug</string>
+    <string name="bug_title_header">Signaler un bug</string>
+    <string name="bug_subtitle">Décrivez le problème. Un journal technique est joint automatiquement.</string>
+    <string name="bug_field_title">Titre</string>
+    <string name="bug_field_steps">Étapes pour reproduire</string>
+    <string name="bug_field_result">Résultat observé</string>
+    <string name="bug_title_required">Indiquez un titre</string>
+    <string name="bug_send">Envoyer</string>
+    <string name="bug_status_capturing">Capture du journal…</string>
+    <string name="bug_status_sending">Envoi en cours…</string>
+    <string name="bug_status_error_fmt">Erreur : %1$s</string>
+    <string name="bug_sent_ok">Rapport envoyé ✓ Merci !</string>
+    <string name="bug_share_subject">DashCast — Rapport de bug</string>
+    <string name="bug_share_chooser">Envoyer le rapport via…</string>
     <!-- Feature: Usage stats -->
     <string name="menu_usage_stats">📊 Statistiques d\'utilisation</string>
     <string name="usage_title">Temps d\'utilisation sur le cluster</string>
@@ -675,4 +690,63 @@
     <string name="main_layout_section">Layout cluster</string>
     <string name="main_layout_free_sub">Aucun layout</string>
     <string name="main_layout_manage">Gérer</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Quel type de problème ?</string>
+    <string name="bug_wizard_step_app">Quelle application est concernée ?</string>
+    <string name="bug_wizard_step_issue">Qu’est-ce qui s’est passé exactement ?</string>
+    <string name="bug_wizard_detecting">Détection de l’app sur le cluster…</string>
+    <string name="bug_wizard_no_app">Aucune application spécifique</string>
+    <string name="bug_wizard_other_app">Autre / Application inconnue</string>
+    <string name="bug_wizard_back">← Retour</string>
+    <string-array name="bug_categories">
+        <item>Mirror / Projection</item>
+        <item>Affichage app</item>
+        <item>Son</item>
+        <item>Connexion</item>
+        <item>Freeze / Crash</item>
+        <item>Autre</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Écran noir</item>
+        <item>Mauvaise taille/position</item>
+        <item>App non affichée</item>
+        <item>Déconnecté</item>
+        <item>Scintillement</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App figée</item>
+        <item>Écran noir</item>
+        <item>Mauvaise position</item>
+        <item>App plantée</item>
+        <item>Contenu absent</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Pas de son</item>
+        <item>Son distordu</item>
+        <item>Trop faible</item>
+        <item>Problème micro</item>
+        <item>Écho</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Impossible de se connecter</item>
+        <item>Déconnexions fréquentes</item>
+        <item>Très lent</item>
+        <item>Pas d’affichage cluster</item>
+        <item>Problème WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App plantée</item>
+        <item>Écran figé</item>
+        <item>DashCast planté</item>
+        <item>Écran voiture noir</item>
+        <item>Dû redémarrer</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Problème de performance</item>
+        <item>Batterie</item>
+        <item>Paramètres d’affichage</item>
+        <item>Suggestion</item>
+        <item>Autre chose</item>
+    </string-array>
 </resources>

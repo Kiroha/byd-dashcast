@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">Kategoriefilter anzeigen (Alle / Nav / Medien)</string>
     <string name="settings_reconnect_popup">Letzte App bei Cluster-Neuverbindung erneut starten</string>
     <string name="quick_switch_title">Letzte Apps</string>
-    <string name="quick_switch_empty">Keine letzten Apps</string>
     <string name="menu_usage_stats">📊 Nutzungsstatistiken</string>
     <string name="usage_title">Cluster-Nutzungszeit</string>
     <string name="usage_empty">Keine Nutzungsdaten</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">Cluster-Layout</string>
     <string name="main_layout_free_sub">Kein Layout</string>
     <string name="main_layout_manage">Verwalten</string>
+    <string name="main_nav_bug_report">Melden</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 Fehler melden</string>
+    <string name="bug_title_header">Fehler melden</string>
+    <string name="bug_subtitle">Beschreiben Sie das Problem. Ein technisches Protokoll wird automatisch angehängt.</string>
+    <string name="bug_field_title">Titel</string>
+    <string name="bug_field_steps">Schritte zur Reproduktion</string>
+    <string name="bug_field_result">Beobachtetes Ergebnis</string>
+    <string name="bug_title_required">Bitte einen Titel eingeben</string>
+    <string name="bug_send">Senden</string>
+    <string name="bug_status_capturing">Protokoll wird erfasst…</string>
+    <string name="bug_status_sending">Wird gesendet…</string>
+    <string name="bug_status_error_fmt">Fehler: %1$s</string>
+    <string name="bug_sent_ok">Bericht gesendet ✓ Danke!</string>
+    <string name="bug_share_subject">DashCast — Fehlerbericht</string>
+    <string name="bug_share_chooser">Bericht senden über…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">Welche Art von Problem?</string>
+    <string name="bug_wizard_step_app">Welche App ist betroffen?</string>
+    <string name="bug_wizard_step_issue">Was genau ist passiert?</string>
+    <string name="bug_wizard_detecting">App auf Cluster wird erkannt…</string>
+    <string name="bug_wizard_no_app">Keine bestimmte App</string>
+    <string name="bug_wizard_other_app">Andere / Unbekannte App</string>
+    <string name="bug_wizard_back">← Zurück</string>
+    <string-array name="bug_categories">
+        <item>Spiegelung</item>
+        <item>App-Anzeige</item>
+        <item>Ton</item>
+        <item>Verbindung</item>
+        <item>Einfrieren/Absturz</item>
+        <item>Sonstiges</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>Schwarzer Bildschirm</item>
+        <item>Falsche Größe/Position</item>
+        <item>App nicht angezeigt</item>
+        <item>Getrennt</item>
+        <item>Flackern</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>App eingefroren</item>
+        <item>Schwarzer Bildschirm</item>
+        <item>Falsche Position</item>
+        <item>App abgestürzt</item>
+        <item>Inhalt fehlt</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>Kein Ton</item>
+        <item>Verzerrter Ton</item>
+        <item>Zu leise</item>
+        <item>Mikrofonproblem</item>
+        <item>Echo</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>Keine Verbindung</item>
+        <item>Häufige Unterbrechungen</item>
+        <item>Sehr langsam</item>
+        <item>Kein Cluster-Display</item>
+        <item>WLAN-Problem</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>App abgestürzt</item>
+        <item>Bildschirm eingefroren</item>
+        <item>DashCast abgestürzt</item>
+        <item>Auto-Bildschirm schwarz</item>
+        <item>Neustart erforderlich</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>Leistungsproblem</item>
+        <item>Akkuverbrauch</item>
+        <item>Anzeigeeinstellungen</item>
+        <item>Vorschlag</item>
+        <item>Etwas anderes</item>
+    </string-array>
 </resources>

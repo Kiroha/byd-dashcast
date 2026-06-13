@@ -117,7 +117,6 @@
     <string name="settings_show_category_filters">إظهار فلاتر الفئات (الكل / ملاحة / وسائط)</string>
     <string name="settings_reconnect_popup">اقتراح إعادة تشغيل آخر تطبيق عند إعادة الاتصال بالكلاستر</string>
     <string name="quick_switch_title">التطبيقات الأخيرة</string>
-    <string name="quick_switch_empty">لا توجد تطبيقات أخيرة</string>
     <string name="menu_usage_stats">📊 إحصائيات الاستخدام</string>
     <string name="usage_title">وقت الاستخدام على الكلستر</string>
     <string name="usage_empty">لا توجد بيانات استخدام</string>
@@ -643,4 +642,79 @@
     <string name="main_layout_section">تخطيط المجموعة</string>
     <string name="main_layout_free_sub">بدون تخطيط</string>
     <string name="main_layout_manage">إدارة</string>
+    <string name="main_nav_bug_report">إبلاغ</string>
+    <!-- Bug reporter -->
+    <string name="bug_report_menu">🐞 الإبلاغ عن خطأ</string>
+    <string name="bug_title_header">الإبلاغ عن خطأ</string>
+    <string name="bug_subtitle">صف المشكلة. يُرفق سجل تقني تلقائيًا.</string>
+    <string name="bug_field_title">العنوان</string>
+    <string name="bug_field_steps">خطوات إعادة الإنتاج</string>
+    <string name="bug_field_result">النتيجة الملاحَظة</string>
+    <string name="bug_title_required">الرجاء إدخال عنوان</string>
+    <string name="bug_send">إرسال</string>
+    <string name="bug_status_capturing">جارٍ التقاط السجل…</string>
+    <string name="bug_status_sending">جارٍ الإرسال…</string>
+    <string name="bug_status_error_fmt">خطأ: %1$s</string>
+    <string name="bug_sent_ok">تم إرسال التقرير ✓ شكرًا!</string>
+    <string name="bug_share_subject">DashCast — تقرير خطأ</string>
+    <string name="bug_share_chooser">إرسال التقرير عبر…</string>
+
+    <!-- Bug Wizard (keyboard-free, 3-step) -->
+    <string name="bug_wizard_step_category">ما نوع المشكلة؟</string>
+    <string name="bug_wizard_step_app">ما التطبيق المتأثر؟</string>
+    <string name="bug_wizard_step_issue">ماذا حدث بالضبط؟</string>
+    <string name="bug_wizard_detecting">جارٍ اكتشاف التطبيق على الشاشة…</string>
+    <string name="bug_wizard_no_app">لا يوجد تطبيق محدد</string>
+    <string name="bug_wizard_other_app">تطبيق آخر / غير معروف</string>
+    <string name="bug_wizard_back">← رجوع</string>
+    <string-array name="bug_categories">
+        <item>مرآة</item>
+        <item>عرض التطبيق</item>
+        <item>الصوت</item>
+        <item>الاتصال</item>
+        <item>تجمد/تعطل</item>
+        <item>أخرى</item>
+    </string-array>
+    <string-array name="bug_issues_mirror">
+        <item>شاشة سوداء</item>
+        <item>حجم/موضع خاطئ</item>
+        <item>التطبيق لا يظهر</item>
+        <item>انقطع الاتصال</item>
+        <item>وميض</item>
+    </string-array>
+    <string-array name="bug_issues_app">
+        <item>التطبيق متجمد</item>
+        <item>شاشة سوداء</item>
+        <item>موضع خاطئ</item>
+        <item>تعطل التطبيق</item>
+        <item>محتوى مفقود</item>
+    </string-array>
+    <string-array name="bug_issues_sound">
+        <item>لا يوجد صوت</item>
+        <item>صوت مشوه</item>
+        <item>صوت منخفض جداً</item>
+        <item>مشكلة الميكروفون</item>
+        <item>صدى</item>
+    </string-array>
+    <string-array name="bug_issues_connect">
+        <item>لا يمكن الاتصال</item>
+        <item>انقطاعات متكررة</item>
+        <item>بطيء جداً</item>
+        <item>لا يوجد عرض كلاستر</item>
+        <item>مشكلة WiFi</item>
+    </string-array>
+    <string-array name="bug_issues_freeze">
+        <item>تعطل التطبيق</item>
+        <item>تجمدت الشاشة</item>
+        <item>تعطل DashCast</item>
+        <item>شاشة السيارة سوداء</item>
+        <item>اضطررت للإعادة</item>
+    </string-array>
+    <string-array name="bug_issues_other">
+        <item>مشكلة أداء</item>
+        <item>استنزاف البطارية</item>
+        <item>إعدادات العرض</item>
+        <item>اقتراح</item>
+        <item>شيء آخر</item>
+    </string-array>
 </resources>
