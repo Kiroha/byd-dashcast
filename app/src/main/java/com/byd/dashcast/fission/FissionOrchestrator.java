@@ -220,6 +220,8 @@ public final class FissionOrchestrator {
             final List<String> pkgs = new ArrayList<>(mSlots.keySet());
             mExec.execute(() -> {
                 for (String pkg : pkgs) {
+                    // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
+                    try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
                     if (binder != null) {
                         try { FissionClient.releaseSlot(binder, pkg); } catch (Throwable ignored) {}
                     }
@@ -324,6 +326,11 @@ public final class FissionOrchestrator {
             mProjecting  = false;
             mMirrorReady = false;
             for (String pkg : mSlots.keySet()) {
+                // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
+                try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
+                if (mDaemonBinder != null) {
+                    try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Throwable ignored) {}
+                }
                 ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
             }
             mSlots.clear();
@@ -342,6 +349,8 @@ public final class FissionOrchestrator {
 
     public void releaseSlotAsync(String pkg) {
         mExec.execute(() -> {
+            // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
+            try { ProxyClient.moveAndResize(pkg, 0, 0, 0, 0, 0); } catch (Throwable ignored) {}
             if (mDaemonBinder != null) {
                 try { FissionClient.releaseSlot(mDaemonBinder, pkg); }
                 catch (Exception e) { AppLogger.e(TAG, "releaseSlot error", e); }
