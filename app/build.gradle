@@ -286,8 +286,9 @@ android {
         // 444 = 1.6.3-beta (Fission teardown: move apps to display 0 before force-stop).
         // 445 = 1.6.4-beta (proper MOVE_TO_DISPLAY0 transaction + pre-create VD persistence).
         // 446 = 1.6.5-beta (Kotlin lot 1: ClusterPrefs, ProjectionStateProvider, LayoutPreset, LocaleHelper).
-        versionCode 447
-        versionName "1.6.6-beta"
+        // 447 = 1.6.6-beta (FissionOrchestrator headless teardown + originCluster button race fix).
+        versionCode 448
+        versionName "1.6.7-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
