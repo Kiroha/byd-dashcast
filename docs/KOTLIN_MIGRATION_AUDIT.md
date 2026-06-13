@@ -73,11 +73,20 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - ✅ `AppInfo.java` → `AppInfo.kt` (`@JvmField` sur tous les champs, `const val` pour les catégories, mots-clés de catégorisation extraits en listes).
 - ✅ `SplitSlot.java` → `SplitSlot.kt` (enum + `const val MAX_INDEX`). Note : aucun usage externe trouvé — candidat dead-code à confirmer.
 
+## 4 bis. Réalisé — lot 1 (Tier 1 sûr)
+
+- ✅ `ProjectionStateProvider.java` → `.kt` (interface ; param `Runnable?` nullable ; toujours implémentée par ClusterService + 3 classes anonymes Java).
+- ✅ `LocaleHelper.java` → `.kt` (`object` + `@JvmStatic` + `const val` ; les 2 écritures prefs inline via l'extension core-ktx `edit { }` — déjà au classpath via appcompat — pour garder lint UseKtx à 0).
+- ✅ `LayoutPreset.java` → `.kt` (`@JvmField` sur tous les champs publics mutés en place ; `@JvmStatic fromJson` ; `@Throws(Exception)` pour préserver le try/catch de LayoutPrefs ; `optString(name, null)` réécrit via `has()`+`isNull()` → strictement équivalent, sans passer null à un arg `@NonNull`).
+- ✅ `ClusterPrefs.java` → `.kt` (`object` + `@JvmStatic` + `const val` ; constantes de clés package-private passées `private` (aucun lecteur externe, vérifié grep) ; setters recevant `null` au call site gardés `String?` → pas de NPE Kotlin ; surcharge `isGridMode` via `@JvmOverloads`).
+- **AppLogger sorti du lot 1** : 556 lignes avec `synchronized`/`static volatile`/compteurs incrémentaux, appelé par tous les threads workers → lot dédié avec relecture concurrence approfondie.
+- Vérif : compile Kotlin+Java forcée sans warning sur les 4 fichiers, `assembleDebug`+`assembleRelease` verts. (Les 5 warnings lint restants sont dans `activity_bug_wizard.xml`, hors périmètre.)
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 1 | Reste du Tier 1 : ClusterPrefs, LayoutPreset, ProjectionStateProvider, util/ | build + lint 0/0 + smoke test launcher |
+| 1 bis | `util/AppLogger` (concurrence — relecture champ par champ) | build + lint 0/0 + smoke test log |
 | 2 | data/apps/AppRepository + adapters UI simples | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
