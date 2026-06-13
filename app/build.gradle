@@ -283,8 +283,9 @@ android {
         // 441 = 1.5.3 (in-app bug reporter with direct Telegram upload).
         // 442 = 1.5.4 (bug wizard).
         // 443 = 1.6.2-beta (DiLink 5 layout mode fix + merged 1.5.x features).
-        versionCode 443
-        versionName "1.6.2-beta"
+        // 444 = 1.6.3-beta (Fission teardown: move apps to display 0 before force-stop).
+        versionCode 444
+        versionName "1.6.3-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
