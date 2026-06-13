@@ -206,7 +206,23 @@ public final class FissionOrchestrator {
                 AppLogger.w(TAG, "launch-layout: projection conflict — aborting");
             }
         };
-        new FissionOrchestrator(appCtx, psp, headless).initAsync(fav, true, false);
+        FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        sAutoStartOrchestrator = orch;
+        orch.initAsync(fav, true, false);
+    }
+
+    /**
+     * Stops and clears the headless auto-start orchestrator (if any).
+     * Called by FissionActivity on create so it starts with a clean slate and
+     * any apps started headlessly are properly moved back to display 0 and killed.
+     */
+    public static void stopAutoOrchestrator() {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        sAutoStartOrchestrator = null;
+        if (o != null) {
+            AppLogger.i(TAG, "stopping headless auto-start orchestrator");
+            o.stopAll();
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -522,6 +538,8 @@ public final class FissionOrchestrator {
         // Release slots absent from the new layout (empty set = release all = free mode)
         for (String pkg : new ArrayList<>(mSlots.keySet())) {
             if (!newPkgs.contains(pkg)) {
+                // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
+                if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
                 if (mDaemonBinder != null) {
                     try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Exception ignored) {}
                 }
