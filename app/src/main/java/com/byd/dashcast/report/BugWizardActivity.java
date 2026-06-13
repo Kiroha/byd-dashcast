@@ -1,10 +1,14 @@
 package com.byd.dashcast.report;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.Space;
@@ -33,6 +37,8 @@ import java.io.File;
 public class BugWizardActivity extends Activity {
 
     private static final String TAG = "BugWizardActivity";
+    private static final String PREFS_BUG    = "dashcast_bug_report";
+    private static final String PREF_TG_HANDLE = "tg_handle";
 
     // Category indices — must match bug_categories string-array order.
     private static final int CAT_MIRROR  = 0;
@@ -57,6 +63,7 @@ public class BugWizardActivity extends Activity {
     private ViewFlipper    mFlipper;
     private TextView       mTvTitle;
     private TextView       mTvStatus;
+    private TextView       mTvTgBanner;
     private MaterialButton mBtnBack;
     private TextView[]     mDots;
     private GridLayout     mGridCat;
@@ -68,6 +75,7 @@ public class BugWizardActivity extends Activity {
     private String  mAppPkg   = "";
     private String  mAppLabel = "";
     private boolean mSending  = false;
+    private String  mTgHandle = "";
 
     // Cluster app detection
     private String  mDetectedPkg   = null;
@@ -80,14 +88,15 @@ public class BugWizardActivity extends Activity {
         super.onCreate(saved);
         setContentView(R.layout.activity_bug_wizard);
 
-        mFlipper  = findViewById(R.id.bug_wizard_flipper);
-        mTvTitle  = findViewById(R.id.tv_wizard_title);
-        mTvStatus = findViewById(R.id.tv_wizard_status);
-        mBtnBack  = findViewById(R.id.btn_wizard_back);
-        mGridCat  = findViewById(R.id.grid_wizard_categories);
-        mLlApps   = findViewById(R.id.ll_wizard_apps);
-        mLlIssues = findViewById(R.id.ll_wizard_issues);
-        mDots     = new TextView[]{
+        mFlipper    = findViewById(R.id.bug_wizard_flipper);
+        mTvTitle    = findViewById(R.id.tv_wizard_title);
+        mTvStatus   = findViewById(R.id.tv_wizard_status);
+        mTvTgBanner = findViewById(R.id.tv_tg_handle_banner);
+        mBtnBack    = findViewById(R.id.btn_wizard_back);
+        mGridCat    = findViewById(R.id.grid_wizard_categories);
+        mLlApps     = findViewById(R.id.ll_wizard_apps);
+        mLlIssues   = findViewById(R.id.ll_wizard_issues);
+        mDots       = new TextView[]{
             findViewById(R.id.dot_wizard_1),
             findViewById(R.id.dot_wizard_2),
             findViewById(R.id.dot_wizard_3)
@@ -95,10 +104,22 @@ public class BugWizardActivity extends Activity {
 
         findViewById(R.id.btn_wizard_cancel).setOnClickListener(v -> finish());
         mBtnBack.setOnClickListener(v -> goBack());
+        mTvTgBanner.setOnClickListener(v -> showTgHandleDialog());
 
-        buildCategoryPage();
-        showStep(0);
-        detectClusterApp();
+        mTgHandle = loadTgHandle();
+        if (mTgHandle.isEmpty()) {
+            // First use: block on dialog before showing wizard
+            showTgHandleDialogThen(() -> {
+                buildCategoryPage();
+                showStep(0);
+                detectClusterApp();
+            });
+        } else {
+            buildCategoryPage();
+            showStep(0);
+            detectClusterApp();
+        }
+        updateTgBanner();
     }
 
     // ── Step 0: category ─────────────────────────────────────────────────────
@@ -229,7 +250,8 @@ public class BugWizardActivity extends Activity {
                                : mAppLabel + " (" + mAppPkg + ")")
                 + "\nIssue: " + issue
                 + "\nDevice: " + BugReportCapture.deviceLine()
-                + "\nVersion: " + BugReportCapture.versionLine();
+                + "\nVersion: " + BugReportCapture.versionLine()
+                + (mTgHandle.isEmpty() ? "" : "\nTelegram: " + mTgHandle);
 
         BugReportCapture.capture(this, caption, new BugReportCapture.Callback() {
             @Override public void onReady(File file) {
@@ -326,6 +348,72 @@ public class BugWizardActivity extends Activity {
         } catch (Exception e) {
             return pkg;
         }
+    }
+
+    // ── Telegram handle ───────────────────────────────────────────────────────
+
+    private String loadTgHandle() {
+        return getSharedPreferences(PREFS_BUG, MODE_PRIVATE)
+                .getString(PREF_TG_HANDLE, "");
+    }
+
+    private void saveTgHandle(String handle) {
+        getSharedPreferences(PREFS_BUG, MODE_PRIVATE)
+                .edit().putString(PREF_TG_HANDLE, handle).apply();
+    }
+
+    private void updateTgBanner() {
+        if (mTgHandle.isEmpty()) {
+            mTvTgBanner.setText(R.string.bug_tg_banner_unset);
+            mTvTgBanner.setTextColor(
+                    getResources().getColor(android.R.color.holo_orange_dark, getTheme()));
+        } else {
+            mTvTgBanner.setText(getString(R.string.bug_tg_banner_set, mTgHandle));
+            mTvTgBanner.setTextColor(
+                    getResources().getColor(R.color.md_on_surface_variant, getTheme()));
+        }
+    }
+
+    /** Shows the dialog with the full explanation message (first use). Calls {@code then} on confirm or skip. */
+    private void showTgHandleDialogThen(Runnable then) {
+        showTgHandleDialogInternal(then);
+    }
+
+    /** Shows the dialog for subsequent edits (no mandatory callback). */
+    private void showTgHandleDialog() {
+        showTgHandleDialogInternal(null);
+    }
+
+    private void showTgHandleDialogInternal(Runnable onDismiss) {
+        EditText et = new EditText(this);
+        et.setHint(R.string.bug_tg_hint);
+        et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        et.setSingleLine(true);
+        if (!mTgHandle.isEmpty()) et.setText(mTgHandle);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(24);
+        container.setPadding(pad, dp(8), pad, dp(4));
+        container.addView(et);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.bug_tg_title)
+                .setMessage(R.string.bug_tg_message)
+                .setView(container)
+                .setPositiveButton(R.string.bug_tg_confirm, (d, w) -> {
+                    String raw = et.getText().toString().trim();
+                    if (!raw.isEmpty() && !raw.startsWith("@")) raw = "@" + raw;
+                    mTgHandle = raw;
+                    saveTgHandle(mTgHandle);
+                    updateTgBanner();
+                    if (onDismiss != null) onDismiss.run();
+                })
+                .setNegativeButton(R.string.bug_tg_skip, (d, w) -> {
+                    if (onDismiss != null) onDismiss.run();
+                })
+                .setCancelable(false)
+                .show();
     }
 
     private void shareFallback(File file) {

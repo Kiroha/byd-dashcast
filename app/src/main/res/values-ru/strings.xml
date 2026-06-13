@@ -667,6 +667,13 @@
     <string name="bug_wizard_no_app">Без конкретного приложения</string>
     <string name="bug_wizard_other_app">Другое / Неизвестное приложение</string>
     <string name="bug_wizard_back">← Назад</string>
+    <string name="bug_tg_title">Твой ник в Telegram</string>
+    <string name="bug_tg_message">Когда исправление твоей проблемы будет готово, мы свяжемся с тобой напрямую в Telegram и попросим протестировать его первым.\n\n⚠️ Убедись, что вводишь правильный ник (пример: @john_doe). Без него мы не сможем с тобой связаться.\n\nТвой ник хранится только на этом устройстве и никогда не передаётся.</string>
+    <string name="bug_tg_hint">@твой_ник</string>
+    <string name="bug_tg_confirm">Подтвердить</string>
+    <string name="bug_tg_skip">Позже</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Ник Telegram не указан — нажмите, чтобы задать</string>
     <string-array name="bug_categories">
         <item>Зеркало</item>
         <item>Отображение</item>

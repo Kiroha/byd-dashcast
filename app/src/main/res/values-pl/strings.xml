@@ -676,6 +676,13 @@
     <string name="bug_wizard_no_app">Brak konkretnej aplikacji</string>
     <string name="bug_wizard_other_app">Inna / Nieznana aplikacja</string>
     <string name="bug_wizard_back">← Wstecz</string>
+    <string name="bug_tg_title">Twój nick na Telegramie</string>
+    <string name="bug_tg_message">Gdy poprawka do Twojego problemu będzie gotowa, skontaktujemy się z Tobą bezpośrednio na Telegramie z prośbą o przetestowanie jej jako pierwszy.\n\n⚠️ Upewnij się, że podajesz właściwy nick (przykład: @john_doe). Bez niego nie będziemy mogli się z Tobą skontaktować.\n\nTwój nick jest przechowywany tylko na tym urządzeniu i nigdy nie jest udostępniany.</string>
+    <string name="bug_tg_hint">@twoj_nick</string>
+    <string name="bug_tg_confirm">Potwierdź</string>
+    <string name="bug_tg_skip">Później</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Nick Telegram nie ustawiony — dotknij, aby ustawić</string>
     <string-array name="bug_categories">
         <item>Mirror / Projekcja</item>
         <item>Wyświetlanie app</item>

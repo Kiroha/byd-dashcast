@@ -668,6 +668,13 @@
     <string name="bug_wizard_no_app">Aniq ilova yo’q</string>
     <string name="bug_wizard_other_app">Boshqa / Noma’lum ilova</string>
     <string name="bug_wizard_back">← Orqaga</string>
+    <string name="bug_tg_title">Telegram taxallusingiz</string>
+    <string name="bug_tg_message">Muammoingiz uchun tuzatish tayyor bo\’lganda, uni birinchi bo\’lib sinab ko\’rishingizni so\’rash uchun to\’g\’ridan-to\’g\’ri Telegram orqali siz bilan bog\’lanamiz.\n\n⚠️ To\’g\’ri taxallusni kiritganingizga ishonch hosil qiling (misol: @john_doe). Usiz siz bilan bog\’lana olmaymiz.\n\nTaxallusingiz faqat ushbu qurilmada saqlanadi va hech qachon ulashilmaydi.</string>
+    <string name="bug_tg_hint">@taxallusingiz</string>
+    <string name="bug_tg_confirm">Tasdiqlash</string>
+    <string name="bug_tg_skip">Keyinroq</string>
+    <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
+    <string name="bug_tg_banner_unset">⚠️ Telegram taxallusi o\’rnatilmagan — o\’rnatish uchun bosing</string>
     <string-array name="bug_categories">
         <item>Ko’zgu</item>
         <item>Ilova ko’rinishi</item>

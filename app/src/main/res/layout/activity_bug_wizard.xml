@@ -74,6 +74,22 @@
                     android:textStyle="bold"
                     android:textColor="@color/md_on_surface"/>
 
+                <!-- Telegram handle banner (tap to set / change) -->
+                <TextView
+                    android:id="@+id/tv_tg_handle_banner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/md_on_surface_variant"
+                    android:background="@android:color/transparent"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
                 <!-- 3-page ViewFlipper -->
                 <ViewFlipper
                     android:id="@+id/bug_wizard_flipper"

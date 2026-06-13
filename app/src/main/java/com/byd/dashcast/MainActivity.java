@@ -567,6 +567,9 @@ public class MainActivity extends AppCompatActivity
             return;
         }
         mUsageTracker.trackStop(mCurrentDashboardPkg);
+        // Remove from tracker before launch: prevents a concurrent evictAllThen (stale
+        // persisted session) from force-stopping the app we are about to put on the cluster.
+        mSessionTracker.remove(pkgName);
         int displayId = mClusterService.getDisplayId();
         if (displayId < 0) displayId = 1;
         mClusterService.moveTaskToDisplay(pkgName, displayId, new ClusterService.LaunchCallback() {
@@ -1007,6 +1010,8 @@ public class MainActivity extends AppCompatActivity
             if (mSplitController.getSecondDashboardPkg() != null) {
                 AdbLocalClient.forceStopApp(this, mSplitController.getSecondDashboardPkg(), null);
             }
+            // Remove from tracker before launch (same race-condition guard as normal path).
+            mSessionTracker.remove(pkgName);
             mClusterService.launchOnDashboardWithBounds(pkgName, newLeft, 0, newRight, H,
                     new ClusterService.LaunchCallback() {
                 @Override public void onResult(boolean launched) {
@@ -1029,6 +1034,9 @@ public class MainActivity extends AppCompatActivity
         // ── Normal behavior — move (or launch if not running) ──────────────────
         // moveTaskToDisplay() moves the existing task without killing it.
         // Falls back to launchOnDashboard() if no running task is found.
+        // Remove from tracker before launch: prevents a concurrent evictAllThen (stale
+        // persisted session after crash) from force-stopping the app mid-launch.
+        mSessionTracker.remove(pkgName);
         int clusterDisplayId = mClusterService.getDisplayId();
         if (clusterDisplayId < 0) clusterDisplayId = 1; // Seal EU hardcoded fallback
         final int targetDisplayId = clusterDisplayId;
