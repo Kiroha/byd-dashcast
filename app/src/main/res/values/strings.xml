@@ -718,6 +718,7 @@
         <item>Son</item>
         <item>Connexion</item>
         <item>Freeze / Crash</item>
+        <item>Cluster mode simple</item>
         <item>Autre</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -754,6 +755,13 @@
         <item>DashCast planté</item>
         <item>Écran voiture noir</item>
         <item>Dû redémarrer</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Figé</item>
+        <item>Écran noir</item>
+        <item>Contenu incorrect</item>
+        <item>Infos manquantes</item>
+        <item>Non affiché</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Problème de performance</item>

@@ -681,6 +681,7 @@
         <item>Звук</item>
         <item>Підключення</item>
         <item>Зависання/Збій</item>
+        <item>Кластер простий режим</item>
         <item>Інше</item>
     </string-array>
     <string-array name="bug_issues_mirror">
@@ -717,6 +718,13 @@
         <item>DashCast впав</item>
         <item>Екран авто чорний</item>
         <item>Довелось перезапустити</item>
+    </string-array>
+    <string-array name="bug_issues_simple">
+        <item>Завис</item>
+        <item>Чорний екран</item>
+        <item>Невірний вміст</item>
+        <item>Інформація відсутня</item>
+        <item>Не відображається</item>
     </string-array>
     <string-array name="bug_issues_other">
         <item>Проблема продуктивності</item>
