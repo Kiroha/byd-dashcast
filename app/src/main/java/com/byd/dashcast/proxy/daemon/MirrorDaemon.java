@@ -762,7 +762,10 @@ public class MirrorDaemon {
 
             Runnable attach = () -> {
                 try {
-                    Context base = (sSysContext != null) ? sSysContext : sContext;
+                    // Use the shell-identity context (pkg="com.android.shell", uid=2000).
+                    // On Android 12 (DL5) WMS strictly checks context.getPackageName() against
+                    // the calling uid — sSysContext has pkg="android" (uid=1000) which fails.
+                    Context base = (sContext != null) ? sContext : sSysContext;
                     Context displayCtx = null;
                     try { displayCtx = base.createDisplayContext(target); }
                     catch (Exception e) {
