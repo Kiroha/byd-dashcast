@@ -145,10 +145,6 @@ public class MainActivity extends AppCompatActivity
             mDashboardLauncher = mClusterService.getLauncher();
             mClusterService.setListener(MainActivity.this);
             AppLogger.log(TAG, "Bind ClusterService OK — displayId=" + mClusterService.getDisplayId());
-            // DL3: SurfaceTexture may already be available when the service binds
-            // (race: onSurfaceTextureAvailable fired before onServiceConnected).
-            // Kick attemptStart() so the mirror starts regardless of ordering.
-            attemptStartMirrorWithCurrentHolder();
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
