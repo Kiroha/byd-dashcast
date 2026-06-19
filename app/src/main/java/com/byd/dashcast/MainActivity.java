@@ -145,6 +145,10 @@ public class MainActivity extends AppCompatActivity
             mDashboardLauncher = mClusterService.getLauncher();
             mClusterService.setListener(MainActivity.this);
             AppLogger.log(TAG, "Bind ClusterService OK — displayId=" + mClusterService.getDisplayId());
+            // DL3: SurfaceTexture may already be available when the service binds
+            // (race: onSurfaceTextureAvailable fired before onServiceConnected).
+            // Kick attemptStart() so the mirror starts regardless of ordering.
+            attemptStartMirrorWithCurrentHolder();
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
@@ -1334,7 +1338,16 @@ public class MainActivity extends AppCompatActivity
         // v0.9.7 — apps pane is always visible (M3 split layout). We only collapse the
         // cluster preview/control widgets here. Mirror frame stays VISIBLE so its empty
         // preview card serves as the idle state.
-        stopClusterMirror();
+        // DL3 keepalive: the activation sequence always times out on DL3 (no
+        // AutoContainerNative), firing onClusterDisplayDisconnected → showAppList
+        // every 12 s. Without this guard the daemon mirror (layerStack=2 fallback,
+        // displayId=-1) is killed on every timeout even though it is working.
+        boolean keepDaemonMirror = mServiceBound && mClusterService != null
+                && mClusterService.getMirrorManager().isMirrorViaDaemon()
+                && mClusterService.getDisplayId() <= 0;
+        if (!keepDaemonMirror) {
+            stopClusterMirror();
+        }
         if (mClusterControlCoordinator != null) mClusterControlCoordinator.hidePanel();
     }
 
