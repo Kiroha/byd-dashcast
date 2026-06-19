@@ -167,6 +167,33 @@ public final class FissionOrchestrator {
     }
 
     /**
+     * Launches the apps bound to layout slots into their VDs.
+     *
+     * <p>Call this after {@link FissionClient#activateLayout} succeeds and has filled
+     * {@code preset.slots[i].displayId}. Slots with a null/empty package name or
+     * {@code displayId ≤ 0} are skipped. Runs blocking shell commands — must be
+     * called from a background thread (e.g. LayoutManagerActivity's executor).
+     */
+    public static void launchAppsIntoPreset(Context ctx, LayoutPreset preset) {
+        final Context appCtx = ctx.getApplicationContext();
+        for (LayoutPreset.SlotDef slot : preset.slots) {
+            final String pkg = slot.packageName;
+            if (pkg == null || pkg.isEmpty() || slot.displayId <= 0) continue;
+            if (!ProxyClient.isConnected()) {
+                boolean ok = ProxyClient.connect(appCtx);
+                if (!ok) {
+                    AppLogger.w(TAG, "launchAppsIntoPreset: proxy not connected for " + pkg);
+                    continue;
+                }
+            }
+            String result = ProxyClient.launchAndForce(pkg, null, slot.displayId, slot.w, slot.h);
+            String firstLine = (result != null) ? result.split("\n")[0] : "null";
+            AppLogger.i(TAG, "launchAppsIntoPreset: " + pkg + "@" + slot.displayId
+                    + " → " + firstLine);
+        }
+    }
+
+    /**
      * Manually launches the apps configured in the favourite layout.
      * Same flow as {@link #maybeAutoStartOnAppLaunch} but user-triggered — skips the
      * {@code isFissionAutoLayout} guard so it works when the auto-launch option is OFF.
