@@ -715,7 +715,17 @@ public class MainActivity extends AppCompatActivity
         boolean clusterAppActive = mCurrentDashboardApp != null
                 && mServiceBound && mClusterService != null
                 && mClusterService.getDisplayId() > 0;
-        if (!clusterAppActive) {
+        // DL3 keepalive: same guard as showAppList() — the daemon mirror on
+        // layerStack=2 fallback must survive onStop so the user sees live content
+        // immediately when returning to the app, without waiting for a restart.
+        // Condition mirrors showAppList() exactly to keep behaviour consistent:
+        // isMirrorViaDaemon() && displayId≤0 → DL3 fallback path only.
+        // onDestroy() always calls stopClusterMirror() unconditionally, so the
+        // mirror is always cleaned up when the Activity is actually destroyed.
+        boolean keepDaemonMirror = mServiceBound && mClusterService != null
+                && mClusterService.getMirrorManager().isMirrorViaDaemon()
+                && mClusterService.getDisplayId() <= 0;
+        if (!clusterAppActive && !keepDaemonMirror) {
             stopClusterMirror();
         }
         if (mServiceBound && mClusterService != null) {
