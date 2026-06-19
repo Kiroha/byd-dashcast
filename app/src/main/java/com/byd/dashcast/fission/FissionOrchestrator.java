@@ -186,10 +186,14 @@ public final class FissionOrchestrator {
                     continue;
                 }
             }
-            String result = ProxyClient.launchAndForce(pkg, null, slot.displayId, slot.w, slot.h);
-            String firstLine = (result != null) ? result.split("\n")[0] : "null";
-            AppLogger.i(TAG, "launchAppsIntoPreset: " + pkg + "@" + slot.displayId
-                    + " → " + firstLine);
+            try {
+                String result = ProxyClient.launchAndForce(pkg, null, slot.displayId, slot.w, slot.h);
+                String firstLine = (result != null) ? result.split("\n")[0] : "null";
+                AppLogger.i(TAG, "launchAppsIntoPreset: " + pkg + "@" + slot.displayId
+                        + " → " + firstLine);
+            } catch (ProxyClient.ProxyException pe) {
+                AppLogger.w(TAG, "launchAppsIntoPreset: launch failed for " + pkg + ": " + pe.getMessage());
+            }
         }
     }
 
