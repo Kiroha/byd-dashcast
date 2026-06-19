@@ -74,6 +74,13 @@ public final class MirrorCoordinator {
                 if (mMirrorSurface != null) { mMirrorSurface.release(); mMirrorSurface = null; }
                 mMirrorSurface = new Surface(st);
                 AppLogger.d(TAG, "SurfaceTexture size changed " + w + "x" + h);
+                // Stop the active mirror (if any) so attemptStart() below is not
+                // short-circuited by isMirrorActive(). Without this the mirror keeps
+                // projecting at the stale size (e.g. 349px on DL5 cold start) because
+                // the weighted-card layout emits a wrong first pass before settling.
+                // Bypass stopMirror() to avoid flashing the placeholder during resize.
+                ClusterService svc = mHost.getClusterServiceIfBound();
+                if (svc != null) svc.getMirrorManager().stopMirror();
                 attemptStart();
             }
 
