@@ -617,6 +617,19 @@ public class MainActivity extends AppCompatActivity
         // (forbidden since systemMain() — AMS rejects IApplicationThread).
         if (mDaemonBinder == null) {
             tryGetDaemonBinderFromServiceManager();
+            // On ROMs where ServiceManager.addService is blocked (e.g. DX_BYD_AUTO / Android 11),
+            // the daemon binder is delivered only via the startup broadcast. After MainActivity
+            // onStop/onStart the broadcast reference is lost. Trigger ProxyClient.connect() so
+            // the bootstrap script touches the REBROADCAST trigger file → daemon re-emits its
+            // binder broadcast → mDaemonReadyReceiver fires → mirror restarts.
+            // Only when an active cluster session is in progress (mCurrentDashboardApp != null)
+            // to avoid spurious daemon wakes on cold opens.
+            if (mCurrentDashboardApp != null) {
+                new Thread(() -> {
+                    boolean ok = com.byd.dashcast.proxy.ProxyClient.connect(MainActivity.this);
+                    if (!ok) AppLogger.w(TAG, "onStart daemon reconnect failed");
+                }, "onstart-daemon-reconnect").start();
+            }
         }
         if (mServiceBound && mClusterService != null) {
             // Activity back in the foreground: re-attach the listener

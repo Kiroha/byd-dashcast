@@ -289,8 +289,9 @@ android {
         // 447 = 1.6.6-beta (FissionOrchestrator headless teardown + originCluster button race fix).
         // 448 = 1.6.7-beta (DL3 FORCE_ON guard + cluster simple mode bug wizard category).
         // 449 = 1.6.8-beta (DL5 layout mode SecurityException fix + Uzbek string fixes).
-        versionCode 450
-        versionName "1.6.9-beta"
+        // 450 = 1.6.9-beta (DL3.0 frozen cluster after layout re-activation — launchAppsIntoPreset).
+        versionCode 451
+        versionName "1.6.10-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",

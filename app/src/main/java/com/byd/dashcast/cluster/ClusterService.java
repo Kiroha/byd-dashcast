@@ -519,14 +519,18 @@ public class ClusterService extends Service
                 mPendingDashboardCallback = null;
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching on display=" + displayId + " → " + packageName);
-                if (displayId > 0) {
-                    try {
-                        String cleanLog = com.byd.dashcast.proxy.ProxyClient
-                                .cleanFissionStacks(displayId);
-                        AppLogger.d(TAG, "cleanFissionStacks(" + displayId + ")\n" + cleanLog);
-                    } catch (Throwable ce) {
-                        AppLogger.w(TAG, "cleanFissionStacks failed: " + ce.getMessage());
-                    }
+                if (displayId <= 0) {
+                    AppLogger.w(TAG, "launchOnDashboard: cluster display not ready (id="
+                            + displayId + ") — aborting launch for " + packageName);
+                    if (callback != null) callback.onResult(false);
+                    return;
+                }
+                try {
+                    String cleanLog = com.byd.dashcast.proxy.ProxyClient
+                            .cleanFissionStacks(displayId);
+                    AppLogger.d(TAG, "cleanFissionStacks(" + displayId + ")\n" + cleanLog);
+                } catch (Throwable ce) {
+                    AppLogger.w(TAG, "cleanFissionStacks failed: " + ce.getMessage());
                 }
                 boolean needsDpiSettle = com.byd.dashcast.cluster.dpi.ClusterDpiManager
                         .applyForLaunch(ClusterService.this, packageName, displayId);

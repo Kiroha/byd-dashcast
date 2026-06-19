@@ -237,6 +237,10 @@ public class ClusterMirrorManager {
                                         Surface targetSurface, int viewW, int viewH) {
         if (mMirrorActive) return true;
         if (daemonBinder == null || targetSurface == null || !targetSurface.isValid()) return false;
+        if (clusterDisplay == null) {
+            AppLogger.w(TAG, "startMirrorViaDaemon: clusterDisplay null — mirror deferred until display is ready");
+            return false;
+        }
 
         // Cluster dimensions
         if (clusterDisplay != null) {
