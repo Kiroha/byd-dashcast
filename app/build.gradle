@@ -295,8 +295,9 @@ android {
         // 453 = 1.6.12-beta (DiLink5.0 wrong mirror size on cold start: restart mirror on SurfaceTexture size change).
         // 454 = 1.6.13-beta (DiLink3.0 black screen: daemon mirror killed by ClusterManager timeout via showAppList + onServiceConnected race fix).
         // 455 = 1.6.14-beta (DiLink3.0 black screen: showAppList() keepalive for daemon mirror on layerStack=2 fallback).
-        versionCode 455
-        versionName "1.6.14-beta"
+        // 456 = 1.6.15-beta (DiLink3.0 mirror killed by onStop: extend keepalive guard to onStop(), same condition as showAppList()).
+        versionCode 456
+        versionName "1.6.15-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
