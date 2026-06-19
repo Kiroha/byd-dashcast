@@ -86,9 +86,30 @@ public class DashboardDisplayHelper {
                 }
                 // VirtualDisplay not created after the full sequence (30→6s→16→6s→35).
                 // No fallback to hardcoded displayId=1 — report failure to the caller.
+                // ClusterManager will keep watching via armLateArrivalWatch(); if the VD
+                // appears within the grace period, onDisplayLateReady fires below.
                 AppLogger.e(TAG, "Dashboard VirtualDisplay timeout — activation sequence failed");
                 mKnownClusterDisplayId = -1;
                 mListener.onDashboardDisplayDisconnected();
+            }
+
+            @Override
+            public void onDisplayLateReady(Display display, int displayId) {
+                // Ignore if stop() was already called (sentinel -2).
+                if (mKnownClusterDisplayId == -2) {
+                    AppLogger.d(TAG, "onDisplayLateReady: stop() called — ignoring");
+                    return;
+                }
+                // Ignore if the normal path already succeeded (shouldn't happen but guard).
+                if (mKnownClusterDisplayId > 0) {
+                    AppLogger.d(TAG, "onDisplayLateReady: already connected (id="
+                            + mKnownClusterDisplayId + ") — ignoring");
+                    return;
+                }
+                mKnownClusterDisplayId = displayId;
+                AppLogger.i(TAG, "Dashboard display late arrival: id=" + displayId
+                        + " name=" + (display != null ? display.getName() : "null"));
+                mListener.onDashboardDisplayConnected(display, displayId);
             }
         });
     }

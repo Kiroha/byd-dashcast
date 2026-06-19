@@ -72,6 +72,10 @@ public class ClusterManager {
     private static final long CLUSTER_DISPLAY_TIMEOUT_MS = 12000;
     // Polling interval to detect the virtual display
     private static final long POLL_INTERVAL_MS = 500;
+    // Grace period after the 12s timeout during which we keep watching for slow VD creation.
+    // Some firmware variants (e.g. DiLink 4.0) take longer than 12s. Zero impact on
+    // DL3/DL5 where the VD appears in time and this watcher is never armed.
+    private static final long LATE_ARRIVAL_GRACE_MS = 60_000;
 
     // ────────────────────────────────────────────────────────────────────────
     // v1.2.78 — Qt projection state tracker.
@@ -120,6 +124,9 @@ public class ClusterManager {
     public interface DisplayReadyCallback {
         void onDisplayReady(Display display, int displayId);
         void onDisplayTimeout();
+        /** Called if the VirtualDisplay appears after the initial timeout fires.
+         *  Implementors must guard against stop() having been called. */
+        default void onDisplayLateReady(Display display, int displayId) {}
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -131,6 +138,11 @@ public class ClusterManager {
     // can unregister it even if no display ever appeared.
     private DisplayManager.DisplayListener mActiveDisplayListener = null;
     private DisplayManager               mActiveDisplayManager   = null;
+
+    // Late-arrival listener — registered after the 12s timeout to catch slow VD creation.
+    // Kept separate from mActiveDisplayListener so cancel() clears both independently.
+    private DisplayManager.DisplayListener mLateArrivalListener = null;
+    private DisplayManager               mLateArrivalManager   = null;
 
     public ClusterManager(Context context) {
         mContext = context.getApplicationContext();
@@ -362,6 +374,11 @@ public class ClusterManager {
                 AppLogger.w(TAG, "Timeout: cluster VirtualDisplay not detected after "
                         + timeoutMs + "ms");
                 callback.onDisplayTimeout();
+                // Keep watching quietly for slow firmware variants (e.g. DiLink 4.0).
+                // onDisplayLateReady fires if the VD eventually appears within the grace period.
+                // This branch is never reached on DL5 (early return above) or when the
+                // VD appears in time (onDisplayReady fires first, cancelling this Runnable).
+                armLateArrivalWatch(dm, callback);
             }
         }, timeoutMs);
     }
@@ -394,6 +411,83 @@ public class ClusterManager {
             }
         };
         mHandler.postDelayed(pollRunnable, delayMs == 0 ? POLL_INTERVAL_MS : delayMs);
+    }
+
+    // ── Late arrival watcher ──────────────────────────────────────────────────
+
+    /**
+     * Arms a background DisplayListener + polling loop after the initial timeout fires.
+     * If the cluster VirtualDisplay eventually appears within LATE_ARRIVAL_GRACE_MS,
+     * {@link DisplayReadyCallback#onDisplayLateReady} is called exactly once.
+     *
+     * Cleared by {@link #cancel()} — so a stop() or a fresh activateClusterDisplay()
+     * always cleans up before starting a new sequence.
+     */
+    private void armLateArrivalWatch(final DisplayManager dm,
+                                      final DisplayReadyCallback callback) {
+        // One-shot: prevents both the DisplayListener and the polling loop from firing.
+        final boolean[] consumed = {false};
+
+        final Runnable expiry = new Runnable() {
+            @Override public void run() {
+                if (consumed[0]) return;
+                consumed[0] = true;
+                if (mLateArrivalManager != null && mLateArrivalListener != null) {
+                    mLateArrivalManager.unregisterDisplayListener(mLateArrivalListener);
+                    mLateArrivalListener = null;
+                    mLateArrivalManager = null;
+                }
+                AppLogger.d(TAG, "Late arrival grace period expired — no VD appeared");
+            }
+        };
+
+        final DisplayManager.DisplayListener[] holder = new DisplayManager.DisplayListener[1];
+        holder[0] = new DisplayManager.DisplayListener() {
+            @Override public void onDisplayAdded(int displayId) {
+                if (consumed[0]) return;
+                Display d = dm.getDisplay(displayId);
+                if (!isClusterDisplay(d)) return;
+                consumed[0] = true;
+                mHandler.removeCallbacks(expiry);
+                dm.unregisterDisplayListener(holder[0]);
+                mLateArrivalListener = null;
+                mLateArrivalManager  = null;
+                AppLogger.i(TAG, "Late arrival: cluster VD appeared — id=" + displayId);
+                notifyProjectionActive();
+                callback.onDisplayLateReady(d, displayId);
+            }
+            @Override public void onDisplayRemoved(int displayId) {}
+            @Override public void onDisplayChanged(int displayId) {}
+        };
+        mLateArrivalManager = dm;
+        mLateArrivalListener = holder[0];
+        dm.registerDisplayListener(holder[0], mHandler);
+
+        // Polling fallback: onDisplayAdded is not always fired for cross-process VDs.
+        final long deadline = android.os.SystemClock.uptimeMillis() + LATE_ARRIVAL_GRACE_MS;
+        mHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (consumed[0]) return;
+                Display found = findClusterDisplay(dm);
+                if (found != null) {
+                    consumed[0] = true;
+                    mHandler.removeCallbacks(expiry);
+                    if (mLateArrivalManager != null && mLateArrivalListener != null) {
+                        mLateArrivalManager.unregisterDisplayListener(mLateArrivalListener);
+                        mLateArrivalListener = null;
+                        mLateArrivalManager  = null;
+                    }
+                    AppLogger.i(TAG, "Late arrival (poll): cluster VD id=" + found.getDisplayId());
+                    notifyProjectionActive();
+                    callback.onDisplayLateReady(found, found.getDisplayId());
+                } else if (android.os.SystemClock.uptimeMillis() < deadline) {
+                    mHandler.postDelayed(this, 2000);
+                }
+            }
+        }, 2000);
+
+        AppLogger.i(TAG, "Late arrival watch armed ("
+                + LATE_ARRIVAL_GRACE_MS / 1000 + "s grace)");
     }
 
     // ── Warm path helper ──────────────────────────────────────────────────────
@@ -604,6 +698,11 @@ public class ClusterManager {
             mActiveDisplayManager.unregisterDisplayListener(mActiveDisplayListener);
             mActiveDisplayListener = null;
             mActiveDisplayManager  = null;
+        }
+        if (mLateArrivalManager != null && mLateArrivalListener != null) {
+            mLateArrivalManager.unregisterDisplayListener(mLateArrivalListener);
+            mLateArrivalListener = null;
+            mLateArrivalManager  = null;
         }
         AppLogger.d(TAG, "cancel() — Handler and DisplayListener cancelled");
     }
