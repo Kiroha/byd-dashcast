@@ -293,8 +293,9 @@ android {
         // 451 = 1.6.10-beta (DX_BYD_AUTO "App not shown": layerStack race + display=-1 + daemon binder lost after onStop).
         // 452 = 1.6.11-beta (DiLink4.0 black screen: late-arrival watcher (armLateArrivalWatch) for slow VD creation >12s).
         // 453 = 1.6.12-beta (DiLink5.0 wrong mirror size on cold start: restart mirror on SurfaceTexture size change).
-        versionCode 453
-        versionName "1.6.12-beta"
+        // 454 = 1.6.13-beta (DiLink3.0 black screen: daemon mirror killed by ClusterManager timeout via showAppList + onServiceConnected race fix).
+        versionCode 454
+        versionName "1.6.13-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
