@@ -302,8 +302,9 @@ android {
         // 460 = 1.6.19-beta (DiLink3.0 wrong FREEFORM bounds after portrait app: normalize VirtualDisplay dimensions to enforce landscape).
         // 461 = 1.6.20-beta (DX_BYD_AUTO app not shown: use IAM path for DL5 launch; fix double mirror-daemon start on fresh boot).
         // 462 = 1.6.21-beta (i18n: all 11 locales translated to 100% — diag/hotspot/watchdog/settings/sysinfo; AppLogger migrated to Kotlin).
-        versionCode 462
-        versionName "1.6.21-beta"
+        // 463 = 1.6.22-beta (DX_BYD_AUTO app not shown: shell fallback without --windowingMode when IAM reflection fails on real HDMI display).
+        versionCode 463
+        versionName "1.6.22-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
