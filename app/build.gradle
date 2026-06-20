@@ -310,8 +310,9 @@ android {
         // 468 = 1.6.27-beta (Kotlin migration lot 3a: ui/log — LogActivity + LogAdapter converted to Kotlin — behaviour unchanged).
         // 469 = 1.6.28-beta (Kotlin migration lot 3b: SettingsActivity converted to Kotlin — behaviour unchanged).
         // 470 = 1.6.29-beta (Kotlin migration lot 3c: HotspotActivity + SysInfoActivity converted to Kotlin — lot 3 done, behaviour unchanged).
-        versionCode 470
-        versionName "1.6.29-beta"
+        // 471 = 1.6.30-beta (Kotlin migration lot 2 bis: app-list adapters — AppListAdapter + AppActionSheet + AppListCoordinator converted to Kotlin — behaviour unchanged).
+        versionCode 471
+        versionName "1.6.30-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
