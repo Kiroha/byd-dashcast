@@ -100,10 +100,20 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Adapters (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) **gardés pour un lot ultérieur** — zone modifiée activement par l'utilisateur.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 quinquies. Réalisé — lot 3a (`ui/log`)
+
+- ✅ `LogActivity.java` + `LogAdapter.java` → `.kt` (première Activity + RecyclerView.Adapter convertis ; consommateurs de l'API AppLogger).
+- Views via `lateinit` (présentes dans le layout) ; vues navrail optionnelles en `View?` ; `mLevelFilter: AppLogger.Level?` nullable ; `Runnable` anonyme (auto-référence `this` dans `postDelayed`).
+- Pièges traités : `regionMatches` réordonné (signature Kotlin ≠ Java) ; `e.threadName != null` (toujours vrai, Entry.threadName non-null) remplacé par `!= "main"` ; `-1L` explicite pour les `Long` ; `when` exhaustif sur `Level` (le `case INFO/default` Java).
+- Le nom qualifié de l'Activity est inchangé → manifest + `LogActivity.class` (8 call sites Java) et `Intent(..., LogActivity::class.java)` continuent de fonctionner.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
+| 3b | `SettingsActivity` (660 l) | build + test manuel réglages |
+| 3c | `HotspotActivity` (849 l) + `SysInfoActivity` (1435 l) | build + test manuel hotspot/sysinfo |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
