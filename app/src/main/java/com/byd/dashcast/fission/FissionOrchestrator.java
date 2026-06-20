@@ -115,6 +115,48 @@ public final class FissionOrchestrator {
     @SuppressWarnings("unused")
     private static FissionOrchestrator sAutoStartOrchestrator;
 
+    /** Listener notified (on the main thread) when the headless orchestrator's slot set changes. */
+    public interface LayoutChangeListener { void onLayoutPackagesChanged(); }
+
+    private static volatile LayoutChangeListener sLayoutChangeListener;
+
+    /** Registers a UI listener for headless layout slot changes (MainActivity onStart). */
+    public static void setLayoutChangeListener(LayoutChangeListener l) { sLayoutChangeListener = l; }
+
+    /** Fires the registered layout-change listener on the main thread (if any). */
+    private static void notifyLayoutChanged() {
+        final LayoutChangeListener l = sLayoutChangeListener;
+        if (l != null) new Handler(Looper.getMainLooper()).post(l::onLayoutPackagesChanged);
+    }
+
+    /**
+     * Snapshot of the package names currently projected by the headless auto-start
+     * orchestrator (the layout-launch path). Empty when no layout is active.
+     */
+    public static java.util.Set<String> getActiveLayoutPackages() {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null) return java.util.Collections.emptySet();
+        java.util.Set<String> pkgs = new HashSet<>();
+        for (SlotState s : o.getSlots()) {
+            if (s.pkg != null && !s.pkg.isEmpty()) pkgs.add(s.pkg);
+        }
+        return pkgs;
+    }
+
+    /** True when {@code pkg} is currently projected by the headless layout orchestrator. */
+    public static boolean isLayoutPackage(String pkg) {
+        return pkg != null && getActiveLayoutPackages().contains(pkg);
+    }
+
+    /**
+     * Kills a single layout slot: moves the app back to display 0, releases its VD and
+     * force-stops it (via {@link #releaseSlotAsync}). No-op when no layout is active.
+     */
+    public static void killLayoutSlot(String pkg) {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o != null && pkg != null) o.releaseSlotAsync(pkg);
+    }
+
     /**
      * True only when ClusterService has an app actively projected (mProjectionActive == true).
      * Unlike sIsRunning, this returns false as soon as stopProjectionNoAdb() is called —
@@ -160,7 +202,7 @@ public final class FissionOrchestrator {
             }
         };
         Callbacks headless = new Callbacks() {
-            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) {}
+            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) { notifyLayoutChanged(); }
             @Override public void onDaemonBinderAcquired(IBinder binder) {}
             @Override public void onStatusMessage(String message) {
                 if (message != null) AppLogger.d(TAG, "auto-start: " + message);
@@ -236,7 +278,7 @@ public final class FissionOrchestrator {
             }
         };
         Callbacks headless = new Callbacks() {
-            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) {}
+            @Override public void onSlotsChanged(java.util.Collection<SlotState> slots) { notifyLayoutChanged(); }
             @Override public void onDaemonBinderAcquired(IBinder binder) {}
             @Override public void onStatusMessage(String msg) {
                 if (msg != null) AppLogger.d(TAG, "launch-layout: " + msg);
@@ -264,6 +306,7 @@ public final class FissionOrchestrator {
         if (o != null) {
             AppLogger.i(TAG, "stopping headless auto-start orchestrator");
             o.stopAll();
+            notifyLayoutChanged();
         }
     }
 

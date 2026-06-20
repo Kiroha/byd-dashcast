@@ -724,6 +724,13 @@ public class MainActivity extends AppCompatActivity
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
                 .registerReceiver(mVoiceCommandReceiver,
                         new IntentFilter(VoiceCommandRouter.ACTION_VOICE_COMMAND));
+
+        // Reflect fission-layout apps in the app list (indicator + long-press kill).
+        // The headless orchestrator launches asynchronously, so listen for slot changes
+        // while the Activity is in the foreground and sync the current set now.
+        com.byd.dashcast.fission.FissionOrchestrator.setLayoutChangeListener(
+                this::refreshLayoutPackages);
+        refreshLayoutPackages();
     }
 
     @Override
@@ -757,6 +764,9 @@ public class MainActivity extends AppCompatActivity
         if (mServiceBound && mClusterService != null) {
             mClusterService.setListener(null);
         }
+        // Detach the fission layout listener — only the foreground Activity drives the
+        // app-list indicators, and the static reference would otherwise leak this Activity.
+        com.byd.dashcast.fission.FissionOrchestrator.setLayoutChangeListener(null);
         try {
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
                     .unregisterReceiver(mVoiceCommandReceiver);
@@ -1203,6 +1213,16 @@ public class MainActivity extends AppCompatActivity
 
     /** Performs the actual force-stop after the user confirmed. */
     private void doKillApp(final AppInfo app) {
+        // Fission-layout app: route through the orchestrator so its VD slot is released
+        // (move to display 0 + release VD + force-stop). The classic ClusterService path
+        // below doesn't know about the fission VD and would leave the slot allocated.
+        if (app.packageName != null
+                && com.byd.dashcast.fission.FissionOrchestrator.isLayoutPackage(app.packageName)) {
+            AppLogger.log(TAG, "doKillApp: fission layout slot — " + app.packageName);
+            com.byd.dashcast.fission.FissionOrchestrator.killLayoutSlot(app.packageName);
+            return;
+        }
+
         // 1. If the app is still on the cluster (mCurrentDashboardPkg matches),
         //    we do NOT stop projection or restore anything. We just kill it in memory.
         final boolean isOnCluster = mCurrentDashboardPkg != null
@@ -1502,6 +1522,12 @@ public class MainActivity extends AppCompatActivity
         ClusterPrefs.setClusterName(this, null);
         mAppListCoordinator.setCurrentPackage(null);
 
+        // Fission layout apps live on dedicated VD slots tracked by the headless
+        // orchestrator, not by mSessionTracker — stop them too so they are moved back
+        // to display 0 and force-stopped (otherwise they stay stranded on their VDs
+        // and cannot be relaunched on the main display).
+        com.byd.dashcast.fission.FissionOrchestrator.stopAutoOrchestrator();
+
         // v1.2.81 — unified stop semantics: every cluster-occupying app (main +
         // split second) is now moved back to display 0 AND force-stopped (am
         // force-stop + task remove) before sendInfo(18) is dispatched, mirroring
@@ -1677,6 +1703,9 @@ public class MainActivity extends AppCompatActivity
         ClusterPrefs.setClusterPkg(this, null);
         ClusterPrefs.setClusterName(this, null);
         mAppListCoordinator.setCurrentPackage(null);
+
+        // Stop fission layout apps too (see restoreBydDashboard for rationale).
+        com.byd.dashcast.fission.FissionOrchestrator.stopAutoOrchestrator();
 
         // v1.2.81 — see restoreBydDashboard for the unified eviction rationale.
         mSessionTracker.moveToMainDisplay(mServiceBound ? mClusterService : null);
@@ -1949,6 +1978,19 @@ public class MainActivity extends AppCompatActivity
     @Override
     public String getMainDisplayPkg() {
         return mMainDisplayPkg;
+    }
+
+    @Override
+    public java.util.Set<String> getLayoutPkgs() {
+        return com.byd.dashcast.fission.FissionOrchestrator.getActiveLayoutPackages();
+    }
+
+    /** Pushes the current fission-layout package set to the app list (indicators + actions). */
+    private void refreshLayoutPackages() {
+        if (mAppListCoordinator != null) {
+            mAppListCoordinator.setLayoutPackages(
+                    com.byd.dashcast.fission.FissionOrchestrator.getActiveLayoutPackages());
+        }
     }
 
     // ── OverflowMenuHelper.Host ───────────────────────────────────────────────
