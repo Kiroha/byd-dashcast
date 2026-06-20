@@ -125,11 +125,24 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Couleurs ARGB en `private val … .toInt()` (interdit en `const`) ; `@Suppress("DEPRECATION")` sur `getPackageInfo`/`getApplicationInfo` (API 29) ; `Uri.parse` → `String.toUri` ; `@SuppressLint("SetTextI18n")` ciblé sur le compteur de clients (entier pur ; le lint Kotlin est plus strict que le Java sur `.toString()`).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 octies. Réalisé — lot 3c-2 (`ui/diag/SysInfoActivity`) — fin du lot 3
+
+- ✅ `SysInfoActivity.java` → `.kt` (1435 l ; **le plus gros fichier converti**). Génération de rapport diagnostic sur executor, réflexion BYD (Class.forName + invoke), 4 `ThreadLocal<SimpleDateFormat>`, caches `ConcurrentHashMap`, callbacks ADB imbriqués, construction dynamique de lignes de services.
+- `@Suppress("DEPRECATION")` + `@SuppressLint("SetTextI18n")` au niveau classe (comme le Java) ; `ThreadLocal.get()!!` documenté ; caches/patterns/helpers statiques → `companion object`.
+- Pièges traités : variable `val` Java → `value` (mot réservé Kotlin) ; **conflit `Process`** (`android.os.Process` importé vs `java.lang.Process` de `ProcessBuilder`) → type local qualifié ; `when` sur `AppLogger.Level` ; les 2 surcharges `addServiceRow` fusionnées via `alwaysClickable: Boolean = false` ; checks morts retirés (`addServiceRow` retourne un `View` non-null) ; `v.toString()` réflexion → passé directement à `String.format` (gère null).
+- Callbacks `AdbLocalClient.Callback` params nullable (`String?`) avec usages adaptés (`raw ?: ""`, `out?.trim()`).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
+**Lot 3 (activities secondaires) terminé** : ui/log, Settings, Hotspot, SysInfo — toutes en Kotlin. 17 fichiers Kotlin au total.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 3c-2 | `SysInfoActivity` (1435 l) | build + test manuel sysinfo |
+| 4 | `MainActivity` (~2000 l, après extraction de contrôleurs) | run terrain DL3 |
+| 2 bis | Adapters liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | test manuel liste d'apps |
+| 5 | `cluster/`, `infrastructure/` (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
+| 6 (option) | proxy/daemon + TestRunners | batteries diag |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
