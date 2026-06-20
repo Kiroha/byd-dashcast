@@ -33,6 +33,8 @@ public final class AppActionSheet {
         String getCurrentClusterPkg();
         /** Package last sent to the main display. */
         String getMainDisplayPkg();
+        /** Packages currently projected via a fission layout (headless orchestrator). */
+        java.util.Set<String> getLayoutPkgs();
         void onSendToDashboard(AppInfo app);
         void onSendToMain(AppInfo app);
         void onKillApp(AppInfo app);
@@ -84,10 +86,17 @@ public final class AppActionSheet {
                 && app.packageName.equals(host.getCurrentClusterPkg());
         final boolean isOnMain = app.packageName != null
                 && app.packageName.equals(host.getMainDisplayPkg());
+        // Fission-layout app: projected on the cluster via the headless orchestrator, on a
+        // dedicated VD slot. The classic move-to-main / move-to-cluster / resize actions go
+        // through ClusterService and don't know about the fission VD, so only expose kill
+        // (routed to FissionOrchestrator.killLayoutSlot via host.onKillApp).
+        java.util.Set<String> layoutPkgs = host.getLayoutPkgs();
+        final boolean isLayout = app.packageName != null
+                && layoutPkgs != null && layoutPkgs.contains(app.packageName);
         rowToMain.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        rowToClus.setVisibility(isOnMain || (!isActive && !isOnMain) ? View.VISIBLE : View.GONE);
+        rowToClus.setVisibility((!isActive && !isLayout) ? View.VISIBLE : View.GONE);
         rowResize.setVisibility(isActive ? View.VISIBLE : View.GONE);
-        rowKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+        rowKill.setVisibility((isActive || isOnMain || isLayout) ? View.VISIBLE : View.GONE);
 
         rowToMain.setOnClickListener(vv -> { host.onSendToMain(app); dialog.dismiss(); });
         rowToClus.setOnClickListener(vv -> { host.onSendToDashboard(app); dialog.dismiss(); });

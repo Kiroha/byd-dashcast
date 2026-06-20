@@ -35,6 +35,8 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
     private final OnSendToDashboardListener mListener;
     private String mCurrentPackage = null;
     private String mMainPackage = null;
+    /** Packages currently projected via a fission layout (headless orchestrator). */
+    private java.util.Set<String> mLayoutPackages = java.util.Collections.emptySet();
 
     /** v0.9.72 — exposed for the long-press bottom sheet. */
     public String getCurrentPackage() { return mCurrentPackage; }
@@ -157,6 +159,21 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
         notifyPackageChanged(old);
         notifyPackageChanged(packageName);
     }
+
+    /**
+     * Updates the set of packages projected via a fission layout. Refreshes only the
+     * rows whose membership changed (union of the previous and new sets).
+     */
+    public void setLayoutPackages(java.util.Set<String> packages) {
+        java.util.Set<String> next = (packages != null)
+                ? new java.util.HashSet<>(packages) : java.util.Collections.<String>emptySet();
+        java.util.Set<String> changed = new java.util.HashSet<>(mLayoutPackages);
+        changed.addAll(next);
+        mLayoutPackages = next;
+        for (String pkg : changed) notifyPackageChanged(pkg);
+    }
+
+    public java.util.Set<String> getLayoutPackages() { return mLayoutPackages; }
 
     private void notifyPackageChanged(String packageName) {
         if (packageName == null) return;
@@ -306,9 +323,14 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
 
         boolean isActive = app.packageName != null && app.packageName.equals(mCurrentPackage);
         boolean isOnMain = app.packageName != null && app.packageName.equals(mMainPackage);
-        
+        // A fission-layout app is shown as "active" (indicator + green tint) and exposes
+        // the kill action — but NOT the classic move-to-main/cluster buttons, whose
+        // ClusterService path doesn't know about the fission VD slots.
+        boolean isLayout = app.packageName != null && mLayoutPackages.contains(app.packageName);
+
         if (holder.viewActiveIndicator != null) {
-            holder.viewActiveIndicator.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+            holder.viewActiveIndicator.setVisibility(
+                    (isActive || isOnMain || isLayout) ? View.VISIBLE : View.GONE);
         }
         // v0.9.72 \u2014 in grid mode keep tiles minimal: icon + name + favorite badge + active dot.
         // All actions (auto-launch, move-to-main/cluster, kill) live in the long-press bottom sheet.
@@ -326,14 +348,14 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHold
                 holder.btnToCluster.setVisibility(isOnMain ? View.VISIBLE : View.GONE);
             }
             if (holder.btnKill != null) {
-                holder.btnKill.setVisibility((isActive || isOnMain) ? View.VISIBLE : View.GONE);
+                holder.btnKill.setVisibility((isActive || isOnMain || isLayout) ? View.VISIBLE : View.GONE);
             }
         }
 
         // Subtle background tint on the active row — preserves the ripple via setForeground().
         // Skipped when the holder already shows the right state: newDrawable()
         // allocates, and at most two rows ever change state per update.
-        int fgState = isActive ? 1 : (isOnMain ? 2 : 0);
+        int fgState = (isActive || isLayout) ? 1 : (isOnMain ? 2 : 0);
         if (holder.lastFgState != fgState) {
             holder.lastFgState = fgState;
             if (fgState == 1) {

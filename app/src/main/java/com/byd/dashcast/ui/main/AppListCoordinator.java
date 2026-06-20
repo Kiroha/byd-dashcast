@@ -184,6 +184,11 @@ public final class AppListCoordinator {
         updateFavoritesIndicators();
     }
 
+    /** Updates the set of packages projected via a fission layout. */
+    public void setLayoutPackages(java.util.Set<String> pkgs) {
+        if (mAdapter != null) mAdapter.setLayoutPackages(pkgs);
+    }
+
     public List<AppInfo> getApps() {
         return mAdapter != null ? mAdapter.getApps() : java.util.Collections.emptyList();
     }
