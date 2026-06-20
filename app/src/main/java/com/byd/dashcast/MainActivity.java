@@ -242,6 +242,24 @@ public class MainActivity extends AppCompatActivity
         // callback. Setting it here ensures that if the user previously marked an app as auto-launch,
         // it is sent to the cluster as soon as the dashboard display becomes available.
         mPendingAutoLaunchPkg = ClusterPrefs.getAutoLaunchPkg(this);
+        // Session-resume: if no explicit auto-launch is set but a previous projection was
+        // interrupted (ClusterSessionTracker preserved the set across process death), treat
+        // the last cluster package as a one-time pending auto-launch so the cluster is
+        // re-activated and the app re-projected on the next cluster-connect callback.
+        // Read the session set HERE — before the cleanup thread below clears it.
+        // Guards: no explicit auto-launch, no fission auto-start (checked in onStart),
+        //         and not in auto-start mode (which manages sessions independently).
+        if (mPendingAutoLaunchPkg == null && !ClusterPrefs.isBootAutoStartEnabled(this)) {
+            java.util.Set<String> prevSession = ClusterPrefs.getSessionClusterPkgs(this);
+            if (!prevSession.isEmpty()) {
+                String lastPkg = ClusterPrefs.getLastClusterPkg(this);
+                mPendingAutoLaunchPkg = (lastPkg != null && prevSession.contains(lastPkg))
+                        ? lastPkg
+                        : prevSession.iterator().next();
+                AppLogger.i(TAG, "session-resume: pending auto-launch « " + mPendingAutoLaunchPkg
+                        + " » from interrupted session (" + prevSession.size() + " app(s))");
+            }
+        }
         if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
             // Defensive: cleanup uses IActivityTaskManager binder reflection per package.
             // With a non-trivial persisted set, calling on the main thread during onCreate
