@@ -135,12 +135,19 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 
 **Lot 3 (activities secondaires) terminé** : ui/log, Settings, Hotspot, SysInfo — toutes en Kotlin. 17 fichiers Kotlin au total.
 
+## 4 nonies. Réalisé — lot 2 bis (adapters liste d'apps)
+
+- ✅ `AppListAdapter.java` → `.kt` (RecyclerView.Adapter ; interface `OnSendToDashboardListener` implémentée par MainActivity Java ; ViewHolder nested ; shortcuts/popup/tints). `getAppAt` en `internal` (nested class non-inner). Couleurs `const val` (positives) + `ConstantState` via KTX `Int.toDrawable()`. `adapterPosition` (recyclerview 1.1.0, pas `bindingAdapterPosition` qui est 1.2.0+).
+- ✅ `AppActionSheet.java` → `.kt` (`object` + `@JvmStatic fun show` appelé par MainActivity ; interface `Host` ; bottom sheet + dialogs DPI). `showDpiDialog`/`showDpiCustomDialog` en `private`.
+- ✅ `AppListCoordinator.java` → `.kt` (`class` ; interface `Host` ; constructeur 10 params dont vues nullable ; `lateinit mAdapter` assigné dans `init`). `dpToPx` mort retiré (le seul utilisé est dans LayoutManagerActivity).
+- Interop : les 3 interfaces (`OnSendToDashboardListener`, `AppActionSheet.Host`, `AppListCoordinator.Host`) restent implémentées par **MainActivity (Java)** — types de retour nullable côté Kotlin, compatibles. KTX adopté (`isVisible`, `toDrawable`) + `@SuppressLint("SetTextI18n")` ciblé.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 4 | `MainActivity` (~2000 l, après extraction de contrôleurs) | run terrain DL3 |
-| 2 bis | Adapters liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | test manuel liste d'apps |
+| 4 | `MainActivity` (~2000 l, implémente déjà les interfaces Kotlin des adapters) | run terrain DL3 |
 | 5 | `cluster/`, `infrastructure/` (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
 | 6 (option) | proxy/daemon + TestRunners | batteries diag |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
