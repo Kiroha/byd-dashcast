@@ -254,6 +254,17 @@ public class AdbLocalClient {
      *  5 s pidof poll on the legacy path paid it twice per tick. */
     private static volatile AdbKeyPair sKeyPair;
 
+    /**
+     * Set to {@code true} the first time {@link #connect(Context)} receives
+     * ECONNREFUSED from {@code Dadb.create()}. Cleared on the first successful
+     * connection. Used by the UI layer to display a one-time warning when ADB
+     * TCP (port 5555) is not accessible on the device (e.g. disabled in ROM).
+     */
+    private static volatile boolean sPortRefused = false;
+
+    /** Returns {@code true} if the last ADB connection attempt was refused (ECONNREFUSED). */
+    public static boolean isAdbPortRefused() { return sPortRefused; }
+
     private static Dadb connect(Context context) throws Exception {
         AdbKeyPair keyPair = sKeyPair;
         if (keyPair == null) {
@@ -275,12 +286,18 @@ public class AdbLocalClient {
         Exception lastE = null;
         while (retries > 0) {
             try {
-                return Dadb.create("localhost", ADB_PORT, keyPair);
+                Dadb d = Dadb.create("localhost", ADB_PORT, keyPair);
+                sPortRefused = false;  // connection succeeded: port is reachable
+                return d;
             } catch (Exception e) {
                 lastE = e;
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                     throw e;
+                }
+                String msg = e.getMessage();
+                if (msg != null && (msg.contains("ECONNREFUSED") || msg.contains("Connection refused"))) {
+                    sPortRefused = true;
                 }
                 AppLogger.w(TAG, "ADB connect exception (popup pending?), retrying in 2s... (" + retries + " left)");
                 try {
