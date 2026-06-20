@@ -183,7 +183,11 @@ public class AdbLocalClient {
             "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
+    private static volatile long sLastDaemonStartMs = 0;
+    public static long getLastDaemonStartMs() { return sLastDaemonStartMs; }
+
     public static void startMirrorDaemon(final Context context) {
+        sLastDaemonStartMs = System.currentTimeMillis();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context)) {

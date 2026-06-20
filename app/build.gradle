@@ -300,8 +300,9 @@ android {
         // 458 = 1.6.17-beta (DL5 fission race: launchOnDashboardWithBounds() aborts if cluster displayId resets to -1 during 500ms delay).
         // 459 = 1.6.18-beta (DL5 mirror black screen after Activity recreate: relaunch mirror daemon in onClusterDisplayConnected when binder was missed).
         // 460 = 1.6.19-beta (DiLink3.0 wrong FREEFORM bounds after portrait app: normalize VirtualDisplay dimensions to enforce landscape).
-        versionCode 460
-        versionName "1.6.19-beta"
+        // 461 = 1.6.20-beta (DX_BYD_AUTO app not shown: use IAM path for DL5 launch; fix double mirror-daemon start on fresh boot).
+        versionCode 461
+        versionName "1.6.20-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
