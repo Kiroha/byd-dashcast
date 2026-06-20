@@ -814,8 +814,19 @@ public class MainActivity extends AppCompatActivity
                         // zombie and relaunches, triggering a fresh broadcast → mDaemonReadyReceiver
                         // fires → onDaemonBinderAvailable() → attemptStart() → mirror restarts.
                         if (mDaemonBinder == null) {
-                            AppLogger.w(TAG, "onClusterDisplayConnected: Activity restored but daemon binder lost — relaunching mirror daemon");
-                            com.byd.dashcast.infrastructure.AdbLocalClient.startMirrorDaemon(MainActivity.this);
+                            long msSinceStart = System.currentTimeMillis()
+                                    - com.byd.dashcast.infrastructure.AdbLocalClient.getLastDaemonStartMs();
+                            if (msSinceStart > 3000) {
+                                // Daemon was running before Activity was recreated but its startup
+                                // broadcast was missed by the new instance — restart to get a fresh one.
+                                AppLogger.w(TAG, "onClusterDisplayConnected: Activity restored but daemon binder lost — relaunching mirror daemon");
+                                com.byd.dashcast.infrastructure.AdbLocalClient.startMirrorDaemon(MainActivity.this);
+                            } else {
+                                // Daemon was just started by ClusterService.startNativeProjection;
+                                // broadcast is in flight — do not restart to avoid killing it.
+                                AppLogger.d(TAG, "onClusterDisplayConnected: daemon start recent ("
+                                        + msSinceStart + "ms ago) — waiting for broadcast");
+                            }
                         }
                     }
                 }

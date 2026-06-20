@@ -554,11 +554,12 @@ public class ClusterService extends Service
                         android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                         opts.setLaunchDisplayId(displayId);
                         if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
-                        if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            startActivityViaShell(packageName, displayId, launchIntent);
-                        } else {
-                            startActivityViaIAM(launchIntent, opts);
-                        }
+                        // Always use IAM path (honours setLaunchDisplayId in ActivityOptions).
+                        // DL5 previously used startActivityViaShell ("am start --display N") which
+                        // is silently ignored on some ROMs (e.g. DX_BYD_AUTO), leaving the app on
+                        // display=0. IAM falls back to startActivity(opts.toBundle()) which still
+                        // carries setLaunchDisplayId and is reliably respected.
+                        startActivityViaIAM(launchIntent, opts);
                         AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                         if (callback != null) callback.onResult(true);
                     } catch (Exception e) {
@@ -628,11 +629,8 @@ public class ClusterService extends Service
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
                     }
-                    if (AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                        startActivityViaShell(packageName, displayId, launchIntent);
-                    } else {
-                        startActivityViaIAM(launchIntent, opts);
-                    }
+                    // Always use IAM path — same rationale as launchOnDashboard.
+                    startActivityViaIAM(launchIntent, opts);
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
                     if (callback != null) callback.onResult(true);
                 } catch (Exception e) {
