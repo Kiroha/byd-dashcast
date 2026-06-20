@@ -116,11 +116,20 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Vues : `lateinit` pour les présentes, `View?`/`CompoundButton?` pour les optionnelles (cbAdasWindowFix, cbCompactAppsPanel, flSafeZone, navrail) avec safe-calls ; `@Volatile mDestroyed` ; écritures prefs via KTX `edit { }` ; `Uri.parse` → `String.toUri` ; `Context.DISPLAY_SERVICE`/`MODE_PRIVATE` qualifiés ; `AdbLocalClient.Callback` override non-null (usage `error.trim()`).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 septies. Réalisé — lot 3c-1 (`ui/hotspot/HotspotActivity`)
+
+- ✅ `HotspotActivity.java` → `.kt` (849 l ; la plus complexe du lot 3 : 3 Handlers/Runnables — watchdog, stats, uptime —, polling ADB, parsing regex de clients).
+- Runnables anonymes → `object : Runnable` (auto-réf `this` dans `postDelayed`) ; callbacks `AdbLocalClient.Callback` params nullable (checks `out != null`).
+- Vues : `lateinit` pour les non-checkées (tvStatus, btnStart/Stop/Toggle/Open, swAutoStartBoot, tvStatRx/Tx), nullable+safe-calls pour les checkées (tvUpdate, swWatchdog, tvWatchdogStatus, clients/uptime).
+- `HClient` (nested) + `parseClients` (parser pur) en `private` (aucun test réel dans le repo) dans le companion ; `Matcher.group(1)` géré `?.`/`?: continue` (pas de `!!`).
+- Couleurs ARGB en `private val … .toInt()` (interdit en `const`) ; `@Suppress("DEPRECATION")` sur `getPackageInfo`/`getApplicationInfo` (API 29) ; `Uri.parse` → `String.toUri` ; `@SuppressLint("SetTextI18n")` ciblé sur le compteur de clients (entier pur ; le lint Kotlin est plus strict que le Java sur `.toString()`).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 3c | `HotspotActivity` (849 l) + `SysInfoActivity` (1435 l) | build + test manuel hotspot/sysinfo |
+| 3c-2 | `SysInfoActivity` (1435 l) | build + test manuel sysinfo |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
