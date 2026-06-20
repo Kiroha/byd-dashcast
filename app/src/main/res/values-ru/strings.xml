@@ -732,4 +732,5 @@
         <item>Предложение</item>
         <item>Другое</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB недоступен (порт 5555) — зеркалирование недоступно на этом устройстве</string>
 </resources>
