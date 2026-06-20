@@ -306,8 +306,9 @@ android {
         // 464 = 1.6.23-beta (DiLink3.0 black screen + fission layout button no-op: FissionOrchestrator used sIsRunning instead of mProjectionActive to detect classic projection, blocking fission after stopProjectionNoAdb while ClusterService was still bound).
         // 465 = 1.6.24-beta (DiLink3.0 content missing on restart: session-resume auto-launch from ClusterSessionTracker when no explicit auto-launch is configured and previous projection was interrupted).
         // 466 = 1.6.25-beta (DiLink3.0 layout-mode: stop projection now evicts fission slot apps to display 0 (killable/relaunchable); app list shows active indicator + long-press kill for layout apps).
-        versionCode 466
-        versionName "1.6.25-beta"
+        // 467 = 1.6.26-beta (Kotlin migration lot 2: AppRepository (app-list data layer) converted to Kotlin — behaviour unchanged).
+        versionCode 467
+        versionName "1.6.26-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
