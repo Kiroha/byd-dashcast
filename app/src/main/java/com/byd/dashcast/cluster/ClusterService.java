@@ -297,6 +297,12 @@ public class ClusterService extends Service
                 if (fh > 0) ch = fh;
             }
         }
+        // Normalize: cluster is always landscape; getRealSize() can report portrait dimensions
+        // after a portrait app triggered a VirtualDisplay rotation on DL3.
+        if (cw > 0 && ch > 0 && ch > cw) {
+            int tmp = cw; cw = ch; ch = tmp;
+            AppLogger.w(TAG, "resizeActiveTask: portrait VD detected — swapped to " + cw + "x" + ch);
+        }
         int insetH = getInsetH(packageName);
         int insetV = getInsetV(packageName);
         Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
@@ -665,6 +671,13 @@ public class ClusterService extends Service
             if (d != null) d.getRealSize(sz);
         } catch (Exception e) {
             AppLogger.w(TAG, "getRealSize: " + e.getMessage());
+        }
+        // Normalize: cluster is always landscape; getRealSize() can report portrait dimensions
+        // after a portrait app (e.g. TikTok) triggered a VirtualDisplay rotation on DL3.
+        if (sz.x > 0 && sz.y > 0 && sz.y > sz.x) {
+            int tmp = sz.x; sz.x = sz.y; sz.y = tmp;
+            AppLogger.w(TAG, "applyClusterFreeformBounds: portrait VD detected — swapped to "
+                    + sz.x + "x" + sz.y);
         }
         int insetH = getInsetH(packageName);
         int insetV = getInsetV(packageName);

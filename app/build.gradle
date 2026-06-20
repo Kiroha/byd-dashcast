@@ -299,8 +299,9 @@ android {
         // 457 = 1.6.16-beta (ADB port 5555 unreachable: show Toast warning at startup instead of silent black screen).
         // 458 = 1.6.17-beta (DL5 fission race: launchOnDashboardWithBounds() aborts if cluster displayId resets to -1 during 500ms delay).
         // 459 = 1.6.18-beta (DL5 mirror black screen after Activity recreate: relaunch mirror daemon in onClusterDisplayConnected when binder was missed).
-        versionCode 459
-        versionName "1.6.18-beta"
+        // 460 = 1.6.19-beta (DiLink3.0 wrong FREEFORM bounds after portrait app: normalize VirtualDisplay dimensions to enforce landscape).
+        versionCode 460
+        versionName "1.6.19-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
