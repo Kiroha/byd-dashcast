@@ -732,4 +732,5 @@
         <item>Vorschlag</item>
         <item>Etwas anderes</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB nicht erreichbar (Port 5555) — Spiegelung auf diesem Gerät nicht verfügbar</string>
 </resources>

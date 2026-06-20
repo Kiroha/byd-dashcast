@@ -733,4 +733,5 @@
         <item>Пропозиція</item>
         <item>Інше</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB недоступний (порт 5555) — дзеркалювання недоступне на цьому пристрої</string>
 </resources>

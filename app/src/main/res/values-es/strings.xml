@@ -732,4 +732,5 @@
         <item>Sugerencia</item>
         <item>Otra cosa</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB inaccesible (puerto 5555) — espejo no disponible en este dispositivo</string>
 </resources>

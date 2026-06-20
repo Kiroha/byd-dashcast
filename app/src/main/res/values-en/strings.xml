@@ -744,4 +744,5 @@
         <item>Suggestion</item>
         <item>Something else</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB unreachable (port 5555) — mirroring unavailable on this device</string>
 </resources>

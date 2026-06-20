@@ -733,5 +733,6 @@
         <item>Taklif</item>
         <item>Boshqa narsa</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB ulanib bo\'lmadi (5555-port) — bu qurilmada ko\'zgu mavjud emas</string>
 </resources>
 

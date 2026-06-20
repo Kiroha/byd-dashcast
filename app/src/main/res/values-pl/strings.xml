@@ -741,4 +741,5 @@
         <item>Sugestia</item>
         <item>Coś innego</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB nieosiągalny (port 5555) — dublowanie niedostępne na tym urządzeniu</string>
 </resources>

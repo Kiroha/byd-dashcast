@@ -732,4 +732,5 @@
         <item>اقتراح</item>
         <item>شيء آخر</item>
     </string-array>
+    <string name="toast_adb_port_refused">ADB غير قابل للوصول (المنفذ 5555) — المرآة غير متوفرة على هذا الجهاز</string>
 </resources>
