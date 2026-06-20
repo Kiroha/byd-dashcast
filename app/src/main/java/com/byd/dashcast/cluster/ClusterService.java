@@ -554,12 +554,16 @@ public class ClusterService extends Service
                         android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                         opts.setLaunchDisplayId(displayId);
                         if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
-                        // Always use IAM path (honours setLaunchDisplayId in ActivityOptions).
-                        // DL5 previously used startActivityViaShell ("am start --display N") which
-                        // is silently ignored on some ROMs (e.g. DX_BYD_AUTO), leaving the app on
-                        // display=0. IAM falls back to startActivity(opts.toBundle()) which still
-                        // carries setLaunchDisplayId and is reliably respected.
-                        startActivityViaIAM(launchIntent, opts);
+                        // Primary: IAM path (honours setLaunchDisplayId in ActivityOptions).
+                        // On DL5 with real HDMI, IAM reflection may fail (NPE) and fall back to
+                        // startActivity(opts) which ignores setLaunchDisplayId on this ROM. If so,
+                        // retry via shell without --windowingMode 5 — that flag caused some ROMs
+                        // to silently ignore --display and fall back to display=0.
+                        boolean iamOk = startActivityViaIAM(launchIntent, opts);
+                        if (!iamOk && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                            AppLogger.w(TAG, "DL5: IAM fell back to startActivity — retrying via shell (no windowingMode)");
+                            startActivityViaShellSimple(packageName, displayId, launchIntent);
+                        }
                         AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                         if (callback != null) callback.onResult(true);
                     } catch (Exception e) {
@@ -629,8 +633,12 @@ public class ClusterService extends Service
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
                     }
-                    // Always use IAM path — same rationale as launchOnDashboard.
-                    startActivityViaIAM(launchIntent, opts);
+                    // Same chain as launchOnDashboard: IAM first, shell simple as DL5 fallback.
+                    boolean iamOkWB = startActivityViaIAM(launchIntent, opts);
+                    if (!iamOkWB && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                        AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — retrying via shell (no windowingMode)");
+                        startActivityViaShellSimple(packageName, displayId, launchIntent);
+                    }
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
                     if (callback != null) callback.onResult(true);
                 } catch (Exception e) {
@@ -701,8 +709,10 @@ public class ClusterService extends Service
         }
     }
 
-    private void startActivityViaIAM(android.content.Intent intent,
-                                      android.app.ActivityOptions opts) {
+    // Returns true if IAM reflection succeeded, false if fell back to startActivity().
+    // Callers on DL5 can use the return value to decide whether to retry via shell.
+    private boolean startActivityViaIAM(android.content.Intent intent,
+                                         android.app.ActivityOptions opts) {
         try {
             Class<?> amClass        = Class.forName("android.app.ActivityManager");
             Object   iam            = amClass.getMethod("getService").invoke(null);
@@ -716,10 +726,41 @@ public class ClusterService extends Service
                     android.os.Bundle.class, int.class)
                 .invoke(iam, null, getPackageName(), intent,
                     null, null, null, 0, 0, null, opts.toBundle(), -2);
+            return true;
         } catch (Exception ex) {
             AppLogger.w(TAG, "startActivityViaIAM → fallback context: " + ex.getMessage());
             startActivity(intent, opts.toBundle());
+            return false;
         }
+    }
+
+    // DL5 shell fallback used when IAM reflection fails and startActivity() ignores
+    // setLaunchDisplayId on a real HDMI secondary display (e.g. DX_BYD_AUTO).
+    // Intentionally omits --windowingMode 5: some ROMs silently reject --display N
+    // when FREEFORM mode is requested on a display that does not support it, causing
+    // the app to land on display=0 instead.
+    private void startActivityViaShellSimple(String packageName, int displayId,
+                                              android.content.Intent launchIntent) {
+        android.content.ComponentName cn = (launchIntent != null)
+                ? launchIntent.getComponent() : null;
+        if (cn == null) {
+            AppLogger.e(TAG, "startActivityViaShellSimple: no component for " + packageName);
+            return;
+        }
+        String component = cn.getPackageName() + "/" + cn.getClassName();
+        final String cmd = "am force-stop " + packageName + " 2>&1; "
+                + "am start --display " + displayId
+                + " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+                + " -n " + component + " 2>&1";
+        AppLogger.i(TAG, "DL5 shell fallback (no windowingMode): " + cmd);
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.i(TAG, "DL5 shell fallback → " + (out == null ? "" : out.trim()));
+            }
+            @Override public void onError(String err) {
+                AppLogger.e(TAG, "DL5 shell fallback ERROR: " + err);
+            }
+        });
     }
 
     private void startActivityViaShell(String packageName, int displayId,
