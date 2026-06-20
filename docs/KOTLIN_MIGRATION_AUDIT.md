@@ -108,11 +108,18 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Le nom qualifié de l'Activity est inchangé → manifest + `LogActivity.class` (8 call sites Java) et `Intent(..., LogActivity::class.java)` continuent de fonctionner.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 sexies. Réalisé — lot 3b (`ui/settings/SettingsActivity`)
+
+- ✅ `SettingsActivity.java` → `.kt` (660 l ; écran réglages).
+- **17 constantes publiques `PREF_*`/`DEFAULT_*`** (consommées par ~12 classes Java : MainActivity, BootReceiver, ClusterService, HotspotActivity, UpdateChecker…) déplacées en `const val` dans un `companion object` → toujours accessibles `SettingsActivity.PREF_X` depuis Java. Les `const val` qui délèguent à `ClusterPrefs.X` compilent car ces dernières sont aussi `const val`.
+- `PREF_CLUSTER_TYPE`/`DEFAULT_CLUSTER_TYPE`/`PREF_VISUAL_OVERSCAN_MODE` (internes, grep-vérifié) passés `private const val`.
+- Vues : `lateinit` pour les présentes, `View?`/`CompoundButton?` pour les optionnelles (cbAdasWindowFix, cbCompactAppsPanel, flSafeZone, navrail) avec safe-calls ; `@Volatile mDestroyed` ; écritures prefs via KTX `edit { }` ; `Uri.parse` → `String.toUri` ; `Context.DISPLAY_SERVICE`/`MODE_PRIVATE` qualifiés ; `AdbLocalClient.Callback` override non-null (usage `error.trim()`).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 3b | `SettingsActivity` (660 l) | build + test manuel réglages |
 | 3c | `HotspotActivity` (849 l) + `SysInfoActivity` (1435 l) | build + test manuel hotspot/sysinfo |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
