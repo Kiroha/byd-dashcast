@@ -90,11 +90,21 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `ThreadLocal.withInitial` + `!!` documenté aux 2 call sites (jamais null par construction) ; `@Suppress("DEPRECATION")` sur `shareReportToTelegram` (`getPackageInfo(String,int)` obligatoire en API 29).
 - Vérif : compile forcée 0 warning sur AppLogger, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 quater. Réalisé — lot 2 (data) — `data/apps/AppRepository`
+
+- ✅ `AppRepository.java` → `.kt` (`class` instanciable, 1 instance dans MainActivity). Concurrence préservée : executor mono-thread daemon (`Thread(...).apply { isDaemon = true }`), `@Volatile mCachedApps`, `Handler(mainLooper)`, `submit(Runnable { … })` explicite (évite l'ambiguïté Callable).
+- `Callback` → `fun interface` (SAM, implémentée par lambdas Java dans MainActivity/AppListCoordinator).
+- Nullabilité fidèle : `setFavorite(packageName: String)` non-null (toujours déréférencé) ; `setAutoLaunch(packageName: String?)` nullable pour préserver le contrat « enable=false pour effacer » (court-circuit `enable && pkg == …`) ; `icon: Drawable?` (loadIcon peut renvoyer null) ; `getApps()` jamais null (`?: emptyList()`).
+- Champs `AppInfo` mutés via `@JvmField` ; tri `sortWith` à 4 niveaux identique (catégorie → favori → launchCount desc → `compareTo(ignoreCase=true)`).
+- `@Suppress("DEPRECATION")` sur `queryPackageManager` (`queryIntentActivities(Intent,int)` obligatoire en API 29).
+- Adapters (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) **gardés pour un lot ultérieur** — zone modifiée activement par l'utilisateur.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 2 | data/apps/AppRepository + adapters UI simples | build + test manuel liste d'apps |
+| 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
 | 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
 | 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
 | 5 | cluster/, infrastructure/ (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
