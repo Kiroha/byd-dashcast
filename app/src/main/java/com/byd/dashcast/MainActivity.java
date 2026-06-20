@@ -808,6 +808,15 @@ public class MainActivity extends AppCompatActivity
                         updateControlLabel();
                         showMirrorView(); // makes panelClusterControl visible
                         AppLogger.i(TAG, "cluster active app restored: " + _pkg);
+                        // Mirror daemon binder is delivered only via startup broadcast. If the
+                        // Activity was recreated after that broadcast was sent, the new receiver
+                        // misses it and mDaemonBinder stays null. startMirrorDaemon() kills any
+                        // zombie and relaunches, triggering a fresh broadcast → mDaemonReadyReceiver
+                        // fires → onDaemonBinderAvailable() → attemptStart() → mirror restarts.
+                        if (mDaemonBinder == null) {
+                            AppLogger.w(TAG, "onClusterDisplayConnected: Activity restored but daemon binder lost — relaunching mirror daemon");
+                            com.byd.dashcast.infrastructure.AdbLocalClient.startMirrorDaemon(MainActivity.this);
+                        }
                     }
                 }
 
