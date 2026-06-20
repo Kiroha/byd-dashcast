@@ -601,10 +601,18 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
+    /** Shown at most once per process — avoids repeating on every onStart() cycle. */
+    private static boolean sAdbWarningShown = false;
+
     @Override
     protected void onStart() {
         super.onStart();
         AppLogger.lifecycle(getClass().getSimpleName(), "onStart");
+        if (AdbLocalClient.isAdbPortRefused() && !sAdbWarningShown) {
+            sAdbWarningShown = true;
+            Toast.makeText(getApplicationContext(),
+                    R.string.toast_adb_port_refused, Toast.LENGTH_LONG).show();
+        }
         if (mPermissionBannerCoordinator != null) mPermissionBannerCoordinator.refresh();
         // Refresh category filter visibility (may have been toggled in Settings)
         boolean showFilters = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

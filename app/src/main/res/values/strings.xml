@@ -142,6 +142,7 @@
     <string name="hud_notif_banner_body">DashCast doit pouvoir lire les notifications pour afficher les instructions de navigation sur le cluster. Activez l\'accès dans Paramètres → Accès spéciaux → Accès aux notifications → DashCast.</string>
     <string name="hud_notif_banner_toast_enabled">Accès aux notifications activé ✓</string>
     <string name="toast_activate_timeout">Cluster injoignable — réessayez</string>
+    <string name="toast_adb_port_refused">ADB unreachable (port 5555) — mirroring unavailable on this device</string>
     <string name="dialog_reconnect_title">Relancer l\'app ?</string>
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
     <string name="dialog_reconnect_yes">↺ Relancer</string>
