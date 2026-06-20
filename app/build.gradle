@@ -297,8 +297,9 @@ android {
         // 455 = 1.6.14-beta (DiLink3.0 black screen: showAppList() keepalive for daemon mirror on layerStack=2 fallback).
         // 456 = 1.6.15-beta (DiLink3.0 mirror killed by onStop: extend keepalive guard to onStop(), same condition as showAppList()).
         // 457 = 1.6.16-beta (ADB port 5555 unreachable: show Toast warning at startup instead of silent black screen).
-        versionCode 457
-        versionName "1.6.16-beta"
+        // 458 = 1.6.17-beta (DL5 fission race: launchOnDashboardWithBounds() aborts if cluster displayId resets to -1 during 500ms delay).
+        versionCode 458
+        versionName "1.6.17-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",

@@ -578,6 +578,12 @@ public class ClusterService extends Service
                 + " [" + left + "," + top + "," + right + "," + bottom + "]");
         mMainHandler.postDelayed(() -> {
             final int displayId = mDisplayHelper.getKnownClusterDisplayId();
+            if (displayId <= 0) {
+                AppLogger.w(TAG, "launchOnDashboardWithBounds: cluster display not ready (id="
+                        + displayId + ") — aborting launch for " + packageName);
+                if (callback != null) callback.onResult(false);
+                return;
+            }
             if (displayId > 0) {
                 try {
                     com.byd.dashcast.proxy.ProxyClient.cleanFissionStacks(displayId);
