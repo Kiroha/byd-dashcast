@@ -116,6 +116,17 @@ public final class FissionOrchestrator {
     private static FissionOrchestrator sAutoStartOrchestrator;
 
     /**
+     * True only when ClusterService has an app actively projected (mProjectionActive == true).
+     * Unlike sIsRunning, this returns false as soon as stopProjectionNoAdb() is called —
+     * even if the service is still bound by MainActivity.
+     */
+    private static boolean isClassicProjectionActive() {
+        com.byd.dashcast.cluster.ClusterService cs =
+                com.byd.dashcast.cluster.ClusterService.getInstance();
+        return cs != null && cs.isProjectionActive();
+    }
+
+    /**
      * Launch-time entry point: when "auto favourite layout" is enabled, activates the
      * cluster projection and the favourite layout (which then launches the bound apps)
      * as soon as DashCast starts — without requiring the user to open the Fission screen.
@@ -130,7 +141,7 @@ public final class FissionOrchestrator {
         if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
         LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
         if (fav == null) return;
-        if (com.byd.dashcast.cluster.ClusterService.sIsRunning) {
+        if (isClassicProjectionActive()) {
             AppLogger.d(TAG, "auto-start skipped: classic projection already active");
             return;
         }
@@ -139,7 +150,7 @@ public final class FissionOrchestrator {
 
         ProjectionStateProvider psp = new ProjectionStateProvider() {
             @Override public boolean isProjectionActive() {
-                return com.byd.dashcast.cluster.ClusterService.sIsRunning;
+                return isClassicProjectionActive();
             }
             @Override public void stopProjectionIfActive(Runnable onStopped) {
                 com.byd.dashcast.cluster.ClusterService cs =
@@ -207,7 +218,7 @@ public final class FissionOrchestrator {
         if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
         LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
         if (fav == null) return;
-        if (com.byd.dashcast.cluster.ClusterService.sIsRunning) {
+        if (isClassicProjectionActive()) {
             AppLogger.d(TAG, "launchFavoriteLayoutApps skipped: classic projection active");
             return;
         }
@@ -215,7 +226,7 @@ public final class FissionOrchestrator {
 
         ProjectionStateProvider psp = new ProjectionStateProvider() {
             @Override public boolean isProjectionActive() {
-                return com.byd.dashcast.cluster.ClusterService.sIsRunning;
+                return isClassicProjectionActive();
             }
             @Override public void stopProjectionIfActive(Runnable onStopped) {
                 com.byd.dashcast.cluster.ClusterService cs =
