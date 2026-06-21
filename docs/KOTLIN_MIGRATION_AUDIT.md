@@ -161,14 +161,23 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `ReflectionTaskResizer`/`TaskResizer`/`ShellTaskResizer`/`ChainedTaskResizer` **gardés Java** (réflexion) pour le sous-lot suivant.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 duodecies. Réalisé — lot 5b (`infrastructure/task` resizers — **1ʳᵉ réflexion convertie**)
+
+- ✅ `TaskResizer` (interface + `ResizeException`) + `ReflectionTaskResizer`, `ShellTaskResizer`, `ChainedTaskResizer` → `.kt`. **`infrastructure/task` est désormais 100 % Kotlin.**
+- **`ReflectionTaskResizer` = premier code à réflexion converti** (manuel, nullités explicites) : `int.class` → `Int::class.javaPrimitiveType` (indispensable pour que `getMethod("resizeTask", int, Rect, int)` matche la vraie signature) ; `iatm: Any?` (fidèle au Java qui ne suppose pas non-null) ; **ordre des `catch` préservé** (`ResizeException` avant `Exception`) + re-throw pour ne pas réemballer ; `ite.getTargetException() != null ? … : ite` → `ite.targetException ?: ite` ; `lastError is Exception` smart-cast pour le 2ᵉ ctor (cause `Throwable?` nullable).
+- Interop `ClusterService` (Java) : `@Throws(ResizeException::class)` sur `resize` pour le `catch (TaskResizer.ResizeException)`. `ChainedTaskResizer(context)` instancié tel quel.
+- `ShellTaskResizer` : `\$?` shell échappé (`echo \"exit=\$?\"`), patterns awk `\\{` conservés (= `\{`, valide en Kotlin car `\\`+`{`), `toLowerCase(Locale.ROOT)` → `lowercase(Locale.ROOT)`, callbacks `AdbLocalClient.Callback` params `String?` (`out?.trim() ?: ""`). Fire-and-forget : ne throw jamais (inchangé).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 5a ✅ | `infrastructure/task` : TaskFinder + 4 impls (fait) | build vert |
-| 5b | `infrastructure/task` resizers (`TaskResizer`, `ShellTaskResizer`, `ChainedTaskResizer`, **`ReflectionTaskResizer`** réflexion) + `infrastructure/launch` (`AppLauncher`, `ShellAppLauncher`, `IamAppLauncher` réflexion, `PlatformAdaptiveAppLauncher`) | run terrain DL3/DL5 |
-| 5c | `cluster/` petits fichiers sûrs (ClusterSessionTracker, dpi/, display/) | run terrain |
-| 5d | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder, ClusterManager) — manuel, champ par champ | run terrain DL3/DL5 |
+| 5a ✅ | `infrastructure/task` : TaskFinder + 4 impls | build vert |
+| 5b ✅ | `infrastructure/task` resizers (dont `ReflectionTaskResizer` réflexion) — **task/ 100 % Kotlin** | build vert |
+| 5c | `infrastructure/launch` (`AppLauncher`, `ShellAppLauncher`, `IamAppLauncher` réflexion, `PlatformAdaptiveAppLauncher`) | run terrain DL3/DL5 |
+| 5d | `cluster/` petits fichiers sûrs (ClusterSessionTracker, dpi/, display/) | run terrain |
+| 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder, ClusterManager) — manuel, champ par champ | run terrain DL3/DL5 |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 
 Règle générale : **un lot = un commit = build vert**, jamais de conversion automatique IDE sans relecture des `!!` et de la nullabilité.
