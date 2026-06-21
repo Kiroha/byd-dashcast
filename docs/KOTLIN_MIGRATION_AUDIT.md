@@ -207,6 +207,13 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `@Suppress("DEPRECATION")` sur `systemUiVisibility` (flags immersifs) ; KTX `edit { }` (live-mode + persistRect) ; `getSystemService(DISPLAY_SERVICE) as? DisplayManager`. Le fix resize (persistRect/scheduleApply, déjà validé en 1.6.38) converti tel quel.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 octodecies. Réalisé — lot 5d-3a (`cluster/display/DashboardDisplayHelper`)
+
+- ✅ `DashboardDisplayHelper.java` → `.kt` (détection du display cluster secondaire ; aucune réflexion). Délègue l'activation à `ClusterManager` (resté Java) et écoute les déconnexions.
+- Interop : `Listener` (interface) implémentée par `ClusterService` (Java) → params `display: Display?` (nullable, `display?.name ?: "null"`). Callbacks anonymes `DisplayManager.DisplayListener` / `ClusterManager.DisplayReadyCallback` (Java) / `AdbLocalClient.Callback` → `object :` (params `String?`/`Display?`).
+- Sentinelles `-1`/`-2` (stop déjà appelé) préservées ; `getSystemService(DISPLAY_SERVICE) as DisplayManager` ; constantes `ClusterManager.CLUSTER_TYPE/CMD_*` (Java static) lues telles quelles. Dépendance circulaire `ClusterManager` ↔ `DashboardDisplayHelper` gérée par interop bidirectionnel Kotlin↔Java.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -217,7 +224,9 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5d-1 ✅ | `cluster/ClusterSessionTracker` | build vert |
 | 5d-2a ✅ | `cluster/dpi/` système DPI (ClusterDpiPrefs, ClusterDpiManager) | build vert |
 | 5d-2b ✅ | `cluster/dpi/` éditeur (ResizeFrameView + ClusterResizeActivity) — **dpi/ 100 % Kotlin** | build vert |
-| 5d-3 | `cluster/display/` (DashboardDisplayHelper, DashboardLauncher, ClusterManager — réflexion/binder) | run terrain DL3/DL5 |
+| 5d-3a ✅ | `cluster/display/DashboardDisplayHelper` (0 réflexion) | build vert |
+| 5d-3b | `cluster/display/ClusterManager` (709 l, 0 réflexion, nombreux consommateurs Java) | run terrain |
+| 5d-3c | `cluster/display/DashboardLauncher` (198 l, **12 réflexion/binder** — launch sur display via APIs cachées) | run terrain DL3/DL5 |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
