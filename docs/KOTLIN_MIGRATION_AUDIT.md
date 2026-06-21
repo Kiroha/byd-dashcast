@@ -169,15 +169,24 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `ShellTaskResizer` : `\$?` shell échappé (`echo \"exit=\$?\"`), patterns awk `\\{` conservés (= `\{`, valide en Kotlin car `\\`+`{`), `toLowerCase(Locale.ROOT)` → `lowercase(Locale.ROOT)`, callbacks `AdbLocalClient.Callback` params `String?` (`out?.trim() ?: ""`). Fire-and-forget : ne throw jamais (inchangé).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 terdecies. Réalisé — lot 5c (`infrastructure/launch`)
+
+- ✅ `AppLauncher` (interface + `LaunchException`) + `ShellAppLauncher`, `IamAppLauncher`, `PlatformAdaptiveAppLauncher` → `.kt`. **`infrastructure/` est désormais 100 % Kotlin** (hors `AdbLocalClient`, classe à part).
+- **Aucun consommateur runtime** : `PlatformAdaptiveAppLauncher` est seulement *importé* (mort) par `ClusterService` — jamais instancié ni appelé (ClusterService lance via ses propres `startActivityViaIAM/Shell` inline). Sous-lot le moins risqué ; l'import mort reste valide (même nom qualifié → non touché).
+- `IamAppLauncher` (réflexion `startActivityAsUser`, 11 params) : `int.class` → `Int::class.javaPrimitiveType` (3 occurrences) pour matcher la signature reflective ; `iam: Any?` ; fallback `Context.startActivity` puis `LaunchException` (cause `Throwable` non-null, seul usage). `ShellAppLauncher` fire-and-forget, `launchIntent?.component ?: throw`. `PlatformAdaptiveAppLauncher` passe `context` brut aux 2 sous-launchers (comme le Java — chacun applique `applicationContext`).
+- `@Throws(LaunchException::class)` conservé par cohérence (aucun `catch` Java externe ne l'exige, mais l'import dans ClusterService suggère un branchement futur).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
 | 5a ✅ | `infrastructure/task` : TaskFinder + 4 impls | build vert |
 | 5b ✅ | `infrastructure/task` resizers (dont `ReflectionTaskResizer` réflexion) — **task/ 100 % Kotlin** | build vert |
-| 5c | `infrastructure/launch` (`AppLauncher`, `ShellAppLauncher`, `IamAppLauncher` réflexion, `PlatformAdaptiveAppLauncher`) | run terrain DL3/DL5 |
+| 5c ✅ | `infrastructure/launch` (dont `IamAppLauncher` réflexion) — **infrastructure/ 100 % Kotlin** (hors AdbLocalClient) | build vert |
 | 5d | `cluster/` petits fichiers sûrs (ClusterSessionTracker, dpi/, display/) | run terrain |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder, ClusterManager) — manuel, champ par champ | run terrain DL3/DL5 |
+| 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 
 Règle générale : **un lot = un commit = build vert**, jamais de conversion automatique IDE sans relecture des `!!` et de la nullabilité.
