@@ -556,13 +556,17 @@ public class ClusterService extends Service
                         if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
                         // Primary: IAM path (honours setLaunchDisplayId in ActivityOptions).
                         // On DL5 with real HDMI, IAM reflection may fail (NPE) and fall back to
-                        // startActivity(opts) which ignores setLaunchDisplayId on this ROM. If so,
-                        // retry via shell without --windowingMode 5 — that flag caused some ROMs
-                        // to silently ignore --display and fall back to display=0.
+                        // startActivity(opts) which ignores setLaunchDisplayId on this ROM.
+                        // On some DX_BYD_AUTO ROMs even a shell `am start --display 1` lands the
+                        // app on display 0 (the live `displayId=1 realActivity` query stays empty).
+                        // Route through the proxy daemon's launchAndForce cascade instead: it adds
+                        // the privileged moveRootTaskToDisplay + watchdog that re-anchors the task
+                        // on the cluster display — the same path fission uses to pin apps there.
                         boolean iamOk = startActivityViaIAM(launchIntent, opts);
                         if (!iamOk && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            AppLogger.w(TAG, "DL5: IAM fell back to startActivity — retrying via shell (no windowingMode)");
-                            startActivityViaShellSimple(packageName, displayId, launchIntent);
+                            AppLogger.w(TAG, "DL5: IAM fell back to startActivity — routing via proxy daemon launchAndForce");
+                            launchViaDaemonForce(packageName, displayId,
+                                    clusterWidthOr(1920), clusterHeightOr(720));
                         }
                         AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
                         if (callback != null) callback.onResult(true);
@@ -633,11 +637,16 @@ public class ClusterService extends Service
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
                     }
-                    // Same chain as launchOnDashboard: IAM first, shell simple as DL5 fallback.
+                    // Same chain as launchOnDashboard: IAM first, then the proxy daemon's
+                    // launchAndForce cascade as the DL5 fallback (shell `am start --display`
+                    // provably lands the app on display 0 on some DX_BYD_AUTO ROMs).
                     boolean iamOkWB = startActivityViaIAM(launchIntent, opts);
                     if (!iamOkWB && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                        AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — retrying via shell (no windowingMode)");
-                        startActivityViaShellSimple(packageName, displayId, launchIntent);
+                        AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — routing via proxy daemon launchAndForce");
+                        int wbW = right - left, wbH = bottom - top;
+                        launchViaDaemonForce(packageName, displayId,
+                                wbW > 0 ? wbW : clusterWidthOr(1920),
+                                wbH > 0 ? wbH : clusterHeightOr(720));
                     }
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
                     if (callback != null) callback.onResult(true);
@@ -732,6 +741,36 @@ public class ClusterService extends Service
             startActivity(intent, opts.toBundle());
             return false;
         }
+    }
+
+    private int clusterWidthOr(int fallback) {
+        int w = (mInputForwarder != null) ? mInputForwarder.getClusterWidth() : 0;
+        return w > 0 ? w : fallback;
+    }
+
+    private int clusterHeightOr(int fallback) {
+        int h = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() : 0;
+        return h > 0 ? h : fallback;
+    }
+
+    // DL5 fallback when IAM fails and a shell `am start --display N` provably lands the
+    // app on display 0 (DX_BYD_AUTO HDMI cluster — the live `displayId=1 realActivity`
+    // query stays empty). Routes through the proxy daemon's launchAndForce cascade, which
+    // follows the launch with the privileged moveRootTaskToDisplay + an async watchdog that
+    // re-anchors the task on the cluster display — the same path fission uses. Runs off the
+    // main thread because launchAndForce blocks for several seconds.
+    private void launchViaDaemonForce(final String packageName, final int displayId,
+                                       final int width, final int height) {
+        sMoveTaskExecutor.execute(() -> {
+            try {
+                if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
+                String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
+                String first = (log != null && !log.isEmpty()) ? log.split("\n", 2)[0] : "null";
+                AppLogger.i(TAG, "DL5 daemon launchAndForce → " + first);
+            } catch (Throwable t) {
+                AppLogger.e(TAG, "DL5 daemon launchAndForce failed: " + t.getMessage());
+            }
+        });
     }
 
     // DL5 shell fallback used when IAM reflection fails and startActivity() ignores
