@@ -177,6 +177,13 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `@Throws(LaunchException::class)` conservé par cohérence (aucun `catch` Java externe ne l'exige, mais l'import dans ClusterService suggère un branchement futur).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 quaterdecies. Réalisé — lot 5d-1 (`cluster/ClusterSessionTracker`)
+
+- ✅ `ClusterSessionTracker.java` → `.kt` (1ᵉʳ fichier du package `cluster/`, aucune réflexion). Suivi du set d'apps lancées sur le cluster + pipeline d'éviction (move→display 0 + force-stop) pour restoreBydDashboard/originCluster.
+- Interop Kotlin↔Kotlin (seul consommateur = MainActivity, déjà converti) : `onAllDone` gardé en `Runnable` (la lambda trailing de MainActivity se SAM-convertit ; et `Handler.post(onAllDone)` l'attend). Callbacks `LaunchCallback`/`AdbLocalClient.Callback` → `object :` (params `String?`).
+- `LinkedHashSet` (ordre d'insertion préservé), `!main.isNullOrEmpty()` + smart-cast, `mPkgs` en `MutableSet<String>`, `setSessionClusterPkgs(HashSet(mPkgs))`. `pkg` non-null dans `evictNext` (liste `List<String>`) → check `== null` mort retiré.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -184,8 +191,10 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5a ✅ | `infrastructure/task` : TaskFinder + 4 impls | build vert |
 | 5b ✅ | `infrastructure/task` resizers (dont `ReflectionTaskResizer` réflexion) — **task/ 100 % Kotlin** | build vert |
 | 5c ✅ | `infrastructure/launch` (dont `IamAppLauncher` réflexion) — **infrastructure/ 100 % Kotlin** (hors AdbLocalClient) | build vert |
-| 5d | `cluster/` petits fichiers sûrs (ClusterSessionTracker, dpi/, display/) | run terrain |
-| 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder, ClusterManager) — manuel, champ par champ | run terrain DL3/DL5 |
+| 5d-1 ✅ | `cluster/ClusterSessionTracker` | build vert |
+| 5d-2 | `cluster/dpi/` (ClusterDpiPrefs, ClusterDpiManager, ResizeFrameView) — **après validation du fix resize** (ClusterResizeActivity touché, non encore testé) | run terrain |
+| 5d-3 | `cluster/display/` (DashboardDisplayHelper, DashboardLauncher, ClusterManager — réflexion/binder) | run terrain DL3/DL5 |
+| 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 
