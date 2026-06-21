@@ -214,6 +214,14 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Sentinelles `-1`/`-2` (stop déjà appelé) préservées ; `getSystemService(DISPLAY_SERVICE) as DisplayManager` ; constantes `ClusterManager.CLUSTER_TYPE/CMD_*` (Java static) lues telles quelles. Dépendance circulaire `ClusterManager` ↔ `DashboardDisplayHelper` gérée par interop bidirectionnel Kotlin↔Java.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 novemdecies. Réalisé — lot 5d-3b (`cluster/display/ClusterManager`)
+
+- ✅ `ClusterManager.java` → `.kt` (**709 l**, le moteur d'activation du display cluster : séquence `sendInfo 30/16/35`, fast/warm/slow path, ADAS remap, late-arrival watcher, polling). **0 réflexion réelle** (le commentaire « via reflection » décrit AutoContainer/le daemon — clarifié). Délègue tout `sendInfo` à `AdbLocalClient.sendInfo` (daemon-first).
+- **Piège résolu — méthode d'interface par défaut** : `DisplayReadyCallback.onDisplayLateReady` a un corps par défaut, et `FissionOrchestrator` (Java) l'**omettait** (s'appuyait dessus). Sans `-Xjvm-default`, une interface Kotlin ne génère pas de default JVM → j'ai ajouté un `onDisplayLateReady {}` **explicite vide** dans FissionOrchestrator (= comportement par défaut, zéro régression) plutôt qu'un changement de toolchain global.
+- Interop : constantes (`CLUSTER_TYPE`, `CMD_*`, `SERVICE_NAME`) en `const val` companion (lues Java+Kotlin) ; hooks `notifyProjectionActive/Stopped`/`isQtInProjectionMode` en `@JvmStatic` (appelés par AdbLocalClient, FissionOrchestrator, SysInfoActivity) ; `@Volatile private var sQtInProjectionMode` dans le companion. `isKnownClusterName` (static) en companion private.
+- Concurrence/fidélité : `Handler(mainLooper)`, holder arrays `arrayOfNulls<DisplayListener>(1)` / `booleanArrayOf` / `longArrayOf` préservés (self-référence des listeners anonymes) ; Runnables auto-repostés (`postDelayed(this, …)`) en `object : Runnable` ; les autres en lambdas ; callbacks `AdbLocalClient.Callback`/`DisplayListener` → `object :` (params `String?`). `getDisplays()` → propriété `displays` / méthode avec catégorie (checks null préservés).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -225,7 +233,7 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5d-2a ✅ | `cluster/dpi/` système DPI (ClusterDpiPrefs, ClusterDpiManager) | build vert |
 | 5d-2b ✅ | `cluster/dpi/` éditeur (ResizeFrameView + ClusterResizeActivity) — **dpi/ 100 % Kotlin** | build vert |
 | 5d-3a ✅ | `cluster/display/DashboardDisplayHelper` (0 réflexion) | build vert |
-| 5d-3b | `cluster/display/ClusterManager` (709 l, 0 réflexion, nombreux consommateurs Java) | run terrain |
+| 5d-3b ✅ | `cluster/display/ClusterManager` (709 l, 0 réflexion) — piège default-method résolu | run terrain (cœur activation) |
 | 5d-3c | `cluster/display/DashboardLauncher` (198 l, **12 réflexion/binder** — launch sur display via APIs cachées) | run terrain DL3/DL5 |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
