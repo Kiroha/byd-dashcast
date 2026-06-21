@@ -317,8 +317,9 @@ android {
         // 475 = 1.6.34-beta (DL3 fix INC-20260621: launching a 2nd app over a busy cluster landed it in split-screen on the main display — when moveTaskToDisplay is stripped on the ROM, the previous cluster app is now stopped before launching the new one. No-op on DL5/DL4).
         // 476 = 1.6.35-beta (Kotlin migration lot 5b: infrastructure/task resizers — TaskResizer + ReflectionTaskResizer (1st reflection file) + ShellTaskResizer + ChainedTaskResizer converted to Kotlin; task/ now 100% Kotlin — behaviour unchanged).
         // 477 = 1.6.36-beta (DX_BYD_AUTO app not shown — diagnostics: log full daemon launchAndForce cascade result + post-launch cluster display-1 state (pkg/visible/mode/bounds); attach PROXYDAEMON LOG to bug reports. No launch-path behaviour change).
-        versionCode 477
-        versionName "1.6.36-beta"
+        // 478 = 1.6.37-beta (Kotlin migration lot 5c: infrastructure/launch — AppLauncher + ShellAppLauncher + IamAppLauncher (reflection) + PlatformAdaptiveAppLauncher converted to Kotlin; infrastructure/ now 100% Kotlin (AdbLocalClient aside). No runtime consumer — behaviour unchanged).
+        versionCode 478
+        versionName "1.6.37-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
