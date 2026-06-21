@@ -108,7 +108,10 @@ class DashboardDisplayHelper(context: Context, private val mListener: Listener) 
         // Stopping it would destroy the PRESENTATION VirtualDisplay for the entire Android session.
 
         // Close projection mode via sendInfo(1000, 18) = stop projection + sendInfo(1000, 0) = refresh Qt.
-        // Sent via ADB relay (uid=2000) because com.byd.dashcast is blocked by Binder SecurityException.
+        // Routed through AdbLocalClient.sendInfo (uid=2000) because com.byd.dashcast is blocked by a
+        // Binder SecurityException when calling AutoContainer directly. AdbLocalClient.sendInfo goes
+        // through the proxy daemon's typed transact first (ProxyClient.autoContainerSendInfo) and only
+        // falls back to the ADB shell relay when the daemon is unavailable (legacy mode / DL5).
         // Chained: cmd=18 first, then cmd=0 in the callback to guarantee execution order.
         AdbLocalClient.sendInfo(
             mContext, ClusterManager.CLUSTER_TYPE, ClusterManager.CMD_STOP_PROJECTION, "",

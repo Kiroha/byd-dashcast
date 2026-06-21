@@ -568,15 +568,21 @@ public class AdbLocalClient {
     }
 
     // ──────────────────────────────────────────────────────────────────────────────────────────────
-    // sendInfo ADB relay — bypasses SecurityException (uid=10100 not in whitelist JSON)
+    // sendInfo — bypasses SecurityException (uid=10100 not in whitelist JSON) by running as uid=2000.
     // dm-verity prevents patching /system/etc/container_comm_cfg.json on this hardware.
-    // uid=2000 (shell ADB) passes checkSignatures() in AutoContainerService.
+    // uid=2000 passes checkSignatures() in AutoContainerService.
+    // Transport: the proxy daemon's typed binder.transact (ProxyClient.autoContainerSendInfo) is tried
+    // FIRST (the default path); the ADB shell relay below is only a fallback when the daemon is
+    // unavailable (legacy mode / DL5). Both run as uid=2000.
     // ──────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
-     * Sends sendInfo(type, infoInt, infoStr) to the AutoContainer service via ADB shell relay.
+     * Sends sendInfo(type, infoInt, infoStr) to the AutoContainer service from uid=2000.
      *
-     * Equivalent to: service call AutoContainer 2 i32 <type> i32 <infoInt> s16 "<infoStr>"
+     * Tries the proxy daemon's typed transact first (ProxyClient.autoContainerSendInfo, descriptor
+     * android.os.IAutoContainer), then falls back to the ADB shell relay below when the daemon is
+     * unavailable (legacy mode / DL5).
+     * Shell-relay equivalent: service call AutoContainer 2 i32 <type> i32 <infoInt> s16 "<infoStr>"
      * uid=2000 (shell) passes checkSignatures → no SecurityException.
      *
      * Callback is called from a background thread — use runOnUiThread if necessary.
