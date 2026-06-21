@@ -184,6 +184,13 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - `LinkedHashSet` (ordre d'insertion préservé), `!main.isNullOrEmpty()` + smart-cast, `mPkgs` en `MutableSet<String>`, `setSessionClusterPkgs(HashSet(mPkgs))`. `pkg` non-null dans `evictNext` (liste `List<String>`) → check `== null` mort retiré.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 quindecies. Réalisé — lot 5d-2a (`cluster/dpi/` système DPI)
+
+- ✅ `ClusterDpiPrefs.java` + `ClusterDpiManager.java` → `.kt` (overrides DPI par app sur le cluster via `wm density … -d <id>` ; garde de sécurité `displayId > 0` préservée — display 0 jamais touché).
+- `object` + `@JvmStatic` (ClusterDpiManager appelé par ClusterService Java : `applyForLaunch`, `restore`, `cacheSnapshot`) ; `const val SETTLE_MS = 150L`, `MIN_DPI/MAX_DPI`. ClusterDpiPrefs consommé par AppActionSheet (Kotlin) — `@JvmStatic` gardé par sécurité.
+- Concurrence préservée : `sCache` (HashMap) + `synchronized(sCache) { … }` (forme valeur-de-retour, ex. `val v = synchronized(sCache){ sCache[id] } ?: 0`). `Math.max/min(clamp)` → `dpi.coerceIn(MIN_DPI, MAX_DPI)` ; écriture prefs via KTX `edit { }` (lint UseKtx) ; `pkg.isNullOrEmpty()`.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -192,7 +199,8 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5b ✅ | `infrastructure/task` resizers (dont `ReflectionTaskResizer` réflexion) — **task/ 100 % Kotlin** | build vert |
 | 5c ✅ | `infrastructure/launch` (dont `IamAppLauncher` réflexion) — **infrastructure/ 100 % Kotlin** (hors AdbLocalClient) | build vert |
 | 5d-1 ✅ | `cluster/ClusterSessionTracker` | build vert |
-| 5d-2 | `cluster/dpi/` (ClusterDpiPrefs, ClusterDpiManager, ResizeFrameView) — **après validation du fix resize** (ClusterResizeActivity touché, non encore testé) | run terrain |
+| 5d-2a ✅ | `cluster/dpi/` système DPI (ClusterDpiPrefs, ClusterDpiManager) | build vert |
+| 5d-2b | `cluster/dpi/` éditeur (ResizeFrameView View custom, ClusterResizeActivity — réflexion) — fix resize validé terrain (1.6.38) | run terrain |
 | 5d-3 | `cluster/display/` (DashboardDisplayHelper, DashboardLauncher, ClusterManager — réflexion/binder) | run terrain DL3/DL5 |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
