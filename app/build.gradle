@@ -311,8 +311,9 @@ android {
         // 469 = 1.6.28-beta (Kotlin migration lot 3b: SettingsActivity converted to Kotlin — behaviour unchanged).
         // 470 = 1.6.29-beta (Kotlin migration lot 3c: HotspotActivity + SysInfoActivity converted to Kotlin — lot 3 done, behaviour unchanged).
         // 471 = 1.6.30-beta (Kotlin migration lot 2 bis: app-list adapters — AppListAdapter + AppActionSheet + AppListCoordinator converted to Kotlin — behaviour unchanged).
-        versionCode 471
-        versionName "1.6.30-beta"
+        // 472 = 1.6.31-beta (Kotlin migration lot 4: MainActivity (the launcher god class, 2036 lines) converted to Kotlin — behaviour unchanged).
+        versionCode 472
+        versionName "1.6.31-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
