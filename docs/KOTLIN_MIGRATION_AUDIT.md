@@ -151,20 +151,24 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Callbacks `ServiceConnection`/`ClusterService.LaunchCallback`/`AdbLocalClient.Callback` → `object :`; threads/runnables → lambdas ; statiques (`sOrphanSnifferKillDone`, `sAdbWarningShown`, TAG) → companion. KTX `isVisible`.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0. **À tester en voiture en priorité (cœur de l'app).**
 
-**21 fichiers Kotlin.** Reste : zones à risque réflexion/binder.
+**21 fichiers Kotlin.** Validé terrain (1.6.31-beta). Reste : zones à risque réflexion/binder.
+
+## 4 undecies. Réalisé — lot 5a (`infrastructure/task` — TaskFinder + impls)
+
+- ✅ `TaskFinder` (interface) + ses 4 implémentations → `.kt` : `AmTaskFinder`, `AdbLocalTaskFinder`, `ProxyTaskFinder`, `ChainedTaskFinder`. **Aucune réflexion** — premier pas dans le tier 3, sous-lot net.
+- Interop avec `ClusterService` (resté Java, seul consommateur) : `@Throws(TaskFinderException::class)` sur `findTaskId` **obligatoire** pour que le `catch (TaskFinder.TaskFinderException)` Java compile (sinon checked-exception « never thrown ») ; `const val NOT_FOUND` en `companion object` reste lisible `TaskFinder.NOT_FOUND` depuis Java ; les impls Kotlin l'écrivent qualifié (pas hérité du companion d'interface). Exception imbriquée `TaskFinderException` en `class` à 2 constructeurs.
+- `parseFromRecents`/`parseFromActivities` (statiques, appelées par ClusterService + AdbLocalTaskFinder) → `@JvmStatic` dans le companion ; patterns pré-compilés conservés. `vararg finders` pour ChainedTaskFinder. `AtomicReference<String?>()` (valeur initiale null). `@Suppress("DEPRECATION")` sur `findTaskId` d'AmTaskFinder (`getRunningTasks` **et** `RunningTaskInfo.id` dépréciés).
+- `ReflectionTaskResizer`/`TaskResizer`/`ShellTaskResizer`/`ChainedTaskResizer` **gardés Java** (réflexion) pour le sous-lot suivant.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 5 | `cluster/`, `infrastructure/` (réflexion APIs cachées — manuel, champ par champ) | run terrain DL3/DL5 |
+| 5a ✅ | `infrastructure/task` : TaskFinder + 4 impls (fait) | build vert |
+| 5b | `infrastructure/task` resizers (`TaskResizer`, `ShellTaskResizer`, `ChainedTaskResizer`, **`ReflectionTaskResizer`** réflexion) + `infrastructure/launch` (`AppLauncher`, `ShellAppLauncher`, `IamAppLauncher` réflexion, `PlatformAdaptiveAppLauncher`) | run terrain DL3/DL5 |
+| 5c | `cluster/` petits fichiers sûrs (ClusterSessionTracker, dpi/, display/) | run terrain |
+| 5d | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder, ClusterManager) — manuel, champ par champ | run terrain DL3/DL5 |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
-| 5 | `cluster/`, `infrastructure/` (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
-| 6 (option) | proxy/daemon + TestRunners | batteries diag |
-| 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
-| 3 | Activities secondaires (Settings, Log, SysInfo, Hotspot) | test manuel navrail |
-| 4 | MainActivity / DiagActivity (après extraction de contrôleurs) | run terrain DL3 |
-| 5 | cluster/, infrastructure/ (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
-| 6 (option) | proxy/daemon + TestRunners | batteries diag complètes |
 
 Règle générale : **un lot = un commit = build vert**, jamais de conversion automatique IDE sans relecture des `!!` et de la nullabilité.
