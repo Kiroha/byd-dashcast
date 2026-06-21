@@ -143,11 +143,22 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Interop : les 3 interfaces (`OnSendToDashboardListener`, `AppActionSheet.Host`, `AppListCoordinator.Host`) restent implémentées par **MainActivity (Java)** — types de retour nullable côté Kotlin, compatibles. KTX adopté (`isVisible`, `toDrawable`) + `@SuppressLint("SetTextI18n")` ciblé.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 decies. Réalisé — lot 4 (`MainActivity`)
+
+- ✅ `MainActivity.java` → `.kt` (**2036 l — le plus gros et le plus central**). God class du launcher : 16 interfaces implémentées (ClusterService.Listener + 15 Host de coordinateurs/adapters), lifecycle cluster, callbacks imbriqués, touch forwarding.
+- Tous les `override` des 16 interfaces matchent du premier coup (3 Kotlin strictes + 13 Java platform) — une seule erreur de compilation (Int→Float implicite Java sur `setProjection`).
+- Nullabilité fine : coordinateurs checkés/accédés tôt (broadcast receiver enregistré avant `setupCoordinators`) en **nullable + safe-calls** (mNav, mMirror, mFullscreen, mSplit, mClusterControl, mInsetOverlay…) ; ceux toujours initialisés-puis-utilisés en `lateinit` (mAppListCoordinator, mUsageTracker, mTimeoutManager, mInsetApplicator, mSessionTracker, mDashboardLauncher) — avec `::x.isInitialized` là où le Java checkait `!= null`.
+- Callbacks `ServiceConnection`/`ClusterService.LaunchCallback`/`AdbLocalClient.Callback` → `object :`; threads/runnables → lambdas ; statiques (`sOrphanSnifferKillDone`, `sAdbWarningShown`, TAG) → companion. KTX `isVisible`.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0. **À tester en voiture en priorité (cœur de l'app).**
+
+**21 fichiers Kotlin.** Reste : zones à risque réflexion/binder.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
 |---|---|---|
-| 4 | `MainActivity` (~2000 l, implémente déjà les interfaces Kotlin des adapters) | run terrain DL3 |
+| 5 | `cluster/`, `infrastructure/` (réflexion APIs cachées — manuel, champ par champ) | run terrain DL3/DL5 |
+| 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 | 5 | `cluster/`, `infrastructure/` (réflexion — manuel, champ par champ) | run terrain DL3/DL5 |
 | 6 (option) | proxy/daemon + TestRunners | batteries diag |
 | 2 bis | Adapters UI liste d'apps (`AppListAdapter`, `AppActionSheet`, `AppListCoordinator`) — une fois stabilisés | build + test manuel liste d'apps |
