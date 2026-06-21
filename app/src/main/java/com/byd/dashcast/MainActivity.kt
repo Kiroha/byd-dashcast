@@ -670,18 +670,10 @@ class MainActivity : AppCompatActivity(),
                 }
             }
 
-            // Auto-Launch process.
-            val targetPkg = mPendingAutoLaunchPkg
-            if (targetPkg != null) {
-                mPendingAutoLaunchPkg = null // Clear immediately
-                AppLogger.i(TAG, "Executing pending auto-launch for $targetPkg")
-                for (a in mAppListCoordinator.getApps()) {
-                    if (a.packageName == targetPkg) {
-                        onSendToDashboard(a)
-                        break
-                    }
-                }
-            }
+            // Auto-Launch process. Only runs if the app list is already loaded; if the
+            // cluster connected before the async load finished, the pending is kept and
+            // replayed from loadAppsAsync()'s callback (see tryExecutePendingAutoLaunch).
+            tryExecutePendingAutoLaunch()
 
             // Reconnect reminder (guarded by user preference).
             val reconnectEnabled = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1347,7 +1339,30 @@ class MainActivity : AppCompatActivity(),
         mAppRepo.loadApps(this) { apps ->
             if (isFinishing || isDestroyed) return@loadApps
             mAppListCoordinator.deliver(apps, true)
+            // The list is now ready: run an auto-launch that was deferred because the
+            // cluster connected before this async load finished (no-op otherwise).
+            tryExecutePendingAutoLaunch()
         }
+    }
+
+    /**
+     * Runs the configured auto-launch app once it is available in the app list.
+     * The pending package is consumed ONLY when the app is found, so a cluster-connect
+     * that races ahead of the async app-list load no longer drops the auto-launch:
+     * [onClusterDisplayConnected] keeps the pending and [loadAppsAsync]'s callback retries it.
+     * [onSendToDashboard] handles activation if the service/display is not up yet.
+     */
+    private fun tryExecutePendingAutoLaunch() {
+        val targetPkg = mPendingAutoLaunchPkg ?: return
+        for (a in mAppListCoordinator.getApps()) {
+            if (a.packageName == targetPkg) {
+                mPendingAutoLaunchPkg = null // consume only once the app is actually found
+                AppLogger.i(TAG, "Executing pending auto-launch for $targetPkg")
+                onSendToDashboard(a)
+                return
+            }
+        }
+        AppLogger.i(TAG, "auto-launch $targetPkg deferred: app list not ready yet")
     }
 
     // ── Coordinator wiring ────────────────────────────────────────────────────
