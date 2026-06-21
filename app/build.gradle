@@ -314,8 +314,9 @@ android {
         // 472 = 1.6.31-beta (Kotlin migration lot 4: MainActivity (the launcher god class, 2036 lines) converted to Kotlin — behaviour unchanged).
         // 473 = 1.6.32-beta (Kotlin migration lot 5a: infrastructure/task TaskFinder + 4 implementations converted to Kotlin — behaviour unchanged).
         // 474 = 1.6.33-beta (DX_BYD_AUTO app not shown: shell `am start --display 1` lands the app on display 0 — DL5 IAM-failure fallback now routes through the proxy daemon's launchAndForce cascade (privileged moveRootTaskToDisplay + watchdog) to anchor the app on the HDMI cluster).
-        versionCode 474
-        versionName "1.6.33-beta"
+        // 475 = 1.6.34-beta (DL3 fix INC-20260621: launching a 2nd app over a busy cluster landed it in split-screen on the main display — when moveTaskToDisplay is stripped on the ROM, the previous cluster app is now stopped before launching the new one. No-op on DL5/DL4).
+        versionCode 475
+        versionName "1.6.34-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
