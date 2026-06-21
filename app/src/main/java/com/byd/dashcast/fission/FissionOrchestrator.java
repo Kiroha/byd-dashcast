@@ -384,6 +384,12 @@ public final class FissionOrchestrator {
                             AppLogger.w(TAG, "auto-layout: cluster activation timed out — aborted");
                             post(() -> mCallbacks.onStatusMessage(null));
                         }
+                        // No-op (matches the former Kotlin-interface default body): the auto-layout
+                        // flow doesn't act on a late-arriving display. Explicit because the
+                        // DisplayReadyCallback default method is not exposed to Java without
+                        // -Xjvm-default. No behaviour change.
+                        @Override public void onDisplayLateReady(android.view.Display display,
+                                                                  int displayId) {}
                     });
         });
     }
