@@ -25,6 +25,8 @@ import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.R;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.cluster.mirror.ClusterMirrorManager;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
+import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
@@ -307,9 +309,23 @@ public class ClusterResizeActivity extends Activity
                 l, t, r, b, r - l, b - t));
     }
 
+    /** Persists the committed rectangle per package (stored in the shared inset prefs file). */
+    private void persistRect(int l, int t, int r, int b) {
+        if (mPkg == null || mPkg.isEmpty()) return;
+        getSharedPreferences(ClusterPrefs.PREFS_NAME, MODE_PRIVATE).edit()
+                .putString(SettingsActivity.PREF_CLUSTER_RECT_PREFIX + mPkg,
+                        l + "," + t + "," + r + "," + b)
+                .apply();
+        AppLogger.d(TAG, "persistRect " + mPkg + " [" + l + "," + t + "," + r + "," + b + "]");
+    }
+
     // ── Throttled apply ────────────────────────────────────────────────────
 
     private void scheduleApply(int l, int t, int r, int b, boolean commit) {
+        // Persist committed rectangles so they survive relaunch: AppActionSheet re-opens
+        // this editor on the saved size, and InsetAutoApplicator re-applies it after a
+        // fresh launch (the shell/seekbar insets are a separate, symmetric system).
+        if (commit) persistRect(l, t, r, b);
         synchronized (mApplyLock) {
             mPendingRect = new int[]{ l, t, r, b };
             if (commit) {
