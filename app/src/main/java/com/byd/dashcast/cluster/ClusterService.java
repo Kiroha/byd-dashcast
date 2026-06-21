@@ -65,6 +65,20 @@ public class ClusterService extends Service
     //   null = unknown (try), TRUE = available, FALSE = stripped (skip reflection)
     private static volatile Boolean sMoveTaskToDisplayAvailable = null;
 
+    /**
+     * Whether IActivityTaskManager.moveTaskToDisplay is usable on this ROM.
+     * Returns false only once the reflection probe has positively found it stripped
+     * (DiLink3.0); null/unknown and TRUE both report true.
+     *
+     * Callers use this to decide whether the app already on the cluster must be stopped
+     * before launching a new one: when the move is stripped, the fallback launch path
+     * cannot reparent the previous app, so a second app lands in split-screen on the
+     * main display (INC-20260621-130238).
+     */
+    public boolean isMoveTaskToDisplaySupported() {
+        return !Boolean.FALSE.equals(sMoveTaskToDisplayAvailable);
+    }
+
     private static final String CHANNEL_ID = "cluster_projection";
     private static final int    NOTIF_ID   = 1;
 

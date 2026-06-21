@@ -830,43 +830,74 @@ class MainActivity : AppCompatActivity(),
         }
 
         // ── Normal behavior — move (or launch if not running) ──
-        mSessionTracker.remove(pkgName)
-        var clusterDisplayId = svc.getDisplayId()
-        if (clusterDisplayId < 0) clusterDisplayId = 1 // Seal EU hardcoded fallback
-        val targetDisplayId = clusterDisplayId
-        svc.moveTaskToDisplay(pkgName, targetDisplayId, object : ClusterService.LaunchCallback {
-            override fun onResult(launched: Boolean) {
-                AppLogger.log(
-                    TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId +
-                        " " + (if (launched) "OK" else "FAILED")
-                )
-                if (launched) {
-                    mLastLaunchTime = System.currentTimeMillis()
-                    mUsageTracker.trackStop(mCurrentDashboardPkg)
-                    mCurrentDashboardApp = appName
-                    mCurrentDashboardPkg = pkgName
-                    mSessionTracker.add(pkgName)
-                    ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
-                    mUsageTracker.trackStart()
-                    ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
-                    ClusterPrefs.setClusterName(this@MainActivity, appName)
-                    ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
-                    mAppListCoordinator.setCurrentPackage(pkgName)
-                    updateDashboardStatus(appName)
-                    updateControlLabel()
-                    startClusterMirror()
-                    // v1.2.55-beta — deferred enforcement for apps AOSP placed on display 0.
-                    mScreenshotHandler.postDelayed({
-                        if (isFinishing || isDestroyed) return@postDelayed
-                        if (pkgName != mCurrentDashboardPkg) return@postDelayed
-                        svc.enforceTaskOnDisplay(pkgName, targetDisplayId)
-                    }, 2500L)
-                    mInsetApplicator.apply(pkgName)
-                } else {
-                    Toast.makeText(applicationContext, getString(R.string.toast_app_incompatible, appName), Toast.LENGTH_LONG).show()
+        // Factored out so it can run either immediately or after the previous cluster app
+        // has been stopped (see the guard below).
+        fun proceedMove() {
+            mSessionTracker.remove(pkgName)
+            var clusterDisplayId = svc.getDisplayId()
+            if (clusterDisplayId < 0) clusterDisplayId = 1 // Seal EU hardcoded fallback
+            val targetDisplayId = clusterDisplayId
+            svc.moveTaskToDisplay(pkgName, targetDisplayId, object : ClusterService.LaunchCallback {
+                override fun onResult(launched: Boolean) {
+                    AppLogger.log(
+                        TAG, "moveTaskToDisplay " + pkgName + " → display=" + targetDisplayId +
+                            " " + (if (launched) "OK" else "FAILED")
+                    )
+                    if (launched) {
+                        mLastLaunchTime = System.currentTimeMillis()
+                        mUsageTracker.trackStop(mCurrentDashboardPkg)
+                        mCurrentDashboardApp = appName
+                        mCurrentDashboardPkg = pkgName
+                        mSessionTracker.add(pkgName)
+                        ClusterPrefs.addRecentApp(this@MainActivity, pkgName, appName)
+                        mUsageTracker.trackStart()
+                        ClusterPrefs.setClusterPkg(this@MainActivity, pkgName)
+                        ClusterPrefs.setClusterName(this@MainActivity, appName)
+                        ClusterPrefs.setLastCluster(this@MainActivity, pkgName, appName)
+                        mAppListCoordinator.setCurrentPackage(pkgName)
+                        updateDashboardStatus(appName)
+                        updateControlLabel()
+                        startClusterMirror()
+                        // v1.2.55-beta — deferred enforcement for apps AOSP placed on display 0.
+                        mScreenshotHandler.postDelayed({
+                            if (isFinishing || isDestroyed) return@postDelayed
+                            if (pkgName != mCurrentDashboardPkg) return@postDelayed
+                            svc.enforceTaskOnDisplay(pkgName, targetDisplayId)
+                        }, 2500L)
+                        mInsetApplicator.apply(pkgName)
+                    } else {
+                        Toast.makeText(applicationContext, getString(R.string.toast_app_incompatible, appName), Toast.LENGTH_LONG).show()
+                    }
                 }
-            }
-        })
+            })
+        }
+
+        // INC-20260621-130238 — on ROMs where IActivityTaskManager.moveTaskToDisplay is
+        // stripped (DiLink3.0), the fallback launch cannot reparent the app already on the
+        // cluster, so the second app lands in split-screen on the main display (NPE
+        // ActivityStack.getBounds → split-screen-primary). Free the cluster by stopping the
+        // previous app first, then launch. No-op on ROMs where the move works (DL5/DL4) —
+        // there the running app is reparented as before, behaviour unchanged.
+        val previousClusterPkg = mCurrentDashboardPkg
+        if (previousClusterPkg != null && previousClusterPkg != pkgName &&
+            !svc.isMoveTaskToDisplaySupported()
+        ) {
+            AppLogger.i(
+                TAG, "cluster occupied by " + previousClusterPkg +
+                    " and moveTaskToDisplay unavailable → stopping it before launching " + pkgName
+            )
+            AdbLocalClient.forceStopApp(this, previousClusterPkg, object : AdbLocalClient.Callback {
+                override fun onSuccess(report: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) proceedMove() }
+                }
+
+                override fun onError(error: String?) {
+                    runOnUiThread { if (!isFinishing && !isDestroyed) proceedMove() }
+                }
+            })
+        } else {
+            proceedMove()
+        }
     }
 
     override fun onSendToMain(app: AppInfo) {
