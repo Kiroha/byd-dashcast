@@ -198,6 +198,15 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Conversion : `@JvmOverloads constructor(...)` pour les 3 ctors (inflation XML) + bloc `init`; `switch`→`when` (touch `ACTION_UP, ACTION_CANCEL` groupés) ; littéraux couleur `0xFF…` (Long en Kotlin) → `.toInt()` ; `Math.hypot` via helper `hyp()` (Float→Double→Float) ; `setSystemGestureExclusionRects` → propriété `systemGestureExclusionRects` (guard `SDK_INT < Q`) ; constantes HANDLE_*/SNAP/GRID + `snapStep/softSnap` en `companion`.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0. **`ClusterResizeActivity` (Activity, réflexion) reste pour 5d-2b-2.**
 
+## 4 septdecies. Réalisé — lot 5d-2b-2 (`cluster/dpi/ClusterResizeActivity`) — **dpi/ 100 % Kotlin**
+
+- ✅ `ClusterResizeActivity.java` → `.kt` (Activity éditeur plein écran ~390 l : `SurfaceTextureListener` + `ResizeFrameView.Listener`, miroir cluster via daemon, apply throttlé sur executor, IBinder daemon). **Le package `cluster/dpi/` est désormais 100 % Kotlin.**
+- `EXTRA_PACKAGE/EXTRA_DISPLAY_ID/EXTRA_INIT_LTRB` en `const val` companion (lus par `AppActionSheet` Kotlin) ; nom qualifié inchangé → **manifest valide sans modif**.
+- Nullabilité : `mPkg`/`mInitRect`/vues/`mMirror` en `lateinit` (assignés dans `onCreate` après le guard `pkg.isNullOrEmpty() → finish`), `::mFrame.isInitialized` dans `onDestroy` (le `mFrame != null` Java) ; `mActiveSurface: Surface?` ; `mPendingRect: IntArray?`.
+- Concurrence préservée : `mApplyLock` (`Any()`), `synchronized(mApplyLock) { … }` (forme valeur-de-retour dans `mApplyRunnable`), executor mono-thread daemon en companion, `mUi` Handler. `Runnable { … }` + `return@Runnable`.
+- `@Suppress("DEPRECATION")` sur `systemUiVisibility` (flags immersifs) ; KTX `edit { }` (live-mode + persistRect) ; `getSystemService(DISPLAY_SERVICE) as? DisplayManager`. Le fix resize (persistRect/scheduleApply, déjà validé en 1.6.38) converti tel quel.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -207,7 +216,7 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5c ✅ | `infrastructure/launch` (dont `IamAppLauncher` réflexion) — **infrastructure/ 100 % Kotlin** (hors AdbLocalClient) | build vert |
 | 5d-1 ✅ | `cluster/ClusterSessionTracker` | build vert |
 | 5d-2a ✅ | `cluster/dpi/` système DPI (ClusterDpiPrefs, ClusterDpiManager) | build vert |
-| 5d-2b | `cluster/dpi/` éditeur (ResizeFrameView View custom, ClusterResizeActivity — réflexion) — fix resize validé terrain (1.6.38) | run terrain |
+| 5d-2b ✅ | `cluster/dpi/` éditeur (ResizeFrameView + ClusterResizeActivity) — **dpi/ 100 % Kotlin** | build vert |
 | 5d-3 | `cluster/display/` (DashboardDisplayHelper, DashboardLauncher, ClusterManager — réflexion/binder) | run terrain DL3/DL5 |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
