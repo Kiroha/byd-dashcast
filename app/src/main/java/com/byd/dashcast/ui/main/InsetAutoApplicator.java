@@ -10,6 +10,7 @@ import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.cluster.ClusterService;
 import com.byd.dashcast.ui.settings.SettingsActivity;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.ShellGateway;
 
 /**
@@ -51,6 +52,18 @@ public final class InsetAutoApplicator {
         if (pkg == null) return;
         Context ctx = mHost.getContext();
         SharedPreferences p = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+
+        // A hand-drawn rectangle (ClusterResizeActivity) takes precedence over the symmetric
+        // seekbar insets: re-apply it via the daemon moveAndResize path that actually works on
+        // DL3 (the inset/resizeActiveTask path is rejected with "resizeTask not allowed").
+        int[] rect = parseRect(p.getString(SettingsActivity.PREF_CLUSTER_RECT_PREFIX + pkg, null));
+        if (rect != null) {
+            AppLogger.d(TAG, "autoApplyRect pkg=" + pkg + " [" + rect[0] + "," + rect[1] + ","
+                    + rect[2] + "," + rect[3] + "]");
+            scheduleRectApply(pkg, rect);
+            return;
+        }
+
         int defH    = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
         int defV    = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
         int savedH  = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
@@ -97,5 +110,77 @@ public final class InsetAutoApplicator {
             mResizeThread = t;
             t.start();
         }, 500);
+    }
+
+    /**
+     * Re-applies a hand-drawn rectangle 500 ms after launch via the daemon moveAndResize
+     * path. Retries up to 3× (the FREEFORM flip may not take on the first call right after a
+     * fresh launch — the same call succeeds once the task has settled, which is why drawing
+     * it manually in ClusterResizeActivity works).
+     */
+    private void scheduleRectApply(final String pkg, final int[] rect) {
+        mHandler.postDelayed(() -> {
+            if (!pkg.equals(mHost.getCurrentPkg())) return;
+            ClusterService svc = mHost.getClusterServiceIfBound();
+            if (svc == null) return;
+            final int clusterId = svc.getDisplayId();
+            if (clusterId <= 0) {
+                AppLogger.w(TAG, "autoApplyRect: cluster display not connected — skipped");
+                return;
+            }
+            Thread prev = mResizeThread;
+            if (prev != null && prev.isAlive()) {
+                AppLogger.d(TAG, "autoApplyRect: resize thread still running, skipped for " + pkg);
+                return;
+            }
+            Thread t = new Thread(() -> {
+                // Wait for the freshly-launched task to appear (same race as the inset path).
+                int taskId = -1;
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    taskId = svc.findRunningTaskId(pkg);
+                    if (taskId > 0) break;
+                    if (!pkg.equals(mHost.getCurrentPkg())) return;
+                    try { Thread.sleep(500); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                }
+                if (taskId <= 0) {
+                    AppLogger.w(TAG, "autoApplyRect: task not found for " + pkg);
+                    return;
+                }
+                // Re-apply via the same daemon path ClusterResizeActivity uses; retry until
+                // the FREEFORM flip lands (the daemon returns its log, never throws).
+                for (int attempt = 1; attempt <= 3; attempt++) {
+                    if (!pkg.equals(mHost.getCurrentPkg())) return;
+                    try {
+                        String log = ProxyClient.moveAndResize(pkg, clusterId,
+                                rect[0], rect[1], rect[2], rect[3]);
+                        AppLogger.i(TAG, "autoApplyRect [" + rect[0] + "," + rect[1] + ","
+                                + rect[2] + "," + rect[3] + "] (attempt " + attempt + "/3) → " + log);
+                        if (log != null && !log.contains("not allowed") && !log.contains("ERR")) break;
+                    } catch (Throwable th) {
+                        AppLogger.w(TAG, "autoApplyRect failed: " + th.getMessage());
+                    }
+                    try { Thread.sleep(800); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+                }
+            }, "auto-rect-resize-thread");
+            mResizeThread = t;
+            t.start();
+        }, 500);
+    }
+
+    /** Parses a persisted "l,t,r,b" rectangle, or null if absent/invalid. */
+    private static int[] parseRect(String s) {
+        if (s == null) return null;
+        String[] parts = s.split(",");
+        if (parts.length != 4) return null;
+        try {
+            return new int[]{
+                    Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim()),
+                    Integer.parseInt(parts[2].trim()), Integer.parseInt(parts[3].trim())
+            };
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

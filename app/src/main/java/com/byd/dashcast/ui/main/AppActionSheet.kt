@@ -16,7 +16,9 @@ import com.byd.dashcast.R
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.cluster.dpi.ClusterDpiPrefs
 import com.byd.dashcast.cluster.dpi.ClusterResizeActivity
+import com.byd.dashcast.data.prefs.ClusterPrefs
 import com.byd.dashcast.model.AppInfo
+import com.byd.dashcast.ui.settings.SettingsActivity
 import com.byd.dashcast.util.AppLogger
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -104,10 +106,15 @@ object AppActionSheet {
             val svc = host.getClusterServiceIfBound()
             var displayId = svc?.getDisplayId() ?: 1
             if (displayId < 0) displayId = 1
-            val it = Intent(ctx, ClusterResizeActivity::class.java)
-            it.putExtra(ClusterResizeActivity.EXTRA_PACKAGE, app.packageName)
-            it.putExtra(ClusterResizeActivity.EXTRA_DISPLAY_ID, displayId)
-            host.startActivity(it)
+            val resizeIntent = Intent(ctx, ClusterResizeActivity::class.java)
+            resizeIntent.putExtra(ClusterResizeActivity.EXTRA_PACKAGE, app.packageName)
+            resizeIntent.putExtra(ClusterResizeActivity.EXTRA_DISPLAY_ID, displayId)
+            // Re-open on the last saved rectangle so the frame reflects the current size
+            // instead of resetting to full-screen.
+            readSavedClusterRect(ctx, app.packageName)?.let {
+                resizeIntent.putExtra(ClusterResizeActivity.EXTRA_INIT_LTRB, it)
+            }
+            host.startActivity(resizeIntent)
             dialog.dismiss()
         }
 
@@ -228,5 +235,18 @@ object AppActionSheet {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** Reads the per-app hand-drawn cluster rectangle ("l,t,r,b"), or null if none/invalid. */
+    private fun readSavedClusterRect(ctx: Context, pkg: String): IntArray? {
+        val s = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(SettingsActivity.PREF_CLUSTER_RECT_PREFIX + pkg, null) ?: return null
+        val parts = s.split(",")
+        if (parts.size != 4) return null
+        return try {
+            intArrayOf(parts[0].toInt(), parts[1].toInt(), parts[2].toInt(), parts[3].toInt())
+        } catch (e: NumberFormatException) {
+            null
+        }
     }
 }

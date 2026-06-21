@@ -609,5 +609,10 @@ class SettingsActivity : AppCompatActivity() {
         // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
         const val PREF_INSET_H_PREFIX = "inset_h_"
         const val PREF_INSET_V_PREFIX = "inset_v_"
+
+        // Per-app hand-drawn cluster rectangle ("l,t,r,b"), set by ClusterResizeActivity.
+        // Takes precedence over the symmetric seekbar insets when present (the last tool
+        // used wins: ClusterControlCoordinator removes it when the seekbar Apply is used).
+        const val PREF_CLUSTER_RECT_PREFIX = "cluster_rect_"
     }
 }
