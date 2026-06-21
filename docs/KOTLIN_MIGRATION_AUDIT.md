@@ -191,6 +191,13 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Concurrence préservée : `sCache` (HashMap) + `synchronized(sCache) { … }` (forme valeur-de-retour, ex. `val v = synchronized(sCache){ sCache[id] } ?: 0`). `Math.max/min(clamp)` → `dpi.coerceIn(MIN_DPI, MAX_DPI)` ; écriture prefs via KTX `edit { }` (lint UseKtx) ; `pkg.isNullOrEmpty()`.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 sexdecies. Réalisé — lot 5d-2b-1 (`cluster/dpi/ResizeFrameView`)
+
+- ✅ `ResizeFrameView.java` → `.kt` (View custom 352 l : cadre éditable à 8 poignées, dessin + tactile + snap + gesture-exclusion). Aucune réflexion. Consommée uniquement par `ClusterResizeActivity` (resté Java).
+- Interop : `Listener` en `fun interface` (implémentée en dur par ClusterResizeActivity Java) ; `setClusterSize/setFrame/getFrame/setListener/clearGestureExclusion` restent des méthodes (appelées depuis Java).
+- Conversion : `@JvmOverloads constructor(...)` pour les 3 ctors (inflation XML) + bloc `init`; `switch`→`when` (touch `ACTION_UP, ACTION_CANCEL` groupés) ; littéraux couleur `0xFF…` (Long en Kotlin) → `.toInt()` ; `Math.hypot` via helper `hyp()` (Float→Double→Float) ; `setSystemGestureExclusionRects` → propriété `systemGestureExclusionRects` (guard `SDK_INT < Q`) ; constantes HANDLE_*/SNAP/GRID + `snapStep/softSnap` en `companion`.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0. **`ClusterResizeActivity` (Activity, réflexion) reste pour 5d-2b-2.**
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
