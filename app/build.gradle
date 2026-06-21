@@ -321,8 +321,9 @@ android {
         // 479 = 1.6.38-beta (DL3 resize fix INC-20260621-181741: hand-drawn cluster resize is now persisted per-app, re-opened on its saved size, and re-applied on relaunch via the daemon moveAndResize path (retry x3); seekbar Apply clears the drawn rect. + Kotlin migration lot 5d-1: ClusterSessionTracker converted to Kotlin).
         // 480 = 1.6.39-beta (DL3 auto-launch fix INC-20260621-083120: a configured auto-launch app was silently dropped when the cluster connected before the async app-list finished loading; the pending is now consumed only when the app is found and replayed once the list is ready. + Kotlin migration lot 5d-2a: ClusterDpiPrefs + ClusterDpiManager converted to Kotlin).
         // 481 = 1.6.40-beta (Kotlin migration lot 5d-2b: ResizeFrameView (custom View) + ClusterResizeActivity converted to Kotlin; cluster/dpi/ now 100% Kotlin — behaviour unchanged).
-        versionCode 481
-        versionName "1.6.40-beta"
+        // 482 = 1.6.41-beta (Kotlin migration lot 5d-3a: cluster/display/DashboardDisplayHelper (cluster display detection/activation, sentinels -1/-2) converted to Kotlin — behaviour unchanged. + comment clarification: sendInfo routes through the proxy daemon first, ADB shell fallback).
+        versionCode 482
+        versionName "1.6.41-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
