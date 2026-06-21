@@ -82,6 +82,8 @@ public final class BugReportCapture {
             + " ; ps -A 2>/dev/null | grep -iE 'byd|xdja|daemon|dilink|cluster|app_process' >> " + p
             + " ; echo '--- MIRRORDAEMON LOG ---' >> " + p
             + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null | tail -200 >> " + p
+            + " ; echo '--- PROXYDAEMON LOG ---' >> " + p
+            + " ; cat /data/local/tmp/dashcast_proxy.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '=== END SHELL DUMP ===' >> " + p;
 
         AdbLocalClient.executeShellWithResult(app, cmd, new AdbLocalClient.Callback() {

@@ -779,10 +779,42 @@ public class ClusterService extends Service
             try {
                 if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
                 String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
-                String first = (log != null && !log.isEmpty()) ? log.split("\n", 2)[0] : "null";
-                AppLogger.i(TAG, "DL5 daemon launchAndForce → " + first);
+                // Log the FULL cascade result, not just the first line — we need to see
+                // whether moveRootTaskToDisplay / setTaskWindowingModeFreeform / resizeTask
+                // actually succeeded on this ROM (INC-20260621-201303: app reaches display 1
+                // but ends up mode=fullscreen and the user still sees nothing).
+                AppLogger.i(TAG, "DL5 daemon launchAndForce result:\n"
+                        + (log != null && !log.isEmpty() ? log : "(empty)"));
             } catch (Throwable t) {
                 AppLogger.e(TAG, "DL5 daemon launchAndForce failed: " + t.getMessage());
+            }
+            // Post-launch verification: ~1.5 s after the cascade, dump what is actually on
+            // the cluster display (package / visible / windowing mode / bounds) so the next
+            // bug report shows whether the app stayed put and in which mode it rendered.
+            verifyClusterDisplayState(displayId, packageName);
+        });
+    }
+
+    /**
+     * Diagnostic only (no behaviour change): after a DL5 daemon launch, query the
+     * cluster display's top tasks and log them to the journal. Helps determine whether
+     * the launched app stays on the display and in which windowing mode / bounds.
+     */
+    private void verifyClusterDisplayState(final int displayId, final String packageName) {
+        try { Thread.sleep(1500); } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt(); return;
+        }
+        final String cmd = "dumpsys activity activities 2>/dev/null"
+                + " | grep -A 25 'Display #" + displayId + "'"
+                + " | grep -E 'Stack #|Task\\{|mResumed|visible=' | head -20";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.i(TAG, "DL5 post-launch display " + displayId + " state ("
+                        + packageName + "):\n" + (out == null || out.trim().isEmpty()
+                        ? "(nothing on display " + displayId + ")" : out.trim()));
+            }
+            @Override public void onError(String err) {
+                AppLogger.w(TAG, "DL5 post-launch verify failed: " + err);
             }
         });
     }
