@@ -322,8 +322,9 @@ android {
         // 480 = 1.6.39-beta (DL3 auto-launch fix INC-20260621-083120: a configured auto-launch app was silently dropped when the cluster connected before the async app-list finished loading; the pending is now consumed only when the app is found and replayed once the list is ready. + Kotlin migration lot 5d-2a: ClusterDpiPrefs + ClusterDpiManager converted to Kotlin).
         // 481 = 1.6.40-beta (Kotlin migration lot 5d-2b: ResizeFrameView (custom View) + ClusterResizeActivity converted to Kotlin; cluster/dpi/ now 100% Kotlin — behaviour unchanged).
         // 482 = 1.6.41-beta (Kotlin migration lot 5d-3a: cluster/display/DashboardDisplayHelper (cluster display detection/activation, sentinels -1/-2) converted to Kotlin — behaviour unchanged. + comment clarification: sendInfo routes through the proxy daemon first, ADB shell fallback).
-        versionCode 482
-        versionName "1.6.41-beta"
+        // 483 = 1.6.42-beta (Kotlin migration lot 5d-3b: cluster/display/ClusterManager (709 l — cluster display activation engine: sendInfo 30/16/35 sequence, fast/warm/slow paths, ADAS remap, late-arrival watcher) converted to Kotlin; interface default-method pitfall fixed via an explicit empty onDisplayLateReady in FissionOrchestrator — behaviour unchanged).
+        versionCode 483
+        versionName "1.6.42-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
