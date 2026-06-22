@@ -104,6 +104,14 @@ public final class Platform {
         String f = (fingerprint == null ? "" : fingerprint).toLowerCase(Locale.ROOT);
         if (p.contains("dilink5") || m.contains("dilink5") || f.contains("dilink5")) return true;
         if (p.contains("dilink_5") || m.contains("dilink 5") || f.contains("dilink 5")) return true;
+        // DX_BYD_AUTO: BYD's DiLink 5.0 variant whose ro.product.name is "DX_BYD_AUTO"
+        // (not "DiLink5"). It ships Android 11 (API 30), so the api>=31 heuristic below
+        // misses it — without this signal it auto-detects as DL3 and the whole DL5 launch
+        // path (daemon launchAndForce, overscan skip) is disabled. Confirmed DiLink 5.0 by
+        // the user and by field reports INC-20260620-191420 / -205757 / INC-20260621-073318
+        // / -201303 / -210703. Build.MODEL is the generic "BYD AUTO" (shared with DL3), so
+        // we match the product-name signature "dx_byd" only.
+        if (p.contains("dx_byd") || m.contains("dx_byd") || f.contains("dx_byd")) return true;
         // Secondary signal: Android 12+ on BYD device strongly implies DiLink 5
         if (api >= 31 && (m.contains("byd") || f.contains("byd-auto") || f.contains("/dilink"))) {
             return true;
