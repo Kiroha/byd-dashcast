@@ -24,7 +24,7 @@ import java.util.Locale
  * Backward-compat: log(tag, msg) → INFO.
  *
  * Thread-safe: uses a synchronized ArrayDeque with explicit lock.
- * Circular buffer: MAX_ENTRIES = 3000 entries.
+ * Circular buffer: MAX_ENTRIES = 5000 entries.
  */
 object AppLogger {
 
@@ -45,7 +45,7 @@ object AppLogger {
     }
 
     // ── Circular buffer ───────────────────────────────────────────────────────
-    private const val MAX_ENTRIES = 3000
+    private const val MAX_ENTRIES = 5000
 
     // Using a synchronized ArrayDeque instead of CopyOnWriteArrayList to avoid
     // an O(N) copy of 3000 entries on every log call, reducing GC pressure.
