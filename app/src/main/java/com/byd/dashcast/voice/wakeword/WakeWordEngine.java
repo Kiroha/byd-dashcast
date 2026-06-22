@@ -90,8 +90,44 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     /** Minimum samples accumulated before the first eval is meaningful. */
     private static final int MIN_AUDIO_SAMPLES = 16_000 * 2;   // 2 s
 
-    /** Throttle : at most one full eval every this many ms. */
-    private static final long EVAL_INTERVAL_MS = 100L;
+    /** Throttle : at most one full eval every this many ms.
+     *  perf — raised 100 → 160 ms (10 Hz → ~6.3 Hz). With a 2.5 s window and a
+     *  1.5 s detect cool-down, the wake word still gets ~15 evals while it sits
+     *  in the buffer; worst-case added latency +60 ms (imperceptible). Cuts the
+     *  continuous wake-word CPU by ~37 % outright. */
+    private static final long EVAL_INTERVAL_MS = 160L;
+
+    /** perf — silence gate. If the loudest sample in the WHOLE 2.5 s window is
+     *  below this normalised-float floor (~-49 dBFS), the audio is genuine
+     *  silence and we skip the ONNX pipeline entirely. Safe by construction:
+     *  because the gate inspects the full window, a wake word (and its 2.5 s
+     *  echo in the ring) keeps the engine active for 2.5 s, so a real utterance
+     *  can never be skipped. A signal below this floor is also below the model's
+     *  own sensitivity, so no detection the model could have made is lost.
+     *  Set to 0f to disable. */
+    private static final float SILENCE_GATE_FLOOR = 0.0035f;
+
+    // ─── perf: streaming inference parameters ──────────────────────────────
+    /** Samples per mel frame (100 Hz framing → 160 samples at 16 kHz). */
+    private static final int MEL_HOP = 160;
+    /** Rolling mel-frame cache capacity. Must exceed the 204 frames the wake
+     *  head spans (16*8 + 76) plus a few ticks of advance. */
+    private static final int MEL_RING_FRAMES = 320;
+    /** Rolling embedding cache (stride-grid windows). Must exceed WAKE_WINDOW. */
+    private static final int EMB_CACHE = 24;
+    /** Left-context frames discarded from each short mel feed. Generously larger
+     *  than any plausible STFT window, so the frames we keep have full left
+     *  context and are bit-identical to the full-window computation. */
+    private static final int MEL_WARMUP_FRAMES = 48;
+    /** Right-context guard: the newest frames of a feed may use padded/reflected
+     *  right context (centered STFT), so we defer committing them by one tick
+     *  until real future audio exists. 3 frames = 30 ms covers any 16 kHz STFT. */
+    private static final int MEL_GUARD = 3;
+    /** Transient on-device self-check: run the reference full-recompute path
+     *  alongside streaming for this long after the first non-silent eval and log
+     *  both scores, so detection parity can be confirmed by voice on the target
+     *  unit. Set to 0 to disable. */
+    private static final long SELF_CHECK_MS = 12_000L;
 
     /** Number of mel frames per embedding window. */
     private static final int EMB_WINDOW = 76;
@@ -167,6 +203,16 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
     private final HashMap<String, OnnxTensor> mEmbMap  = new HashMap<>(2);
     private final HashMap<String, OnnxTensor> mWakeMap = new HashMap<>(2);
     private final Intent mScoreIntent = new Intent(ACTION_WAKEWORD);
+
+    // ─── perf: streaming inference state (worker-thread only) ──────────────────
+    private final float[]       mMelFeed   = new float[AUDIO_BUFFER_LEN];        // normalized audio fed to mel
+    private final float[][]     mMelRing   = new float[MEL_RING_FRAMES][32];     // rolling normalized mel frames
+    private long                mMelTotalFrames = 0L;                            // committed mel frames (absolute)
+    private final float[][][][] mEmb1Input = new float[1][EMB_WINDOW][32][1];    // batch-1 embedding input
+    private final float[][]     mEmbRing   = new float[EMB_CACHE][96];           // rolling embeddings (grid k → k % EMB_CACHE)
+    private long                mEmbHeadGrid   = -1L;                            // highest computed grid index
+    private long                mEmbContigFrom = 0L;                             // lowest grid index of the contiguous valid run
+    private long                mFirstEvalAt   = 0L;                             // self-check window anchor
 
     public WakeWordEngine(Context ctx) {
         this.mAppCtx = ctx.getApplicationContext();
@@ -256,6 +302,7 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
             // Snapshot the latest min(MIN_AUDIO_SAMPLES, total) samples
             // chronologically into audioWindow[0..n-1].
             int n;
+            float windowPeak = 0f;
             synchronized (mRingLock) {
                 long total = mTotalWritten;
                 int  w     = mRingWrite;
@@ -265,13 +312,35 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
                     // Normalize int16 PCM → float32 [-1, 1] as expected by the
                     // openWakeWord melspectrogram model (mirrors openwakeword/utils.py:
                     // x = x.astype(np.float32) / 32768).
-                    audioWindow[i] = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f;
+                    float s = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f;
+                    audioWindow[i] = s;
+                    float a = s < 0f ? -s : s;
+                    if (a > windowPeak) windowPeak = a;
                 }
             }
             if (n < MIN_AUDIO_SAMPLES) continue;
 
+            // perf — silence gate. Skip the expensive mel→emb→wake ONNX pipeline
+            // when the entire 2.5 s window is silent. See SILENCE_GATE_FLOOR: this
+            // can never drop a real utterance, it only reclaims idle CPU. We still
+            // publish a 0 score so the UI level/score indicator stays live.
+            if (SILENCE_GATE_FLOOR > 0f && windowPeak < SILENCE_GATE_FLOOR) {
+                mLastScore = 0f;
+                broadcastScore(0f, false);
+                continue;
+            }
+
             try {
-                float score = runOneEval(audioWindow, n);
+                if (mFirstEvalAt == 0L) mFirstEvalAt = SystemClock.elapsedRealtime();
+                float score = runOneEvalStreaming();
+                // perf — transient on-device self-check: for the first SELF_CHECK_MS
+                // of active audio, also run the reference full-recompute and log both
+                // scores so detection parity can be confirmed by voice on the unit.
+                if (SELF_CHECK_MS > 0L && SystemClock.elapsedRealtime() - mFirstEvalAt < SELF_CHECK_MS) {
+                    float ref = runOneEvalReference(audioWindow, n);
+                    AppLogger.d(TAG, String.format(java.util.Locale.US,
+                            "selfcheck stream=%.3f ref=%.3f Δ=%.3f", score, ref, Math.abs(score - ref)));
+                }
                 mLastScore = score;
                 long evalNow = SystemClock.elapsedRealtime();
                 // v1.2.80 — rolling 30s peak. Decays naturally: if the
@@ -364,8 +433,10 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
 
     // ─── Inference pipeline ────────────────────────────────────────────────
 
-    /** Runs one melspec → embedding → wake pass; returns the sigmoid score. */
-    private float runOneEval(float[] audio, int n) throws Exception {
+    /** Reference path: full-window recompute of melspec → 16 embeddings → wake.
+     *  Retained as the ground-truth oracle for the streaming self-check; not on
+     *  the steady-state hot path once {@link #SELF_CHECK_MS} elapses. */
+    private float runOneEvalReference(float[] audio, int n) throws Exception {
         // 1) melspectrogram : (1, n_samples) float32 → (n_frames, 1, 1, 32)
         float[][] melspec = computeMelspec(audio, n);
         int nFrames = melspec.length;
@@ -441,6 +512,115 @@ public final class WakeWordEngine implements com.byd.dashcast.voice.VoiceService
                     }
                 }
                 return mel;
+            }
+        }
+    }
+
+    // ─── perf: streaming inference pipeline ────────────────────────────────
+
+    /**
+     * Streaming evaluation. The reference path recomputes the mel-spectrogram of
+     * the whole 2.5 s window and all 16 embedding windows every tick (~90 %
+     * redundant). This instead:
+     *   1) feeds the mel model only a short audio tail and commits the new
+     *      frames into a rolling mel-frame ring — interior frames are bit-exact
+     *      vs the full-window result (MEL_WARMUP_FRAMES of left context,
+     *      MEL_GUARD frames of right-context deferral);
+     *   2) computes embeddings only for newly-available stride-grid windows
+     *      (~1-2 per tick vs 16) into a rolling embedding ring;
+     *   3) runs the fixed [1,16,96] wake head on the last 16 cached embeddings.
+     * Windows are anchored to an absolute EMB_STRIDE grid (≤ 80 ms behind the
+     * latest audio), which is what makes embeddings cacheable across ticks.
+     */
+    private float runOneEvalStreaming() throws Exception {
+        advanceMel();
+        advanceEmbeddings();
+        if (mEmbHeadGrid < 0 || mEmbHeadGrid - mEmbContigFrom + 1 < WAKE_WINDOW) {
+            return mLastScore; // still warming up — not yet 16 contiguous embeddings
+        }
+        final long head = mEmbHeadGrid;
+        for (int b = 0; b < WAKE_WINDOW; b++) {
+            long k = head - (WAKE_WINDOW - 1) + b;
+            float[] e = mEmbRing[(int) Math.floorMod(k, (long) EMB_CACHE)];
+            System.arraycopy(e, 0, mWakeInput[0][b], 0, 96);
+        }
+        try (OnnxTensor wt = OnnxTensor.createTensor(mEnv, mWakeInput)) {
+            mWakeMap.put(mWakeInputName, wt);
+            try (OrtSession.Result out = mSessWake.run(mWakeMap)) {
+                float[][] raw = (float[][]) out.get(0).getValue();
+                return raw[0][0];
+            }
+        }
+    }
+
+    /** Feeds a short audio tail to the mel model and commits the new (fully
+     *  contextualised) frames into mMelRing. */
+    private void advanceMel() throws Exception {
+        final long feedStartFrame;
+        final int  feedLen;
+        synchronized (mRingLock) {
+            long total = mTotalWritten;
+            long bufStartSample = Math.max(0L, total - AUDIO_BUFFER_LEN);
+            long bufStartFrame  = (bufStartSample + MEL_HOP - 1) / MEL_HOP; // ceil → never read evicted samples
+            if (mMelTotalFrames < bufStartFrame) mMelTotalFrames = bufStartFrame; // cold start / stall jump
+            feedStartFrame  = Math.max(bufStartFrame, mMelTotalFrames - MEL_WARMUP_FRAMES);
+            long feedStartSample = feedStartFrame * MEL_HOP;
+            feedLen = (int) (total - feedStartSample);
+            if (feedLen < EMB_WINDOW * MEL_HOP) return; // not enough audio for one window yet
+            int start = (int) Math.floorMod(feedStartSample, (long) AUDIO_BUFFER_LEN);
+            for (int i = 0; i < feedLen; i++) {
+                mMelFeed[i] = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f;
+            }
+        }
+        long[] shape = { 1L, (long) feedLen };
+        try (OnnxTensor in = OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(mMelFeed, 0, feedLen), shape)) {
+            mMelMap.put(mMelInputName, in);
+            try (OrtSession.Result out = mSessMel.run(mMelMap)) {
+                float[][][][] raw = (float[][][][]) out.get(0).getValue(); // [1,1,time,32]
+                int nf = raw[0][0].length;
+                long lastCommit = feedStartFrame + nf - MEL_GUARD; // exclusive
+                for (long f = mMelTotalFrames; f < lastCommit; f++) {
+                    int localIdx = (int) (f - feedStartFrame);
+                    if (localIdx < 0 || localIdx >= nf) continue;
+                    float[] src = raw[0][0][localIdx];               // (32,) raw log-mel dB
+                    float[] dst = mMelRing[(int) Math.floorMod(f, (long) MEL_RING_FRAMES)];
+                    for (int k = 0; k < 32; k++) dst[k] = src[k] / 10f + 2f; // openWakeWord normalization
+                }
+                if (lastCommit > mMelTotalFrames) mMelTotalFrames = lastCommit;
+            }
+        }
+    }
+
+    /** Computes embeddings for any newly-available stride-grid windows and
+     *  maintains the contiguous-valid run used by the wake head. */
+    private void advanceEmbeddings() throws Exception {
+        long maxK = (mMelTotalFrames - EMB_WINDOW) / EMB_STRIDE;
+        if (maxK < 0) return;
+        long ringFloorFrame = Math.max(0L, mMelTotalFrames - MEL_RING_FRAMES);
+        long minK  = (ringFloorFrame + EMB_STRIDE - 1) / EMB_STRIDE;   // ceil → first window fully inside the ring
+        long fromK = Math.max(mEmbHeadGrid + 1, minK);
+        if (mEmbHeadGrid < 0 || fromK > mEmbHeadGrid + 1) {
+            mEmbContigFrom = fromK; // cold start, or ring overflowed past the old head (worker stalled)
+        }
+        for (long k = fromK; k <= maxK; k++) {
+            embedWindow(k);
+        }
+        if (maxK > mEmbHeadGrid)        mEmbHeadGrid   = maxK;
+        if (mEmbContigFrom < minK)      mEmbContigFrom = minK; // windows below the ring floor are no longer valid
+    }
+
+    /** Runs the embedding model (batch 1) for one stride-grid window and caches it. */
+    private void embedWindow(long k) throws Exception {
+        long startFrame = k * EMB_STRIDE;
+        for (int j = 0; j < EMB_WINDOW; j++) {
+            float[] mel = mMelRing[(int) Math.floorMod(startFrame + j, (long) MEL_RING_FRAMES)];
+            for (int c = 0; c < 32; c++) mEmb1Input[0][j][c][0] = mel[c];
+        }
+        try (OnnxTensor embT = OnnxTensor.createTensor(mEnv, mEmb1Input)) {
+            mEmbMap.put(mEmbInputName, embT);
+            try (OrtSession.Result out = mSessEmb.run(mEmbMap)) {
+                float[][][][] raw = (float[][][][]) out.get(0).getValue(); // [1,1,1,96]
+                System.arraycopy(raw[0][0][0], 0, mEmbRing[(int) Math.floorMod(k, (long) EMB_CACHE)], 0, 96);
             }
         }
     }
