@@ -690,6 +690,9 @@
         <item>Ilova ko’rinmaydi</item>
         <item>Uzilgan</item>
         <item>Miltillash</item>
+        <item>Sensor ishlamaydi</item>
+        <item>Sensor siljigan</item>
+        <item>Kechikish / uzilish</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Ilova muzladi</item>
@@ -697,6 +700,9 @@
         <item>Noto’g’ri joylashuv</item>
         <item>Ilova ishdan chiqdi</item>
         <item>Kontent yo’q</item>
+        <item>Noto’g’ri DPI / matn</item>
+        <item>Istalmagan bo’lingan ekran</item>
+        <item>O’lcham saqlanmadi</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Ovoz yo’q</item>
@@ -711,6 +717,7 @@
         <item>Juda sekin</item>
         <item>Klaster ekrani yo’q</item>
         <item>WiFi muammosi</item>
+        <item>Daemon / proksi mavjud emas</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Ilova ishdan chiqdi</item>
@@ -718,6 +725,8 @@
         <item>DashCast ishdan chiqdi</item>
         <item>Avtomobil ekrani qora</item>
         <item>Qayta ishga tushirishga to’g’ri keldi</item>
+        <item>Proyeksiya to’xtagach sekin</item>
+        <item>Planshet sekinlashadi</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Muzlagan</item>
@@ -728,11 +737,20 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Ishlash muammosi</item>
+        <item>Sekin / planshet sekin</item>
+        <item>Avto-ishga tushirish ishlamaydi</item>
+        <item>Layout / Fission</item>
         <item>Batareya sarfi</item>
         <item>Ekran sozlamalari</item>
         <item>Taklif</item>
         <item>Boshqa narsa</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Tafsilotlar (ixtiyoriy)</string>
+    <string name="bug_wizard_details_hint">Nima qilayotgan eding? Nimani kutgan eding? Foydali ma’lumot qo’sh.</string>
+    <string name="bug_wizard_send">Hisobotni yuborish</string>
+    <string name="bug_wizard_pick_issue">Yuqoridan muammo tanlang</string>
+    <string name="bug_wizard_selected_fmt">Tanlandi: %1$s</string>
     <string name="toast_adb_port_refused">ADB ulanib bo\'lmadi (5555-port) — bu qurilmada ko\'zgu mavjud emas</string>
 </resources>
 

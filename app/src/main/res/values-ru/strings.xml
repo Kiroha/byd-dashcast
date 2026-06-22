@@ -689,6 +689,9 @@
         <item>Приложение не отображается</item>
         <item>Отключено</item>
         <item>Мерцание</item>
+        <item>Касание не работает</item>
+        <item>Касание смещено</item>
+        <item>Лаги / рывки</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Приложение зависло</item>
@@ -696,6 +699,9 @@
         <item>Неверная позиция</item>
         <item>Приложение упало</item>
         <item>Контент отсутствует</item>
+        <item>Неверный DPI / текст</item>
+        <item>Нежелательный раздел экрана</item>
+        <item>Размер не сохранён</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Нет звука</item>
@@ -710,6 +716,7 @@
         <item>Очень медленно</item>
         <item>Нет дисплея кластера</item>
         <item>Проблема Wi-Fi</item>
+        <item>Daemon / прокси недоступен</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Приложение упало</item>
@@ -717,6 +724,8 @@
         <item>DashCast упал</item>
         <item>Экран авто чёрный</item>
         <item>Пришлось перезапустить</item>
+        <item>Тормозит после остановки проекции</item>
+        <item>Планшет тормозит</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Завис</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Проблема производительности</item>
+        <item>Тормозит / планшет тормозит</item>
+        <item>Автозапуск не работает</item>
+        <item>Layout / Fission</item>
         <item>Расход батареи</item>
         <item>Настройки дисплея</item>
         <item>Предложение</item>
         <item>Другое</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Детали (необязательно)</string>
+    <string name="bug_wizard_details_hint">Что вы делали? Что ожидали? Добавьте полезные детали.</string>
+    <string name="bug_wizard_send">Отправить отчёт</string>
+    <string name="bug_wizard_pick_issue">Выберите проблему выше</string>
+    <string name="bug_wizard_selected_fmt">Выбрано: %1$s</string>
     <string name="toast_adb_port_refused">ADB недоступен (порт 5555) — зеркалирование недоступно на этом устройстве</string>
 </resources>

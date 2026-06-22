@@ -689,6 +689,9 @@
         <item>App nicht angezeigt</item>
         <item>Getrennt</item>
         <item>Flackern</item>
+        <item>Touch reagiert nicht</item>
+        <item>Touch versetzt</item>
+        <item>Ruckeln / Verzögerung</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>App eingefroren</item>
@@ -696,6 +699,9 @@
         <item>Falsche Position</item>
         <item>App abgestürzt</item>
         <item>Inhalt fehlt</item>
+        <item>Falsche DPI / Textgröße</item>
+        <item>Ungewollter Splitscreen</item>
+        <item>Größe nicht gespeichert</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Kein Ton</item>
@@ -710,6 +716,7 @@
         <item>Sehr langsam</item>
         <item>Kein Cluster-Display</item>
         <item>WLAN-Problem</item>
+        <item>Daemon / Proxy nicht verfügbar</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>App abgestürzt</item>
@@ -717,6 +724,8 @@
         <item>DashCast abgestürzt</item>
         <item>Auto-Bildschirm schwarz</item>
         <item>Neustart erforderlich</item>
+        <item>Träge nach Projektionsstopp</item>
+        <item>Tablet hängt</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Eingefroren</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Leistungsproblem</item>
+        <item>Träge / Tablet hängt</item>
+        <item>Auto-Start funktioniert nicht</item>
+        <item>Layout / Fission</item>
         <item>Akkuverbrauch</item>
         <item>Anzeigeeinstellungen</item>
         <item>Vorschlag</item>
         <item>Etwas anderes</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Details (optional)</string>
+    <string name="bug_wizard_details_hint">Was hast du gemacht? Was hast du erwartet? Füge nützliche Infos hinzu.</string>
+    <string name="bug_wizard_send">Bericht senden</string>
+    <string name="bug_wizard_pick_issue">Wähle oben ein Problem</string>
+    <string name="bug_wizard_selected_fmt">Ausgewählt: %1$s</string>
     <string name="toast_adb_port_refused">ADB nicht erreichbar (Port 5555) — Spiegelung auf diesem Gerät nicht verfügbar</string>
 </resources>

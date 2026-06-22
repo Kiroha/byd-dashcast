@@ -689,6 +689,9 @@
         <item>App no mostrada</item>
         <item>Desconectado</item>
         <item>Parpadeo</item>
+        <item>Toque no responde</item>
+        <item>Toque desplazado</item>
+        <item>Lag / tirones</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>App bloqueada</item>
@@ -696,6 +699,9 @@
         <item>Posición incorrecta</item>
         <item>App cerrada</item>
         <item>Contenido ausente</item>
+        <item>DPI / texto incorrecto</item>
+        <item>Pantalla dividida no deseada</item>
+        <item>Tamaño no conservado</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Sin sonido</item>
@@ -710,6 +716,7 @@
         <item>Muy lento</item>
         <item>Sin pantalla cluster</item>
         <item>Problema WiFi</item>
+        <item>Daemon / proxy no disponible</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>App cerrada</item>
@@ -717,6 +724,8 @@
         <item>DashCast cerrado</item>
         <item>Pantalla del coche negra</item>
         <item>Tuvo que reiniciar</item>
+        <item>Lentitud tras detener proyección</item>
+        <item>Tableta lenta</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Congelado</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Problema de rendimiento</item>
+        <item>Lentitud / tableta lenta</item>
+        <item>Auto-inicio no funciona</item>
+        <item>Layout / Fisión</item>
         <item>Consumo de batería</item>
         <item>Ajustes de pantalla</item>
         <item>Sugerencia</item>
         <item>Otra cosa</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Detalles (opcional)</string>
+    <string name="bug_wizard_details_hint">¿Qué hacías? ¿Qué esperabas? Añade cualquier detalle útil.</string>
+    <string name="bug_wizard_send">Enviar informe</string>
+    <string name="bug_wizard_pick_issue">Selecciona un problema arriba</string>
+    <string name="bug_wizard_selected_fmt">Seleccionado: %1$s</string>
     <string name="toast_adb_port_refused">ADB inaccesible (puerto 5555) — espejo no disponible en este dispositivo</string>
 </resources>

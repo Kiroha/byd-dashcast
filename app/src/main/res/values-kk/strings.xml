@@ -689,6 +689,9 @@
         <item>Қосымша көрінбейді</item>
         <item>Ажыратылды</item>
         <item>Жыпылықтау</item>
+        <item>Түрту жұмыс істемейді</item>
+        <item>Түрту жылжыған</item>
+        <item>Кідіріс / іркіліс</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Қосымша тоқтады</item>
@@ -696,6 +699,9 @@
         <item>Қате орын</item>
         <item>Қосымша бұзылды</item>
         <item>Мазмұн жоқ</item>
+        <item>Қате DPI / мәтін</item>
+        <item>Қаламаған бөлінген экран</item>
+        <item>Өлшем сақталмады</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Дыбыс жоқ</item>
@@ -710,6 +716,7 @@
         <item>Өте баяу</item>
         <item>Кластер дисплейі жоқ</item>
         <item>Wi-Fi мәселесі</item>
+        <item>Daemon / прокси қолжетімсіз</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Қосымша бұзылды</item>
@@ -717,6 +724,8 @@
         <item>DashCast бұзылды</item>
         <item>Автомобиль экраны қара</item>
         <item>Қайта іске қосуға мәжбүр болды</item>
+        <item>Проекцияны тоқтатқаннан кейін баяу</item>
+        <item>Планшет баяулайды</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Тоңды</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Өнімділік мәселесі</item>
+        <item>Баяу / планшет баяу</item>
+        <item>Автоқосу жұмыс істемейді</item>
+        <item>Layout / Fission</item>
         <item>Батарея разряды</item>
         <item>Дисплей параметрлері</item>
         <item>Ұсыныс</item>
         <item>Басқа нәрсе</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Мәліметтер (міндетті емес)</string>
+    <string name="bug_wizard_details_hint">Не істедіңіз? Не күттіңіз? Пайдалы мәлімет қосыңыз.</string>
+    <string name="bug_wizard_send">Есепті жіберу</string>
+    <string name="bug_wizard_pick_issue">Жоғарыдан мәселе таңдаңыз</string>
+    <string name="bug_wizard_selected_fmt">Таңдалды: %1$s</string>
     <string name="toast_adb_port_refused">ADB қолжетімсіз (5555 порты) — бұл құрылғыда айналау қолжетімсіз</string>
 </resources>

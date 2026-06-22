@@ -690,6 +690,9 @@
         <item>Додаток не відображається</item>
         <item>Відключено</item>
         <item>Мерехтіння</item>
+        <item>Дотик не працює</item>
+        <item>Дотик зміщено</item>
+        <item>Лаги / ривки</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Додаток завис</item>
@@ -697,6 +700,9 @@
         <item>Невірна позиція</item>
         <item>Додаток впав</item>
         <item>Контент відсутній</item>
+        <item>Невірний DPI / текст</item>
+        <item>Небажаний розділений екран</item>
+        <item>Розмір не збережено</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Немає звуку</item>
@@ -711,6 +717,7 @@
         <item>Дуже повільно</item>
         <item>Немає дисплея кластера</item>
         <item>Проблема Wi-Fi</item>
+        <item>Daemon / проксі недоступний</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Додаток впав</item>
@@ -718,6 +725,8 @@
         <item>DashCast впав</item>
         <item>Екран авто чорний</item>
         <item>Довелось перезапустити</item>
+        <item>Гальмує після зупинки проєкції</item>
+        <item>Планшет гальмує</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Завис</item>
@@ -728,10 +737,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Проблема продуктивності</item>
+        <item>Гальмує / планшет гальмує</item>
+        <item>Автозапуск не працює</item>
+        <item>Layout / Fission</item>
         <item>Розряд батареї</item>
         <item>Налаштування дисплея</item>
         <item>Пропозиція</item>
         <item>Інше</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Деталі (необов’язково)</string>
+    <string name="bug_wizard_details_hint">Що ви робили? Чого очікували? Додайте корисні деталі.</string>
+    <string name="bug_wizard_send">Надіслати звіт</string>
+    <string name="bug_wizard_pick_issue">Виберіть проблему вище</string>
+    <string name="bug_wizard_selected_fmt">Вибрано: %1$s</string>
     <string name="toast_adb_port_refused">ADB недоступний (порт 5555) — дзеркалювання недоступне на цьому пристрої</string>
 </resources>

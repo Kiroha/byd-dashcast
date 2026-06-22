@@ -689,6 +689,9 @@
         <item>Прыкладанне не паказана</item>
         <item>Адключана</item>
         <item>Мільгаценне</item>
+        <item>Дотык не працуе</item>
+        <item>Дотык зрушаны</item>
+        <item>Лагі / рыўкі</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Прыкладанне завісла</item>
@@ -696,6 +699,9 @@
         <item>Няправільная пазіцыя</item>
         <item>Прыкладанне ўпала</item>
         <item>Кантэнт адсутнічае</item>
+        <item>Няправільны DPI / тэкст</item>
+        <item>Непажаданы падзел экрана</item>
+        <item>Памер не захаваны</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Няма гуку</item>
@@ -710,6 +716,7 @@
         <item>Вельмі павольна</item>
         <item>Няма дысплея кластара</item>
         <item>Праблема Wi-Fi</item>
+        <item>Daemon / проксі недаступны</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Прыкладанне ўпала</item>
@@ -717,6 +724,8 @@
         <item>DashCast ўпаў</item>
         <item>Экран аўта чорны</item>
         <item>Прыйшлося перазапусціць</item>
+        <item>Тармозіць пасля спынення праекцыі</item>
+        <item>Планшэт тармозіць</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Замарожаны</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Праблема прадукцыйнасці</item>
+        <item>Тармозіць / планшэт тармозіць</item>
+        <item>Аўтазапуск не працуе</item>
+        <item>Layout / Fission</item>
         <item>Разрад батарэі</item>
         <item>Налады дысплея</item>
         <item>Прапанова</item>
         <item>Іншае</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Дэталі (неабавязкова)</string>
+    <string name="bug_wizard_details_hint">Што вы рабілі? Чаго чакалі? Дадайце карысныя дэталі.</string>
+    <string name="bug_wizard_send">Адправіць справаздачу</string>
+    <string name="bug_wizard_pick_issue">Выберыце праблему вышэй</string>
+    <string name="bug_wizard_selected_fmt">Выбрана: %1$s</string>
     <string name="toast_adb_port_refused">ADB недаступны (порт 5555) — люстраванне недаступнае на гэтай прыладзе</string>
 </resources>

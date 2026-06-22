@@ -689,6 +689,9 @@
         <item>التطبيق لا يظهر</item>
         <item>انقطع الاتصال</item>
         <item>وميض</item>
+        <item>اللمس لا يعمل</item>
+        <item>إزاحة اللمس</item>
+        <item>تأخر / تقطيع</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>التطبيق متجمد</item>
@@ -696,6 +699,9 @@
         <item>موضع خاطئ</item>
         <item>تعطل التطبيق</item>
         <item>محتوى مفقود</item>
+        <item>DPI / نص خاطئ</item>
+        <item>تقسيم شاشة غير مرغوب</item>
+        <item>الحجم غير محفوظ</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>لا يوجد صوت</item>
@@ -710,6 +716,7 @@
         <item>بطيء جداً</item>
         <item>لا يوجد عرض كلاستر</item>
         <item>مشكلة WiFi</item>
+        <item>Daemon / بروكسي غير متاح</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>تعطل التطبيق</item>
@@ -717,6 +724,8 @@
         <item>تعطل DashCast</item>
         <item>شاشة السيارة سوداء</item>
         <item>اضطررت للإعادة</item>
+        <item>بطيء بعد إيقاف العرض</item>
+        <item>الجهاز اللوحي بطيء</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>مجمّد</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>مشكلة أداء</item>
+        <item>بطيء / الجهاز اللوحي بطيء</item>
+        <item>التشغيل التلقائي لا يعمل</item>
+        <item>Layout / Fission</item>
         <item>استنزاف البطارية</item>
         <item>إعدادات العرض</item>
         <item>اقتراح</item>
         <item>شيء آخر</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">تفاصيل (اختياري)</string>
+    <string name="bug_wizard_details_hint">ماذا كنت تفعل؟ ماذا توقعت؟ أضف أي تفاصيل مفيدة.</string>
+    <string name="bug_wizard_send">إرسال التقرير</string>
+    <string name="bug_wizard_pick_issue">اختر مشكلة من الأعلى</string>
+    <string name="bug_wizard_selected_fmt">محدد: %1$s</string>
     <string name="toast_adb_port_refused">ADB غير قابل للوصول (المنفذ 5555) — المرآة غير متوفرة على هذا الجهاز</string>
 </resources>
