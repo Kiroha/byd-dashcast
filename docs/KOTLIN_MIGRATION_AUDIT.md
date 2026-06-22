@@ -222,6 +222,14 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Concurrence/fidélité : `Handler(mainLooper)`, holder arrays `arrayOfNulls<DisplayListener>(1)` / `booleanArrayOf` / `longArrayOf` préservés (self-référence des listeners anonymes) ; Runnables auto-repostés (`postDelayed(this, …)`) en `object : Runnable` ; les autres en lambdas ; callbacks `AdbLocalClient.Callback`/`DisplayListener` → `object :` (params `String?`). `getDisplays()` → propriété `displays` / méthode avec catégorie (checks null préservés).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 vigesies. Réalisé — lot 5d-3c (`cluster/display/DashboardLauncher`) — **display/ 100 % Kotlin**
+
+- ✅ `DashboardLauncher.java` → `.kt` (198 l, **réflexion** : launch sur display via APIs cachées `ActivityOptions.setLaunchDisplayId/WindowingMode/Bounds` + `IActivityManager.startActivityAsUser`, avec cache statique des `Method`). **Le package `cluster/display/` est désormais 100 % Kotlin.**
+- Réflexion : `int.class` → `Int::class.javaPrimitiveType` ; `"…IActivityManager$Stub"` → `\$Stub` (échappé pour ne pas être interprété comme template Kotlin) ; `getDeclaredMethod(...).apply { isAccessible = true }`. Les `Method` cachés capturés en **val locales** dans `launchWithDisplayId` (smart-cast au lieu de `!!`). `invoke(...) as Int` pour le résultat de `startActivityAsUser`.
+- Concurrence : `@Volatile sLaunchMethodsCached`/`sStartActivityAsUser`, `@Synchronized` sur `ensureLaunchMethodsCached` (companion) — équivalent au `static synchronized` Java. `@Suppress("DEPRECATION")` classe (makeCustomAnimation, getRealSize).
+- Interop : `getDashboardDisplayId()`/`setDashboardDisplayId()`/`launchOnMainDisplay()` gardées en **méthodes** (call sites inchangés : ClusterService Java + MainActivity/SysInfoActivity Kotlin). Constructeur `(Context)`.
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -234,6 +242,7 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5d-2b ✅ | `cluster/dpi/` éditeur (ResizeFrameView + ClusterResizeActivity) — **dpi/ 100 % Kotlin** | build vert |
 | 5d-3a ✅ | `cluster/display/DashboardDisplayHelper` (0 réflexion) | build vert |
 | 5d-3b ✅ | `cluster/display/ClusterManager` (709 l, 0 réflexion) — piège default-method résolu | run terrain (cœur activation) |
+| 5d-3c ✅ | `cluster/display/DashboardLauncher` (198 l, réflexion launch) — **display/ 100 % Kotlin** | run terrain |
 | 5d-3c | `cluster/display/DashboardLauncher` (198 l, **12 réflexion/binder** — launch sur display via APIs cachées) | run terrain DL3/DL5 |
 | 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
