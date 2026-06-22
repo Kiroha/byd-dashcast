@@ -23,6 +23,7 @@ import com.byd.dashcast.util.AppLogger;
 import com.google.android.material.button.MaterialButton;
 
 import java.io.File;
+import java.util.ArrayList;
 
 /**
  * Keyboard-free, 3-step bug reporter designed for in-car use.
@@ -78,6 +79,13 @@ public class BugWizardActivity extends Activity {
     private String  mAppLabel = "";
     private boolean mSending  = false;
     private String  mTgHandle = "";
+
+    // Step 2 (issue) — selection + optional free-text details, sent via an explicit button.
+    private String  mSelectedIssue = null;
+    private EditText mDetailsField  = null;
+    private MaterialButton mBtnSend  = null;
+    private TextView mTvSelected     = null;
+    private final ArrayList<MaterialButton> mIssueButtons = new ArrayList<>();
 
     // Cluster app detection
     private String  mDetectedPkg   = null;
@@ -231,26 +239,91 @@ public class BugWizardActivity extends Activity {
 
     private void buildIssuePage() {
         mLlIssues.removeAllViews();
+        mIssueButtons.clear();
+        mSelectedIssue = null;
+
+        // Issue chips: a tap now just selects (highlights) the issue; the report is sent
+        // by the explicit "Send" button below, so the optional free-text can be filled first.
         String[] issues = getResources().getStringArray(ISSUE_ARRAYS[mCategory]);
         for (String issue : issues) {
             MaterialButton btn = makeOutlinedButton(issue);
-            btn.setOnClickListener(v -> selectIssue(issue));
+            btn.setCheckable(true);
+            btn.setOnClickListener(v -> onIssuePicked(issue, btn));
             mLlIssues.addView(btn);
+            mIssueButtons.add(btn);
         }
+
+        // ── Optional free-text details (the user can add anything in their own words) ──
+        TextView lbl = new TextView(this);
+        lbl.setText(R.string.bug_wizard_details_label);
+        lbl.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lblLp.setMargins(0, dp(18), 0, dp(4));
+        lbl.setLayoutParams(lblLp);
+        mLlIssues.addView(lbl);
+
+        mDetailsField = new EditText(this);
+        mDetailsField.setHint(R.string.bug_wizard_details_hint);
+        mDetailsField.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        mDetailsField.setMinLines(2);
+        mDetailsField.setMaxLines(5);
+        mDetailsField.setGravity(Gravity.TOP | Gravity.START);
+        LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mDetailsField.setLayoutParams(etLp);
+        mLlIssues.addView(mDetailsField);
+
+        // ── Selected indicator + Send button ──
+        mTvSelected = new TextView(this);
+        mTvSelected.setText(R.string.bug_wizard_pick_issue);
+        mTvSelected.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
+        LinearLayout.LayoutParams selLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        selLp.setMargins(0, dp(12), 0, dp(4));
+        mTvSelected.setLayoutParams(selLp);
+        mLlIssues.addView(mTvSelected);
+
+        mBtnSend = new MaterialButton(this); // filled style (default)
+        mBtnSend.setText(R.string.bug_wizard_send);
+        mBtnSend.setMinimumHeight(dp(64));
+        mBtnSend.setEnabled(false);
+        LinearLayout.LayoutParams sendLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sendLp.setMargins(0, dp(8), 0, dp(8));
+        mBtnSend.setLayoutParams(sendLp);
+        mBtnSend.setOnClickListener(v -> submitReport());
+        mLlIssues.addView(mBtnSend);
     }
 
-    private void selectIssue(String issue) {
+    /** Marks the picked issue chip (single-choice) and enables the Send button. */
+    private void onIssuePicked(String issue, MaterialButton picked) {
         if (mSending) return;
+        mSelectedIssue = issue;
+        for (MaterialButton b : mIssueButtons) {
+            b.setChecked(b == picked);
+        }
+        mTvSelected.setText(getString(R.string.bug_wizard_selected_fmt, issue));
+        mBtnSend.setEnabled(true);
+    }
+
+    private void submitReport() {
+        if (mSending || mSelectedIssue == null) return;
         mSending = true;
+        mBtnSend.setEnabled(false);
         mBtnBack.setEnabled(false);
         mTvStatus.setVisibility(View.VISIBLE);
         mTvStatus.setText(R.string.bug_status_capturing);
 
+        String details = (mDetailsField != null) ? mDetailsField.getText().toString().trim() : "";
         String[] cats = getResources().getStringArray(R.array.bug_categories);
         String caption = "Category: " + cats[mCategory]
                 + "\nApp: " + (mAppPkg.isEmpty() ? mAppLabel
                                : mAppLabel + " (" + mAppPkg + ")")
-                + "\nIssue: " + issue
+                + "\nIssue: " + mSelectedIssue
+                + (details.isEmpty() ? "" : "\nDetails: " + details)
                 + "\nDevice: " + BugReportCapture.deviceLine()
                 + "\nVersion: " + BugReportCapture.versionLine()
                 + (mTgHandle.isEmpty() ? "" : "\nTelegram: " + mTgHandle);
@@ -278,6 +351,7 @@ public class BugWizardActivity extends Activity {
             @Override public void onError(String msg, File partial) {
                 mSending = false;
                 mBtnBack.setEnabled(true);
+                if (mBtnSend != null) mBtnSend.setEnabled(true);
                 mTvStatus.setText(getString(R.string.bug_status_error_fmt, msg));
                 if (partial != null) shareFallback(partial);
             }

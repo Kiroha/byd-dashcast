@@ -701,6 +701,9 @@
         <item>App not shown</item>
         <item>Disconnected</item>
         <item>Flickering</item>
+        <item>Touch not working</item>
+        <item>Touch offset</item>
+        <item>Lag / stutter</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>App frozen</item>
@@ -708,6 +711,9 @@
         <item>Wrong position</item>
         <item>App crashed</item>
         <item>Content missing</item>
+        <item>Wrong DPI / text size</item>
+        <item>Unwanted split-screen</item>
+        <item>Size not kept</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>No sound</item>
@@ -722,6 +728,7 @@
         <item>Very slow</item>
         <item>No cluster display</item>
         <item>WiFi problem</item>
+        <item>Daemon / proxy down</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>App crashed</item>
@@ -729,6 +736,8 @@
         <item>DashCast crashed</item>
         <item>Car screen black</item>
         <item>Had to restart</item>
+        <item>Sluggish after stopping projection</item>
+        <item>Tablet lagging</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Frozen</item>
@@ -739,10 +748,20 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Performance problem</item>
+        <item>Sluggish / tablet lagging</item>
+        <item>Auto-launch not working</item>
+        <item>Layout / Fission</item>
         <item>Battery drain</item>
         <item>Display settings</item>
         <item>Suggestion</item>
         <item>Something else</item>
     </string-array>
+
+    <!-- Bug wizard — issue step: optional free-text details + send button -->
+    <string name="bug_wizard_details_label">Details (optional)</string>
+    <string name="bug_wizard_details_hint">What were you doing? What did you expect? Add anything useful.</string>
+    <string name="bug_wizard_send">Send report</string>
+    <string name="bug_wizard_pick_issue">Pick an issue above</string>
+    <string name="bug_wizard_selected_fmt">Selected: %1$s</string>
     <string name="toast_adb_port_refused">ADB unreachable (port 5555) — mirroring unavailable on this device</string>
 </resources>
