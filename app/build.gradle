@@ -325,8 +325,9 @@ android {
         // 483 = 1.6.42-beta (Kotlin migration lot 5d-3b: cluster/display/ClusterManager (709 l — cluster display activation engine: sendInfo 30/16/35 sequence, fast/warm/slow paths, ADAS remap, late-arrival watcher) converted to Kotlin; interface default-method pitfall fixed via an explicit empty onDisplayLateReady in FissionOrchestrator — behaviour unchanged).
         // 484 = 1.6.43-beta (double release: (1) PERF FIX — the daemon SurfaceControl mirror is now torn down on projection stop (ClusterMirrorManager.stopPreview + ClusterService.stopProjectionNoAdb), fixing residual SurfaceFlinger/CPU load that made the tablet sluggish after a restore; (2) Kotlin migration lot 5d-3c — cluster/display/DashboardLauncher (reflection launch on display) converted to Kotlin; cluster/display now 100% Kotlin).
         // 485 = 1.6.44-beta (DX_BYD_AUTO app not shown — root cause: auto-detection missed this DiLink 5.0 variant (product=DX_BYD_AUTO, API 30) so it fell back to DL3 and the whole DL5 launch path was disabled once the manual override was lost. Platform.detectDiLink5 now recognises the "dx_byd" product signature → effectiveDiLink5=true by default, restoring the daemon launchAndForce path).
-        versionCode 485
-        versionName "1.6.44-beta"
+        // 486 = 1.6.45-beta (1) Bug-report wizard: per-category DashCast-specific issue options (touch not working/offset, wrong DPI, unwanted split-screen, size not kept, daemon down, sluggish after stop, auto-launch KO, …) + an optional free-text "details" field; the issue step now selects-then-sends. Translated in all 13 locales. (2) Perf: removed a redundant LAYER_TYPE_HARDWARE on the cluster preview TextureView (it forced a second FBO + a GPU blit per frame → high janky-frame ratio); streamed wake-word inference + silence gate. (3) Kotlin migration lot 5e-2: cluster/mirror/ClusterMirrorManager (447 l, SurfaceControl reflection) converted to Kotlin — behaviour unchanged.).
+        versionCode 486
+        versionName "1.6.45-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
