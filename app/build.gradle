@@ -323,8 +323,9 @@ android {
         // 481 = 1.6.40-beta (Kotlin migration lot 5d-2b: ResizeFrameView (custom View) + ClusterResizeActivity converted to Kotlin; cluster/dpi/ now 100% Kotlin — behaviour unchanged).
         // 482 = 1.6.41-beta (Kotlin migration lot 5d-3a: cluster/display/DashboardDisplayHelper (cluster display detection/activation, sentinels -1/-2) converted to Kotlin — behaviour unchanged. + comment clarification: sendInfo routes through the proxy daemon first, ADB shell fallback).
         // 483 = 1.6.42-beta (Kotlin migration lot 5d-3b: cluster/display/ClusterManager (709 l — cluster display activation engine: sendInfo 30/16/35 sequence, fast/warm/slow paths, ADAS remap, late-arrival watcher) converted to Kotlin; interface default-method pitfall fixed via an explicit empty onDisplayLateReady in FissionOrchestrator — behaviour unchanged).
-        versionCode 483
-        versionName "1.6.42-beta"
+        // 484 = 1.6.43-beta (double release: (1) PERF FIX — the daemon SurfaceControl mirror is now torn down on projection stop (ClusterMirrorManager.stopPreview + ClusterService.stopProjectionNoAdb), fixing residual SurfaceFlinger/CPU load that made the tablet sluggish after a restore; (2) Kotlin migration lot 5d-3c — cluster/display/DashboardLauncher (reflection launch on display) converted to Kotlin; cluster/display now 100% Kotlin).
+        versionCode 484
+        versionName "1.6.43-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
