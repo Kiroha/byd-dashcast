@@ -892,6 +892,11 @@ public class ClusterService extends Service
         }
         mProjectionActive = false;
         mDisplayHelper.stopWithoutAdb();
+        // Tear down the mirror NOW (local token + daemon SurfaceControl via stopPreview) so
+        // SurfaceFlinger stops compositing the cluster immediately on a real stop, instead of
+        // waiting for the async stopSelf()→onDestroy()→release(). Background keepalive is not
+        // affected: stopProjectionNoAdb() is only called on an explicit restore/stop.
+        mMirrorManager.stopMirror();
         mLauncher.setDashboardDisplayId(-1);
         try {
             stopForeground(Service.STOP_FOREGROUND_REMOVE);

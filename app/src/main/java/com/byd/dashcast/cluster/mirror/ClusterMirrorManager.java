@@ -412,6 +412,16 @@ public class ClusterMirrorManager {
     }
 
     private void stopPreview() {
+        // If we were mirroring via the daemon, tell it to drop its OWN SurfaceControl token too.
+        // destroyMirrorToken() below only releases the LOCAL token; without this the daemon keeps
+        // compositing the cluster after a stop → residual SurfaceFlinger/CPU load (sluggish tablet
+        // after projection ends). Read the flag before stopMirrorViaDaemon() clears it.
+        if (mMirrorViaDaemon) {
+            IBinder daemon = com.byd.dashcast.proxy.ProxyClient.getDaemonBinder();
+            if (daemon != null) {
+                stopMirrorViaDaemon(daemon); // synchronous TRANSACT_MIRROR_STOP; clears the flags
+            }
+        }
         mMirrorActive = false;
         mMirrorViaDaemon = false;
         mProjScale = 0f;  // Reset: signals "not yet set" to touch mapping
