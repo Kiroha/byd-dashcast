@@ -698,6 +698,9 @@
         <item>Aplikacja nie widoczna</item>
         <item>Rozłączony</item>
         <item>Migotanie</item>
+        <item>Dotyk nie działa</item>
+        <item>Dotyk przesunięty</item>
+        <item>Lagi / przycięcia</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Aplikacja zawieszona</item>
@@ -705,6 +708,9 @@
         <item>Zła pozycja</item>
         <item>Aplikacja się zamknęła</item>
         <item>Brak treści</item>
+        <item>Zły DPI / tekst</item>
+        <item>Niechciany podział ekranu</item>
+        <item>Rozmiar niezachowany</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Brak dźwięku</item>
@@ -719,6 +725,7 @@
         <item>Bardzo wolno</item>
         <item>Brak wyświetlacza klastra</item>
         <item>Problem z WiFi</item>
+        <item>Daemon / proxy niedostępny</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Aplikacja się zamknęła</item>
@@ -726,6 +733,8 @@
         <item>DashCast się zamknął</item>
         <item>Czarny ekran auta</item>
         <item>Trzeba było uruchomić ponownie</item>
+        <item>Wolno po zatrzymaniu projekcji</item>
+        <item>Tablet zwalnia</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Zamrożony</item>
@@ -736,10 +745,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Problem z wydajnością</item>
+        <item>Wolno / tablet zwalnia</item>
+        <item>Autostart nie działa</item>
+        <item>Layout / Fission</item>
         <item>Zużycie baterii</item>
         <item>Ustawienia wyświetlacza</item>
         <item>Sugestia</item>
         <item>Coś innego</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Szczegóły (opcjonalnie)</string>
+    <string name="bug_wizard_details_hint">Co robiłeś? Czego oczekiwałeś? Dodaj przydatne szczegóły.</string>
+    <string name="bug_wizard_send">Wyślij raport</string>
+    <string name="bug_wizard_pick_issue">Wybierz problem powyżej</string>
+    <string name="bug_wizard_selected_fmt">Wybrano: %1$s</string>
     <string name="toast_adb_port_refused">ADB nieosiągalny (port 5555) — dublowanie niedostępne na tym urządzeniu</string>
 </resources>

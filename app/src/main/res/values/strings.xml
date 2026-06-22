@@ -722,7 +722,7 @@
         <item>Cluster mode simple</item>
         <item>Autre</item>
     </string-array>
-    <string-array name="bug_issues_mirror" tools:ignore="InconsistentArrays">
+    <string-array name="bug_issues_mirror">
         <item>Écran noir</item>
         <item>Mauvaise taille/position</item>
         <item>App non affichée</item>
@@ -732,7 +732,7 @@
         <item>Toucher décalé</item>
         <item>Latence / saccades</item>
     </string-array>
-    <string-array name="bug_issues_app" tools:ignore="InconsistentArrays">
+    <string-array name="bug_issues_app">
         <item>App figée</item>
         <item>Écran noir</item>
         <item>Mauvaise position</item>
@@ -749,7 +749,7 @@
         <item>Problème micro</item>
         <item>Écho</item>
     </string-array>
-    <string-array name="bug_issues_connect" tools:ignore="InconsistentArrays">
+    <string-array name="bug_issues_connect">
         <item>Impossible de se connecter</item>
         <item>Déconnexions fréquentes</item>
         <item>Très lent</item>
@@ -757,7 +757,7 @@
         <item>Problème WiFi</item>
         <item>Daemon / proxy indisponible</item>
     </string-array>
-    <string-array name="bug_issues_freeze" tools:ignore="InconsistentArrays">
+    <string-array name="bug_issues_freeze">
         <item>App plantée</item>
         <item>Écran figé</item>
         <item>DashCast planté</item>
@@ -773,7 +773,7 @@
         <item>Infos manquantes</item>
         <item>Non affiché</item>
     </string-array>
-    <string-array name="bug_issues_other" tools:ignore="InconsistentArrays">
+    <string-array name="bug_issues_other">
         <item>Problème de performance</item>
         <item>Lenteur / tablette qui rame</item>
         <item>Lancement auto KO</item>
@@ -785,11 +785,10 @@
     </string-array>
 
     <!-- Bug wizard — issue step: optional free-text details + send button.
-         fr (source) + en provided; other locales fall back to fr until a dedicated i18n pass
-         (same status as be/kk/uz/ar). tools:ignore keeps the lint baseline at 0/0. -->
-    <string name="bug_wizard_details_label" tools:ignore="MissingTranslation">Détails (optionnel)</string>
-    <string name="bug_wizard_details_hint" tools:ignore="MissingTranslation">Que faisais-tu ? Qu’attendais-tu ? Ajoute toute précision utile.</string>
-    <string name="bug_wizard_send" tools:ignore="MissingTranslation">Envoyer le rapport</string>
-    <string name="bug_wizard_pick_issue" tools:ignore="MissingTranslation">Sélectionne un problème ci-dessus</string>
-    <string name="bug_wizard_selected_fmt" tools:ignore="MissingTranslation">Sélectionné : %1$s</string>
+         Translated in all 13 locales (be/kk/uz/ar best-effort, pending native review). -->
+    <string name="bug_wizard_details_label">Détails (optionnel)</string>
+    <string name="bug_wizard_details_hint">Que faisais-tu ? Qu’attendais-tu ? Ajoute toute précision utile.</string>
+    <string name="bug_wizard_send">Envoyer le rapport</string>
+    <string name="bug_wizard_pick_issue">Sélectionne un problème ci-dessus</string>
+    <string name="bug_wizard_selected_fmt">Sélectionné : %1$s</string>
 </resources>

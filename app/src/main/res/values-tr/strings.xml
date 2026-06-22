@@ -689,6 +689,9 @@
         <item>Uygulama görünmüyor</item>
         <item>Bağlantı kesildi</item>
         <item>Titreme</item>
+        <item>Dokunma çalışmıyor</item>
+        <item>Dokunma kaymış</item>
+        <item>Gecikme / takılma</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>Uygulama dondu</item>
@@ -696,6 +699,9 @@
         <item>Yanlış konum</item>
         <item>Uygulama çöktü</item>
         <item>İçerik eksik</item>
+        <item>Yanlış DPI / metin</item>
+        <item>İstenmeyen bölünmüş ekran</item>
+        <item>Boyut korunmadı</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Ses yok</item>
@@ -710,6 +716,7 @@
         <item>Çok yavaş</item>
         <item>Küme ekranı yok</item>
         <item>WiFi sorunu</item>
+        <item>Daemon / proxy kapalı</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>Uygulama çöktü</item>
@@ -717,6 +724,8 @@
         <item>DashCast çöktü</item>
         <item>Araba ekranı siyah</item>
         <item>Yeniden başlatmak zorunda kaldı</item>
+        <item>Projeksiyon durunca yavaş</item>
+        <item>Tablet yavaşlıyor</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Donmuş</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Performans sorunu</item>
+        <item>Yavaş / tablet yavaş</item>
+        <item>Otomatik başlatma çalışmıyor</item>
+        <item>Layout / Fission</item>
         <item>Batarya tüketimi</item>
         <item>Görüntü ayarları</item>
         <item>Öneri</item>
         <item>Başka bir şey</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Ayrıntılar (isteğe bağlı)</string>
+    <string name="bug_wizard_details_hint">Ne yapıyordun? Ne bekliyordun? Faydalı bilgi ekle.</string>
+    <string name="bug_wizard_send">Raporu gönder</string>
+    <string name="bug_wizard_pick_issue">Yukarıdan bir sorun seç</string>
+    <string name="bug_wizard_selected_fmt">Seçildi: %1$s</string>
     <string name="toast_adb_port_refused">ADB\'ye erişilemiyor (bağlantı noktası 5555) — bu cihazda ayna kullanılamıyor</string>
 </resources>

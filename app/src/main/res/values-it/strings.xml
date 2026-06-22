@@ -689,6 +689,9 @@
         <item>App non mostrata</item>
         <item>Disconnesso</item>
         <item>Sfarfallio</item>
+        <item>Tocco non risponde</item>
+        <item>Tocco disallineato</item>
+        <item>Lag / scatti</item>
     </string-array>
     <string-array name="bug_issues_app">
         <item>App bloccata</item>
@@ -696,6 +699,9 @@
         <item>Posizione errata</item>
         <item>App crashata</item>
         <item>Contenuto mancante</item>
+        <item>DPI / testo errati</item>
+        <item>Schermo diviso indesiderato</item>
+        <item>Dimensione non mantenuta</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Nessun suono</item>
@@ -710,6 +716,7 @@
         <item>Molto lento</item>
         <item>Nessun display cluster</item>
         <item>Problema WiFi</item>
+        <item>Daemon / proxy non disponibile</item>
     </string-array>
     <string-array name="bug_issues_freeze">
         <item>App crashata</item>
@@ -717,6 +724,8 @@
         <item>DashCast crashato</item>
         <item>Schermo auto nero</item>
         <item>Dovuto riavviare</item>
+        <item>Lento dopo stop proiezione</item>
+        <item>Tablet lento</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Bloccato</item>
@@ -727,10 +736,19 @@
     </string-array>
     <string-array name="bug_issues_other">
         <item>Problema prestazioni</item>
+        <item>Lento / tablet lento</item>
+        <item>Avvio automatico non funziona</item>
+        <item>Layout / Fission</item>
         <item>Consumo batteria</item>
         <item>Impostazioni display</item>
         <item>Suggerimento</item>
         <item>Altro</item>
     </string-array>
+
+    <string name="bug_wizard_details_label">Dettagli (facoltativo)</string>
+    <string name="bug_wizard_details_hint">Cosa stavi facendo? Cosa ti aspettavi? Aggiungi dettagli utili.</string>
+    <string name="bug_wizard_send">Invia segnalazione</string>
+    <string name="bug_wizard_pick_issue">Seleziona un problema sopra</string>
+    <string name="bug_wizard_selected_fmt">Selezionato: %1$s</string>
     <string name="toast_adb_port_refused">ADB irraggiungibile (porta 5555) — mirroring non disponibile su questo dispositivo</string>
 </resources>
