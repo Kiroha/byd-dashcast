@@ -30,7 +30,7 @@ public final class BugReportCapture {
 
     private static final String TAG       = "BugReportCapture";
     private static final String PREFIX    = "byd_bugreport_";
-    private static final int    LOGCAT_LINES = 3000;
+    private static final int    LOGCAT_LINES = 5000;
 
     public interface Callback {
         /** Called on the main thread with the finished file (never null on success). */
@@ -69,17 +69,34 @@ public final class BugReportCapture {
         String cmd =
               "echo '=== DASHCAST BUG REPORT ===' > " + p
             + " ; date >> " + p
+            // ── PERF SNAPSHOT (kept near the top so it's readable without scrolling) ──
+            // CPU: one toybox top iteration, sorted by CPU. Shows whether dashcast_proxy /
+            // surfaceflinger / our app are still busy at rest (e.g. residual mirror after a stop).
+            + " ; echo '--- CPU TOP (snapshot) ---' >> " + p
+            + " ; top -b -n 1 2>/dev/null | head -45 >> " + p
+            + " ; echo '--- PROCESSES (byd/xdja/daemon/proxy/sf) ---' >> " + p
+            + " ; ps -A 2>/dev/null | grep -iE 'byd|xdja|daemon|dilink|cluster|app_process|dashcast|proxy|surfaceflinger' >> " + p
+            // Memory: app PSS / heap / native — to spot growth or leaks across sessions.
+            + " ; echo '--- MEMINFO (com.byd.dashcast) ---' >> " + p
+            + " ; dumpsys meminfo com.byd.dashcast 2>/dev/null >> " + p
+            // Graphics: frame stats / jank — directly relevant to perceived responsiveness.
+            + " ; echo '--- GFXINFO (frame stats) ---' >> " + p
+            + " ; dumpsys gfxinfo com.byd.dashcast 2>/dev/null | head -60 >> " + p
+            // ── LOGS ──
             + " ; echo '--- LOGCAT (last " + LOGCAT_LINES + " lines) ---' >> " + p
             + " ; logcat -d -t " + LOGCAT_LINES + " -v threadtime >> " + p + " 2>&1"
             + " ; echo '--- LOGCAT EVENTS (last 500) ---' >> " + p
             + " ; logcat -b events -d -t 500 -v threadtime >> " + p + " 2>&1"
+            // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
             + " ; echo '--- WINDOW STACKS ---' >> " + p
             + " ; dumpsys activity activities 2>/dev/null"
             + "   | grep -E 'Stack #|Task id|taskId|displayId|realActivity|mResumed' >> " + p
-            + " ; echo '--- PROCESSES (byd/xdja/daemon) ---' >> " + p
-            + " ; ps -A 2>/dev/null | grep -iE 'byd|xdja|daemon|dilink|cluster|app_process' >> " + p
+            // SurfaceFlinger cluster/mirror layers — reveals a leftover mirror token after a stop.
+            + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'byd|mirror|xdja|fission|layerStack|displayId' | head -40 >> " + p
+            // ── DAEMON LOGS ──
             + " ; echo '--- MIRRORDAEMON LOG ---' >> " + p
             + " ; cat /data/local/tmp/mirrordaemon_latest.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '--- PROXYDAEMON LOG ---' >> " + p
