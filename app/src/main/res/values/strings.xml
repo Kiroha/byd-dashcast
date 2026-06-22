@@ -722,19 +722,25 @@
         <item>Cluster mode simple</item>
         <item>Autre</item>
     </string-array>
-    <string-array name="bug_issues_mirror">
+    <string-array name="bug_issues_mirror" tools:ignore="InconsistentArrays">
         <item>Écran noir</item>
         <item>Mauvaise taille/position</item>
         <item>App non affichée</item>
         <item>Déconnecté</item>
         <item>Scintillement</item>
+        <item>Toucher ne répond pas</item>
+        <item>Toucher décalé</item>
+        <item>Latence / saccades</item>
     </string-array>
-    <string-array name="bug_issues_app">
+    <string-array name="bug_issues_app" tools:ignore="InconsistentArrays">
         <item>App figée</item>
         <item>Écran noir</item>
         <item>Mauvaise position</item>
         <item>App plantée</item>
         <item>Contenu absent</item>
+        <item>Mauvais DPI / texte</item>
+        <item>Écran partagé involontaire</item>
+        <item>Taille non conservée</item>
     </string-array>
     <string-array name="bug_issues_sound">
         <item>Pas de son</item>
@@ -743,19 +749,22 @@
         <item>Problème micro</item>
         <item>Écho</item>
     </string-array>
-    <string-array name="bug_issues_connect">
+    <string-array name="bug_issues_connect" tools:ignore="InconsistentArrays">
         <item>Impossible de se connecter</item>
         <item>Déconnexions fréquentes</item>
         <item>Très lent</item>
         <item>Pas d’affichage cluster</item>
         <item>Problème WiFi</item>
+        <item>Daemon / proxy indisponible</item>
     </string-array>
-    <string-array name="bug_issues_freeze">
+    <string-array name="bug_issues_freeze" tools:ignore="InconsistentArrays">
         <item>App plantée</item>
         <item>Écran figé</item>
         <item>DashCast planté</item>
         <item>Écran voiture noir</item>
         <item>Dû redémarrer</item>
+        <item>Lenteur après arrêt projection</item>
+        <item>Tablette qui rame</item>
     </string-array>
     <string-array name="bug_issues_simple">
         <item>Figé</item>
@@ -764,11 +773,23 @@
         <item>Infos manquantes</item>
         <item>Non affiché</item>
     </string-array>
-    <string-array name="bug_issues_other">
+    <string-array name="bug_issues_other" tools:ignore="InconsistentArrays">
         <item>Problème de performance</item>
+        <item>Lenteur / tablette qui rame</item>
+        <item>Lancement auto KO</item>
+        <item>Layout / Fission</item>
         <item>Batterie</item>
         <item>Paramètres d’affichage</item>
         <item>Suggestion</item>
         <item>Autre chose</item>
     </string-array>
+
+    <!-- Bug wizard — issue step: optional free-text details + send button.
+         fr (source) + en provided; other locales fall back to fr until a dedicated i18n pass
+         (same status as be/kk/uz/ar). tools:ignore keeps the lint baseline at 0/0. -->
+    <string name="bug_wizard_details_label" tools:ignore="MissingTranslation">Détails (optionnel)</string>
+    <string name="bug_wizard_details_hint" tools:ignore="MissingTranslation">Que faisais-tu ? Qu’attendais-tu ? Ajoute toute précision utile.</string>
+    <string name="bug_wizard_send" tools:ignore="MissingTranslation">Envoyer le rapport</string>
+    <string name="bug_wizard_pick_issue" tools:ignore="MissingTranslation">Sélectionne un problème ci-dessus</string>
+    <string name="bug_wizard_selected_fmt" tools:ignore="MissingTranslation">Sélectionné : %1$s</string>
 </resources>
