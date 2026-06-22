@@ -230,6 +230,15 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Interop : `getDashboardDisplayId()`/`setDashboardDisplayId()`/`launchOnMainDisplay()` gardées en **méthodes** (call sites inchangés : ClusterService Java + MainActivity/SysInfoActivity Kotlin). Constructeur `(Context)`.
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 unvigesies. Réalisé — lot 5e-1 (`cluster/mirror/ClusterInputForwarder`)
+
+- ✅ `ClusterInputForwarder.java` → `.kt` (366 l, **réflexion + concurrence + MotionEvent**). Injection touch/clavier sur le cluster via `InputManager.injectInputEvent` (réflexion, @hide), chemin daemon (uid 2000) prioritaire + fallback direct. Pris en 1ᵉʳ du cœur cluster car **indépendant du fix perf** (qui vit dans ClusterMirrorManager/ClusterService, en test terrain 1.6.43).
+- Réflexion : `int.class` → `Int::class.javaPrimitiveType`, `.apply { isAccessible = true }`, `InputEvent/MotionEvent/KeyEvent::class.java`. `mInjectMethod?.invoke` / `mSetDisplayId*Method!!` (gardés par les checks `!= null`).
+- Concurrence préservée : `@Volatile` (mClusterWidth/Height/DisplayId, **mDaemonBinder**, mTouchDownTime) ; `synchronized(mTouchInjectLock)` dans `injectTouchAtMulti` ; **mDaemonBinder capturé en val locale** (volatile → pas de smart-cast, snapshot cohérent).
+- Pointer arrays pré-alloués `Array(MAX_POINTERS){ PointerProperties() }` (type **non-null** pour matcher `MotionEvent.obtain(PointerProperties[])`, au lieu de `arrayOfNulls`). `Parcel`/`ev` recyclés (`?.recycle()`). `MAX_POINTERS`/TAG en companion.
+- Interop : `getClusterWidth()/getClusterHeight()/isAvailable()/setDaemonBinder()` en **méthodes** (ClusterService Java + MainActivity Kotlin inchangés). `@Suppress("DEPRECATION")` classe (getSize).
+- Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -244,7 +253,9 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5d-3b ✅ | `cluster/display/ClusterManager` (709 l, 0 réflexion) — piège default-method résolu | run terrain (cœur activation) |
 | 5d-3c ✅ | `cluster/display/DashboardLauncher` (198 l, réflexion launch) — **display/ 100 % Kotlin** | run terrain |
 | 5d-3c | `cluster/display/DashboardLauncher` (198 l, **12 réflexion/binder** — launch sur display via APIs cachées) | run terrain DL3/DL5 |
-| 5e | `cluster/` cœur réflexion/binder (ClusterService, ClusterMirrorManager, ClusterInputForwarder) — manuel, champ par champ | run terrain DL3/DL5 |
+| 5e-1 ✅ | `cluster/mirror/ClusterInputForwarder` (366 l, réflexion injection touch) | run terrain DL3/DL5 |
+| 5e-2 | `cluster/mirror/ClusterMirrorManager` (réflexion SurfaceControl) — **après validation du fix perf 1.6.43** | run terrain DL3/DL5 |
+| 5e-3 | `cluster/ClusterService` (~900 l, foreground service, cœur) — **après validation du fix perf 1.6.43** | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 
