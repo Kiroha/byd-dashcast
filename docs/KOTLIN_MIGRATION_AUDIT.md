@@ -239,6 +239,15 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Interop : `getClusterWidth()/getClusterHeight()/isAvailable()/setDaemonBinder()` en **méthodes** (ClusterService Java + MainActivity Kotlin inchangés). `@Suppress("DEPRECATION")` classe (getSize).
 - Vérif : compile forcée 0 warning, `assembleDebug`+`assembleRelease` verts, lint 0/0.
 
+## 4 duovigesies. Réalisé — lot 5e-2 (`cluster/mirror/ClusterMirrorManager`)
+
+- ✅ `ClusterMirrorManager.java` → `.kt` (447 l, **réflexion SurfaceControl**). Miroir du cluster via `SurfaceControl.createDisplay` + `Transaction.setDisplayLayerStack/Surface/Projection` (chemin direct, échoue sur DL3/DL5 sans ACCESS_SURFACE_FLINGER → fallback daemon uid 2000 par Parcel typé). Débloqué car **le fix perf qu'il porte est validé sur 1.6.44** (rapport INC-20260622-220742 : `stopMirrorViaDaemon` au stop + aucune couche `byd_myapp_mirror` résiduelle dans SurfaceFlinger).
+- Réflexion : méthodes cachées mises en cache une fois (`@Volatile sMirrorMethodsCached` + `@Synchronized @Throws(Exception::class) ensureMirrorMethodsCached`). `boolean.class`/`int.class` → `Boolean::class.javaPrimitiveType`/`Int::class.javaPrimitiveType` (**critique** pour matcher `createDisplay(String,boolean)` / `setDisplayLayerStack(IBinder,int)` / `setDisplayProjection(IBinder,int,Rect,Rect)`). `"…SurfaceControl$Transaction"` → `\$Transaction` (échappé). `invoke(...) as Int` / `as IBinder?`.
+- `unlockHiddenApis` (réflexion VMRuntime.setHiddenApiExemptions) en `@JvmStatic` dans le companion : `Class[].class` → `arrayOf<Class<*>>().javaClass`, `String[].class` → `arrayOf<String>().javaClass`, le `null` (parameterTypes) et le `Object[]{String[]}` reproduits via vararg `invoke` sans spread.
+- État : champs `var` privés + accesseurs `getClusterWidth()/getProjScale()/isMirrorActive()/isMirrorViaDaemon()…` gardés en **méthodes** (call sites Kotlin MainActivity/ClusterResizeActivity en `()` + ClusterService Java inchangés). `companion object` pour TAG/cache réflexion/`unlockHiddenApis`/overrides DL5. `if (clusterDisplay != null)` mort retiré après early-return (smart-cast). FQN `com.byd.dashcast.proxy.ProxyClient` / `android.os.DeadObjectException` conservés.
+- Le fix perf est **préservé tel quel** : `stopPreview()` appelle `stopMirrorViaDaemon(daemon)` (lu `mMirrorViaDaemon` avant clear) puis `destroyMirrorToken()`. Reste en Java : `ClusterService` (5e-3) et `MirrorTestRunner`.
+- Vérif : compile forcée 0 warning kotlinc, interop `compileDebugJavaWithJavac` OK, `assembleRelease` vert, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -254,7 +263,7 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5d-3c ✅ | `cluster/display/DashboardLauncher` (198 l, réflexion launch) — **display/ 100 % Kotlin** | run terrain |
 | 5d-3c | `cluster/display/DashboardLauncher` (198 l, **12 réflexion/binder** — launch sur display via APIs cachées) | run terrain DL3/DL5 |
 | 5e-1 ✅ | `cluster/mirror/ClusterInputForwarder` (366 l, réflexion injection touch) | run terrain DL3/DL5 |
-| 5e-2 | `cluster/mirror/ClusterMirrorManager` (réflexion SurfaceControl) — **après validation du fix perf 1.6.43** | run terrain DL3/DL5 |
+| 5e-2 ✅ | `cluster/mirror/ClusterMirrorManager` (447 l, réflexion SurfaceControl) — fix perf validé 1.6.44 | run terrain DL3/DL5 |
 | 5e-3 | `cluster/ClusterService` (~900 l, foreground service, cœur) — **après validation du fix perf 1.6.43** | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
