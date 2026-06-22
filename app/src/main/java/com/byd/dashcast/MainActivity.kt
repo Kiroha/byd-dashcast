@@ -289,9 +289,13 @@ class MainActivity : AppCompatActivity(),
         // Read persisted mMainDisplayPkg early so it is available for display-connected callbacks.
         mMainDisplayPkg = ClusterPrefs.getMainPkg(this)
 
-        // TextureView optimizations
-        clusterMirror.isOpaque = true // No alpha blending overhead
-        clusterMirror.setLayerType(View.LAYER_TYPE_HARDWARE, null) // Force hardware layer
+        // TextureView optimizations.
+        // Opaque avoids alpha-blending overhead. We deliberately do NOT set
+        // LAYER_TYPE_HARDWARE here: a TextureView already renders its stream into a
+        // GPU texture, so forcing an extra hardware layer adds a second FBO + a GPU
+        // blit per frame (60 fps) — that double-composition is what pushed frames past
+        // the 16 ms vsync budget (high janky-frame ratio in gfxinfo).
+        clusterMirror.isOpaque = true
 
         // Auto-trigger the mirror once the TextureView is measured (avoid cold-start black screens).
         clusterMirror.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
