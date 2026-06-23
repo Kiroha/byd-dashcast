@@ -99,11 +99,18 @@ class ClusterMirrorManager {
             return false
         }
 
-        // Cluster dimensions
+        // Cluster dimensions — only accept a strictly-positive size. A transient
+        // 0×0 from getRealSize() during display teardown would otherwise make the
+        // scale computation below divide by zero (viewW/0f → +Infinity), yielding
+        // an empty destRect and a non-finite mProjScale that corrupts touch mapping.
         if (clusterDisplay != null) {
             val sz = Point(1920, 720)
             clusterDisplay.getRealSize(sz)
-            mClusterW = sz.x; mClusterH = sz.y
+            if (sz.x > 0 && sz.y > 0) {
+                mClusterW = sz.x; mClusterH = sz.y
+            } else {
+                AppLogger.w(TAG, "startMirror: getRealSize returned ${sz.x}×${sz.y} — keeping ${mClusterW}×${mClusterH}")
+            }
         }
 
         // ── SurfaceControl mirror attempt ────────────────────────────────────
@@ -180,11 +187,15 @@ class ClusterMirrorManager {
             return false
         }
 
-        // Cluster dimensions
+        // Cluster dimensions — only accept a strictly-positive size (see startMirror).
         val sz = Point(1920, 720)
         clusterDisplay.getRealSize(sz)
-        mClusterW = sz.x
-        mClusterH = sz.y
+        if (sz.x > 0 && sz.y > 0) {
+            mClusterW = sz.x
+            mClusterH = sz.y
+        } else {
+            AppLogger.w(TAG, "startMirrorViaDaemon: getRealSize returned ${sz.x}×${sz.y} — keeping ${mClusterW}×${mClusterH}")
+        }
 
         // Pre-compute projection params (identical formula to MirrorDaemon.setupMirror).
         // Stored here so touch mapping uses exact same offsets as the daemon's projection.
