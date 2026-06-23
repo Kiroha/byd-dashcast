@@ -93,6 +93,13 @@ public final class BugReportCapture {
             + " ; echo '--- WINDOW STACKS ---' >> " + p
             + " ; dumpsys activity activities 2>/dev/null"
             + "   | grep -E 'Stack #|Task id|taskId|displayId|realActivity|mResumed|Display #|TaskDisplayArea' >> " + p
+            // Per-display activity/task context for every NON-ZERO display (not only the
+            // expected cluster #1). -A on each "Display #N" header surfaces extra/unknown
+            // screens (secondary cluster, HUD, presentation displays) on variants we don't
+            // model yet — display *existence* incl. hidden/off ones is already in DISPLAYS above.
+            + " ; echo '--- ACTIVITIES PER DISPLAY (non-zero) ---' >> " + p
+            + " ; dumpsys activity activities 2>/dev/null"
+            + "   | grep -A 40 -E 'Display #[1-9][0-9]*' | head -200 >> " + p
             // Task→display hierarchy: which TaskDisplayArea a launched app actually lands in.
             // On OEM-presented clusters (e.g. DX_BYD_AUTO "HDMI Screen") third-party apps stay in
             // the DefaultTaskDisplayArea and never reach the cluster → "app not shown".
