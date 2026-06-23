@@ -248,7 +248,10 @@ public final class MirrorCoordinator {
         // This guarantees the touch offset/scale matches the actual rendered projection,
         // even if the view was resized since mirror start (avoids touch offset bugs).
         float scale   = mirror.getProjScale();
-        if (scale <= 0f) return;  // Mirror not yet fully initialized
+        // Reject non-finite scale too: a degenerate projection (e.g. a transient
+        // 0-size cluster display) can leave scale = Infinity/NaN, which "scale <= 0f"
+        // does not catch — it would map every touch to the clamp boundary.
+        if (!Float.isFinite(scale) || scale <= 0f) return;  // Mirror not yet fully initialized
 
         float offsetX = mirror.getProjOffsetX();
         float offsetY = mirror.getProjOffsetY();
