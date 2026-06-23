@@ -92,7 +92,16 @@ public final class BugReportCapture {
             + " ; dumpsys display 2>/dev/null >> " + p
             + " ; echo '--- WINDOW STACKS ---' >> " + p
             + " ; dumpsys activity activities 2>/dev/null"
-            + "   | grep -E 'Stack #|Task id|taskId|displayId|realActivity|mResumed' >> " + p
+            + "   | grep -E 'Stack #|Task id|taskId|displayId|realActivity|mResumed|Display #|TaskDisplayArea' >> " + p
+            // Task→display hierarchy: which TaskDisplayArea a launched app actually lands in.
+            // On OEM-presented clusters (e.g. DX_BYD_AUTO "HDMI Screen") third-party apps stay in
+            // the DefaultTaskDisplayArea and never reach the cluster → "app not shown".
+            + " ; echo '--- ACTIVITY CONTAINERS (display areas) ---' >> " + p
+            + " ; dumpsys activity containers 2>/dev/null | head -120 >> " + p
+            // System services — to discover the OEM cluster/projection channel (analogous to
+            // auto_container) on variants where the usual activation service is absent.
+            + " ; echo '--- SERVICES (service list) ---' >> " + p
+            + " ; service list 2>/dev/null >> " + p
             // SurfaceFlinger cluster/mirror layers — reveals a leftover mirror token after a stop.
             + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'byd|mirror|xdja|fission|layerStack|displayId' | head -40 >> " + p
