@@ -788,6 +788,11 @@ public class ClusterService extends Service
             } catch (Throwable t) {
                 AppLogger.e(TAG, "DL5 daemon launchAndForce failed: " + t.getMessage());
             }
+            // AAOS-only experiment: on Android Automotive head units the normal launch lands the
+            // app on the logical cluster display (visible in our preview) but never on the
+            // physical cluster panel. Probe the AAOS `start-fixed-activity` mechanism — see the
+            // method for details. No-op on DL3/DL5 fission ROMs.
+            tryClusterFixedActivityExperiment(displayId, packageName);
             // Post-launch verification: ~1.5 s after the cascade, dump what is actually on
             // the cluster display (package / visible / windowing mode / bounds) so the next
             // bug report shows whether the app stayed put and in which mode it rendered.
@@ -815,6 +820,46 @@ public class ClusterService extends Service
             }
             @Override public void onError(String err) {
                 AppLogger.w(TAG, "DL5 post-launch verify failed: " + err);
+            }
+        });
+    }
+
+    /**
+     * EXPERIMENT — Android Automotive (AAOS) clusters only. On these head units (e.g.
+     * DX_BYD_AUTO / Bosch, INC-20260624-221542) the instrument cluster panel is driven by the
+     * AAOS cluster-rendering pipeline (InstrumentClusterService + IAutomotiveDisplayProxyService),
+     * NOT by a raw scan-out of the logical display. So a normal {@code am start --display N} puts
+     * the app on the logical cluster display (it shows in our SurfaceControl preview) but never on
+     * the physical cluster, where only the OEM system nav is presented.
+     *
+     * {@code cmd car_service start-fixed-activity <displayId> <pkg> <activity>} is the AAOS way to
+     * pin an activity on a display in "fixed" mode. This probes whether it (a) is permitted on this
+     * production/user build and (b) actually reaches the physical cluster. The full result is logged
+     * for the bug report. Gated to {@code FEATURE_AUTOMOTIVE} so DL3/DL5 fission ROMs — where the
+     * normal launch already works — are left completely untouched.
+     */
+    private void tryClusterFixedActivityExperiment(final int displayId, final String packageName) {
+        if (displayId <= 0 || packageName == null || packageName.isEmpty()) return;
+        if (!getPackageManager().hasSystemFeature(
+                android.content.pm.PackageManager.FEATURE_AUTOMOTIVE)) {
+            return; // not AAOS — do not disturb working fission ROMs
+        }
+        // Resolve the package's launcher activity, normalise a relative ".Name" to a full
+        // component, then ask car_service to pin it on the cluster display in fixed mode.
+        final String cmd =
+              "PKG=" + packageName + " ; DID=" + displayId + " ; "
+            + "COMP=$(cmd package resolve-activity --brief -c android.intent.category.LAUNCHER \"$PKG\" 2>/dev/null | tail -1) ; "
+            + "ACT=${COMP#*/} ; case \"$ACT\" in .*) ACT=\"$PKG$ACT\" ;; esac ; "
+            + "echo \"[exp] resolved=$COMP -> start-fixed-activity $DID $PKG $ACT\" ; "
+            + "cmd car_service start-fixed-activity \"$DID\" \"$PKG\" \"$ACT\" 2>&1";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                AppLogger.i(TAG, "AAOS start-fixed-activity experiment (" + packageName
+                        + " → display " + displayId + "):\n"
+                        + (out == null || out.trim().isEmpty() ? "(no output)" : out.trim()));
+            }
+            @Override public void onError(String err) {
+                AppLogger.w(TAG, "AAOS start-fixed-activity experiment error: " + err);
             }
         });
     }
