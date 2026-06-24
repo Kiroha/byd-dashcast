@@ -87,6 +87,12 @@ public final class BugReportCapture {
             + " ; logcat -d -t " + LOGCAT_LINES + " -v threadtime >> " + p + " 2>&1"
             + " ; echo '--- LOGCAT EVENTS (last 500) ---' >> " + p
             + " ; logcat -b events -d -t 500 -v threadtime >> " + p + " 2>&1"
+            // Tag-filtered logcat on window/launch/cluster/car events. The main buffer floods
+            // fast (the prior DX_BYD_AUTO report had no 'waze'/'neusoft' line left), so a -t
+            // window over only these tags is far more likely to still hold the moment a
+            // third-party app was launched on the cluster and (not) shown.
+            + " ; echo '--- LOGCAT (window/cluster/car tags) ---' >> " + p
+            + " ; logcat -d -t 1200 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V ClusterRenderingService:V InstrumentClusterRenderingService:V DisplayManagerService:I '*:S' >> " + p + " 2>&1"
             // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
