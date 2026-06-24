@@ -1909,6 +1909,14 @@ public class DiagActivity extends AppCompatActivity {
         View btnTestRebroadcast = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_rebroadcast);
         // v1.2.64 — export daemon log /data/local/tmp/dashcast_proxy.log via Telegram.
         View btnExportDaemonLog = panelClusterPoc.findViewById(R.id.btn_cluster_poc_export_daemon_log);
+        // HUD nav bench (DL3) — scraper for real BYD instrument feature IDs + live write tester.
+        com.google.android.material.button.MaterialButton btnHudBench =
+                panelClusterPoc.findViewById(R.id.btn_cluster_poc_hud_bench);
+        if (btnHudBench != null) {
+            btnHudBench.setText("HUD nav bench (DL3)");
+            btnHudBench.setOnClickListener(v ->
+                    startActivity(new Intent(this, com.byd.dashcast.hud.HudDiagActivity.class)));
+        }
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);

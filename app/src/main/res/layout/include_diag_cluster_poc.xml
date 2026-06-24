@@ -52,6 +52,14 @@
                     android:textSize="13sp"
                     android:textColor="@color/md_on_surface_variant"/>
 
+                <!-- HUD nav bench (DL3) — label set in code to avoid an i18n string for a dev tool -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_hud_bench"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"/>
+
                 <!-- ── Row 1 : enumerate + restart daemon + share report ── -->
                 <LinearLayout
                     android:layout_width="match_parent"
