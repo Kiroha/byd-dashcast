@@ -124,7 +124,7 @@ public final class BugReportCapture {
             // "is this AAOS?" check; props identify the exact product / build.
             + " ; echo '--- FEATURES / PROPS (platform id) ---' >> " + p
             + " ; pm list features 2>/dev/null | grep -iE 'automotive|car|cluster|display' >> " + p
-            + " ; getprop 2>/dev/null | grep -iE 'automotive|cluster|ro.product|ro.build.flavor|fingerprint|dilink|byd|car|display' | head -80 >> " + p
+            + " ; getprop 2>/dev/null | grep -iE 'automotive|cluster|ro.product|ro.build.flavor|ro.build.version|security_patch|ro.vendor|fingerprint|dilink|byd|car|display' | head -100 >> " + p
             // Android Automotive Car service: cluster config, app-focus owner (navigation focus),
             // display assignment and any per-package allow-list that gates the instrument cluster.
             // AAOS distraction/driving gating — prime suspect: non-"distractionOptimized"
@@ -152,6 +152,15 @@ public final class BugReportCapture {
             // Cluster/projection permission declarations — who is even allowed to drive the cluster.
             + " ; echo '--- PERMISSIONS (cluster/car/projection) ---' >> " + p
             + " ; dumpsys package permissions 2>/dev/null | grep -iE 'cluster|instrument|projection|car.permission|distraction' | head -60 >> " + p
+            // DashCast's OWN granted permissions/flags on this platform — to verify the app (and
+            // the uid-2000 daemon that launches apps) hold what they need on a new ROM, e.g. any
+            // car/cluster/projection signature permissions.
+            + " ; echo '--- DASHCAST PACKAGE (grants/flags) ---' >> " + p
+            + " ; dumpsys package com.byd.dashcast 2>/dev/null | grep -iE 'versionName|flags=|pkgFlags|privateFlags|sharedUser|granted=true|cluster|instrument|projection' | head -90 >> " + p
+            // Input → display/viewport mapping: which input device feeds the cluster display, to
+            // tell a touch-routing problem apart from a rendering problem on projected apps.
+            + " ; echo '--- INPUT (display/viewport) ---' >> " + p
+            + " ; dumpsys input 2>/dev/null | grep -iE 'DisplayViewport|displayId|uniqueId|viewport|cluster' | head -60 >> " + p
             // Car service CLI (READ-ONLY): the usage dump lists what this build lets us query, and
             // get-do-activities answers directly whether an app's activities are distraction-
             // optimized (allowed to run while driving) — the suspected gate for the cluster.
