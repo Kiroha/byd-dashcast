@@ -109,6 +109,38 @@ public final class BugReportCapture {
             // auto_container) on variants where the usual activation service is absent.
             + " ; echo '--- SERVICES (service list) ---' >> " + p
             + " ; service list 2>/dev/null >> " + p
+            // ── CLUSTER GATING DEEP-DIVE ──
+            // Why does only the OEM system nav render on the cluster while third-party apps,
+            // placed on the SAME display at the WM level, do not? (DX_BYD_AUTO / Android
+            // Automotive INC-20260623-222919). Everything below is read-only discovery.
+            //
+            // Platform identity: `android.hardware.type.automotive` feature is the authoritative
+            // "is this AAOS?" check; props identify the exact product / build.
+            + " ; echo '--- FEATURES / PROPS (platform id) ---' >> " + p
+            + " ; pm list features 2>/dev/null | grep -iE 'automotive|car|cluster|display' >> " + p
+            + " ; getprop 2>/dev/null | grep -iE 'automotive|cluster|ro.product|ro.build.flavor|fingerprint|dilink|byd|car|display' | head -80 >> " + p
+            // Android Automotive Car service: cluster config, app-focus owner (navigation focus),
+            // display assignment and any per-package allow-list that gates the instrument cluster.
+            + " ; echo '--- CAR SERVICE (cluster/focus/nav/display) ---' >> " + p
+            + " ; dumpsys car_service 2>/dev/null | grep -iE 'cluster|navigation|focus|display|launch|allow|whitelist|package|instrument|projection' | head -200 >> " + p
+            // Per-display WINDOW state: which windows are actually on each display, their
+            // visibility / z-order / flags — shows whether a launched third-party window reaches
+            // the cluster surface or is dropped, vs the system nav which renders fine.
+            + " ; echo '--- WINDOW DISPLAYS ---' >> " + p
+            + " ; dumpsys window displays 2>/dev/null | head -300 >> " + p
+            + " ; echo '--- WINDOW FOCUS (per display) ---' >> " + p
+            + " ; dumpsys window 2>/dev/null | grep -iE 'mCurrentFocus|mFocusedApp|mInputMethodTarget|imeLayeringTarget|Display: mDisplayId|mDisplayId=' | head -40 >> " + p
+            // Candidate OEM cluster/nav packages — the system nav that DOES project is one of these.
+            + " ; echo '--- PACKAGES (nav/map/cluster/car) ---' >> " + p
+            + " ; pm list packages 2>/dev/null | grep -iE 'nav|map|cluster|instrument|neusoft|byd|car' >> " + p
+            // Settings that may whitelist which package is allowed on the cluster/secondary display.
+            + " ; echo '--- SETTINGS (cluster/display/nav/car) ---' >> " + p
+            + " ; (settings list global ; settings list secure ; settings list system) 2>/dev/null"
+            + "   | grep -iE 'cluster|display|nav|car|projection|instrument' | head -80 >> " + p
+            // SurfaceFlinger: full layer z-order (ALL packages, not only byd) + per-display
+            // composition state — to see whether a third-party layer exists on the cluster layerStack.
+            + " ; echo '--- SURFACEFLINGER (all layers, z-order) ---' >> " + p
+            + " ; dumpsys SurfaceFlinger 2>/dev/null | head -150 >> " + p
             // SurfaceFlinger cluster/mirror layers — reveals a leftover mirror token after a stop.
             + " ; echo '--- SURFACEFLINGER (cluster/mirror layers) ---' >> " + p
             + " ; dumpsys SurfaceFlinger 2>/dev/null | grep -iE 'byd|mirror|xdja|fission|layerStack|displayId' | head -40 >> " + p
