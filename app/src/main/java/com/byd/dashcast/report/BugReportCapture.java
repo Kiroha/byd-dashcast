@@ -131,7 +131,7 @@ public final class BugReportCapture {
             // (and non-privileged) apps are blocked on car displays while driving, so only the
             // system nav renders on the cluster. CarUxRestrictions + driving state reveal it.
             + " ; echo '--- CAR UX RESTRICTIONS / DRIVING STATE ---' >> " + p
-            + " ; dumpsys car_service 2>/dev/null | grep -iE 'restriction|distraction|driving|drive_state|drivestate|ux_restriction|uxr|optimized|requires_distraction|parked|moving|blocking|blocked|requiresDistraction' | head -120 >> " + p
+            + " ; dumpsys car_service 2>/dev/null | grep -iE 'restriction|distraction|driving|drive_state|drivestate|ux_restriction|uxr|optimized|requires_distraction|parked|moving|blocking|blocked|requiresDistraction|allowlist|allowed|occupant|zone|do_activit|do-activit' | head -150 >> " + p
             + " ; echo '--- CAR SERVICE (cluster/focus/nav/display) ---' >> " + p
             + " ; dumpsys car_service 2>/dev/null | grep -iE 'cluster|navigation|focus|display|launch|allow|whitelist|package|instrument|projection' | head -200 >> " + p
             // Per-display WINDOW state: which windows are actually on each display, their
@@ -152,6 +152,18 @@ public final class BugReportCapture {
             // Cluster/projection permission declarations — who is even allowed to drive the cluster.
             + " ; echo '--- PERMISSIONS (cluster/car/projection) ---' >> " + p
             + " ; dumpsys package permissions 2>/dev/null | grep -iE 'cluster|instrument|projection|car.permission|distraction' | head -60 >> " + p
+            // Car service CLI (READ-ONLY): the usage dump lists what this build lets us query, and
+            // get-do-activities answers directly whether an app's activities are distraction-
+            // optimized (allowed to run while driving) — the suspected gate for the cluster.
+            + " ; echo '--- CAR SERVICE CLI (usage + do-activities) ---' >> " + p
+            + " ; cmd car_service 2>&1 | head -60 >> " + p
+            + " ; for x in $(pm list packages 2>/dev/null | grep -iE 'neusoft|nav|map|cluster|instrument' | cut -d: -f2) ; do echo \"## get-do-activities $x\" ; cmd car_service get-do-activities \"$x\" 2>&1 | head -8 ; done 2>/dev/null | head -90 >> " + p
+            // Vendor HALs — a cluster/instrument/display HAL would be the OEM's native channel.
+            + " ; echo '--- VENDOR HALS (cluster/display/nav) ---' >> " + p
+            + " ; lshal 2>/dev/null | grep -iE 'cluster|instrument|display|nav|automotive|vehicle' | head -40 >> " + p
+            // Running services that hint at a cluster/instrument renderer or nav bridge.
+            + " ; echo '--- RUNNING SERVICES (cluster/instrument/nav) ---' >> " + p
+            + " ; dumpsys activity services 2>/dev/null | grep -iE 'cluster|instrument|nav|neusoft|projection|ClusterRenderingService' | head -40 >> " + p
             // Settings that may whitelist which package is allowed on the cluster/secondary display.
             + " ; echo '--- SETTINGS (cluster/display/nav/car) ---' >> " + p
             + " ; (settings list global ; settings list secure ; settings list system) 2>/dev/null"
