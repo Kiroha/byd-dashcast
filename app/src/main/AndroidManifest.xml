@@ -196,6 +196,12 @@
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
 
+        <!-- HUD nav bench (DL3) — BYD instrument feature-ID scraper + live write tester -->
+        <activity
+            android:name=".hud.HudDiagActivity"
+            android:label="HUD nav bench"
+            android:screenOrientation="landscape"/>
+
         <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
         <activity
             android:name=".cluster.dpi.ClusterResizeActivity"
