@@ -92,7 +92,7 @@ public final class BugReportCapture {
             // window over only these tags is far more likely to still hold the moment a
             // third-party app was launched on the cluster and (not) shown.
             + " ; echo '--- LOGCAT (window/cluster/car tags) ---' >> " + p
-            + " ; logcat -d -t 1200 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V ClusterRenderingService:V InstrumentClusterRenderingService:V DisplayManagerService:I '*:S' >> " + p + " 2>&1"
+            + " ; logcat -d -t 1500 -v threadtime WindowManager:I ActivityTaskManager:I ActivityManager:I CarService:I CAR.CLUSTER:V CAR.UXR:V CarUxRestrictions:V ClusterRenderingService:V InstrumentClusterRenderingService:V ActivityBlocking:V CarLaunch:V DisplayManagerService:I '*:S' >> " + p + " 2>&1"
             // ── CLUSTER / DISPLAY STATE ──
             + " ; echo '--- DISPLAYS ---' >> " + p
             + " ; dumpsys display 2>/dev/null >> " + p
@@ -127,6 +127,11 @@ public final class BugReportCapture {
             + " ; getprop 2>/dev/null | grep -iE 'automotive|cluster|ro.product|ro.build.flavor|fingerprint|dilink|byd|car|display' | head -80 >> " + p
             // Android Automotive Car service: cluster config, app-focus owner (navigation focus),
             // display assignment and any per-package allow-list that gates the instrument cluster.
+            // AAOS distraction/driving gating — prime suspect: non-"distractionOptimized"
+            // (and non-privileged) apps are blocked on car displays while driving, so only the
+            // system nav renders on the cluster. CarUxRestrictions + driving state reveal it.
+            + " ; echo '--- CAR UX RESTRICTIONS / DRIVING STATE ---' >> " + p
+            + " ; dumpsys car_service 2>/dev/null | grep -iE 'restriction|distraction|driving|drive_state|drivestate|ux_restriction|uxr|optimized|requires_distraction|parked|moving|blocking|blocked|requiresDistraction' | head -120 >> " + p
             + " ; echo '--- CAR SERVICE (cluster/focus/nav/display) ---' >> " + p
             + " ; dumpsys car_service 2>/dev/null | grep -iE 'cluster|navigation|focus|display|launch|allow|whitelist|package|instrument|projection' | head -200 >> " + p
             // Per-display WINDOW state: which windows are actually on each display, their
@@ -139,6 +144,14 @@ public final class BugReportCapture {
             // Candidate OEM cluster/nav packages — the system nav that DOES project is one of these.
             + " ; echo '--- PACKAGES (nav/map/cluster/car) ---' >> " + p
             + " ; pm list packages 2>/dev/null | grep -iE 'nav|map|cluster|instrument|neusoft|byd|car' >> " + p
+            // Privilege / distraction-optimization of nav/cluster candidate packages: compare the
+            // system nav (which DOES render on the cluster) against third-party apps that don't.
+            // distractionOptimized + FLAG_SYSTEM/privileged are the likely differentiators.
+            + " ; echo '--- PACKAGE FLAGS (nav/cluster candidates) ---' >> " + p
+            + " ; for x in $(pm list packages 2>/dev/null | grep -iE 'neusoft|nav|map|cluster|instrument' | cut -d: -f2) ; do echo \"## $x\" ; dumpsys package \"$x\" 2>/dev/null | grep -iE 'flags=|pkgFlags|privateFlags|sharedUser|codePath|distraction|versionName' ; done 2>/dev/null | head -120 >> " + p
+            // Cluster/projection permission declarations — who is even allowed to drive the cluster.
+            + " ; echo '--- PERMISSIONS (cluster/car/projection) ---' >> " + p
+            + " ; dumpsys package permissions 2>/dev/null | grep -iE 'cluster|instrument|projection|car.permission|distraction' | head -60 >> " + p
             // Settings that may whitelist which package is allowed on the cluster/secondary display.
             + " ; echo '--- SETTINGS (cluster/display/nav/car) ---' >> " + p
             + " ; (settings list global ; settings list secure ; settings list system) 2>/dev/null"
