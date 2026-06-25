@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.system.CanBusController
+import com.byd.dashcast.util.AppLogger
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -181,7 +182,12 @@ class HudDiagActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun log(msg: String) = runOnUiThread { logUi(msg) }
+    // Mirror every bench result to the in-app journal too, so it is captured in the
+    // bug report (the on-screen TextView alone is not — INC-20260625-174650).
+    private fun log(msg: String) {
+        AppLogger.i("HudDiagBench", msg)
+        runOnUiThread { logUi(msg) }
+    }
 
     private fun logUi(msg: String) {
         out.append("[${ts.format(Date())}] $msg\n")
