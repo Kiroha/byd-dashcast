@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.byd.dashcast.proxy.ProxyClient
+import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.system.CanBusController
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -63,12 +64,21 @@ class HudDiagActivity : AppCompatActivity() {
         navRow.addView(button("Nav ON") { bg { CanBusController.setNaviActive(true); log("setNaviActive(true) ok") } }, rowLp())
         navRow.addView(button("Nav OFF") { bg { CanBusController.setNaviActive(false); log("setNaviActive(false) ok") } }, rowLp())
         root.addView(navRow)
-        root.addView(button("Test guidance: turn-right 300 m") {
+        root.addView(button("Test guidance: turn-right 300 m (rc per write)") {
             bg {
-                CanBusController.setNaviActive(true)
-                CanBusController.sendSimpleGuidance(CanBusController.ICON_TURN_RIGHT, 300)
-                CanBusController.sendNextStreetName("TEST 300m")
-                log("sent ICON_TURN_RIGHT + 300m + name")
+                // Raw writes with the CORRECT feature IDs so each SDK return code is shown
+                // (rc=0 = accepted; negative = rejected/unknown feature). Then look at the cluster.
+                log("SETTING_NAVI_SCREEN=3 rc=" +
+                        CanBusController.setSettingFeature(CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS, 3))
+                log("SEND_NAVI_STATUS=active rc=" +
+                        CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, CanWriteVerbs.NAVI_STATUS_ACTIVE))
+                log("GUIDE_SIMPLE=turn-right rc=" +
+                        CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, CanBusController.ICON_TURN_RIGHT))
+                log("FRONT_CROSSING=300m rc=" +
+                        CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, 300))
+                log("NEXT_PATHNAME=TEST rc=" +
+                        CanBusController.setFeatureBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, "TEST".toByteArray(Charsets.UTF_8)))
+                log("→ now LOOK AT THE CLUSTER: turn-right arrow + 300 m + 'TEST'?")
             }
         })
 
@@ -82,7 +92,7 @@ class HudDiagActivity : AppCompatActivity() {
         rawRow.addView(button("Send int") { sendRawInt() }, rowLp())
         rawRow.addView(button("Send text→bytes") { sendRawBytes() }, rowLp())
         root.addView(rawRow)
-        root.addView(button("Print known ID sets (DashCast vs repo)") { printKnownIds() })
+        root.addView(button("Print verified DL3 feature IDs") { printKnownIds() })
 
         root.addView(header("4 · AAOS cluster (DX_BYD_AUTO only — no-op on DiLink)"))
         root.addView(hint("Switch the cluster mode via a vendor VHAL command WHILE an app is on Display 1, then look at the panel. Or probe the display-proxy HAL that owns the panel."))
@@ -172,14 +182,15 @@ class HudDiagActivity : AppCompatActivity() {
 
     private fun printKnownIds() {
         log(
-            "DashCast (OpenBYD 2.2 RE)   vs   repo (DiLink 5.1)\n" +
-            "NAVI_STATUS   0x43C0007A   |   0x43E0003A\n" +
-            "GUIDE_SIMPLE  0x43D10010   |   0x43F01010\n" +
-            "ROAD_DISTANCE 0x43D10030   |   0x43F01030\n" +
-            "FRONT_CROSS   0x43D10018   |   0x43F01018\n" +
-            "NEXT_PATHNAME 0x43E10008   |   0x43FA1008\n" +
-            "LEAD_MSG      0x43EC0010   |   0x43F08010\n" +
-            "SETTING_NAVI  0x4C1A0015   |   0x4C10E015"
+            "Verified DL3/DL5.1 instrument feature IDs (from the BYDAutoFeatureIds scrape):\n" +
+            "SEND_NAVI_STATUS    0x43E0003A   (value 2=active, 4=stop)\n" +
+            "GUIDE_SIMPLE        0x43F01010   (value = turn icon id, e.g. 2=right)\n" +
+            "GUIDE_ROAD_DIST     0x43F01030\n" +
+            "FRONT_CROSSING      0x43F01018   (value = metres)\n" +
+            "NEXT_PATHNAME       0x43FA1008   (bytes = UTF-8 road name)\n" +
+            "NAVI_TRIP M/H/MIN/S 0x43F02028 / 0x43F02010 / 0x43F02018 / 0x43F0201E\n" +
+            "LEAD_MSG 0x43F08010   DIST_TARGET 0x43F08018\n" +
+            "SETTING_NAVI_SCREEN 0x4C10E015   (value 3, via SettingDevice)"
         )
     }
 

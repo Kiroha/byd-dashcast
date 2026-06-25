@@ -35,48 +35,53 @@ public final class CanWriteVerbs {
 
     private CanWriteVerbs() {}
 
-    // ─── CAN feature ID constants (from OpenBYD 2.2 RE) ──────────────────
+    // ─── CAN feature ID constants ────────────────────────────────────────
+    //  The decimal values are authoritative — VERIFIED against the live DL3
+    //  android.hardware.bydauto.BYDAutoFeatureIds scrape (HUD bench export
+    //  20260625_174428; they match the Open-BYD repo / DiLink 5.1). The earlier
+    //  hex comments ("from OpenBYD 2.2 RE") were WRONG and are corrected below —
+    //  they had misled a tester into writing the wrong featureId in the bench.
 
     /** Start / stop navigation display on the instrument cluster HUD.
      *  Pass {@link #NAVI_STATUS_ACTIVE} or {@link #NAVI_STATUS_STOPPED}. */
-    public static final int INSTRUMENT_SEND_NAVI_STATUS      = 1138753594; // 0x43C0007A
+    public static final int INSTRUMENT_SEND_NAVI_STATUS      = 1138753594; // 0x43E0003A
 
     /** Simple guidance: primary turn icon ID + distance-to-turn in metres. */
-    public static final int INSTRUMENT_GUIDE_SIMPLE          = 1139806224; // 0x43D10010
+    public static final int INSTRUMENT_GUIDE_SIMPLE          = 1139806224; // 0x43F01010
 
     /** Guidance with road-ahead distance (secondary display variant). */
-    public static final int INSTRUMENT_GUIDE_ROAD_DISTANCE   = 1139806256; // 0x43D10030
+    public static final int INSTRUMENT_GUIDE_ROAD_DISTANCE   = 1139806256; // 0x43F01030
 
     /** Distance to the next crossing / intersection in metres. */
-    public static final int INSTRUMENT_FRONT_CROSSING_DIST   = 1139806232; // 0x43D10018
+    public static final int INSTRUMENT_FRONT_CROSSING_DIST   = 1139806232; // 0x43F01018
 
     /** Next street name — write as UTF-8 bytes via {@link #setBytes}. */
-    public static final int INSTRUMENT_NEXT_PATHNAME         = 1140461576; // 0x43E10008
+    public static final int INSTRUMENT_NEXT_PATHNAME         = 1140461576; // 0x43FA1008
 
     /** Remaining route distance in metres. */
-    public static final int INSTRUMENT_NAVI_MILEAGE          = 1139810344;
+    public static final int INSTRUMENT_NAVI_MILEAGE          = 1139810344; // 0x43F02028
 
     /** ETA hours component (0-23). */
-    public static final int INSTRUMENT_NAVI_HOUR             = 1139810320;
+    public static final int INSTRUMENT_NAVI_HOUR             = 1139810320; // 0x43F02010
 
     /** ETA minutes component (0-59). */
-    public static final int INSTRUMENT_NAVI_MINUTE           = 1139810328;
+    public static final int INSTRUMENT_NAVI_MINUTE           = 1139810328; // 0x43F02018
 
     /** Remaining route time in seconds (alternative to hour/minute split). */
-    public static final int INSTRUMENT_NAVI_REMAINING_SEC    = 1139810334;
+    public static final int INSTRUMENT_NAVI_REMAINING_SEC    = 1139810334; // 0x43F0201E
 
     /** Advanced lead-message icon (secondary / advanced HUD variant). */
-    public static final int INSTRUMENT_NAVI_LEAD_MSG         = 1139834896; // 0x43EC0010
+    public static final int INSTRUMENT_NAVI_LEAD_MSG         = 1139834896; // 0x43F08010
 
     /** Advanced distance-to-target (secondary / advanced HUD variant). */
-    public static final int INSTRUMENT_DISTANCE_TARGET_AHEAD = 1139834904; // 0x43EC0018
+    public static final int INSTRUMENT_DISTANCE_TARGET_AHEAD = 1139834904; // 0x43F08018
 
     // ─── BYDAutoSettingDevice feature IDs ────────────────────────────────
 
     /** Activates the navigation display lane on the instrument cluster screen.
      *  Lives on {@code BYDAutoSettingDevice} (NOT InstrumentDevice).
      *  Set to value {@code 3} when navigation starts; not cleared on stop. */
-    public static final int SETTING_NAVI_SCREEN_STATUS = 1276174357; // 0x4C1A0015
+    public static final int SETTING_NAVI_SCREEN_STATUS = 1276174357; // 0x4C10E015
 
     // ─── Navigation status values ─────────────────────────────────────────
 
