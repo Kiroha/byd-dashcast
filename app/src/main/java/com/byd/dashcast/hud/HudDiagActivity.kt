@@ -78,6 +78,17 @@ class HudDiagActivity : AppCompatActivity() {
         root.addView(rawRow)
         root.addView(button("Print known ID sets (DashCast vs repo)") { printKnownIds() })
 
+        root.addView(header("4 · AAOS cluster (DX_BYD_AUTO only — no-op on DiLink)"))
+        root.addView(hint("Switch the cluster mode via a vendor VHAL command WHILE an app is on Display 1, then look at the panel. Or probe the display-proxy HAL that owns the panel."))
+        for ((name, prop) in AaosClusterProbe.CANDIDATES) {
+            root.addView(button("%s = 1  (0x%08X)".format(name, prop)) { aaosSetProp(prop, 1) })
+        }
+        root.addView(button("Send VHAL int (free featureId + value above)") { aaosSetFree() })
+        root.addView(button("Probe display-proxy HAL") {
+            if (!AaosClusterProbe.isAaos(this)) { logUi("not AAOS — skipped"); return@button }
+            bg { log(AaosClusterProbe.probeDisplayProxy()) }
+        })
+
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 11f
@@ -130,6 +141,18 @@ class HudDiagActivity : AppCompatActivity() {
             val rc = CanBusController.setFeatureBytes(fid, s.toByteArray(Charsets.UTF_8))
             log("setFeatureBytes(0x%08X, \"%s\") → rc=%d".format(fid, s, rc))
         }
+    }
+
+    private fun aaosSetProp(propId: Int, value: Int) {
+        if (!AaosClusterProbe.isAaos(this)) { logUi("not AAOS — skipped"); return }
+        bg { log(AaosClusterProbe.setCarIntProperty(this, propId, 0, value)) }
+    }
+
+    private fun aaosSetFree() {
+        val fid = parseId(fidField.text.toString()) ?: return logUi("bad featureId")
+        val v = valField.text.toString().trim().toIntOrNull() ?: return logUi("bad value")
+        if (!AaosClusterProbe.isAaos(this)) { logUi("not AAOS — skipped"); return }
+        bg { log(AaosClusterProbe.setCarIntProperty(this, fid, 0, v)) }
     }
 
     private fun printKnownIds() {
