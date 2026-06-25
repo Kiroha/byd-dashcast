@@ -131,10 +131,19 @@ object HudDiagnosticBundle {
         }
         write(work, "05_candidate_dumpsys.txt", dumps.toString())
 
-        // logcat (recent) + a nav/instrument-filtered view
-        val logcat = sh("logcat -d -v threadtime -t 4000")
+        // Cluster-type discriminator: "1" => single-OS fission (BYDAutoInstrumentDevice CAN path,
+        // works on DL5.1); anything else => "1 for 2" cluster driven by AutoContainerManager (DL3).
+        write(work, "09_props.txt",
+            "ro.build.system.fission_single_os=" + sh("getprop ro.build.system.fission_single_os") +
+            "\n----- full getprop -----\n" + sh("getprop"))
+
+        // Tag-filtered logcat FIRST (small + the smoking gun): does AmapService forward our
+        // broadcast to the 1for2 cluster? It logs "send_to di1for2 cluster" / "发送独立仪表…".
+        write(work, "06_logcat_amapservice.txt", sh("logcat -d -s AmapService:V -t 400"))
+        // General recent buffer, kept SMALL so the daemon parcel never overflows (-t 4000 killed it).
+        val logcat = sh("logcat -d -v threadtime -t 600")
         write(work, "06_logcat.txt", logcat)
-        val rx = Regex("(?i)navi|instrument|autonavi|amap|gaode|cluster|hud|byd|guidance|someip")
+        val rx = Regex("(?i)navi|instrument|autonavi|amap|gaode|cluster|hud|byd|guidance|someip|container")
         write(work, "07_logcat_filtered.txt",
             logcat.lineSequence().filter { rx.containsMatchIn(it) }.joinToString("\n"))
     }
