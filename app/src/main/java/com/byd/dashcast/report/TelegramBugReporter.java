@@ -43,9 +43,17 @@ public final class TelegramBugReporter {
      * {@code cb} fires on the main thread.
      */
     public static void send(Context context, File file, String caption, Callback cb) {
-        final Context app = context.getApplicationContext();
+        send(context, file, caption, BuildConfig.BUG_REPORT_THREAD_ID, cb);
+    }
+
+    /**
+     * Same as {@link #send(Context, File, String, Callback)} but routes to a specific
+     * topic ({@code message_thread_id}) within the same chat — used e.g. by the HUD
+     * self-test to post into its dedicated thread.
+     */
+    public static void send(Context context, File file, String caption, String threadOverride, Callback cb) {
         new Thread(() -> {
-            String error = doSend(file, caption);
+            String error = doSend(file, caption, threadOverride);
             post(() -> {
                 if (error == null) cb.onSent();
                 else cb.onFailed(error);
@@ -53,11 +61,10 @@ public final class TelegramBugReporter {
         }, "tg-bugreport").start();
     }
 
-    private static String doSend(File file, String caption) {
+    private static String doSend(File file, String caption, String thread) {
         final String boundary = "----dashcast" + System.currentTimeMillis();
         final String token  = BuildConfig.BUG_REPORT_BOT_TOKEN;
         final String chatId = BuildConfig.BUG_REPORT_CHAT_ID;
-        final String thread = BuildConfig.BUG_REPORT_THREAD_ID;
         HttpURLConnection conn = null;
         try {
             URL url = new URL("https://api.telegram.org/bot" + token + "/sendDocument");
