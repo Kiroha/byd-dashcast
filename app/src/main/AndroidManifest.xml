@@ -128,6 +128,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Android Automotive car library — optional: present only on AAOS head units
+             (e.g. DX_BYD_AUTO). required=false → ignored at install on DiLink 3/5, where
+             it does not exist. Used reflection-only by the AAOS cluster diag probe. -->
+        <uses-library android:name="android.car" android:required="false"/>
+
         <!-- Welcome screen: language selection (first launch only) -->
         <activity
             android:name=".ui.welcome.WelcomeActivity"
