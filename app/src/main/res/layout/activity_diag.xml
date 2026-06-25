@@ -316,6 +316,10 @@
                 android:text="@string/diag_tab_export_apk"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_voice"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_aaos"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_hud_dl3"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -381,6 +385,16 @@
             <include
                 android:id="@+id/panel_voice"
                 layout="@layout/include_diag_voice"/>
+
+            <!-- AAOS (DX_BYD_AUTO) cluster diagnostic panel -->
+            <include
+                android:id="@+id/panel_aaos"
+                layout="@layout/include_diag_aaos"/>
+
+            <!-- HUD navigation bench (DiLink 3) panel -->
+            <include
+                android:id="@+id/panel_hud_dl3"
+                layout="@layout/include_diag_hud_dl3"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include
