@@ -1,5 +1,8 @@
 package com.byd.dashcast.hud
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.text.method.ScrollingMovementMethod
@@ -11,9 +14,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.system.CanBusController
 import com.byd.dashcast.util.AppLogger
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,6 +94,15 @@ class HudDiagActivity : AppCompatActivity() {
             if (!AaosClusterProbe.isAaos(this)) { logUi("not AAOS — skipped"); return@button }
             bg { log(AaosClusterProbe.probeDisplayProxy()) }
         })
+
+        // ── Output + export (testers can't always send a bug report — let them share/copy
+        //    the bench log directly, on any platform) ──
+        root.addView(header("Output — export the results"))
+        val exportRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        exportRow.addView(button("Share log") { shareLog() }, rowLp())
+        exportRow.addView(button("Copy log") { copyLog() }, rowLp())
+        exportRow.addView(button("Clear") { out.text = ""; logUi("cleared") }, rowLp())
+        root.addView(exportRow)
 
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -170,6 +184,38 @@ class HudDiagActivity : AppCompatActivity() {
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
+
+    /** Write the full session log to a file and share it (Telegram/email/…). */
+    private fun shareLog() {
+        try {
+            val dir = getExternalFilesDir(null) ?: filesDir
+            val name = "hud_bench_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".txt"
+            val file = File(dir, name)
+            file.writeText(out.text.toString())
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "DashCast HUD bench log")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(send, "Share HUD bench log"))
+            logUi("exported → $file")
+        } catch (t: Throwable) {
+            logUi("share failed: ${t.javaClass.simpleName}: ${t.message}")
+        }
+    }
+
+    /** Fallback when sharing isn't convenient: copy the full log to the clipboard. */
+    private fun copyLog() {
+        try {
+            val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("HUD bench log", out.text))
+            logUi("copied to clipboard")
+        } catch (t: Throwable) {
+            logUi("copy failed: ${t.message}")
+        }
+    }
 
     /** Accepts "0x..", "..h" hex or decimal; values up to 0xFFFFFFFF fit a signed int. */
     private fun parseId(raw: String): Int? = try {
