@@ -207,6 +207,12 @@
             android:label="HUD nav bench"
             android:screenOrientation="landscape"/>
 
+        <!-- AAOS cluster diagnostic (DX_BYD_AUTO) — one-tap full capture → zip -->
+        <activity
+            android:name=".hud.AaosDiagActivity"
+            android:label="AAOS cluster diagnostic"
+            android:screenOrientation="landscape"/>
+
         <!-- v1.2.71 — Cluster resize editor (option B minimal) -->
         <activity
             android:name=".cluster.dpi.ClusterResizeActivity"
