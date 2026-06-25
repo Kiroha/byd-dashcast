@@ -3,6 +3,7 @@ package com.byd.dashcast.hud
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.text.method.ScrollingMovementMethod
@@ -15,8 +16,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import com.byd.dashcast.BuildConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
+import com.byd.dashcast.report.TelegramBugReporter
 import com.byd.dashcast.system.CanBusController
 import com.byd.dashcast.util.AppLogger
 import java.io.File
@@ -55,6 +58,10 @@ class HudDiagActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
+
+        root.addView(header("0 · One-tap test (results sent automatically)"))
+        root.addView(hint("Runs the full nav sequence with the verified IDs and uploads the result to the support Telegram topic — no typing needed. Then just look at the cluster."))
+        root.addView(button("▶  RUN HUD SELF-TEST & SEND") { runHudSelfTest() })
 
         root.addView(header("1 · Scrape real feature IDs from this car"))
         root.addView(button("Scrape BYD instrument/nav IDs") { runScrape() })
@@ -148,6 +155,61 @@ class HudDiagActivity : AppCompatActivity() {
     private fun runScrape() {
         log("scraping… (see below)")
         bg { log(HudFeatureScraper.scrape()) }
+    }
+
+    /**
+     * One-tap test for end users: runs the full nav-guidance sequence with the verified
+     * feature IDs, captures every SDK return code, then auto-uploads the result to the
+     * dedicated Telegram topic via the bug-report bot — no manual input, no share sheet.
+     */
+    private fun runHudSelfTest() {
+        log("HUD self-test starting…")
+        bg {
+            if (!ProxyClient.isConnected()) ProxyClient.connect(this)
+            val sb = StringBuilder()
+            sb.append("=== DASHCAST HUD SELF-TEST ===\n")
+            sb.append("App: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+            sb.append("Device: ${Build.MANUFACTURER} ${Build.MODEL} — ${Build.PRODUCT}, API ${Build.VERSION.SDK_INT}\n")
+            sb.append("ProxyClient connected: ${ProxyClient.isConnected()}\n\n")
+            fun step(label: String, write: () -> Int) {
+                val line = try { "$label → rc=${write()}" }
+                           catch (t: Throwable) { "$label → EXCEPTION ${t.javaClass.simpleName}: ${t.message}" }
+                sb.append(line).append('\n')
+                log(line)
+            }
+            step("SETTING_NAVI_SCREEN=3") { CanBusController.setSettingFeature(CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS, 3) }
+            step("SEND_NAVI_STATUS=active") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, CanWriteVerbs.NAVI_STATUS_ACTIVE) }
+            step("GUIDE_SIMPLE=turn-right") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, CanBusController.ICON_TURN_RIGHT) }
+            step("FRONT_CROSSING=300m") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, 300) }
+            step("NEXT_PATHNAME=TEST") { CanBusController.setFeatureBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, "TEST".toByteArray(Charsets.UTF_8)) }
+            step("NAVI_MILEAGE=1200m") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_NAVI_MILEAGE, 1200) }
+            step("NAVI_HOUR=0") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_NAVI_HOUR, 0) }
+            step("NAVI_MINUTE=12") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_NAVI_MINUTE, 12) }
+            sb.append("\nrc=0 = SDK accepted the write (negative = rejected / unknown feature).\n")
+            sb.append("TESTER: did the cluster show a RIGHT-TURN arrow + 300 m + 'TEST'? Reply Yes/No.\n")
+            uploadSelfTest(sb.toString())
+        }
+    }
+
+    /** Writes the self-test report to a file and uploads it to the HUD Telegram topic. */
+    private fun uploadSelfTest(report: String) {
+        if (!TelegramBugReporter.isConfigured()) {
+            log("Telegram bot not configured in this build — tap 'Share log' to send manually.")
+            return
+        }
+        try {
+            val dir = getExternalFilesDir(null) ?: filesDir
+            val file = File(dir, "hud_selftest_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".txt")
+            file.writeText(report)
+            log("uploading self-test to Telegram…")
+            TelegramBugReporter.send(this, file, "DashCast HUD self-test — ${Build.PRODUCT}", HUD_TEST_THREAD,
+                object : TelegramBugReporter.Callback {
+                    override fun onSent() { logUi("✓ self-test sent to Telegram (topic $HUD_TEST_THREAD)") }
+                    override fun onFailed(message: String) { logUi("✗ Telegram failed: $message — tap 'Share log' instead") }
+                })
+        } catch (t: Throwable) {
+            log("self-test upload failed: ${t.javaClass.simpleName}: ${t.message}")
+        }
     }
 
     private fun sendRawInt() {
@@ -274,4 +336,9 @@ class HudDiagActivity : AppCompatActivity() {
     }
 
     private fun rowLp() = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+
+    companion object {
+        /** Telegram topic (message_thread_id) for HUD self-test results — t.me/c/3712642112/2701. */
+        private const val HUD_TEST_THREAD = "2701"
+    }
 }
