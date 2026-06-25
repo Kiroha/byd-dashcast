@@ -182,14 +182,14 @@ class HudDiagActivity : AppCompatActivity() {
         }.start()
     }
 
-    // Mirror every bench result to the in-app journal too, so it is captured in the
-    // bug report (the on-screen TextView alone is not — INC-20260625-174650).
-    private fun log(msg: String) {
-        AppLogger.i("HudDiagBench", msg)
-        runOnUiThread { logUi(msg) }
-    }
+    private fun log(msg: String) = runOnUiThread { logUi(msg) }
 
+    // Single output sink: EVERYTHING shown on screen (results, validation errors,
+    // "not AAOS — skipped", connection state…) is also written to the in-app journal,
+    // so the bug report captures the full bench session — no screen-only blind spot
+    // (INC-20260625-174650). logUi is always called on the UI thread.
     private fun logUi(msg: String) {
+        AppLogger.i("HudDiagBench", msg)
         out.append("[${ts.format(Date())}] $msg\n")
         (out.parent as? ScrollView)?.post { (out.parent as ScrollView).fullScroll(View.FOCUS_DOWN) }
     }
