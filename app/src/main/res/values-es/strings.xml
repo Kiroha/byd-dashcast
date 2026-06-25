@@ -751,4 +751,11 @@
     <string name="bug_wizard_pick_issue">Selecciona un problema arriba</string>
     <string name="bug_wizard_selected_fmt">Seleccionado: %1$s</string>
     <string name="toast_adb_port_refused">ADB inaccesible (puerto 5555) — espejo no disponible en este dispositivo</string>
+    <string name="hud_visual_title">Comprobación visual del HUD</string>
+    <string name="hud_visual_question">¿El cuadro de instrumentos mostró una flecha a la derecha, 300 m y «TEST»?</string>
+    <string name="hud_visual_yes">Sí</string>
+    <string name="hud_visual_no">No</string>
+    <string name="hud_visual_unsure">No estoy seguro</string>
+    <string name="hud_visual_no_hint">¿Qué vio en su lugar? (opcional)</string>
+    <string name="hud_visual_send">Enviar</string>
 </resources>

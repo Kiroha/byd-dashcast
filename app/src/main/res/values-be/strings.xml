@@ -751,4 +751,11 @@
     <string name="bug_wizard_pick_issue">Выберыце праблему вышэй</string>
     <string name="bug_wizard_selected_fmt">Выбрана: %1$s</string>
     <string name="toast_adb_port_refused">ADB недаступны (порт 5555) — люстраванне недаступнае на гэтай прыладзе</string>
+    <string name="hud_visual_title">Візуальная праверка HUD</string>
+    <string name="hud_visual_question">Ці паказала прыборная панэль стрэлку направа, 300 м і «TEST»?</string>
+    <string name="hud_visual_yes">Так</string>
+    <string name="hud_visual_no">Не</string>
+    <string name="hud_visual_unsure">Не ўпэўнены</string>
+    <string name="hud_visual_no_hint">Што вы ўбачылі замест гэтага? (неабавязкова)</string>
+    <string name="hud_visual_send">Адправіць</string>
 </resources>

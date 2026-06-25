@@ -751,4 +751,11 @@
     <string name="bug_wizard_pick_issue">Yukarıdan bir sorun seç</string>
     <string name="bug_wizard_selected_fmt">Seçildi: %1$s</string>
     <string name="toast_adb_port_refused">ADB\'ye erişilemiyor (bağlantı noktası 5555) — bu cihazda ayna kullanılamıyor</string>
+    <string name="hud_visual_title">HUD görsel kontrolü</string>
+    <string name="hud_visual_question">Gösterge paneli sağa dönüş oku, 300 m ve “TEST” gösterdi mi?</string>
+    <string name="hud_visual_yes">Evet</string>
+    <string name="hud_visual_no">Hayır</string>
+    <string name="hud_visual_unsure">Emin değilim</string>
+    <string name="hud_visual_no_hint">Bunun yerine ne gördünüz? (isteğe bağlı)</string>
+    <string name="hud_visual_send">Gönder</string>
 </resources>

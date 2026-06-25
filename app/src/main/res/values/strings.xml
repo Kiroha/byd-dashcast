@@ -791,4 +791,11 @@
     <string name="bug_wizard_send">Envoyer le rapport</string>
     <string name="bug_wizard_pick_issue">Sélectionne un problème ci-dessus</string>
     <string name="bug_wizard_selected_fmt">Sélectionné : %1$s</string>
+    <string name="hud_visual_title">Vérification visuelle du HUD</string>
+    <string name="hud_visual_question">Le combiné a-t-il affiché : flèche à droite, 300 m et « TEST » ?</string>
+    <string name="hud_visual_yes">Oui</string>
+    <string name="hud_visual_no">Non</string>
+    <string name="hud_visual_unsure">Pas sûr</string>
+    <string name="hud_visual_no_hint">Qu’avez-vous vu à la place ? (facultatif)</string>
+    <string name="hud_visual_send">Envoyer</string>
 </resources>

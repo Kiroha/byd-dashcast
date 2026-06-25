@@ -752,5 +752,12 @@
     <string name="bug_wizard_pick_issue">Yuqoridan muammo tanlang</string>
     <string name="bug_wizard_selected_fmt">Tanlandi: %1$s</string>
     <string name="toast_adb_port_refused">ADB ulanib bo\'lmadi (5555-port) — bu qurilmada ko\'zgu mavjud emas</string>
+    <string name="hud_visual_title">HUD vizual tekshiruvi</string>
+    <string name="hud_visual_question">Asboblar paneli o‘ngga burilish o‘qini, 300 m va “TEST” ko‘rsatdimi?</string>
+    <string name="hud_visual_yes">Ha</string>
+    <string name="hud_visual_no">Yo‘q</string>
+    <string name="hud_visual_unsure">Aniq emas</string>
+    <string name="hud_visual_no_hint">Buning o‘rniga nima ko‘rdingiz? (ixtiyoriy)</string>
+    <string name="hud_visual_send">Yuborish</string>
 </resources>
 

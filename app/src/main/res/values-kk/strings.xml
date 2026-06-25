@@ -751,4 +751,11 @@
     <string name="bug_wizard_pick_issue">Жоғарыдан мәселе таңдаңыз</string>
     <string name="bug_wizard_selected_fmt">Таңдалды: %1$s</string>
     <string name="toast_adb_port_refused">ADB қолжетімсіз (5555 порты) — бұл құрылғыда айналау қолжетімсіз</string>
+    <string name="hud_visual_title">HUD визуалды тексеру</string>
+    <string name="hud_visual_question">Аспаптар панелі оңға бұрылу көрсеткісін, 300 м және «TEST» көрсетті ме?</string>
+    <string name="hud_visual_yes">Иә</string>
+    <string name="hud_visual_no">Жоқ</string>
+    <string name="hud_visual_unsure">Сенімді емеспін</string>
+    <string name="hud_visual_no_hint">Оның орнына не көрдіңіз? (міндетті емес)</string>
+    <string name="hud_visual_send">Жіберу</string>
 </resources>
