@@ -1917,6 +1917,14 @@ public class DiagActivity extends AppCompatActivity {
             btnHudBench.setOnClickListener(v ->
                     startActivity(new Intent(this, com.byd.dashcast.hud.HudDiagActivity.class)));
         }
+        // AAOS cluster diagnostic (DX_BYD_AUTO) — one-tap full capture → zip.
+        com.google.android.material.button.MaterialButton btnAaosBench =
+                panelClusterPoc.findViewById(R.id.btn_cluster_poc_aaos_bench);
+        if (btnAaosBench != null) {
+            btnAaosBench.setText("AAOS cluster diagnostic (DX_BYD_AUTO)");
+            btnAaosBench.setOnClickListener(v ->
+                    startActivity(new Intent(this, com.byd.dashcast.hud.AaosDiagActivity.class)));
+        }
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);

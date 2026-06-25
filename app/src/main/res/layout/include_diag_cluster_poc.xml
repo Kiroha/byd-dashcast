@@ -60,6 +60,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"/>
 
+                <!-- AAOS cluster diagnostic (DX_BYD_AUTO) — label set in code (dev tool) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cluster_poc_aaos_bench"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"/>
+
                 <!-- ── Row 1 : enumerate + restart daemon + share report ── -->
                 <LinearLayout
                     android:layout_width="match_parent"
