@@ -576,7 +576,7 @@ public class ClusterService extends Service
                         // Route through the proxy daemon's launchAndForce cascade instead: it adds
                         // the privileged moveRootTaskToDisplay + watchdog that re-anchors the task
                         // on the cluster display — the same path fission uses to pin apps there.
-                        boolean iamOk = startActivityViaIAM(launchIntent, opts);
+                        boolean iamOk = startActivityViaIAM(launchIntent, opts, displayId);
                         if (!iamOk && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
                             AppLogger.w(TAG, "DL5: IAM fell back to startActivity — routing via proxy daemon launchAndForce");
                             launchViaDaemonForce(packageName, displayId,
@@ -654,7 +654,7 @@ public class ClusterService extends Service
                     // Same chain as launchOnDashboard: IAM first, then the proxy daemon's
                     // launchAndForce cascade as the DL5 fallback (shell `am start --display`
                     // provably lands the app on display 0 on some DX_BYD_AUTO ROMs).
-                    boolean iamOkWB = startActivityViaIAM(launchIntent, opts);
+                    boolean iamOkWB = startActivityViaIAM(launchIntent, opts, displayId);
                     if (!iamOkWB && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
                         AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — routing via proxy daemon launchAndForce");
                         int wbW = right - left, wbH = bottom - top;
@@ -735,7 +735,7 @@ public class ClusterService extends Service
     // Returns true if IAM reflection succeeded, false if fell back to startActivity().
     // Callers on DL5 can use the return value to decide whether to retry via shell.
     private boolean startActivityViaIAM(android.content.Intent intent,
-                                         android.app.ActivityOptions opts) {
+                                         android.app.ActivityOptions opts, int displayId) {
         try {
             Class<?> amClass        = Class.forName("android.app.ActivityManager");
             Object   iam            = amClass.getMethod("getService").invoke(null);
@@ -751,8 +751,24 @@ public class ClusterService extends Service
                     null, null, null, 0, 0, null, opts.toBundle(), -2);
             return true;
         } catch (Exception ex) {
-            AppLogger.w(TAG, "startActivityViaIAM → fallback context: " + ex.getMessage());
-            startActivity(intent, opts.toBundle());
+            AppLogger.w(TAG, "startActivityViaIAM → fallback startActivity: " + ex.getMessage());
+            try {
+                startActivity(intent, opts.toBundle());
+            } catch (Exception e2) {
+                // DL3 cold-launch: launching a not-yet-running app onto the fission
+                // VirtualDisplay with FREEFORM + launch bounds NPEs in the WM
+                // (ActivityStack.getBounds() on a stack that doesn't exist yet —
+                // INC-20260625-123938). Retry targeting only the display (no FREEFORM,
+                // no bounds) so the task is created on the cluster; the inset bounds are
+                // re-applied afterwards by the auto-resize path. DL5 never reaches this
+                // catch — there startActivity(opts) succeeds (it lands on the wrong
+                // display) and launchViaDaemonForce takes over, so DL5 is unchanged.
+                AppLogger.w(TAG, "fallback startActivity(opts) failed (" + e2.getMessage()
+                        + ") — retrying plain launch on display " + displayId);
+                android.app.ActivityOptions plain = android.app.ActivityOptions.makeBasic();
+                if (displayId > 0) plain.setLaunchDisplayId(displayId);
+                startActivity(intent, plain.toBundle());
+            }
             return false;
         }
     }
