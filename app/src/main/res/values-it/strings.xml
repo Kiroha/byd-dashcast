@@ -751,4 +751,11 @@
     <string name="bug_wizard_pick_issue">Seleziona un problema sopra</string>
     <string name="bug_wizard_selected_fmt">Selezionato: %1$s</string>
     <string name="toast_adb_port_refused">ADB irraggiungibile (porta 5555) — mirroring non disponibile su questo dispositivo</string>
+    <string name="hud_visual_title">Verifica visiva HUD</string>
+    <string name="hud_visual_question">Il quadro strumenti ha mostrato una freccia a destra, 300 m e «TEST»?</string>
+    <string name="hud_visual_yes">Sì</string>
+    <string name="hud_visual_no">No</string>
+    <string name="hud_visual_unsure">Non sono sicuro</string>
+    <string name="hud_visual_no_hint">Cosa hai visto invece? (facoltativo)</string>
+    <string name="hud_visual_send">Invia</string>
 </resources>

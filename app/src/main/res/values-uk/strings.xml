@@ -752,4 +752,11 @@
     <string name="bug_wizard_pick_issue">Виберіть проблему вище</string>
     <string name="bug_wizard_selected_fmt">Вибрано: %1$s</string>
     <string name="toast_adb_port_refused">ADB недоступний (порт 5555) — дзеркалювання недоступне на цьому пристрої</string>
+    <string name="hud_visual_title">Візуальна перевірка HUD</string>
+    <string name="hud_visual_question">Чи показала приладова панель стрілку праворуч, 300 м і «TEST»?</string>
+    <string name="hud_visual_yes">Так</string>
+    <string name="hud_visual_no">Ні</string>
+    <string name="hud_visual_unsure">Не впевнений</string>
+    <string name="hud_visual_no_hint">Що ви побачили натомість? (необов’язково)</string>
+    <string name="hud_visual_send">Надіслати</string>
 </resources>

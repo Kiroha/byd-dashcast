@@ -764,4 +764,11 @@
     <string name="bug_wizard_pick_issue">Pick an issue above</string>
     <string name="bug_wizard_selected_fmt">Selected: %1$s</string>
     <string name="toast_adb_port_refused">ADB unreachable (port 5555) — mirroring unavailable on this device</string>
+    <string name="hud_visual_title">HUD visual check</string>
+    <string name="hud_visual_question">Did the instrument cluster show a right-turn arrow, 300 m and “TEST”?</string>
+    <string name="hud_visual_yes">Yes</string>
+    <string name="hud_visual_no">No</string>
+    <string name="hud_visual_unsure">Not sure</string>
+    <string name="hud_visual_no_hint">What did you see instead? (optional)</string>
+    <string name="hud_visual_send">Send</string>
 </resources>

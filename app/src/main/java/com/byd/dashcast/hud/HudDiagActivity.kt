@@ -14,9 +14,11 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.byd.dashcast.BuildConfig
+import com.byd.dashcast.R
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.report.TelegramBugReporter
@@ -186,9 +188,44 @@ class HudDiagActivity : AppCompatActivity() {
             step("NAVI_HOUR=0") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_NAVI_HOUR, 0) }
             step("NAVI_MINUTE=12") { CanBusController.setFeatureInt(CanWriteVerbs.INSTRUMENT_NAVI_MINUTE, 12) }
             sb.append("\nrc=0 = SDK accepted the write (negative = rejected / unknown feature).\n")
-            sb.append("TESTER: did the cluster show a RIGHT-TURN arrow + 300 m + 'TEST'? Reply Yes/No.\n")
-            uploadSelfTest(sb.toString())
+            // Capture the visual result in-app (a popup) so we don't depend on the tester
+            // typing a reply in Telegram — the answer is baked into the uploaded report.
+            runOnUiThread { askVisualResult(sb.toString()) }
         }
+    }
+
+    /** Popup asking the tester whether the cluster actually rendered the test guidance. */
+    private fun askVisualResult(report: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.hud_visual_title)
+            .setMessage(R.string.hud_visual_question)
+            .setCancelable(false)
+            .setPositiveButton(R.string.hud_visual_yes) { _, _ ->
+                uploadSelfTest(report + "\nVISUAL RESULT: YES\n")
+            }
+            .setNeutralButton(R.string.hud_visual_unsure) { _, _ ->
+                uploadSelfTest(report + "\nVISUAL RESULT: NOT SURE\n")
+            }
+            .setNegativeButton(R.string.hud_visual_no) { _, _ -> askVisualNoDetail(report) }
+            .show()
+    }
+
+    /** On "No", offer an optional free-text note ("what did you see instead?") before upload. */
+    private fun askVisualNoDetail(report: String) {
+        val input = EditText(this).apply {
+            hint = getString(R.string.hud_visual_no_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.hud_visual_no)
+            .setView(input)
+            .setCancelable(false)
+            .setPositiveButton(R.string.hud_visual_send) { _, _ ->
+                val note = input.text.toString().trim()
+                uploadSelfTest(report + "\nVISUAL RESULT: NO" +
+                        (if (note.isNotEmpty()) " — $note" else "") + "\n")
+            }
+            .show()
     }
 
     /** Writes the self-test report to a file and uploads it to the HUD Telegram topic. */
