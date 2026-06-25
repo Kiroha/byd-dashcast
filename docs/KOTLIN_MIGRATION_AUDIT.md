@@ -248,6 +248,14 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 - Le fix perf est **préservé tel quel** : `stopPreview()` appelle `stopMirrorViaDaemon(daemon)` (lu `mMirrorViaDaemon` avant clear) puis `destroyMirrorToken()`. Reste en Java : `ClusterService` (5e-3) et `MirrorTestRunner`.
 - Vérif : compile forcée 0 warning kotlinc, interop `compileDebugJavaWithJavac` OK, `assembleRelease` vert, lint 0/0.
 
+## 4 trevigesies. Réalisé — lot 6a (`app/` — cycle de vie / boot)
+
+- ✅ `app/` 100 % Kotlin : `InstallResultReceiver` (44 l), `AppStartupTasks` (61 l), `BootDisplayCleanup` (68 l), `BootReceiver` (157 l). Lot choisi car **propre, cohérent et hors chantier** (le prochain planifié, `ClusterService`, est en flux à cause de l'investigation DX_BYD_AUTO/HUD).
+- Interop : receivers référencés **par classe** (manifest `.app.BootReceiver`/`.app.InstallResultReceiver` + `InstallResultReceiver.class` dans `UpdateChecker.java`) → inchangés en `.kt`. `AppStartupTasks.run`/`BootDisplayCleanup.cleanup` en `object` + `@JvmStatic` (appelés depuis MainActivity.kt/BootReceiver.kt).
+- `BootReceiver` : `goAsync()`/`PendingResult.finish()` conservés ; `AtomicInteger` sentinelle + `releaseOne: Runnable` capturés par les lambdas Thread/postDelayed ; `Handler` statique → `companion object`. `@Suppress("DEPRECATION")` (getPackageInfo). Variable `it`→`tetherIntent` (collision implicite Kotlin).
+- `AppStartupTasks` : script shell reproduit à l'identique avec échappement `\"\$pid\"` (templates Kotlin). `BootDisplayCleanup` : réflexion ATM `getTasks`/`moveTaskToDisplay` (`Int::class.javaPrimitiveType`) ; check `pkgs == null` mort retiré (ClusterPrefs retourne non-null).
+- Vérif : compile forcée 0 warning kotlinc, interop `compileDebugJavaWithJavac` OK (UpdateChecker), `assembleRelease` vert, lint 0/0.
+
 ## 5. Plan de lots suivants
 
 | Lot | Contenu | Validation |
@@ -266,6 +274,7 @@ Attention : DiagActivity = 3 280 lignes, MainActivity = 1 882 lignes — à conv
 | 5e-2 ✅ | `cluster/mirror/ClusterMirrorManager` (447 l, réflexion SurfaceControl) — fix perf validé 1.6.44 | run terrain DL3/DL5 |
 | 5e-3 | `cluster/ClusterService` (~900 l, foreground service, cœur) — **après validation du fix perf 1.6.43** | run terrain DL3/DL5 |
 | 5f | `infrastructure/AdbLocalClient` (869 l, socket ADB local) | run terrain |
+| 6a ✅ | `app/` cycle de vie/boot (InstallResultReceiver, AppStartupTasks, BootDisplayCleanup, BootReceiver) — **app/ 100 % Kotlin** | build vert |
 | 6 (option) | `proxy/daemon` (contrat binaire) + TestRunners | batteries diag |
 
 Règle générale : **un lot = un commit = build vert**, jamais de conversion automatique IDE sans relecture des `!!` et de la nullabilité.
