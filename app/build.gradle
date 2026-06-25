@@ -335,8 +335,9 @@ android {
         // 493 = 1.6.52-beta (HUD/AAOS diag bench — full instrumentation, no blind spot on any platform: bench output now (1) shows on screen, (2) is written to the in-app journal so it's captured in bug reports, and (3) is directly exportable via new Share log / Copy log / Clear buttons (FileProvider → Telegram). Testers (DL3 HUD scrape + AAOS cluster experiments) can finally send results without a full bug report or hand transcription. Carries the 1.6.51 DL3 cold-launch fix. Capture-only; no behaviour change; AAOS code stays reflection-only/no-op on DiLink.).
         // 494 = 1.6.53-beta (Kotlin migration lot 6a: app/ lifecycle package (InstallResultReceiver, AppStartupTasks, BootDisplayCleanup, BootReceiver) converted to Kotlin — app/ now 100% Kotlin. Faithful 1:1 (receivers referenced by class → manifest unchanged; run/cleanup as object + @JvmStatic; goAsync/PendingResult + AtomicInteger sentinel preserved in BootReceiver). Touches boot/OTA startup → validate on a real reboot. No behaviour change intended; DL3/DL5 unaffected.).
         // 495 = 1.6.54-beta (HUD diag: one-tap "RUN HUD SELF-TEST & SEND" that runs the full nav sequence with the verified DL3 feature IDs, captures each SDK rc, and auto-uploads the report to the support Telegram topic 2701 — no typing/share sheet. Also corrected the misleading hex comments in CanWriteVerbs (the decimal values were already correct = verified against the live DL3 BYDAutoFeatureIds scrape) and the bench now logs rc per write + prints the verified IDs. DL3/DL5 unaffected; no daemon contract change.).
-        versionCode 495
-        versionName "1.6.54-beta"
+        // 496 = 1.6.55-beta (HUD self-test: after the writes, an in-app popup asks whether the cluster actually rendered the test guidance (Yes / No / Not sure; on No an optional free-text note). The answer is baked into the uploaded report ("VISUAL RESULT: …") so the visual confirmation no longer depends on the tester replying in Telegram. Popup strings translated into all 13 locales. On DL5.1 a tester reported all 8 writes rc=0 → SDK accepts the nav writes; the visual is now captured. Diag-only UI; no daemon/DL3/DL5 behaviour change.).
+        versionCode 496
+        versionName "1.6.55-beta"
 
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
