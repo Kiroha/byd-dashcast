@@ -119,7 +119,7 @@ public final class TelegramBugReporter {
         out.writeBytes("--" + boundary + "\r\n");
         out.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"; filename=\""
                 + file.getName() + "\"\r\n");
-        out.writeBytes("Content-Type: text/plain\r\n\r\n");
+        out.writeBytes("Content-Type: application/octet-stream\r\n\r\n");
         try (InputStream in = new FileInputStream(file)) {
             byte[] buf = new byte[8192];
             int n;

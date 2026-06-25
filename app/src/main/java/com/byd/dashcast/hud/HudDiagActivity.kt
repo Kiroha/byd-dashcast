@@ -61,8 +61,10 @@ class HudDiagActivity : AppCompatActivity() {
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
-        root.addView(header("0 · One-tap test (results sent automatically)"))
-        root.addView(hint("Runs the full nav sequence with the verified IDs and uploads the result to the support Telegram topic — no typing needed. Then just look at the cluster."))
+        root.addView(header("0 · One-tap tests (results sent automatically)"))
+        root.addView(hint("FULL DIAGNOSTIC tries every way to drive the cluster (feature-ID writes, dedicated SDK methods, AutoNavi broadcast), scrapes the framework, captures packages/receivers/logcat, pulls candidate system APKs, and uploads ONE zip. Just watch the cluster, then answer the popup."))
+        root.addView(button("▶▶  RUN FULL DL3 HUD DIAGNOSTIC → ZIP") { runFullDiagnostic() })
+        root.addView(hint("Lighter test: just the nav sequence + rc, no zip."))
         root.addView(button("▶  RUN HUD SELF-TEST & SEND") { runHudSelfTest() })
 
         root.addView(header("1 · Scrape real feature IDs from this car"))
@@ -157,6 +159,50 @@ class HudDiagActivity : AppCompatActivity() {
     private fun runScrape() {
         log("scraping… (see below)")
         bg { log(HudFeatureScraper.scrape()) }
+    }
+
+    /**
+     * One-tap FULL DL3 HUD investigation: runs all three driving paths, scrapes the
+     * framework, captures packages/receivers/logcat + candidate APKs, then (after the
+     * visual popup) zips everything and uploads it to the support Telegram topic.
+     */
+    private fun runFullDiagnostic() {
+        log("FULL diagnostic starting — takes ~30–60 s, WATCH THE CLUSTER…")
+        bg {
+            val work = HudDiagnosticBundle.collect(this) { m -> log(m) }
+            log("collected → ${work.name}; asking visual result…")
+            runOnUiThread { askVisualThenZip(work) }
+        }
+    }
+
+    private fun askVisualThenZip(work: File) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.hud_visual_title)
+            .setMessage(R.string.hud_visual_question)
+            .setCancelable(false)
+            .setPositiveButton(R.string.hud_visual_yes) { _, _ -> zipAndUpload(work, "YES") }
+            .setNeutralButton(R.string.hud_visual_unsure) { _, _ -> zipAndUpload(work, "NOT SURE") }
+            .setNegativeButton(R.string.hud_visual_no) { _, _ -> zipAndUpload(work, "NO") }
+            .show()
+    }
+
+    private fun zipAndUpload(work: File, visual: String) {
+        log("zipping + uploading (visual=$visual)…")
+        bg {
+            File(work, "00_visual_result.txt").writeText("VISUAL RESULT: $visual\n")
+            val zip = HudDiagnosticBundle.zipDir(work)
+            log("zip ready: ${zip.name} (${zip.length() / 1024} KB)")
+            if (!TelegramBugReporter.isConfigured()) {
+                log("Telegram not configured — zip saved at ${zip.absolutePath}")
+                return@bg
+            }
+            TelegramBugReporter.send(this, zip,
+                "DL3 HUD full diagnostic — ${Build.PRODUCT} (visual=$visual)",
+                HUD_TEST_THREAD, object : TelegramBugReporter.Callback {
+                    override fun onSent() { logUi("✓ diagnostic zip sent to Telegram (topic $HUD_TEST_THREAD)") }
+                    override fun onFailed(message: String) { logUi("✗ upload failed: $message — zip at ${zip.absolutePath}") }
+                })
+        }
     }
 
     /**
