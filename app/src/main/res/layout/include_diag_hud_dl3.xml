@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HUD navigation bench (DiLink 3) panel. Dev tool: text in English / set in code. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="HUD navigation bench (DiLink 3)"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/md_on_surface"
+            tools:ignore="HardcodedText"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Drive turn-by-turn on the DiLink 3 instrument cluster: one-tap full diagnostic (feature-ID writes, dedicated SDK methods, AutoNavi broadcast), framework scrape, environment capture and candidate APK pull, all uploaded as ONE zip. Includes the lighter self-test and the raw write tester."
+            android:textSize="13sp"
+            android:textColor="@color/md_on_surface_variant"
+            tools:ignore="HardcodedText"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_hud_dl3_run"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"/>
+
+    </LinearLayout>
+</ScrollView>

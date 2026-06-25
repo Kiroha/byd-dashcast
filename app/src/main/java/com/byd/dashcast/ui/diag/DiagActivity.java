@@ -103,6 +103,8 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_CLUSTER_DL5 = 11;
     private static final int TAB_EXPORT_APK  = 12;
     private static final int TAB_VOICE       = 13;
+    private static final int TAB_AAOS        = 14;
+    private static final int TAB_HUD_DL3     = 15;
 
     private TabLayout    tabs;
     private View         panelBeta;
@@ -116,8 +118,10 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelClusterDl5;
     private View         panelExportApk;
     private View         panelVoice;
+    private View         panelAaos;
+    private View         panelHudDl3;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 14; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk,voice
+    private static final int TAB_COUNT = 16; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk,voice,aaos,hud_dl3
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -295,6 +299,26 @@ public class DiagActivity extends AppCompatActivity {
         panelClusterDl5 = findViewById(R.id.panel_cluster_dl5);
         panelExportApk  = findViewById(R.id.panel_export_apk);
         panelVoice      = findViewById(R.id.panel_voice);
+        panelAaos       = findViewById(R.id.panel_aaos);
+        if (panelAaos != null) {
+            com.google.android.material.button.MaterialButton aaosRun =
+                    panelAaos.findViewById(R.id.btn_aaos_run);
+            if (aaosRun != null) {
+                aaosRun.setText("▶▶  Run AAOS diagnostic → zip");
+                aaosRun.setOnClickListener(v ->
+                        startActivity(new Intent(this, com.byd.dashcast.hud.AaosDiagActivity.class)));
+            }
+        }
+        panelHudDl3     = findViewById(R.id.panel_hud_dl3);
+        if (panelHudDl3 != null) {
+            com.google.android.material.button.MaterialButton hudRun =
+                    panelHudDl3.findViewById(R.id.btn_hud_dl3_run);
+            if (hudRun != null) {
+                hudRun.setText("▶▶  Open HUD nav bench (DL3)");
+                hudRun.setOnClickListener(v ->
+                        startActivity(new Intent(this, com.byd.dashcast.hud.HudDiagActivity.class)));
+            }
+        }
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -347,6 +371,8 @@ public class DiagActivity extends AppCompatActivity {
         boolean isClusterDl5 = position == TAB_CLUSTER_DL5;
         boolean isExportApk  = position == TAB_EXPORT_APK;
         boolean isVoice      = position == TAB_VOICE;
+        boolean isAaos       = position == TAB_AAOS;
+        boolean isHudDl3     = position == TAB_HUD_DL3;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -358,6 +384,8 @@ public class DiagActivity extends AppCompatActivity {
         panelClusterDl5.setVisibility(isClusterDl5 ? View.VISIBLE : View.GONE);
         panelExportApk.setVisibility(isExportApk ? View.VISIBLE : View.GONE);
         panelVoice.setVisibility(isVoice ? View.VISIBLE : View.GONE);
+        if (panelAaos != null) panelAaos.setVisibility(isAaos ? View.VISIBLE : View.GONE);
+        if (panelHudDl3 != null) panelHudDl3.setVisibility(isHudDl3 ? View.VISIBLE : View.GONE);
         // v1.2.46 — lazy row preparation : inflate only the catalog actually
         // about to be displayed. Each helper is a no-op once already prepared,
         // so subsequent tab switches are free.
@@ -369,8 +397,8 @@ public class DiagActivity extends AppCompatActivity {
         if (isClusterDl5) prepareClusterDl5TestRowsIfNeeded();
         if (isExportApk) refreshExportApkListIfNeeded();
         if (isVoice)     onVoicePanelEntered();
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice) {
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice || isAaos || isHudDl3) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice && !isAaos && !isHudDl3) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -1909,22 +1937,6 @@ public class DiagActivity extends AppCompatActivity {
         View btnTestRebroadcast = panelClusterPoc.findViewById(R.id.btn_cluster_poc_test_rebroadcast);
         // v1.2.64 — export daemon log /data/local/tmp/dashcast_proxy.log via Telegram.
         View btnExportDaemonLog = panelClusterPoc.findViewById(R.id.btn_cluster_poc_export_daemon_log);
-        // HUD nav bench (DL3) — scraper for real BYD instrument feature IDs + live write tester.
-        com.google.android.material.button.MaterialButton btnHudBench =
-                panelClusterPoc.findViewById(R.id.btn_cluster_poc_hud_bench);
-        if (btnHudBench != null) {
-            btnHudBench.setText("HUD nav bench (DL3)");
-            btnHudBench.setOnClickListener(v ->
-                    startActivity(new Intent(this, com.byd.dashcast.hud.HudDiagActivity.class)));
-        }
-        // AAOS cluster diagnostic (DX_BYD_AUTO) — one-tap full capture → zip.
-        com.google.android.material.button.MaterialButton btnAaosBench =
-                panelClusterPoc.findViewById(R.id.btn_cluster_poc_aaos_bench);
-        if (btnAaosBench != null) {
-            btnAaosBench.setText("AAOS cluster diagnostic (DX_BYD_AUTO)");
-            btnAaosBench.setOnClickListener(v ->
-                    startActivity(new Intent(this, com.byd.dashcast.hud.AaosDiagActivity.class)));
-        }
         final android.widget.SeekBar sbX = panelClusterPoc.findViewById(R.id.sb_cluster_poc_x);
         final android.widget.SeekBar sbY = panelClusterPoc.findViewById(R.id.sb_cluster_poc_y);
         final android.widget.SeekBar sbW = panelClusterPoc.findViewById(R.id.sb_cluster_poc_w);
