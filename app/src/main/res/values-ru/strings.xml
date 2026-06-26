@@ -752,7 +752,6 @@
     <string name="bug_wizard_selected_fmt">Выбрано: %1$s</string>
     <string name="toast_adb_port_refused">ADB недоступен (порт 5555) — зеркалирование недоступно на этом устройстве</string>
     <string name="hud_visual_title">Визуальная проверка HUD</string>
-    <string name="hud_visual_question">Приборная панель показала стрелку направо, 300 м и «TEST»?</string>
     <string name="hud_visual_yes">Да</string>
     <string name="hud_visual_no">Нет</string>
     <string name="hud_visual_unsure">Не уверен</string>

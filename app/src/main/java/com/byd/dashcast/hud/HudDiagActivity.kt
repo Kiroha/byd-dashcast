@@ -108,7 +108,9 @@ class HudDiagActivity : AppCompatActivity() {
     private fun askVisualThenZip(work: File) {
         AlertDialog.Builder(this)
             .setTitle(R.string.hud_visual_title)
-            .setMessage(R.string.hud_visual_question)
+            .setMessage("On the WINDSHIELD HUD (the projection on the glass) — did the nav appear " +
+                    "(turn arrow + distance + TEST)? On 'No', note which HUD mode (if any) showed " +
+                    "something. (The cluster already works.)")
             .setCancelable(false)
             .setPositiveButton(R.string.hud_visual_yes) { _, _ -> zipAndUpload(work, "YES") }
             .setNeutralButton(R.string.hud_visual_unsure) { _, _ -> zipAndUpload(work, "NOT SURE") }

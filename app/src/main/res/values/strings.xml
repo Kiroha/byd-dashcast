@@ -794,7 +794,6 @@
     <string name="bug_wizard_pick_issue">Sélectionne un problème ci-dessus</string>
     <string name="bug_wizard_selected_fmt">Sélectionné : %1$s</string>
     <string name="hud_visual_title">Vérification visuelle du HUD</string>
-    <string name="hud_visual_question">Le combiné a-t-il affiché : flèche à droite, 300 m et « TEST » ?</string>
     <string name="hud_visual_yes">Oui</string>
     <string name="hud_visual_no">Non</string>
     <string name="hud_visual_unsure">Pas sûr</string>

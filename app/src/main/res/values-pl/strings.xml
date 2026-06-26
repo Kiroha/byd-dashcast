@@ -761,7 +761,6 @@
     <string name="bug_wizard_selected_fmt">Wybrano: %1$s</string>
     <string name="toast_adb_port_refused">ADB nieosiągalny (port 5555) — dublowanie niedostępne na tym urządzeniu</string>
     <string name="hud_visual_title">Wizualna kontrola HUD</string>
-    <string name="hud_visual_question">Czy zestaw wskaźników pokazał strzałkę w prawo, 300 m i „TEST”?</string>
     <string name="hud_visual_yes">Tak</string>
     <string name="hud_visual_no">Nie</string>
     <string name="hud_visual_unsure">Nie jestem pewien</string>

@@ -752,7 +752,6 @@
     <string name="bug_wizard_selected_fmt">Ausgewählt: %1$s</string>
     <string name="toast_adb_port_refused">ADB nicht erreichbar (Port 5555) — Spiegelung auf diesem Gerät nicht verfügbar</string>
     <string name="hud_visual_title">HUD-Sichtprüfung</string>
-    <string name="hud_visual_question">Hat das Kombiinstrument einen Rechtsabbiegepfeil, 300 m und „TEST“ angezeigt?</string>
     <string name="hud_visual_yes">Ja</string>
     <string name="hud_visual_no">Nein</string>
     <string name="hud_visual_unsure">Nicht sicher</string>
