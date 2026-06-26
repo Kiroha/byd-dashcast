@@ -100,9 +100,20 @@ object HudDiagnosticBundle {
                 "--ez IS_BYD_MAP true --ei NEW_ICON 4 --ei SEG_REMAIN_DIS 300 --es NEXT_ROAD_NAME TEST " +
                 "--ei ROUTE_REMAIN_DIS 1200 --ei ROUTE_REMAIN_TIME 720"
         sb.append("C daemon am broadcast:\n").append(sh(amCmd)).append('\n')
-        sleep(3000)
+        sleep(1500)
+        // Capture AmapService's OWN log RIGHT NOW (tag-filtered, tail-capped) so the forward proof
+        // ("send_to di1for2 cluster") is reliably captured BEFORE the very chatty device buffer
+        // scrolls it out. The end-of-run `-t` logcat misses it (≈1 s of logs on this device), and a
+        // `-s TAG -t N` filter cuts before filtering → empty. This makes TEST C self-verifying:
+        // proof of the cluster forward no longer depends on the tester's visual answer.
+        log("▶ capturing AmapService forward proof…")
+        sb.append("\n[TEST C — AmapService log (proof of cluster forward)]\n")
+            .append(sh("logcat -d -s AmapService:V 2>/dev/null | tail -c 80000")).append('\n')
+        sleep(1500)
 
         sb.append("\nrc=0 = SDK accepted the write (negative = rejected / unknown feature).\n")
+        sb.append("DL3 cluster forward CONFIRMED iff the AmapService log above shows " +
+                "'GuideInfo.naviState: 1' + 'send_to di1for2 cluster'.\n")
         write(work, "01_tests.txt", sb.toString())
     }
 
