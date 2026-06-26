@@ -122,8 +122,8 @@ object HudDiagnosticBundle {
         // projects the instrument nav, gated by switch (on/off) + mode. So turn the HUD on, try the
         // request command, then sweep the HUD mode while feeding nav frames, so the tester can see
         // which mode (if any) shows the nav on the windshield HUD.
-        sb.append("\n[TEST D] Windshield HUD — switch ON + mode sweep + nav\n")
-        log("▶ TEST D: HUD — turning it ON + sweeping modes. ▶▶ WATCH THE WINDSHIELD HUD (~20 s)")
+        sb.append("\n[TEST D] Windshield HUD — switch ON + SLOW mode sweep (~5 s each) + nav\n")
+        log("▶ TEST D: HUD. ▶▶ LOOK AT THE WINDSHIELD HUD (the glass, NOT the cluster) — ~40 s.")
         fun setRc(label: String, id: Int, v: Int) {
             val rc = try { CanBusController.setSettingFeature(id, v).toString() }
                      catch (t: Throwable) { "EXC ${t.javaClass.simpleName}:${t.message}" }
@@ -131,17 +131,19 @@ object HudDiagnosticBundle {
         }
         setRc("SET_HUD_SWITCH", CanWriteVerbs.SET_HUD_SWITCH, 1)
         setRc("SETTING_HUD_REQUEST_COMMAND", CanWriteVerbs.SETTING_HUD_REQUEST_COMMAND, 1)
+        log("▶▶ Did the WINDSHIELD HUD just turn ON (any content)? (3 s)"); sleep(3000)
+        // Slow sweep so the tester can correlate AND photograph each mode separately.
         for (mode in 0..6) {
             setRc("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, mode)
-            log("▶▶ HUD mode=$mode — does the nav show on the HUD now?")
-            repeat(3) {
+            log("▶▶ HUD MODE = $mode — LOOK AT / PHOTOGRAPH THE WINDSHIELD HUD NOW (~5 s)")
+            repeat(6) {  // ~5 s of live nav at this mode
                 try { HudAutoNaviBroadcast.sendGuide(ctx, HudAutoNaviBroadcast.AMAP_ICON_RIGHT, 300, "TEST", 1200, 720) }
                 catch (_: Throwable) {}
-                sleep(600)
+                sleep(800)
             }
-            sleep(700)
         }
-        sb.append("D HUD mode sweep done (0..6). NOTE which mode (if any) showed nav on the HUD.\n")
+        sb.append("D HUD slow sweep done (modes 0..6, ~5 s each). " +
+                "NOTE/PHOTOGRAPH which mode (if any) showed nav on the windshield HUD.\n")
 
         write(work, "01_tests.txt", sb.toString())
     }
