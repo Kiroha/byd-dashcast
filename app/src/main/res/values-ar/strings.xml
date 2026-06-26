@@ -752,7 +752,6 @@
     <string name="bug_wizard_selected_fmt">محدد: %1$s</string>
     <string name="toast_adb_port_refused">ADB غير قابل للوصول (المنفذ 5555) — المرآة غير متوفرة على هذا الجهاز</string>
     <string name="hud_visual_title">فحص HUD البصري</string>
-    <string name="hud_visual_question">هل أظهرت لوحة العدادات سهم انعطاف يمينًا و300 م و«TEST»؟</string>
     <string name="hud_visual_yes">نعم</string>
     <string name="hud_visual_no">لا</string>
     <string name="hud_visual_unsure">غير متأكد</string>

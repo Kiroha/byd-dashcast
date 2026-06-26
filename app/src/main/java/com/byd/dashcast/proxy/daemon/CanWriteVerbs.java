@@ -83,6 +83,19 @@ public final class CanWriteVerbs {
      *  Set to value {@code 3} when navigation starts; not cleared on stop. */
     public static final int SETTING_NAVI_SCREEN_STATUS = 1276174357; // 0x4C10E015
 
+    // ─── Windshield HUD (W-HUD) control — BYDAutoSettingDevice ──────────────
+    // The HUD has no dedicated nav-content feature: it projects the instrument
+    // nav guidance, gated by the switch (on/off) + mode (what it shows).
+
+    /** Windshield HUD on/off. SET_HUD_SWITCH_SET — 1 = on. */
+    public static final int SET_HUD_SWITCH = 1276174371; // 0x4C10E023
+
+    /** Windshield HUD display mode (what it shows: speed / speed+nav / …). SET_HUD_MODE_SET. */
+    public static final int SET_HUD_MODE = 1276174373; // 0x4C10E025
+
+    /** HUD request command. SETTING_HUD_REQUEST_COMMAND_SET. */
+    public static final int SETTING_HUD_REQUEST_COMMAND = 850436164; // 0x32B0A044
+
     // ─── Navigation status values ─────────────────────────────────────────
 
     /** Value for {@link #INSTRUMENT_SEND_NAVI_STATUS}: navigation active. */

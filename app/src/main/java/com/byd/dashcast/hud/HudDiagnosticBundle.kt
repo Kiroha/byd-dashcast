@@ -117,6 +117,32 @@ object HudDiagnosticBundle {
         sb.append("\nrc=0 = SDK accepted the write (negative = rejected / unknown feature).\n")
         sb.append("DL3 cluster forward CONFIRMED iff the AmapService log above shows " +
                 "'GuideInfo.naviState: 1' + 'send_to di1for2 cluster'.\n")
+
+        // TEST D — WINDSHIELD HUD (the actual target). The HUD has no nav-content feature; it
+        // projects the instrument nav, gated by switch (on/off) + mode. So turn the HUD on, try the
+        // request command, then sweep the HUD mode while feeding nav frames, so the tester can see
+        // which mode (if any) shows the nav on the windshield HUD.
+        sb.append("\n[TEST D] Windshield HUD — switch ON + mode sweep + nav\n")
+        log("▶ TEST D: HUD — turning it ON + sweeping modes. ▶▶ WATCH THE WINDSHIELD HUD (~20 s)")
+        fun setRc(label: String, id: Int, v: Int) {
+            val rc = try { CanBusController.setSettingFeature(id, v).toString() }
+                     catch (t: Throwable) { "EXC ${t.javaClass.simpleName}:${t.message}" }
+            sb.append("D $label=$v rc=$rc\n"); log("D $label=$v rc=$rc")
+        }
+        setRc("SET_HUD_SWITCH", CanWriteVerbs.SET_HUD_SWITCH, 1)
+        setRc("SETTING_HUD_REQUEST_COMMAND", CanWriteVerbs.SETTING_HUD_REQUEST_COMMAND, 1)
+        for (mode in 0..6) {
+            setRc("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, mode)
+            log("▶▶ HUD mode=$mode — does the nav show on the HUD now?")
+            repeat(3) {
+                try { HudAutoNaviBroadcast.sendGuide(ctx, HudAutoNaviBroadcast.AMAP_ICON_RIGHT, 300, "TEST", 1200, 720) }
+                catch (_: Throwable) {}
+                sleep(600)
+            }
+            sleep(700)
+        }
+        sb.append("D HUD mode sweep done (0..6). NOTE which mode (if any) showed nav on the HUD.\n")
+
         write(work, "01_tests.txt", sb.toString())
     }
 
