@@ -32,8 +32,11 @@ object HudAutoNaviBroadcast {
     ): String {
         val intent = Intent(ACTION).apply {
             putExtra("KEY_TYPE", 10001)          // KEY_TYPE_GUIDE_INFO
-            putExtra("TYPE", 8)                  // 8 = GPS nav active
-            putExtra("EXTRA_STATE", 8)           // 8 = navigating
+            // CRITICAL: AmapService only processes guidance when TYPE == 0 || TYPE == 1
+            // (decompiled receiver: `if (intExtra2 == 0 || 1 == intExtra2)`). TYPE=8 (the
+            // Open-BYD value) makes it skip the guidance and never forward to the cluster.
+            putExtra("TYPE", 1)                  // 1 = navigating (triggers guidance forward)
+            putExtra("EXTRA_STATE", 8)
             putExtra("EXTRA_IS_FOREGROUND", 0)
             putExtra("IS_BYD_MAP", true)
             putExtra("IS_BYD_BAIDU_MAP", false)
@@ -54,9 +57,11 @@ object HudAutoNaviBroadcast {
 
     fun sendStop(ctx: Context): String {
         val intent = Intent(ACTION).apply {
-            putExtra("KEY_TYPE", 10001)
-            putExtra("TYPE", 9)                  // 9 = none / stop
-            putExtra("EXTRA_STATE", 1)
+            // Stop is handled by AmapService under KEY_TYPE=10019 + EXTRA_STATE 9/12
+            // (sets mIsBYDMapNaving=false + reSetGuideInfo), not the 10001/TYPE path.
+            putExtra("KEY_TYPE", 10019)
+            putExtra("EXTRA_STATE", 9)           // 9 = stop navigation
+            putExtra("TYPE", 9)
             putExtra("EXTRA_IS_FOREGROUND", 1)
             putExtra("IS_BYD_MAP", true)
             putExtra("IS_BYD_BAIDU_MAP", false)

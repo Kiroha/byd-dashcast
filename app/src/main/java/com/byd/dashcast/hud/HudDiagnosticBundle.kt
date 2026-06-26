@@ -94,8 +94,9 @@ object HudDiagnosticBundle {
             sb.append("C app sendBroadcast: $r\n"); log("C $r")
         } catch (t: Throwable) { sb.append("C app sendBroadcast EXCEPTION: ${t.message}\n") }
         // also from the privileged daemon (uid shell), in case a normal-app broadcast is filtered
+        // TYPE must be 0 or 1 for AmapService to process guidance (not 8 — see HudAutoNaviBroadcast).
         val amCmd = "am broadcast -a ${HudAutoNaviBroadcast.ACTION} " +
-                "--ei KEY_TYPE 10001 --ei TYPE 8 --ei EXTRA_STATE 8 --ei EXTRA_IS_FOREGROUND 0 " +
+                "--ei KEY_TYPE 10001 --ei TYPE 1 --ei EXTRA_STATE 8 --ei EXTRA_IS_FOREGROUND 0 " +
                 "--ez IS_BYD_MAP true --ei NEW_ICON 4 --ei SEG_REMAIN_DIS 300 --es NEXT_ROAD_NAME TEST " +
                 "--ei ROUTE_REMAIN_DIS 1200 --ei ROUTE_REMAIN_TIME 720"
         sb.append("C daemon am broadcast:\n").append(sh(amCmd)).append('\n')
