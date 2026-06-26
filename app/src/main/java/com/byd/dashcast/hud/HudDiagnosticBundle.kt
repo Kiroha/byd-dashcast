@@ -87,20 +87,23 @@ object HudDiagnosticBundle {
         step("B sendRestRouteInfo(0,12,1200)") { HudInstrumentSdk.sendRestRouteInfo(ctx, 0, 12, 1200L) }
         sleep(3000)
 
-        // TEST C — AUTONAVI/AMap standard broadcast (prime suspect for DL3)
-        sb.append("\n[TEST C] AUTONAVI_STANDARD_BROADCAST_SEND (watch ~3s)\n"); log("▶ TEST C: AutoNavi broadcast")
-        try {
-            val r = HudAutoNaviBroadcast.sendGuide(ctx, HudAutoNaviBroadcast.AMAP_ICON_RIGHT, 300, "TEST", 1200, 720)
-            sb.append("C app sendBroadcast: $r\n"); log("C $r")
-        } catch (t: Throwable) { sb.append("C app sendBroadcast EXCEPTION: ${t.message}\n") }
-        // also from the privileged daemon (uid shell), in case a normal-app broadcast is filtered
-        // TYPE must be 0 or 1 for AmapService to process guidance (not 8 — see HudAutoNaviBroadcast).
-        val amCmd = "am broadcast -a ${HudAutoNaviBroadcast.ACTION} " +
-                "--ei KEY_TYPE 10001 --ei TYPE 1 --ei EXTRA_STATE 8 --ei EXTRA_IS_FOREGROUND 0 " +
-                "--ez IS_BYD_MAP true --ei NEW_ICON 4 --ei SEG_REMAIN_DIS 300 --es NEXT_ROAD_NAME TEST " +
-                "--ei ROUTE_REMAIN_DIS 1200 --ei ROUTE_REMAIN_TIME 720"
-        sb.append("C daemon am broadcast:\n").append(sh(amCmd)).append('\n')
-        sleep(1500)
+        // TEST C — AUTONAVI/AMap standard broadcast (the working DL3 path).
+        // The forward (send_to di1for2 cluster) is confirmed, but a single 2-frame burst renders
+        // only transiently — a tester catches it (YES) or misses it (NO) with the SAME forward.
+        // So send SUSTAINED frames (~10 s, distance counting down) like a real nav, after re-asserting
+        // the cluster nav-screen page, so the guidance is persistently displayed and reliably observable.
+        sb.append("\n[TEST C] AUTONAVI_STANDARD_BROADCAST_SEND — SUSTAINED ~10s\n")
+        log("▶ TEST C: AutoNavi broadcast (sustained ~10 s)")
+        try { CanBusController.setSettingFeature(CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS, 3) } catch (_: Throwable) {}
+        log("▶▶ WATCH THE CLUSTER NOW (~10 s): right-turn arrow + counting-down distance + 'TEST'")
+        var dist = 300
+        for (frame in 1..12) {
+            try { HudAutoNaviBroadcast.sendGuide(ctx, HudAutoNaviBroadcast.AMAP_ICON_RIGHT, dist, "TEST", 1200, 720) }
+            catch (t: Throwable) { sb.append("C frame $frame EXCEPTION: ${t.message}\n") }
+            dist = (dist - 20).coerceAtLeast(40)
+            sleep(800)
+        }
+        sb.append("C sent 12 sustained AUTONAVI frames (TYPE=1, dist 300→down, road TEST, icon 4)\n")
         // Capture AmapService's OWN log RIGHT NOW (tag-filtered, tail-capped) so the forward proof
         // ("send_to di1for2 cluster") is reliably captured BEFORE the very chatty device buffer
         // scrolls it out. The end-of-run `-t` logcat misses it (≈1 s of logs on this device), and a
