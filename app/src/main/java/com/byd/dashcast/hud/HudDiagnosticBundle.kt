@@ -144,6 +144,12 @@ object HudDiagnosticBundle {
         }
         sb.append("D HUD slow sweep done (modes 0..6, ~5 s each). " +
                 "NOTE/PHOTOGRAPH which mode (if any) showed nav on the windshield HUD.\n")
+        // P2 — capture the HUD's own reaction right after the sweep (tag-filtered, tail-capped)
+        // so the zip shows what the HUD/SettingDevice did per write, not just the tester's eyes.
+        log("▶ capturing HUD reaction logcat…")
+        sb.append("\n[TEST D — HUD reaction logcat]\n")
+            .append(sh("logcat -d -v threadtime 2>/dev/null | grep -iE 'HUD|抬头|head.?up|HUD_MODE|HUD_SWITCH' | tail -c 60000"))
+            .append('\n')
 
         write(work, "01_tests.txt", sb.toString())
     }
@@ -218,6 +224,32 @@ object HudDiagnosticBundle {
         }
         manifest.append("\nTotal pulled: $count APKs, ${total / 1024 / 1024} MB\n")
         write(work, "08_apk_manifest.txt", manifest.toString())
+    }
+
+    // ── P4 — OEM nav HUD baseline ──────────────────────────────────────────────
+    // The tester starts the REAL OEM nav (BydMap) with the HUD ON; we clear the log,
+    // let the OEM drive the HUD for ~12 s, then dump the HUD/nav/instrument-filtered
+    // logcat — to find WHICH service/signal actually puts nav on the HUD (we never send
+    // anything here, so whatever appears is the OEM's own HUD channel). Returns the work dir.
+    fun collectOemBaseline(ctx: Context, progress: (String) -> Unit): File {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val work = File(ctx.cacheDir, "hud_oem_baseline_$stamp").apply { mkdirs() }
+        progress("[1/4] clearing logcat…"); sh("logcat -c -b all 2>/dev/null")
+        progress("[2/4] OEM nav must be RUNNING on the HUD now — capturing ~12 s…")
+        try { Thread.sleep(12000) } catch (_: InterruptedException) {}
+        progress("[3/4] dumping HUD / nav / instrument logcat…")
+        write(work, "01_oem_hud_logcat.txt", sh(
+            "logcat -d -v threadtime 2>/dev/null | grep -iE " +
+            "'HUD|抬头|head.?up|navi|nav|instrument|cluster|amap|neusoft|AutoContainer|InstrumentDevice|SettingDevice|di1for2|发送|仪表' " +
+            "| tail -c 300000"))
+        write(work, "02_running.txt",
+            "----- foreground / resumed -----\n" +
+            sh("dumpsys activity activities 2>/dev/null | grep -iE 'mResumedActivity|topActivity|realActivity|displayId' | head -c 30000") +
+            "\n----- nav/map/hud packages -----\n" +
+            sh("pm list packages 2>/dev/null | grep -iE 'map|nav|hud|neusoft|amap'"))
+        write(work, "03_props.txt", sh("getprop 2>/dev/null"))
+        progress("[4/4] baseline captured.")
+        return work
     }
 
     // ── zip ──────────────────────────────────────────────────────────────────
