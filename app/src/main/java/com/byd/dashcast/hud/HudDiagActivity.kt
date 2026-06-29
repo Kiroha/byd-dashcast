@@ -55,30 +55,45 @@ class HudDiagActivity : AppCompatActivity() {
         }
 
         root.addView(TextView(this).apply {
-            text = "Runs the full DL3 HUD diagnostic — feature-ID writes, dedicated SDK methods, " +
-                    "AutoNavi broadcast, framework scrape, environment + candidate APK capture — " +
-                    "then asks whether the cluster showed the guidance and uploads ONE zip. " +
-                    "Watch the progress below (~30–60 s)."
+            text = "DiLink 3 HUD test. Park first. Do the steps in order — each one uploads a zip automatically."
             textSize = 13f
         })
 
+        // ── STEP 1 — one-tap full test ──────────────────────────────────────
+        root.addView(sectionHeader("STEP 1 — Full test (one tap)"))
+        root.addView(hint("Runs everything, then asks if the HUD showed the nav. Watch the HUD + cluster."))
         runBtn = Button(this).apply {
-            text = "▶▶  RUN FULL DL3 HUD DIAGNOSTIC → ZIP"
+            text = "▶▶  RUN FULL HUD TEST → ZIP"
             isAllCaps = false
             setOnClickListener { runDiagnostic() }
         }
-        root.addView(runBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(12) })
-
+        root.addView(runBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
         bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
             visibility = View.GONE
         }
-        root.addView(bar, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(8) })
+        root.addView(bar, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(4) })
 
-        // ── P1 — HUD mode explorer: set ONE mode, photograph the windshield HUD, note it ──
-        root.addView(sectionHeader("HUD MODE EXPLORER — set a mode, then photograph the HUD"))
+        // ── STEP 2 — learn how the CAR drives the HUD (while OEM nav is guiding) ──
+        root.addView(sectionHeader("STEP 2 — While the CAR's own navigation is guiding"))
+        root.addView(hint("Start the built-in car navigation on a real route (a turn coming up), HUD on. " +
+                "Then tap BOTH buttons below."))
+        root.addView(Button(this).apply {
+            text = "①  Capture OEM HUD baseline → ZIP"
+            isAllCaps = false
+            setOnClickListener { runOemBaseline() }
+        }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+        root.addView(Button(this).apply {
+            text = "②  Read HUD nav mode → ZIP"
+            isAllCaps = false
+            setOnClickListener { runHudStateRead() }
+        }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(4) })
+
+        // ── ADVANCED — manual HUD mode explorer (optional) ──────────────────
+        root.addView(sectionHeader("Advanced — HUD mode explorer (optional)"))
+        root.addView(hint("Set one mode, photograph the HUD, step to the next."))
         hudLabel = TextView(this).apply {
-            textSize = 20f
+            textSize = 18f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             text = "HUD: ?   MODE = 0"
         }
@@ -92,18 +107,6 @@ class HudDiagActivity : AppCompatActivity() {
         rowMode.addView(miniBtn("Mode + ▶") { stepMode(+1) }, eq())
         root.addView(rowMode)
         root.addView(miniBtn("▶ Feed nav 10 s at this mode") { feedNav() })
-
-        // ── P4 — OEM nav baseline: capture what drives the HUD when the OEM nav runs ──
-        root.addView(sectionHeader("OEM NAV BASELINE → ZIP"))
-        root.addView(TextView(this).apply {
-            text = "Start the REAL OEM nav (BydMap) with the HUD on, then tap (captures ~12 s)."
-            textSize = 12f
-        })
-        root.addView(Button(this).apply {
-            text = "▶ CAPTURE OEM HUD BASELINE → ZIP"
-            isAllCaps = false
-            setOnClickListener { runOemBaseline() }
-        })
 
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -244,6 +247,17 @@ class HudDiagActivity : AppCompatActivity() {
         }
     }
 
+    /** Reads the HUD/nav feedback features while the OEM nav guides → captures the OEM's nav-HUD mode. */
+    private fun runHudStateRead() {
+        log("──── Read HUD nav mode ──── the OEM nav must be ACTIVELY guiding on the HUD now!")
+        bg {
+            val work = HudDiagnosticBundle.collectHudStateRead(this) { log(it) }
+            val zip = HudDiagnosticBundle.zipDir(work)
+            log("HUD-state zip: ${zip.name} (${zip.length() / 1024} KB)")
+            uploadZip(zip, "DL3 HUD nav-mode read — ${Build.PRODUCT}")
+        }
+    }
+
     private fun uploadZip(zip: File, caption: String) {
         if (!TelegramBugReporter.isConfigured()) {
             log("Telegram not configured — zip at ${zip.absolutePath}"); return
@@ -264,6 +278,8 @@ class HudDiagActivity : AppCompatActivity() {
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         setPadding(0, dp(18), 0, dp(4))
     }
+
+    private fun hint(t: String) = TextView(this).apply { text = t; textSize = 12f }
 
     private fun miniBtn(t: String, onClick: () -> Unit) = Button(this).apply {
         text = t; isAllCaps = false; setOnClickListener { onClick() }
