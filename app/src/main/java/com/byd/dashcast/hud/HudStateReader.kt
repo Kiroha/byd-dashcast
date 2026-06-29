@@ -40,20 +40,41 @@ object HudStateReader {
                     .take(900))
                 return sb.toString()
             }
-            val res = getter.invoke(d, ids)
-            if (res is Array<*>) {
-                val intField = res.firstOrNull { it != null }?.javaClass?.getField("intValue")
-                for (i in ids.indices) {
-                    val ev = res.getOrNull(i)
-                    val v = try { intField?.getInt(ev) } catch (_: Throwable) { null }
-                    sb.append("0x%08X = %s\n".format(ids[i], v?.toString() ?: "?"))
+            try {
+                val res = getter.invoke(d, ids)
+                if (res is Array<*>) {
+                    val intField = res.firstOrNull { it != null }?.javaClass?.getField("intValue")
+                    for (i in ids.indices) {
+                        val ev = res.getOrNull(i)
+                        val v = try { intField?.getInt(ev) } catch (_: Throwable) { null }
+                        sb.append("0x%08X = %s\n".format(ids[i], v?.toString() ?: "?"))
+                    }
+                } else {
+                    sb.append("get(int[]) returned ${res?.javaClass?.name}: $res\n")
                 }
-            } else {
-                sb.append("get(int[]) returned ${res?.javaClass?.name}: $res\n")
+            } catch (ite: java.lang.reflect.InvocationTargetException) {
+                // The real reason is the CAUSE (the wrapped exception), not the ITE itself.
+                val c = ite.cause
+                sb.append("get(int[]) threw ${c?.javaClass?.name ?: "?"}: ${c?.message}\n")
             }
         } catch (t: Throwable) {
-            sb.append("${cls.substringAfterLast('.')} read error: ${t.javaClass.simpleName}: ${t.message}\n")
+            val c = (t as? java.lang.reflect.InvocationTargetException)?.cause ?: t
+            sb.append("${cls.substringAfterLast('.')} read error: ${c.javaClass.name}: ${c.message}\n")
         }
         return sb.toString()
+    }
+
+    /** Lists the device's `get*` method signatures + its granted-permission-relevant info — once. */
+    fun describeReadApi(ctx: Context, cls: String): String {
+        return try {
+            val d = device(ctx, cls)
+            "${cls.substringAfterLast('.')} get* methods: " +
+                d.javaClass.methods.filter { it.name.startsWith("get") }
+                    .joinToString(", ") { m -> m.name + "(" + m.parameterTypes.joinToString(",") { it.simpleName } + ")" }
+                    .take(1200)
+        } catch (t: Throwable) {
+            val c = (t as? java.lang.reflect.InvocationTargetException)?.cause ?: t
+            "${cls.substringAfterLast('.')} describe error: ${c.javaClass.name}: ${c.message}"
+        }
     }
 }
