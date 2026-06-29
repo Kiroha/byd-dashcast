@@ -270,7 +270,10 @@ object HudDiagnosticBundle {
         sb.append("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) — " +
                 "${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
         sb.append("setting ids: ").append(settingIds.joinToString { "0x%08X".format(it) }).append('\n')
-        sb.append("instrument ids: ").append(instrIds.joinToString { "0x%08X".format(it) }).append("\n\n")
+        sb.append("instrument ids: ").append(instrIds.joinToString { "0x%08X".format(it) }).append("\n")
+        // Describe the read API once (so we learn the real get* signatures + any error cause).
+        sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.SETTING_CLASS)).append('\n')
+        sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.INSTRUMENT_CLASS)).append("\n\n")
         progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
