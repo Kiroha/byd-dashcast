@@ -278,6 +278,17 @@ object HudDiagnosticBundle {
         sb.append("[in-app read — expected to fail, kept for contrast]\n")
         sb.append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))
         sb.append(HudStateReader.read(ctx, HudStateReader.INSTRUMENT_CLASS, instrIds)).append('\n')
+        // Write→readback self-check: does the daemon get() reflect a value we just WROTE?
+        //  • readback == written value → get() is a LIVE read; the all-zero loop below then
+        //    means no nav/HUD was active during capture (procedure issue).
+        //  • readback stays 0 → the feedback is push-only (listener-based) and get() cannot
+        //    observe it → we must register a BYD feedback listener instead of polling get().
+        sb.append("[daemon write→readback self-check]\n")
+        sb.append(selfCheck("SET_HUD_SWITCH", CanWriteVerbs.SET_HUD_SWITCH, 1,
+                CanWriteVerbs.SET_HUD_SWITCH_STATUS_FEEDBACK))
+        sb.append(selfCheck("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, 2,
+                CanWriteVerbs.SET_HUD_MODE_FEEDBACK))
+        sb.append('\n')
         progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s via daemon…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
@@ -291,6 +302,18 @@ object HudDiagnosticBundle {
         write(work, "02_props.txt", sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
         progress("HUD state read captured — look for the SET_HUD_MODE / FEEDBACK value while nav was on the HUD.")
         return work
+    }
+
+    /** Writes a known value via the daemon then reads back both the set-id and its feedback-id. */
+    private fun selfCheck(name: String, setId: Int, value: Int, feedbackId: Int): String {
+        val s = StringBuilder()
+        val rc = try { com.byd.dashcast.proxy.ProxyClient.canSettingInt(setId, value).toString() }
+                 catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+        s.append("set %s(0x%08X)=%d → rc=%s\n".format(name, setId, value, rc))
+        try { Thread.sleep(300) } catch (_: InterruptedException) {}
+        s.append("  get set-id   → ").append(daemonRead(setId, false)).append('\n')
+        s.append("  get feedback → ").append(daemonRead(feedbackId, false)).append('\n')
+        return s.toString()
     }
 
     /** Reads one CAN feature through the daemon (privileged context). Formats the value or the error. */
