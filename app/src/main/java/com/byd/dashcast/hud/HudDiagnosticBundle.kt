@@ -274,17 +274,32 @@ object HudDiagnosticBundle {
         // Describe the read API once (so we learn the real get* signatures + any error cause).
         sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.SETTING_CLASS)).append('\n')
         sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.INSTRUMENT_CLASS)).append("\n\n")
-        progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s…")
+        // One in-app read up front for contrast (known to throw — the SDK rejects app-uid reads).
+        sb.append("[in-app read — expected to fail, kept for contrast]\n")
+        sb.append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))
+        sb.append(HudStateReader.read(ctx, HudStateReader.INSTRUMENT_CLASS, instrIds)).append('\n')
+        progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s via daemon…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
-            sb.append("[setting]\n").append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))
-            sb.append("[instrument]\n").append(HudStateReader.read(ctx, HudStateReader.INSTRUMENT_CLASS, instrIds))
+            sb.append("[setting via daemon]\n")
+            for (id in settingIds) sb.append(daemonRead(id, false)).append('\n')
+            sb.append("[instrument via daemon]\n")
+            for (id in instrIds) sb.append(daemonRead(id, true)).append('\n')
             try { Thread.sleep(1200) } catch (_: InterruptedException) {}
         }
         write(work, "01_hud_state_read.txt", sb.toString())
         write(work, "02_props.txt", sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
         progress("HUD state read captured — look for the SET_HUD_MODE / FEEDBACK value while nav was on the HUD.")
         return work
+    }
+
+    /** Reads one CAN feature through the daemon (privileged context). Formats the value or the error. */
+    private fun daemonRead(id: Int, instrument: Boolean): String = try {
+        val v = if (instrument) com.byd.dashcast.proxy.ProxyClient.canInstrumentGet(id)
+                else            com.byd.dashcast.proxy.ProxyClient.canSettingGet(id)
+        "0x%08X = %d".format(id, v)
+    } catch (t: Throwable) {
+        "0x%08X ERR %s".format(id, t.message ?: t.javaClass.simpleName)
     }
 
     // ── zip ──────────────────────────────────────────────────────────────────

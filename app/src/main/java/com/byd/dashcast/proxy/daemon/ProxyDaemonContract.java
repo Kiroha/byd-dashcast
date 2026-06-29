@@ -122,4 +122,16 @@ public final class ProxyDaemonContract {
      *  which activates the navigation lane on the instrument cluster display;
      *  that feature lives on the SettingDevice, not InstrumentDevice. */
     public static final int TXN_CAN_SETTING_INT         = IBinder.FIRST_CALL_TRANSACTION + 18; // 19
+
+    /** {@code int featureId} → {@code int value}.
+     *  Read an integer from a CAN <em>instrument</em> feature via
+     *  {@code BYDAutoInstrumentDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     *  In-app reads are rejected by the SDK; only the daemon's privileged context works. */
+    public static final int TXN_CAN_INSTRUMENT_GET      = IBinder.FIRST_CALL_TRANSACTION + 19; // 20
+
+    /** {@code int featureId} → {@code int value}.
+     *  Read an integer from a CAN <em>setting</em> feature via
+     *  {@code BYDAutoSettingDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     *  Used to read e.g. {@code SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD. */
+    public static final int TXN_CAN_SETTING_GET         = IBinder.FIRST_CALL_TRANSACTION + 20; // 21
 }

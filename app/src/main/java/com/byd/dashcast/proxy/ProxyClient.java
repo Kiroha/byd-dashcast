@@ -848,6 +848,34 @@ public final class ProxyClient {
     }
 
     /**
+     * Read an integer from a CAN <em>instrument</em> feature via
+     * {@code BYDAutoInstrumentDevice.get(int[])} inside the daemon (privileged context).
+     *
+     * <p>In-app reads are rejected by the SDK ({@code InvocationTargetException}); the
+     * daemon's permission-bypass context is the only path that the SDK accepts.
+     *
+     * @param featureId raw BYD CAN instrument feature constant (e.g. a {@code *_FEEDBACK} id)
+     * @return the feature's current integer value
+     */
+    public static int canInstrumentGet(int featureId) throws ProxyException {
+        return callWithRetry("canInstrumentGet",
+                () -> ProxyCanVerbs.canInstrumentGet(featureId));
+    }
+
+    /**
+     * Read an integer from a CAN <em>setting</em> feature via
+     * {@code BYDAutoSettingDevice.get(int[])} inside the daemon (privileged context).
+     * Used to read e.g. {@code SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD.
+     *
+     * @param featureId raw BYD CAN setting feature constant
+     * @return the feature's current integer value
+     */
+    public static int canSettingGet(int featureId) throws ProxyException {
+        return callWithRetry("canSettingGet",
+                () -> ProxyCanVerbs.canSettingGet(featureId));
+    }
+
+    /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
      * typed verbs: the old daemon process keeps the previous APK's

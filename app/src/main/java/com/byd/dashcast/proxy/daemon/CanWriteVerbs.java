@@ -119,6 +119,8 @@ public final class CanWriteVerbs {
     private static volatile Field    sBytesField;      // BYDAutoEventValue.bufferDataValue
     private static volatile Method   sSetMethod;       // InstrumentDevice.set(int[], BYDAutoEventValue)
     private static volatile Method   sSettingSetMethod;// SettingDevice.set(int[], BYDAutoEventValue)
+    private static volatile Method   sGetMethod;        // InstrumentDevice.get(int[])
+    private static volatile Method   sSettingGetMethod; // SettingDevice.get(int[])
 
     // ─── Public verbs ─────────────────────────────────────────────────────
 
@@ -178,6 +180,53 @@ public final class CanWriteVerbs {
         Object ev = evClass.newInstance();
         ensureIntField().set(ev, value);
         return (int) ensureSettingSetMethod().invoke(sSettingDevice, new int[]{featureId}, ev);
+    }
+
+    /**
+     * Read an integer value from a CAN <em>instrument</em> feature via
+     * {@code BYDAutoInstrumentDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     *
+     * <p>Runs inside the daemon (uid 2000) with the permission-bypass context, exactly
+     * like {@link #setInt}. In-app reads (uid of the app) throw an
+     * {@code InvocationTargetException} — only the daemon path is accepted by the SDK.
+     *
+     * @param wrappedCtx permission-bypass context (must grant all permissions)
+     * @param featureId  raw CAN feature ID (e.g. a {@code *_FEEDBACK} id)
+     * @return the feature's current integer value
+     * @throws Throwable on reflection failure or if the SDK rejects the call
+     */
+    public static int getInt(Context wrappedCtx, int featureId) throws Throwable {
+        ensureDevice(wrappedCtx);
+        Object res = ensureGetMethod().invoke(sDevice, (Object) new int[]{featureId});
+        return readIntFromResult(res);
+    }
+
+    /**
+     * Read an integer value from a CAN <em>setting</em> feature via
+     * {@code BYDAutoSettingDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
+     * Use this to read e.g. {@link #SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD.
+     *
+     * @param wrappedCtx permission-bypass context (must grant all permissions)
+     * @param featureId  raw CAN setting feature ID
+     * @return the feature's current integer value
+     * @throws Throwable on reflection failure or if the SDK rejects the call
+     */
+    public static int settingGetInt(Context wrappedCtx, int featureId) throws Throwable {
+        ensureSettingDevice(wrappedCtx);
+        Object res = ensureSettingGetMethod().invoke(sSettingDevice, (Object) new int[]{featureId});
+        return readIntFromResult(res);
+    }
+
+    /** Extracts {@code intValue} from a {@code get(int[])} result (an array or a single event). */
+    private static int readIntFromResult(Object res) throws Throwable {
+        Object ev = res;
+        if (res != null && res.getClass().isArray()) {
+            int len = java.lang.reflect.Array.getLength(res);
+            if (len == 0) throw new IllegalStateException("get(int[]) returned an empty array");
+            ev = java.lang.reflect.Array.get(res, 0);
+        }
+        if (ev == null) throw new IllegalStateException("get(int[]) returned a null value");
+        return ensureIntField().getInt(ev);
     }
 
     // ─── Reflection initialisation (call order: device → evClass → fields/method) ─
@@ -257,6 +306,46 @@ public final class CanWriteVerbs {
             sSetMethod = m;
             return m;
         }
+    }
+
+    private static Method ensureGetMethod() throws Throwable {
+        Method m = sGetMethod;
+        if (m != null) return m;
+        synchronized (CanWriteVerbs.class) {
+            m = sGetMethod;
+            if (m != null) return m;
+            Object device = sDevice;
+            if (device == null) throw new IllegalStateException("device not initialised");
+            m = findGet(device.getClass());
+            sGetMethod = m;
+            return m;
+        }
+    }
+
+    private static Method ensureSettingGetMethod() throws Throwable {
+        Method m = sSettingGetMethod;
+        if (m != null) return m;
+        synchronized (CanWriteVerbs.class) {
+            m = sSettingGetMethod;
+            if (m != null) return m;
+            Object device = sSettingDevice;
+            if (device == null) throw new IllegalStateException("setting device not initialised");
+            m = findGet(device.getClass());
+            sSettingGetMethod = m;
+            return m;
+        }
+    }
+
+    /** Finds a {@code get(int[])} method anywhere in the runtime class hierarchy. */
+    private static Method findGet(Class<?> cls) throws NoSuchMethodException {
+        for (Method cand : cls.getMethods()) {
+            if (!"get".equals(cand.getName())) continue;
+            Class<?>[] pt = cand.getParameterTypes();
+            if (pt.length == 1 && pt[0] == int[].class) {
+                return cand;
+            }
+        }
+        throw new NoSuchMethodException("no get(int[]) on " + cls.getName());
     }
 
     private static void ensureSettingDevice(Context ctx) throws Throwable {
