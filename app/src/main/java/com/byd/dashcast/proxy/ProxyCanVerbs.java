@@ -99,4 +99,40 @@ final class ProxyCanVerbs {
             data.recycle();
         }
     }
+
+    static int canInstrumentGet(int featureId)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            b.transact(ProxyDaemonContract.TXN_CAN_INSTRUMENT_GET, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canSettingGet(int featureId)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            b.transact(ProxyDaemonContract.TXN_CAN_SETTING_GET, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
 }

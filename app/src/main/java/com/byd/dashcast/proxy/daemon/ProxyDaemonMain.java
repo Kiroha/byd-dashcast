@@ -58,8 +58,9 @@ public final class ProxyDaemonMain {
      *  v8 (v1.2.70-beta): daemon hardening (OOM protection, atomic PID lock, self-heal).
      *  v10 (v1.4.7-beta): adds TXN_CAN_NAVI_STATUS / TXN_CAN_INSTRUMENT_INT / TXN_CAN_INSTRUMENT_BYTES.
      *  v11 (v1.4.11-beta): adds TXN_CAN_SETTING_INT (BYDAutoSettingDevice, required for HUD activation).
+     *  v12 (v1.6.69-beta): adds TXN_CAN_INSTRUMENT_GET / TXN_CAN_SETTING_GET (privileged HUD/nav reads).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "11";
+    private static final String PROTOCOL_VERSION = "12";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -810,6 +811,32 @@ public final class ProxyDaemonMain {
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         int rc = CanWriteVerbs.settingSetInt(ctx, featureId, value);
                         if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_INSTRUMENT_GET: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int v = CanWriteVerbs.getInt(ctx, featureId);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(v); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_SETTING_GET: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int v = CanWriteVerbs.settingGetInt(ctx, featureId);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(v); }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
                     }
