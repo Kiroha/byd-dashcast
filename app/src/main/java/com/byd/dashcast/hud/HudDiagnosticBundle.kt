@@ -279,7 +279,16 @@ object HudDiagnosticBundle {
         sb.append("instrument ids: ").append(instrIds.joinToString { "0x%08X".format(it) }).append("\n")
         // Describe the read API once (so we learn the real get* signatures + any error cause).
         sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.SETTING_CLASS)).append('\n')
-        sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.INSTRUMENT_CLASS)).append("\n\n")
+        sb.append(HudStateReader.describeReadApi(ctx, HudStateReader.INSTRUMENT_CLASS)).append("\n")
+        // Push-feedback LISTENER API discovery (class structure only — no instance, no permission).
+        // get() proved push-only (readback always 0); to capture pushes we must registerListener a
+        // BYD listener. This reveals whether AbsBYDAuto*Listener is subclassable + its callback names.
+        sb.append("[listener API discovery]\n")
+        sb.append(HudStateReader.describeClass(HudStateReader.SETTING_LISTENER, listOf("HUD", "Hud", "Feature", "Navi", "Changed")))
+        sb.append(HudStateReader.describeClass(HudStateReader.INSTRUMENT_LISTENER, listOf("HUD", "Hud", "Feature", "Navi", "Guide", "Changed")))
+        sb.append(HudStateReader.describeClass(HudStateReader.SETTING_CLASS, listOf("register", "Listener", "unregister")))
+        sb.append(HudStateReader.describeClass(HudStateReader.INSTRUMENT_CLASS, listOf("register", "Listener", "unregister")))
+        sb.append("\n")
         // One in-app read up front for contrast (known to throw — the SDK rejects app-uid reads).
         sb.append("[in-app read — expected to fail, kept for contrast]\n")
         sb.append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))

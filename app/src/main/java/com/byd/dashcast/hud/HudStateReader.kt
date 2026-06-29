@@ -17,6 +17,38 @@ object HudStateReader {
 
     const val SETTING_CLASS = "android.hardware.bydauto.setting.BYDAutoSettingDevice"
     const val INSTRUMENT_CLASS = "android.hardware.bydauto.instrument.BYDAutoInstrumentDevice"
+    const val SETTING_LISTENER = "android.hardware.bydauto.setting.AbsBYDAutoSettingListener"
+    const val INSTRUMENT_LISTENER = "android.hardware.bydauto.instrument.AbsBYDAutoInstrumentListener"
+
+    /**
+     * Reflects a class STRUCTURE only (no instance, no method call) — so it needs NO BYD
+     * permission (unlike [read]/[describeReadApi], which call getInstance and hit the
+     * BYDAUTO_*_COMMON SecurityException). Used to discover the push-feedback LISTENER API:
+     * is the AbsBYDAuto*Listener abstract-with-mandatory-methods? does it expose
+     * onFeatureChanged / onHUD* / a no-arg ctor? what is registerListener's param type?
+     */
+    fun describeClass(name: String, keywords: List<String>): String {
+        return try {
+            val c = Class.forName(name)
+            val sb = StringBuilder()
+            sb.append("$name\n")
+            sb.append("  super=${c.superclass?.name} abstract=${java.lang.reflect.Modifier.isAbstract(c.modifiers)}\n")
+            sb.append("  ctors: ").append(
+                c.declaredConstructors.joinToString { ct -> "(" + ct.parameterTypes.joinToString { it.simpleName } + ")" }
+            ).append('\n')
+            val abstracts = c.declaredMethods.filter { java.lang.reflect.Modifier.isAbstract(it.modifiers) }
+            sb.append("  ABSTRACT methods (${abstracts.size}): ").append(
+                abstracts.joinToString { m -> m.name + "(" + m.parameterTypes.joinToString { it.simpleName } + ")" }.take(900)
+            ).append('\n')
+            val rel = c.declaredMethods.filter { m -> keywords.any { m.name.contains(it, ignoreCase = true) } }
+            sb.append("  matching [${keywords.joinToString()}]: ").append(
+                rel.joinToString { m -> m.name + "(" + m.parameterTypes.joinToString { it.simpleName } + ")" }.take(1200)
+            ).append('\n')
+            sb.toString()
+        } catch (t: Throwable) {
+            "$name describe-class error: ${t.javaClass.name}: ${t.message}\n"
+        }
+    }
 
     private fun device(ctx: Context, cls: String): Any {
         try { ClusterMirrorManager.unlockHiddenApis() } catch (_: Throwable) {}
