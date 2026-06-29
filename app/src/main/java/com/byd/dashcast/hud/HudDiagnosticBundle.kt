@@ -252,6 +252,38 @@ object HudDiagnosticBundle {
         return work
     }
 
+    // ── HUD nav-mode reader ─────────────────────────────────────────────────────
+    // The HUD DOES turn-by-turn (confirmed). We only miss the value the OEM applies to
+    // SET_HUD_MODE for nav. Read the HUD/nav feedback features in a loop WHILE the OEM nav
+    // is actively guiding on the HUD → capture that mode value, then we replicate it.
+    fun collectHudStateRead(ctx: Context, progress: (String) -> Unit): File {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val work = File(ctx.cacheDir, "hud_state_read_$stamp").apply { mkdirs() }
+        val settingIds = intArrayOf(
+            CanWriteVerbs.SET_HUD_MODE, CanWriteVerbs.SET_HUD_MODE_FEEDBACK,
+            CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.SET_HUD_SWITCH_STATUS_FEEDBACK,
+            CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS)
+        val instrIds = intArrayOf(
+            CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE,
+            CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST)
+        val sb = StringBuilder("=== HUD STATE READ — capture WHILE the OEM nav shows turn-by-turn on the HUD ===\n")
+        sb.append("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) — " +
+                "${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+        sb.append("setting ids: ").append(settingIds.joinToString { "0x%08X".format(it) }).append('\n')
+        sb.append("instrument ids: ").append(instrIds.joinToString { "0x%08X".format(it) }).append("\n\n")
+        progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s…")
+        for (t in 1..10) {
+            sb.append("---- t=$t ----\n")
+            sb.append("[setting]\n").append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))
+            sb.append("[instrument]\n").append(HudStateReader.read(ctx, HudStateReader.INSTRUMENT_CLASS, instrIds))
+            try { Thread.sleep(1200) } catch (_: InterruptedException) {}
+        }
+        write(work, "01_hud_state_read.txt", sb.toString())
+        write(work, "02_props.txt", sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
+        progress("HUD state read captured — look for the SET_HUD_MODE / FEEDBACK value while nav was on the HUD.")
+        return work
+    }
+
     // ── zip ──────────────────────────────────────────────────────────────────
     fun zipDir(work: File): File {
         val zip = File(work.parentFile, work.name + ".zip")

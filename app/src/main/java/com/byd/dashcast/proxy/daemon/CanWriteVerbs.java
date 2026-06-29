@@ -96,6 +96,12 @@ public final class CanWriteVerbs {
     /** HUD request command. SETTING_HUD_REQUEST_COMMAND_SET. */
     public static final int SETTING_HUD_REQUEST_COMMAND = 850436164; // 0x32B0A044
 
+    /** HUD mode read-back (feedback). SET_HUD_MODE_FEEDBACK — read to learn the OEM's nav mode. */
+    public static final int SET_HUD_MODE_FEEDBACK = 951058445; // 0x38B0000D
+
+    /** HUD switch read-back (feedback). SET_HUD_SWITCH_STATUS_FEEDBACK. */
+    public static final int SET_HUD_SWITCH_STATUS_FEEDBACK = 951058460; // 0x38B0001C
+
     // ─── Navigation status values ─────────────────────────────────────────
 
     /** Value for {@link #INSTRUMENT_SEND_NAVI_STATUS}: navigation active. */
