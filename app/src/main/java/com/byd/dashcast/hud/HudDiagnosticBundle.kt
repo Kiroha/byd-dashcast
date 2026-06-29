@@ -135,6 +135,12 @@ object HudDiagnosticBundle {
         // Slow sweep so the tester can correlate AND photograph each mode separately.
         for (mode in 0..6) {
             setRc("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, mode)
+            // Daemon read-back: does the HUD mode feedback reflect the mode we just wrote?
+            //  reflects → get() is a live read; stays 0/ERR → push-only feedback (need a listener).
+            val fb = try { com.byd.dashcast.proxy.ProxyClient.canSettingGet(CanWriteVerbs.SET_HUD_MODE_FEEDBACK).toString() }
+                     catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+            sb.append("D   readback SET_HUD_MODE_FEEDBACK=$fb (wrote $mode)\n")
+            log("D   readback FEEDBACK=$fb (wrote $mode)")
             log("▶▶ HUD MODE = $mode — LOOK AT / PHOTOGRAPH THE WINDSHIELD HUD NOW (~5 s)")
             repeat(6) {  // ~5 s of live nav at this mode
                 try { HudAutoNaviBroadcast.sendGuide(ctx, HudAutoNaviBroadcast.AMAP_ICON_RIGHT, 300, "TEST", 1200, 720) }
