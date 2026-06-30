@@ -37,6 +37,7 @@ public final class CanFeedbackListener {
     private static final List<String> sBuf = Collections.synchronizedList(new ArrayList<String>());
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
     private static volatile boolean sRegistered;
+    private static volatile android.os.HandlerThread sThread;   // Looper thread for register + callbacks
 
     private static void record(String s) {
         synchronized (sBuf) {
@@ -69,16 +70,54 @@ public final class CanFeedbackListener {
      * @return a short status string
      * @throws Throwable if registration fails (caller surfaces it; daemon stays alive)
      */
-    public static synchronized String startSetting(Context wrappedCtx) throws Throwable {
+    public static synchronized String startSetting(final Context wrappedCtx) {
         if (sRegistered) return "already-registered";
-        Class<?> cls = Class.forName("android.hardware.bydauto.setting.BYDAutoSettingDevice");
-        Object dev = cls.getMethod("getInstance", Context.class).invoke(null, wrappedCtx);
-        if (dev == null) throw new IllegalStateException("BYDAutoSettingDevice.getInstance() returned null");
-        SettingSink sink = new SettingSink();
-        cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
-        sListener = sink;
-        sRegistered = true;
-        return "registered (all setting features)";
+        try {
+            if (sThread == null) {
+                sThread = new android.os.HandlerThread("can-feedback-listener");
+                sThread.start();
+            }
+            // The BYD listener creates a Handler internally → it MUST be built/registered on a
+            // thread that has a Looper (the daemon's binder thread has none → NPE). Do it on our
+            // dedicated HandlerThread; callbacks are then delivered on that Looper too.
+            final android.os.Handler h = new android.os.Handler(sThread.getLooper());
+            final String[] result = { "no-result" };
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            h.post(new Runnable() {
+                @Override public void run() {
+                    try {
+                        Class<?> cls = Class.forName("android.hardware.bydauto.setting.BYDAutoSettingDevice");
+                        Object dev = cls.getMethod("getInstance", Context.class).invoke(null, wrappedCtx);
+                        if (dev == null) { result[0] = "ERR getInstance() null"; return; }
+                        SettingSink sink = new SettingSink();
+                        cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
+                        sListener = sink;
+                        sRegistered = true;
+                        result[0] = "registered (all setting features, looper thread)";
+                    } catch (Throwable t) {
+                        result[0] = "ERR " + describe(t);
+                    } finally {
+                        latch.countDown();
+                    }
+                }
+            });
+            if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) return "ERR register timeout";
+            return result[0];
+        } catch (Throwable t) {
+            return "ERR(outer) " + describe(t);
+        }
+    }
+
+    /** Unwraps InvocationTargetException and appends the top stack frames, so the cause is visible. */
+    private static String describe(Throwable t) {
+        Throwable r = (t instanceof java.lang.reflect.InvocationTargetException && t.getCause() != null)
+                ? t.getCause() : t;
+        StringBuilder sb = new StringBuilder(r.getClass().getName());
+        if (r.getMessage() != null) sb.append(": ").append(r.getMessage());
+        StackTraceElement[] st = r.getStackTrace();
+        if (st != null && st.length > 0) sb.append(" @ ").append(st[0]);
+        if (st != null && st.length > 1) sb.append(" <- ").append(st[1]);
+        return sb.toString();
     }
 
     /** Returns and clears the captured push events (newline-separated), or "(no events)". */
