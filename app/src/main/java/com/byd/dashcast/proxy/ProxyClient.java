@@ -891,6 +891,16 @@ public final class ProxyClient {
     }
 
     /**
+     * AAOS-only: probe the automotive display proxy HAL (IAutomotiveDisplayProxyService) from the
+     * daemon (uid 2000) — tests whether app windows can be drawn to the cluster panel.
+     *
+     * @return the probe report (HAL reachability + getHGraphicBufferProducer result)
+     */
+    public static String aaosHalProbe() throws ProxyException {
+        return callWithRetry("aaosHalProbe", ProxyCanVerbs::aaosHalProbe);
+    }
+
+    /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
      * typed verbs: the old daemon process keeps the previous APK's

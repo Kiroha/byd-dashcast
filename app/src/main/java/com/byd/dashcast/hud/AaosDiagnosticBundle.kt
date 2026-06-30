@@ -113,6 +113,23 @@ object AaosDiagnosticBundle {
         s("AAOS experiments (display-proxy / VHAL / fixed-activity gates)") {
             write(work, "13_experiments.txt", runExperiments(ctx))
         }
+        s("automotive display HAL probe (definitive app-projection test)") {
+            val sb = StringBuilder()
+            sb.append("=== IAutomotiveDisplayProxyService REACHABILITY ===\n")
+            sb.append("Goal: can we obtain getHGraphicBufferProducer(clusterDisplay)? ")
+                .append("non-null ⇒ app projection feasible; absent/null/denied ⇒ closed.\n\n")
+            sb.append("--- IN-APP (app uid) ---\n")
+            sb.append(runCatching { com.byd.dashcast.proxy.daemon.AaosDisplayHalProbe.probe() }
+                .getOrElse { "probe threw ${it.javaClass.name}: ${it.message}" }).append('\n')
+            sb.append("--- VIA DAEMON (uid 2000) ---\n")
+            sb.append(runCatching { ProxyClient.aaosHalProbe() }
+                .getOrElse { "daemon probe ERR ${it.message ?: it.javaClass.simpleName}" }).append("\n\n")
+            sb.append("--- lshal: automotive display HAL (registered? clients?) ---\n")
+            sb.append(sh("lshal 2>/dev/null | grep -iE 'automotive.display|IAutomotiveDisplayProxy' | head -c 8000")).append('\n')
+            sb.append("--- SELinux avc denials (hwservice/display) just now ---\n")
+            sb.append(sh("logcat -d -t 400 2>/dev/null | grep -iE 'avc: .*denied' | grep -iE 'automotive|display|hwservice|graphic|surfaceflinger|gpu' | head -c 12000"))
+            write(work, "14_display_hal_probe.txt", sb.toString())
+        }
         s("pull candidate system APKs") {
             pullApks(work, progress)
         }
