@@ -123,11 +123,17 @@ public final class BugReportCapture {
             // differentiator. Capture: is AutoContainerNative registered? which init service starts
             // it + its state? is the native process alive?
             + " ; echo '--- AUTOCONTAINER (native backend) ---' >> " + p
-            + " ; service list 2>/dev/null | grep -iE 'container|cluster' >> " + p
+            + " ; service list 2>/dev/null | grep -iE 'container|cluster|fission|magicwindow' >> " + p
             + " ; echo '-- init.svc (container/xdja/fission/cluster) --' >> " + p
             + " ; getprop 2>/dev/null | grep -iE 'init.svc' | grep -iE 'contain|xdja|fission|cluster|vdc' >> " + p
-            + " ; echo '-- processes (xdja/container, unfiltered) --' >> " + p
-            + " ; ps -A 2>/dev/null | grep -iE 'xdja|container' >> " + p
+            + " ; echo '-- init.svc (FULL list, sorted) --' >> " + p
+            + " ; getprop 2>/dev/null | grep -E 'init.svc' | sort >> " + p
+            + " ; echo '-- fission/xdja/cluster props (non-init.svc) --' >> " + p
+            + " ; getprop 2>/dev/null | grep -iE 'fission|xdja|container|cluster' | grep -viE 'init.svc' | head -60 >> " + p
+            + " ; echo '-- FissionCluster vendor dir / version --' >> " + p
+            + " ; ls -d /vendor/*ission* /vendor/*luster* /odm/*ission* 2>/dev/null >> " + p
+            + " ; echo '-- processes (xdja/container/fission, unfiltered) --' >> " + p
+            + " ; ps -A 2>/dev/null | grep -iE 'xdja|container|fission|cluster' >> " + p
             // ── CLUSTER GATING DEEP-DIVE ──
             // Why does only the OEM system nav render on the cluster while third-party apps,
             // placed on the SAME display at the WM level, do not? (DX_BYD_AUTO / Android
