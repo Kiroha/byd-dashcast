@@ -760,5 +760,7 @@
     <string name="hud_visual_send">Yuborish</string>
     <string name="aaos_cluster_unsupported_title">Asboblar paneliga proyeksiya bloklangan</string>
     <string name="aaos_cluster_unsupported_msg">Avtomobilingiz BYD\'ning Android Automotive tizimidan (DX_BYD_AUTO) foydalanadi. Bu qurilmada asboblar paneli ishlab chiqaruvchi tomonidan qulflangan: BYD uni o\'rnatilgan navigatsiya uchun ajratadi va ilovalarni proyeksiya qilishni bloklaydi. Bu — avtomobil cheklovi (DashCast cheklovi emas), chetlab o\'tish yo\'li yo\'q.</string>
+    <string name="dl3_singleos_cluster_unsupported_title">Asboblar paneliga proyeksiya mavjud emas</string>
+    <string name="dl3_singleos_cluster_unsupported_msg">Bu avtomobilda asboblar paneli bitta ekranli (single-OS) tartibdan foydalanadi: u bevosita avtomobil tomonidan chiziladi va ilovalarni proyeksiya qilish mumkin bo\'lgan alohida ekran yo\'q. Shu sababli bu yerda ilovalarni panelga proyeksiya qilish imkonsiz — bu avtomobilingiz asboblar panelining xususiyati, DashCast cheklovi emas.</string>
 </resources>
 

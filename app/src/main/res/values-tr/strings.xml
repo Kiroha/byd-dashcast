@@ -759,4 +759,6 @@
     <string name="hud_visual_send">Gönder</string>
     <string name="aaos_cluster_unsupported_title">Gösterge paneli yansıtması engellendi</string>
     <string name="aaos_cluster_unsupported_msg">Aracınız BYD\'nin Android Automotive sistemini (DX_BYD_AUTO) kullanıyor. Bu ünitede gösterge paneli üretici tarafından kilitlenmiştir: BYD bunu yerleşik navigasyona ayırır ve uygulama yansıtmasını engeller. Bu, aracın bir kısıtlamasıdır (DashCast\'in değil) — bir geçici çözüm yoktur.</string>
+    <string name="dl3_singleos_cluster_unsupported_title">Gösterge paneli yansıtması kullanılamıyor</string>
+    <string name="dl3_singleos_cluster_unsupported_msg">Bu araçta gösterge paneli tek ekranlı (single-OS) bir düzen kullanır: doğrudan araç tarafından çizilir ve uygulamaların yansıtılabileceği ayrı bir ekran yoktur. Gösterge paneline uygulama yansıtma burada mümkün değildir — bu, aracınızın gösterge panelinin bir özelliğidir, DashCast\'in bir kısıtlaması değildir.</string>
 </resources>

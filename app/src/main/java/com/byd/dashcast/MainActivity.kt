@@ -759,6 +759,22 @@ class MainActivity : AppCompatActivity(),
                 .show()
             return
         }
+        // DL3 single-OS fission (ro.build.system.fission_single_os==1): the cluster is rendered
+        // natively (Qt/fission) with NO projectable Android display (only Display 0; AutoContainer
+        // creates none → "no AutoContainerNative") — proven by working(=0)/failing(=1) on-car diff.
+        // App projection is impossible here, so explain it instead of looping 12s on activation.
+        // STRICT + safe: only DL3 (isDiLink3) AND single-OS — a real DL5.1 (also single-OS but
+        // isDiLink3=false) and a normal 1-for-2 DL3 (fission_single_os==0) are NOT affected.
+        if (com.byd.dashcast.platform.Platform.get().isDiLink3(this)
+                && com.byd.dashcast.platform.Platform.isClusterSingleOs()) {
+            AppLogger.i(TAG, "onSendToDashboard: DL3 single-OS fission (fission_single_os=1) — cluster projection unsupported, informing user")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.dl3_singleos_cluster_unsupported_title)
+                .setMessage(R.string.dl3_singleos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
         ClusterPrefs.incrementLaunchCount(this, app.packageName)
         val svc = mClusterService
         if (svc == null) {

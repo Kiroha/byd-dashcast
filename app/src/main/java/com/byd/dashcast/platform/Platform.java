@@ -428,4 +428,20 @@ public final class Platform {
     }
 
     private static String safe(String s) { return s == null ? "" : s; }
+
+    /**
+     * True iff the cluster runs in <b>single-OS fission</b> mode
+     * ({@code ro.build.system.fission_single_os == "1"}). On a DL3 product this means the
+     * instrument cluster is rendered natively (Qt/fission), with NO projectable Android
+     * display — AutoContainer app projection is impossible there (proven on-car: the working
+     * 1-for-2 car has {@code =0} + a cluster VirtualDisplay; the single-OS car has {@code =1},
+     * only Display 0, and "no AutoContainerNative"). Read-only prop, immutable after boot.
+     *
+     * <p><b>Fail-open:</b> returns {@code false} if the prop can't be read (never gate a car we
+     * can't classify). Note {@code =1} alone is NOT enough to gate — combine with
+     * {@link #isDiLink3(Context)} so a real DL5.1 (also single-OS) is unaffected.
+     */
+    public static boolean isClusterSingleOs() {
+        return "1".equals(readProp("ro.build.system.fission_single_os"));
+    }
 }
