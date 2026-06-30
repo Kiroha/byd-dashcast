@@ -115,6 +115,19 @@ public final class BugReportCapture {
             // auto_container) on variants where the usual activation service is absent.
             + " ; echo '--- SERVICES (service list) ---' >> " + p
             + " ; service list 2>/dev/null >> " + p
+            // ── AUTOCONTAINER NATIVE BACKEND (DL3 cluster projection) ──
+            // "no AutoContainerNative" = the Java service com.xdja.containerservice (registered as
+            // "AutoContainer") is up but ServiceManager.checkService("AutoContainerNative") is null,
+            // i.e. the SEPARATE native daemon "AutoContainerNative" isn't registered/running. The
+            // Java package is present + same version on working cars — the native daemon is the real
+            // differentiator. Capture: is AutoContainerNative registered? which init service starts
+            // it + its state? is the native process alive?
+            + " ; echo '--- AUTOCONTAINER (native backend) ---' >> " + p
+            + " ; service list 2>/dev/null | grep -iE 'container|cluster' >> " + p
+            + " ; echo '-- init.svc (container/xdja/fission/cluster) --' >> " + p
+            + " ; getprop 2>/dev/null | grep -iE 'init.svc' | grep -iE 'contain|xdja|fission|cluster|vdc' >> " + p
+            + " ; echo '-- processes (xdja/container, unfiltered) --' >> " + p
+            + " ; ps -A 2>/dev/null | grep -iE 'xdja|container' >> " + p
             // ── CLUSTER GATING DEEP-DIVE ──
             // Why does only the OEM system nav render on the cluster while third-party apps,
             // placed on the SAME display at the WM level, do not? (DX_BYD_AUTO / Android
