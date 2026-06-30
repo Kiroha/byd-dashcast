@@ -766,4 +766,6 @@
     <string name="hud_visual_unsure">Nie jestem pewien</string>
     <string name="hud_visual_no_hint">Co zobaczyłeś zamiast tego? (opcjonalnie)</string>
     <string name="hud_visual_send">Wyślij</string>
+    <string name="aaos_cluster_unsupported_title">Projekcja na zegarach zablokowana</string>
+    <string name="aaos_cluster_unsupported_msg">Twój pojazd korzysta z systemu Android Automotive firmy BYD (DX_BYD_AUTO). W tym urządzeniu zestaw wskaźników jest zablokowany przez producenta: BYD rezerwuje go dla wbudowanej nawigacji i blokuje projekcję aplikacji. To ograniczenie pojazdu (nie ograniczenie DashCast) — nie ma obejścia.</string>
 </resources>
