@@ -59,8 +59,9 @@ public final class ProxyDaemonMain {
      *  v10 (v1.4.7-beta): adds TXN_CAN_NAVI_STATUS / TXN_CAN_INSTRUMENT_INT / TXN_CAN_INSTRUMENT_BYTES.
      *  v11 (v1.4.11-beta): adds TXN_CAN_SETTING_INT (BYDAutoSettingDevice, required for HUD activation).
      *  v12 (v1.6.69-beta): adds TXN_CAN_INSTRUMENT_GET / TXN_CAN_SETTING_GET (privileged HUD/nav reads).
+     *  v13 (v1.6.73-beta): adds TXN_CAN_LISTEN_START / TXN_CAN_LISTEN_DRAIN (BYD setting push-feedback listener).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "12";
+    private static final String PROTOCOL_VERSION = "13";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -837,6 +838,28 @@ public final class ProxyDaemonMain {
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         int v = CanWriteVerbs.settingGetInt(ctx, featureId);
                         if (reply != null) { reply.writeNoException(); reply.writeInt(v); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_START: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        String r = CanFeedbackListener.startSetting(ctx);
+                        if (reply != null) { reply.writeNoException(); reply.writeString(r); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_DRAIN: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        String r = CanFeedbackListener.drain();
+                        if (reply != null) { reply.writeNoException(); reply.writeString(r); }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
                     }

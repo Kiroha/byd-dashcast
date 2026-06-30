@@ -134,4 +134,13 @@ public final class ProxyDaemonContract {
      *  {@code BYDAutoSettingDevice.get(int[])} → {@code BYDAutoEventValue.intValue}.
      *  Used to read e.g. {@code SET_HUD_MODE_FEEDBACK} while the OEM nav drives the HUD. */
     public static final int TXN_CAN_SETTING_GET         = IBinder.FIRST_CALL_TRANSACTION + 20; // 21
+
+    /** No args → {@code String status}.
+     *  Register a BYD setting feedback listener inside the daemon (privileged context) to capture
+     *  PUSH feedback (the HUD/nav feature values are push-only — not gettable). Idempotent. */
+    public static final int TXN_CAN_LISTEN_START        = IBinder.FIRST_CALL_TRANSACTION + 21; // 22
+
+    /** No args → {@code String events}.
+     *  Drain (return + clear) the push events captured since the last drain. */
+    public static final int TXN_CAN_LISTEN_DRAIN        = IBinder.FIRST_CALL_TRANSACTION + 22; // 23
 }

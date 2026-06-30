@@ -135,4 +135,38 @@ final class ProxyCanVerbs {
             data.recycle();
         }
     }
+
+    static String canListenStart()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_START, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static String canListenDrain()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_DRAIN, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
 }
