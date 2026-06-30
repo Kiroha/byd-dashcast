@@ -131,6 +131,10 @@ object HudDiagnosticBundle {
         }
         setRc("SET_HUD_SWITCH", CanWriteVerbs.SET_HUD_SWITCH, 1)
         setRc("SETTING_HUD_REQUEST_COMMAND", CanWriteVerbs.SETTING_HUD_REQUEST_COMMAND, 1)
+        // Push feedback is the only way to observe HUD state (get() proved push-only). Register the
+        // daemon listener so the FULL test also captures pushes — incl. any feedback the HUD sends
+        // back in response to our SET_HUD_MODE writes below, and OEM pushes if its nav is guiding.
+        sb.append("D push-listener start → ").append(listenStart()).append('\n')
         log("▶▶ Did the WINDSHIELD HUD just turn ON (any content)? (3 s)"); sleep(3000)
         // Slow sweep so the tester can correlate AND photograph each mode separately.
         for (mode in 0..6) {
@@ -150,6 +154,8 @@ object HudDiagnosticBundle {
         }
         sb.append("D HUD slow sweep done (modes 0..6, ~5 s each). " +
                 "NOTE/PHOTOGRAPH which mode (if any) showed nav on the windshield HUD.\n")
+        // Drain the push events captured during the sweep (feedback fired by the HUD/OEM, if any).
+        sb.append("[TEST D — push events captured during the sweep]\n").append(listenDrain())
         // P2 — capture the HUD's own reaction right after the sweep (tag-filtered, tail-capped)
         // so the zip shows what the HUD/SettingDevice did per write, not just the tester's eyes.
         log("▶ capturing HUD reaction logcat…")
