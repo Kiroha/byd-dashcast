@@ -143,4 +143,9 @@ public final class ProxyDaemonContract {
     /** No args → {@code String events}.
      *  Drain (return + clear) the push events captured since the last drain. */
     public static final int TXN_CAN_LISTEN_DRAIN        = IBinder.FIRST_CALL_TRANSACTION + 22; // 23
+
+    /** No args → {@code String report}.
+     *  AAOS-only: probe the automotive display proxy HAL (IAutomotiveDisplayProxyService) from
+     *  the daemon (uid 2000) to test whether app windows can be drawn to the cluster panel. */
+    public static final int TXN_AAOS_HAL_PROBE          = IBinder.FIRST_CALL_TRANSACTION + 23; // 24
 }
