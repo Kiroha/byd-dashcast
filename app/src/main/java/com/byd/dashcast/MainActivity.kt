@@ -745,6 +745,20 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
+        // DX_BYD_AUTO (Android Automotive): the instrument cluster is owned by the AAOS
+        // cluster-rendering pipeline and is unreachable to us (the automotive display HIDL stub
+        // is absent AND SELinux denies the HAL even to uid 2000 — proven on-car, 1.6.74). App
+        // projection is impossible here, so explain it clearly instead of looping forever on a
+        // silent activation failure. (Only DX_BYD_AUTO is FEATURE_AUTOMOTIVE; DL3/DL5 are not.)
+        if (com.byd.dashcast.hud.AaosClusterProbe.isAaos(this)) {
+            AppLogger.i(TAG, "onSendToDashboard: AAOS detected — cluster projection unsupported, informing user")
+            AlertDialog.Builder(this)
+                .setTitle(R.string.aaos_cluster_unsupported_title)
+                .setMessage(R.string.aaos_cluster_unsupported_msg)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
         ClusterPrefs.incrementLaunchCount(this, app.packageName)
         val svc = mClusterService
         if (svc == null) {

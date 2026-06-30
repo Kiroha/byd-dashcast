@@ -757,4 +757,6 @@
     <string name="hud_visual_unsure">غير متأكد</string>
     <string name="hud_visual_no_hint">ماذا رأيت بدلاً من ذلك؟ (اختياري)</string>
     <string name="hud_visual_send">إرسال</string>
+    <string name="aaos_cluster_unsupported_title">تعذّر العرض على لوحة العدادات</string>
+    <string name="aaos_cluster_unsupported_msg">تستخدم سيارتك نظام أندرويد أوتوموتيف من BYD (DX_BYD_AUTO). في هذه الوحدة، تكون لوحة العدادات مقفلة من قِبل الشركة المصنّعة: تحجزها BYD للملاحة المدمجة وتمنع عرض التطبيقات عليها. هذا قيد من السيارة (وليس قيدًا من DashCast) — ولا يوجد حل بديل.</string>
 </resources>
