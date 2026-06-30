@@ -876,6 +876,21 @@ public final class ProxyClient {
     }
 
     /**
+     * Register a BYD setting feedback listener inside the daemon to capture PUSH feedback
+     * (the HUD/nav feature values are push-only — not gettable). Idempotent.
+     *
+     * @return a short status string ("registered…" / "already-registered")
+     */
+    public static String canListenStart() throws ProxyException {
+        return callWithRetry("canListenStart", ProxyCanVerbs::canListenStart);
+    }
+
+    /** Drain (return + clear) the push events captured by the daemon listener. */
+    public static String canListenDrain() throws ProxyException {
+        return callWithRetry("canListenDrain", ProxyCanVerbs::canListenDrain);
+    }
+
+    /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new
      * typed verbs: the old daemon process keeps the previous APK's

@@ -304,13 +304,17 @@ object HudDiagnosticBundle {
         sb.append(selfCheck("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, 2,
                 CanWriteVerbs.SET_HUD_MODE_FEEDBACK))
         sb.append('\n')
-        progress("OEM nav must be ACTIVELY guiding on the HUD now — reading ~12 s via daemon…")
+        // Register the daemon PUSH listener (get() is push-only) — captures whatever the OEM
+        // nav pushes to the setting features (incl. the HUD mode) while it guides on the HUD.
+        sb.append("[push listener] start → ").append(listenStart()).append('\n')
+        progress("OEM nav must be ACTIVELY guiding on the HUD now — capturing pushes ~12 s…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
             sb.append("[setting via daemon]\n")
             for (id in settingIds) sb.append(daemonRead(id, false)).append('\n')
             sb.append("[instrument via daemon]\n")
             for (id in instrIds) sb.append(daemonRead(id, true)).append('\n')
+            sb.append("[push events]\n").append(listenDrain())
             try { Thread.sleep(1200) } catch (_: InterruptedException) {}
         }
         write(work, "01_hud_state_read.txt", sb.toString())
@@ -329,6 +333,18 @@ object HudDiagnosticBundle {
         s.append("  get set-id   → ").append(daemonRead(setId, false)).append('\n')
         s.append("  get feedback → ").append(daemonRead(feedbackId, false)).append('\n')
         return s.toString()
+    }
+
+    /** Registers the daemon push-feedback listener; returns its status (or the error). */
+    private fun listenStart(): String = try {
+        com.byd.dashcast.proxy.ProxyClient.canListenStart()
+    } catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+
+    /** Drains the daemon push events (always newline-terminated). */
+    private fun listenDrain(): String {
+        val s = try { com.byd.dashcast.proxy.ProxyClient.canListenDrain() }
+                catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+        return if (s.endsWith("\n")) s else "$s\n"
     }
 
     /** Reads one CAN feature through the daemon (privileged context). Formats the value or the error. */
