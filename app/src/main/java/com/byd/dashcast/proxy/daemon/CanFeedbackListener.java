@@ -33,6 +33,12 @@ public final class CanFeedbackListener {
     private CanFeedbackListener() {}
 
     private static final int CAP = 1000;
+    /** HUD/nav setting feature ids to subscribe to via registerListener(listener, int[]). */
+    private static final int[] SUBSCRIBE_IDS = {
+        CanWriteVerbs.SET_HUD_MODE, CanWriteVerbs.SET_HUD_MODE_FEEDBACK,
+        CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.SET_HUD_SWITCH_STATUS_FEEDBACK,
+        CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS
+    };
     private static final List<String> sBuf = Collections.synchronizedList(new ArrayList<String>());
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
     private static volatile boolean sRegistered;
@@ -86,10 +92,22 @@ public final class CanFeedbackListener {
                         Object dev = cls.getMethod("getInstance", Context.class).invoke(null, wrappedCtx);
                         if (dev == null) { result[0] = "ERR getInstance() null"; return; }
                         SettingSink sink = new SettingSink();
-                        cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
+                        // Prefer registerListener(listener, int[]): many BYD builds deliver NO
+                        // callbacks unless you subscribe to specific feature IDs (1.6.81 registered
+                        // via the no-arg variant but captured nothing). Subscribe to the HUD/nav
+                        // feedback ids; fall back to the all-features variant if that overload is absent.
+                        String how;
+                        try {
+                            cls.getMethod("registerListener", AbsBYDAutoSettingListener.class, int[].class)
+                               .invoke(dev, sink, SUBSCRIBE_IDS);
+                            how = "filtered ids";
+                        } catch (NoSuchMethodException nsme) {
+                            cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
+                            how = "all features";
+                        }
                         sListener = sink;
                         sRegistered = true;
-                        result[0] = "registered (all setting features, looper thread)";
+                        result[0] = "registered (" + how + ", looper thread)";
                     } catch (Throwable t) {
                         result[0] = "ERR " + describe(t);
                     } finally {
