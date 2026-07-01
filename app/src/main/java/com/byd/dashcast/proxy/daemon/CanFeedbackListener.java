@@ -64,6 +64,25 @@ public final class CanFeedbackListener {
     }
 
     /**
+     * Adds {@code onDataEventChanged(int, BYDAutoEventValue)} — the most likely per-feature
+     * delivery callback (1.6.83's onFeatureChanged captured nothing even when subscribed to the
+     * ids). It is NOT in the stub, so it is declared WITHOUT {@code @Override} — at runtime it
+     * overrides the real method by name+descriptor. It MIGHT be {@code final} on-device (like
+     * onDataChanged); if so this class fails to load with a {@link LinkageError}, which
+     * {@link #startSetting} catches to fall back to {@link SettingSink} — so capture is never
+     * disabled entirely.
+     */
+    private static final class EventSink extends AbsBYDAutoSettingListener {
+        @Override public void onFeatureChanged(String feature, int value) {
+            record("feat " + feature + "=" + value);
+        }
+        public void onDataEventChanged(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
+            int v = (value != null) ? value.intValue : Integer.MIN_VALUE;
+            record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, v));
+        }
+    }
+
+    /**
      * Registers the setting listener once (idempotent). Uses reflection for getInstance /
      * registerListener (matching {@link CanWriteVerbs}) so we don't depend on the stub's exact
      * method signatures; only the listener subclass needs the compile stub.
@@ -91,7 +110,18 @@ public final class CanFeedbackListener {
                         Class<?> cls = Class.forName("android.hardware.bydauto.setting.BYDAutoSettingDevice");
                         Object dev = cls.getMethod("getInstance", Context.class).invoke(null, wrappedCtx);
                         if (dev == null) { result[0] = "ERR getInstance() null"; return; }
-                        SettingSink sink = new SettingSink();
+                        // Try the EventSink (adds onDataEventChanged) — its class load throws a
+                        // LinkageError if onDataEventChanged is final on-device; fall back to the
+                        // onFeatureChanged-only sink so capture is never disabled entirely.
+                        AbsBYDAutoSettingListener sink;
+                        String sinkKind;
+                        try {
+                            sink = new EventSink();
+                            sinkKind = "EventSink";
+                        } catch (Throwable le) {
+                            sink = new SettingSink();
+                            sinkKind = "SettingSink(EventSink load failed: " + le.getClass().getSimpleName() + ")";
+                        }
                         // Prefer registerListener(listener, int[]): many BYD builds deliver NO
                         // callbacks unless you subscribe to specific feature IDs (1.6.81 registered
                         // via the no-arg variant but captured nothing). Subscribe to the HUD/nav
@@ -107,7 +137,7 @@ public final class CanFeedbackListener {
                         }
                         sListener = sink;
                         sRegistered = true;
-                        result[0] = "registered (" + how + ", looper thread)";
+                        result[0] = "registered (" + how + ", " + sinkKind + ", looper thread)";
                     } catch (Throwable t) {
                         result[0] = "ERR " + describe(t);
                     } finally {
