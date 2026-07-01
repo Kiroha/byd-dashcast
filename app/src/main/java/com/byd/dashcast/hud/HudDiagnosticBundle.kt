@@ -313,6 +313,13 @@ object HudDiagnosticBundle {
         // Register the daemon PUSH listener (get() is push-only) — captures whatever the OEM
         // nav pushes to the setting features (incl. the HUD mode) while it guides on the HUD.
         sb.append("[push listener] start → ").append(listenStart()).append('\n')
+        // Discard buffered leftovers (prior runs + our own self-check echoes, e.g. our
+        // SET_HUD_MODE writes come back as SET_HUD_MODE_FEEDBACK=0x38B0000D) so the loop below
+        // captures ONLY what is pushed during THIS window — i.e. the OEM nav's HUD-mode value.
+        val discarded = listenDrain().trim()
+        sb.append("[pre-capture buffer discarded]")
+            .append(if (discarded.isEmpty() || discarded == "(no events)") "" else " " + discarded.replace("\n", " "))
+            .append('\n')
         progress("OEM nav must be ACTIVELY guiding on the HUD now — capturing pushes ~12 s…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
