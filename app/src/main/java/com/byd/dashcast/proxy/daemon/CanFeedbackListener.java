@@ -1,7 +1,6 @@
 package com.byd.dashcast.proxy.daemon;
 
 import android.content.Context;
-import android.hardware.IBYDAutoEvent;
 import android.hardware.bydauto.setting.AbsBYDAutoSettingListener;
 
 import java.util.ArrayList;
@@ -45,19 +44,16 @@ public final class CanFeedbackListener {
         }
     }
 
-    /** Our concrete listener — records whatever the framework pushes. */
+    /**
+     * Our concrete listener — records whatever the framework pushes via the generic
+     * {@code onFeatureChanged(String,int)} callback. We do NOT override
+     * {@code onDataChanged(IBYDAutoEvent)} — it is {@code final} on the real device
+     * (the internal dispatcher), and overriding it throws a {@link LinkageError} at class
+     * load (proven 1.6.80). The overridable surface is the {@code onXxxChanged} family.
+     */
     private static final class SettingSink extends AbsBYDAutoSettingListener {
         @Override public void onFeatureChanged(String feature, int value) {
             record("feat " + feature + "=" + value);
-        }
-        @Override public void onDataChanged(IBYDAutoEvent event) {
-            try {
-                record("data type=" + event.getEventType()
-                        + " dev=" + event.getDeviceType()
-                        + " val=" + event.getValue());
-            } catch (Throwable t) {
-                record("data <err " + t.getClass().getSimpleName() + ">");
-            }
         }
     }
 
