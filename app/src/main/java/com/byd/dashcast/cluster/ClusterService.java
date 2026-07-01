@@ -245,7 +245,24 @@ public class ClusterService extends Service
     // Public API (called from MainActivity via the binder)
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * DL3 with {@code ro.build.system.fission_single_os==1}: the instrument cluster is rendered
+     * natively (Qt/fission) and there is NO projectable Android display — AutoContainer has no
+     * native backend ("no AutoContainerNative"), so the activation sequence just churns for 12 s
+     * per cycle forever (this is what made "auto-start" appear broken; INC-20260701-083007).
+     * Skip the activation entirely on these cars. STRICT + safe: a normal 1-for-2 DL3
+     * ({@code ==0}) and DL5/DL5.1 ({@code isDiLink3()==false}) are NOT affected; fail-open if the
+     * prop can't be read.
+     */
+    private boolean isDl3SingleOsFission() {
+        return Platform.get().isDiLink3(this) && Platform.isClusterSingleOs();
+    }
+
     private void startNativeProjection() {
+        if (isDl3SingleOsFission()) {
+            AppLogger.w(TAG, "DL3 single-OS fission (fission_single_os=1) — no projectable cluster display; skipping AutoContainer activation");
+            return;
+        }
         AppLogger.i(TAG, "Starting cluster projection (native)...");
         mDisplayHelper.start();
     }
@@ -937,6 +954,10 @@ public class ClusterService extends Service
 
     public void restartProjection() {
         AppLogger.log(TAG, "restartProjection requested natively");
+        if (isDl3SingleOsFission()) {
+            AppLogger.w(TAG, "DL3 single-OS fission — skipping restartProjection (no projectable cluster display)");
+            return;
+        }
         if (mDisplayHelper != null) mDisplayHelper.start();
     }
 
