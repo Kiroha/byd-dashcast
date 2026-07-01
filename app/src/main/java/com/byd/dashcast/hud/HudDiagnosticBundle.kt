@@ -307,8 +307,11 @@ object HudDiagnosticBundle {
         // last-known with our own values. The listener persists in the daemon across runs.
         sb.append("[push listener] start → ").append(listenStart()).append('\n')
         sb.append("[initial snapshot] ").append(listenDrain())
-        progress("OEM nav should be guiding on the HUD — capturing ~12 s (last-known persists)…")
-        for (t in 1..10) {
+        // ~30 s window: the HUD mode itself is set once at nav-start (stable), but DRIVING toward a
+        // turn re-triggers HUD pushes (maneuver/approach state), so a longer window + motion catches
+        // more. last-known persists regardless.
+        progress("Start the OEM nav + DRIVE toward a turn — capturing ~30 s (keep the HUD nav on)…")
+        for (t in 1..25) {
             sb.append("---- t=$t ----\n")
             sb.append("[setting via daemon]\n")
             for (id in settingIds) sb.append(daemonRead(id, false)).append('\n')
