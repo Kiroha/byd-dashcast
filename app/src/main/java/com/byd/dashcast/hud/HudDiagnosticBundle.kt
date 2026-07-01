@@ -299,28 +299,15 @@ object HudDiagnosticBundle {
         sb.append("[in-app read — expected to fail, kept for contrast]\n")
         sb.append(HudStateReader.read(ctx, HudStateReader.SETTING_CLASS, settingIds))
         sb.append(HudStateReader.read(ctx, HudStateReader.INSTRUMENT_CLASS, instrIds)).append('\n')
-        // Write→readback self-check: does the daemon get() reflect a value we just WROTE?
-        //  • readback == written value → get() is a LIVE read; the all-zero loop below then
-        //    means no nav/HUD was active during capture (procedure issue).
-        //  • readback stays 0 → the feedback is push-only (listener-based) and get() cannot
-        //    observe it → we must register a BYD feedback listener instead of polling get().
-        sb.append("[daemon write→readback self-check]\n")
-        sb.append(selfCheck("SET_HUD_SWITCH", CanWriteVerbs.SET_HUD_SWITCH, 1,
-                CanWriteVerbs.SET_HUD_SWITCH_STATUS_FEEDBACK))
-        sb.append(selfCheck("SET_HUD_MODE", CanWriteVerbs.SET_HUD_MODE, 2,
-                CanWriteVerbs.SET_HUD_MODE_FEEDBACK))
-        sb.append('\n')
-        // Register the daemon PUSH listener (get() is push-only) — captures whatever the OEM
-        // nav pushes to the setting features (incl. the HUD mode) while it guides on the HUD.
+        // Register the daemon PUSH listener. get() is push-only (returns 0), so the listener is the
+        // only way to read the HUD mode. onDataEventChanged pushes (0x38B0000D = SET_HUD_MODE_FEEDBACK)
+        // are kept in a PERSISTENT last-known map → drain() reports "[last-known] 0x..=..", so we get
+        // the CURRENT HUD mode the OEM nav set even if it was pushed BEFORE this window (it fires on
+        // change; the OEM sets it once at nav-start). No self-check writes here — they'd pollute
+        // last-known with our own values. The listener persists in the daemon across runs.
         sb.append("[push listener] start → ").append(listenStart()).append('\n')
-        // Discard buffered leftovers (prior runs + our own self-check echoes, e.g. our
-        // SET_HUD_MODE writes come back as SET_HUD_MODE_FEEDBACK=0x38B0000D) so the loop below
-        // captures ONLY what is pushed during THIS window — i.e. the OEM nav's HUD-mode value.
-        val discarded = listenDrain().trim()
-        sb.append("[pre-capture buffer discarded]")
-            .append(if (discarded.isEmpty() || discarded == "(no events)") "" else " " + discarded.replace("\n", " "))
-            .append('\n')
-        progress("OEM nav must be ACTIVELY guiding on the HUD now — capturing pushes ~12 s…")
+        sb.append("[initial snapshot] ").append(listenDrain())
+        progress("OEM nav should be guiding on the HUD — capturing ~12 s (last-known persists)…")
         for (t in 1..10) {
             sb.append("---- t=$t ----\n")
             sb.append("[setting via daemon]\n")
@@ -334,18 +321,6 @@ object HudDiagnosticBundle {
         write(work, "02_props.txt", sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
         progress("HUD state read captured — look for the SET_HUD_MODE / FEEDBACK value while nav was on the HUD.")
         return work
-    }
-
-    /** Writes a known value via the daemon then reads back both the set-id and its feedback-id. */
-    private fun selfCheck(name: String, setId: Int, value: Int, feedbackId: Int): String {
-        val s = StringBuilder()
-        val rc = try { com.byd.dashcast.proxy.ProxyClient.canSettingInt(setId, value).toString() }
-                 catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
-        s.append("set %s(0x%08X)=%d → rc=%s\n".format(name, setId, value, rc))
-        try { Thread.sleep(300) } catch (_: InterruptedException) {}
-        s.append("  get set-id   → ").append(daemonRead(setId, false)).append('\n')
-        s.append("  get feedback → ").append(daemonRead(feedbackId, false)).append('\n')
-        return s.toString()
     }
 
     /** Registers the daemon push-feedback listener; returns its status (or the error). */

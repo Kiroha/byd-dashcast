@@ -43,11 +43,22 @@ public final class CanFeedbackListener {
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
     private static volatile boolean sRegistered;
     private static volatile android.os.HandlerThread sThread;   // Looper thread for register + callbacks
+    /** Last value pushed per feature id — persistent (survives drain). onDataEventChanged fires on
+     *  CHANGE only, and the OEM nav sets the HUD mode once at nav-start; keeping the last value lets
+     *  us report the CURRENT HUD mode even if it was pushed before the read window. */
+    private static final java.util.Map<Integer, Integer> sLastValue =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     private static void record(String s) {
         synchronized (sBuf) {
             if (sBuf.size() < CAP) sBuf.add(s);
         }
+    }
+
+    /** Records an int-feature push: updates the persistent last-value map + the event log. */
+    private static void recordValue(int featureId, int value) {
+        sLastValue.put(featureId, value);
+        record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, value));
     }
 
     /**
@@ -77,8 +88,7 @@ public final class CanFeedbackListener {
             record("feat " + feature + "=" + value);
         }
         public void onDataEventChanged(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
-            int v = (value != null) ? value.intValue : Integer.MIN_VALUE;
-            record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, v));
+            recordValue(featureId, (value != null) ? value.intValue : Integer.MIN_VALUE);
         }
     }
 
@@ -164,14 +174,24 @@ public final class CanFeedbackListener {
         return sb.toString();
     }
 
-    /** Returns and clears the captured push events (newline-separated), or "(no events)". */
+    /**
+     * Returns the new events since the last drain (cleared) PLUS the persistent per-feature
+     * last-known snapshot (NOT cleared) — so a stable value pushed before this window (e.g. the
+     * OEM nav's HUD mode set at nav-start) is still reported.
+     */
     public static String drain() {
+        StringBuilder sb = new StringBuilder();
         synchronized (sBuf) {
-            if (sBuf.isEmpty()) return "(no events)";
-            StringBuilder sb = new StringBuilder();
             for (String s : sBuf) sb.append(s).append('\n');
             sBuf.clear();
-            return sb.toString();
         }
+        if (!sLastValue.isEmpty()) {
+            sb.append("[last-known]");
+            for (java.util.Map.Entry<Integer, Integer> e : sLastValue.entrySet()) {
+                sb.append(String.format(java.util.Locale.US, " 0x%08X=%d", e.getKey(), e.getValue()));
+            }
+            sb.append('\n');
+        }
+        return sb.length() == 0 ? "(no events)" : sb.toString();
     }
 }
