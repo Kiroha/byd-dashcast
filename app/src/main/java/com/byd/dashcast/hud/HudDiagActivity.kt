@@ -49,6 +49,15 @@ class HudDiagActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         title = "HUD nav bench (DL3)"
 
+        // Start the daemon push-feedback listener as soon as this page opens, so it is already
+        // listening BEFORE the tester (re)starts the OEM nav. The daemon respawns on app update
+        // (resetting the listener), and the OEM sets the HUD mode once at nav-start — if we only
+        // registered at "② Read" time we'd miss that push. The listener persists + keeps a
+        // last-known value, so the OEM HUD-mode push is captured whenever it happens. Guarded.
+        Thread {
+            try { com.byd.dashcast.proxy.ProxyClient.canListenStart() } catch (_: Throwable) {}
+        }.start()
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
