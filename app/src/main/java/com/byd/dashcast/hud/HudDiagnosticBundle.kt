@@ -321,10 +321,12 @@ object HudDiagnosticBundle {
             try { com.byd.dashcast.proxy.ProxyClient.canSettingInt(CanWriteVerbs.SETTING_HUD_REQUEST_COMMAND, 1).toString() }
             catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
         sb.append("[HUD state request] SETTING_HUD_REQUEST_COMMAND=1 → rc=").append(requestHudState()).append('\n')
-        // ~30 s window. 0x38B0000D pushes only when the mode CHANGES (the request above / a switch
-        // toggle don't move it). The reliable trigger is the OEM nav (re)starting on the HUD — that's
-        // when it SETS the mode. So the tester must START (or stop+restart) the car nav NOW.
-        progress("▶ NOW start (or stop+restart) the CAR navigation on the HUD — capturing ~30 s…")
+        // ~30 s window. 0x38B0000D pushes only when the HUD DISPLAY MODE changes. That mode is a USER
+        // setting (car HUD menu: speed / speed+nav / map …), stable — a switch toggle, the request
+        // above, or a nav restart don't move it. The reliable trigger is the tester CHANGING the HUD
+        // display mode in the car's HUD settings (we then capture each 0x38B0000D value; the one that
+        // shows the map/nav is the target).
+        progress("▶ NOW change the HUD DISPLAY MODE in the car's HUD settings (cycle to the map/nav view) — ~30 s…")
         for (t in 1..25) {
             sb.append("---- t=$t ----\n")
             if (t % 5 == 0) sb.append("[HUD state request] rc=").append(requestHudState()).append('\n')
