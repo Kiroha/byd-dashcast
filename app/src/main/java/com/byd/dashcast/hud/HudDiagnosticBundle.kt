@@ -313,11 +313,20 @@ object HudDiagnosticBundle {
         // the window, toggle the HUD off/on (or drive through a turn) — see the prompt.
         listenClear()
         sb.append("[cleared last-known — capturing only fresh OEM pushes below]\n")
-        // ~30 s window. The HUD mode is set once at nav-start (stable), so TOGGLE THE HUD OFF/ON (or
-        // drive through a turn) during this window to make the car re-push its current HUD nav mode.
-        progress("OEM nav on the HUD → now TOGGLE the HUD off/on (or drive a turn) — capturing ~30 s…")
+        // The 0x38B0000D (MODE) feedback fires only when the mode CHANGES (stable during nav; toggling
+        // the HUD switch only re-pushed 0x38B0001C = the SWITCH). So ASK the HUD to report its current
+        // state via SETTING_HUD_REQUEST_COMMAND — a REQUEST, not a set, so the pushed mode is the OEM's
+        // (no contamination). Re-issued in the loop in case the first doesn't fire.
+        fun requestHudState(): String =
+            try { com.byd.dashcast.proxy.ProxyClient.canSettingInt(CanWriteVerbs.SETTING_HUD_REQUEST_COMMAND, 1).toString() }
+            catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+        sb.append("[HUD state request] SETTING_HUD_REQUEST_COMMAND=1 → rc=").append(requestHudState()).append('\n')
+        // ~30 s window. Keep the OEM nav guiding on the HUD; the request above (+ any nav (re)start or
+        // turn) should make the car push its current 0x38B0000D HUD nav mode.
+        progress("Keep OEM nav on the HUD (start/restart it if needed) — capturing ~30 s…")
         for (t in 1..25) {
             sb.append("---- t=$t ----\n")
+            if (t % 5 == 0) sb.append("[HUD state request] rc=").append(requestHudState()).append('\n')
             sb.append("[setting via daemon]\n")
             for (id in settingIds) sb.append(daemonRead(id, false)).append('\n')
             sb.append("[instrument via daemon]\n")
