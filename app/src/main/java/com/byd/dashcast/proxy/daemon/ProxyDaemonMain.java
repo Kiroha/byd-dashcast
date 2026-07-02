@@ -61,8 +61,9 @@ public final class ProxyDaemonMain {
      *  v12 (v1.6.69-beta): adds TXN_CAN_INSTRUMENT_GET / TXN_CAN_SETTING_GET (privileged HUD/nav reads).
      *  v13 (v1.6.73-beta): adds TXN_CAN_LISTEN_START / TXN_CAN_LISTEN_DRAIN (BYD setting push-feedback listener).
      *  v14 (v1.6.74-beta): adds TXN_AAOS_HAL_PROBE (automotive display proxy HAL reachability test).
+     *  v15 (v1.6.89-beta): adds TXN_CAN_LISTEN_CLEAR (reset push-feedback log + last-known map).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "14";
+    private static final String PROTOCOL_VERSION = "15";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -871,6 +872,16 @@ public final class ProxyDaemonMain {
                     try {
                         String r = AaosDisplayHalProbe.probe();
                         if (reply != null) { reply.writeNoException(); reply.writeString(r); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_LISTEN_CLEAR: {
+                    data.enforceInterface(DESCRIPTOR);
+                    try {
+                        CanFeedbackListener.clear();
+                        if (reply != null) reply.writeNoException();
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
                     }

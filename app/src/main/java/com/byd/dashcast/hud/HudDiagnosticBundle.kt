@@ -306,11 +306,16 @@ object HudDiagnosticBundle {
         // change; the OEM sets it once at nav-start). No self-check writes here — they'd pollute
         // last-known with our own values. The listener persists in the daemon across runs.
         sb.append("[push listener] start → ").append(listenStart()).append('\n')
-        sb.append("[initial snapshot] ").append(listenDrain())
-        // ~30 s window: the HUD mode itself is set once at nav-start (stable), but DRIVING toward a
-        // turn re-triggers HUD pushes (maneuver/approach state), so a longer window + motion catches
-        // more. last-known persists regardless.
-        progress("Start the OEM nav + DRIVE toward a turn — capturing ~30 s (keep the HUD nav on)…")
+        // CLEAR the persistent last-known + log first, so this read is UNCONTAMINATED by prior runs
+        // — notably the full test's TEST D mode sweep (which writes SET_HUD_MODE 0..6 and echoes them
+        // into last-known, faking a value). After the clear, anything captured is a FRESH push, and
+        // the ② Read never writes, so it can only come from the OEM. To force that fresh push during
+        // the window, toggle the HUD off/on (or drive through a turn) — see the prompt.
+        listenClear()
+        sb.append("[cleared last-known — capturing only fresh OEM pushes below]\n")
+        // ~30 s window. The HUD mode is set once at nav-start (stable), so TOGGLE THE HUD OFF/ON (or
+        // drive through a turn) during this window to make the car re-push its current HUD nav mode.
+        progress("OEM nav on the HUD → now TOGGLE the HUD off/on (or drive a turn) — capturing ~30 s…")
         for (t in 1..25) {
             sb.append("---- t=$t ----\n")
             sb.append("[setting via daemon]\n")
@@ -330,6 +335,11 @@ object HudDiagnosticBundle {
     private fun listenStart(): String = try {
         com.byd.dashcast.proxy.ProxyClient.canListenStart()
     } catch (t: Throwable) { "ERR ${t.message ?: t.javaClass.simpleName}" }
+
+    /** Clears the daemon push log + last-known map (fresh, uncontaminated read). Best-effort. */
+    private fun listenClear() {
+        try { com.byd.dashcast.proxy.ProxyClient.canListenClear() } catch (_: Throwable) {}
+    }
 
     /** Drains the daemon push events (always newline-terminated). */
     private fun listenDrain(): String {

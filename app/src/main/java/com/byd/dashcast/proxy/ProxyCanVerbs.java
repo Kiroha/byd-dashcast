@@ -186,4 +186,20 @@ final class ProxyCanVerbs {
             data.recycle();
         }
     }
+
+    static void canListenClear()
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            b.transact(ProxyDaemonContract.TXN_CAN_LISTEN_CLEAR, data, reply, 0);
+            reply.readException();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
 }

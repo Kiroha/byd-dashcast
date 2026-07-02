@@ -900,6 +900,11 @@ public final class ProxyClient {
         return callWithRetry("aaosHalProbe", ProxyCanVerbs::aaosHalProbe);
     }
 
+    /** Clear the push-feedback log + persistent last-known map (for a fresh, uncontaminated read). */
+    public static void canListenClear() throws ProxyException {
+        callWithRetry("canListenClear", () -> { ProxyCanVerbs.canListenClear(); return null; });
+    }
+
     /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new

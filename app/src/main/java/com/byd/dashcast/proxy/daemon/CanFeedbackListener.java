@@ -55,6 +55,12 @@ public final class CanFeedbackListener {
         }
     }
 
+    /** Clears the event log AND the persistent last-known map (for a fresh, uncontaminated read). */
+    public static void clear() {
+        synchronized (sBuf) { sBuf.clear(); }
+        sLastValue.clear();
+    }
+
     /** Records an int-feature push: updates the persistent last-value map + the event log. */
     private static void recordValue(int featureId, int value) {
         sLastValue.put(featureId, value);
