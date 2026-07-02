@@ -148,4 +148,8 @@ public final class ProxyDaemonContract {
      *  AAOS-only: probe the automotive display proxy HAL (IAutomotiveDisplayProxyService) from
      *  the daemon (uid 2000) to test whether app windows can be drawn to the cluster panel. */
     public static final int TXN_AAOS_HAL_PROBE          = IBinder.FIRST_CALL_TRANSACTION + 23; // 24
+
+    /** No args → {@code void}.
+     *  Clear the push-feedback event log + persistent last-known map (fresh, uncontaminated read). */
+    public static final int TXN_CAN_LISTEN_CLEAR        = IBinder.FIRST_CALL_TRANSACTION + 24; // 25
 }
