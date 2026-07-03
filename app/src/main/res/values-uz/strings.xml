@@ -756,8 +756,6 @@
     <string name="hud_visual_yes">Ha</string>
     <string name="hud_visual_no">Yo‘q</string>
     <string name="hud_visual_unsure">Aniq emas</string>
-    <string name="hud_visual_no_hint">Buning o‘rniga nima ko‘rdingiz? (ixtiyoriy)</string>
-    <string name="hud_visual_send">Yuborish</string>
     <string name="aaos_cluster_unsupported_title">Asboblar paneliga proyeksiya bloklangan</string>
     <string name="aaos_cluster_unsupported_msg">Avtomobilingiz BYD\'ning Android Automotive tizimidan (DX_BYD_AUTO) foydalanadi. Bu qurilmada asboblar paneli ishlab chiqaruvchi tomonidan qulflangan: BYD uni o\'rnatilgan navigatsiya uchun ajratadi va ilovalarni proyeksiya qilishni bloklaydi. Bu — avtomobil cheklovi (DashCast cheklovi emas), chetlab o\'tish yo\'li yo\'q.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Asboblar paneliga proyeksiya mavjud emas</string>

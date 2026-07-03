@@ -201,10 +201,16 @@
             android:label="Diagnostic"
             android:screenOrientation="landscape"/>
 
-        <!-- HUD nav bench (DL3) — BYD instrument feature-ID scraper + live write tester -->
+        <!-- HUD bench (DL3) — proven HUD-control confirmation + raw logcat recorder -->
         <activity
             android:name=".hud.HudDiagActivity"
-            android:label="HUD nav bench"
+            android:label="HUD bench"
+            android:screenOrientation="landscape"/>
+
+        <!-- HUD raw logcat recorder (DL3) — unfiltered capture + arrow taps for guidance decoding -->
+        <activity
+            android:name=".hud.HudRawCaptureActivity"
+            android:label="HUD raw logcat recorder"
             android:screenOrientation="landscape"/>
 
         <!-- AAOS cluster diagnostic (DX_BYD_AUTO) — one-tap full capture → zip -->

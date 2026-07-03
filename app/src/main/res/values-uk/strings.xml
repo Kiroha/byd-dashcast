@@ -756,8 +756,6 @@
     <string name="hud_visual_yes">Так</string>
     <string name="hud_visual_no">Ні</string>
     <string name="hud_visual_unsure">Не впевнений</string>
-    <string name="hud_visual_no_hint">Що ви побачили натомість? (необов’язково)</string>
-    <string name="hud_visual_send">Надіслати</string>
     <string name="aaos_cluster_unsupported_title">Проєкцію на приладову панель заблоковано</string>
     <string name="aaos_cluster_unsupported_msg">Ваш автомобіль використовує систему Android Automotive від BYD (DX_BYD_AUTO). На цьому пристрої приладову панель заблоковано виробником: BYD резервує її для вбудованої навігації та блокує проєкцію застосунків. Це обмеження автомобіля (а не DashCast) — обхідного шляху немає.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Проєкція на приладову панель недоступна</string>

@@ -118,6 +118,25 @@ final class ProxyCanVerbs {
         }
     }
 
+    static int canSettingDouble(int featureId, double value)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(featureId);
+            data.writeDouble(value);
+            b.transact(ProxyDaemonContract.TXN_CAN_SETTING_DOUBLE, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
     static int canSettingGet(int featureId)
             throws RemoteException, ProxyClient.ProxyException {
         IBinder b = ProxyClient.sBinder;

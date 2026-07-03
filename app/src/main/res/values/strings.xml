@@ -797,8 +797,6 @@
     <string name="hud_visual_yes">Oui</string>
     <string name="hud_visual_no">Non</string>
     <string name="hud_visual_unsure">Pas sûr</string>
-    <string name="hud_visual_no_hint">Qu’avez-vous vu à la place ? (facultatif)</string>
-    <string name="hud_visual_send">Envoyer</string>
     <string name="aaos_cluster_unsupported_title">Projection cluster bloquée</string>
     <string name="aaos_cluster_unsupported_msg">Votre véhicule utilise le système Android Automotive de BYD (DX_BYD_AUTO), où le combiné d\'instruments est verrouillé par le constructeur : BYD le réserve à la navigation intégrée et bloque la projection d\'applications. C\'est une restriction du véhicule (pas une limite de DashCast) — il n\'existe aucun contournement.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Projection cluster indisponible</string>

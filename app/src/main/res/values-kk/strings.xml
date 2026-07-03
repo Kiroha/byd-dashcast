@@ -755,8 +755,6 @@
     <string name="hud_visual_yes">Иә</string>
     <string name="hud_visual_no">Жоқ</string>
     <string name="hud_visual_unsure">Сенімді емеспін</string>
-    <string name="hud_visual_no_hint">Оның орнына не көрдіңіз? (міндетті емес)</string>
-    <string name="hud_visual_send">Жіберу</string>
     <string name="aaos_cluster_unsupported_title">Аспаптар панеліне проекция бөгелген</string>
     <string name="aaos_cluster_unsupported_msg">Көлігіңіз BYD-дің Android Automotive жүйесін (DX_BYD_AUTO) пайдаланады. Бұл құрылғыда аспаптар тақтасын өндіруші құлыптаған: BYD оны кірістірілген навигацияға арнайды және қолданбаларды проекциялауды бөгейді. Бұл — көліктің шектеуі (DashCast шектеуі емес), айналып өту жолы жоқ.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Аспаптар панеліне проекция қолжетімсіз</string>

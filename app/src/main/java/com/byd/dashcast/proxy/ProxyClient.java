@@ -876,6 +876,36 @@ public final class ProxyClient {
     }
 
     /**
+     * Write a DOUBLE value to a CAN <em>setting</em> feature via {@code BYDAutoSettingDevice}
+     * inside the daemon. Required for the HUD angle ({@code CanWriteVerbs.SET_HUD_ANGLE}), which
+     * the OEM CarSettings app writes as a double.
+     *
+     * @param featureId raw BYD CAN setting feature constant
+     * @param value     double to write
+     * @return SDK result code (0 = success).
+     */
+    public static int canSettingDouble(int featureId, double value) throws ProxyException {
+        return callWithRetry("canSettingDouble",
+                () -> ProxyCanVerbs.canSettingDouble(featureId, value));
+    }
+
+    /**
+     * Read up to {@code maxLen} bytes of {@code path} at {@code offset} from inside the daemon
+     * (uid 2000 = shell), which can read {@code /data/local/tmp} files SELinux hides from the app
+     * uid. Returns an empty array at EOF. Loop, advancing {@code offset} by each chunk's length,
+     * to pull an arbitrarily large file without overflowing a single Binder parcel.
+     *
+     * @param path   absolute path on the device
+     * @param offset byte offset to read from
+     * @param maxLen max bytes to read (daemon clamps to a Binder-safe ceiling)
+     * @return the bytes read (length 0 at EOF)
+     */
+    public static byte[] readFileChunk(String path, long offset, int maxLen) throws ProxyException {
+        return callWithRetry("readFileChunk",
+                () -> ProxyFileVerbs.readFileChunk(path, offset, maxLen));
+    }
+
+    /**
      * Register a BYD setting feedback listener inside the daemon to capture PUSH feedback
      * (the HUD/nav feature values are push-only — not gettable). Idempotent.
      *
