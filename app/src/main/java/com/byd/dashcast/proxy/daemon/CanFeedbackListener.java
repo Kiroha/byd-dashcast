@@ -50,17 +50,29 @@ public final class CanFeedbackListener {
     private static final java.util.Map<Integer, Integer> sLastValue =
             new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** Session start (elapsedRealtime ms) — every log line is timestamped relative to this, so
+     *  user-tapped ground-truth markers ({@link #mark}) can be correlated with CAN events. */
+    private static volatile long sT0 = android.os.SystemClock.elapsedRealtime();
+
     private static void record(String s) {
+        String line = String.format(java.util.Locale.US, "[t=%6.1f] %s",
+                (android.os.SystemClock.elapsedRealtime() - sT0) / 1000.0, s);
         synchronized (sBuf) {
-            if (sBuf.size() < CAP) sBuf.add(s);
+            if (sBuf.size() < CAP) sBuf.add(line);
         }
     }
 
-    /** Clears the event log AND the persistent last-known map (for a fresh, uncontaminated read). */
+    /** Records a user-tapped ground-truth marker (the maneuver shown on the HUD right now). */
+    public static void mark(String label) {
+        record("TAP " + label);
+    }
+
+    /** Clears the event log + last-known maps and resets the timestamp clock (fresh recording). */
     public static void clear() {
         synchronized (sBuf) { sBuf.clear(); }
         sLastValue.clear();
         sLastBuf.clear();
+        sT0 = android.os.SystemClock.elapsedRealtime();
     }
 
     /** Last buffer (hex) seen per feature id — nav guidance icon/distance/road is likely a buffer. */

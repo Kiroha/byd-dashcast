@@ -152,4 +152,9 @@ public final class ProxyDaemonContract {
     /** No args → {@code void}.
      *  Clear the push-feedback event log + persistent last-known map (fresh, uncontaminated read). */
     public static final int TXN_CAN_LISTEN_CLEAR        = IBinder.FIRST_CALL_TRANSACTION + 24; // 25
+
+    /** {@code String label} → {@code void}.
+     *  Append a timestamped user ground-truth marker (the maneuver shown on the HUD) to the log,
+     *  so a driving capture can correlate the tapped arrow with the CAN events at that instant. */
+    public static final int TXN_CAN_LISTEN_MARK         = IBinder.FIRST_CALL_TRANSACTION + 25; // 26
 }
