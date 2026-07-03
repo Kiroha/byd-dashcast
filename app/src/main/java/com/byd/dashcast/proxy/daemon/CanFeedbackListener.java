@@ -60,19 +60,43 @@ public final class CanFeedbackListener {
     public static void clear() {
         synchronized (sBuf) { sBuf.clear(); }
         sLastValue.clear();
+        sLastBuf.clear();
     }
 
+    /** Last buffer (hex) seen per feature id — nav guidance icon/distance/road is likely a buffer. */
+    private static final java.util.Map<Integer, String> sLastBuf =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
-     * Records an int-feature push. Updates the persistent last-value map, and logs an event line
-     * ONLY when the value actually CHANGED (or is first seen) — this dedups noisy heartbeat features
-     * (e.g. 0x99000198=0 spams continuously) so genuine changes like the HUD mode selector
-     * (0x42E00008 / 0x42E0000C going 1→6 as the user cycles) stand out.
+     * Handles a push (int value + optional byte buffer). Logs ONLY on a CHANGE (dedups the noisy
+     * 0x99000198/0x12D heartbeats). The rich nav guidance (turn direction, distance, next road) is
+     * often carried in the byte BUFFER, not intValue (which is 0/1 for many features) — so log the
+     * buffer hex too when present + changed.
      */
-    private static void recordValue(int featureId, int value) {
-        Integer prev = sLastValue.put(featureId, value);
-        if (prev == null || prev.intValue() != value) {
-            record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, value));
+    private static void onEvent(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
+        int v = (value != null) ? value.intValue : Integer.MIN_VALUE;
+        byte[] buf = null;
+        try { buf = (value != null) ? value.bufferDataValue : null; } catch (Throwable ignore) {}
+        boolean intChanged;
+        { Integer prev = sLastValue.put(featureId, v); intChanged = (prev == null || prev.intValue() != v); }
+        if (buf != null && buf.length > 0) {
+            String hex = toHex(buf);
+            String pb = sLastBuf.put(featureId, hex);
+            if (!hex.equals(pb) || intChanged) {
+                record(String.format(java.util.Locale.US, "evt 0x%08X=%d buf=%s", featureId, v, hex));
+                return;
+            }
+            return;
         }
+        if (intChanged) record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, v));
+    }
+
+    private static String toHex(byte[] b) {
+        int n = Math.min(b.length, 48);
+        StringBuilder sb = new StringBuilder(n * 2);
+        for (int i = 0; i < n; i++) sb.append(String.format(java.util.Locale.US, "%02x", b[i] & 0xff));
+        if (b.length > n) sb.append("..").append(b.length);
+        return sb.toString();
     }
 
     /**
@@ -102,7 +126,7 @@ public final class CanFeedbackListener {
             record("feat " + feature + "=" + value);
         }
         public void onDataEventChanged(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
-            recordValue(featureId, (value != null) ? value.intValue : Integer.MIN_VALUE);
+            onEvent(featureId, value);
         }
     }
 
@@ -115,7 +139,7 @@ public final class CanFeedbackListener {
     private static final class InstrumentSink
             extends android.hardware.bydauto.instrument.AbsBYDAutoInstrumentListener {
         public void onDataEventChanged(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
-            recordValue(featureId, (value != null) ? value.intValue : Integer.MIN_VALUE);
+            onEvent(featureId, value);
         }
     }
 
