@@ -138,18 +138,20 @@ public final class CanFeedbackListener {
                             sink = new SettingSink();
                             sinkKind = "SettingSink(EventSink load failed: " + le.getClass().getSimpleName() + ")";
                         }
-                        // Prefer registerListener(listener, int[]): many BYD builds deliver NO
-                        // callbacks unless you subscribe to specific feature IDs (1.6.81 registered
-                        // via the no-arg variant but captured nothing). Subscribe to the HUD/nav
-                        // feedback ids; fall back to the all-features variant if that overload is absent.
+                        // Prefer registerListener(listener) = ALL setting features: the filtered
+                        // variant (our 5 HUD/nav ids) captured our own SET_HUD_MODE writes + the switch
+                        // toggle, but NOTHING when a tester changes the HUD display mode in the car's
+                        // HUD settings — because that user setting almost certainly uses a DIFFERENT
+                        // feature id we weren't subscribed to. Subscribe to everything (EventSink's
+                        // onDataEventChanged gives featureId+value) so we discover which id fires.
                         String how;
                         try {
+                            cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
+                            how = "all features";
+                        } catch (NoSuchMethodException nsme) {
                             cls.getMethod("registerListener", AbsBYDAutoSettingListener.class, int[].class)
                                .invoke(dev, sink, SUBSCRIBE_IDS);
                             how = "filtered ids";
-                        } catch (NoSuchMethodException nsme) {
-                            cls.getMethod("registerListener", AbsBYDAutoSettingListener.class).invoke(dev, sink);
-                            how = "all features";
                         }
                         sListener = sink;
                         sRegistered = true;
