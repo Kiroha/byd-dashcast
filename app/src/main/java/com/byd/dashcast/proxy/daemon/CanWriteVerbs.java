@@ -86,12 +86,38 @@ public final class CanWriteVerbs {
     // ─── Windshield HUD (W-HUD) control — BYDAutoSettingDevice ──────────────
     // The HUD has no dedicated nav-content feature: it projects the instrument
     // nav guidance, gated by the switch (on/off) + mode (what it shows).
+    //
+    // The feature IDs and value semantics below are PROVEN ground truth: they were
+    // captured from the OEM `com.byd.carsettings` app's own HalSetter logcat
+    // (sendEcu2BYDAuto FeatureId … intValue …) while a tester operated each HUD
+    // control (see log.docx, ECU Id=0x4C1 SubId=0xE). Do not "correct" them.
 
-    /** Windshield HUD on/off. SET_HUD_SWITCH_SET — 1 = on. */
+    /** Windshield HUD on/off. SET_HUD_SWITCH_SET.
+     *  PROVEN values: {@link #HUD_SWITCH_ON} (1) = on, {@link #HUD_SWITCH_OFF} (2) = off.
+     *  (NOT 0/1 — the OEM writes 1 to turn on and 2 to turn off.) */
     public static final int SET_HUD_SWITCH = 1276174371; // 0x4C10E023
 
     /** Windshield HUD display mode (what it shows: speed / speed+nav / …). SET_HUD_MODE_SET. */
     public static final int SET_HUD_MODE = 1276174373; // 0x4C10E025
+
+    /** HUD ADAS / option-display overlay on/off (OEM "HudOptionDisplay"). 1 = on. Proven. */
+    public static final int SET_HUD_OPTION_DISPLAY = 1276174384; // 0x4C10E030
+
+    /** HUD image brightness (OEM "HudBrightness"). Integer level (observed up to 11). Proven. */
+    public static final int SET_HUD_BRIGHTNESS = 1276174360; // 0x4C10E018
+
+    /** HUD image vertical position / height (OEM "HudHeight"). Integer level. Proven. */
+    public static final int SET_HUD_HEIGHT = 1276174352; // 0x4C10E010
+
+    /** HUD image angle / rotation (OEM "HudRotate"). Written as a DOUBLE, degrees
+     *  (each detent ≈ 0.4°). Use {@link #settingSetDouble}. Proven. */
+    public static final int SET_HUD_ANGLE = 1276174380; // 0x4C10E02C
+
+    /** Value for {@link #SET_HUD_SWITCH}: turn the windshield HUD ON. */
+    public static final int HUD_SWITCH_ON  = 1;
+
+    /** Value for {@link #SET_HUD_SWITCH}: turn the windshield HUD OFF. */
+    public static final int HUD_SWITCH_OFF = 2;
 
     /** HUD request command. SETTING_HUD_REQUEST_COMMAND_SET. */
     public static final int SETTING_HUD_REQUEST_COMMAND = 850436164; // 0x32B0A044
@@ -117,6 +143,7 @@ public final class CanWriteVerbs {
     private static volatile Class<?> sEvClass;         // BYDAutoEventValue Class
     private static volatile Field    sIntField;        // BYDAutoEventValue.intValue
     private static volatile Field    sBytesField;      // BYDAutoEventValue.bufferDataValue
+    private static volatile Field    sDoubleField;     // BYDAutoEventValue.doubleValue (or floatValue)
     private static volatile Method   sSetMethod;       // InstrumentDevice.set(int[], BYDAutoEventValue)
     private static volatile Method   sSettingSetMethod;// SettingDevice.set(int[], BYDAutoEventValue)
     private static volatile Method   sGetMethod;        // InstrumentDevice.get(int[])
@@ -179,6 +206,34 @@ public final class CanWriteVerbs {
         Class<?> evClass = ensureEvClass();
         Object ev = evClass.newInstance();
         ensureIntField().set(ev, value);
+        return (int) ensureSettingSetMethod().invoke(sSettingDevice, new int[]{featureId}, ev);
+    }
+
+    /**
+     * Write a DOUBLE value to a CAN <em>setting</em> feature via
+     * {@code BYDAutoSettingDevice.set(int[], BYDAutoEventValue)} with the {@code doubleValue}
+     * field set. Required for the HUD angle ({@link #SET_HUD_ANGLE}), which the OEM writes as a
+     * double (proven from the OEM HalSetter logcat: {@code doubleValue is 0.0}).
+     *
+     * <p>The value field name is resolved reflectively ({@code doubleValue}, else {@code floatValue})
+     * against the runtime {@code BYDAutoEventValue} class — the compile stub need not carry it.
+     *
+     * @param wrappedCtx permission-bypass context (must grant all permissions)
+     * @param featureId  raw BYD CAN setting feature ID
+     * @param value      double value to write
+     * @return SDK result code: 0 = success
+     * @throws Throwable on reflection failure or if the SDK rejects the call
+     */
+    public static int settingSetDouble(Context wrappedCtx, int featureId, double value) throws Throwable {
+        ensureSettingDevice(wrappedCtx);
+        Class<?> evClass = ensureEvClass();
+        Object ev = evClass.newInstance();
+        Field f = ensureDoubleField();
+        if (f.getType() == float.class) {
+            f.setFloat(ev, (float) value);
+        } else {
+            f.setDouble(ev, value);
+        }
         return (int) ensureSettingSetMethod().invoke(sSettingDevice, new int[]{featureId}, ev);
     }
 
@@ -276,6 +331,25 @@ public final class CanWriteVerbs {
             if (f != null) return f;
             f = ensureEvClass().getField("bufferDataValue");
             sBytesField = f;
+            return f;
+        }
+    }
+
+    /** Resolves the {@code BYDAutoEventValue} floating-point value field: {@code doubleValue}
+     *  (preferred, matches the OEM HalSetter log) or {@code floatValue} as a fallback. */
+    private static Field ensureDoubleField() throws Throwable {
+        Field f = sDoubleField;
+        if (f != null) return f;
+        synchronized (CanWriteVerbs.class) {
+            f = sDoubleField;
+            if (f != null) return f;
+            Class<?> ev = ensureEvClass();
+            try {
+                f = ev.getField("doubleValue");
+            } catch (NoSuchFieldException nsfe) {
+                f = ev.getField("floatValue");
+            }
+            sDoubleField = f;
             return f;
         }
     }

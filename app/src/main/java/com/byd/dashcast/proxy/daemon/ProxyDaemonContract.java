@@ -157,4 +157,18 @@ public final class ProxyDaemonContract {
      *  Append a timestamped user ground-truth marker (the maneuver shown on the HUD) to the log,
      *  so a driving capture can correlate the tapped arrow with the CAN events at that instant. */
     public static final int TXN_CAN_LISTEN_MARK         = IBinder.FIRST_CALL_TRANSACTION + 25; // 26
+
+    /** {@code int featureId, double value} → {@code int resultCode}.
+     *  Write a DOUBLE value to a CAN <em>setting</em> feature via
+     *  {@code BYDAutoSettingDevice.set(int[], BYDAutoEventValue)} with the {@code doubleValue}
+     *  field set. Required for the HUD ANGLE (0x4C10E02C), which the OEM CarSettings app writes
+     *  as a double (proven from the OEM HalSetter logcat). Returns the SDK result code. */
+    public static final int TXN_CAN_SETTING_DOUBLE      = IBinder.FIRST_CALL_TRANSACTION + 26; // 27
+
+    /** {@code String path, long offset, int maxLen} → {@code byte[] chunk}.
+     *  Read up to {@code maxLen} bytes of {@code path} at {@code offset} from inside the daemon
+     *  (uid 2000 = shell), which can read {@code /data/local/tmp} files that SELinux hides from
+     *  the app uid. Returns an empty array at EOF. Lets the app pull an arbitrarily large raw
+     *  logcat capture in bounded chunks without overflowing a single Binder parcel. */
+    public static final int TXN_READ_FILE_CHUNK         = IBinder.FIRST_CALL_TRANSACTION + 27; // 28
 }

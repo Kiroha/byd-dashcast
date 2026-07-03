@@ -755,8 +755,6 @@
     <string name="hud_visual_yes">Sì</string>
     <string name="hud_visual_no">No</string>
     <string name="hud_visual_unsure">Non sono sicuro</string>
-    <string name="hud_visual_no_hint">Cosa hai visto invece? (facoltativo)</string>
-    <string name="hud_visual_send">Invia</string>
     <string name="aaos_cluster_unsupported_title">Proiezione sul quadro bloccata</string>
     <string name="aaos_cluster_unsupported_msg">Il tuo veicolo usa il sistema Android Automotive di BYD (DX_BYD_AUTO). Su questa unità il quadro strumenti è bloccato dal produttore: BYD lo riserva alla navigazione integrata e blocca la proiezione delle app. È una restrizione del veicolo (non un limite di DashCast) — non esiste alcuna soluzione.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Proiezione sul quadro non disponibile</string>

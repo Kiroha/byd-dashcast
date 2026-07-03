@@ -63,8 +63,9 @@ public final class ProxyDaemonMain {
      *  v14 (v1.6.74-beta): adds TXN_AAOS_HAL_PROBE (automotive display proxy HAL reachability test).
      *  v15 (v1.6.89-beta): adds TXN_CAN_LISTEN_CLEAR (reset push-feedback log + last-known map).
      *  v16 (v1.6.97-beta): adds TXN_CAN_LISTEN_MARK (timestamped user ground-truth marker) + timestamps.
+     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "16";
+    private static final String PROTOCOL_VERSION = "17";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -899,6 +900,33 @@ public final class ProxyDaemonMain {
                     }
                     return true;
                 }
+                case TXN_CAN_SETTING_DOUBLE: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int featureId = data.readInt();
+                    double value  = data.readDouble();
+                    try {
+                        Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        int rc = CanWriteVerbs.settingSetDouble(ctx, featureId, value);
+                        if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_READ_FILE_CHUNK: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String path  = data.readString();
+                    long   off   = data.readLong();
+                    int    maxLen = data.readInt();
+                    try {
+                        byte[] chunk = readFileChunk(path, off, maxLen);
+                        if (reply != null) { reply.writeNoException(); reply.writeByteArray(chunk); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
                 case INTERFACE_TRANSACTION: {
                     if (reply != null) reply.writeString(DESCRIPTOR);
                     return true;
@@ -907,6 +935,29 @@ public final class ProxyDaemonMain {
                     return super.onTransact(code, data, reply, flags);
             }
         }
+    }
+
+    /**
+     * Read up to {@code maxLen} bytes of {@code path} starting at {@code offset}. Runs in the
+     * daemon (uid 2000 = shell), which can read {@code /data/local/tmp} files that SELinux hides
+     * from the app uid. Returns an empty array at/after EOF so the caller's pull loop terminates.
+     * {@code maxLen} is clamped to a Binder-safe ceiling.
+     */
+    private static byte[] readFileChunk(String path, long offset, int maxLen) throws java.io.IOException {
+        if (path == null) throw new java.io.FileNotFoundException("null path");
+        final int CEIL = 512 * 1024; // keep well under the ~1 MB Binder transaction limit
+        if (maxLen <= 0) return new byte[0];
+        if (maxLen > CEIL) maxLen = CEIL;
+        File f = new File(path);
+        long size = f.length();
+        if (offset < 0 || offset >= size) return new byte[0];
+        int toRead = (int) Math.min((long) maxLen, size - offset);
+        byte[] buf = new byte[toRead];
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "r")) {
+            raf.seek(offset);
+            raf.readFully(buf);
+        }
+        return buf;
     }
 
     /** Unwrap InvocationTargetException and ensure we always hand a real Exception to
