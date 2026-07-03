@@ -41,6 +41,7 @@ public final class CanFeedbackListener {
     };
     private static final List<String> sBuf = Collections.synchronizedList(new ArrayList<String>());
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
+    private static volatile Object  sInstrListener;// our AbsBYDAutoInstrumentListener subclass (strong ref)
     private static volatile boolean sRegistered;
     private static volatile android.os.HandlerThread sThread;   // Looper thread for register + callbacks
     /** Last value pushed per feature id — persistent (survives drain). onDataEventChanged fires on
@@ -106,6 +107,19 @@ public final class CanFeedbackListener {
     }
 
     /**
+     * Same, but for the INSTRUMENT device — nav GUIDANCE (turn arrows, distances, next-road) is
+     * pushed here, not on the setting device. Registered so a capture WHILE DRIVING a route with
+     * turns reveals which instrument feature ids fire for each maneuver → the protocol to feed nav
+     * to the HUD ourselves. onDataEventChanged declared without @Override (runtime override).
+     */
+    private static final class InstrumentSink
+            extends android.hardware.bydauto.instrument.AbsBYDAutoInstrumentListener {
+        public void onDataEventChanged(int featureId, android.hardware.bydauto.BYDAutoEventValue value) {
+            recordValue(featureId, (value != null) ? value.intValue : Integer.MIN_VALUE);
+        }
+    }
+
+    /**
      * Registers the setting listener once (idempotent). Uses reflection for getInstance /
      * registerListener (matching {@link CanWriteVerbs}) so we don't depend on the stub's exact
      * method signatures; only the listener subclass needs the compile stub.
@@ -162,7 +176,8 @@ public final class CanFeedbackListener {
                         }
                         sListener = sink;
                         sRegistered = true;
-                        result[0] = "registered (" + how + ", " + sinkKind + ", looper thread)";
+                        String instr = registerInstrument(wrappedCtx);
+                        result[0] = "registered (" + how + ", " + sinkKind + ", looper thread) + instrument[" + instr + "]";
                     } catch (Throwable t) {
                         result[0] = "ERR " + describe(t);
                     } finally {
@@ -174,6 +189,36 @@ public final class CanFeedbackListener {
             return result[0];
         } catch (Throwable t) {
             return "ERR(outer) " + describe(t);
+        }
+    }
+
+    /**
+     * Registers the INSTRUMENT-device listener (all features) so nav guidance events are captured
+     * too. Runs on the shared Looper thread's caller (already on it). Fully guarded — a failure here
+     * must not disable the setting listener. Returns a short status string.
+     */
+    private static String registerInstrument(Context wrappedCtx) {
+        if (sInstrListener != null) return "already";
+        try {
+            Class<?> icls = Class.forName("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice");
+            Object idev = icls.getMethod("getInstance", Context.class).invoke(null, wrappedCtx);
+            if (idev == null) return "getInstance null";
+            InstrumentSink isink;
+            try {
+                isink = new InstrumentSink();
+            } catch (Throwable le) {
+                return "sink load failed: " + le.getClass().getSimpleName();
+            }
+            Class<?> lcls = android.hardware.bydauto.instrument.AbsBYDAutoInstrumentListener.class;
+            try {
+                icls.getMethod("registerListener", lcls).invoke(idev, isink);
+            } catch (NoSuchMethodException nsme) {
+                icls.getMethod("registerListener", lcls, int[].class).invoke(idev, isink, SUBSCRIBE_IDS);
+            }
+            sInstrListener = isink;
+            return "all features";
+        } catch (Throwable t) {
+            return "ERR " + describe(t);
         }
     }
 
