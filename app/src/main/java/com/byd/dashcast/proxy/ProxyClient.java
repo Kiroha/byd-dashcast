@@ -905,6 +905,11 @@ public final class ProxyClient {
         callWithRetry("canListenClear", () -> { ProxyCanVerbs.canListenClear(); return null; });
     }
 
+    /** Append a timestamped user ground-truth marker (e.g. the HUD maneuver just seen) to the log. */
+    public static void canListenMark(String label) throws ProxyException {
+        callWithRetry("canListenMark", () -> { ProxyCanVerbs.canListenMark(label); return null; });
+    }
+
     /**
      * Force-kill the running daemon (if any) so the next {@link #connect}
      * bootstraps a fresh one. Useful after installing an APK that ships new

@@ -39,6 +39,9 @@ class HudDiagActivity : AppCompatActivity() {
     private lateinit var bar: ProgressBar
     private lateinit var hudLabel: TextView
     private var hudMode = 0
+    private var recording = false
+    private lateinit var recBtn: Button
+    private lateinit var recGrid: LinearLayout
     private val ts = SimpleDateFormat("HH:mm:ss", Locale.US)
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
 
@@ -97,6 +100,32 @@ class HudDiagActivity : AppCompatActivity() {
             isAllCaps = false
             setOnClickListener { runHudStateRead() }
         }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(4) })
+
+        // ── GUIDANCE RECORDER — correlate the HUD arrow with CAN events (drive + tap) ──
+        root.addView(sectionHeader("▶ Guidance recorder (drive + tap the arrow)"))
+        root.addView(hint("Tap START, then start the car nav on the HUD. A PASSENGER taps the button " +
+                "matching the arrow shown on the HUD each time it changes. Tap STOP when done → uploads a zip. " +
+                "Drive safely — passenger only."))
+        recBtn = Button(this).apply {
+            text = "▶  Guidance recorder — START"
+            isAllCaps = false
+            setOnClickListener { toggleRecording() }
+        }
+        root.addView(recBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+        recGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        listOf(
+            listOf("straight" to "▲ Straight", "left" to "◀ Left", "right" to "Right ▶"),
+            listOf("slight-left" to "↖ Slight L", "slight-right" to "↗ Slight R"),
+            listOf("sharp-left" to "⤶ Sharp L", "sharp-right" to "⤷ Sharp R"),
+            listOf("roundabout" to "◎ Roundabout", "uturn" to "↩ U-turn"),
+            listOf("exit-left" to "⇤ Exit L", "exit-right" to "Exit R ⇥"),
+            listOf("arrive" to "⚑ Arrive", "changed-other" to "⟳ Changed (?)")
+        ).forEach { r ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            r.forEach { (code, label) -> row.addView(miniBtn(label) { mark(code) }, eq()) }
+            recGrid.addView(row)
+        }
+        root.addView(recGrid)
 
         // ── ADVANCED — manual HUD mode explorer (optional) ──────────────────
         root.addView(sectionHeader("Advanced — HUD mode explorer (optional)"))
@@ -264,6 +293,53 @@ class HudDiagActivity : AppCompatActivity() {
             val zip = HudDiagnosticBundle.zipDir(work)
             log("HUD-state zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 HUD nav-mode read — ${Build.PRODUCT}")
+        }
+    }
+
+    // ── Guidance recorder — timestamped CAN events + user ground-truth taps ──
+    private fun toggleRecording() = if (!recording) startGuidanceRecording() else stopGuidanceRecording()
+
+    private fun startGuidanceRecording() {
+        recording = true
+        recBtn.text = "■  STOP recording → ZIP"
+        recGrid.visibility = View.VISIBLE
+        log("──── guidance recording STARTED ──── start the car nav on the HUD; a passenger taps the arrow on each change.")
+        bg {
+            try { com.byd.dashcast.proxy.ProxyClient.canListenStart() } catch (_: Throwable) {}
+            try { com.byd.dashcast.proxy.ProxyClient.canListenClear() } catch (_: Throwable) {}  // fresh + reset timestamp clock
+        }
+    }
+
+    /** A passenger tapped the maneuver shown on the HUD → timestamped ground-truth marker in the log. */
+    private fun mark(code: String) {
+        if (!recording) { log("(tap START first)"); return }
+        bg { try { com.byd.dashcast.proxy.ProxyClient.canListenMark(code) } catch (_: Throwable) {} }
+        log("● $code")
+    }
+
+    private fun stopGuidanceRecording() {
+        recording = false
+        recBtn.text = "▶  Guidance recorder — START"
+        recGrid.visibility = View.GONE
+        log("──── recording STOPPED — building zip ────")
+        bg {
+            val drained = try { com.byd.dashcast.proxy.ProxyClient.canListenDrain() ?: "" }
+                          catch (t: Throwable) { "drain ERR: ${t.message}" }
+            val work = File(cacheDir, "hud_guidance_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()))
+                .apply { mkdirs() }
+            val header = "=== HUD GUIDANCE RECORDING (timestamped CAN events + user TAP markers) ===\n" +
+                    "${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — " +
+                    "${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n" +
+                    "Format: [t=<s>] evt 0x<featureId>=<int> [buf=<hex>]  |  [t=<s>] TAP <maneuver>\n\n"
+            File(work, "01_guidance.txt").writeText(header + drained)
+            val props = try {
+                com.byd.dashcast.proxy.ProxyClient.runShell(
+                    "getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'") ?: ""
+            } catch (_: Throwable) { "" }
+            File(work, "02_props.txt").writeText(props)
+            val zip = HudDiagnosticBundle.zipDir(work)
+            log("guidance zip: ${zip.name} (${zip.length() / 1024} KB)")
+            uploadZip(zip, "DL3 HUD guidance recording — ${Build.PRODUCT}")
         }
     }
 
