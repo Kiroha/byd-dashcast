@@ -61,10 +61,17 @@ public final class CanFeedbackListener {
         sLastValue.clear();
     }
 
-    /** Records an int-feature push: updates the persistent last-value map + the event log. */
+    /**
+     * Records an int-feature push. Updates the persistent last-value map, and logs an event line
+     * ONLY when the value actually CHANGED (or is first seen) — this dedups noisy heartbeat features
+     * (e.g. 0x99000198=0 spams continuously) so genuine changes like the HUD mode selector
+     * (0x42E00008 / 0x42E0000C going 1→6 as the user cycles) stand out.
+     */
     private static void recordValue(int featureId, int value) {
-        sLastValue.put(featureId, value);
-        record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, value));
+        Integer prev = sLastValue.put(featureId, value);
+        if (prev == null || prev.intValue() != value) {
+            record(String.format(java.util.Locale.US, "evt 0x%08X=%d", featureId, value));
+        }
     }
 
     /**
