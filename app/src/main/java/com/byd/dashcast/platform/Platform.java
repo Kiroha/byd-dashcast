@@ -444,4 +444,18 @@ public final class Platform {
     public static boolean isClusterSingleOs() {
         return "1".equals(readProp("ro.build.system.fission_single_os"));
     }
+
+    /**
+     * Raw HUD/MCU firmware id — {@code apps.setting.product.inswver}, e.g.
+     * {@code "6125f_1for2_USER_SIGN_SX326_202602032334_Q2700"}. Empty if unreadable.
+     *
+     * <p>On DL3 the embedded {@code SX<NNN>} revision code + build date discriminate the
+     * instrument-MCU firmware, which (per the on-car RE) decides whether the windshield HUD
+     * can draw turn-by-turn nav arrows at all (older firmware cannot; a newer one can). Read-only
+     * system property, readable without any permission — used by the HUD bench to report the
+     * firmware alongside the tester's arrow observation so the capability threshold can be pinned.
+     */
+    public static String hudFirmwareVersion() {
+        return readProp("apps.setting.product.inswver");
+    }
 }
