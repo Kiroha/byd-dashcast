@@ -43,3 +43,9 @@ char_map.json
 *.py.save
 app/build.gradle.bak
 scripts_work/
+
+# ── Tooling artefacts (regenerated locally, not versioned) ─
+# graphify knowledge graph + per-file cache (~20 MB, regenerable)
+graphify-out/
+# local Claude Code session config
+.claude/
