@@ -209,7 +209,15 @@ public class DiagActivity extends AppCompatActivity {
         bindClusterPocPanel();
         bindClusterDl5Panel();
         bindExportApkPanel();
-        bindVoicePanel();
+        // A voice-panel failure (e.g. a storage SecurityException on some DL5.1 / Android 13 ROMs:
+        // "callingPackage does not match UID") must NEVER crash the whole diagnostic screen — that
+        // would also take down everything wired after it in onCreate, including the Bug Report button
+        // (reported 2026-07-04). Degrade gracefully: skip the voice panel, keep the rest.
+        try {
+            bindVoicePanel();
+        } catch (Throwable t) {
+            com.byd.dashcast.util.AppLogger.e("DiagActivity", "bindVoicePanel failed — voice panel skipped", t);
+        }
         // v1.2.46 — prepare*TestRows() are now lazy : each catalog's ~10–42 row
         // inflations are deferred to the first showPanelForTab(thatTab) call,
         // shaving ~400–800 ms off the DiagActivity onCreate path on DL3/DL5.
