@@ -5,6 +5,9 @@ import android.app.PendingIntent;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.app.InstallResultReceiver;
 import com.byd.dashcast.ui.settings.SettingsActivity;
+import com.byd.dashcast.proxy.ShellGateway;
+import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.infrastructure.AdbLocalClient;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInstaller;
@@ -29,8 +32,13 @@ import java.net.URL;
  * On every fresh app launch, queries the GitHub releases API for the latest release.
  * If a newer version is found, downloads the APK and installs it via PackageInstaller.
  *
- * With platform.keystore (INSTALL_PACKAGES permission), the install is silent.
- * Without it, InstallResultReceiver handles the STATUS_PENDING_USER_ACTION fallback.
+ * Install strategy (see {@link #installApk}):
+ *   1. Preferred: fully silent + auto-relaunch via the proxy daemon (uid 2000 =
+ *      shell) — {@code pm install -r <apk> && am start <launcher>}. No user tap.
+ *   2. Fallback: PackageInstaller. Silent if the app effectively holds
+ *      INSTALL_PACKAGES (platform.keystore); otherwise InstallResultReceiver shows
+ *      the system install dialog (STATUS_PENDING_USER_ACTION). Used when the daemon
+ *      is unreachable (e.g. DL5.1 signing wall) so no car ever loses the update path.
  */
 public class UpdateChecker {
 
@@ -75,12 +83,12 @@ public class UpdateChecker {
         final Handler ui = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             try {
-                File apkFile = new File(context.getCacheDir(), APK_CACHE_NAME);
+                File apkFile = resolveApkFile(context);
                 downloadToFile(apkUrl, apkFile, listener, ui);
                 AppLogger.i(TAG, "APK downloaded: " + apkFile.length() + " bytes → " + apkFile);
                 if (listener != null) ui.post(listener::onInstalling);
-                installApk(context, apkFile);
-                // Do NOT delete apkFile here — PackageInstaller reads it asynchronously.
+                installApk(context, apkFile, listener, ui);
+                // Do NOT delete apkFile here — PackageInstaller / pm read it asynchronously.
                 // The cached file will be overwritten on the next OTA download.
             } catch (Exception e) {
                 AppLogger.e(TAG, "OTA download failed", e);
@@ -328,7 +336,125 @@ public class UpdateChecker {
 
     // ── Install ───────────────────────────────────────────────────────────────
 
-    private static void installApk(Context context, File apkFile) throws Exception {
+    /**
+     * Where to download the APK. Prefers the external files dir so the proxy
+     * daemon (uid 2000 = shell) can read it for a silent {@code pm install};
+     * falls back to the app-private cache when external storage is unavailable
+     * (e.g. the DL5.1/A13 getExternalFilesDir SecurityException). The
+     * PackageInstaller path can read either location.
+     */
+    private static File resolveApkFile(Context context) {
+        try {
+            File ext = context.getExternalFilesDir(null);
+            if (ext != null) {
+                //noinspection ResultOfMethodCallIgnored
+                ext.mkdirs();
+                return new File(ext, APK_CACHE_NAME);
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "getExternalFilesDir unavailable, using cache: " + t);
+        }
+        return new File(context.getCacheDir(), APK_CACHE_NAME);
+    }
+
+    /**
+     * Installs the freshly-downloaded APK.
+     *
+     * <p>Preferred path — <b>fully silent + auto-relaunch via the proxy daemon</b>:
+     * the daemon runs as uid 2000 (shell), so {@code pm install -r} needs no user
+     * confirmation, exactly like {@code adb install}. The command chains an
+     * {@code am start} so the app is relaunched after its running process is
+     * replaced. Because the daemon executes the command in its <em>own</em>
+     * process, it survives this app being killed mid-install and completes the
+     * relaunch on its own.
+     *
+     * <p>Fallback path — {@link PackageInstaller}: used when the daemon is not
+     * reachable (e.g. the DL5.1 signing wall leaves it down) or when {@code pm}
+     * reports a failure. This is the previous behaviour, so no car ever loses the
+     * ability to update — it just keeps the one manual "Install" tap there.
+     */
+    private static void installApk(Context context, File apkFile,
+                                   ProgressListener listener, Handler ui) throws Exception {
+        if (tryDaemonSilentInstall(context, apkFile, listener, ui)) {
+            return; // dispatched to the daemon; on success the app is replaced + relaunched
+        }
+        installViaPackageInstaller(context, apkFile);
+    }
+
+    /**
+     * Attempts the silent daemon install. Returns {@code true} if the command was
+     * dispatched to the daemon (success replaces + relaunches the app; any failure
+     * falls back to {@link PackageInstaller} from the callback), {@code false} if
+     * the daemon path is unavailable and the caller must install via
+     * {@link PackageInstaller} directly.
+     */
+    private static boolean tryDaemonSilentInstall(final Context context, final File apkFile,
+                                                  final ProgressListener listener, final Handler ui) {
+        if (!ProxyClient.isConnected()) {
+            AppLogger.i(TAG, "daemon not connected — PackageInstaller path");
+            return false;
+        }
+        // uid 2000 (shell) must be able to READ the APK. The app-private cache dir
+        // is 0700 (unreadable by shell); only the external files dir is shell-
+        // readable. If the download landed in the cache, skip the daemon path.
+        String cachePrefix = context.getCacheDir().getAbsolutePath();
+        if (apkFile.getAbsolutePath().startsWith(cachePrefix)) {
+            AppLogger.i(TAG, "APK in app-private cache (shell can't read) — PackageInstaller path");
+            return false;
+        }
+        final String cmd = "pm install -r '" + apkFile.getAbsolutePath() + "'"
+                + " && sleep 1 && " + buildRelaunchCommand(context);
+        AppLogger.i(TAG, "daemon silent install + relaunch: " + cmd);
+        ShellGateway.execShellWithResult(context, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                // A successful reinstall kills THIS process before this callback can
+                // run, so reaching here without a "Success" line means pm failed.
+                // Fall back to the interactive installer in that case.
+                if (out != null && out.contains("Success")) {
+                    AppLogger.i(TAG, "daemon install reported Success");
+                    return;
+                }
+                AppLogger.w(TAG, "daemon install did not report Success, falling back: " + out);
+                fallbackInstall(context, apkFile, listener, ui);
+            }
+            @Override public void onError(String err) {
+                AppLogger.w(TAG, "daemon install error, falling back: " + err);
+                fallbackInstall(context, apkFile, listener, ui);
+            }
+        });
+        return true;
+    }
+
+    /** Builds the shell command that relaunches this app after the install. */
+    private static String buildRelaunchCommand(Context context) {
+        try {
+            Intent launch = context.getPackageManager()
+                    .getLaunchIntentForPackage(context.getPackageName());
+            if (launch != null && launch.getComponent() != null) {
+                return "am start -n " + launch.getComponent().flattenToShortString();
+            }
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "launch-intent resolve failed, using monkey: " + t);
+        }
+        return "monkey -p " + context.getPackageName()
+                + " -c android.intent.category.LAUNCHER 1";
+    }
+
+    /** Runs the PackageInstaller path from a background callback, reporting errors. */
+    private static void fallbackInstall(Context context, File apkFile,
+                                        ProgressListener listener, Handler ui) {
+        try {
+            installViaPackageInstaller(context, apkFile);
+        } catch (Exception e) {
+            AppLogger.e(TAG, "PackageInstaller fallback failed", e);
+            if (listener != null && ui != null) {
+                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                ui.post(() -> listener.onError(msg));
+            }
+        }
+    }
+
+    private static void installViaPackageInstaller(Context context, File apkFile) throws Exception {
         PackageInstaller installer = context.getPackageManager().getPackageInstaller();
         PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
                 PackageInstaller.SessionParams.MODE_FULL_INSTALL);
