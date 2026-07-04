@@ -226,6 +226,9 @@ public final class BugReportCapture {
     /** Appends the metadata header (top) and the in-memory journal (bottom), then reports. */
     private static void finish(Context app, File outFile, String metaHeader,
                                Callback cb, String shellError) {
+        // Build the body first. This must NEVER sink the report — on any failure fall back
+        // to a journal-only body so the tester still gets something to send.
+        String content;
         try {
             String shellBody = outFile.exists() ? readFile(outFile) : "";
             StringBuilder sb = new StringBuilder(shellBody.length() + 8192);
@@ -236,15 +239,39 @@ public final class BugReportCapture {
                 sb.append("[shell dump unavailable: ").append(shellError).append("]\n");
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody);
             sb.append("\n════════ DASHCAST JOURNAL ════════\n").append(AppLogger.get());
+            content = sb.toString();
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "finish() body build failed — journal-only", t);
+            content = (metaHeader != null ? metaHeader : "")
+                    + "\n\nDevice: " + deviceLine()
+                    + "\nVersion: " + versionLine()
+                    + "\n[report body build failed: " + t + "]\n"
+                    + "\n════════ DASHCAST JOURNAL ════════\n" + AppLogger.get();
+        }
+        final String body = content;
 
-            try (FileWriter fw = new FileWriter(outFile)) {
-                fw.write(sb.toString());
-            }
+        // Primary target is EXTERNAL (so the uid-2000 shell can co-write the dump into it).
+        // But when the shell dump never ran (daemon / ADB-TCP down) the external dir is often
+        // ALSO unwritable on the same broken DL5.1 ROMs (getExternalFilesDir threw), so writing
+        // there fails and the report is lost — exactly what the tester reported on 2026-07-04.
+        // Fall back to INTERNAL storage, which the app can always write and which the
+        // FileProvider (<files-path>) already shares, so an offline report is ALWAYS produced.
+        try {
+            try (FileWriter fw = new FileWriter(outFile)) { fw.write(body); }
             post(app, () -> cb.onReady(outFile));
-        } catch (IOException e) {
-            AppLogger.e(TAG, "finish() write failed", e);
-            post(app, () -> cb.onError(e.getMessage(),
-                    outFile.exists() ? outFile : null));
+            return;
+        } catch (Throwable extErr) {
+            AppLogger.w(TAG, "external write failed — falling back to internal storage", extErr);
+        }
+        try {
+            File internal = new File(app.getFilesDir(), outFile.getName());
+            try (FileWriter fw = new FileWriter(internal)) { fw.write(body); }
+            AppLogger.i(TAG, "offline bug report written to internal storage: "
+                    + internal.getAbsolutePath());
+            post(app, () -> cb.onReady(internal));
+        } catch (Throwable intErr) {
+            AppLogger.e(TAG, "internal fallback write failed too", intErr);
+            post(app, () -> cb.onError(String.valueOf(intErr), null));
         }
     }
 

@@ -172,6 +172,11 @@ public final class ProxyClient {
 
     private static final Object LOCK = new Object();
 
+    /** Re-probe interval for a transport classified as permanently unreachable (v1.6.102). */
+    private static final long XPORT_RECHECK_MS = 60_000L;
+    /** Last time the dead-transport circuit-breaker allowed a real bootstrap attempt. */
+    private static volatile long sLastDeadXportAttemptMs = 0L;
+
     /**
      * The live binder reference, or {@code null} when the daemon is unreachable.
      *
@@ -343,6 +348,20 @@ public final class ProxyClient {
             if (isConnected()) {
                 if (sDaemonUid < 0) handshake();
                 return true;
+            }
+            // v1.6.102 — circuit-breaker for a permanently-dead self-ADB transport
+            // (e.g. D50F_LC: ADB-over-TCP off / app unprivileged). The keeper (10 s) and
+            // watchdog (30 s) both call connect(); without this each would pay a full
+            // blocking bootstrap every cycle, forever. When AdbLocalClient has classified
+            // the transport as unreachable, bail fast without bootstrapping — but still
+            // allow ONE real attempt every XPORT_RECHECK_MS so it self-heals if ADB-TCP
+            // is enabled later without restarting the app.
+            if (AdbLocalClient.isAdbTransportUnreachable()) {
+                long now = SystemClock.elapsedRealtime();
+                if (now - sLastDeadXportAttemptMs < XPORT_RECHECK_MS) {
+                    return false;
+                }
+                sLastDeadXportAttemptMs = now;
             }
             // Arm the latch BEFORE registering the receiver so that a broadcast
             // arriving immediately after registration (daemon already alive) finds

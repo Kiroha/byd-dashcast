@@ -402,16 +402,61 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD7(Context ctx, TestResult r) {
+        StringBuilder detail = new StringBuilder();
+
+        // 1) Raw TCP reachability — independent of the ADB handshake. Distinguishes
+        //    "port closed / ADB-TCP off" (fast refuse) and "no listener" (SYN dropped →
+        //    connect timeout) from "port open" (the handshake/auth stage was reached).
+        //    The current suite could not tell these apart: a dead transport collapsed
+        //    everything into "TIMEOUT after 3000ms" because connect() retries 5×2 s.
+        boolean tcpOpen = false;
+        String tcp;
+        try {
+            java.net.Socket s = new java.net.Socket();
+            try {
+                s.connect(new java.net.InetSocketAddress("localhost", 5555), 1500);
+                tcpOpen = true;
+                tcp = "OPEN (TCP connect to localhost:5555 succeeded)";
+            } finally {
+                try { s.close(); } catch (java.io.IOException ignore) { /* best-effort */ }
+            }
+        } catch (java.net.SocketTimeoutException ste) {
+            tcp = "NO LISTENER (connect timed out — adbd not listening on 5555 / SYN dropped)";
+        } catch (java.net.ConnectException ce) {
+            tcp = "REFUSED (ECONNREFUSED — ADB-over-TCP is OFF in this ROM)";
+        } catch (Throwable t) {
+            tcp = "ERROR (" + t.getClass().getSimpleName() + ": " + t.getMessage() + ")";
+        }
+        detail.append("TCP 5555      : ").append(tcp).append('\n');
+
+        // 2) Full ADB shell round-trip over the same transport the uid-2000 daemon uses.
         AtomicReference<String> out = new AtomicReference<>("");
         runShellSync(ctx, "echo ok", out, 3000);
-        if ("ok".equals(out.get().trim())) {
+        String raw = out.get() == null ? "" : out.get().trim();
+        boolean shellOk = "ok".equals(raw);
+        detail.append("echo ok       : ").append(raw.isEmpty() ? "(no output)" : raw).append('\n');
+
+        // 3) Surface the transport-layer classification AdbLocalClient recorded (v1.6.102),
+        //    so the report tells us whether to enable ADB-TCP vs authorize this app's key.
+        detail.append("transport     : ")
+              .append(AdbLocalClient.isAdbTransportUnreachable()
+                      ? AdbLocalClient.adbTransportState() : "OK/untested")
+              .append(AdbLocalClient.isAdbPortRefused() ? "  (portRefused=true)" : "")
+              .append('\n');
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            detail.append("diagnosis     : ").append(AdbLocalClient.adbTransportDiagnosis()).append('\n');
+        }
+
+        r.detail = detail.toString();
+        if (shellOk) {
             r.status = Status.PASS;
             r.message = "ADB shell round-trip OK";
-            r.detail = "echo ok → " + out.get().trim();
+        } else if (tcpOpen) {
+            r.status = Status.FAIL;
+            r.message = "ADB-TCP reachable but shell round-trip failed — app's ADB key not authorized?";
         } else {
             r.status = Status.FAIL;
-            r.message = "ADB round-trip failed";
-            r.detail = "raw: " + out.get();
+            r.message = "ADB-over-TCP not reachable on port 5555 (see detail)";
         }
     }
 
@@ -823,7 +868,16 @@ public final class DiLink5TestRunner {
                 out, 6000);
         String raw = out.get();
         r.detail = raw;
-        String lower = raw.toLowerCase(Locale.ROOT);
+        String lower = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
+        // v1.6.102 \u2014 do NOT read a stale default from a dead shell relay: when the round-trip
+        // never returned (TIMEOUT/ERROR sentinel from runShellSync), app_process64 was never
+        // evaluated, so "not found at expected path" would be misleading (the prior report on
+        // D50F_LC implied trinket lacks app_process64, which is unproven).
+        if (lower.isEmpty() || lower.startsWith("timeout after") || lower.startsWith("error:")) {
+            r.status = Status.SKIPPED;
+            r.message = "shell relay dead (ADB-TCP down) \u2014 app_process64 not evaluated";
+            return;
+        }
         boolean hasApp = lower.contains("/system/bin/app_process");
         boolean denied = lower.contains("permission denied") || lower.contains("avc:");
         if (hasApp && !denied) {
