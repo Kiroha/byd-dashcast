@@ -213,18 +213,43 @@ public final class VoskTranscriber {
 
     // ─── Static helpers (used by the UI) ────────────────────────────────
 
-    /** Returns true if the given model variant is fully extracted on disk. */
-    public static boolean isModelDownloaded(Context ctx, boolean large) {
-        String asset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
-        File modelDir = new File(ctx.getExternalFilesDir("vosk"), asset);
-        return new File(modelDir, "am").exists();
+    /**
+     * Safe base directory for Vosk models. {@code getExternalFilesDir()} routes through
+     * StorageManagerService, which does an AppOps package/uid check that can throw
+     * {@code SecurityException} ("callingPackage does not match UID") on some Android 13 /
+     * DiLink 5.1 ROMs (observed opening the diagnostic screen, 2026-07-04). This best-effort
+     * accessor never throws: it falls back to an internal {@code files/vosk} dir. Callers must
+     * not let a storage probe crash the UI.
+     */
+    private static File voskBaseDir(Context ctx) {
+        try {
+            File ext = ctx.getExternalFilesDir("vosk");
+            if (ext != null) return ext;
+        } catch (Throwable t) {
+            com.byd.dashcast.util.AppLogger.w("VoskTranscriber",
+                    "getExternalFilesDir(vosk) unavailable (" + t.getClass().getSimpleName() + ") — using internal");
+        }
+        return new File(ctx.getFilesDir(), "vosk");
     }
 
-    /** Returns free space in MB on the external files directory. */
+    /** Returns true if the given model variant is fully extracted on disk. Never throws. */
+    public static boolean isModelDownloaded(Context ctx, boolean large) {
+        try {
+            String asset = large ? MODEL_LARGE_ASSET : MODEL_SMALL_ASSET;
+            return new File(new File(voskBaseDir(ctx), asset), "am").exists();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Returns free space in MB on the Vosk model directory, or {@code -1} if it cannot be read.
+     *  Best-effort — never throws (see {@link #voskBaseDir}). */
     public static long getFreeSpaceMb(Context ctx) {
-        File dir = ctx.getExternalFilesDir("vosk");
-        if (dir == null) dir = ctx.getCacheDir();
-        return dir.getFreeSpace() / 1024 / 1024;
+        try {
+            return voskBaseDir(ctx).getFreeSpace() / 1024 / 1024;
+        } catch (Throwable t) {
+            return -1;
+        }
     }
 
     /**

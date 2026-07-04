@@ -250,9 +250,26 @@ public final class BugReportCapture {
 
     private static File newFile(Context app) {
         String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(new Date());
-        File dir = app.getExternalFilesDir(null);
-        if (dir == null) dir = app.getFilesDir();
-        if (!dir.exists()) dir.mkdirs();
+        File dir = null;
+        // getExternalFilesDir() routes through StorageManagerService (AppOps package/uid check) and
+        // can THROW SecurityException ("callingPackage does not match UID") on some DL5.1 / Android 13
+        // ROMs (reported 2026-07-04: the Bug Report feature stopped generating). The report file must
+        // live on EXTERNAL storage because the shell (uid 2000) writes the dump into it — internal
+        // filesDir is not writable by the shell. So on failure, build the canonical external app-files
+        // path directly: it bypasses the throwing API, the shell can write there (as the successful
+        // dumps already do), and the app can read/write its own external dir.
+        try {
+            dir = app.getExternalFilesDir(null);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "getExternalFilesDir threw (" + t.getClass().getSimpleName()
+                    + ") — using canonical external path");
+        }
+        if (dir == null) {
+            dir = new File("/storage/emulated/0/Android/data/" + app.getPackageName() + "/files");
+        }
+        if (!dir.exists()) {
+            try { dir.mkdirs(); } catch (Throwable ignore) { /* best-effort */ }
+        }
         return new File(dir, PREFIX + ts + ".txt");
     }
 
