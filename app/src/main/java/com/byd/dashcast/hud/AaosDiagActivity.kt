@@ -85,6 +85,17 @@ class AaosDiagActivity : AppCompatActivity() {
 
         setContentView(ScrollView(this).apply { addView(root) })
         log(AaosDiagnosticBundle.header(this))
+
+        // Gate (defense-in-depth): this diagnostic is AAOS-only. On non-AAOS units
+        // (DL3/DL5 fission ROMs) every AAOS probe is a no-op/noise, so disable running
+        // it even if this screen is somehow reached without the DiagActivity button gate.
+        if (!AaosClusterProbe.isAaos(this)) {
+            runBtn.isEnabled = false
+            runBtn.text = "AAOS-only — this unit is not Android Automotive"
+            log("⛔ This unit is NOT Android Automotive (no android.hardware.type.automotive feature).")
+            log("The AAOS cluster diagnostic does not apply here and has been disabled.")
+            return
+        }
         log("Ready. Tap the button to start.")
     }
 

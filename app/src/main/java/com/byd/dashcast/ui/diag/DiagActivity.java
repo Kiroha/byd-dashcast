@@ -312,9 +312,29 @@ public class DiagActivity extends AppCompatActivity {
             com.google.android.material.button.MaterialButton aaosRun =
                     panelAaos.findViewById(R.id.btn_aaos_run);
             if (aaosRun != null) {
-                aaosRun.setText("▶▶  Run AAOS diagnostic → zip");
-                aaosRun.setOnClickListener(v ->
-                        startActivity(new Intent(this, com.byd.dashcast.hud.AaosDiagActivity.class)));
+                // Gate: the AAOS diagnostic only makes sense on a DX_BYD_AUTO / Android
+                // Automotive unit (android.hardware.type.automotive). On DL3/DL5 fission
+                // ROMs it produces only noise (IAutomotiveDisplayProxyService absent,
+                // car_service cluster N/A) — it was already mistakenly run on a DiLink 3.0.
+                // Block the launch on non-AAOS units with a clear message.
+                boolean isAaosUnit = getPackageManager()
+                        .hasSystemFeature(android.content.pm.PackageManager.FEATURE_AUTOMOTIVE);
+                if (isAaosUnit) {
+                    aaosRun.setText("▶▶  Run AAOS diagnostic → zip");
+                    aaosRun.setOnClickListener(v ->
+                            startActivity(new Intent(this, com.byd.dashcast.hud.AaosDiagActivity.class)));
+                } else {
+                    aaosRun.setText("AAOS diagnostic — not an Android Automotive unit");
+                    aaosRun.setOnClickListener(v ->
+                            new androidx.appcompat.app.AlertDialog.Builder(this)
+                                    .setTitle("Not an Android Automotive unit")
+                                    .setMessage("This diagnostic only applies to DX_BYD_AUTO / Android "
+                                            + "Automotive head units (android.hardware.type.automotive). "
+                                            + "This unit is not AAOS, so the AAOS probes would only produce "
+                                            + "noise. Nothing to run here.")
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show());
+                }
             }
         }
         panelHudDl3     = findViewById(R.id.panel_hud_dl3);
