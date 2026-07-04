@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
 import com.byd.dashcast.report.TelegramBugReporter
@@ -28,13 +29,17 @@ import java.util.Locale
  * `com.byd.carsettings` HalSetter logcat (log.docx): each windshield-HUD control maps to a
  * BYDAutoSettingDevice feature id (ECU 0x4C1 / sub 0xE).
  *
- * Two tools only:
+ * Three tools:
  *  1. **Confirm the discoveries** — we send each HUD command ourselves and, after every command,
  *     ask the tester whether the expected effect happened (OK / KO). The answers + SDK result
  *     codes are zipped and uploaded to Telegram.
  *  2. **Raw logcat recorder** — opens [HudRawCaptureActivity]: an unfiltered logcat capture with
  *     on-screen arrow buttons whose taps are injected into the log, to decode the turn-by-turn
  *     guidance codes while driving.
+ *  3. **CAN → HUD bench** — we write nav guidance ourselves (BYDAutoInstrumentDevice: icon +
+ *     distance + road + status) with the OEM nav OFF, then ask whether the windshield HUD showed
+ *     an arrow — the decisive test of whether the HUD MCU consumes our CAN frames (arrow-capable
+ *     firmware only; the inswver firmware id is captured in every zip to pin the threshold).
  *
  * Dev-only screen, built programmatically (no layout/strings → no i18n burden).
  */
@@ -43,6 +48,7 @@ class HudDiagActivity : AppCompatActivity() {
 
     private lateinit var out: TextView
     private lateinit var confirmBtn: Button
+    private lateinit var benchBtn: Button
     private lateinit var bar: ProgressBar
 
     private val stamp = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -112,6 +118,12 @@ class HudDiagActivity : AppCompatActivity() {
                     "and decode the turn-by-turn guidance codes."
             textSize = 13f
         })
+        root.addView(TextView(this).apply {
+            text = "Firmware HUD (inswver): ${firmwareLabel()}"
+            textSize = 12f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, dp(4), 0, 0)
+        })
 
         // ── TOOL 1 — confirm the 5 discoveries ──────────────────────────────
         root.addView(sectionHeader("① Confirmer les découvertes HUD"))
@@ -139,6 +151,18 @@ class HudDiagActivity : AppCompatActivity() {
             setOnClickListener { startActivity(Intent(this@HudDiagActivity, HudRawCaptureActivity::class.java)) }
         }, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
 
+        // ── TOOL 3 — CAN → HUD bench (does the HUD MCU consume our nav CAN frames?) ──
+        root.addView(sectionHeader("③ Bench CAN → HUD (firmware à flèches)"))
+        root.addView(hint("⚠️ COUPE d'abord la navigation de la voiture. On envoie NOUS-MÊMES un guidage " +
+                "sur le CAN (flèche + distance + route) : tout droit, gauche, droite (~6 s chacun). Regarde le " +
+                "PARE-BRISE : si une flèche apparaît, le HUD est pilotable par nous. Puis réponds OUI/NON → ZIP."))
+        benchBtn = Button(this).apply {
+            text = "▶  Émettre un guidage CAN → regarde le HUD"
+            isAllCaps = false
+            setOnClickListener { startCanHudBench() }
+        }
+        root.addView(benchBtn, LinearLayout.LayoutParams(mp, wc).apply { topMargin = dp(6) })
+
         out = TextView(this).apply {
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 12f
@@ -163,6 +187,7 @@ class HudDiagActivity : AppCompatActivity() {
         report.append("=== DL3 HUD CONTROL CONFIRMATION ===\n")
             .append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
             .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+            .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
             .append("Feature ids proven from OEM com.byd.carsettings HalSetter (log.docx), ECU 0x4C1/0xE.\n")
             .append("rc=0 → SDK accepted the write.\n\n")
         stepIdx = 0
@@ -238,6 +263,104 @@ class HudDiagActivity : AppCompatActivity() {
                 confirmBtn.isEnabled = true
                 bar.visibility = View.GONE
             }
+        }
+    }
+
+    /** Compact firmware label parsed from inswver (e.g. "SX326 (2026-02-03)"). */
+    private fun firmwareLabel(): String {
+        val v = try { Platform.hudFirmwareVersion() } catch (_: Throwable) { "" }
+        if (v.isEmpty()) return "?"
+        val sx = Regex("S[A-Z]?[0-9]+").find(v)?.value ?: "?"
+        val d = Regex("20[0-9]{6}").find(v)?.value ?: ""
+        val date = if (d.length == 8) "${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}" else "?"
+        return "$sx ($date)  [$v]"
+    }
+
+    // ── TOOL 3 — CAN → HUD bench ─────────────────────────────────────────────
+    // Writes nav guidance ourselves on BYDAutoInstrumentDevice (icon + distance + road + status)
+    // with the OEM nav OFF, to test whether the windshield-HUD MCU consumes our CAN guidance frames
+    // directly (nav-agnostic). If the HUD shows an arrow → we can drive it; if not → HUD content is
+    // rendered by the OEM nav (e.g. Telenav) and not CAN-injectable. Only meaningful on arrow-capable
+    // firmware (recent inswver) — the label is captured in the zip so we can correlate.
+    private fun startCanHudBench() {
+        benchBtn.isEnabled = false
+        bar.visibility = View.VISIBLE
+        log("──── CAN→HUD bench started (OEM nav must be OFF) ────")
+        bg {
+            val sb = StringBuilder("=== DL3 CAN → HUD BENCH (we write nav guidance; OEM nav OFF) ===\n")
+            sb.append("${com.byd.dashcast.BuildConfig.VERSION_NAME} (${com.byd.dashcast.BuildConfig.VERSION_CODE}) — ")
+                .append("${Build.MANUFACTURER} ${Build.MODEL} ${Build.PRODUCT} API ${Build.VERSION.SDK_INT}\n")
+                .append("HUD firmware (inswver): ${Platform.hudFirmwareVersion()}\n")
+                .append("Writes BYDAutoInstrumentDevice guidance (INSTRUMENT_GUIDE_INFO_SIMPLE + distance + road + status).\n\n")
+            fun step(label: String, block: () -> Unit) {
+                val line = try { block(); "$label ok" } catch (t: Throwable) { "$label ERR ${t.message}" }
+                sb.append(line).append('\n'); log(line)
+            }
+            step("SET_HUD_SWITCH=1") { CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
+            step("setNaviActive(true)") { CanBusController.setNaviActive(true) }
+            // Sweep three unambiguous maneuvers; each SUSTAINED ~6 s (counting distance down) like a real nav.
+            val icons = listOf(
+                Triple("TOUT DROIT", CanBusController.ICON_STRAIGHT_SOLID, "STRAIGHT"),
+                Triple("GAUCHE", CanBusController.ICON_TURN_LEFT, "LEFT"),
+                Triple("DROITE", CanBusController.ICON_TURN_RIGHT, "RIGHT"))
+            for ((fr, icon, en) in icons) {
+                log("▶▶ REGARDE LE PARE-BRISE — '$fr' (icône CAN $icon) ~6 s")
+                var dist = 300
+                var rc = "?"
+                repeat(6) {
+                    rc = try { CanBusController.sendSimpleGuidance(icon, dist); "0" } catch (t: Throwable) { "ERR ${t.message}" }
+                    try { CanBusController.sendNextStreetName("TEST $fr") } catch (_: Throwable) {}
+                    try { CanBusController.sendRestRoute(0, 5, 1200) } catch (_: Throwable) {}
+                    dist = (dist - 40).coerceAtLeast(40); sleep(1000)
+                }
+                sb.append("[$en] icon=$icon sustained 6s (dist 300→) rc=$rc\n")
+            }
+            runOnUiThread { askBench(sb) }
+        }
+    }
+
+    /** Popup: did the WINDSHIELD HUD render an arrow from our CAN guidance? Answer baked into the zip. */
+    private fun askBench(sb: StringBuilder) {
+        AlertDialog.Builder(this)
+            .setTitle("Bench CAN → HUD")
+            .setMessage("Pendant le test (nav voiture ÉTEINTE), le HUD du PARE-BRISE a-t-il affiché une " +
+                    "FLÈCHE de direction (tout droit / gauche / droite) ou une info de nav ?")
+            .setCancelable(false)
+            .setPositiveButton("✓ OUI, flèche") { _, _ -> finishBench(sb, "YES — arrow on HUD") }
+            .setNegativeButton("✗ NON, rien") { _, _ -> askBenchNote(sb) }
+            .setNeutralButton("Partiel/bizarre") { _, _ -> askBenchNote(sb) }
+            .show()
+    }
+
+    private fun askBenchNote(sb: StringBuilder) {
+        val input = EditText(this).apply {
+            hint = "Qu'as-tu vu (HUD et/ou cluster) ? (optionnel)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Bench CAN → HUD — détail")
+            .setView(input)
+            .setCancelable(false)
+            .setPositiveButton("Envoyer") { _, _ ->
+                val note = input.text.toString().trim()
+                finishBench(sb, "NO/PARTIAL" + if (note.isNotEmpty()) " — $note" else "")
+            }
+            .show()
+    }
+
+    private fun finishBench(sb: StringBuilder, answer: String) {
+        log("──── bench result: $answer — building zip ────")
+        bg {
+            sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")
+            try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}  // clean up injected nav
+            val work = File(cacheDir, "hud_canbench_" +
+                    SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
+            File(work, "01_can_bench.txt").writeText(sb.toString())
+            File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|inswver|fission_single_os|model'"))
+            val zip = HudCaptureSupport.zipDir(work)
+            log("zip: ${zip.name} (${zip.length() / 1024} KB)")
+            uploadZip(zip, "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer")
+            runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE }
         }
     }
 
