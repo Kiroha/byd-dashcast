@@ -2,6 +2,8 @@ package com.byd.dashcast.infrastructure;
 
 import android.content.Context;
 // LOT 4 — Bitmap/BitmapFactory imports removed (captureClusterDisplay deleted).
+import android.os.IBinder;
+import android.os.Parcel;
 import android.os.SystemClock;
 
 import com.byd.dashcast.proxy.DaemonConfig;
@@ -13,6 +15,9 @@ import dadb.AdbShellResponse;
 import dadb.Dadb;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
 /**
  * AdbLocalClient — connects to the local ADB daemon (localhost:5555) from inside
@@ -54,6 +59,9 @@ public class AdbLocalClient {
 
     /** ADB TCP port — same for Android 7–10 in developer mode */
     private static final int ADB_PORT = 5555;
+
+    /** Fast TCP-reachability probe budget before the ADB handshake (v1.6.102). */
+    private static final int CONNECT_PROBE_MS = 1500;
 
     // ──────────────────────────────────────────────────────────────────────────
     // AutoContainer service name — resolved by PROBING which casing is actually
@@ -315,6 +323,75 @@ public class AdbLocalClient {
     /** Returns {@code true} if the last ADB connection attempt was refused (ECONNREFUSED). */
     public static boolean isAdbPortRefused() { return sPortRefused; }
 
+    // ── Transport health classification (v1.6.102) ─────────────────────────────
+    // Sticky diagnosis of the self-ADB transport to localhost:5555 so callers can
+    // (a) stop paying a blocking bootstrap on a permanently-dead transport (the
+    // ProxyClient circuit-breaker) and (b) surface ONE actionable message to the
+    // tester. Distinct from sPortRefused so the message can tell "ADB-TCP off /
+    // port closed" apart from "port open but this app's key is not authorized".
+    // Cleared on the first fully-successful connect().
+    /** ECONNREFUSED — adbd not listening on TCP (ADB-over-TCP disabled in the ROM). */
+    public static final String XPORT_REFUSED     = "PORT_CLOSED";
+    /** TCP connect timed out (SYN dropped / filtered) — no ADB listener on 5555. */
+    public static final String XPORT_NO_LISTENER = "NO_LISTENER";
+    /** TCP open but the ADB handshake failed — this app's RSA key is not authorized. */
+    public static final String XPORT_AUTH        = "KEY_UNAUTHORIZED";
+
+    private static volatile String  sTransportState    = null; // null = healthy / untested
+    private static volatile boolean sTransportMsgShown = false;
+
+    /** {@code true} once the self-ADB transport has been classified as unreachable. */
+    public static boolean isAdbTransportUnreachable() { return sTransportState != null; }
+
+    /** One of the {@code XPORT_*} constants, or {@code null} when healthy / untested. */
+    public static String adbTransportState() { return sTransportState; }
+
+    /** Human, actionable one-liner matching the current transport state (Diag / banners). */
+    public static String adbTransportDiagnosis() {
+        String s = sTransportState;
+        if (s == null) return "ADB transport OK / untested";
+        if (XPORT_AUTH.equals(s)) {
+            return "ADB over TCP is reachable but this app's debug key is not authorized. "
+                 + "Accept the “Allow USB debugging” prompt for DashCast (tick "
+                 + "“always allow from this computer”) so the uid-2000 proxy daemon can start.";
+        }
+        return "ADB over TCP (port 5555) is not reachable on this unit. Cluster projection needs "
+             + "the uid-2000 proxy daemon, which connects over local ADB. Enable ADB debugging over "
+             + "TCP (e.g. `adb tcpip 5555`) and keep it enabled.";
+    }
+
+    /** Record a transport failure and, once per outage, log + toast one clear message. */
+    private static void markTransport(Context ctx, String state) {
+        boolean transition = !state.equals(sTransportState);
+        sTransportState = state;
+        if (transition && !sTransportMsgShown) {
+            sTransportMsgShown = true;
+            String msg = adbTransportDiagnosis();
+            AppLogger.e(TAG, "SELF-ADB TRANSPORT UNREACHABLE [" + state + "] — " + msg);
+            toastOnce(ctx, msg);
+        }
+    }
+
+    /** Reset the classification after a fully-successful connect. */
+    private static void clearTransport() {
+        sTransportState    = null;
+        sTransportMsgShown = false;
+    }
+
+    private static void toastOnce(Context ctx, final String msg) {
+        try {
+            final Context app = (ctx == null) ? null : ctx.getApplicationContext();
+            if (app == null) return;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override public void run() {
+                    try {
+                        android.widget.Toast.makeText(app, msg, android.widget.Toast.LENGTH_LONG).show();
+                    } catch (Throwable ignore) { /* Toast is best-effort */ }
+                }
+            });
+        } catch (Throwable ignore) { /* a diagnostic notice must never crash a bg thread */ }
+    }
+
     private static Dadb connect(Context context) throws Exception {
         AdbKeyPair keyPair = sKeyPair;
         if (keyPair == null) {
@@ -331,13 +408,40 @@ public class AdbLocalClient {
             }
         }
         
-        // Retry loop to give the user time to click 'Allow USB Debugging' if the popup appears
+        // v1.6.102 — fast TCP reachability probe BEFORE the ADB handshake. Distinguishes
+        // "port closed / ADB-TCP off" and "no listener (SYN dropped)" from "port open but key
+        // not authorized", and fails those in ~1.5 s instead of blocking on the OS SYN timeout
+        // inside Dadb.create(). Retrying is futile when the port itself is dead (no "Allow USB
+        // debugging" popup can ever appear), so we throw immediately there; the 5×2 s retry
+        // below only wraps the AUTH stage, where the popup is expected.
+        try {
+            Socket probe = new Socket();
+            try {
+                probe.connect(new InetSocketAddress("localhost", ADB_PORT), CONNECT_PROBE_MS);
+            } finally {
+                try { probe.close(); } catch (IOException ignore) { /* best-effort */ }
+            }
+        } catch (java.net.SocketTimeoutException ste) {
+            markTransport(context, XPORT_NO_LISTENER);
+            throw new IOException("ADB TCP 5555 unreachable (no listener / SYN dropped)", ste);
+        } catch (java.net.ConnectException ce) {
+            sPortRefused = true;
+            markTransport(context, XPORT_REFUSED);
+            throw new IOException("ADB TCP 5555 refused (ADB-over-TCP off)", ce);
+        } catch (IOException ioe) {
+            markTransport(context, XPORT_NO_LISTENER);
+            throw ioe;
+        }
+
+        // TCP is open → run the ADB handshake. Retry to give the user time to accept the
+        // 'Allow USB debugging' popup if this app's RSA key is not yet authorized.
         int retries = 5;
         Exception lastE = null;
         while (retries > 0) {
             try {
                 Dadb d = Dadb.create("localhost", ADB_PORT, keyPair);
-                sPortRefused = false;  // connection succeeded: port is reachable
+                sPortRefused = false;   // full success: port reachable + key authorized
+                clearTransport();
                 return d;
             } catch (Exception e) {
                 lastE = e;
@@ -348,8 +452,12 @@ public class AdbLocalClient {
                 String msg = e.getMessage();
                 if (msg != null && (msg.contains("ECONNREFUSED") || msg.contains("Connection refused"))) {
                     sPortRefused = true;
+                    markTransport(context, XPORT_REFUSED);
+                } else {
+                    // TCP was open but the handshake failed → key almost certainly not authorized.
+                    markTransport(context, XPORT_AUTH);
                 }
-                AppLogger.w(TAG, "ADB connect exception (popup pending?), retrying in 2s... (" + retries + " left)");
+                AppLogger.w(TAG, "ADB handshake exception (popup pending?), retrying in 2s... (" + retries + " left)");
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException ie) {
@@ -638,6 +746,28 @@ public class AdbLocalClient {
                                 final Callback callback) {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
+                // v1.6.102 — daemon-free & ADB-free FIRST attempt, tried ONLY when the
+                // uid-2000 daemon is not connected (so healthy DL3/DL5.0 keep their exact
+                // proven path). Transacts the AutoContainer binder directly from THIS process:
+                // needs neither the daemon nor the self-ADB shell — the only path left on an
+                // unprivileged unit whose ADB-TCP is dead (D50F_LC). It succeeds only if the
+                // AutoContainer server does not enforce caller uid/signature (UNPROVEN from the
+                // app uid), so any failure — incl. SecurityException — falls through untouched.
+                if (!ProxyClient.isConnected()) {
+                    try {
+                        String svc = autoContainerSvcName(context);
+                        sendInfoInProcess(svc, type, infoInt, infoStr);
+                        AppLogger.i(TAG, "sendInfo IN-PROC transact ACCEPTED from app uid on '"
+                                + svc + "' (" + type + "," + infoInt + ") — daemon-free path");
+                        if (callback != null) callback.onSuccess("");
+                        return;
+                    } catch (Throwable t) {
+                        AppLogger.w(TAG, "sendInfo IN-PROC transact REJECTED from app uid ("
+                                + t.getClass().getSimpleName() + ": " + t.getMessage()
+                                + ") — falling back to daemon/shell");
+                        // fall through to the typed-daemon / ADB-shell path below
+                    }
+                }
                 // Phase 4c: try the typed daemon path first. P13 (build 176)
                 // proved binder.transact(2, ...) on AutoContainer is accepted
                 // from uid 2000 with descriptor android.os.IAutoContainer.
@@ -697,6 +827,55 @@ public class AdbLocalClient {
                 }
             }
         }); // adb-sendinfo-thread
+    }
+
+    /**
+     * Sends {@code sendInfo(type, infoInt, infoStr)} to the AutoContainer service by
+     * transacting its binder DIRECTLY from the current process — no daemon, no ADB.
+     *
+     * <p>Resolves the live {@link IBinder} via {@code ServiceManager.getService(svc)}
+     * (reflection; hidden APIs are already unlocked at startup) and reads the advertised
+     * interface descriptor at runtime so OEM rebrands still work. Uses the resolved
+     * service name (see {@link #autoContainerSvcName}) rather than a hardcoded one, so it
+     * is correct on both PascalCase (DL3 / DL5.1) and snake_case (literal DiLink5.0) units.
+     *
+     * @throws Throwable if the service is absent, the binder is dead, or the server rejects
+     *         the caller (e.g. a SecurityException surfaced via {@link Parcel#readException()}).
+     */
+    private static void sendInfoInProcess(String svc, int type, int infoInt, String infoStr)
+            throws Throwable {
+        Class<?> sm = Class.forName("android.os.ServiceManager");
+        IBinder b = (IBinder) sm.getMethod("getService", String.class).invoke(null, svc);
+        if (b == null) throw new IllegalStateException("no '" + svc + "' service in ServiceManager");
+
+        // Read the advertised interface descriptor (the token the server expects).
+        String descriptor;
+        Parcel d0 = Parcel.obtain();
+        Parcel r0 = Parcel.obtain();
+        try {
+            b.transact(IBinder.INTERFACE_TRANSACTION, d0, r0, 0);
+            descriptor = r0.readString();
+        } finally {
+            r0.recycle();
+            d0.recycle();
+        }
+        if (descriptor == null || descriptor.isEmpty()) {
+            throw new IllegalStateException(svc + " advertised an empty descriptor");
+        }
+
+        Parcel data  = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(descriptor);
+            data.writeInt(type);
+            data.writeInt(infoInt);
+            data.writeString(infoStr == null ? "" : infoStr);
+            b.transact(2 /* TXN sendInfo */, data, reply, 0);
+            reply.readException();   // re-throws a SecurityException the server may return
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
     }
 
     // ── Diagnostic: actual signature + permissions ──────────────────────────────

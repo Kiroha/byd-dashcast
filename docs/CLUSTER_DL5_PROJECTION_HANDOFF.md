@@ -18,6 +18,8 @@
 - **★ Bug fixed in 1.6.100-beta:** on the **DiLink 50F_LC / 5.1** ("1for2") variant, DashCast asked the wrong service — it hardcoded `auto_container` (snake_case) for all DL5, but this variant registers it as **`AutoContainer` (PascalCase)** → activation returned "service does not exist" → projection never switched, even though the cluster display was present. Now `AdbLocalClient.autoContainerSvcName()` **probes** the registered casing. See §4.
 - **Open blocker — cross-user:** launching a nav app on cluster display 2 fails because the app lacks `INTERACT_ACROSS_USERS` (not manifestable) / `INTERACT_ACROSS_USERS_FULL` (role-managed). **Fix = launch via the uid-2000 daemon** (shell holds the permission), not the app. See §6.
 - **Current test car blocker:** on the DL5.1 unit that reported these, the **daemon itself is DOWN** (repeated `bootstrap timed out` — ADB-over-TCP not connecting), which blocks *everything* daemon-dependent (activation, bug-report shell dump, cross-user launch). Unblock ADB-TCP on that unit first.
+- **★ ROOT CAUSE UNIFIED (2026-07-04, 1.6.101 retest — see §6.5):** the cross-user blocker and the daemon-down blocker are **one story: DashCast runs fully UNPRIVILEGED on D50F_LC.** The app is signed with the **AOSP public testkey** (matched old DL3/DL5.0 ROMs, does NOT match the trinket production platform cert) → **D6 = 0/10 signature perms** → no direct privileged ops → forced onto the uid-2000 daemon → whose self-ADB to `127.0.0.1:5555` is dead (**D7**). The cluster hardware is fine (display present, casing fix works); the wall is signing + ADB-TCP. Cert is unobtainable for a 3rd party → plan around reviving the daemon (§6.5).
+- **1.6.102-beta hardening + diagnostics** (shipped, gated so DL3/DL5.0 untouched): fast TCP-reachability probe + sticky transport classification (`PORT_CLOSED`/`NO_LISTENER`/`KEY_UNAUTHORIZED`) + one actionable toast/log; a circuit-breaker that kills the infinite reconnect storm; a daemon-free **in-process AutoContainer transact** first-attempt (logs `ACCEPTED`/`REJECTED` from the app uid to settle the server-identity unknown on-car); a conclusive **D7** (port-closed vs no-listener vs key-unauthorized) + fixed **D17** stale verdict; and an **offline Bug Report** that always generates (internal-storage fallback). See §9/§12.
 
 ---
 
@@ -120,6 +122,24 @@ The cluster display is owned by another uid/user (`com.xdja.containerservice` ui
 
 ---
 
+## 6.5. ★ The signing wall — why the app is unprivileged on D50F_LC (root cause, 2026-07-04)
+
+The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_214035`, in `/home/ccarre/app_byd/log/`) **pins the root cause and unifies the two blockers.** The casing fix works (`AutoContainer resolved (probe)`), the crash fix works (tester confirms), the display is healthy — yet nothing activates. Why:
+
+- **`keytool` on `app/keystore/platform.keystore`** → alias `androiddebugkey`, `CN=Android, O=Android, android@android.com`, SHA1 `27:19:6E:38:6B:87:5E:76:AD:F7:00:E7:EA:84:E4:C6:EE:E3:3D:FA` — this is the **AOSP public `platform.x509.pem` test key** (downloadable by anyone). No `sharedUserId`; the app relies purely on cert-matching for signature perms.
+- **Old DL3 / DL5.0 BYD ROMs were built with those same AOSP testkeys** → cert matches → DashCast is privileged there → direct SurfaceControl mirror / launch / inject work, daemon optional.
+- **D50F_LC / trinket uses a real production platform cert** → the testkey no longer matches → **D6 = 0/10 signature perms** (`INTERNAL_SYSTEM_WINDOW`, `INJECT_EVENTS`, `ACCESS_SURFACE_FLINGER`, `MANAGE_ACTIVITY_*`, `BYDAUTO_*` all ungranted). The app is **fully unprivileged**.
+
+**The chain (D6 + D7 are one story):** unprivileged (D6) → no direct privileged ops → forced onto the **uid-2000 daemon** → daemon bootstraps via self-ADB (the `dadb` lib, raw ADB protocol) to `127.0.0.1:5555`, which needs ADB-over-TCP enabled **and** the app's RSA key authorized — neither holds on a normal car → **D7 fail** (`bootstrap timed out` → `no live binder` → `Activate cluster timeout`). Even the daemon-free **in-process transact** on the AutoContainer handle is likely gated by the same wall (`AdbLocalClient` comment: *"uid=10100 not in whitelist… uid=2000 passes `checkSignatures()` in AutoContainerService"*), which is exactly why 1.6.102 logs the app-uid verdict to settle it on-car.
+
+**A 2nd, orthogonal axis on the §2 taxonomy:** topology (1for2 / single-OS / AAOS) says whether projection is *mechanically* possible; the **signing/privilege regime** says whether DashCast can *drive* it. D50F_LC = **1for2 topology (possible) BUT unprivileged app AND ADB-TCP off (can't drive it either way).**
+
+**Realistic paths** (the trinket platform cert is unobtainable for a 3rd party — confirmed):
+1. **Revive the daemon** = enable ADB-TCP (`adb tcpip 5555` from a bench PC) + authorize the app's ADB key (accept the "Allow USB debugging" prompt for DashCast on the head-unit screen). The uid-2000 shell IS privileged (passes `checkSignatures`) → unlocks activation, launch, mirror, and the bug-report shell dump. **Only path to full projection on D50F_LC without the cert.** Fragile: `adb tcpip` doesn't persist past reboot without root.
+2. **In-proc AutoContainer transact** (1.6.102) — long shot on this unit, but free to try and it logs `ACCEPTED`/`REJECTED` so the next report settles whether the server enforces caller identity.
+
+---
+
 ## 7. Case study — the DL5.1 D50F_LC bugreport
 
 `byd_bugreport_20260702_190502` + `byd_log_20260702_190721` (in `/home/ccarre/app_byd/log/`):
@@ -158,8 +178,9 @@ The cluster display is owned by another uid/user (`com.xdja.containerservice` ui
 - **1.6.46–1.6.48** — AAOS (DX_BYD_AUTO) investigation → proven app-window projection impossible; AAOS gate message.
 - **1.6.74** — `AaosDisplayHalProbe` (TXN_AAOS_HAL_PROBE) → definitively CLOSED AAOS projection (SELinux + no Java stub).
 - **1.6.79** — single-OS DL3 (`fission_single_os=1`) proven = app projection impossible (same wall); retracted the "13.1.32/33 OTA" theory; single-OS gate message wired.
-- **1.6.100** — **AutoContainer service-name casing fix** (D50F_LC / 5.1 uses PascalCase). §4.
-- **1.6.101** — DL5.1/Android 13 diagnostic crash + Bug Report fix (§7).
+- **1.6.100** — **AutoContainer service-name casing fix** (D50F_LC / 5.1 uses PascalCase). §4. **Retested on-car 1.6.101 → CONFIRMED working** (`AutoContainer resolved (probe)` in the log).
+- **1.6.101** — DL5.1/Android 13 diagnostic crash + Bug Report crash fix (§7). Crash confirmed gone by the tester; but the full Bug Report still failed to export (the shell dump can't run with the daemon down → the external-only write failed) → addressed in 1.6.102.
+- **1.6.102** — **D50F_LC daemon-down hardening + conclusive diagnostics** (root cause pinned = signing wall + ADB-TCP, §6.5): (1) fast TCP-reachability probe + sticky transport classification + one actionable toast/log; (2) circuit-breaker killing the reconnect storm (self-heals every 60 s); (3) daemon-free **in-process AutoContainer transact** first-attempt when the daemon is down, logging the app-uid verdict; (4) conclusive **D7** (port-closed vs no-listener vs key-unauthorized) + fixed **D17** stale verdict; (5) **offline Bug Report** (internal-storage fallback, always generates). All gated so DL3/DL5.0 keep their proven paths; lint 0/0.
 
 ---
 
@@ -188,15 +209,17 @@ The cluster display is owned by another uid/user (`com.xdja.containerservice` ui
 
 **PROVEN / DONE:**
 - Cluster family taxonomy (§2): 1for2 works, single-OS impossible, AAOS closed — all proven on-car.
-- AutoContainer casing fix (1.6.100) for D50F_LC / 5.1 (§4) — **awaiting on-car retest**.
-- DL5.1/A13 crash + Bug Report fix (1.6.101).
-- Mirror + activation pipeline works on 1for2 (long-standing).
+- AutoContainer casing fix (1.6.100) for D50F_LC / 5.1 (§4) — **retested on-car 1.6.101 → CONFIRMED working.**
+- DL5.1/A13 crash fix (1.6.101) — **confirmed gone by the tester.**
+- **Root cause pinned + unified (§6.5):** D50F_LC = unprivileged app (AOSP testkey ≠ prod cert, D6=0/10) + ADB-TCP dead (D7). The two blockers are one story. Cert unobtainable.
+- 1.6.102 hardening + diagnostics shipped (build 543, lint 0/0, APK built).
+- Mirror + activation pipeline works on 1for2 with a live daemon (long-standing).
 
 **OPEN / NEXT (ranked):**
-1. **Retest the 1.6.100 AutoContainer fix on a D50F_LC / 5.1 car** — does the cluster now actually switch to DashCast's projection? (Needs the daemon UP → ADB-TCP working on that unit.) **Highest priority — closes the loop on the shipped fix.**
-2. **Unblock the daemon on the DL5.1 test car** — the repeated `bootstrap timed out` means ADB-over-TCP isn't reachable at `127.0.0.1:5555`. Everything (activation, bug reports, cross-user launch) depends on it. Investigate why (ADB-TCP disabled? port? pairing? self-key not authorized?).
-3. **Route the cluster app-launch through the uid-2000 daemon** (`Phase4TaskVerbs.launchAndForce` / `am start --display <id>`) so the cross-user permission is satisfied (§6) — for the "launch a nav app on the cluster" feature.
-4. **Gate messaging polish:** ensure single-OS DL3 (`fission_single_os=1`) and AAOS both show the "unsupported on this variant" dialog cleanly instead of looping on activation.
+1. **Get the tester to run 1.6.102 + export the NEW Diagnostic Report.** The upgraded **D7** now reports exactly which ADB-TCP condition holds (`PORT_CLOSED` = ADB-TCP off → `adb tcpip 5555`; `NO_LISTENER` = SYN dropped; `KEY_UNAUTHORIZED` = accept the app's "Allow USB debugging" prompt). Also read the `sendInfo IN-PROC transact ACCEPTED/REJECTED` log line = does the app-uid transact work daemon-free? **Highest priority — one report now settles both unknowns.**
+2. **Revive the daemon on the DL5.1 unit** = enable ADB-TCP + authorize the app's ADB key (§6.5 path 1). uid-2000 is privileged → unlocks activation/launch/mirror/bug-report. Only full-projection path without the cert. (Needs a bench PC once; doesn't persist past reboot without root.)
+3. **Route the cluster app-launch through the uid-2000 daemon** (`Phase4TaskVerbs.launchAndForce` / `am start --display <id>`) so the cross-user permission is satisfied (§6) — for the "launch a nav app on the cluster" feature. (Only reachable once the daemon is up per #2.)
+4. **Gate messaging polish:** ensure single-OS DL3 (`fission_single_os=1`) and AAOS both show the "unsupported on this variant" dialog cleanly instead of looping on activation. (1.6.102's transport toast partly covers the ADB-TCP-dead case.)
 5. (Optional/low-odds) Channel D pixel path (bydhud-style Presentation/VirtualDisplay) — only if the OEM helper jars can be obtained and self-ADB works.
 
 **Open questions:**
