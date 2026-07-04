@@ -894,28 +894,11 @@
                             app:iconTint="@color/md_on_error_container"/>
                     </GridLayout>
 
-                    <!-- Lancer manuellement les apps du layout favori.
-                         Visible only when Layouts mode is ON, a favourite layout with
-                         apps is set, and the "Automatic favourite layout" option is OFF. -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_launch_layout_apps"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/main_btn_launch_layout_apps"
-                        android:minHeight="52dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        app:cornerRadius="26dp"
-                        app:icon="@drawable/ic_play"
-                        app:iconGravity="textStart"
-                        app:iconSize="20dp"
-                        android:visibility="gone"/>
-
-                    <!-- ────── Layout carousel (visible only when Layouts mode enabled).
-                         Cards are built dynamically by FissionCoordinator: free mode,
-                         one card per saved preset (mini zone preview), manage card. -->
+                    <!-- ────── Cluster-layout section (collapsible; visible only in Layouts mode).
+                         COLLAPSED BY DEFAULT so the live preview keeps its full height — the
+                         header row toggles the body (launch-apps button + preset carousel).
+                         Cards are built dynamically by FissionCoordinator: free mode, one card
+                         per saved preset (mini zone preview), manage card. -->
                     <LinearLayout
                         android:id="@+id/ll_layout_carousel_section"
                         android:layout_width="match_parent"
@@ -924,31 +907,81 @@
                         android:layout_marginTop="14dp"
                         android:visibility="gone">
 
-                        <TextView
+                        <!-- Clickable header — expands/collapses the body below. -->
+                        <LinearLayout
+                            android:id="@+id/layout_section_header"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:text="@string/main_layout_section"
-                            android:textAllCaps="true"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.12"
-                            android:textColor="@color/md_on_surface_variant"/>
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground"
+                            android:paddingTop="6dp"
+                            android:paddingBottom="6dp">
 
-                        <HorizontalScrollView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:scrollbars="none"
-                            android:clipToPadding="false"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp">
-
-                            <LinearLayout
-                                android:id="@+id/ll_layout_carousel"
-                                android:layout_width="wrap_content"
+                            <TextView
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal"/>
-                        </HorizontalScrollView>
+                                android:layout_weight="1"
+                                android:text="@string/main_layout_section"
+                                android:textAllCaps="true"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.12"
+                                android:textColor="@color/md_on_surface_variant"/>
+
+                            <ImageView
+                                android:id="@+id/iv_layout_chevron"
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:src="@drawable/ic_expand_more"
+                                android:contentDescription="@string/main_layout_section"/>
+                        </LinearLayout>
+
+                        <!-- Collapsible body — hidden by default (keeps the preview tall). -->
+                        <LinearLayout
+                            android:id="@+id/layout_section_body"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <!-- Manually launch the favourite layout's apps. Visible only when
+                                 Layouts mode ON, a favourite layout with apps is set, and the
+                                 "Automatic favourite layout" option is OFF. -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_launch_layout_apps"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/main_btn_launch_layout_apps"
+                                android:minHeight="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                app:cornerRadius="26dp"
+                                app:icon="@drawable/ic_play"
+                                app:iconGravity="textStart"
+                                app:iconSize="20dp"
+                                android:visibility="gone"/>
+
+                            <HorizontalScrollView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:scrollbars="none"
+                                android:clipToPadding="false"
+                                android:layout_marginTop="8dp"
+                                android:paddingTop="4dp"
+                                android:paddingBottom="4dp">
+
+                                <LinearLayout
+                                    android:id="@+id/ll_layout_carousel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"/>
+                            </HorizontalScrollView>
+                        </LinearLayout>
                     </LinearLayout>
 
                     <!-- ────── Cluster control panel (collapsible, when 3rd party app on cluster) ────── -->

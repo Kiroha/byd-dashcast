@@ -151,6 +151,11 @@ class MainActivity : AppCompatActivity(),
     private lateinit var ivNavLogo: ImageView // v0.9.81: long-press = overflow menu
     private lateinit var btnShowMirror: Button
     private lateinit var btnLaunchLayoutApps: MaterialButton
+    // Cluster-layout section is collapsed by default so the live preview keeps its
+    // full height; the header row expands/collapses it on demand.
+    private lateinit var mLayoutSectionBody: View
+    private lateinit var mLayoutSectionChevron: ImageView
+    private var mLayoutSectionExpanded = false
     private lateinit var btnExitFullscreen: FloatingActionButton
     private lateinit var vRootOverlay: FrameLayout
     private lateinit var llCategoryFilters: View
@@ -381,6 +386,13 @@ class MainActivity : AppCompatActivity(),
             DaemonConfig.isFissionModeEnabled(this) &&
             favoriteLayoutHasApps()
         btnLaunchLayoutApps.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    /** Expands/collapses the Cluster-layout section (collapsed by default so the live
+     *  preview keeps its full height). Rotates the chevron down (collapsed) / up (open). */
+    private fun applyLayoutSectionCollapsed() {
+        mLayoutSectionBody.visibility = if (mLayoutSectionExpanded) View.VISIBLE else View.GONE
+        mLayoutSectionChevron.rotation = if (mLayoutSectionExpanded) 180f else 0f
     }
 
     private fun favoriteLayoutHasApps(): Boolean {
@@ -1480,6 +1492,15 @@ class MainActivity : AppCompatActivity(),
             findViewById(R.id.ll_layout_carousel),
             this
         )
+        // Cluster-layout section: collapsed by default (keeps the live preview tall);
+        // the header row toggles it open/closed on demand.
+        mLayoutSectionBody = findViewById(R.id.layout_section_body)
+        mLayoutSectionChevron = findViewById(R.id.iv_layout_chevron)
+        findViewById<View>(R.id.layout_section_header).setOnClickListener {
+            mLayoutSectionExpanded = !mLayoutSectionExpanded
+            applyLayoutSectionCollapsed()
+        }
+        applyLayoutSectionCollapsed()
 
         mStatePollCoordinator = DisplayStatePollCoordinator(this)
         mTimeoutManager = ActivateTimeoutManager(this)
