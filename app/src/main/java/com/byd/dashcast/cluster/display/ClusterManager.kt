@@ -90,20 +90,34 @@ class ClusterManager(context: Context) {
         // DiLink 5.0 short-circuit: PRESENTATION displays #3/#4 exist persistently. The full DL3
         // sequence (30→16→35) is replaced by a single sendInfo(16) on auto_container.
         if (isDiLink5Safe()) {
-            AppLogger.i(TAG, "DL5 activation path: sendInfo(16) only on auto_container")
-            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "",
-                object : AdbLocalClient.Callback {
-                    override fun onSuccess(out: String?) {
-                        AppLogger.i(TAG, "DL5 activation ADB(cmd=16): $out")
-                        mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
+            AppLogger.i(TAG, "DL5 activation path: sendInfo(16) only on ${AdbLocalClient.autoContainerSvcName(mContext)}")
+            // Some DL5 variants (DiLink50F_LC / 5.1, "1for2") register the service as
+            // "AutoContainer" (PascalCase), not "auto_container" — proven by the D50F_LC bugreport
+            // (20260702): service list had "AutoContainer" while `service call auto_container` returned
+            // "does not exist". autoContainerSvcName() now probes the registered name; this callback
+            // additionally self-corrects if the shell still reports the tried name absent (probe blocked).
+            val svcRetried = java.util.concurrent.atomic.AtomicBoolean(false)
+            val cb = object : AdbLocalClient.Callback {
+                override fun onSuccess(out: String?) {
+                    AppLogger.i(TAG, "DL5 activation ADB(cmd=16): $out")
+                    if (out != null && out.contains("does not exist") && svcRetried.compareAndSet(false, true)) {
+                        val tried = AdbLocalClient.autoContainerSvcName(mContext)
+                        AdbLocalClient.noteAutoContainerMissing(tried)
+                        AppLogger.i(TAG, "DL5 activation: '$tried' absent → retry with " +
+                                "'${AdbLocalClient.autoContainerSvcName(mContext)}'")
+                        AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", this)
+                        return
                     }
+                    mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
+                }
 
-                    override fun onError(err: String?) {
-                        AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: $err")
-                        // Still attempt to resolve a display — they may be already up.
-                        mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
-                    }
-                })
+                override fun onError(err: String?) {
+                    AppLogger.e(TAG, "DL5 activation ADB(cmd=16) ERROR: $err")
+                    // Still attempt to resolve a display — they may be already up.
+                    mHandler.postDelayed({ resolveDl5Display(dm, callback) }, 500)
+                }
+            }
+            AdbLocalClient.sendInfo(mContext, CLUSTER_TYPE, CMD_PROJECTION_ON, "", cb)
             return
         }
 
