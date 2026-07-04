@@ -56,20 +56,66 @@ public class AdbLocalClient {
     private static final int ADB_PORT = 5555;
 
     // ──────────────────────────────────────────────────────────────────────────
-    // AutoContainer service name — DL3 vs DL5 dispatch
-    //   DiLink 3.0 (BYD Seal EU / Atto 3 …) → "AutoContainer" (PascalCase)
-    //   DiLink 5.0 (BYD-AUTO API 32)       → "auto_container" (snake_case)
-    // Confirmed by D11/D12 PASS on DL5 (log 22/05/2026) and by user on DL3.
-    // Helper must never throw (hot path called from background thread).
+    // AutoContainer service name — resolved by PROBING which casing is actually
+    // registered in ServiceManager, not by a fixed DL3/DL5 rule.
+    //   DiLink 3.0 / 4.0                    → "AutoContainer" (PascalCase)
+    //   literal DiLink5.0 (API 32)          → "auto_container" (snake_case)  [D11/D12 PASS 22/05]
+    //   DiLink50F_LC / 5.1 (1for2, API 33)  → "AutoContainer" (PascalCase)   [proven: bugreport
+    //     20260702 D50F_LC — service list has "AutoContainer" (PascalCase) + AutoContainerNative,
+    //     while `service call auto_container` returned "does not exist"]
+    // So "DL5 ⇒ snake_case" is WRONG for the 50F_LC/5.1 variants. Matches the OEM's own rule
+    // (AmapService: snake_case only when ro.product.name == "DiLink5.0", else PascalCase).
+    //
+    // Resolution order: cached result → in-proc ServiceManager probe (a positive getService is
+    // trusted; a null is treated as "not visible to this uid", NOT "absent") → DL5/DL3 heuristic
+    // as an uncached default. The activation path additionally self-corrects via
+    // {@link #noteAutoContainerMissing} if a `service call` returns "does not exist". Never throws.
     // ──────────────────────────────────────────────────────────────────────────
-    static String autoContainerSvcName(Context ctx) {
+    private static final String SVC_PASCAL = "AutoContainer";
+    private static final String SVC_SNAKE  = "auto_container";
+    /** Resolved-and-verified service name, cached process-wide (the registration never changes). */
+    private static volatile String sCachedSvcName = null;
+
+    public static String autoContainerSvcName(Context ctx) {
+        String cached = sCachedSvcName;
+        if (cached != null) return cached;
+        boolean dl5 = isDiLink5Safe(ctx);
+        boolean pascalReg = serviceRegistered(SVC_PASCAL);   // trust only a positive
+        boolean snakeReg  = serviceRegistered(SVC_SNAKE);
+        String resolved;
+        if (pascalReg && !snakeReg)      resolved = SVC_PASCAL;
+        else if (snakeReg && !pascalReg) resolved = SVC_SNAKE;
+        else if (pascalReg)              resolved = dl5 ? SVC_SNAKE : SVC_PASCAL; // both visible → heuristic
+        else {
+            // Neither positively visible (probe blocked for this uid) — return the heuristic
+            // default WITHOUT caching, so the activation fallback can still correct it.
+            return dl5 ? SVC_SNAKE : SVC_PASCAL;
+        }
+        sCachedSvcName = resolved;
+        com.byd.dashcast.util.AppLogger.i(TAG, "AutoContainer service resolved to '" + resolved + "' (probe)");
+        return resolved;
+    }
+
+    /** {@code true} only if a binder is positively registered under {@code name} in ServiceManager.
+     *  A {@code null} handle is reported as {@code false} (may be registered but not visible to an
+     *  untrusted uid) — callers must not conclude "absent" from a single false; see the probe logic. */
+    private static boolean serviceRegistered(String name) {
         try {
-            if (ctx != null
-                    && com.byd.dashcast.platform.Platform.get().isDiLink5(ctx)) {
-                return "auto_container";
-            }
-        } catch (Throwable ignore) { /* DL3 safe default below */ }
-        return "AutoContainer";
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            Object b = sm.getMethod("getService", String.class).invoke(null, name);
+            return b != null;
+        } catch (Throwable ignore) {
+            return false;
+        }
+    }
+
+    /** Self-correction: when a {@code service call <tried>} returns "does not exist", pin the OTHER
+     *  casing so every subsequent call (and the immediate retry) uses the name that exists. */
+    public static void noteAutoContainerMissing(String tried) {
+        String other = SVC_SNAKE.equals(tried) ? SVC_PASCAL : SVC_SNAKE;
+        sCachedSvcName = other;
+        com.byd.dashcast.util.AppLogger.i(TAG,
+                "AutoContainer '" + tried + "' does not exist → switching to '" + other + "'");
     }
 
     public static boolean isDiLink5Safe(Context ctx) {
