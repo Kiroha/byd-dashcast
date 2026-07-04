@@ -12,7 +12,8 @@
 - **GOAL:** show turn-by-turn navigation on the **DiLink 3 windshield HUD** (and, adjacently, on the instrument **cluster**).
 - **HUD architecture (proven):** the DL3 windshield HUD is an **MCU/CAN-driven hardware display** (icon library + text fields selected by CAN frames on the MCU side), **not** an Android rendered surface.
 - **HUD control (proven on-car):** we can fully drive the HUD *container* — on/off, brightness, height, angle, ADAS overlay — via `BYDAutoSettingDevice` feature ids (ECU `0x4C1`/sub `0xE`). See §3.
-- **★ BREAKTHROUGH (2026-07-04):** on **arrow-capable firmware**, writing our own CAN **guidance** (`BYDAutoInstrumentDevice` INSTRUMENT_GUIDE_INFO_SIMPLE + distance + road + status) made a **turn arrow appear on the windshield HUD** (1 clear YES). So DashCast **can** drive the HUD arrows itself via CAN — regardless of the OEM nav app. **Not yet solid: 1 YES vs 1 NO/PARTIAL on the same firmware → procedure-dependent; needs 2-3 photographed confirmations.** See §5.
+- **★ BREAKTHROUGH (2026-07-04):** on **arrow-capable firmware**, writing our own CAN **guidance** (`BYDAutoInstrumentDevice` INSTRUMENT_GUIDE_INFO_SIMPLE + distance + road + status) made a **turn arrow appear on the windshield HUD**. So DashCast **can** drive the HUD arrows itself via CAN — regardless of the OEM nav app. **Now at 2 clear YES vs 1 NO/PARTIAL, all on the SAME SX326 firmware** ⇒ the NO is **procedure-dependent, not firmware** (HUD display mode / OEM nav not fully closed). **Still not fully locked: 0 photographed YES so far** (the tester answers are self-reported); need 2-3 **photographed** confirmations. See §5.
+- **★ NEW field intel (2026-07-04, topic chat):** a tester (Erdal) states **"to display Navi arrows on HUD, the OTA version must be V2.2.2 (with an update for HUD, new style of ADAS symbols)."** This is a concrete OTA threshold for arrow capability (see §4). Caveat: **`V2.2.2` (HUD OTA package version) is a DIFFERENT version namespace from `inswver`'s `SX<NNN>` (MCU revision)** — the two are not yet correlated. Our arrow-YES firmware is SX326; whether SX326 == V2.2.2 is unproven. Ask testers to report BOTH `inswver` AND whether they have V2.2.2 / the new ADAS symbol style.
 - **Firmware split (proven):** two DL3 HUD MCU firmwares — an **older one that cannot draw arrows** and a **newer one that can**. Discriminator = system property `apps.setting.product.inswver` (free to read). See §4.
 - **Immediate next step chosen by the user: option (A)** = solidify the CAN→HUD bench with **photos** + OEM-nav-fully-off + noting the HUD display mode. A tester how-to was written (English). Then (B) test the real feature: run Google Maps nav through DashCast (existing `MapNotificationListenerService` already writes CAN guidance) and see if the HUD shows real turn-by-turn.
 - **Separate but related (DL5.1 cluster projection):** fixed the AutoContainer service-name casing bug (`AutoContainer` vs `auto_container`) in 1.6.100; the cross-user (`INTERACT_ACROSS_USERS`) blocker for launching apps on display 2 must be solved via the uid-2000 daemon, not the app. See §9.
@@ -81,16 +82,18 @@ DL3 format: `6125f_1for2_USER_SIGN_SX<NNN>_<YYYYMMDDHHMM>_Q2700`. The `SX<NNN>` 
 
 Firmwares seen across testers:
 
-| SX code | Build date | Arrow signal |
-|---|---|---|
-| SX245 | 2025-03-25 | oldest — barely tapped (unclear) |
-| SX309 | 2025-11-08 | tester used "changed-other (?)" (ambiguous) |
-| **SX326** | **2026-02-03** | **clear arrows; CAN→HUD bench got a YES here** |
-| SX365 | 2026-06-07 | newest (only a confirm run so far) |
+| SX code | Build date | Arrow signal | HUD container control (confirm zips) |
+|---|---|---|---|
+| SX245 | 2025-03-25 | oldest — barely tapped (unclear) | 6 controls **work** (ANGLE flaky) — container control ≠ arrow capability |
+| SX309 | 2025-11-08 | tester used "changed-other (?)" (ambiguous) | mostly YES (one bruité run) |
+| **SX326** | **2026-02-03** | **clear arrows; CAN→HUD bench = 2 YES / 1 NO here** | all 6 solid YES |
+| SX365 | 2026-06-07 | newest — no bench yet | ⚠️ one confirm (`hud_confirm_20260704_173637`, on old app 1.6.98) gave **ON=NO / ADAS=NO / rest SKIP** — ambiguous, **re-run on 1.6.101** before concluding SX365 changed the scheme |
 
 (DL5.1 car uses `Di5.1_…_S9221_…`, a different platform entirely.)
 
-**Actionable:** DashCast can read `inswver` to predict/gate arrow capability; stop chasing arrows on old firmware; run the CAN→HUD bench only on arrow-capable firmware (SX326+). The exact SX/date threshold where arrows appear is **not yet pinned** — needs tester confirmation.
+**★ Concrete OTA threshold (field intel, 2026-07-04):** a tester says **arrow capability needs HUD OTA `V2.2.2`** ("new style of ADAS symbols"). **BUT `V2.2.2` ≠ `SX<NNN>`** — `V2.2.2` is the HUD OTA package version, `SX<NNN>` is the MCU revision inside `inswver`; the mapping between them is **not yet established**. To pin it: collect from each tester `inswver` (SX) + whether they have V2.2.2 + whether their ADAS symbols are the "new style" + a CAN→HUD bench result. Note SX326 (arrow-YES) is probably ≥ V2.2.2 but unproven.
+
+**Actionable:** DashCast can read `inswver` to predict/gate arrow capability; stop chasing arrows on old firmware; run the CAN→HUD bench only on arrow-capable firmware (SX326+). Container HUD control (§3) works even on the oldest SX245 — do **not** conflate it with arrow capability. The exact SX/date/OTA threshold where arrows appear is **not yet pinned** — needs the `inswver`↔`V2.2.2` correlation above.
 
 ---
 
@@ -99,14 +102,15 @@ Firmwares seen across testers:
 Shipped in **1.6.99-beta** as **HudDiagActivity TOOL 3 "CAN → HUD bench"**: with OEM nav OFF, DashCast writes nav guidance itself via `CanBusController`:
 `setSettingFeature(SET_HUD_SWITCH, 1)` → `setNaviActive(true)` → `sendSimpleGuidance(icon, dist)` + `sendNextStreetName("TEST …")` + `sendRestRoute(0,5,1200)`, sweeping **STRAIGHT (icon 11) → LEFT (1) → RIGHT (2)**, ~6 s each, then asks the tester **YES/NO/Partial** (did the windshield HUD show an arrow?) → zip `hud_canbench_*` to Telegram topic 2701.
 
-**Result (2026-07-04, 2 zips, both on SX326 arrow-capable firmware):**
-- `hud_canbench_20260704_124211` → **"YES — arrow on HUD"** ✅
-- `hud_canbench_20260704_084429` (earlier) → "NO/PARTIAL" ❌
-- Both: all writes rc=0, OEM nav off.
+**Result (2026-07-04, 3 zips, all on SX326 arrow-capable firmware):**
+- `hud_canbench_20260704_124211` (1.6.100) → **"YES — arrow on HUD"** ✅
+- `hud_canbench_20260704_150400` (1.6.101, current build) → **"YES — arrow on HUD"** ✅ *(reproduced the YES)*
+- `hud_canbench_20260704_084429` (1.6.100, earliest) → "NO/PARTIAL" ❌
+- All three: all writes rc=0, OEM nav off. **Tally = 2 YES / 1 NO on the SAME firmware.**
 
 **Interpretation:** on arrow-capable DL3 firmware the windshield HUD **does consume the CAN instrument guidance registers** (`INSTRUMENT_GUIDE_INFO_SIMPLE_SET` etc.). So **DashCast can drive the HUD arrows via Channel C**, independent of which nav app is the OEM source (even on Telenav cars — the MCU reads CAN). This **flips** the earlier "no injectable HUD path" verdict *for arrow-capable firmware*.
 
-**Caveat (do not take the YES for granted):** 1 clear YES vs 1 NO/PARTIAL on the *same* firmware ⇒ procedure-dependent. Likely reasons the first failed: OEM nav not fully closed (it overwrites our guidance), or the HUD display mode was "speed only" (not a nav mode), or the tester looked at the wrong moment. **Need 2-3 photographed YES to solidify.**
+**Caveat (do not take the YES for granted):** 2 clear YES vs 1 NO/PARTIAL on the *same* SX326 firmware ⇒ the NO is **procedure-dependent, not firmware**. Likely reasons it failed: OEM nav not fully closed (it overwrites our guidance), or the HUD display mode was "speed only" (not a nav mode), or the tester looked at the wrong moment. Cédric's updated tester how-to (topic msg 2026-07-04 12:37) already instructs: fully close OEM nav + set HUD to a **navigation** display mode + take a **PHOTO**. **Still need photographed YES to solidify — 0 photos returned so far** (all results are self-reported YES/NO taps; the zip carries no image, photos come as separate Telegram image posts).
 
 **Huge implication:** DashCast's **existing production path** — `HudController` + `MapNotificationListenerService` — already parses Google Maps/Waze notifications and writes these **same** CAN guidance frames (today for the cluster). So **running a real nav through DashCast on arrow-capable firmware probably already lights the HUD** with turn-by-turn. That is the real feature to verify next.
 
@@ -241,19 +245,20 @@ Rebuilt in 1.6.98, extended since. **Three tools** (dev-only screen, built progr
 - HUD architecture = MCU/CAN-driven (§2).
 - HUD container control (on/off/brightness/height/angle/ADAS) on DL3 (§3), DL3-only.
 - Firmware discriminator `inswver` + two-firmware split (§4).
-- **CAN→HUD arrow injection works on arrow-capable firmware (1 YES) (§5)** — the big one, needs solidifying.
+- **CAN→HUD arrow injection works on arrow-capable firmware — 2 YES / 1 NO, all SX326 (§5)** — the big one; reproduced on current build 1.6.101; NO is procedure-dependent; still needs a **photographed** YES to lock.
 - Cluster nav on AMap DL3 via AUTONAVI broadcast (§6, older work).
 - DL5.1 AutoContainer casing fix (§9).
 
 **OPEN / NEXT (ranked):**
-1. **(A — user's current choice) Solidify the CAN→HUD bench:** get 2-3 **photographed** YES on arrow-capable firmware, with OEM nav fully closed + HUD in a nav display mode. Tester how-to already written (English). Confirm the exact SX/date threshold for arrow capability.
+1. **(A — user's current choice) Solidify the CAN→HUD bench:** now **2 YES / 1 NO on SX326** (reproduced on 1.6.101) but **0 photographed** — the remaining gap is a **photo** of the HUD arrow. Updated tester how-to (12:37 msg) asks for photo + nav display mode + OEM nav fully closed. Also correlate `inswver` (SX) ↔ OTA `V2.2.2` to pin the arrow-capability threshold (§4).
 2. **(B) Test the real feature end-to-end:** on an SX326+ car, run a Google Maps navigation with DashCast open (its `MapNotificationListenerService` → `HudController` → `CanBusController` writes Channel C) and photograph the HUD. If it shows real turn-by-turn, the feature already exists — just needs a DL3-arrow-firmware gate + polish. **This is the highest-value test.**
 3. Verify the turn-icon mapping renders correctly (our icon id → the HUD's drawn arrow) — a sweep with photos.
 4. Ship the HUD turn-by-turn as a real gated feature (arrow-capable DL3), reusing the prod path.
 5. (Adjacent) DL5.1 cluster projection: retest 1.6.100 AutoContainer fix; solve cross-user launch via the daemon; unblock ADB-TCP on the affected car.
 
 **Open questions:**
-- Exact SX/date threshold where the HUD firmware gains arrow support (SX309 vs SX326?).
+- Exact SX/date/OTA threshold where the HUD firmware gains arrow support. **New lead:** field intel says arrows need **HUD OTA `V2.2.2`** — but `V2.2.2` (OTA package) ≠ `SX<NNN>` (`inswver` MCU rev); **correlate the two** (ask testers for both + "new ADAS symbol style" + a bench result). SX326 got arrows → likely ≥ V2.2.2, unproven.
+- Does the newest firmware **SX365** keep the same HUD-control scheme? One ambiguous confirm (`173637`, old app 1.6.98) gave ON=NO/ADAS=NO — **re-run on 1.6.101** to rule out an app-version/test-noise artifact vs a real scheme change.
 - Does our injected arrow render with the *correct* direction/icon (map our `ICON_*` to the HUD's library)?
 - Does the OEM nav (if running) race/overwrite our CAN guidance — do we need to suppress it?
 - Does the HUD display mode (0x42E00008/0C, the user setting) need to be a nav mode for our arrow to show? (Suspected reason for the NO/PARTIAL run.)
