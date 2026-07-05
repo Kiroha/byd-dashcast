@@ -54,6 +54,11 @@ class LlmVoiceEngine(ctx: Context) {
     private val mMain = Handler(Looper.getMainLooper())
     /** Guard: stop any previous TTS playback before starting a new one. */
     private var mActiveMp: MediaPlayer? = null
+    // The AudioFocusRequest tied to mActiveMp. Held so a manual stop()/release() (which does
+    // NOT fire the MediaPlayer completion listener) can still abandon the MAY_DUCK grant —
+    // otherwise each interrupted/released TTS reply leaves the cabin audio permanently ducked.
+    // Accessed only on mMain (main looper), like mActiveMp.
+    private var mActiveFocusReq: AudioFocusRequest? = null
     private var mActiveTmpFile: File? = null
     @Volatile private var mReleased = false
 
@@ -106,6 +111,14 @@ class LlmVoiceEngine(ctx: Context) {
                 val tmp = mActiveTmpFile; mActiveTmpFile = null
                 tmp?.delete()
             }
+            // Manual teardown doesn't fire the completion listener that abandons focus.
+            mActiveFocusReq?.let {
+                try {
+                    val am = mCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    am.abandonAudioFocusRequest(it)
+                } catch (ignore: Throwable) {}
+            }
+            mActiveFocusReq = null
         }
     }
 
@@ -226,20 +239,28 @@ class LlmVoiceEngine(ctx: Context) {
             FileOutputStream(tmp).use { fos -> fos.write(mp3) }
             mMain.post {
                 if (mReleased) { tmp.delete(); return@post }
-                // Stop any previous TTS still playing
+                val am = mCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                // Stop any previous TTS still playing — and abandon ITS focus grant. A manual
+                // stop()/release() does NOT fire the completion listener that would normally
+                // abandon it, so without this each interrupt leaked a MAY_DUCK grant and the
+                // car's media/nav audio stayed ducked with no owner.
                 val prev = mActiveMp
                 if (prev != null) {
                     try { prev.stop(); prev.release() } catch (ignore: Throwable) {}
                     mActiveMp = null
                     val prevTmp = mActiveTmpFile; mActiveTmpFile = null
                     prevTmp?.delete()
+                    mActiveFocusReq?.let {
+                        try { am.abandonAudioFocusRequest(it) } catch (ignore: Throwable) {}
+                    }
+                    mActiveFocusReq = null
                 }
-                val am = mCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 val focusReq = AudioFocusRequest.Builder(
                     AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                     .setAudioAttributes(ASSISTANT_AUDIO_ATTRS)
                     .setAcceptsDelayedFocusGain(false)
                     .build()
+                mActiveFocusReq = focusReq
                 val focus = am.requestAudioFocus(focusReq)
                 if (focus != AudioManager.AUDIOFOCUS_REQUEST_GRANTED
                     && focus != AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
@@ -256,6 +277,7 @@ class LlmVoiceEngine(ctx: Context) {
                         if (mActiveMp === p) { mActiveMp = null; mActiveTmpFile = null }
                         tmp.delete()
                         am.abandonAudioFocusRequest(focusReq)
+                        if (mActiveFocusReq === focusReq) mActiveFocusReq = null
                     }
                     mp.setOnErrorListener { p, what, _ ->
                         AppLogger.w(TAG, "MediaPlayer error what=$what")
@@ -263,6 +285,7 @@ class LlmVoiceEngine(ctx: Context) {
                         if (mActiveMp === p) { mActiveMp = null; mActiveTmpFile = null }
                         tmp.delete()
                         am.abandonAudioFocusRequest(focusReq)
+                        if (mActiveFocusReq === focusReq) mActiveFocusReq = null
                         true
                     }
                     mp.setOnPreparedListener { p ->
@@ -273,6 +296,7 @@ class LlmVoiceEngine(ctx: Context) {
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "MediaPlayer error: ${e.message}")
                     am.abandonAudioFocusRequest(focusReq)
+                    if (mActiveFocusReq === focusReq) mActiveFocusReq = null
                 }
             }
         } catch (e: Exception) {
