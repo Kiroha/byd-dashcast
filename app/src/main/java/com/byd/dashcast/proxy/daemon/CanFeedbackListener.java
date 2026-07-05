@@ -43,6 +43,10 @@ public final class CanFeedbackListener {
     private static volatile Object  sListener;     // our AbsBYDAutoSettingListener subclass (strong ref)
     private static volatile Object  sInstrListener;// our AbsBYDAutoInstrumentListener subclass (strong ref)
     private static volatile boolean sRegistered;
+    /** True while a registration runnable is posted but not yet completed. Prevents a retry
+     *  during the 5s await-timeout window from posting a second runnable that would register
+     *  a duplicate device listener and leak the first sink. Cleared on success AND failure. */
+    private static volatile boolean sRegisterInFlight;
     private static volatile android.os.HandlerThread sThread;   // Looper thread for register + callbacks
     /** Last value pushed per feature id — persistent (survives drain). onDataEventChanged fires on
      *  CHANGE only, and the OEM nav sets the HUD mode once at nav-start; keeping the last value lets
@@ -166,6 +170,9 @@ public final class CanFeedbackListener {
      */
     public static synchronized String startSetting(final Context wrappedCtx) {
         if (sRegistered) return "already-registered";
+        // A previous attempt's runnable may still be in flight after its caller's 5s await
+        // timed out — don't post a second one (it would register a duplicate device listener).
+        if (sRegisterInFlight) return "register-in-flight";
         try {
             if (sThread == null) {
                 sThread = new android.os.HandlerThread("can-feedback-listener");
@@ -177,6 +184,7 @@ public final class CanFeedbackListener {
             final android.os.Handler h = new android.os.Handler(sThread.getLooper());
             final String[] result = { "no-result" };
             final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            sRegisterInFlight = true;
             h.post(new Runnable() {
                 @Override public void run() {
                     try {
@@ -217,6 +225,10 @@ public final class CanFeedbackListener {
                     } catch (Throwable t) {
                         result[0] = "ERR " + describe(t);
                     } finally {
+                        // Clear on BOTH success and failure: a genuinely-failed register can be
+                        // retried, but a still-pending one blocks a duplicate post above. On
+                        // success sRegistered=true is already set, so retries short-circuit there.
+                        sRegisterInFlight = false;
                         latch.countDown();
                     }
                 }
