@@ -98,6 +98,28 @@ class HudRawCaptureActivity : AppCompatActivity() {
         log("Ready. Tape START.")
     }
 
+    override fun onDestroy() {
+        // If the screen is left (back / rotation / finish) while a capture is running without
+        // tapping STOP, the detached `nohup logcat -b all` would keep writing an unbounded
+        // all-buffers log to /data/local/tmp until reboot (and repeat launches stack more
+        // processes). Kill the recorded PID and delete the abandoned capture file — a hard
+        // abort (no zip/upload); a normal STOP still runs the graceful path.
+        if (capturing) {
+            capturing = false
+            bg {
+                sh(
+                    "P=$REMOTE_PID; F=$REMOTE_LOG; " +
+                    "PID=\$(cat \"\$P\" 2>/dev/null); " +
+                    "[ -n \"\$PID\" ] && kill \"\$PID\" 2>/dev/null; " +
+                    "sleep 1; " +
+                    "[ -n \"\$PID\" ] && kill -9 \"\$PID\" 2>/dev/null; " +
+                    "rm -f \"\$F\" \"\$P\" 2>/dev/null"
+                )
+            }
+        }
+        super.onDestroy()
+    }
+
     private fun toggleCapture() = if (!capturing) startCapture() else stopCapture()
 
     private fun startCapture() {
