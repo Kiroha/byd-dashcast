@@ -1072,6 +1072,49 @@ public final class ProxyClient {
         return ok;
     }
 
+    // ─── Main-thread ANR guard for the reconnect bootstrap ───────────────────
+    // connect() blocks the caller for up to BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS
+    // (~23s) bootstrapping a cold uid-2000 daemon. That MUST never run on the UI
+    // looper (frozen instrument cluster = ANR). This single-thread executor runs the
+    // blocking bootstrap off-thread when a verb is (defensively) called on main.
+    private static final java.util.concurrent.ExecutorService sReconnectExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "proxy-reconnect");
+                t.setDaemon(true);
+                return t;
+            });
+    private static final java.util.concurrent.atomic.AtomicBoolean sAsyncReconnectPending =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * Reconnect policy that never blocks the main thread. On a background thread this
+     * runs the (cooldown-gated) blocking bootstrap synchronously — unchanged behaviour.
+     * On the main thread it kicks the bootstrap onto the dedicated "proxy-reconnect"
+     * thread (coalesced — at most one in flight) and returns {@code false} immediately,
+     * so a cold daemon can never ANR the UI: the caller's {@code op.run()} throws
+     * "not connected" (handled by existing AdbLocalClient fallbacks) and the daemon
+     * still revives in the background for the next call.
+     *
+     * @return {@code true} only when a synchronous reconnect ran AND a live binder is
+     *         now held; {@code false} on the main thread (kicked async) or on failure.
+     */
+    private static boolean reconnectUnlessMainThread() {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            if (sAsyncReconnectPending.compareAndSet(false, true)) {
+                try {
+                    sReconnectExecutor.execute(() -> {
+                        try { attemptReconnect(); }
+                        finally { sAsyncReconnectPending.set(false); }
+                    });
+                } catch (java.util.concurrent.RejectedExecutionException ree) {
+                    sAsyncReconnectPending.set(false);
+                }
+            }
+            return false;
+        }
+        return attemptReconnect();
+    }
+
     /**
      * Wrap a typed-verb body in single-shot auto-recovery: pre-check live
      * binder (best-effort silent reconnect if dead), run the body, retry once
@@ -1095,7 +1138,7 @@ public final class ProxyClient {
         // the legacy fallback (e.g. AdbLocalClient.sendInfo) catch and route.
         IBinder pre = sBinder;
         if (pre == null || !pre.isBinderAlive()) {
-            attemptReconnect();
+            reconnectUnlessMainThread();
         }
         try {
             return op.run();
@@ -1111,7 +1154,7 @@ public final class ProxyClient {
             }
             AppLogger.w(TAG, tag + " RemoteException: " + e.getMessage()
                     + " — attempting reconnect");
-            if (!attemptReconnect()) {
+            if (!reconnectUnlessMainThread()) {
                 throw new ProxyException(tag + ": " + e.getMessage(), e);
             }
             try {
