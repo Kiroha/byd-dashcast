@@ -287,6 +287,15 @@ public final class ProxyDaemonMain {
         try {
             Runtime.getRuntime().addShutdownHook(new Thread("pid-cleanup") {
                 @Override public void run() {
+                    // Only clean up if THIS process still owns the lock. A duplicate daemon
+                    // that lost the race and suicided (healPidLock -> System.exit) must NOT
+                    // delete the SURVIVOR's PID file — otherwise a fresh bootstrap sees no
+                    // lock and spawns a spurious third daemon during the ~10s until the
+                    // survivor rewrites it.
+                    int owner = -1;
+                    try { owner = Integer.parseInt(readSmallFile(new File(PID_FILE)).trim()); }
+                    catch (Throwable ignore) {}
+                    if (owner != Process.myPid()) return;
                     try { new File(PID_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(TRIGGER_FILE).delete(); } catch (Throwable ignore) {}
                     try { new File(VERSION_FILE).delete(); } catch (Throwable ignore) {}
