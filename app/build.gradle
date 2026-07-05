@@ -392,6 +392,12 @@ android {
         versionCode 549
         versionName "1.6.108-beta"
 
+        // Ship only the locales the app actually translates (verified against
+        // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
+        // folders from resources.arsc — smaller APK for the bandwidth-limited
+        // on-car OTA. Perf audit 2026-07-05 finding #16.
+        resConfigs 'ar', 'be', 'de', 'en', 'es', 'it', 'kk', 'pl', 'ru', 'tr', 'uk', 'uz'
+
         // Bug-report bot credentials (see note at top of file).
         buildConfigField "String", "BUG_REPORT_BOT_TOKEN",
                 "\"${_localProps.getProperty('bugReport.botToken', '')}\""
