@@ -184,6 +184,12 @@ class HotspotActivity : AppCompatActivity() {
         super.onPause()
         statsHandler.removeCallbacks(statsTick)
         uptimeHandler.removeCallbacks(uptimeTick)
+        // Also cancel the TetherFi watchdog. It self-reposts every WATCHDOG_PERIOD_MS and was
+        // only stopped in onDestroy / on switch toggle, so a paused-but-alive Activity kept
+        // ADB/dumpsys-polling every 20s and auto-relaunching TetherFi in the foreground.
+        // Reset watchdogChecks so onResume's (checked && checks==0) re-arm fires.
+        stopWatchdog(false)
+        watchdogChecks = 0
     }
 
     private fun checkForTetherFiUpdate() {
