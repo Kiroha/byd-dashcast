@@ -1082,16 +1082,23 @@ public final class Phase4TaskVerbs {
     private static String execShell(String command, int timeoutMs) {
         Process p = null;
         try {
-            p = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
+            // redirectErrorStream(true): stderr is merged into stdout so a single reader
+            // drains ONE stream. The previous code read stdout fully THEN stderr, so a
+            // child that filled its 64KB stderr pipe before closing stdout deadlocked the
+            // reader (and stalled this binder thread until the waitFor timeout).
+            ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
+            pb.redirectErrorStream(true);
+            p = pb.start();
             final Process proc = p;
-            StringBuilder out = new StringBuilder();
+            // StringBuffer (not StringBuilder): the reader thread appends while the caller
+            // reads out.toString() after a BOUNDED join, so the buffer is touched from two
+            // threads — StringBuffer's synchronized append/toString removes that data race.
+            final StringBuffer out = new StringBuffer();
             Thread reader = new Thread(() -> {
                 byte[] buf = new byte[4096];
-                try (java.io.InputStream is = proc.getInputStream();
-                     java.io.InputStream es = proc.getErrorStream()) {
+                try (java.io.InputStream is = proc.getInputStream()) {
                     int n;
                     while ((n = is.read(buf)) > 0) out.append(new String(buf, 0, n));
-                    while ((n = es.read(buf)) > 0) out.append("[err] ").append(new String(buf, 0, n));
                 } catch (Throwable ignore) {}
             });
             reader.start();
