@@ -606,45 +606,62 @@ public class ClusterService extends Service
                         android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                         opts.setLaunchDisplayId(displayId);
                         if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
-                        // Primary: IAM path (honours setLaunchDisplayId in ActivityOptions).
-                        // On DL5 with real HDMI, IAM reflection may fail (NPE) and fall back to
-                        // startActivity(opts) which ignores setLaunchDisplayId on this ROM.
-                        // On some DX_BYD_AUTO ROMs even a shell `am start --display 1` lands the
-                        // app on display 0 (the live `displayId=1 realActivity` query stays empty).
-                        // Route through the proxy daemon's launchAndForce cascade instead: it adds
-                        // the privileged moveRootTaskToDisplay + watchdog that re-anchors the task
-                        // on the cluster display — the same path fission uses to pin apps there.
+                        // ── DAEMON-PRIMARY launch (matches DaemonConfig: the uid-2000 proxy daemon
+                        // is the DEFAULT privileged path in ALL modes; the app-side path is a fallback
+                        // gated by use_legacy_path). Layout mode already launches via the daemon —
+                        // this unifies normal mode. On unprivileged DL5 the app-side launch is
+                        // cross-user DENIED anyway, so the daemon is essential there; on DL3 the daemon
+                        // `am start --display` is the same cascade fission/layout uses successfully.
+                        // The app-side path stays as the fallback (use_legacy_path ON, daemon down, or
+                        // the daemon launch failed).
+                        final int clW = clusterWidthOr(1920);
+                        final int clH = clusterHeightOr(720);
+                        boolean legacyPath = com.byd.dashcast.proxy.DaemonConfig
+                                .isLegacyPathEnabled(ClusterService.this);
+                        boolean daemonTried = false;
+                        if (!legacyPath && ProxyClient.isConnected()) {
+                            daemonTried = true;
+                            if (daemonLaunchSync(packageName, displayId, clW, clH)) {
+                                AppLogger.i(TAG, "launchOnDashboard OK (daemon) → " + packageName);
+                                postLaunchResult(callback, true);
+                                return;
+                            }
+                            AppLogger.w(TAG, "daemon launch failed — falling back to app-side for " + packageName);
+                        }
+
+                        // App-side fallback. startActivityViaIAM RETURNS false when IAM reflection
+                        // failed but its internal startActivity(opts) fallback DID launch the app —
+                        // the normal DL3 path, a SUCCESS that must be reported so the app is tracked
+                        // (green bar / resize / stop all depend on it). It only THROWS when every
+                        // app-side attempt failed. 1.6.106 conflated the two (INC-20260705-195632
+                        // Telenav / 195856 Waze — app shown but never tracked).
                         boolean iamOk;
+                        boolean iamThrew = false;
                         try {
                             iamOk = startActivityViaIAM(launchIntent, opts, displayId);
                         } catch (Throwable iamErr) {
-                            // Unprivileged units (D50F_LC / DL5.1): the app-side launch onto the
-                            // cluster display is DENIED (cross-user SecurityException — "Permission
-                            // Denial … launchDisplayId=N" — the app lacks INTERACT_ACROSS_USERS).
-                            // A thrown denial must NOT escape to the outer catch (that aborted the
-                            // whole launch and skipped the daemon path). Treat it as a plain failure
-                            // so DL5 reaches the privileged uid-2000 daemon path below.
                             AppLogger.w(TAG, "startActivityViaIAM threw ("
                                     + iamErr.getClass().getSimpleName() + ": " + iamErr.getMessage() + ")");
                             iamOk = false;
+                            iamThrew = true;
                         }
-                        if (!iamOk && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            // The uid-2000 daemon HOLDS the cross-user permission — proven on-car
-                            // (INC-20260705: D8 "Launch + retract OK — projected on display 2" on
-                            // D50F_LC, while every app-side attempt returned Permission Denial).
+                        if (!iamOk && !daemonTried && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
+                            // DL5 app-side DENIED (cross-user) and the daemon was not tried yet
+                            // (use_legacy_path ON, or daemon was down at decision time) — the daemon
+                            // HOLDS the cross-user permission, so it is the only path that can land it.
                             AppLogger.w(TAG, "DL5: app-side launch failed — routing via proxy daemon launchAndForce");
-                            launchViaDaemonForce(packageName, displayId,
-                                    clusterWidthOr(1920), clusterHeightOr(720));
-                            AppLogger.i(TAG, "launchOnDashboard → daemon force path → " + packageName);
-                            postLaunchResult(callback, true);
-                        } else if (iamOk) {
-                            AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
-                            postLaunchResult(callback, true);
-                        } else {
-                            // Non-DL5 (DL3) app-side launch failed and there is no daemon cluster
-                            // path here — report failure rather than a false success.
+                            boolean ok = daemonLaunchSync(packageName, displayId, clW, clH);
+                            AppLogger.i(TAG, "launchOnDashboard → daemon force path (ok=" + ok + ") → " + packageName);
+                            postLaunchResult(callback, ok);
+                        } else if (iamThrew) {
+                            // Non-DL5 (DL3) and EVERY app-side attempt threw — a genuine failure.
                             AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
                             postLaunchResult(callback, false);
+                        } else {
+                            // iamOk==true, OR (non-DL5 && returned false = startActivity fallback
+                            // launched it — the normal DL3 path). Report success so it is tracked.
+                            AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
+                            postLaunchResult(callback, true);
                         }
                     } catch (Exception e) {
                         AppLogger.e(TAG, "launchOnDashboard error for " + packageName, e);
@@ -908,6 +925,44 @@ public class ClusterService extends Service
             // worker (frees it immediately for a queued eviction / task-move).
             sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName));
         });
+    }
+
+    /**
+     * Synchronous daemon launch (uid 2000): runs the {@code launchAndForce} cascade
+     * (am start --display + moveRootTaskToDisplay + resize) and RETURNS whether the app
+     * was launched, so the caller can register it and decide a fallback. Used as the
+     * daemon-PRIMARY path in {@link #launchOnDashboard} (DaemonConfig design). MUST run
+     * off the main thread — {@code launchAndForce} blocks for several seconds; callers
+     * already run on {@code sMoveTaskExecutor}. The diagnostic post-launch verify is
+     * scheduled on {@code sDiagExecutor} so it never holds the move-task worker.
+     *
+     * <p>Success is inferred leniently: the daemon cascade ran without throwing and the
+     * output has no hard-failure marker (am prints "Starting: Intent" on success). This
+     * avoids false negatives that would drop the just-launched app's tracking.
+     */
+    private boolean daemonLaunchSync(final String packageName, final int displayId,
+                                      final int width, final int height) {
+        boolean ok;
+        try {
+            if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
+            String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
+            String low = (log == null) ? "" : log.toLowerCase(java.util.Locale.ROOT);
+            ok = log != null && !log.isEmpty()
+                    && !low.contains("error:")
+                    && !low.contains("exception")
+                    && !low.contains("permission den")
+                    && !low.contains("does not exist")
+                    && !low.contains("unable to resolve");
+            AppLogger.i(TAG, "daemon launchAndForce result (ok=" + ok + "):\n"
+                    + (log != null && !log.isEmpty() ? log : "(empty)"));
+        } catch (Throwable t) {
+            AppLogger.e(TAG, "daemon launchAndForce failed: " + t.getMessage());
+            ok = false;
+        }
+        // AAOS-only experiment + post-launch verify — diagnostic, off the critical path.
+        tryClusterFixedActivityExperiment(displayId, packageName);
+        sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName));
+        return ok;
     }
 
     /**
