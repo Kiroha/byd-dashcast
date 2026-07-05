@@ -1086,6 +1086,23 @@ public final class ProxyClient {
     private static final java.util.concurrent.atomic.AtomicBoolean sAsyncReconnectPending =
             new java.util.concurrent.atomic.AtomicBoolean(false);
 
+    // Threads that own their own transport fallback (e.g. the ShellGateway serial
+    // executor, which routes to AdbLocalClient on any failure) can opt out of the
+    // blocking bootstrap: a binder that dies mid-transact would otherwise stall that
+    // single worker ~23s before the fallback runs. When set, callWithRetry's reconnect
+    // is kicked async (daemon still revives) and the verb fails fast instead.
+    private static final ThreadLocal<Boolean> sNonBlockingReconnect =
+            ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /**
+     * Opt the CURRENT thread out of the blocking daemon bootstrap inside
+     * {@link #callWithRetry}. Intended for dedicated worker threads that have their
+     * own legacy fallback and must not be stalled by a cold-daemon reconnect.
+     */
+    public static void setNonBlockingReconnect(boolean enabled) {
+        sNonBlockingReconnect.set(enabled);
+    }
+
     /**
      * Reconnect policy that never blocks the main thread. On a background thread this
      * runs the (cooldown-gated) blocking bootstrap synchronously — unchanged behaviour.
@@ -1099,7 +1116,8 @@ public final class ProxyClient {
      *         now held; {@code false} on the main thread (kicked async) or on failure.
      */
     private static boolean reconnectUnlessMainThread() {
-        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+                || Boolean.TRUE.equals(sNonBlockingReconnect.get())) {
             if (sAsyncReconnectPending.compareAndSet(false, true)) {
                 try {
                     sReconnectExecutor.execute(() -> {
