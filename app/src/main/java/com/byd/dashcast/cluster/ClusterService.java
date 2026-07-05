@@ -129,6 +129,17 @@ public class ClusterService extends Service
         return t;
     });
 
+    // ── Separate executor for diagnostic-only post-launch verification ──────
+    // verifyClusterDisplayState sleeps ~1.5s before a dumpsys; it must NOT run on
+    // sMoveTaskExecutor (the single move-task worker) or it serializes ahead of a
+    // pending moveTaskToDisplay/eviction, delaying app return-to-display-0. It has
+    // no bearing on the launch outcome, so it runs off the critical path here.
+    private static final ExecutorService sDiagExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "cluster-diag-thread");
+        t.setDaemon(true);
+        return t;
+    });
+
     private static final String PKG_FORCE_FRESH_LAUNCH = "com.telenav.app.arp";
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -893,7 +904,9 @@ public class ClusterService extends Service
             // Post-launch verification: ~1.5 s after the cascade, dump what is actually on
             // the cluster display (package / visible / windowing mode / bounds) so the next
             // bug report shows whether the app stayed put and in which mode it rendered.
-            verifyClusterDisplayState(displayId, packageName);
+            // Runs on the diagnostic executor so its 1.5 s sleep never holds the move-task
+            // worker (frees it immediately for a queued eviction / task-move).
+            sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName));
         });
     }
 
