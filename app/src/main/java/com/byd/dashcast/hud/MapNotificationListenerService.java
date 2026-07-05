@@ -75,6 +75,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private String lastText    = "";
     private String lastSubText = "";
 
+    // Cache of per-source-package Resources (Maps/Waze/ReVanced). A nav app's resources
+    // don't change at runtime, so build the Context + AssetManager once per package instead
+    // of on every notification (createPackageContext().getResources() is a PM lookup + asset
+    // load that previously ran per nav frame on the dispatch thread).
+    private final java.util.concurrent.ConcurrentHashMap<String, Resources> mResCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private static final String PKG_MAPS          = "com.google.android.apps.maps";
     private static final String PKG_MAPS_REVANCED  = "app.revanced.android.apps.maps";
     private static final String PKG_WAZE           = "com.waze";
@@ -566,7 +573,11 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private int resolveIconFromResource(String pkg, Icon icon) {
         if (icon == null || icon.getType() != Icon.TYPE_RESOURCE) return -1;
         try {
-            Resources res = createPackageContext(pkg, 0).getResources();
+            Resources res = mResCache.get(pkg);
+            if (res == null) {
+                res = createPackageContext(pkg, 0).getResources();
+                mResCache.put(pkg, res);
+            }
             int resId = icon.getResId();
             if (resId == 0) return -1;
             String name = res.getResourceEntryName(resId).toLowerCase(Locale.ROOT);
