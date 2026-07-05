@@ -552,14 +552,24 @@ public class ClusterService extends Service
         mPendingDashboardCallback = callback;
         mPendingLaunchRunnable = new Runnable() {
             @Override public void run() {
+                // Cancellation bookkeeping stays on the MAIN thread: these two fields are
+                // read/written from launchOnDashboard() and onDestroy() on the main looper,
+                // so they must be cleared here (still on main) before the executor hop.
                 mPendingLaunchRunnable    = null;
                 mPendingDashboardCallback = null;
+                // Hop the whole cascade off the main thread. cleanFissionStacks() is a
+                // synchronous binder/proxy transact, applyForLaunch() does a shell round-trip
+                // and startActivityViaIAM() bootstraps the uid-2000 proxy daemon — none of that
+                // may run on the UI thread (ANR when the daemon is cold). Reusing the existing
+                // single-thread sMoveTaskExecutor keeps this launch serialized behind any
+                // in-flight moveTaskToDisplay task-move, so no new races are introduced.
+                sMoveTaskExecutor.execute(() -> {
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching on display=" + displayId + " → " + packageName);
                 if (displayId <= 0) {
                     AppLogger.w(TAG, "launchOnDashboard: cluster display not ready (id="
                             + displayId + ") — aborting launch for " + packageName);
-                    if (callback != null) callback.onResult(false);
+                    postLaunchResult(callback, false);
                     return;
                 }
                 try {
@@ -577,7 +587,7 @@ public class ClusterService extends Service
                                 getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent == null) {
                             AppLogger.e(TAG, "No launch intent for " + packageName);
-                            if (callback != null) callback.onResult(false);
+                            postLaunchResult(callback, false);
                             return;
                         }
                         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -615,27 +625,34 @@ public class ClusterService extends Service
                             launchViaDaemonForce(packageName, displayId,
                                     clusterWidthOr(1920), clusterHeightOr(720));
                             AppLogger.i(TAG, "launchOnDashboard → daemon force path → " + packageName);
-                            if (callback != null) callback.onResult(true);
+                            postLaunchResult(callback, true);
                         } else if (iamOk) {
                             AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
-                            if (callback != null) callback.onResult(true);
+                            postLaunchResult(callback, true);
                         } else {
                             // Non-DL5 (DL3) app-side launch failed and there is no daemon cluster
                             // path here — report failure rather than a false success.
                             AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
-                            if (callback != null) callback.onResult(false);
+                            postLaunchResult(callback, false);
                         }
                     } catch (Exception e) {
                         AppLogger.e(TAG, "launchOnDashboard error for " + packageName, e);
-                        if (callback != null) callback.onResult(false);
+                        postLaunchResult(callback, false);
                     }
                 };
+                // DPI settle delay is now applied on THIS background thread (ClusterDpiManager
+                // documents that the caller must delay SETTLE_MS off the main thread) instead of
+                // a main-handler postDelayed, so the whole cascade stays on the executor.
                 if (needsDpiSettle) {
-                    mMainHandler.postDelayed(doLaunch,
-                            com.byd.dashcast.cluster.dpi.ClusterDpiManager.SETTLE_MS);
-                } else {
-                    doLaunch.run();
+                    try {
+                        Thread.sleep(com.byd.dashcast.cluster.dpi.ClusterDpiManager.SETTLE_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
+                if (mDestroyed) return;
+                doLaunch.run();
+                });
             }
         };
         mMainHandler.postDelayed(mPendingLaunchRunnable, 2000);
@@ -646,12 +663,16 @@ public class ClusterService extends Service
             final LaunchCallback callback) {
         AppLogger.log(TAG, "launchOnDashboardWithBounds 500ms → " + packageName
                 + " [" + left + "," + top + "," + right + "," + bottom + "]");
-        mMainHandler.postDelayed(() -> {
+        // Keep the 500ms schedule on the main handler (preserves timing + cancel semantics),
+        // then hop the whole binder/proxy/shell cascade onto the shared single-thread move-task
+        // executor so the main thread never blocks and launches stay serialized behind any
+        // in-flight task-move.
+        mMainHandler.postDelayed(() -> sMoveTaskExecutor.execute(() -> {
             final int displayId = mDisplayHelper.getKnownClusterDisplayId();
             if (displayId <= 0) {
                 AppLogger.w(TAG, "launchOnDashboardWithBounds: cluster display not ready (id="
                         + displayId + ") — aborting launch for " + packageName);
-                if (callback != null) callback.onResult(false);
+                postLaunchResult(callback, false);
                 return;
             }
             if (displayId > 0) {
@@ -669,7 +690,7 @@ public class ClusterService extends Service
                             getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
                         AppLogger.e(TAG, "launchOnDashboardWithBounds: no intent for " + packageName);
-                        if (callback != null) callback.onResult(false);
+                        postLaunchResult(callback, false);
                         return;
                     }
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -704,19 +725,38 @@ public class ClusterService extends Service
                                 wbH > 0 ? wbH : clusterHeightOr(720));
                     }
                     AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
-                    if (callback != null) callback.onResult(true);
+                    postLaunchResult(callback, true);
                 } catch (Exception e) {
                     AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
-                    if (callback != null) callback.onResult(false);
+                    postLaunchResult(callback, false);
                 }
             };
+            // DPI settle delay applied on this background thread (see launchOnDashboard).
             if (needsDpiSettle) {
-                mMainHandler.postDelayed(doLaunchWithBounds,
-                        com.byd.dashcast.cluster.dpi.ClusterDpiManager.SETTLE_MS);
-            } else {
-                doLaunchWithBounds.run();
+                try {
+                    Thread.sleep(com.byd.dashcast.cluster.dpi.ClusterDpiManager.SETTLE_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
             }
-        }, 500);
+            if (mDestroyed) return;
+            doLaunchWithBounds.run();
+        }), 500);
+    }
+
+    /**
+     * Marshals a launch callback result back onto the main looper. The launch cascades now
+     * run on {@link #sMoveTaskExecutor}; per the hardening contract only {@code onResult} is
+     * allowed back on the main thread. Follows the same drop-on-destroy contract already used
+     * by {@link #fallbackLaunch} and moveTaskToDisplayInternal so we never call back into a
+     * torn-down service.
+     */
+    private void postLaunchResult(final LaunchCallback callback, final boolean success) {
+        if (callback == null) return;
+        mMainHandler.post(() -> {
+            if (mDestroyed) return;
+            callback.onResult(success);
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
