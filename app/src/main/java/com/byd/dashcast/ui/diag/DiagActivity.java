@@ -388,6 +388,7 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private void showPanelForTab(int position) {
+        mCurrentTab = position;
         boolean isBeta       = position == TAB_BETA_ENGINE;
         boolean isDl5        = position == TAB_DILINK5;
         boolean isDl2        = position == TAB_DILINK2;
@@ -425,6 +426,7 @@ public class DiagActivity extends AppCompatActivity {
         if (isClusterDl5) prepareClusterDl5TestRowsIfNeeded();
         if (isExportApk) refreshExportApkListIfNeeded();
         if (isVoice)     onVoicePanelEntered();
+        else             unregisterVoiceReceiver(); // leaving Voice → stop the ~20Hz level updates
         panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice || isAaos || isHudDl3) ? View.GONE : View.VISIBLE);
         if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice && !isAaos && !isHudDl3) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
@@ -2872,6 +2874,9 @@ public class DiagActivity extends AppCompatActivity {
     private ProgressBar    pbVoicePeak;
     private MaterialButton btnVoiceToggle;
     private boolean        voiceReceiverRegistered;
+    /** Currently shown tab (set in showPanelForTab); used to re-arm the voice receiver on
+     *  resume only when the Voice tab is actually visible. */
+    private int            mCurrentTab = -1;
     private boolean        voicePanelBound;
 
     // v1.2.50-beta wake-word card
@@ -3024,6 +3029,23 @@ public class DiagActivity extends AppCompatActivity {
         if (!voiceReceiverRegistered) return;
         LocalBroadcastManager.getInstance(this).unregisterReceiver(voiceReceiver);
         voiceReceiverRegistered = false;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Re-arm the voice level receiver only when the Voice tab is the current one, so its
+        // ~20Hz ACTION_LEVEL main-thread UI updates run only while actually visible (F25).
+        if (mCurrentTab == TAB_VOICE) onVoicePanelEntered();
+    }
+
+    @Override
+    protected void onStop() {
+        // Stop the ~20Hz ACTION_LEVEL setText/String.format on the main looper while the
+        // screen is backgrounded — previously the receiver was unregistered only in onDestroy,
+        // so once the Voice tab had been visited it kept waking the UI thread off-screen.
+        try { unregisterVoiceReceiver(); } catch (Throwable ignore) {}
+        super.onStop();
     }
 
     private void onVoiceToggleClicked() {
