@@ -327,6 +327,13 @@ class ClusterManager(context: Context) {
         mLateArrivalListener = holder[0]
         dm.registerDisplayListener(holder[0], mHandler)
 
+        // Actually schedule the expiry: without this the DisplayListener registered above
+        // was never unregistered when the grace period lapsed with no VD (the poll loop just
+        // stopped rescheduling), leaking a DisplayListener until the next cancel() — and a VD
+        // that appeared minutes later still fired a stale onDisplayLateReady. expiry sets
+        // consumed and unregisters; onDisplayAdded / the poll cancel it if a VD arrives first.
+        mHandler.postDelayed(expiry, LATE_ARRIVAL_GRACE_MS)
+
         // Polling fallback: onDisplayAdded is not always fired for cross-process VDs.
         val deadline = SystemClock.uptimeMillis() + LATE_ARRIVAL_GRACE_MS
         mHandler.postDelayed(object : Runnable {
