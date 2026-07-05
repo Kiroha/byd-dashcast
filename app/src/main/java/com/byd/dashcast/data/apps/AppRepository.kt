@@ -69,6 +69,16 @@ class AppRepository {
     }
 
     /**
+     * Returns the cached [AppInfo] for [packageName] from the FULL loaded list
+     * (favorites INCLUDED), or null if the list hasn't loaded yet or the app isn't
+     * installed. This is the correct source for resolving an auto-launch / boot-
+     * projection target: the UI grid excludes favorites into a separate strip, so a
+     * favorited target must NOT be looked up via the grid.
+     */
+    fun findByPackage(packageName: String): AppInfo? =
+        mCachedApps?.firstOrNull { it.packageName == packageName }
+
+    /**
      * Marks or unmarks a package as a favorite, persisting the change and updating
      * the in-memory cache. Triggers a re-sort since favorites float to the top.
      *
