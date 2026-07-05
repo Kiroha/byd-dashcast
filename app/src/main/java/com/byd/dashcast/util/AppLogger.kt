@@ -46,6 +46,13 @@ object AppLogger {
 
     // ── Circular buffer ───────────────────────────────────────────────────────
     private const val MAX_ENTRIES = 5000
+    /** Per-entry message cap (chars). A single dumpsys/Parcel dump can be tens of KB;
+     *  truncate so a handful can't pin megabytes each in this process-wide buffer. */
+    private const val MAX_MSG_CHARS = 4096
+    /** Global char budget across all retained messages. Evict oldest until BOTH the entry
+     *  count AND this budget hold, bounding steady-state retention deterministically. */
+    private const val MAX_TOTAL_CHARS = 2_000_000L
+    private const val TRUNCATION_SUFFIX = "…[truncated]"
 
     // Using a synchronized ArrayDeque instead of CopyOnWriteArrayList to avoid
     // an O(N) copy of 3000 entries on every log call, reducing GC pressure.
@@ -58,6 +65,11 @@ object AppLogger {
     // Lets LogActivity.refreshLog() update the level-filter chips without walking
     // the entire 3000-entry buffer twice on every 500 ms tick.
     private val sCountByLevel = IntArray(Level.values().size)
+
+    // Running total of retained message chars (guarded by LOCK). Together with MAX_TOTAL_CHARS
+    // this bounds heap retention by BYTES, not just entry count — 5000 multi-KB dumps could
+    // otherwise pin many MB for the whole process lifetime.
+    private var sTotalChars = 0L
 
     // Monotonic stamp bumped on every mutation (add or clear). Pollers must use
     // this instead of getEntriesCount(): once the circular buffer saturates at
@@ -83,14 +95,23 @@ object AppLogger {
 
     /** Adds an entry to the circular buffer with O(1) allocation. */
     private fun addEntry(level: Level, tag: String, msg: String) {
-        val e = Entry(level, tag, msg)
+        // Cap over-long messages (keep the head, where the tag/error context lives) so a full
+        // dumpsys/Parcel dump isn't pinned verbatim for the process lifetime.
+        val bounded = if (msg.length > MAX_MSG_CHARS)
+            msg.substring(0, MAX_MSG_CHARS) + TRUNCATION_SUFFIX else msg
+        val e = Entry(level, tag, bounded)
         synchronized(LOCK) {
-            if (sEntries.size >= MAX_ENTRIES) {
-                val evicted = sEntries.pollFirst() // Remove oldest entry
-                if (evicted != null) sCountByLevel[evicted.level.ordinal]--
-            }
             sEntries.addLast(e)
             sCountByLevel[level.ordinal]++
+            sTotalChars += bounded.length
+            // Evict oldest until BOTH the entry-count AND char budgets are satisfied. Keep at
+            // least the just-added entry (size > 1) so a lone large message can't empty the buffer.
+            while (sEntries.size > MAX_ENTRIES ||
+                   (sTotalChars > MAX_TOTAL_CHARS && sEntries.size > 1)) {
+                val evicted = sEntries.pollFirst() ?: break
+                sCountByLevel[evicted.level.ordinal]--
+                sTotalChars -= evicted.message.length
+            }
             sChangeStamp++
         }
     }
@@ -218,6 +239,7 @@ object AppLogger {
         synchronized(LOCK) {
             sEntries.clear()
             sCountByLevel.fill(0)
+            sTotalChars = 0L
             sChangeStamp++ // clear is a mutation too — viewers must refresh
         }
     }
