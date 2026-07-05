@@ -183,6 +183,9 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         AppLogger.i(TAG, "Worker started — $MODEL_LABEL (threshold=$DETECT_THRESHOLD)")
 
         val audioWindow = FloatArray(AUDIO_BUFFER_LEN)
+        // Raw int16 snapshot taken under mRingLock; normalized into audioWindow OUTSIDE the
+        // lock so onFrame's ring writes aren't blocked by the per-sample float divide (F13).
+        val rawWindow = ShortArray(AUDIO_BUFFER_LEN)
         var lastEvalAt = 0L
         var lastDiagLogAt = 0L
         var diagMaxSinceLog = 0f
@@ -198,23 +201,30 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
             // Snapshot the latest min(MIN_AUDIO_SAMPLES, total) samples
             // chronologically into audioWindow[0..n-1].
             var n: Int
-            var windowPeak = 0f
             synchronized(mRingLock) {
                 val total = mTotalWritten
                 val w = mRingWrite
                 n = Math.min(total, AUDIO_BUFFER_LEN.toLong()).toInt()
                 val start = (w - n + AUDIO_BUFFER_LEN) % AUDIO_BUFFER_LEN
+                // Under the lock: raw int16 copy only (no FP work) so onFrame's 20Hz ring
+                // writes are blocked for the minimum time. Normalization + peak run below,
+                // outside the lock — previously the full copy+divide+abs ran inside it.
                 for (i in 0 until n) {
-                    // Normalize int16 PCM → float32 [-1, 1] as expected by the
-                    // openWakeWord melspectrogram model (mirrors openwakeword/utils.py:
-                    // x = x.astype(np.float32) / 32768).
-                    val s = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f
-                    audioWindow[i] = s
-                    val a = if (s < 0f) -s else s
-                    if (a > windowPeak) windowPeak = a
+                    rawWindow[i] = mRing[(start + i) % AUDIO_BUFFER_LEN]
                 }
             }
             if (n < MIN_AUDIO_SAMPLES) continue
+
+            // Normalize int16 PCM → float32 [-1, 1] as expected by the openWakeWord
+            // melspectrogram model (mirrors openwakeword/utils.py: x /= 32768) and compute
+            // the silence-gate peak — OUTSIDE the ring lock. Identical audioWindow/peak result.
+            var windowPeak = 0f
+            for (i in 0 until n) {
+                val s = rawWindow[i] / 32768f
+                audioWindow[i] = s
+                val a = if (s < 0f) -s else s
+                if (a > windowPeak) windowPeak = a
+            }
 
             // perf — silence gate. Skip the expensive mel→emb→wake ONNX pipeline
             // when the entire 2.5 s window is silent. See SILENCE_GATE_FLOOR: this
