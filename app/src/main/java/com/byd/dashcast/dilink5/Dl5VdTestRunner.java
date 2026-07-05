@@ -149,15 +149,32 @@ public final class Dl5VdTestRunner {
             st.mirrorViewW      = mirrorViewW;
             st.mirrorViewH      = mirrorViewH;
 
-            for (int i = 0; i < results.size(); i++) {
-                DiLink5TestRunner.TestResult r = results.get(i);
-                r.status = DiLink5TestRunner.Status.RUNNING;
-                final int idx = i;
-                UI.post(() -> listener.onTestUpdated(idx, r));
+            try {
+                for (int i = 0; i < results.size(); i++) {
+                    DiLink5TestRunner.TestResult r = results.get(i);
+                    r.status = DiLink5TestRunner.Status.RUNNING;
+                    final int idx = i;
+                    UI.post(() -> listener.onTestUpdated(idx, r));
 
-                runOne(appCtx, r, st, listener);
+                    runOne(appCtx, r, st, listener);
 
-                UI.post(() -> listener.onTestUpdated(idx, r));
+                    UI.post(() -> listener.onTestUpdated(idx, r));
+                }
+            } finally {
+                // Safety net: guarantee VD + projection teardown even if an unchecked Throwable
+                // escapes a step before V07 runs — otherwise a real SurfaceFlinger VirtualDisplay
+                // and the open cluster projection leak for the process lifetime. V07 nulls st.vd
+                // and clears projectionOpenedByUs on the normal path, so this only fires on an
+                // abnormal unwind.
+                if (st.vd != null) {
+                    try { st.vd.release(); } catch (Throwable ignore) {}
+                    st.vd = null;
+                }
+                if (st.projectionOpenedByUs) {
+                    try { runShell(appCtx, "service call auto_container 2 i32 1000 i32 18 i32 0", 4000); }
+                    catch (Throwable ignore) {}
+                    st.projectionOpenedByUs = false;
+                }
             }
 
             UI.post(() -> listener.onSuiteFinished(results));
@@ -469,6 +486,7 @@ public final class Dl5VdTestRunner {
         // 2. Release VD (Java API — no shell needed)
         if (st.vd != null) {
             try { st.vd.release(); } catch (Exception e) { /* ignore */ }
+            st.vd = null; // idempotent: the run() safety-net finally then skips it
             sb.append("VD release() ✓ (id=").append(st.vdDisplayId).append(")\n");
         }
 
@@ -481,6 +499,7 @@ public final class Dl5VdTestRunner {
         // 4. Close projection if we opened it
         if (st.projectionOpenedByUs) {
             String closeOut = runShell(ctx, "service call auto_container 2 i32 1000 i32 18 i32 0", 4000);
+            st.projectionOpenedByUs = false; // idempotent: the run() safety-net finally then skips it
             sb.append("close projection: ").append(closeOut.trim()).append('\n');
         }
 
