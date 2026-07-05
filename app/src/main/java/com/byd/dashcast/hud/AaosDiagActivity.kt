@@ -160,14 +160,22 @@ class AaosDiagActivity : AppCompatActivity() {
     /** Popup: did the DASHCAST test screen appear on the cluster? Answer goes into the zip. */
     private fun askVisual(work: File, forced: String?) {
         if (forced != null) { zipAndUpload(work, forced); return }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.hud_visual_title)
-            .setMessage("Did the big blue \"DASHCAST\" screen appear on the instrument cluster?")
-            .setCancelable(false)
-            .setPositiveButton(R.string.hud_visual_yes) { _, _ -> zipAndUpload(work, "YES — Presentation shows on cluster") }
-            .setNeutralButton(R.string.hud_visual_unsure) { _, _ -> zipAndUpload(work, "NOT SURE") }
-            .setNegativeButton(R.string.hud_visual_no) { _, _ -> zipAndUpload(work, "NO") }
-            .show()
+        // The 8s delayed runnable can fire after the user left the screen — never build/show a
+        // dialog on a finishing/destroyed activity (BadTokenException). onDestroy also removes
+        // the callback; this guards the narrow race where it is already dispatching.
+        if (isFinishing || isDestroyed) return
+        try {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.hud_visual_title)
+                .setMessage("Did the big blue \"DASHCAST\" screen appear on the instrument cluster?")
+                .setCancelable(false)
+                .setPositiveButton(R.string.hud_visual_yes) { _, _ -> zipAndUpload(work, "YES — Presentation shows on cluster") }
+                .setNeutralButton(R.string.hud_visual_unsure) { _, _ -> zipAndUpload(work, "NOT SURE") }
+                .setNegativeButton(R.string.hud_visual_no) { _, _ -> zipAndUpload(work, "NO") }
+                .show()
+        } catch (t: Throwable) {
+            AppLogger.w("AaosDiag", "askVisual dialog skipped: ${t.message}")
+        }
     }
 
     private fun zipAndUpload(work: File, visual: String) {
@@ -203,6 +211,9 @@ class AaosDiagActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Cancel the 8s delayed askVisual so it can't show an AlertDialog on a destroyed
+        // activity (WindowManager.BadTokenException) — and so it can't leak this activity.
+        ui.removeCallbacksAndMessages(null)
         try { presentation?.dismiss() } catch (_: Throwable) {}
         presentation = null
     }
