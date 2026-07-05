@@ -71,6 +71,10 @@ class HotspotActivity : AppCompatActivity() {
 
     // ── Watchdog runtime state ───────────────────────────────────────────────
     private val watchdogHandler = Handler(Looper.getMainLooper())
+    // @Volatile: set true on the main thread in watchdogTick, set false on the AdbLocalClient
+    // callback thread (onSuccess/onError) before the runOnUiThread hop. Without it a stale
+    // true read on the main thread can make a tick skip a cycle (self-heals next tick).
+    @Volatile
     private var watchdogProbeInFlight = false
     private var lastRestartElapsed = -1L
     private var watchdogRestarts = 0
