@@ -125,6 +125,15 @@ public final class ProxyKeeperService extends Service {
 
     private void tickInternal() {
         Context ctx = getApplicationContext();
+        // v1.6.x — app-wide persistent hotspot keep-alive rides this always-on FG
+        // heartbeat so the hotspot "always on" survives HotspotActivity being closed
+        // (INC-20260705-195419: the in-Activity watchdog stopped on onPause). No-op
+        // unless the user enabled it; internally throttled to ~20 s.
+        try {
+            com.byd.dashcast.ui.hotspot.HotspotKeeper.maybeKeepAlive(ctx);
+        } catch (Throwable t) {
+            AppLogger.w(TAG, "hotspot keep-alive threw: " + t.getMessage());
+        }
         // v1.3.3 — Defense in depth against silent binder deaths seen on
         // DiLink 3 / Android 10: do a real pingBinder() round-trip (cheap,
         // ~1 ms) rather than only the local isBinderAlive() check.
