@@ -96,8 +96,12 @@ public final class FissionOrchestrator {
     private volatile boolean  mProjecting     = false;
     private volatile boolean  mMirrorReady    = false;
     private volatile boolean  mDestroyed      = false;
-    private          int      mFirstDisplayId = -1;
-    private          LayoutPreset mActiveLayout = null;
+    // volatile: written on the fission-exec thread (initAsync / activateFavoriteLayout) and
+    // on the main thread (switchToLayoutAsync), read on the main thread (getActiveLayout) —
+    // without volatile a background write may not be visible to a later main-thread read
+    // (stale layout-selector label/checkmark). Siblings above are already volatile.
+    private volatile int      mFirstDisplayId = -1;
+    private volatile LayoutPreset mActiveLayout = null;
 
     public FissionOrchestrator(Context context, ProjectionStateProvider projectionState,
                                 Callbacks callbacks) {
