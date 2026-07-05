@@ -364,48 +364,64 @@ class VoskTranscriber(ctx: Context) {
                         + (preRoll.size * 1000 / VoiceService.SAMPLE_RATE_HZ) + " ms)")
             }
 
-            // Install our Vosk consumer; this pauses WakeWordEngine feed.
+            // Install our Vosk consumer on the mic-capture thread, but do NOT decode there:
+            // onFrame only copies the frame into a bounded queue. The heavy Vosk JNI
+            // acceptWaveForm decode + RMS scan run on THIS (transcriber) thread's drain loop
+            // below, so a slow decode can never back up VoiceService's AudioRecord read
+            // (which previously caused mic-buffer overruns / dropped audio). The queue is
+            // bounded with a drop-oldest policy so a decoder that falls behind degrades
+            // gracefully instead of growing memory. mPcmBuf is now touched only on this
+            // thread (drain loop + pre-roll), removing the old cross-thread reuse.
             // Object expression (rather than a SAM lambda) keeps compiling whether
             // VoiceService.SampleConsumer stays a Java interface or becomes Kotlin.
+            val frameQueue = java.util.concurrent.ArrayBlockingQueue<ShortArray>(64)
             VoiceService.setSampleConsumer(object : VoiceService.SampleConsumer {
                 override fun onFrame(pcm: ShortArray, n: Int) {
-                    if (latch.count == 0L) return // already done
+                    if (latch.count == 0L) return // drain loop already finished
                     if (mReleaseRequested) { latch.countDown(); return }
-
-                    // V1: Feed PCM to Vosk — reuse mPcmBuf to avoid per-frame allocation.
-                    if (mPcmBuf.size < n * 2) mPcmBuf = ByteArray(n * 2)
-                    for (i in 0 until n) {
-                        mPcmBuf[i * 2]     = (pcm[i].toInt() and 0xFF).toByte()
-                        mPcmBuf[i * 2 + 1] = ((pcm[i].toInt() shr 8) and 0xFF).toByte()
-                    }
-                    finalReco.acceptWaveForm(mPcmBuf, n * 2)
-
-                    // Silence + timeout detection
-                    var sumSq = 0L
-                    for (i in 0 until n) sumSq += pcm[i].toLong() * pcm[i].toLong()
-                    val rms = Math.sqrt(sumSq.toDouble() / n).toInt()
-                    val now = System.currentTimeMillis()
-
-                    if (now >= deadline) {
-                        latch.countDown()
-                    } else if (rms < SILENCE_THRESHOLD_RMS) {
-                        if (silenceStartMs[0] < 0) silenceStartMs[0] = now
-                        else if (now - silenceStartMs[0] >= SILENCE_MS) {
-                            AppLogger.d(TAG, "Silence detected — stopping early")
-                            latch.countDown()
-                        }
-                    } else {
-                        silenceStartMs[0] = -1L
+                    val copy = pcm.copyOf(n) // pcm is a reused buffer — copy exactly n samples
+                    if (!frameQueue.offer(copy)) {
+                        frameQueue.poll()    // full (decoder behind): drop the oldest frame
+                        frameQueue.offer(copy)
                     }
                 }
             })
 
-            // Block until the consumer signals done (or hard timeout)
-            val timedOut = !latch.await(MAX_LISTEN_MS + 500L, TimeUnit.MILLISECONDS)
-            if (timedOut) AppLogger.d(TAG, "Listen window timed out")
+            // Drain + decode on the transcriber thread (this thread), not the mic thread.
+            while (latch.count > 0L) {
+                if (mReleaseRequested) break
+                if (System.currentTimeMillis() >= deadline) {
+                    AppLogger.d(TAG, "Listen window timed out"); break
+                }
+                // Wake at least every 50 ms so the deadline is honoured even without frames.
+                val frame = frameQueue.poll(50, TimeUnit.MILLISECONDS) ?: continue
+                val n = frame.size
 
-            // Restore WakeWordEngine consumer BEFORE calling getFinalResult so
-            // no concurrent acceptWaveForm can happen.
+                // Feed PCM to Vosk — reuse mPcmBuf to avoid per-frame allocation.
+                if (mPcmBuf.size < n * 2) mPcmBuf = ByteArray(n * 2)
+                for (i in 0 until n) {
+                    mPcmBuf[i * 2]     = (frame[i].toInt() and 0xFF).toByte()
+                    mPcmBuf[i * 2 + 1] = ((frame[i].toInt() shr 8) and 0xFF).toByte()
+                }
+                finalReco.acceptWaveForm(mPcmBuf, n * 2)
+
+                // Silence detection
+                var sumSq = 0L
+                for (i in 0 until n) sumSq += frame[i].toLong() * frame[i].toLong()
+                val rms = Math.sqrt(sumSq.toDouble() / n).toInt()
+                val now = System.currentTimeMillis()
+                if (rms < SILENCE_THRESHOLD_RMS) {
+                    if (silenceStartMs[0] < 0) silenceStartMs[0] = now
+                    else if (now - silenceStartMs[0] >= SILENCE_MS) {
+                        AppLogger.d(TAG, "Silence detected — stopping early"); break
+                    }
+                } else {
+                    silenceStartMs[0] = -1L
+                }
+            }
+            // Signal any late onFrame to no-op, then restore the WakeWordEngine consumer
+            // BEFORE getFinalResult so no concurrent acceptWaveForm can happen.
+            latch.countDown()
             VoiceService.setSampleConsumer(prevConsumer)
 
             val resultJson = finalReco.finalResult
