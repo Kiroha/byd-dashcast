@@ -32,6 +32,17 @@ public class ClusterCanvasView extends View {
     private final Paint mPaintDrawStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF mBgRect          = new RectF();
 
+    // Per-slot label cache — keeps onDraw allocation-free in the steady state.
+    // A cached label is keyed on the exact inputs that compose it (label ref,
+    // w, h, displayId); onDraw rebuilds an entry only when one of those changes,
+    // which during a RESIZE drag is just the single slot being resized.
+    private String[]            mLabelCache = new String[0];
+    private String[]            mLabelName  = new String[0];
+    private int[]               mLabelW     = new int[0];
+    private int[]               mLabelH     = new int[0];
+    private int[]               mLabelVd    = new int[0];
+    private final StringBuilder mLabelSb    = new StringBuilder(24);
+
     private Bitmap mBg;
 
     private int mTop, mBottom, mLeft, mRight;
@@ -152,7 +163,9 @@ public class ClusterCanvasView extends View {
 
         List<LayoutPreset.SlotDef> slots = mSlots;
         if (slots != null) {
-            for (int i = 0; i < slots.size(); i++) {
+            int n = slots.size();
+            ensureLabelCache(n);
+            for (int i = 0; i < n; i++) {
                 LayoutPreset.SlotDef s   = slots.get(i);
                 int col = ZONE_COLORS[i % ZONE_COLORS.length];
                 mPaintFill.setColor(col);
@@ -166,8 +179,17 @@ public class ClusterCanvasView extends View {
                 c.drawCircle(r, t, hr, mPaintHandle);
                 c.drawCircle(r, b, hr, mPaintHandle);
                 c.drawCircle(l, b, hr, mPaintHandle);
-                String lbl = s.label + "\n" + s.w + "×" + s.h
-                        + (s.displayId >= 0 ? "\nVD:" + s.displayId : "");
+                String lbl = mLabelCache[i];
+                if (lbl == null || mLabelName[i] != s.label
+                        || mLabelW[i] != s.w || mLabelH[i] != s.h
+                        || mLabelVd[i] != s.displayId) {
+                    lbl            = buildLabel(s);
+                    mLabelCache[i] = lbl;
+                    mLabelName[i]  = s.label;
+                    mLabelW[i]     = s.w;
+                    mLabelH[i]     = s.h;
+                    mLabelVd[i]    = s.displayId;
+                }
                 drawCenteredText(c, lbl, (l + r) / 2f, (t + b) / 2f);
             }
         }
@@ -178,12 +200,18 @@ public class ClusterCanvasView extends View {
             c.drawRect(mCurrentRect, mPaintDrawStroke);
             int cw = (int) (mCurrentRect.width()  / mScaleX);
             int ch = (int) (mCurrentRect.height() / mScaleY);
-            drawCenteredText(c, cw + "×" + ch, mCurrentRect.centerX(), mCurrentRect.centerY());
+            StringBuilder sb = mLabelSb;
+            sb.setLength(0);
+            sb.append(cw).append('×').append(ch);
+            drawCenteredLine(c, sb, 0, sb.length(),
+                    mCurrentRect.centerX(), mCurrentRect.centerY());
         }
     }
 
-    // Runs once per slot per onDraw, i.e. every frame while a zone is dragged —
-    // lines are scanned by index instead of regex-split into a fresh String[].
+    // Draws a cached multi-line slot label. The String itself is built once in
+    // buildLabel() and reused across frames (see mLabelCache), so this path does
+    // not allocate per frame; lines are scanned by index instead of regex-split
+    // into a fresh String[].
     private void drawCenteredText(Canvas c, String text, float cx, float cy) {
         int lineCount = 1;
         for (int i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineCount++;
@@ -199,6 +227,36 @@ public class ClusterCanvasView extends View {
             if (end >= text.length()) break;
             start = end + 1;
         }
+    }
+
+    // Single-line, allocation-free centered draw for the transient rubber-band
+    // label: measures and draws straight from a CharSequence (the reused
+    // mLabelSb) so no per-frame String is created while a zone is being drawn.
+    private void drawCenteredLine(Canvas c, CharSequence text, int start, int end, float cx, float cy) {
+        float tw = mPaintLabel.measureText(text, start, end);
+        c.drawText(text, start, end, cx - tw / 2f, cy, mPaintLabel);
+    }
+
+    // Grows the parallel label-cache arrays to hold at least n entries, keeping
+    // existing entries. New tail slots start null, forcing a one-time rebuild.
+    private void ensureLabelCache(int n) {
+        if (mLabelCache.length >= n) return;
+        mLabelCache = java.util.Arrays.copyOf(mLabelCache, n);
+        mLabelName  = java.util.Arrays.copyOf(mLabelName,  n);
+        mLabelW     = java.util.Arrays.copyOf(mLabelW,     n);
+        mLabelH     = java.util.Arrays.copyOf(mLabelH,     n);
+        mLabelVd    = java.util.Arrays.copyOf(mLabelVd,    n);
+    }
+
+    // Composes a slot's multi-line label into the reused StringBuilder, then
+    // snapshots it to a String for caching. append(int)/append(char) write the
+    // digits straight into the builder's buffer with no intermediate Strings.
+    private String buildLabel(LayoutPreset.SlotDef s) {
+        StringBuilder sb = mLabelSb;
+        sb.setLength(0);
+        sb.append(s.label).append('\n').append(s.w).append('×').append(s.h);
+        if (s.displayId >= 0) sb.append('\n').append("VD:").append(s.displayId);
+        return sb.toString();
     }
 
     @Override
