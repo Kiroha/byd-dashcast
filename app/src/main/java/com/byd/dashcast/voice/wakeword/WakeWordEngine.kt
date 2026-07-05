@@ -501,15 +501,19 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(mMelFeed, 0, feedLen), shape).use { input ->
             mMelMap.put(mMelInputName!!, input)
             mSessMel!!.run(mMelMap).use { out ->
-                val raw = out.get(0).value as Array<Array<Array<FloatArray>>> // [1,1,time,32]
-                val nf = raw[0][0].size
+                // Zero-copy read: the mel output is a flat [1,1,time,32] float tensor.
+                // Reading it as a FloatBuffer avoids materialising the nested
+                // Array<Array<Array<FloatArray>>> object graph (~time FloatArrays + wrappers)
+                // every ~160 ms tick. Row-major C order: frame f, channel k -> f*32 + k.
+                val melBuf = (out.get(0) as OnnxTensor).floatBuffer
+                val nf = melBuf.remaining() / 32
                 val lastCommit = feedStartFrame + nf - MEL_GUARD // exclusive
                 for (f in mMelTotalFrames until lastCommit) {
                     val localIdx = (f - feedStartFrame).toInt()
                     if (localIdx < 0 || localIdx >= nf) continue
-                    val src = raw[0][0][localIdx]                   // (32,) raw log-mel dB
+                    val base = localIdx * 32                        // (32,) raw log-mel dB row
                     val dst = mMelRing[Math.floorMod(f, MEL_RING_FRAMES.toLong()).toInt()]
-                    for (k in 0 until 32) dst[k] = src[k] / 10f + 2f // openWakeWord normalization
+                    for (k in 0 until 32) dst[k] = melBuf.get(base + k) / 10f + 2f // openWakeWord normalization
                 }
                 if (lastCommit > mMelTotalFrames) mMelTotalFrames = lastCommit
             }
@@ -545,8 +549,10 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         OnnxTensor.createTensor(mEnv, mEmb1Input).use { embT ->
             mEmbMap.put(mEmbInputName!!, embT)
             mSessEmb!!.run(mEmbMap).use { out ->
-                val raw = out.get(0).value as Array<Array<Array<FloatArray>>> // [1,1,1,96]
-                System.arraycopy(raw[0][0][0], 0, mEmbRing[Math.floorMod(k, EMB_CACHE.toLong()).toInt()], 0, 96)
+                // Zero-copy read of the [1,1,1,96] embedding output straight into the
+                // ring slot — no nested-array materialisation per stride window.
+                (out.get(0) as OnnxTensor).floatBuffer
+                    .get(mEmbRing[Math.floorMod(k, EMB_CACHE.toLong()).toInt()], 0, 96)
             }
         }
     }
