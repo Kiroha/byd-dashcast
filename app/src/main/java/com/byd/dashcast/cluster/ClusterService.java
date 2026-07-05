@@ -593,14 +593,38 @@ public class ClusterService extends Service
                         // Route through the proxy daemon's launchAndForce cascade instead: it adds
                         // the privileged moveRootTaskToDisplay + watchdog that re-anchors the task
                         // on the cluster display — the same path fission uses to pin apps there.
-                        boolean iamOk = startActivityViaIAM(launchIntent, opts, displayId);
+                        boolean iamOk;
+                        try {
+                            iamOk = startActivityViaIAM(launchIntent, opts, displayId);
+                        } catch (Throwable iamErr) {
+                            // Unprivileged units (D50F_LC / DL5.1): the app-side launch onto the
+                            // cluster display is DENIED (cross-user SecurityException — "Permission
+                            // Denial … launchDisplayId=N" — the app lacks INTERACT_ACROSS_USERS).
+                            // A thrown denial must NOT escape to the outer catch (that aborted the
+                            // whole launch and skipped the daemon path). Treat it as a plain failure
+                            // so DL5 reaches the privileged uid-2000 daemon path below.
+                            AppLogger.w(TAG, "startActivityViaIAM threw ("
+                                    + iamErr.getClass().getSimpleName() + ": " + iamErr.getMessage() + ")");
+                            iamOk = false;
+                        }
                         if (!iamOk && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
-                            AppLogger.w(TAG, "DL5: IAM fell back to startActivity — routing via proxy daemon launchAndForce");
+                            // The uid-2000 daemon HOLDS the cross-user permission — proven on-car
+                            // (INC-20260705: D8 "Launch + retract OK — projected on display 2" on
+                            // D50F_LC, while every app-side attempt returned Permission Denial).
+                            AppLogger.w(TAG, "DL5: app-side launch failed — routing via proxy daemon launchAndForce");
                             launchViaDaemonForce(packageName, displayId,
                                     clusterWidthOr(1920), clusterHeightOr(720));
+                            AppLogger.i(TAG, "launchOnDashboard → daemon force path → " + packageName);
+                            if (callback != null) callback.onResult(true);
+                        } else if (iamOk) {
+                            AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
+                            if (callback != null) callback.onResult(true);
+                        } else {
+                            // Non-DL5 (DL3) app-side launch failed and there is no daemon cluster
+                            // path here — report failure rather than a false success.
+                            AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
+                            if (callback != null) callback.onResult(false);
                         }
-                        AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
-                        if (callback != null) callback.onResult(true);
                     } catch (Exception e) {
                         AppLogger.e(TAG, "launchOnDashboard error for " + packageName, e);
                         if (callback != null) callback.onResult(false);
