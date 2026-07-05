@@ -499,12 +499,23 @@ public final class Dl5VdTestRunner {
         AtomicReference<String> out = new AtomicReference<>("");
         AtomicReference<String> err = new AtomicReference<>(null);
         final Object lock = new Object();
+        final boolean[] done = { false };
         AdbLocalClient.executeShellWithResult(ctx, cmd, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String s) { out.set(s == null ? "" : s); synchronized (lock) { lock.notifyAll(); } }
-            @Override public void onError(String e)   { err.set(e == null ? "?" : e); synchronized (lock) { lock.notifyAll(); } }
+            @Override public void onSuccess(String s) { out.set(s == null ? "" : s); synchronized (lock) { done[0] = true; lock.notifyAll(); } }
+            @Override public void onError(String e)   { err.set(e == null ? "?" : e); synchronized (lock) { done[0] = true; lock.notifyAll(); } }
         });
+        // Guarded wait (mirrors DiLink5TestRunner.runShellSync): a `done` predicate + a
+        // deadline loop. Without it, a callback that fired before wait() would lose its
+        // notification and the caller would park the FULL timeout even though the shell
+        // already returned — delaying V07 teardown (VD release / projection close).
+        final long deadline = System.currentTimeMillis() + timeoutMs;
         synchronized (lock) {
-            try { lock.wait(timeoutMs); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            while (!done[0]) {
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) break;
+                try { lock.wait(remaining); }
+                catch (InterruptedException ignored) { Thread.currentThread().interrupt(); break; }
+            }
         }
         return err.get() != null ? ("ERROR: " + err.get()) : out.get();
     }
