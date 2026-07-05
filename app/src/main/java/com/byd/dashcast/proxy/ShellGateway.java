@@ -127,6 +127,11 @@ public final class ShellGateway {
             return;
         }
         sExecutor.execute(() -> {
+            // This dedicated single thread has its own legacy fallback (below), so it must
+            // never pay the ~23s blocking daemon bootstrap inside callWithRetry when a binder
+            // dies mid-transact — that would stall every queued overscan/pidof op. Opt out:
+            // the reconnect is kicked async and the verb fails fast into the legacy fallback.
+            ProxyClient.setNonBlockingReconnect(true);
             final long t0 = SystemClock.elapsedRealtime();
             try {
                 if (!ProxyClient.isConnected()) {
