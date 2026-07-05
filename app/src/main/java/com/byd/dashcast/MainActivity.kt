@@ -220,6 +220,17 @@ class MainActivity : AppCompatActivity(),
                 )
             }
         }
+        // When the Layouts auto-start owns startup, it activates the cluster projection AND
+        // launches every bound app itself. The single-app auto-launch must NOT also fire: it
+        // would create a classic ClusterService projection first, and the layout's ensureDaemon()
+        // then sees an active projection → aborts the whole layout with "Daemon unavailable" and
+        // nothing launches (byd_log 20260705_194004). Suppress it here so the two auto-starts
+        // don't race; the layout is the single source of truth for startup launching.
+        if (isLayoutAutoStartConfigured() && mPendingAutoLaunchPkg != null) {
+            AppLogger.i(TAG, "Layout auto-start configured — suppressing single-app auto-launch of « "
+                    + mPendingAutoLaunchPkg + " » (the layout owns startup launching)")
+            mPendingAutoLaunchPkg = null
+        }
         if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
             // Off-load the (binder-reflection) cleanup to a named daemon thread.
             val appCtx = applicationContext
