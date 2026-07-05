@@ -146,6 +146,15 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
             w.interrupt() // wake from Thread.sleep() immediately; no-op if in ONNX inference
             try { w.join(3000L) } catch (ignore: InterruptedException) { Thread.currentThread().interrupt() }
             mWorker = null
+            if (w.isAlive) {
+                // Worker is still inside a native OrtSession.run (interrupt is a no-op there).
+                // Closing the sessions now would be a native use-after-free (SIGSEGV, uncatchable
+                // by the worker's try/catch). Abandon them instead — OrtSession's finalizer
+                // reclaims the native memory once the stuck worker eventually returns and is GC'd.
+                // The common case (worker exits within the 3 s join) still releases below.
+                AppLogger.w(TAG, "stop(): worker still in inference after 3s — abandoning ONNX sessions to avoid a native use-after-free")
+                return
+            }
         }
         releaseOnnx()
     }
