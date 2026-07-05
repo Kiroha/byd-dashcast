@@ -1541,6 +1541,11 @@ public class DiagActivity extends AppCompatActivity {
 
     private static final String RE_SNIFFER_TAG    = ".re_sniffer_run";
     private static final String RE_SNIFFER_PIDS   = ".re_sniffer_pids";
+    /** Auto-stop an abandoned sniffer capture after this many seconds so the detached
+     *  logcat + snapshot loop can't grow the file unbounded (or survive app death) forever.
+     *  A live capture is normally Stop-tapped well before this; re-tapping Start reaps and
+     *  restarts, so a legitimate long session just continues. */
+    private static final int    RE_SNIFFER_MAX_SEC = 1800;
     private static final String RE_SNIFFER_PREFIX = "BYD_RE_Sniffer_";
     private static final String PREF_SNIFFER      = "byd_diag_prefs";
     private static final String PREF_SNIFFER_PATH = "re_sniffer_file_path";
@@ -1759,6 +1764,15 @@ public class DiagActivity extends AppCompatActivity {
                     + " ; setsid sh -c '" + snapLoop + "'"
                     + "   & echo $! >> " + pf
                     + " ; setsid sh -c 'logcat -b events -v threadtime >> " + p + " 2>&1'"
+                    + "   & echo $! >> " + pf
+                    // Detached reaper: after RE_SNIFFER_MAX_SEC, drop the tag file (stops the
+                    // snapshot loop) and kill every recorded PID (the two logcats + itself, last).
+                    // Bounds an abandoned capture's size/duration and self-terminates it even if
+                    // the app has since been killed. Uses the same `while read` kill pattern as
+                    // the header (proven on BYD sh).
+                    + " ; setsid sh -c 'sleep " + RE_SNIFFER_MAX_SEC
+                    + "; rm -f /data/local/tmp/" + RE_SNIFFER_TAG
+                    + "; while IFS= read -r q; do [ -n \"$q\" ] && kill -9 \"$q\" 2>/dev/null; done < " + pf + "'"
                     + "   & echo $! >> " + pf;
 
                 AdbLocalClient.executeShell(DiagActivity.this, bgCmd);
