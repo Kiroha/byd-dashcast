@@ -245,8 +245,19 @@ class MainActivity : AppCompatActivity(),
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver, IntentFilter(MirrorDaemon.ACTION_DAEMON_READY))
 
-        // Floating 📺 mirror button — started once, visibility controlled by show()/hide()
-        startService(Intent(this, FloatingRemoteButton::class.java))
+        // Floating mirror button — started once, visibility controlled by show()/hide().
+        // Deferred to post-first-frame: FloatingRemoteButton.onStartCommand inflates a
+        // WindowManager overlay (addView) on the main looper and the badge starts hidden
+        // (revealed later through the sShouldBeVisible latch, which survives a not-yet-
+        // started service), so that overlay work must not compete with the launcher's
+        // first traversal. Posting on the decor view's run queue runs it after the first
+        // layout pass. The application context keeps the service independent of this
+        // Activity's lifecycle, and onStartCommand is idempotent (early-returns once
+        // mFloatView is created), so the deferral cannot double-start it.
+        val floatingButtonCtx = applicationContext
+        window.decorView.post {
+            floatingButtonCtx.startService(Intent(floatingButtonCtx, FloatingRemoteButton::class.java))
+        }
 
         // Handle a tap on the floating button when the Activity is already alive.
         handleShowMirrorIntent(intent)
@@ -1479,11 +1490,31 @@ class MainActivity : AppCompatActivity(),
             this
         )
 
-        // DL5 guard: hide resize affordance if task resize is unsupported on this ROM.
-        if (!Platform.get().isClusterTaskResizeSupported(this)) {
-            mClusterControlCoordinator?.hideResizeIfUnsupported()
-            AppLogger.i(TAG, "Resize UI hidden: cluster task resize not supported on this ROM (DL5)")
-        }
+        // DL5 guard: hide the resize affordance if task resize is unsupported on this ROM.
+        // isClusterTaskResizeSupported forks a shell on a cold cache (Platform.probeSetTaskWindowingMode,
+        // ~200 ms typical, bounded at 1500 ms) and must NEVER be resolved on the UI thread — on a
+        // first-launch / prefs-wipe cold start that would block the launcher's first frame while it
+        // races the app-startup prime worker. Default the affordance to SHOWN and resolve the
+        // (normally already-primed) cached value on a short-lived daemon worker; post the hide back
+        // to the main thread only if the ROM is confirmed unsupported. isActivityAlive() guards
+        // against a config-change recreate/destroy landing before the post runs.
+        val resizeProbeCtx = applicationContext
+        Thread({
+            val supported = try {
+                Platform.get().isClusterTaskResizeSupported(resizeProbeCtx)
+            } catch (t: Throwable) {
+                // Never downgrade UX on an unclassified probe failure — leave resize shown.
+                AppLogger.w(TAG, "cluster-resize probe failed; leaving resize UI shown", t)
+                true
+            }
+            if (!supported) {
+                runOnUiThread {
+                    if (!isActivityAlive()) return@runOnUiThread
+                    mClusterControlCoordinator?.hideResizeIfUnsupported()
+                    AppLogger.i(TAG, "Resize UI hidden: cluster task resize not supported on this ROM (DL5)")
+                }
+            }
+        }, "resize-affordance-probe").apply { isDaemon = true }.start()
 
         mSplitController = SplitController(this)
 
