@@ -123,7 +123,15 @@ class HotspotActivity : AppCompatActivity() {
         swWatchdog?.setOnCheckedChangeListener { _, checked ->
             getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .edit { putBoolean(SettingsActivity.PREF_HOTSPOT_WATCHDOG, checked) }
-            if (checked) startWatchdog() else stopWatchdog(true)
+            if (checked) {
+                startWatchdog()
+                // Persist the keep-alive beyond this screen: it rides the always-on
+                // ProxyKeeperService FG heartbeat, so the hotspot stays up even after the
+                // Hotspot page / app is closed (INC-20260705-195419).
+                com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this)
+            } else {
+                stopWatchdog(true)
+            }
         }
 
         swAutoStartBoot.setOnCheckedChangeListener { _, checked ->
