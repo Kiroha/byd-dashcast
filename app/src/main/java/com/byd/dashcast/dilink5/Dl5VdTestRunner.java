@@ -171,7 +171,7 @@ public final class Dl5VdTestRunner {
                     st.vd = null;
                 }
                 if (st.projectionOpenedByUs) {
-                    try { runShell(appCtx, "service call auto_container 2 i32 1000 i32 18 i32 0", 4000); }
+                    try { runShell(appCtx, "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(appCtx) + " 2 i32 1000 i32 18 i32 0", 4000); }
                     catch (Throwable ignore) {}
                     st.projectionOpenedByUs = false;
                 }
@@ -220,7 +220,7 @@ public final class Dl5VdTestRunner {
 
     // V01 — Activate projection
     private static void runV01(Context ctx, DiLink5TestRunner.TestResult r, VdState st) {
-        String out = runShell(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\"", 4000);
+        String out = runShell(ctx, "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 16 s16 \"\"", 4000);
         String result = out;
         // service call returns "Result: Parcel(...)" on success, or error text
         if (result.contains("Parcel") || result.contains("result")) {
@@ -498,7 +498,7 @@ public final class Dl5VdTestRunner {
 
         // 4. Close projection if we opened it
         if (st.projectionOpenedByUs) {
-            String closeOut = runShell(ctx, "service call auto_container 2 i32 1000 i32 18 i32 0", 4000);
+            String closeOut = runShell(ctx, "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 18 i32 0", 4000);
             st.projectionOpenedByUs = false; // idempotent: the run() safety-net finally then skips it
             sb.append("close projection: ").append(closeOut.trim()).append('\n');
         }
