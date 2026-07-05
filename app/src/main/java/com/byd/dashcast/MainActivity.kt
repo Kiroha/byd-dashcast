@@ -1400,13 +1400,17 @@ class MainActivity : AppCompatActivity(),
      */
     private fun tryExecutePendingAutoLaunch() {
         val targetPkg = mPendingAutoLaunchPkg ?: return
-        for (a in mAppListCoordinator.getApps()) {
-            if (a.packageName == targetPkg) {
-                mPendingAutoLaunchPkg = null // consume only once the app is actually found
-                AppLogger.i(TAG, "Executing pending auto-launch for $targetPkg")
-                onSendToDashboard(a)
-                return
-            }
+        // Resolve from the FULL app list (favorites INCLUDED). The UI grid getApps()
+        // excludes favorites into a separate strip, so a favorited auto-launch / boot-
+        // projection app (e.g. a favorited Waze) was never found here and stayed
+        // "deferred: app list not ready yet" forever — and thus never launched.
+        val app = mAppRepo.findByPackage(targetPkg)
+            ?: mAppListCoordinator.getApps().firstOrNull { it.packageName == targetPkg }
+        if (app != null) {
+            mPendingAutoLaunchPkg = null // consume only once the app is actually found
+            AppLogger.i(TAG, "Executing pending auto-launch for $targetPkg")
+            onSendToDashboard(app)
+            return
         }
         AppLogger.i(TAG, "auto-launch $targetPkg deferred: app list not ready yet")
     }
