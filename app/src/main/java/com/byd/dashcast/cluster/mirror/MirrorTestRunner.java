@@ -446,7 +446,7 @@ public final class MirrorTestRunner {
 
         full.append("=== STEP 2 — service call auto_container 2 i32 1000 i32 16 s16 \"\" (open projection) ===\n");
         runShellSync(ctx,
-                "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1",
+                "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 16 s16 \"\" 2>&1",
                 tmp, 5000);
         full.append(tmp.get()).append('\n');
 
@@ -490,9 +490,9 @@ public final class MirrorTestRunner {
         full.append("=== STEP 7 — cleanup (force-stop Launcher, sendInfo 18 + 0) ===\n");
         runShellSync(ctx,
                 "am force-stop com.android.launcher3 2>&1 ; "
-              + "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
+              + "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
               + "sleep 1 ; "
-              + "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1",
+              + "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 0 s16 \"\" 2>&1",
                 tmp, 8000);
         full.append(tmp.get()).append('\n');
 

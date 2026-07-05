@@ -919,13 +919,30 @@ public class ClusterService extends Service
         try { Thread.sleep(1500); } catch (InterruptedException ie) {
             Thread.currentThread().interrupt(); return;
         }
-        final String cmd = "dumpsys activity activities 2>/dev/null"
-                + " | grep -A 25 'Display #" + displayId + "'"
-                + " | grep -E 'Stack #|Task\\{|mResumed|visible=' | head -20";
+        // v1.6.108 — decisive pump-vs-placement capture (INC-20260705-175936). The app is known
+        // to reach the cluster display at the WM level; the open question is whether the OEM
+        // fission container actually forwards a FOREIGN window on the composed cluster output
+        // (layerStack 2 / fission_bg_XDJAScreenProjection) to the physical panel. Capture both
+        // the WM task state AND the SurfaceFlinger layers on the cluster surface (is the app's
+        // layer present + non-empty visibleRegion on layerStack 2?). Combined with the app-side
+        // mirror state below — the mirror reads layerStack 2, i.e. EXACTLY what the panel is fed —
+        // this disambiguates "container pump ignores foreign content" (preview shows the app but
+        // the panel is blank) from "window never composited to layerStack 2".
+        final String cmd = "echo '--- WM tasks on display " + displayId + " ---';"
+                + " dumpsys activity activities 2>/dev/null"
+                + "   | grep -A 25 'Display #" + displayId + "'"
+                + "   | grep -E 'Stack #|Task\\{|mResumed|visible=' | head -20;"
+                + " echo '--- SurfaceFlinger cluster layers (" + packageName + ") ---';"
+                + " dumpsys SurfaceFlinger 2>/dev/null"
+                + "   | grep -iE 'fission_bg_XDJAScreenProjection|" + packageName + "|layerStack|visibleRegion'"
+                + "   | head -40";
         ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
+                boolean mirrorActive = mMirrorManager != null && mMirrorManager.isMirrorActive();
                 AppLogger.i(TAG, "DL5 post-launch display " + displayId + " state ("
-                        + packageName + "):\n" + (out == null || out.trim().isEmpty()
+                        + packageName + ") — in-app mirror active=" + mirrorActive
+                        + " [mirror reads layerStack 2 = exact panel content]:\n"
+                        + (out == null || out.trim().isEmpty()
                         ? "(nothing on display " + displayId + ")" : out.trim()));
             }
             @Override public void onError(String err) {

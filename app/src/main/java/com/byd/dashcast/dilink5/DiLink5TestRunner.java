@@ -721,8 +721,9 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD11(Context ctx, TestResult r) {
+        String svc = AdbLocalClient.autoContainerSvcName(ctx);
         AtomicReference<String> out = new AtomicReference<>("");
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
         String raw = out.get();
         r.detail = raw.isEmpty() ? "(no output)" : raw;
         String lower = raw.toLowerCase(Locale.ROOT);
@@ -742,15 +743,16 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD12(Context ctx, TestResult r) {
+        String svc = AdbLocalClient.autoContainerSvcName(ctx);
         StringBuilder sb = new StringBuilder();
         AtomicReference<String> out = new AtomicReference<>("");
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
         sb.append("[sendInfo 16 / Qt standby]\n").append(out.get()).append('\n');
         try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
         sb.append("\n[sendInfo 18 / close]\n").append(out.get()).append('\n');
         try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 4000);
         sb.append("\n[sendInfo 0 / refresh]\n").append(out.get()).append('\n');
         String all = sb.toString().toLowerCase(Locale.ROOT);
         r.detail = sb.toString();
@@ -993,8 +995,9 @@ public final class DiLink5TestRunner {
         StringBuilder sb = new StringBuilder();
         AtomicReference<String> out = new AtomicReference<>("");
 
-        String cmdOn  = "service call auto_container 2 i32 1000 i32 2 s16 \"\" 2>&1";
-        String cmdOff = "service call auto_container 2 i32 1000 i32 3 s16 \"\" 2>&1";
+        String svc = AdbLocalClient.autoContainerSvcName(ctx);
+        String cmdOn  = "service call " + svc + " 2 i32 1000 i32 2 s16 \"\" 2>&1";
+        String cmdOff = "service call " + svc + " 2 i32 1000 i32 3 s16 \"\" 2>&1";
 
         sb.append("[sendInfo(2) — ALL WARNING LAMPS ON]\n").append(cmdOn).append('\n');
         runShellSync(ctx, cmdOn, out, 3000);
@@ -1128,12 +1131,19 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD28(Context ctx, TestResult r) {
+        if (com.byd.dashcast.cluster.ClusterService.isRunning()) {
+            r.status = Status.SKIPPED;
+            r.message = "Skipped — a live cluster projection is active; this test opens/closes the "
+                    + "projection and would disrupt it. Stop projection first.";
+            return;
+        }
+        String svc = AdbLocalClient.autoContainerSvcName(ctx);
         StringBuilder sb = new StringBuilder();
         AtomicReference<String> out = new AtomicReference<>("");
         runShellSync(ctx, "logcat -c 2>&1", out, 3000);
         sb.append("=== logcat cleared ===\n\n");
         sb.append("=== sendInfo(1000, 16) projection ON ===\n");
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
         sb.append(out.get()).append('\n');
         try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         sb.append("\n=== dumpsys display (post-sendInfo) ===\n");
@@ -1144,7 +1154,7 @@ public final class DiLink5TestRunner {
         sb.append(out.get()).append('\n');
         // Always close so we don't leave the cluster in a weird state
         sb.append("\n=== cleanup sendInfo(1000, 18) + sendInfo(1000, 0) ===\n");
-        runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1; sleep 1; service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 6000);
+        runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 18 s16 \"\" 2>&1; sleep 1; service call " + svc + " 2 i32 1000 i32 0 s16 \"\" 2>&1", out, 6000);
         sb.append(out.get()).append('\n');
         r.detail = sb.toString();
         r.status = Status.PASS;
@@ -1273,6 +1283,14 @@ public final class DiLink5TestRunner {
      * on the device — checked up front via {@link PackageManager#getPackageInfo(String, int)}.
      */
     private static void runD31(Context ctx, D8Params params, TestResult r) {
+        if (com.byd.dashcast.cluster.ClusterService.isRunning()) {
+            r.status = Status.SKIPPED;
+            r.message = "Skipped — a live cluster projection is active; this test launches an app on "
+                    + "display 2 and opens/closes the projection, which would disrupt it (it is exactly "
+                    + "what confounded INC-20260705-175936). Stop projection first.";
+            return;
+        }
+        final String svc = AdbLocalClient.autoContainerSvcName(ctx);
         // Default to BYD's own clusterdebug — always installed on DL5, designed for the cluster.
         // The D8 dropdown is an optional override for users who want to test their own app.
         final boolean overridden = params != null
@@ -1331,7 +1349,7 @@ public final class DiLink5TestRunner {
             detail.append("\u2500\u2500\u2500 display ").append(displayId).append(" (").append(disp.getName()).append(") \u2500\u2500\u2500\n");
 
             // a) Open projection
-            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
+            runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 16 s16 \"\" 2>&1", out, 4000);
             detail.append("[a] sendInfo(1000, 16) projection ON  \u2192 ").append(out.get().trim()).append('\n');
 
             try { Thread.sleep(1500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -1359,10 +1377,10 @@ public final class DiLink5TestRunner {
             runShellSync(ctx, "am force-stop " + pkg + " 2>&1", out, 4000);
             detail.append("[e] am force-stop ").append(pkg).append(" \u2192 ").append(out.get().trim()).append('\n');
 
-            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
+            runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 18 s16 \"\" 2>&1", out, 4000);
             detail.append("[f] sendInfo(1000, 18) projection OFF \u2192 ").append(out.get().trim()).append('\n');
 
-            runShellSync(ctx, "service call auto_container 2 i32 1000 i32 0  s16 \"\" 2>&1", out, 4000);
+            runShellSync(ctx, "service call " + svc + " 2 i32 1000 i32 0  s16 \"\" 2>&1", out, 4000);
             detail.append("[g] sendInfo(1000, 0)  restore video \u2192 ").append(out.get().trim()).append('\n');
 
             // Visual separation between iterations

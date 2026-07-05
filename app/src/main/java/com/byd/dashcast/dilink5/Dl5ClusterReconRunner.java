@@ -731,7 +731,7 @@ public final class Dl5ClusterReconRunner {
     /** F01 — open the BYD cluster projection so fission displays become routable. */
     private static void fissionActivateProjection(Context ctx, DiLink5TestRunner.TestResult r,
                                                   FissionState st) {
-        String cmd = "service call auto_container 2 i32 1000 i32 16 s16 \"\" 2>&1";
+        String cmd = "service call " + com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx) + " 2 i32 1000 i32 16 s16 \"\" 2>&1";
         String out = shellSync(ctx, cmd);
         StringBuilder dt = new StringBuilder();
         dt.append("$ ").append(cmd).append("\n\n").append(out == null ? "<no output>" : out);
@@ -1306,10 +1306,11 @@ public final class Dl5ClusterReconRunner {
             r.message = "projection not opened by this run";
             return;
         }
+        String svc = com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(ctx);
         String cmd =
-                "service call auto_container 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
+                "service call " + svc + " 2 i32 1000 i32 18 s16 \"\" 2>&1 ; "
               + "sleep 1 ; "
-              + "service call auto_container 2 i32 1000 i32 0 s16 \"\" 2>&1";
+              + "service call " + svc + " 2 i32 1000 i32 0 s16 \"\" 2>&1";
         String out = shellSync(ctx, cmd);
         r.detail = "$ " + cmd + "\n\n" + (out == null ? "<no output>" : out);
         r.status = DiLink5TestRunner.Status.PASS;

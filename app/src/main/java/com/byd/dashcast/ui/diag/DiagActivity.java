@@ -1597,9 +1597,12 @@ public class DiagActivity extends AppCompatActivity {
     }
 
     private String autoContainerSvcName() {
+        // Delegate to the probe that resolves the ACTUAL registered casing. The old
+        // isDiLink5 ? snake : pascal heuristic was the pre-1.6.100 bug: it returned
+        // "auto_container" for ALL DL5, which does NOT exist on D50F_LC / 5.1 (PascalCase
+        // "AutoContainer") → the ADAS show/hide diag silently no-op'd here.
         try {
-            return com.byd.dashcast.platform.Platform.get().isDiLink5(this)
-                    ? "auto_container" : "AutoContainer";
+            return com.byd.dashcast.infrastructure.AdbLocalClient.autoContainerSvcName(this);
         } catch (Throwable t) {
             return "AutoContainer";
         }
