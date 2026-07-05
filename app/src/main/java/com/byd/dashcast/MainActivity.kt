@@ -583,6 +583,10 @@ class MainActivity : AppCompatActivity(),
             mClusterService?.setListener(null)
         } catch (ignore: Throwable) {
         }
+        // AppRepository owns a never-idle single-thread "app-repo-loader" executor. It is a
+        // per-Activity field, so without this shutdown every recreation (locale/theme/config
+        // or a cluster display add/remove) leaked one worker thread for the process lifetime.
+        try { mAppRepo.shutdown() } catch (ignore: Throwable) {}
         super.onDestroy()
         AppLogger.lifecycle(javaClass.simpleName, "onDestroy")
         // Cancel all pending runnables.
