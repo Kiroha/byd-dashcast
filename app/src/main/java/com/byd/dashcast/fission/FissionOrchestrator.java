@@ -215,6 +215,10 @@ public final class FissionOrchestrator {
             }
         };
         FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        // Tear down any previous headless orchestrator before orphaning it, or its
+        // fission-exec thread leaks (the static ref was overwritten without a stop()).
+        FissionOrchestrator prevAuto = sAutoStartOrchestrator;
+        if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
         sAutoStartOrchestrator = orch;
         orch.initAsync(fav, true, false);
     }
@@ -291,6 +295,10 @@ public final class FissionOrchestrator {
             }
         };
         FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        // Tear down any previous headless orchestrator before orphaning it, or its
+        // fission-exec thread leaks (the static ref was overwritten without a stop()).
+        FissionOrchestrator prevAuto = sAutoStartOrchestrator;
+        if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
         sAutoStartOrchestrator = orch;
         orch.initAsync(fav, true, false);
     }
@@ -306,6 +314,10 @@ public final class FissionOrchestrator {
         if (o != null) {
             AppLogger.i(TAG, "stopping headless auto-start orchestrator");
             o.stopAll();
+            // stopAll() submitted its teardown to mExec but never shut it down; this
+            // throwaway orchestrator is dropped here (never destroy()'d), so shut the
+            // executor down gracefully or its worker thread leaks per headless stop.
+            o.shutdown();
             notifyLayoutChanged();
         }
     }
@@ -335,6 +347,15 @@ public final class FissionOrchestrator {
                 }
             });
         }
+        mExec.shutdown();
+    }
+
+    /**
+     * Shuts down the single-thread executor gracefully (an in-flight stopAll/teardown task
+     * still runs to completion). Call after stopAll() on a throwaway headless orchestrator
+     * that is never destroy()'d, so its "fission-exec" worker thread doesn't leak.
+     */
+    public void shutdown() {
         mExec.shutdown();
     }
 
