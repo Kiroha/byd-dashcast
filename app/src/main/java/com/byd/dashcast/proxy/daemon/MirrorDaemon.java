@@ -759,6 +759,11 @@ public class MirrorDaemon {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Surface> surfaceRef = new AtomicReference<>();
             final AtomicReference<String>  errorRef   = new AtomicReference<>();
+            // Set true when the binder thread gives up (timeout / invalid surface). The
+            // attach runnable checks it under the slot monitor after wm.addView so a
+            // late-running attach removes its own window instead of leaking it.
+            final java.util.concurrent.atomic.AtomicBoolean aborted =
+                    new java.util.concurrent.atomic.AtomicBoolean(false);
 
             Runnable attach = () -> {
                 try {
@@ -825,8 +830,19 @@ public class MirrorDaemon {
                     out("[ATTACH_SLOT] step4: wm.addView display=" + target.getDisplayId()
                             + " pos=" + lp.x + "," + lp.y + " size=" + slot.w + "x" + slot.h);
                     wm.addView(sv, lp);
-                    slot.overlayView = sv;
-                    slot.overlayWM = wm;
+                    // Publish under the slot monitor and re-check the abort flag: if the
+                    // binder thread already timed out, remove this just-added window here
+                    // (we are on the main looper — the correct thread for removeView) rather
+                    // than leak an orphaned TYPE_SYSTEM_OVERLAY in the permanent daemon.
+                    synchronized (slot) {
+                        if (aborted.get()) {
+                            try { wm.removeViewImmediate(sv); }
+                            catch (Exception ignore) {}
+                        } else {
+                            slot.overlayView = sv;
+                            slot.overlayWM = wm;
+                        }
+                    }
                 } catch (Exception e) {
                     out("[ATTACH_SLOT] error: " + e.getClass().getSimpleName()
                             + ": " + e.getMessage());
@@ -838,14 +854,17 @@ public class MirrorDaemon {
             else new android.os.Handler(Looper.getMainLooper()).post(attach);
 
             if (!latch.await(2, TimeUnit.SECONDS)) {
-                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg); return null;
+                out("[ATTACH_SLOT] TIMEOUT 2s pkg=" + slot.pkg);
+                abortOverlayAttach(slot, aborted); return null;
             }
             if (errorRef.get() != null) {
-                out("[ATTACH_SLOT] FAIL: " + errorRef.get()); return null;
+                out("[ATTACH_SLOT] FAIL: " + errorRef.get());
+                abortOverlayAttach(slot, aborted); return null;
             }
             Surface surface = surfaceRef.get();
             if (surface == null || !surface.isValid()) {
-                out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg); return null;
+                out("[ATTACH_SLOT] FAIL: no valid surface pkg=" + slot.pkg);
+                abortOverlayAttach(slot, aborted); return null;
             }
             out("[ATTACH_SLOT] OK surface valid pkg=" + slot.pkg
                     + " display=" + target.getDisplayId());
@@ -855,6 +874,21 @@ public class MirrorDaemon {
                     + ": " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Abort an in-flight overlay attach after a failure: mark the attach runnable to
+     * self-remove if it runs late, then release any window it already added. Prevents an
+     * orphaned TYPE_SYSTEM_OVERLAY window (+ Surface) accumulating in this permanent daemon
+     * on every slow/failed attach. The slot monitor orders this against the runnable's
+     * publish so the window is removed exactly once (here, or by the late runnable).
+     */
+    private static void abortOverlayAttach(SlotInfo slot,
+            java.util.concurrent.atomic.AtomicBoolean aborted) {
+        synchronized (slot) {
+            aborted.set(true);
+        }
+        slot.release();
     }
 
     /** Creates a TRUSTED VirtualDisplay for the given slot. Never returns display id=0. */
