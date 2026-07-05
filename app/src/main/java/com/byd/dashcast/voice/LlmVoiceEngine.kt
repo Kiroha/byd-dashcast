@@ -216,6 +216,7 @@ class LlmVoiceEngine(ctx: Context) {
             val code = conn.responseCode
             if (code != HttpURLConnection.HTTP_OK) {
                 AppLogger.w(TAG, "TTS API HTTP $code")
+                drainErrorStream(conn) // consume the error body so the socket can be pooled
                 return null
             }
 
@@ -226,9 +227,21 @@ class LlmVoiceEngine(ctx: Context) {
                 while (input.read(buf).also { n = it } != -1) baos.write(buf, 0, n)
                 return baos.toByteArray()
             }
-        } finally {
+        } catch (e: Throwable) {
+            // Network/read error: the socket state is unknown, so close it rather than pool a
+            // half-consumed connection. The success and non-200 paths deliberately do NOT
+            // disconnect so the connection returns to the keep-alive pool (saves a TLS
+            // handshake on the next api.openai.com call).
             conn.disconnect()
+            throw e
         }
+    }
+
+    /** Drain + close the error stream so the socket can return to the keep-alive pool
+     *  instead of lingering half-consumed. Used on non-200 responses (the success path
+     *  fully reads + closes the input stream via use{}). */
+    private fun drainErrorStream(conn: HttpURLConnection) {
+        try { conn.errorStream?.use { it.readBytes() } } catch (ignore: Throwable) {}
     }
 
     /** Writes MP3 bytes to a temp file and plays them via MediaPlayer. */
@@ -321,6 +334,7 @@ class LlmVoiceEngine(ctx: Context) {
             val code = conn.responseCode
             if (code != HttpURLConnection.HTTP_OK) {
                 AppLogger.w(TAG, "Chat API HTTP $code")
+                drainErrorStream(conn) // consume the error body (HTTP 429/500/…) so the socket pools
                 return null
             }
 
@@ -330,9 +344,11 @@ class LlmVoiceEngine(ctx: Context) {
                 while (br.readLine().also { line = it } != null) sb.append(line)
                 return sb.toString()
             }
-        } finally {
-            // C8 fix: always disconnect — was missing on non-200 responses (HTTP 429, 500, etc.)
+        } catch (e: Throwable) {
+            // Network/read error: unknown socket state — close it. Success and non-200 paths
+            // keep the connection alive so back-to-back voice commands reuse the TLS session.
             conn.disconnect()
+            throw e
         }
     }
 
