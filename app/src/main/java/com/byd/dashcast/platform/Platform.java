@@ -56,6 +56,15 @@ public final class Platform {
     private static volatile Boolean sCachedIsDiLink5 = null;
     private static volatile Boolean sCachedClusterResizeSupported = null;
 
+    /**
+     * Guards the one-shot cluster-resize probe so the shell is forked (and the
+     * sticky pref written) at most once, even when the startup prime worker and a
+     * UI read race on a cold cache. A dedicated monitor — <b>not</b>
+     * {@code Platform.class} — so the sub-1.5s shell block can never stall a
+     * concurrent {@link #isDiLink5(Context)} cache-fill.
+     */
+    private static final Object sResizeProbeLock = new Object();
+
     /** Cached reflection handle for android.os.SystemProperties#get — resolved once. */
     private static volatile Method sCachedSysPropGet = null;
 
@@ -327,14 +336,22 @@ public final class Platform {
         if (!isDiLink5(ctx)) return true;
         Boolean cached = sCachedClusterResizeSupported;
         if (cached != null) return cached.booleanValue();
-        // Sticky pref takes precedence over a fresh probe (consistent across cold starts).
-        String sticky = prefs(ctx).getString(PREF_CLUSTER_RESIZE_SUPPORTED, null);
-        if ("yes".equals(sticky)) { sCachedClusterResizeSupported = Boolean.TRUE; return true; }
-        if ("no".equals(sticky))  { sCachedClusterResizeSupported = Boolean.FALSE; return false; }
-        boolean supported = probeSetTaskWindowingMode();
-        sCachedClusterResizeSupported = Boolean.valueOf(supported);
-        prefs(ctx).edit().putString(PREF_CLUSTER_RESIZE_SUPPORTED, supported ? "yes" : "no").apply();
-        return supported;
+        // Serialise the cache-miss path. Without this, two callers on a cold cache
+        // (the startup prime worker and a UI read) can BOTH fork the shell probe
+        // and BOTH write the sticky pref. Double-checked under a dedicated lock so
+        // only one shell is spawned and one prefs write occurs per process.
+        synchronized (sResizeProbeLock) {
+            cached = sCachedClusterResizeSupported;
+            if (cached != null) return cached.booleanValue();
+            // Sticky pref takes precedence over a fresh probe (consistent across cold starts).
+            String sticky = prefs(ctx).getString(PREF_CLUSTER_RESIZE_SUPPORTED, null);
+            if ("yes".equals(sticky)) { sCachedClusterResizeSupported = Boolean.TRUE; return true; }
+            if ("no".equals(sticky))  { sCachedClusterResizeSupported = Boolean.FALSE; return false; }
+            boolean supported = probeSetTaskWindowingMode();
+            sCachedClusterResizeSupported = Boolean.valueOf(supported);
+            prefs(ctx).edit().putString(PREF_CLUSTER_RESIZE_SUPPORTED, supported ? "yes" : "no").apply();
+            return supported;
+        }
     }
 
     /**
@@ -366,17 +383,24 @@ public final class Platform {
      */
     private static boolean probeSetTaskWindowingMode() {
         Process p = null;
+        Thread reader = null;
         try {
             // No taskId arg — we only care whether the verb itself is known.
             // The command will fail with "Bad arg" or similar on a healthy ROM
             // (which is exactly what we want — verb known ⇒ supported).
-            p = Runtime.getRuntime().exec(new String[]{
+            // redirectErrorStream(true) folds stderr into stdout so there is no
+            // second pipe fd to leak, and "cmd" prints "Unknown command" to stderr.
+            ProcessBuilder pb = new ProcessBuilder(
                 "sh", "-c",
-                "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?"
-            });
+                "cmd activity set-task-windowing-mode 2>&1; echo __exit=$?");
+            pb.redirectErrorStream(true);
+            p = pb.start();
+            // stdin is unused — close the write-end immediately so we neither hold
+            // the fd open nor let the child block waiting on input.
+            try { p.getOutputStream().close(); } catch (Throwable ignore) {}
             final Process proc = p;
-            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            Thread r = new Thread(new Runnable() {
+            final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream(256);
+            reader = new Thread(new Runnable() {
                 @Override public void run() {
                     byte[] buf = new byte[1024];
                     try (java.io.InputStream is = proc.getInputStream()) {
@@ -388,14 +412,15 @@ public final class Platform {
                     } catch (Throwable ignore) {}
                 }
             }, "platform-probe-reader");
-            r.setDaemon(true);
-            r.start();
+            reader.setDaemon(true);
+            reader.start();
             boolean finished = p.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS);
             if (!finished) {
-                try { p.destroyForcibly(); } catch (Throwable ignore) {}
-                return true;  // timeout → assume supported, don't downgrade UX
+                // timeout → assume supported, don't downgrade UX.
+                // Process kill + reader join happen in finally, so nothing leaks.
+                return true;
             }
-            r.join(200);
+            reader.join(200);
             // Decode only after join() — reader thread has stopped writing.
             String s = baos.toString();
             if (s.contains("Unknown command")) return false;
@@ -406,7 +431,18 @@ public final class Platform {
         } catch (Throwable t) {
             return true;
         } finally {
-            if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
+            if (p != null) {
+                // destroyForcibly() closes the process streams, which unblocks the
+                // reader's is.read() so its bounded join() below returns promptly.
+                try { p.destroyForcibly(); } catch (Throwable ignore) {}
+            }
+            if (reader != null) {
+                // Bounded join so a wedged reader can never outlive the probe; it is
+                // a daemon, so even a missed join cannot keep the process alive.
+                try { reader.join(200); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
     }
 
