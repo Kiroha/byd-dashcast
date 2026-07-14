@@ -559,8 +559,13 @@ class ClusterManager(context: Context) {
         const val CMD_SCREEN_SIZE_SEAL_EU = 30 // BYD Seal EU (CONFIRMED 16/04/2026)
         const val CMD_DI40_MODE = 35 // Di4.0 mode — triggers VirtualDisplay creation (CONFIRMED 03/05/2026)
 
-        // Timeout waiting for VirtualDisplay after the full sendInfo(30→16→35) sequence (~8.3s + margin).
-        private const val CLUSTER_DISPLAY_TIMEOUT_MS = 12000L
+        // Timeout waiting for the VirtualDisplay after the sendInfo activation sequence.
+        // Sized for DL3/DL5 (~8.3s) but 12s was ~1-2s too short for DiLink 4.0: cmd 35 creates
+        // the VD there ~8-9s AFTER it is sent, i.e. ~13.4s after activation start — just past the
+        // old window, so BOTH activation attempts timed out even though the VD DID appear
+        // (INC-20260713-180803: fission_bg_xdjaVirtualSurface id=1 visible ~T+13.4s). 20s catches
+        // it. DL3/DL5 detect their VD in <1s (present / warm path) so never approach this ceiling.
+        private const val CLUSTER_DISPLAY_TIMEOUT_MS = 20000L
         // Polling interval to detect the virtual display.
         private const val POLL_INTERVAL_MS = 500L
         // Grace period after the 12s timeout during which we keep watching for slow VD creation.
