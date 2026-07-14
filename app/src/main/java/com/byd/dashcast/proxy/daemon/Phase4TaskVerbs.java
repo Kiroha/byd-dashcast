@@ -90,6 +90,91 @@ public final class Phase4TaskVerbs {
         return null;
     }
 
+    // WindowConfiguration constants (android.app.WindowConfiguration, @hide).
+    private static final int WM_FULLSCREEN             = 1;
+    private static final int WM_SPLIT_SCREEN_PRIMARY   = 3;
+    private static final int WM_SPLIT_SCREEN_SECONDARY = 4;
+    private static final int AT_HOME                   = 2;
+
+    /**
+     * Windowing mode / activity type of a StackInfo (Android ≤11, DiLink 3) or a
+     * RootTaskInfo (Android 12+, DiLink 5).
+     *
+     * <p>Neither class exposes these as public fields — they live inside
+     * {@code configuration.windowConfiguration}. Reading them with
+     * {@link #readFieldNoThrow} (what cleanFissionStacks did before 1.6.112) therefore
+     * ALWAYS returned null on every ROM: every stack was classified "unreadable" and
+     * defensively kept, so the zombie-stack cleanup never removed anything, ever
+     * (confirmed across 17 on-car bug reports: {@code removed=0} in 100% of them).
+     * That let a stale split-screen-primary stack survive on the fission display, which
+     * makes the next FREEFORM stack creation NPE inside WindowManager and the launch
+     * fail silently (INC-20260714-215700, DiLink 3.0).
+     *
+     * <p>Four routes, most direct first, so a ROM that shifts the class shape again still
+     * resolves: (1) getter on the info object, (2) configuration.windowConfiguration
+     * getter, (3) the textual {@code mWindowingMode=…} of the configuration's toString,
+     * (4) the legacy public field. Returns -1 when every route fails.
+     */
+    private static int readWindowConfigInt(Object info, String getter, String legacyField,
+                                           String[] names) {
+        // 1. Direct getter on the info object (TaskInfo.getWindowingMode(), Android 12+).
+        try {
+            Object v = info.getClass().getMethod(getter).invoke(info);
+            if (v instanceof Integer) return (Integer) v;
+        } catch (Throwable ignore) { /* not on this ROM — next route */ }
+
+        Object cfg = readFieldNoThrow(info, "configuration");
+        Object wc  = (cfg == null) ? null : readFieldNoThrow(cfg, "windowConfiguration");
+
+        // 2. configuration.windowConfiguration.<getter>() — StackInfo (A10) and TaskInfo (A12).
+        if (wc != null) {
+            try {
+                Object v = wc.getClass().getMethod(getter).invoke(wc);
+                if (v instanceof Integer) return (Integer) v;
+            } catch (Throwable ignore) { /* next route */ }
+        }
+
+        // 3. Textual fallback: WindowConfiguration.toString() prints "mWindowingMode=freeform".
+        String dump = (wc != null) ? String.valueOf(wc)
+                    : (cfg != null) ? String.valueOf(cfg) : null;
+        if (dump != null) {
+            String key = getter.equals("getWindowingMode") ? "mWindowingMode=" : "mActivityType=";
+            int at = dump.indexOf(key);
+            if (at >= 0) {
+                String tail = dump.substring(at + key.length());
+                // Longest name first: "split-screen-secondary" must not match "split-screen-p…".
+                int best = -1;
+                for (int i = 0; i < names.length; i++) {
+                    if (tail.startsWith(names[i])
+                            && (best < 0 || names[i].length() > names[best].length())) {
+                        best = i;
+                    }
+                }
+                if (best >= 0) return best;
+            }
+        }
+
+        // 4. Legacy public field (kept in case some ROM does expose it).
+        Object v = readFieldNoThrow(info, legacyField);
+        if (v instanceof Integer) return (Integer) v;
+        return -1;
+    }
+
+    /** Windowing mode of a StackInfo / RootTaskInfo, or -1 when unreadable. */
+    private static int readWindowingMode(Object info) {
+        return readWindowConfigInt(info, "getWindowingMode", "windowingMode", new String[]{
+                "undefined", "fullscreen", "pinned",
+                "split-screen-primary", "split-screen-secondary", "freeform",
+        });
+    }
+
+    /** Activity type of a StackInfo / RootTaskInfo, or -1 when unreadable. */
+    private static int readActivityType(Object info) {
+        return readWindowConfigInt(info, "getActivityType", "activityType", new String[]{
+                "undefined", "standard", "home", "recents", "assistant",
+        });
+    }
+
     /**
      * Moves a stack/root task to the target display.
      * Tries moveStackToDisplay (Android ≤11, DiLink 3) then
@@ -719,10 +804,17 @@ public final class Phase4TaskVerbs {
     // ─── Stack management ─────────────────────────────────────────────────
 
     /**
-     * Destroy every non-fullscreen, non-home stack on {@code displayId}.
-     * Recovery verb for the fission display when a prior session left a zombie
-     * stack in split-screen-primary mode, causing
-     * "Can only have one child on stack…mode=split-screen-primary" on the next launch.
+     * Destroy the zombie stacks on {@code displayId} (the fission/cluster display).
+     * Recovery verb for when a prior session left a stack in split-screen-primary mode,
+     * causing "Can only have one child on stack…mode=split-screen-primary" — or, on
+     * DiLink 3.0, a WindowManager NPE while creating the next FREEFORM stack — on the
+     * next launch.
+     *
+     * <p>Removes: any non-fullscreen, non-home stack that holds NO task (a stale
+     * split-screen one included). Keeps fullscreen stacks, home stacks, and EVERY
+     * task-holding stack — so it can never tear down the running projection, which on
+     * DiLink 3 legitimately sits in a split-screen-primary stack after a resize.
+     * Every call site is a pre-launch cleanup.
      *
      * <p>Safe to call repeatedly — on a clean display the loop finds nothing to remove.
      *
@@ -763,25 +855,55 @@ public final class Phase4TaskVerbs {
                     if (v instanceof Integer) sid = (Integer) v;
                 }
                 Integer did = (Integer) readFieldNoThrow(si, "displayId");
-                Integer wm  = (Integer) readFieldNoThrow(si, "windowingMode");
-                Integer at  = (Integer) readFieldNoThrow(si, "activityType");
                 if (sid == null || did == null) continue;
                 if (did != displayId) continue;
-                int wmV = wm != null ? wm : -1;
-                int atV = at != null ? at : -1;
-                // FULLSCREEN=1: leave (normal projection lives here).
-                // HOME=2: leave (default fallback Activity).
-                if (wmV == 1 || atV == 2) {
+                int wmV = readWindowingMode(si);
+                int atV = readActivityType(si);
+                int[] tids = getChildTaskIds(si);
+                int nTasks = (tids == null) ? 0 : tids.length;
+
+                // FULLSCREEN: leave (a normal projection lives here).
+                // HOME: leave (the display's fallback Activity).
+                if (wmV == WM_FULLSCREEN || atV == AT_HOME) {
                     log.append("  keep   stackId=").append(sid)
-                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=").append(nTasks).append('\n');
                     kept++;
                     continue;
                 }
-                // If both fields are unreadable (-1/-1) the StackInfo class shape differs
-                // on this ROM — cannot safely classify. Keep to avoid emptying the display.
+                // Both unreadable: the class shape differs on this ROM — cannot safely
+                // classify, so keep (never blind-empty the display). Should no longer
+                // happen now that readWindowConfigInt() looks inside configuration.
                 if (wmV == -1 && atV == -1) {
                     log.append("  keep?  stackId=").append(sid)
                        .append(" wm=-1 at=-1 (unreadable, defensive keep)\n");
+                    kept++;
+                    continue;
+                }
+                // A TASK-LESS, non-fullscreen, non-home stack on the fission display is a
+                // zombie: it can never be the live projection, and a stale split-screen-primary
+                // one poisons the display's split bookkeeping, so creating the next FREEFORM
+                // stack throws NPE inside WindowManager and the launch fails silently
+                // (INC-20260714-215700 — dump: stackId=5 mode=split-screen-primary
+                // visible=false, 0 tasks). That is the zombie this verb exists to destroy.
+                boolean splitStack = (wmV == WM_SPLIT_SCREEN_PRIMARY
+                                   || wmV == WM_SPLIT_SCREEN_SECONDARY);
+                // A stack that STILL HOLDS A TASK is NEVER removed — not even a split-screen
+                // one. removeStack() finishes every activity in the stack, and on DiLink 3 the
+                // live projection legitimately sits in a SPLIT_SCREEN_PRIMARY stack:
+                // moveAndResize() → setTaskWindowingModeWithBounds() drives BYD's
+                // setCustomTaskWindowingModeSplitScreenPrimary with modes {5,3,0}, and mode 3
+                // IS split-screen-primary. Split mode also launches the 2nd app while the 1st
+                // stays live (MainActivity → launchOnDashboardWithBounds → this verb), so
+                // removing task-holding split stacks would kill the running app. If a live
+                // split stack ever has to be dissolved, move the task out
+                // (setTaskWindowingModeFreeform + moveStackOrRootTask) — never removeStack().
+                if (nTasks != 0) {
+                    log.append("  keep   stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=").append(nTasks)
+                       .append(splitStack ? " (live split-screen — task-holding, kept)\n"
+                                          : " (live)\n");
                     kept++;
                     continue;
                 }
@@ -793,7 +915,10 @@ public final class Phase4TaskVerbs {
                 try {
                     removeStack.invoke(iAtm, (int) sid);
                     log.append("  REMOVE stackId=").append(sid)
-                       .append(" wm=").append(wmV).append(" at=").append(atV).append('\n');
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" tasks=0")
+                       .append(splitStack ? " (empty split-screen zombie)" : " (empty zombie)")
+                       .append('\n');
                     removed++;
                 } catch (Throwable rex) {
                     Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
