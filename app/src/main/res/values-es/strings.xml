@@ -675,6 +675,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Nombre de Telegram no definido — toca para definirlo</string>
     <string-array name="bug_categories">
+        <item>Navegación HUD</item>
         <item>Mirror / Proyección</item>
         <item>Pantalla app</item>
         <item>Sonido</item>
@@ -772,15 +773,12 @@
     <string name="hud_confirm_yes">✓ Sí</string>
     <string name="hud_confirm_no">✗ No</string>
     <string name="hud_confirm_skip">Omitir</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">¿Qué parte está afectada?</string>
-    <string name="bug_cat_hud">🧭 Navegación en el HUD (parabrisas)</string>
-    <string name="bug_cat_cluster">🖥️ Visualización en el cluster / cuadro de instrumentos</string>
-    <string name="bug_cat_mirror">📱 Duplicación de pantalla</string>
-    <string name="bug_cat_applaunch">🚀 Inicio de una aplicación</string>
-    <string name="bug_cat_voice">🎙️ Asistente de voz</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / punto de acceso</string>
-    <string name="bug_cat_ota">🔄 Actualización (OTA)</string>
-    <string name="bug_cat_crash">💥 Fallo / pantalla congelada</string>
-    <string name="bug_cat_other">❓ Otro</string>
+    <string-array name="bug_issues_hud">
+        <item>Sin flecha en el HUD</item>
+        <item>Dirección incorrecta</item>
+        <item>Distancia / vía incorrecta</item>
+        <item>El HUD sigue apagado</item>
+        <item>Flecha congelada</item>
+        <item>Otro problema del HUD</item>
+    </string-array>
 </resources>

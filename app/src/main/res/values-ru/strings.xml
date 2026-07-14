@@ -675,6 +675,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Ник Telegram не указан — нажмите, чтобы задать</string>
     <string-array name="bug_categories">
+        <item>Навигация HUD</item>
         <item>Зеркало</item>
         <item>Отображение</item>
         <item>Звук</item>
@@ -772,15 +773,12 @@
     <string name="hud_confirm_yes">✓ Да</string>
     <string name="hud_confirm_no">✗ Нет</string>
     <string name="hud_confirm_skip">Пропустить</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Какая область затронута?</string>
-    <string name="bug_cat_hud">🧭 Навигация на HUD (лобовое стекло)</string>
-    <string name="bug_cat_cluster">🖥️ Отображение на приборной панели</string>
-    <string name="bug_cat_mirror">📱 Дублирование экрана</string>
-    <string name="bug_cat_applaunch">🚀 Запуск приложения</string>
-    <string name="bug_cat_voice">🎙️ Голосовой помощник</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / точка доступа</string>
-    <string name="bug_cat_ota">🔄 Обновление (OTA)</string>
-    <string name="bug_cat_crash">💥 Сбой / зависший экран</string>
-    <string name="bug_cat_other">❓ Другое</string>
+    <string-array name="bug_issues_hud">
+        <item>Нет стрелки на HUD</item>
+        <item>Неверное направление</item>
+        <item>Неверное расстояние / дорога</item>
+        <item>HUD не включается</item>
+        <item>Стрелка зависла</item>
+        <item>Другая проблема с HUD</item>
+    </string-array>
 </resources>

@@ -675,6 +675,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Nome Telegram non impostato — tocca per impostarlo</string>
     <string-array name="bug_categories">
+        <item>Navigazione HUD</item>
         <item>Mirror / Proiezione</item>
         <item>Display app</item>
         <item>Audio</item>
@@ -772,15 +773,12 @@
     <string name="hud_confirm_yes">✓ Sì</string>
     <string name="hud_confirm_no">✗ No</string>
     <string name="hud_confirm_skip">Salta</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Quale area è interessata?</string>
-    <string name="bug_cat_hud">🧭 Navigazione sull\'HUD (parabrezza)</string>
-    <string name="bug_cat_cluster">🖥️ Visualizzazione sul cluster / quadro strumenti</string>
-    <string name="bug_cat_mirror">📱 Mirroring dello schermo</string>
-    <string name="bug_cat_applaunch">🚀 Avvio di un\'app</string>
-    <string name="bug_cat_voice">🎙️ Assistente vocale</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / hotspot</string>
-    <string name="bug_cat_ota">🔄 Aggiornamento (OTA)</string>
-    <string name="bug_cat_crash">💥 Crash / schermo bloccato</string>
-    <string name="bug_cat_other">❓ Altro</string>
+    <string-array name="bug_issues_hud">
+        <item>Nessuna freccia sull\'HUD</item>
+        <item>Direzione errata</item>
+        <item>Distanza / strada errata</item>
+        <item>L\'HUD resta spento</item>
+        <item>Freccia bloccata</item>
+        <item>Altro problema HUD</item>
+    </string-array>
 </resources>

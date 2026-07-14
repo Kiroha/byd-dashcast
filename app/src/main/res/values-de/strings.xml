@@ -675,6 +675,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Telegram-Name nicht angegeben — antippen zum Festlegen</string>
     <string-array name="bug_categories">
+        <item>HUD-Navigation</item>
         <item>Spiegelung</item>
         <item>App-Anzeige</item>
         <item>Ton</item>
@@ -772,15 +773,12 @@
     <string name="hud_confirm_yes">✓ Ja</string>
     <string name="hud_confirm_no">✗ Nein</string>
     <string name="hud_confirm_skip">Überspringen</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Welcher Bereich ist betroffen?</string>
-    <string name="bug_cat_hud">🧭 Navigation im HUD (Windschutzscheibe)</string>
-    <string name="bug_cat_cluster">🖥️ Anzeige im Cluster / Kombiinstrument</string>
-    <string name="bug_cat_mirror">📱 Bildschirmspiegelung</string>
-    <string name="bug_cat_applaunch">🚀 App-Start</string>
-    <string name="bug_cat_voice">🎙️ Sprachassistent</string>
-    <string name="bug_cat_wifi">📡 WLAN / Hotspot</string>
-    <string name="bug_cat_ota">🔄 Update (OTA)</string>
-    <string name="bug_cat_crash">💥 Absturz / eingefrorener Bildschirm</string>
-    <string name="bug_cat_other">❓ Sonstiges</string>
+    <string-array name="bug_issues_hud">
+        <item>Kein Pfeil im HUD</item>
+        <item>Falsche Richtung</item>
+        <item>Falsche Entfernung / Straße</item>
+        <item>HUD bleibt aus</item>
+        <item>Pfeil eingefroren</item>
+        <item>Anderes HUD-Problem</item>
+    </string-array>
 </resources>

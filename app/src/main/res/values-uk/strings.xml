@@ -676,6 +676,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Нік Telegram не вказано — натисніть, щоб задати</string>
     <string-array name="bug_categories">
+        <item>Навігація HUD</item>
         <item>Дзеркало</item>
         <item>Відображення</item>
         <item>Звук</item>
@@ -773,15 +774,12 @@
     <string name="hud_confirm_yes">✓ Так</string>
     <string name="hud_confirm_no">✗ Ні</string>
     <string name="hud_confirm_skip">Пропустити</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Де виникла проблема?</string>
-    <string name="bug_cat_hud">🧭 Навігація на HUD (лобове скло)</string>
-    <string name="bug_cat_cluster">🖥️ Відображення на кластері / панелі приладів</string>
-    <string name="bug_cat_mirror">📱 Дублювання екрана</string>
-    <string name="bug_cat_applaunch">🚀 Запуск застосунку</string>
-    <string name="bug_cat_voice">🎙️ Голосовий помічник</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / точка доступу</string>
-    <string name="bug_cat_ota">🔄 Оновлення (OTA)</string>
-    <string name="bug_cat_crash">💥 Збій / завислий екран</string>
-    <string name="bug_cat_other">❓ Інше</string>
+    <string-array name="bug_issues_hud">
+        <item>Немає стрілки на HUD</item>
+        <item>Неправильний напрямок</item>
+        <item>Неправильна відстань / дорога</item>
+        <item>HUD не вмикається</item>
+        <item>Стрілка завмерла</item>
+        <item>Інша проблема з HUD</item>
+    </string-array>
 </resources>
