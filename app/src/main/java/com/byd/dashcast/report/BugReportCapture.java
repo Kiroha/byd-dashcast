@@ -5,6 +5,7 @@ import android.os.Build;
 
 import com.byd.dashcast.BuildConfig;
 import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.util.AppLogger;
 
 import java.io.File;
@@ -144,6 +145,11 @@ public final class BugReportCapture {
             + " ; echo '--- FEATURES / PROPS (platform id) ---' >> " + p
             + " ; pm list features 2>/dev/null | grep -iE 'automotive|car|cluster|display' >> " + p
             + " ; getprop 2>/dev/null | grep -iE 'automotive|cluster|ro.product|ro.build.flavor|ro.build.version|security_patch|ro.vendor|fingerprint|dilink|byd|car|display' | head -100 >> " + p
+            // ── HUD (windshield head-up display) — now a production turn-by-turn nav feature on
+            // DL3, so a "HUD nav" bug report needs the HUD MCU firmware (inswver = SX<NNN>, which
+            // pins arrow-capability) and any HUD-related system props.
+            + " ; echo '--- HUD (firmware inswver + props) ---' >> " + p
+            + " ; getprop 2>/dev/null | grep -iE 'inswver|hud' >> " + p
             // Android Automotive Car service: cluster config, app-focus owner (navigation focus),
             // display assignment and any per-package allow-list that gates the instrument cluster.
             // AAOS distraction/driving gating — prime suspect: non-"distractionOptimized"
@@ -235,6 +241,7 @@ public final class BugReportCapture {
             sb.append(metaHeader != null ? metaHeader : "").append("\n\n");
             sb.append("Device: ").append(deviceLine()).append('\n');
             sb.append("Version: ").append(versionLine()).append('\n');
+            sb.append("\n════════ HUD STATE (push-feedback) ════════\n").append(hudStateSnapshot());
             if (shellError != null)
                 sb.append("[shell dump unavailable: ").append(shellError).append("]\n");
             sb.append("\n════════ SHELL DUMP ════════\n").append(shellBody);
@@ -272,6 +279,22 @@ public final class BugReportCapture {
         } catch (Throwable intErr) {
             AppLogger.e(TAG, "internal fallback write failed too", intErr);
             post(app, () -> cb.onError(String.valueOf(intErr), null));
+        }
+    }
+
+    /**
+     * Best-effort HUD push-feedback snapshot for the report: 0x38B0001C = HUD switch (1=on,2=off),
+     * 0x38B0000D / 0x42E00008 = display mode (1..6). get() is push-only, so this reads the daemon
+     * listener's last-known values (kept registered app-wide by ProxyKeeperService). Never throws.
+     */
+    private static String hudStateSnapshot() {
+        try {
+            try { ProxyClient.canListenStart(); } catch (Throwable ignore) { /* ensure registered */ }
+            String s = ProxyClient.canListenDrain();
+            return (s == null || s.isEmpty())
+                    ? "(no HUD push-feedback captured — listener cold / not a HUD platform)\n" : s;
+        } catch (Throwable t) {
+            return "(HUD state unavailable: " + t + ")\n";
         }
     }
 

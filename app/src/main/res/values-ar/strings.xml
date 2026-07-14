@@ -772,4 +772,15 @@
     <string name="hud_confirm_yes">✓ نعم</string>
     <string name="hud_confirm_no">✗ لا</string>
     <string name="hud_confirm_skip">تخطّي</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">ما الجزء المتأثر؟</string>
+    <string name="bug_cat_hud">🧭 التنقّل على HUD (الزجاج الأمامي)</string>
+    <string name="bug_cat_cluster">🖥️ العرض على شاشة العدّادات / لوحة القيادة</string>
+    <string name="bug_cat_mirror">📱 عكس الشاشة</string>
+    <string name="bug_cat_applaunch">🚀 تشغيل تطبيق</string>
+    <string name="bug_cat_voice">🎙️ المساعد الصوتي</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / نقطة اتصال</string>
+    <string name="bug_cat_ota">🔄 تحديث (OTA)</string>
+    <string name="bug_cat_crash">💥 تعطّل / تجمّد الشاشة</string>
+    <string name="bug_cat_other">❓ أخرى</string>
 </resources>

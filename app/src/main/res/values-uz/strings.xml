@@ -773,5 +773,16 @@
     <string name="hud_confirm_yes">✓ Ha</string>
     <string name="hud_confirm_no">✗ Yo\'q</string>
     <string name="hud_confirm_skip">O\'tkazib yuborish</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">Qaysi qism muammoli?</string>
+    <string name="bug_cat_hud">🧭 HUD\'dagi navigatsiya (old oyna)</string>
+    <string name="bug_cat_cluster">🖥️ Klaster / asboblar panelidagi tasvir</string>
+    <string name="bug_cat_mirror">📱 Ekranni aks ettirish</string>
+    <string name="bug_cat_applaunch">🚀 Ilovani ishga tushirish</string>
+    <string name="bug_cat_voice">🎙️ Ovozli yordamchi</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / hotspot</string>
+    <string name="bug_cat_ota">🔄 Yangilanish (OTA)</string>
+    <string name="bug_cat_crash">💥 Ishdan chiqish / ekran qotib qolishi</string>
+    <string name="bug_cat_other">❓ Boshqa</string>
 </resources>
 

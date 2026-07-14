@@ -149,6 +149,7 @@ public final class ProxyKeeperService extends Service {
 
         if (alive) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
+            armHudListener();   // keep the HUD push-feedback listener registered app-wide
             return;
         }
         long downForMs = mLastSeenAliveMs == 0 ? -1
@@ -159,12 +160,37 @@ public final class ProxyKeeperService extends Service {
         boolean ok = ProxyClient.connect(ctx);
         if (ok) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
+            mHudListenerArmed = false;   // fresh daemon → re-arm the HUD listener on the next tick
             AppLogger.i(TAG, "keeper reconnect ✅ pid="
                     + ProxyClient.getDaemonPid());
         } else {
             AppLogger.w(TAG, "keeper reconnect ❌ — retrying in "
                     + (HEARTBEAT_MS / 1000) + "s");
         }
+    }
+
+    /** Set once we've registered the daemon HUD push-feedback listener for the current daemon
+     *  connection; reset on reconnect / respawn so it re-arms against the fresh daemon. */
+    private volatile boolean mHudListenerArmed = false;
+
+    /**
+     * Keep the BYDAuto HUD push-feedback listener registered app-wide (off-thread, guarded) so the
+     * bug report / diag can read the HUD's ACTUAL switch + display-mode. That state is push-only
+     * (get() returns 0) and the OEM nav pushes it once at nav-start — capturing it reliably needs
+     * the listener already registered, which this guarantees. Idempotent daemon-side; armed once
+     * per connection, re-armed after a reconnect / respawn.
+     */
+    private void armHudListener() {
+        if (mHudListenerArmed) return;
+        mHudListenerArmed = true;
+        new Thread(() -> {
+            try {
+                ProxyClient.canListenStart();
+            } catch (Throwable t) {
+                mHudListenerArmed = false;   // allow a retry on the next alive tick
+                AppLogger.w(TAG, "HUD listener arm failed: " + t.getMessage());
+            }
+        }, "hud-listener-arm").start();
     }
 
     private void ensureChannel() {

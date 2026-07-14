@@ -785,4 +785,15 @@
     <string name="hud_confirm_yes">✓ Yes</string>
     <string name="hud_confirm_no">✗ No</string>
     <string name="hud_confirm_skip">Skip</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">What area is affected?</string>
+    <string name="bug_cat_hud">🧭 Navigation on the HUD (windshield)</string>
+    <string name="bug_cat_cluster">🖥️ Display on the cluster / dashboard</string>
+    <string name="bug_cat_mirror">📱 Screen mirroring</string>
+    <string name="bug_cat_applaunch">🚀 Launching an app</string>
+    <string name="bug_cat_voice">🎙️ Voice assistant</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / hotspot</string>
+    <string name="bug_cat_ota">🔄 Update (OTA)</string>
+    <string name="bug_cat_crash">💥 Crash / frozen screen</string>
+    <string name="bug_cat_other">❓ Other</string>
 </resources>
