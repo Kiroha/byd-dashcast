@@ -772,4 +772,15 @@
     <string name="hud_confirm_yes">✓ Evet</string>
     <string name="hud_confirm_no">✗ Hayır</string>
     <string name="hud_confirm_skip">Atla</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">Hangi alan etkileniyor?</string>
+    <string name="bug_cat_hud">🧭 HUD\'da navigasyon (ön cam)</string>
+    <string name="bug_cat_cluster">🖥️ Gösterge panelinde görüntü</string>
+    <string name="bug_cat_mirror">📱 Ekran yansıtma</string>
+    <string name="bug_cat_applaunch">🚀 Uygulama başlatma</string>
+    <string name="bug_cat_voice">🎙️ Sesli asistan</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / etkin nokta</string>
+    <string name="bug_cat_ota">🔄 Güncelleme (OTA)</string>
+    <string name="bug_cat_crash">💥 Çökme / donan ekran</string>
+    <string name="bug_cat_other">❓ Diğer</string>
 </resources>

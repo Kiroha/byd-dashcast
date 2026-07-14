@@ -772,4 +772,15 @@
     <string name="hud_confirm_yes">✓ Иә</string>
     <string name="hud_confirm_no">✗ Жоқ</string>
     <string name="hud_confirm_skip">Өткізу</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">Мәселе қай бөлікте?</string>
+    <string name="bug_cat_hud">🧭 HUD навигациясы (әйнек)</string>
+    <string name="bug_cat_cluster">🖥️ Аспаптар тақтасындағы бейне</string>
+    <string name="bug_cat_mirror">📱 Экранды қайталау</string>
+    <string name="bug_cat_applaunch">🚀 Қолданбаны іске қосу</string>
+    <string name="bug_cat_voice">🎙️ Дауыстық көмекші</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / хот-спот</string>
+    <string name="bug_cat_ota">🔄 Жаңарту (OTA)</string>
+    <string name="bug_cat_crash">💥 Ақау / қатып қалған экран</string>
+    <string name="bug_cat_other">❓ Басқа</string>
 </resources>

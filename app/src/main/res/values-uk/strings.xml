@@ -773,4 +773,15 @@
     <string name="hud_confirm_yes">✓ Так</string>
     <string name="hud_confirm_no">✗ Ні</string>
     <string name="hud_confirm_skip">Пропустити</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">Де виникла проблема?</string>
+    <string name="bug_cat_hud">🧭 Навігація на HUD (лобове скло)</string>
+    <string name="bug_cat_cluster">🖥️ Відображення на кластері / панелі приладів</string>
+    <string name="bug_cat_mirror">📱 Дублювання екрана</string>
+    <string name="bug_cat_applaunch">🚀 Запуск застосунку</string>
+    <string name="bug_cat_voice">🎙️ Голосовий помічник</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / точка доступу</string>
+    <string name="bug_cat_ota">🔄 Оновлення (OTA)</string>
+    <string name="bug_cat_crash">💥 Збій / завислий екран</string>
+    <string name="bug_cat_other">❓ Інше</string>
 </resources>

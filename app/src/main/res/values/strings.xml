@@ -814,4 +814,15 @@
     <string name="hud_confirm_yes">✓ Oui</string>
     <string name="hud_confirm_no">✗ Non</string>
     <string name="hud_confirm_skip">Passer</string>
+    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
+    <string name="bug_cat_label">Quelle partie est concernée ?</string>
+    <string name="bug_cat_hud">🧭 Navigation sur le HUD (pare-brise)</string>
+    <string name="bug_cat_cluster">🖥️ Affichage sur le cluster / tableau de bord</string>
+    <string name="bug_cat_mirror">📱 Recopie d’écran (mirroring)</string>
+    <string name="bug_cat_applaunch">🚀 Lancement d’une application</string>
+    <string name="bug_cat_voice">🎙️ Assistant vocal</string>
+    <string name="bug_cat_wifi">📡 Wi-Fi / partage de connexion</string>
+    <string name="bug_cat_ota">🔄 Mise à jour (OTA)</string>
+    <string name="bug_cat_crash">💥 Plantage / écran figé</string>
+    <string name="bug_cat_other">❓ Autre</string>
 </resources>
