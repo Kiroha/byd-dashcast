@@ -678,6 +678,33 @@ public final class Phase4TaskVerbs {
                 started = !amStartFailed(out);
             }
 
+            // Last resort: the same launch WITHOUT --windowingMode 5. On some DiLink 3.0
+            // ROMs, creating a FREEFORM stack on the fission display throws inside
+            // WindowManager (NPE in ActivityStack.onConfigurationChanged) and NO activity
+            // starts at all. Dropping the windowing mode lets the activity land in the
+            // display's default (fullscreen) stack — visible on the cluster at full size —
+            // and the FREEFORM flip further down still gets its chance afterwards.
+            // This cannot weaken the cascade: it only runs once BOTH --windowingMode 5
+            // attempts have already failed, i.e. when the alternative is showing nothing.
+            if (!started) {
+                String target = (cmpFlat != null)
+                        ? "-n " + cmpFlat
+                        : "-a android.intent.action.MAIN"
+                          + " -c android.intent.category.LAUNCHER"
+                          + " -p " + packageName;
+                String cmd = "am start-activity -S -W"
+                        + " --display " + displayId
+                        + " --activity-no-animation"
+                        + " " + target;
+                android.util.Log.w("Phase4TaskVerbs",
+                        "FISSION freeform start failed — retrying without --windowingMode");
+                log.append("(freeform start failed — retrying without --windowingMode)\n");
+                log.append("$ ").append(cmd).append('\n');
+                String out = execShell(cmd, 5000);
+                log.append(out == null ? "(no output)" : out).append('\n');
+                started = !amStartFailed(out);
+            }
+
             // Poll up to ~5 s for the task to appear.
             int taskId = -1;
             for (int i = 1; i <= 16 && taskId <= 0; i++) {
