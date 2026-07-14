@@ -760,5 +760,18 @@
     <string name="aaos_cluster_unsupported_msg">Avtomobilingiz BYD\'ning Android Automotive tizimidan (DX_BYD_AUTO) foydalanadi. Bu qurilmada asboblar paneli ishlab chiqaruvchi tomonidan qulflangan: BYD uni o\'rnatilgan navigatsiya uchun ajratadi va ilovalarni proyeksiya qilishni bloklaydi. Bu — avtomobil cheklovi (DashCast cheklovi emas), chetlab o\'tish yo\'li yo\'q.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Asboblar paneliga proyeksiya mavjud emas</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Bu avtomobilda asboblar paneli bitta ekranli (single-OS) tartibdan foydalanadi: u bevosita avtomobil tomonidan chiziladi va ilovalarni proyeksiya qilish mumkin bo\'lgan alohida ekran yo\'q. Shu sababli bu yerda ilovalarni panelga proyeksiya qilish imkonsiz — bu avtomobilingiz asboblar panelining xususiyati, DashCast cheklovi emas.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">HUD natijasi — old oynada nimani ko\'rdingiz?</string>
+    <string name="hud_bench_opt_ok">✅ Strelka ko\'rindi — to\'g\'ri yo\'nalish</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Strelka ko\'rindi — noto\'g\'ri yo\'nalish</string>
+    <string name="hud_bench_opt_partial">⚠️ Masofa/matn ko\'rindi — lekin aniq strelka yo\'q</string>
+    <string name="hud_bench_opt_nothing">❌ HUDda hech narsa yo\'q</string>
+    <string name="hud_bench_opt_other">❓ Boshqa / aniq emas…</string>
+    <string name="hud_bench_note_title">Nimani ko\'rdingiz?</string>
+    <string name="hud_bench_note_hint">HUDda nima paydo bo\'lganini yozing (ixtiyoriy)</string>
+    <string name="hud_report_send">Yuborish</string>
+    <string name="hud_confirm_yes">✓ Ha</string>
+    <string name="hud_confirm_no">✗ Yo\'q</string>
+    <string name="hud_confirm_skip">O\'tkazib yuborish</string>
 </resources>
 

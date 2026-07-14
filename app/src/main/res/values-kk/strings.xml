@@ -759,4 +759,17 @@
     <string name="aaos_cluster_unsupported_msg">Көлігіңіз BYD-дің Android Automotive жүйесін (DX_BYD_AUTO) пайдаланады. Бұл құрылғыда аспаптар тақтасын өндіруші құлыптаған: BYD оны кірістірілген навигацияға арнайды және қолданбаларды проекциялауды бөгейді. Бұл — көліктің шектеуі (DashCast шектеуі емес), айналып өту жолы жоқ.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Аспаптар панеліне проекция қолжетімсіз</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Бұл көлікте аспаптар тақтасы бір экранды (single-OS) конфигурацияны пайдаланады: оны көлік тікелей сызады, қолданбаларды проекциялауға арналған бөлек экран жоқ. Сондықтан мұнда қолданбаларды панельге проекциялау мүмкін емес — бұл көлігіңіздің аспаптар тақтасының ерекшелігі, DashCast шектеуі емес.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">HUD нәтижесі — әйнекте нені көрдіңіз?</string>
+    <string name="hud_bench_opt_ok">✅ Көрсеткі шықты — бағыты дұрыс</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Көрсеткі шықты — бағыты қате</string>
+    <string name="hud_bench_opt_partial">⚠️ Қашықтық/мәтін шықты — бірақ айқын көрсеткі жоқ</string>
+    <string name="hud_bench_opt_nothing">❌ HUD-та ештеңе жоқ</string>
+    <string name="hud_bench_opt_other">❓ Басқа / нақты емес…</string>
+    <string name="hud_bench_note_title">Не көрдіңіз?</string>
+    <string name="hud_bench_note_hint">HUD-та не пайда болғанын сипаттаңыз (міндетті емес)</string>
+    <string name="hud_report_send">Жіберу</string>
+    <string name="hud_confirm_yes">✓ Иә</string>
+    <string name="hud_confirm_no">✗ Жоқ</string>
+    <string name="hud_confirm_skip">Өткізу</string>
 </resources>
