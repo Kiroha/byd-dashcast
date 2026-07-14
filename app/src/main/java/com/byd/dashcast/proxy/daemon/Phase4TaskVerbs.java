@@ -176,6 +176,24 @@ public final class Phase4TaskVerbs {
     }
 
     /**
+     * True when an {@code am start-activity} transcript is a FAILED start.
+     *
+     * <p>Beyond the usual "Error:" line, system_server can throw straight through the shell
+     * command: am then prints "Starting: Intent {…}" (which looks like success) followed by
+     * "Exception occurred while executing:" and a stack trace — and no activity ever starts.
+     * DiLink 3.0 does exactly that when a FREEFORM stack cannot be created on the fission
+     * display. Testing only for "Error:" declared that start a success, so the bare-MAIN
+     * fallback was never tried (INC-20260714-215700).
+     *
+     * <p>A null transcript keeps its historical meaning: no output ⇒ assume started.
+     */
+    private static boolean amStartFailed(String out) {
+        if (out == null) return false;
+        return out.contains("Error:")
+                || out.contains("Exception occurred while executing");
+    }
+
+    /**
      * Moves a stack/root task to the target display.
      * Tries moveStackToDisplay (Android ≤11, DiLink 3) then
      * moveRootTaskToDisplay (Android 12+, DiLink 5).
@@ -642,7 +660,7 @@ public final class Phase4TaskVerbs {
                 log.append("$ ").append(cmd).append('\n');
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
-                started = (out == null || !out.contains("Error:"));
+                started = !amStartFailed(out);
             }
 
             // Fallback: bare MAIN with -p when component resolution failed.
@@ -657,7 +675,7 @@ public final class Phase4TaskVerbs {
                 log.append("$ ").append(cmd).append('\n');
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
-                started = (out == null || !out.contains("Error:"));
+                started = !amStartFailed(out);
             }
 
             // Poll up to ~5 s for the task to appear.
