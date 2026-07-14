@@ -6,6 +6,8 @@ import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
 import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.proxy.daemon.CanWriteVerbs;
+import com.byd.dashcast.platform.Platform;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -37,6 +39,16 @@ public final class HudController {
     // ─── Deduplication state ──────────────────────────────────────────────
 
     private boolean isHudActive;
+
+    /**
+     * Cached DiLink-3 gate. The windshield-HUD nav feature is DL3-only: DL3 is the
+     * proven platform whose HUD MCU consumes our CAN guidance (video-confirmed across
+     * SX245→SX326). DL5.1 uses a different HUD scheme and AAOS uses car_service, not
+     * BYDAuto CAN — so we must never drive them from here. The platform is fixed at
+     * boot, so resolve once. {@code null} = not yet resolved.
+     */
+    private Boolean isDl3Hud;
+
     private String  lastRoadName       = "";
     private int     lastIconId         = -1;
     private int     lastDistance       = -1;
@@ -62,6 +74,7 @@ public final class HudController {
      */
     public void updateNavigation(Context ctx, HudNavigationData data) {
         if (data.distanceMeters < 0) return;
+        if (!isDiLink3Hud(ctx)) return;   // DL3-only feature (video-proven); DL5.1/AAOS excluded
 
         ensureHudActive();
 
@@ -145,14 +158,41 @@ public final class HudController {
     // ─── Internal helpers ─────────────────────────────────────────────────
 
     private void ensureHudActive() {
-        if (!isHudActive) {
-            try {
-                CanBusController.setNaviActive(true);
-                isHudActive = true;
-            } catch (ProxyClient.ProxyException e) {
-                Log.w(TAG, "setNaviActive(true) failed: " + e.getMessage());
-            }
+        if (isHudActive) return;
+        // Turn the windshield HUD ON (DL3 feature id SET_HUD_SWITCH=1) so nav shows even
+        // if the user had the HUD switched off — matches the video-proven CAN→HUD bench.
+        // Best-effort: a failure here must not block nav activation. DL3 gating is enforced
+        // by the caller (isDiLink3Hud). We leave the HUD switch ON when nav ends (like the
+        // bench) — closeNavigation only clears the nav registers, not the user's HUD switch.
+        try {
+            CanBusController.setSettingFeature(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON);
+        } catch (ProxyClient.ProxyException e) {
+            Log.w(TAG, "SET_HUD_SWITCH on failed: " + e.getMessage());
         }
+        try {
+            CanBusController.setNaviActive(true);
+            isHudActive = true;
+        } catch (ProxyClient.ProxyException e) {
+            Log.w(TAG, "setNaviActive(true) failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Whether this head unit is a DiLink 3 (and not Android Automotive). Cached — the
+     * platform is fixed at boot. Fails safe to {@code false} (drive nothing) on any error
+     * so an unknown platform is never hit with DL3-specific CAN writes.
+     */
+    private boolean isDiLink3Hud(Context ctx) {
+        Boolean cached = isDl3Hud;
+        if (cached != null) return cached;
+        boolean dl3;
+        try {
+            dl3 = Platform.get().isDiLink3(ctx) && !AaosClusterProbe.INSTANCE.isAaos(ctx);
+        } catch (Throwable t) {
+            dl3 = false;
+        }
+        isDl3Hud = dl3;
+        return dl3;
     }
 
     private void resetState() {
