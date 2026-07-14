@@ -759,4 +759,17 @@
     <string name="aaos_cluster_unsupported_msg">Ваш автомобиль использует систему Android Automotive от BYD (DX_BYD_AUTO). На этом устройстве приборная панель заблокирована производителем: BYD резервирует её для встроенной навигации и блокирует проекцию приложений. Это ограничение автомобиля (а не DashCast) — обходного пути нет.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Проекция на приборную панель недоступна</string>
     <string name="dl3_singleos_cluster_unsupported_msg">На этом автомобиле приборная панель использует одноэкранную конфигурацию (single-OS): она отрисовывается непосредственно автомобилем, без отдельного экрана, на который можно проецировать приложения. Проекция приложений на панель здесь невозможна — это особенность панели вашего автомобиля, а не ограничение DashCast.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">Результат HUD — что вы увидели на лобовом стекле?</string>
+    <string name="hud_bench_opt_ok">✅ Стрелка показана — верное направление</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Стрелка показана — неверное направление</string>
+    <string name="hud_bench_opt_partial">⚠️ Есть расстояние/текст — но чёткой стрелки нет</string>
+    <string name="hud_bench_opt_nothing">❌ На HUD ничего нет</string>
+    <string name="hud_bench_opt_other">❓ Другое / не уверен…</string>
+    <string name="hud_bench_note_title">Что вы увидели?</string>
+    <string name="hud_bench_note_hint">Опишите, что появилось на HUD (необязательно)</string>
+    <string name="hud_report_send">Отправить</string>
+    <string name="hud_confirm_yes">✓ Да</string>
+    <string name="hud_confirm_no">✗ Нет</string>
+    <string name="hud_confirm_skip">Пропустить</string>
 </resources>

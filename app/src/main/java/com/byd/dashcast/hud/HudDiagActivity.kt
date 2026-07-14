@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.byd.dashcast.R
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs
@@ -41,7 +42,10 @@ import java.util.Locale
  *     an arrow — the decisive test of whether the HUD MCU consumes our CAN frames (arrow-capable
  *     firmware only; the inswver firmware id is captured in every zip to pin the threshold).
  *
- * Dev-only screen, built programmatically (no layout/strings → no i18n burden).
+ * Dev-only screen, built programmatically. The UI scaffolding stays hardcoded (EN/FR), but the
+ * tester-facing RESULT choices + buttons ARE translated (R.string.hud_bench_* / hud_confirm_*) so
+ * international testers report accurately; each choice records a canonical English tag into the zip
+ * (keeps the analyzer's YES / NO-PARTIAL parsing + adds a machine-readable sub-reason).
  */
 @android.annotation.SuppressLint("SetTextI18n")
 class HudDiagActivity : AppCompatActivity() {
@@ -105,8 +109,13 @@ class HudDiagActivity : AppCompatActivity() {
         title = "HUD bench (DL3)"
 
         // Warm up the daemon so the first write is instant (and, after an app update, forces a
-        // fresh daemon that speaks protocol v17 = the new double/pull verbs). Guarded, off-thread.
-        Thread { try { ProxyClient.connect(this) } catch (_: Throwable) {} }.start()
+        // fresh daemon that speaks protocol v17 = the new double/pull verbs). Then register the
+        // BYDAuto push-feedback listener EARLY so the HUD's actual switch + display-mode (push-only,
+        // get() returns 0) is already captured by the time a bench/confirm result is zipped. Guarded.
+        Thread {
+            try { ProxyClient.connect(this) } catch (_: Throwable) {}
+            try { ProxyClient.canListenStart() } catch (_: Throwable) {}
+        }.start()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -213,23 +222,23 @@ class HudDiagActivity : AppCompatActivity() {
             .setTitle(step.title)
             .setMessage(step.question + "\n\n(envoyé: $rc)")
             .setCancelable(false)
-            .setPositiveButton("✓ OUI") { _, _ -> recordAndNext(step, rc, "YES") }
-            .setNegativeButton("✗ NON") { _, _ -> askStepNote(step, rc) }
-            .setNeutralButton("Passer") { _, _ -> recordAndNext(step, rc, "SKIP") }
+            .setPositiveButton(getString(R.string.hud_confirm_yes)) { _, _ -> recordAndNext(step, rc, "YES") }
+            .setNegativeButton(getString(R.string.hud_confirm_no)) { _, _ -> askStepNote(step, rc) }
+            .setNeutralButton(getString(R.string.hud_confirm_skip)) { _, _ -> recordAndNext(step, rc, "SKIP") }
             .show()
     }
 
     /** On NON, offer an optional free-text note before recording. */
     private fun askStepNote(step: Step, rc: String) {
         val input = EditText(this).apply {
-            hint = "Qu'as-tu vu à la place ? (optionnel)"
+            hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
         AlertDialog.Builder(this)
-            .setTitle(step.title + " — NON")
+            .setTitle(step.title + " — " + getString(R.string.hud_confirm_no))
             .setView(input)
             .setCancelable(false)
-            .setPositiveButton("Envoyer") { _, _ ->
+            .setPositiveButton(getString(R.string.hud_report_send)) { _, _ ->
                 val note = input.text.toString().trim()
                 recordAndNext(step, rc, "NO" + if (note.isNotEmpty()) " — $note" else "")
             }
@@ -256,6 +265,7 @@ class HudDiagActivity : AppCompatActivity() {
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
             File(work, "01_confirm.txt").writeText(report.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|fission_single_os|model|inswver'"))
+            writeDiagLogs(work)
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 HUD control confirmation — ${Build.PRODUCT}")
@@ -319,31 +329,42 @@ class HudDiagActivity : AppCompatActivity() {
         }
     }
 
-    /** Popup: did the WINDSHIELD HUD render an arrow from our CAN guidance? Answer baked into the zip. */
+    /**
+     * Structured, TRANSLATED result picker: the tester sees the outcomes in their own language,
+     * but a canonical ENGLISH tag is recorded into the zip (analyzer counts YES vs NO/PARTIAL and
+     * gets a machine-readable sub-reason). The HUD's real switch/mode is captured separately in
+     * 04_hud_state.txt, so options describe only what the tester SAW.
+     */
     private fun askBench(sb: StringBuilder) {
+        val options = listOf(
+            getString(R.string.hud_bench_opt_ok)       to "YES — arrow on HUD",
+            getString(R.string.hud_bench_opt_wrongdir) to "NO/PARTIAL — arrow wrong direction",
+            getString(R.string.hud_bench_opt_partial)  to "NO/PARTIAL — distance/text but no clear arrow",
+            getString(R.string.hud_bench_opt_nothing)  to "NO/PARTIAL — nothing on HUD",
+            getString(R.string.hud_bench_opt_other)    to null,   // → optional free-text note
+        )
         AlertDialog.Builder(this)
-            .setTitle("Bench CAN → HUD")
-            .setMessage("Pendant le test (nav voiture ÉTEINTE), le HUD du PARE-BRISE a-t-il affiché une " +
-                    "FLÈCHE de direction (tout droit / gauche / droite) ou une info de nav ?")
+            .setTitle(getString(R.string.hud_bench_result_title))
             .setCancelable(false)
-            .setPositiveButton("✓ OUI, flèche") { _, _ -> finishBench(sb, "YES — arrow on HUD") }
-            .setNegativeButton("✗ NON, rien") { _, _ -> askBenchNote(sb) }
-            .setNeutralButton("Partiel/bizarre") { _, _ -> askBenchNote(sb) }
+            .setItems(options.map { it.first }.toTypedArray()) { _, which ->
+                val tag = options[which].second
+                if (tag == null) askBenchNote(sb) else finishBench(sb, tag)
+            }
             .show()
     }
 
     private fun askBenchNote(sb: StringBuilder) {
         val input = EditText(this).apply {
-            hint = "Qu'as-tu vu (HUD et/ou cluster) ? (optionnel)"
+            hint = getString(R.string.hud_bench_note_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
         }
         AlertDialog.Builder(this)
-            .setTitle("Bench CAN → HUD — détail")
+            .setTitle(getString(R.string.hud_bench_note_title))
             .setView(input)
             .setCancelable(false)
-            .setPositiveButton("Envoyer") { _, _ ->
+            .setPositiveButton(getString(R.string.hud_report_send)) { _, _ ->
                 val note = input.text.toString().trim()
-                finishBench(sb, "NO/PARTIAL" + if (note.isNotEmpty()) " — $note" else "")
+                finishBench(sb, "NO/PARTIAL — other" + if (note.isNotEmpty()) " — $note" else "")
             }
             .show()
     }
@@ -357,6 +378,7 @@ class HudDiagActivity : AppCompatActivity() {
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())).apply { mkdirs() }
             File(work, "01_can_bench.txt").writeText(sb.toString())
             File(work, "02_props.txt").writeText(sh("getprop 2>/dev/null | grep -iE 'hud|inswver|fission_single_os|model'"))
+            writeDiagLogs(work)
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer")
@@ -405,6 +427,34 @@ class HudDiagActivity : AppCompatActivity() {
     private fun sh(cmd: String): String =
         try { ProxyClient.runShell(cmd) ?: "" }
         catch (t: Throwable) { "ERR [$cmd]: ${t.message}" }
+
+    /**
+     * Extra diagnostic logs added to every HUD bug-report zip so a NO can be ANALYSED (not just
+     * counted): recent unfiltered logcat, the HUD's ACTUAL switch + display-mode (from the BYDAuto
+     * push-feedback listener — get() is push-only, so drain() is the only truth), and the
+     * foreground / nav app + display state. English/technical (the diagnostic-bundle i18n
+     * exception). Runs off the main thread (called from finishBench / finishConfirmation's bg{}).
+     */
+    private fun writeDiagLogs(work: File) {
+        // Recent unfiltered logcat, bounded for the ~1 MB binder reply parcel.
+        File(work, "03_logcat.txt").writeText(
+            sh("logcat -d -v threadtime -t 2000 2>/dev/null | head -c 400000"))
+        // HUD's real state: 0x38B0001C = switch (1=on/2=off), 0x38B0000D / 0x42E00008 = mode (1..6).
+        val hud = try { ProxyClient.canListenDrain() ?: "" } catch (t: Throwable) { "ERR ${t.message}" }
+        File(work, "04_hud_state.txt").writeText(
+            "=== HUD push-feedback snapshot (canListenDrain; get() is push-only) ===\n" +
+            "0x38B0001C = HUD switch (1=on, 2=off) | 0x38B0000D / 0x42E00008 = display mode (1..6)\n\n" + hud)
+        // Foreground app + activities per display + displays + recent SELinux denials.
+        File(work, "05_device_state.txt").writeText(
+            "== focused window ==\n" +
+            sh("dumpsys window 2>/dev/null | grep -iE 'mCurrentFocus|mFocusedApp' | head -c 4000") +
+            "\n== activities ==\n" +
+            sh("dumpsys activity activities 2>/dev/null | grep -iE 'Display #|Task id=|realActivity|mResumed=true|topResumedActivity' | head -c 12000") +
+            "\n== displays ==\n" +
+            sh("dumpsys display 2>/dev/null | grep -iE 'Display id|uniqueId|mBaseDisplayInfo|FLAG_PRESENTATION' | head -c 8000") +
+            "\n== recent avc denials ==\n" +
+            sh("logcat -d -t 600 2>/dev/null | grep -iE 'avc: .*denied' | head -c 4000"))
+    }
 
     private fun sleep(ms: Long) { try { Thread.sleep(ms) } catch (_: InterruptedException) {} }
 

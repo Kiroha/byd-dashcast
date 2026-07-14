@@ -759,4 +759,17 @@
     <string name="aaos_cluster_unsupported_msg">Il tuo veicolo usa il sistema Android Automotive di BYD (DX_BYD_AUTO). Su questa unità il quadro strumenti è bloccato dal produttore: BYD lo riserva alla navigazione integrata e blocca la proiezione delle app. È una restrizione del veicolo (non un limite di DashCast) — non esiste alcuna soluzione.</string>
     <string name="dl3_singleos_cluster_unsupported_title">Proiezione sul quadro non disponibile</string>
     <string name="dl3_singleos_cluster_unsupported_msg">Su questo veicolo il quadro strumenti usa una configurazione a schermo singolo (single-OS): è disegnato direttamente dall\'auto, senza uno schermo separato su cui proiettare le app. La proiezione delle app sul quadro non è possibile qui — è una caratteristica del quadro del tuo veicolo, non un limite di DashCast.</string>
+    <!-- HUD diagnostic bug-report — tester-facing result choices (13 locales) -->
+    <string name="hud_bench_result_title">Risultato HUD — cosa hai visto sul parabrezza?</string>
+    <string name="hud_bench_opt_ok">✅ Freccia mostrata — direzione corretta</string>
+    <string name="hud_bench_opt_wrongdir">⚠️ Freccia mostrata — direzione sbagliata</string>
+    <string name="hud_bench_opt_partial">⚠️ Distanza/testo mostrati — ma nessuna freccia nitida</string>
+    <string name="hud_bench_opt_nothing">❌ Niente sull\'HUD</string>
+    <string name="hud_bench_opt_other">❓ Altro / non saprei…</string>
+    <string name="hud_bench_note_title">Cosa hai visto?</string>
+    <string name="hud_bench_note_hint">Descrivi cosa è apparso sull\'HUD (facoltativo)</string>
+    <string name="hud_report_send">Invia</string>
+    <string name="hud_confirm_yes">✓ Sì</string>
+    <string name="hud_confirm_no">✗ No</string>
+    <string name="hud_confirm_skip">Salta</string>
 </resources>
