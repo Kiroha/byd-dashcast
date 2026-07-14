@@ -947,12 +947,15 @@ public class ClusterService extends Service
             if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
             String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
             String low = (log == null) ? "" : log.toLowerCase(java.util.Locale.ROOT);
-            ok = log != null && !log.isEmpty()
-                    && !low.contains("error:")
-                    && !low.contains("exception")
-                    && !low.contains("permission den")
-                    && !low.contains("does not exist")
-                    && !low.contains("unable to resolve");
+            // POSITIVE success signal: `am start-activity -S -W` prints "Status: ok" (or
+            // "Starting: Intent") when the launch is accepted. Do NOT infer failure from the
+            // word "exception": the cascade's optional-method reflection probes
+            // (setDisplayToSingleTaskInstance / setTaskWindowingModeFreeform) log a BENIGN
+            // NoSuchMethodException even on a fully successful launch — that false-negatived
+            // the daemon-primary path on D50F_LC and dropped the just-launched app's tracking
+            // (green bar / resize / stop), INC-20260706-070423. A hard am/daemon failure never
+            // prints "Status: ok" so this positive check is sufficient.
+            ok = low.contains("status: ok") || low.contains("starting: intent");
             AppLogger.i(TAG, "daemon launchAndForce result (ok=" + ok + "):\n"
                     + (log != null && !log.isEmpty() ? log : "(empty)"));
         } catch (Throwable t) {
