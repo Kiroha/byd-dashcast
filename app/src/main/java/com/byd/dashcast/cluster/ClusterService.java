@@ -936,9 +936,10 @@ public class ClusterService extends Service
      * already run on {@code sMoveTaskExecutor}. The diagnostic post-launch verify is
      * scheduled on {@code sDiagExecutor} so it never holds the move-task worker.
      *
-     * <p>Success is inferred leniently: the daemon cascade ran without throwing and the
-     * output has no hard-failure marker (am prints "Starting: Intent" on success). This
-     * avoids false negatives that would drop the just-launched app's tracking.
+     * <p>Success = the daemon did not report its own "FAIL: no task discovered" verdict AND
+     * the am transcript shows an accepted start. The daemon's verdict wins, because it is the
+     * only signal that actually proves a task exists; the transcript alone can look like a
+     * success on a launch that system_server threw away.
      */
     private boolean daemonLaunchSync(final String packageName, final int displayId,
                                       final int width, final int height) {
@@ -947,15 +948,23 @@ public class ClusterService extends Service
             if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
             String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
             String low = (log == null) ? "" : log.toLowerCase(java.util.Locale.ROOT);
-            // POSITIVE success signal: `am start-activity -S -W` prints "Status: ok" (or
-            // "Starting: Intent") when the launch is accepted. Do NOT infer failure from the
-            // word "exception": the cascade's optional-method reflection probes
+            // The daemon polls for the task after `am start` and appends its OWN verdict:
+            // "FAIL: no task discovered for <pkg>" when nothing came up. That verdict is
+            // authoritative and MUST win — the am transcript above it can read like a success
+            // ("Starting: Intent {…}") while system_server threw and no activity ever started
+            // (DiLink 3.0 FREEFORM stack creation NPE, INC-20260714-215700). Trusting the
+            // transcript alone reported ok=true on a launch that showed nothing on the
+            // cluster, and suppressed the app-side fallback.
+            boolean daemonSaysFail = low.contains("fail: no task discovered");
+            // Otherwise, POSITIVE success signal: `am start-activity -S -W` prints "Status: ok"
+            // (or "Starting: Intent") when the launch is accepted. Do NOT infer failure from
+            // the word "exception": the cascade's optional-method reflection probes
             // (setDisplayToSingleTaskInstance / setTaskWindowingModeFreeform) log a BENIGN
             // NoSuchMethodException even on a fully successful launch — that false-negatived
             // the daemon-primary path on D50F_LC and dropped the just-launched app's tracking
-            // (green bar / resize / stop), INC-20260706-070423. A hard am/daemon failure never
-            // prints "Status: ok" so this positive check is sufficient.
-            ok = low.contains("status: ok") || low.contains("starting: intent");
+            // (green bar / resize / stop), INC-20260706-070423.
+            ok = !daemonSaysFail
+                    && (low.contains("status: ok") || low.contains("starting: intent"));
             AppLogger.i(TAG, "daemon launchAndForce result (ok=" + ok + "):\n"
                     + (log != null && !log.isEmpty() ? log : "(empty)"));
         } catch (Throwable t) {
