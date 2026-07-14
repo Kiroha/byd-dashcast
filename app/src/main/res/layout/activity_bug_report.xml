@@ -43,33 +43,6 @@
                     android:textSize="13sp"
                     android:textColor="@color/md_on_surface_variant"/>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="@string/bug_cat_label"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/md_on_surface"/>
-
-                <RadioGroup
-                    android:id="@+id/rg_bug_category"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:orientation="vertical">
-
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_hud" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_hud" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_cluster" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_cluster" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_mirror" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_mirror" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_applaunch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_applaunch" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_voice" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_voice" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_wifi" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_wifi" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_ota" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_ota" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_crash" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_crash" android:textColor="@color/md_on_surface"/>
-                    <com.google.android.material.radiobutton.MaterialRadioButton android:id="@+id/rb_cat_other" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/bug_cat_other" android:textColor="@color/md_on_surface"/>
-                </RadioGroup>
-
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"

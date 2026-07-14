@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.view.View
 import android.widget.EditText
-import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 
@@ -31,7 +30,6 @@ class BugReportActivity : Activity() {
     private lateinit var etTitle: EditText
     private lateinit var etSteps: EditText
     private lateinit var etResult: EditText
-    private lateinit var rgCategory: RadioGroup
     private lateinit var tvMeta: TextView
     private lateinit var tvStatus: TextView
     private lateinit var btnSend: MaterialButton
@@ -46,7 +44,6 @@ class BugReportActivity : Activity() {
         etTitle = findViewById(R.id.et_bug_title)
         etSteps = findViewById(R.id.et_bug_steps)
         etResult = findViewById(R.id.et_bug_result)
-        rgCategory = findViewById(R.id.rg_bug_category)
         tvMeta = findViewById(R.id.tv_bug_meta)
         tvStatus = findViewById(R.id.tv_bug_status)
         btnSend = findViewById(R.id.btn_bug_send)
@@ -122,25 +119,9 @@ class BugReportActivity : Activity() {
         finish()
     }
 
-    /** The selected bug category as a canonical English tag. The radio label the user sees is
-     *  translated (13 locales); the report records this stable tag for triage / analysis. */
-    private fun selectedCategory(): String = when (rgCategory.checkedRadioButtonId) {
-        R.id.rb_cat_hud       -> "HUD navigation"
-        R.id.rb_cat_cluster   -> "Cluster / dashboard display"
-        R.id.rb_cat_mirror    -> "Screen mirroring"
-        R.id.rb_cat_applaunch -> "App launch"
-        R.id.rb_cat_voice     -> "Voice assistant"
-        R.id.rb_cat_wifi      -> "Wi-Fi / hotspot"
-        R.id.rb_cat_ota       -> "OTA update"
-        R.id.rb_cat_crash     -> "Crash / freeze"
-        R.id.rb_cat_other     -> "Other"
-        else                  -> "Unspecified"
-    }
-
     /** Builds the Telegram caption / file header in the channel's expected format. */
     private fun buildCaption(title: String): String {
         return "Title: " + title +
-                "\nCategory: " + selectedCategory() +
                 "\nDevice: " + BugReportCapture.deviceLine() +
                 "\nVersion: " + BugReportCapture.versionLine() +
                 "\nSteps: " + textOr(etSteps, "-") +

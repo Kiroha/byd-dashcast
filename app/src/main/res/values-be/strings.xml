@@ -675,6 +675,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Нік Telegram не ўказаны — націсніце, каб задаць</string>
     <string-array name="bug_categories">
+        <item>Навігацыя HUD</item>
         <item>Люстра</item>
         <item>Адлюстраванне</item>
         <item>Гук</item>
@@ -772,15 +773,12 @@
     <string name="hud_confirm_yes">✓ Так</string>
     <string name="hud_confirm_no">✗ Не</string>
     <string name="hud_confirm_skip">Прапусціць</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Якая частка закранута?</string>
-    <string name="bug_cat_hud">🧭 Навігацыя на HUD (лабавое шкло)</string>
-    <string name="bug_cat_cluster">🖥️ Адлюстраванне на кластары / прыборнай панэлі</string>
-    <string name="bug_cat_mirror">📱 Люстраванне экрана</string>
-    <string name="bug_cat_applaunch">🚀 Запуск праграмы</string>
-    <string name="bug_cat_voice">🎙️ Галасавы памочнік</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / кропка доступу</string>
-    <string name="bug_cat_ota">🔄 Абнаўленне (OTA)</string>
-    <string name="bug_cat_crash">💥 Збой / завіслы экран</string>
-    <string name="bug_cat_other">❓ Іншае</string>
+    <string-array name="bug_issues_hud">
+        <item>Няма стрэлкі на HUD</item>
+        <item>Няправільны напрамак</item>
+        <item>Няправільная адлегласць / дарога</item>
+        <item>HUD не ўключаецца</item>
+        <item>Стрэлка завісла</item>
+        <item>Іншая праблема HUD</item>
+    </string-array>
 </resources>

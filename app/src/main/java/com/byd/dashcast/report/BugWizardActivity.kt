@@ -295,6 +295,7 @@ class BugWizardActivity : Activity() {
         val details = mDetailsField?.text?.toString()?.trim() ?: ""
         val cats = resources.getStringArray(R.array.bug_categories)
         val caption = "Category: " + cats[mCategory] +
+            "\nCategoryKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
             (if (details.isEmpty()) "" else "\nDetails: $details") +
@@ -469,10 +470,16 @@ class BugWizardActivity : Activity() {
         private const val PREF_TG_HANDLE = "tg_handle"
 
         // Category emojis — order must match the bug_categories string-array.
-        private val CAT_EMOJIS = arrayOf("📺", "📱", "🔊", "🔗", "❄️", "🖥️", "❓")
+        private val CAT_EMOJIS = arrayOf("🧭", "📺", "📱", "🔊", "🔗", "❄️", "🖥️", "❓")
+
+        // Canonical (stable, English) category keys for triage/analysis — order must match the
+        // bug_categories string-array. Written to the report as "CategoryKey:" so incident analysis
+        // can group across the TRANSLATED labels the user actually sees (Spiegelung/Yansıtma/…).
+        private val CAT_KEYS = arrayOf("hud", "mirror", "app", "sound", "connect", "freeze", "simple", "other")
 
         // Issue string-arrays — order must match the bug_categories string-array.
         private val ISSUE_ARRAYS = intArrayOf(
+            R.array.bug_issues_hud,
             R.array.bug_issues_mirror,
             R.array.bug_issues_app,
             R.array.bug_issues_sound,

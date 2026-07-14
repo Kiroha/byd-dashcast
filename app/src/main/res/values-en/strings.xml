@@ -687,6 +687,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Telegram handle not set — tap to define</string>
     <string-array name="bug_categories">
+        <item>HUD navigation</item>
         <item>Mirror / Projection</item>
         <item>App display</item>
         <item>Sound</item>
@@ -785,15 +786,12 @@
     <string name="hud_confirm_yes">✓ Yes</string>
     <string name="hud_confirm_no">✗ No</string>
     <string name="hud_confirm_skip">Skip</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">What area is affected?</string>
-    <string name="bug_cat_hud">🧭 Navigation on the HUD (windshield)</string>
-    <string name="bug_cat_cluster">🖥️ Display on the cluster / dashboard</string>
-    <string name="bug_cat_mirror">📱 Screen mirroring</string>
-    <string name="bug_cat_applaunch">🚀 Launching an app</string>
-    <string name="bug_cat_voice">🎙️ Voice assistant</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / hotspot</string>
-    <string name="bug_cat_ota">🔄 Update (OTA)</string>
-    <string name="bug_cat_crash">💥 Crash / frozen screen</string>
-    <string name="bug_cat_other">❓ Other</string>
+    <string-array name="bug_issues_hud">
+        <item>No arrow on the HUD</item>
+        <item>Wrong direction</item>
+        <item>Wrong distance / road</item>
+        <item>HUD stays off</item>
+        <item>Arrow frozen</item>
+        <item>Other HUD issue</item>
+    </string-array>
 </resources>

@@ -684,6 +684,7 @@
     <string name="bug_tg_banner_set">✉️ %1$s  ✏️</string>
     <string name="bug_tg_banner_unset">⚠️ Nick Telegram nie ustawiony — dotknij, aby ustawić</string>
     <string-array name="bug_categories">
+        <item>Nawigacja HUD</item>
         <item>Mirror / Projekcja</item>
         <item>Wyświetlanie app</item>
         <item>Dźwięk</item>
@@ -781,15 +782,12 @@
     <string name="hud_confirm_yes">✓ Tak</string>
     <string name="hud_confirm_no">✗ Nie</string>
     <string name="hud_confirm_skip">Pomiń</string>
-    <!-- Bug-report category picker (navrail 🐞) — translated in all 13 locales -->
-    <string name="bug_cat_label">Której części dotyczy problem?</string>
-    <string name="bug_cat_hud">🧭 Nawigacja na HUD (szyba przednia)</string>
-    <string name="bug_cat_cluster">🖥️ Wyświetlanie na zestawie wskaźników / desce rozdzielczej</string>
-    <string name="bug_cat_mirror">📱 Dublowanie ekranu (mirroring)</string>
-    <string name="bug_cat_applaunch">🚀 Uruchamianie aplikacji</string>
-    <string name="bug_cat_voice">🎙️ Asystent głosowy</string>
-    <string name="bug_cat_wifi">📡 Wi-Fi / hotspot</string>
-    <string name="bug_cat_ota">🔄 Aktualizacja (OTA)</string>
-    <string name="bug_cat_crash">💥 Awaria / zawieszony ekran</string>
-    <string name="bug_cat_other">❓ Inne</string>
+    <string-array name="bug_issues_hud">
+        <item>Brak strzałki na HUD</item>
+        <item>Zły kierunek</item>
+        <item>Zła odległość / droga</item>
+        <item>HUD nie włącza się</item>
+        <item>Zamrożona strzałka</item>
+        <item>Inny problem z HUD</item>
+    </string-array>
 </resources>
