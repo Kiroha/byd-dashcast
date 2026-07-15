@@ -239,6 +239,10 @@ public class ClusterService extends Service
         if (sInstance == this) sInstance = null;
         mDestroyed = true;
         mListener  = null;
+        // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
+        // broken projection and THEN files the report, so the shots must survive the stop. They
+        // self-clean via the recorder's max-age prune (runs on the keeper heartbeat even when idle)
+        // and after a send. See ClusterShotRecorder.
         if (mPendingDashboardCallback != null) {
             LaunchCallback pending = mPendingDashboardCallback;
             mPendingDashboardCallback = null;
