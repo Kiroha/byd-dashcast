@@ -255,6 +255,7 @@ class HudDiagActivity : AppCompatActivity() {
     private fun finishConfirmation() {
         log("──── building zip ────")
         bg {
+            try {
             // Leave the HUD ON (predictable state) after the OFF confirmation step.
             val restore = try { setInt(CanWriteVerbs.SET_HUD_SWITCH, CanWriteVerbs.HUD_SWITCH_ON) }
                           catch (t: Throwable) { "EXC ${t.message}" }
@@ -269,9 +270,13 @@ class HudDiagActivity : AppCompatActivity() {
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 HUD control confirmation — ${Build.PRODUCT}")
-            runOnUiThread {
-                confirmBtn.isEnabled = true
-                bar.visibility = View.GONE
+            } finally {
+                // Always restore the UI, even if the zip/upload/diag work threw (bg's outer
+                // catch only logs) — otherwise the button stays disabled + spinner visible.
+                runOnUiThread {
+                    confirmBtn.isEnabled = true
+                    bar.visibility = View.GONE
+                }
             }
         }
     }
@@ -372,6 +377,7 @@ class HudDiagActivity : AppCompatActivity() {
     private fun finishBench(sb: StringBuilder, answer: String) {
         log("──── bench result: $answer — building zip ────")
         bg {
+            try {
             sb.append("\nRÉSULTAT (HUD arrow visible): $answer\n")
             try { CanBusController.setNaviActive(false) } catch (_: Throwable) {}  // clean up injected nav
             val work = File(cacheDir, "hud_canbench_" +
@@ -382,7 +388,11 @@ class HudDiagActivity : AppCompatActivity() {
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
             uploadZip(zip, "DL3 CAN→HUD bench [${firmwareLabel()}] — $answer")
-            runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE }
+            } finally {
+                // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
+                // only logs) — otherwise the button stays disabled + spinner visible until recreate.
+                runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE }
+            }
         }
     }
 
