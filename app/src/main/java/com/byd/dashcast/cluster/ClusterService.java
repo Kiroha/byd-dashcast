@@ -188,6 +188,31 @@ public class ClusterService extends Service
         if (BuildConfig.DEBUG) {
             AdbLocalClient.dumpSignatureAndPermissions(this);
         }
+
+        // Load any persisted single-OS verdict BEFORE startNativeProjection() so its guard fires
+        // immediately on a car already known to have no projectable cluster. Also read the prop
+        // via the shell (uid 2000 CAN read ro.build.system.fission_single_os even when the app's
+        // own in-process SystemProperties.get returns "" — SELinux prop context, INC-20260715-140107),
+        // so a first-seen single-OS DL3 gets flagged for next time without waiting on a doomed cycle.
+        Platform.primeClusterSingleOs(this);
+        if (Platform.get().isDiLink3(this)) {
+            AdbLocalClient.executeShellWithResult(this,
+                    "getprop ro.build.system.fission_single_os",
+                    new AdbLocalClient.Callback() {
+                        @Override public void onSuccess(String out) {
+                            if (out != null && "1".equals(out.trim())) {
+                                Platform.noteClusterSingleOsDetected(ClusterService.this);
+                                AppLogger.i(TAG, "shell getprop: DL3 single-OS cluster (fission_single_os=1) — projection unsupported");
+                                // If this resolved only AFTER the first activation already timed
+                                // out, correct the notification now (it would otherwise read the
+                                // generic "disconnected" until the next boot).
+                                mMainHandler.post(() -> updateNotification(
+                                        getString(R.string.dl3_singleos_cluster_unsupported_title)));
+                            }
+                        }
+                        @Override public void onError(String err) { /* stays unflagged; projection proceeds (fail-open) */ }
+                    });
+        }
         startNativeProjection();
     }
 
@@ -272,6 +297,7 @@ public class ClusterService extends Service
     private void startNativeProjection() {
         if (isDl3SingleOsFission()) {
             AppLogger.w(TAG, "DL3 single-OS fission (fission_single_os=1) — no projectable cluster display; skipping AutoContainer activation");
+            updateNotification(getString(R.string.dl3_singleos_cluster_unsupported_title));
             return;
         }
         AppLogger.i(TAG, "Starting cluster projection (native)...");
@@ -1194,7 +1220,12 @@ public class ClusterService extends Service
     public void onDashboardDisplayDisconnected() {
         AppLogger.log(TAG, "Cluster display disconnected");
         mLauncher.setDashboardDisplayId(-1);
-        updateNotification(getString(R.string.notif_cluster_disconnected));
+        // On a DL3 single-OS car the "disconnect" is really "activation timed out because no
+        // VirtualDisplay can exist" — tell the user projection is unavailable rather than the
+        // generic "disconnected" (which reads like a transient glitch they should retry).
+        updateNotification(getString(isDl3SingleOsFission()
+                ? R.string.dl3_singleos_cluster_unsupported_title
+                : R.string.notif_cluster_disconnected));
         if (mListener != null) mListener.onClusterDisplayDisconnected();
     }
 
