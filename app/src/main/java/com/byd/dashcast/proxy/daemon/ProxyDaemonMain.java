@@ -111,6 +111,48 @@ public final class ProxyDaemonMain {
      *  style rebroadcast does not need to rebuild any state. */
     private static volatile ProxyBinder sBinder;
 
+    /** ServiceManager name under which the proxy binder is (best-effort) registered so the app can
+     *  authenticate the PROXY_CONNECTED broadcast binder against it — only uid-2000/system can
+     *  addService (SELinux blocks untrusted apps). Public so ProxyClient can cross-check. */
+    public static final String SERVICE_NAME = "byd_proxy_daemon";
+
+    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
+     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    private static volatile int sAppUid = -1;
+
+    /** True if {@code uid} may drive the privileged ProxyBinder verbs. Falls OPEN when the app uid
+     *  could not be resolved, so it can never block the legitimate app→daemon path. */
+    private static boolean isAllowedCaller(int uid) {
+        if (sAppUid == -1) return true;              // unresolved → fall open, never break
+        if (uid == 1000) return true;                // system
+        if (uid == Process.myUid()) return true;     // the daemon's own uid (shell 2000)
+        return (uid % 100000) == (sAppUid % 100000); // our app (user-agnostic appId match)
+    }
+
+    /** Best-effort registration of the proxy binder in the global ServiceManager (uid-2000/system
+     *  only). Enables the app-side authenticity cross-check; broadcast delivery is unaffected, so
+     *  a failure here is harmless (the app falls back to the broadcast binder). */
+    private static void registerInServiceManager(android.os.IBinder binder) {
+        if (binder == null) return;
+        try {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            try {
+                java.lang.reflect.Method add = sm.getDeclaredMethod("addService",
+                        String.class, android.os.IBinder.class, boolean.class, int.class);
+                add.setAccessible(true);
+                add.invoke(null, SERVICE_NAME, binder, false, 0);
+            } catch (NoSuchMethodException nsme) {
+                java.lang.reflect.Method add = sm.getDeclaredMethod("addService",
+                        String.class, android.os.IBinder.class);
+                add.setAccessible(true);
+                add.invoke(null, SERVICE_NAME, binder);
+            }
+            log("ServiceManager.addService(" + SERVICE_NAME + ") OK");
+        } catch (Throwable t) {
+            log("ServiceManager.addService failed (broadcast only): " + t);
+        }
+    }
+
     private ProxyDaemonMain() {}
 
     public static void main(String[] args) {
@@ -154,6 +196,18 @@ public final class ProxyDaemonMain {
             // SystemContext.get(). Falls back to a plain permission-bypass wrap if
             // createPackageContext is unavailable.
             sWrappedContext = com.byd.dashcast.proxy.SystemContextHelper.adoptIdentity(systemContext);
+
+            // Resolve our app's uid once so the ProxyBinder caller-gate can reject untrusted callers
+            // (the binder is registered in ServiceManager just below). Fall open on any failure.
+            try {
+                sAppUid = systemContext.getPackageManager()
+                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+                log("app uid resolved: " + sAppUid);
+            } catch (Throwable t) {
+                log("app uid resolution failed (fall open): " + t);
+            }
+            // Best-effort ServiceManager registration for the app-side authenticity cross-check.
+            registerInServiceManager(sBinder);
 
             emitBroadcast();
             installTriggerObserver();
@@ -466,6 +520,18 @@ public final class ProxyDaemonMain {
         @Override
         protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws RemoteException {
+            // Caller-identity gate: the binder is now discoverable via ServiceManager (for the
+            // app-side authenticity cross-check) and TXN_EXEC runs arbitrary shell as uid 2000, so
+            // only the app (+ system / the daemon's own uid) may drive any verb. The per-case
+            // enforceInterface below is NOT authentication. Falls OPEN if the app uid is unresolved
+            // → can never block the legitimate app→daemon path.
+            int callingUid = Binder.getCallingUid();
+            if (!isAllowedCaller(callingUid)) {
+                log("ProxyBinder: rejected transact code=" + code + " from uid=" + callingUid);
+                if (reply != null) reply.writeException(
+                        new SecurityException("caller uid " + callingUid + " not permitted"));
+                return true;
+            }
             switch (code) {
                 case TXN_PING: {
                     data.enforceInterface(DESCRIPTOR);
