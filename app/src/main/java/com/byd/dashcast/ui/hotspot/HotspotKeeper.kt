@@ -41,10 +41,15 @@ object HotspotKeeper {
      *  AdbLocalClient's catch) is force-reset once it is this far past due, so probeInFlight
      *  can't stick true and silently kill the keep-alive. */
     private const val PROBE_STUCK_MS = PROBE_INTERVAL_MS * 3
+    /** Give up relaunching TetherFi after this many consecutive failed attempts (it stays
+     *  DOWN — the user stopped it on purpose, or it can't start) until a probe reports UP
+     *  again. Stops an unbounded foreground-Activity relaunch storm every RESTART_COOLDOWN_MS. */
+    private const val MAX_RESTART_ATTEMPTS = 5
 
     @Volatile private var lastProbeMs = 0L
     @Volatile private var lastRestartMs = 0L
     @Volatile private var probeInFlight = false
+    @Volatile private var consecutiveRestarts = 0
 
     /** True if the user enabled the persistent hotspot keep-alive ("watchdog / always on"). */
     @JvmStatic
@@ -80,6 +85,7 @@ object HotspotKeeper {
             override fun onSuccess(out: String?) {
                 probeInFlight = false
                 if (out == null || !out.contains("UP")) restart(app)
+                else consecutiveRestarts = 0 // UP → keep-alive healthy, clear the give-up counter
             }
             override fun onError(err: String?) {
                 probeInFlight = false
@@ -90,6 +96,17 @@ object HotspotKeeper {
     private fun restart(app: Context) {
         val now = SystemClock.elapsedRealtime()
         if (lastRestartMs > 0 && now - lastRestartMs < RESTART_COOLDOWN_MS) return
+        // Give-up ceiling: if TetherFi stays DOWN despite repeated restarts, stop dispatching a
+        // foreground Activity launch every RESTART_COOLDOWN_MS forever. The counter resets to 0
+        // as soon as a probe reports UP (onSuccess), so a normally-recovering hotspot is unaffected.
+        if (consecutiveRestarts >= MAX_RESTART_ATTEMPTS) {
+            if (consecutiveRestarts == MAX_RESTART_ATTEMPTS) {
+                AppLogger.w(TAG, "TetherFi still DOWN after $MAX_RESTART_ATTEMPTS restarts — "
+                        + "giving up until it comes back UP or the keep-alive is re-enabled")
+                consecutiveRestarts++ // bump past the cap so this logs exactly once
+            }
+            return
+        }
         if (!Settings.canDrawOverlays(app)) {
             // Without a BAL exemption the OS silently drops the tile launch from the
             // background — surface it once so the cause is diagnosable.
@@ -99,6 +116,7 @@ object HotspotKeeper {
             return
         }
         lastRestartMs = now
+        consecutiveRestarts++
         try {
             val i = Intent().apply {
                 setClassName(TF_PKG, TF_TILE_CLS)
