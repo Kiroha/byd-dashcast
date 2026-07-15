@@ -956,15 +956,17 @@ public class ClusterService extends Service
             // transcript alone reported ok=true on a launch that showed nothing on the
             // cluster, and suppressed the app-side fallback.
             boolean daemonSaysFail = low.contains("fail: no task discovered");
-            // Otherwise, POSITIVE success signal: `am start-activity -S -W` prints "Status: ok"
-            // (or "Starting: Intent") when the launch is accepted. Do NOT infer failure from
-            // the word "exception": the cascade's optional-method reflection probes
-            // (setDisplayToSingleTaskInstance / setTaskWindowingModeFreeform) log a BENIGN
-            // NoSuchMethodException even on a fully successful launch — that false-negatived
-            // the daemon-primary path on D50F_LC and dropped the just-launched app's tracking
-            // (green bar / resize / stop), INC-20260706-070423.
-            ok = !daemonSaysFail
-                    && (low.contains("status: ok") || low.contains("starting: intent"));
+            // The daemon's poll-based verdict is authoritative: if it did NOT append
+            // "FAIL: no task discovered", a task WAS discovered on the cluster display. Do NOT
+            // also require an am-transcript keyword ("status: ok" / "starting: intent") —
+            // launchAndForce does not emit a positive verdict string when a task is found, so
+            // ANDing that in vetoed task-PROVEN launches: it dropped the app's tracking (green
+            // bar / resize / stop) and forced the app-side fallback (cross-user DENIED on DL5).
+            // Only guard against EMPTY output (a transport error before the daemon ran), which
+            // cannot count as success. Do NOT infer failure from "exception" either — the
+            // cascade's optional-method reflection probes (setDisplayToSingleTaskInstance /
+            // setTaskWindowingModeFreeform) log a BENIGN NoSuchMethodException even on success.
+            ok = !low.isEmpty() && !daemonSaysFail;
             AppLogger.i(TAG, "daemon launchAndForce result (ok=" + ok + "):\n"
                     + (log != null && !log.isEmpty() ? log : "(empty)"));
         } catch (Throwable t) {
