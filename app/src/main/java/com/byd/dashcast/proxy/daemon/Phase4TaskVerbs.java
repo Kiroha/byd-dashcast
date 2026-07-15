@@ -905,7 +905,20 @@ public final class Phase4TaskVerbs {
                 int wmV = readWindowingMode(si);
                 int atV = readActivityType(si);
                 int[] tids = getChildTaskIds(si);
-                int nTasks = (tids == null) ? 0 : tids.length;
+                // tids==null means the child-task-id read FAILED (a ROM whose task-array field
+                // is not named as expected, or a transient reflection failure) — NOT that the
+                // stack is empty. Treating it as "0 tasks → removable" could blank a LIVE
+                // cluster/HUD projection whose tasks we simply couldn't read, so keep it
+                // defensively (mirrors the wm/at unreadable keep below). Only a readable,
+                // genuinely task-less stack reaches removeStack().
+                if (tids == null) {
+                    log.append("  keep?  stackId=").append(sid)
+                       .append(" wm=").append(wmV).append(" at=").append(atV)
+                       .append(" (task list unreadable, defensive keep)\n");
+                    kept++;
+                    continue;
+                }
+                int nTasks = tids.length;
 
                 // FULLSCREEN: leave (a normal projection lives here).
                 // HOME: leave (the display's fallback Activity).
