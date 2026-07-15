@@ -100,6 +100,7 @@ public final class ProxyKeeperService extends Service {
         mRunning = false;
         if (mHandler != null) mHandler.removeCallbacksAndMessages(null);
         if (mThread != null) mThread.quitSafely();
+        mArmExecutor.shutdownNow();
         AppLogger.i(TAG, "stopped");
         super.onDestroy();
     }
@@ -173,6 +174,16 @@ public final class ProxyKeeperService extends Service {
      *  connection; reset on reconnect / respawn so it re-arms against the fresh daemon. */
     private volatile boolean mHudListenerArmed = false;
 
+    /** Serial executor for arming the HUD listener — reused across heartbeats instead of
+     *  spawning a new "hud-listener-arm" Thread per arm (which churned one thread per heartbeat
+     *  under persistent canListenStart failure). Shut down in onDestroy. */
+    private final java.util.concurrent.ExecutorService mArmExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "hud-listener-arm");
+                t.setDaemon(true);
+                return t;
+            });
+
     /**
      * Keep the BYDAuto HUD push-feedback listener registered app-wide (off-thread, guarded) so the
      * bug report / diag can read the HUD's ACTUAL switch + display-mode. That state is push-only
@@ -183,14 +194,20 @@ public final class ProxyKeeperService extends Service {
     private void armHudListener() {
         if (mHudListenerArmed) return;
         mHudListenerArmed = true;
-        new Thread(() -> {
-            try {
-                ProxyClient.canListenStart();
-            } catch (Throwable t) {
-                mHudListenerArmed = false;   // allow a retry on the next alive tick
-                AppLogger.w(TAG, "HUD listener arm failed: " + t.getMessage());
-            }
-        }, "hud-listener-arm").start();
+        try {
+            mArmExecutor.execute(() -> {
+                // Fail fast on a cold daemon instead of blocking this worker ~23s (mirrors F6).
+                ProxyClient.setNonBlockingReconnect(true);
+                try {
+                    ProxyClient.canListenStart();
+                } catch (Throwable t) {
+                    mHudListenerArmed = false;   // allow a retry on the next alive tick
+                    AppLogger.w(TAG, "HUD listener arm failed: " + t.getMessage());
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ree) {
+            mHudListenerArmed = false;   // executor shut down (service stopping) — allow a retry
+        }
     }
 
     private void ensureChannel() {
