@@ -10,6 +10,7 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
+import com.byd.dashcast.util.AppLogger;
 
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -74,6 +75,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private String lastTitle   = "";
     private String lastText    = "";
     private String lastSubText = "";
+
+    // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
+    // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
+    private String lastLoggedNav = "";
 
     // Cache of per-source-package Resources (Maps/Waze/ReVanced). A nav app's resources
     // don't change at runtime, so build the Context + AssetManager once per package instead
@@ -475,12 +480,23 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
         if (combined.isEmpty()) return;
 
-        // 1. Turn icon — try icon resource name first, then text.
+        // 1. Turn icon — try icon resource name first, then text; track WHICH source resolved it so
+        //    the NAV PARSE diagnostic shows whether we read the direction from the small-icon
+        //    resource, a text keyword, or fell back to the straight default.
+        String iconResName = smallIconResName(sbn.getPackageName(), n.getSmallIcon());
         int iconId = resolveIconFromResource(sbn.getPackageName(), n.getSmallIcon());
-        if (iconId <= 0) {
+        String iconSrc;
+        if (iconId > 0) {
+            iconSrc = "resource";
+        } else {
             iconId = resolveIconFromText(lower);
+            if (iconId > 0) {
+                iconSrc = "text";
+            } else {
+                iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
+                iconSrc = "default";
+            }
         }
-        if (iconId <= 0) iconId = CanBusController.ICON_STRAIGHT_SOLID; // safe default
 
         // 2. Distance to next turn — scan title then text then combined.
         int distance = parseFirstDistance(combined);
@@ -500,6 +516,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         HudNavigationData data = new HudNavigationData(
                 iconId, distance, roadName, remainDist, remainSec);
 
+        // NAV PARSE diagnostic (raw notification → parsed icon), written to the DashCast journal so
+        // every bug report shows GROUND TRUTH: what the nav app's notification actually said vs the
+        // arrow we produced — the way to verify the direction mapping on real Maps/Waze notifications.
+        // Deduped per distinct (icon|road) maneuver so it never floods the ~1 Hz distance ticks.
+        String navKey = iconId + "|" + roadName;
+        if (!navKey.equals(lastLoggedNav)) {
+            lastLoggedNav = navKey;
+            AppLogger.i(TAG, "NAV PARSE icon=" + iconId + " src=" + iconSrc
+                    + " smallIcon='" + iconResName + "'"
+                    + " | title='" + clip(title) + "' text='" + clip(text) + "'"
+                    + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
+                    + " -> dist=" + distance + " road='" + roadName + "'");
+        }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
                 + " road='" + roadName + "'"
                 + " remDist=" + remainDist + " remSec=" + remainSec);
@@ -590,6 +619,26 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         return -1;
     }
 
+    /**
+     * The small-icon resource entry name (e.g. {@code ic_maneuver_turn_right}) or {@code ""} — for
+     * the NAV PARSE diagnostic, so on a real car we can see what the nav app's small icon actually is
+     * (and whether it carries the maneuver at all, or is generic → we must rely on text parsing).
+     */
+    private String smallIconResName(String pkg, Icon icon) {
+        if (icon == null || icon.getType() != Icon.TYPE_RESOURCE) return "";
+        try {
+            Resources res = mResCache.get(pkg);
+            if (res == null) {
+                res = createPackageContext(pkg, 0).getResources();
+                mResCache.put(pkg, res);
+            }
+            int resId = icon.getResId();
+            return resId == 0 ? "" : res.getResourceEntryName(resId);
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
     private static int resolveIconFromText(String lower) {
         for (Object[] entry : TEXT_KEYWORD_MAP) {
             if (lower.contains((String) entry[0])) return (int) entry[1];
@@ -671,5 +720,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     private static String charSeqToString(CharSequence cs) {
         return cs != null ? cs.toString() : "";
+    }
+
+    /** One-line, length-bounded form of a notification string for the NAV PARSE diagnostic. */
+    private static String clip(String s) {
+        if (s == null) return "";
+        s = s.replace('\n', ' ').trim();
+        return s.length() > 80 ? s.substring(0, 80) + "…" : s;
     }
 }
