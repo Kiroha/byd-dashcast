@@ -1510,6 +1510,11 @@ class MainActivity : AppCompatActivity(),
         // to the main thread only if the ROM is confirmed unsupported. isActivityAlive() guards
         // against a config-change recreate/destroy landing before the post runs.
         val resizeProbeCtx = applicationContext
+        // Reach the Activity through a WeakReference so this fire-and-forget probe (which blocks
+        // up to ~1.5s on a cold cache) does not strong-capture `this` and retain a destroyed
+        // MainActivity + its view tree. Referencing runOnUiThread / isActivityAlive() /
+        // mClusterControlCoordinator directly would have captured the instance.
+        val selfRef = java.lang.ref.WeakReference(this)
         Thread({
             val supported = try {
                 Platform.get().isClusterTaskResizeSupported(resizeProbeCtx)
@@ -1519,10 +1524,13 @@ class MainActivity : AppCompatActivity(),
                 true
             }
             if (!supported) {
-                runOnUiThread {
-                    if (!isActivityAlive()) return@runOnUiThread
-                    mClusterControlCoordinator?.hideResizeIfUnsupported()
-                    AppLogger.i(TAG, "Resize UI hidden: cluster task resize not supported on this ROM (DL5)")
+                val act = selfRef.get()
+                if (act != null) {
+                    act.runOnUiThread {
+                        if (!act.isActivityAlive()) return@runOnUiThread
+                        act.mClusterControlCoordinator?.hideResizeIfUnsupported()
+                        AppLogger.i(TAG, "Resize UI hidden: cluster task resize not supported on this ROM (DL5)")
+                    }
                 }
             }
         }, "resize-affordance-probe").apply { isDaemon = true }.start()
