@@ -748,12 +748,20 @@ public class ClusterService extends Service
                     if (!iamOkWB && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
                         AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — routing via proxy daemon launchAndForce");
                         int wbW = right - left, wbH = bottom - top;
-                        launchViaDaemonForce(packageName, displayId,
+                        // Use the synchronous, verdict-checked daemon launch — same path
+                        // launchOnDashboard uses. The old launchViaDaemonForce was
+                        // fire-and-forget, so WithBounds reported unconditional success even
+                        // when the DL5 daemon launch actually failed, mistracking the app.
+                        boolean okWB = daemonLaunchSync(packageName, displayId,
                                 wbW > 0 ? wbW : clusterWidthOr(1920),
                                 wbH > 0 ? wbH : clusterHeightOr(720));
+                        AppLogger.i(TAG, "launchOnDashboardWithBounds → daemon force path (ok="
+                                + okWB + ") → " + packageName);
+                        postLaunchResult(callback, okWB);
+                    } else {
+                        AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
+                        postLaunchResult(callback, true);
                     }
-                    AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
-                    postLaunchResult(callback, true);
                 } catch (Exception e) {
                     AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
                     postLaunchResult(callback, false);
