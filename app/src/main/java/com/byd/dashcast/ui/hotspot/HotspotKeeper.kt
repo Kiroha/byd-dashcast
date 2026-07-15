@@ -45,11 +45,16 @@ object HotspotKeeper {
      *  DOWN — the user stopped it on purpose, or it can't start) until a probe reports UP
      *  again. Stops an unbounded foreground-Activity relaunch storm every RESTART_COOLDOWN_MS. */
     private const val MAX_RESTART_ATTEMPTS = 5
+    /** After giving up (MAX_RESTART_ATTEMPTS consecutive failures), wait this long then retry —
+     *  so the ceiling is a BACKOFF, not a permanent latch: a transient cause that outlasts the
+     *  burst (low-memory kill, TetherFi self-update) still self-heals without user action. */
+    private const val GIVE_UP_COOLDOWN_MS = 5 * 60_000L
 
     @Volatile private var lastProbeMs = 0L
     @Volatile private var lastRestartMs = 0L
     @Volatile private var probeInFlight = false
     @Volatile private var consecutiveRestarts = 0
+    @Volatile private var wasEnabled = false
 
     /** True if the user enabled the persistent hotspot keep-alive ("watchdog / always on"). */
     @JvmStatic
@@ -63,7 +68,12 @@ object HotspotKeeper {
      */
     @JvmStatic
     fun maybeKeepAlive(ctx: Context) {
-        if (!isEnabled(ctx)) return
+        val enabled = isEnabled(ctx)
+        // Reset the give-up counter on the disabled→enabled edge so re-enabling the keep-alive
+        // actually resumes it (the give-up log promises this), instead of staying wedged.
+        if (enabled && !wasEnabled) consecutiveRestarts = 0
+        wasEnabled = enabled
+        if (!enabled) return
         val now = SystemClock.elapsedRealtime()
         // Staleness guard: if a prior probe's callback was lost (ShellGateway's single-thread
         // executor wedged on a hung runShell, or an Error escaped AdbLocalClient's catch),
@@ -100,12 +110,21 @@ object HotspotKeeper {
         // foreground Activity launch every RESTART_COOLDOWN_MS forever. The counter resets to 0
         // as soon as a probe reports UP (onSuccess), so a normally-recovering hotspot is unaffected.
         if (consecutiveRestarts >= MAX_RESTART_ATTEMPTS) {
-            if (consecutiveRestarts == MAX_RESTART_ATTEMPTS) {
-                AppLogger.w(TAG, "TetherFi still DOWN after $MAX_RESTART_ATTEMPTS restarts — "
-                        + "giving up until it comes back UP or the keep-alive is re-enabled")
-                consecutiveRestarts++ // bump past the cap so this logs exactly once
+            // Backoff, not a permanent latch: after GIVE_UP_COOLDOWN_MS with no success, clear the
+            // counter and retry, so a transient cause that outlasted the burst still self-heals.
+            // (The prior code returned here forever — the counter only reset on an UP probe, but
+            // nothing could bring TetherFi UP once the keeper stopped dispatching STARTs.)
+            if (now - lastRestartMs >= GIVE_UP_COOLDOWN_MS) {
+                AppLogger.i(TAG, "give-up cooldown elapsed — retrying TetherFi keep-alive")
+                consecutiveRestarts = 0
+            } else {
+                if (consecutiveRestarts == MAX_RESTART_ATTEMPTS) {
+                    AppLogger.w(TAG, "TetherFi still DOWN after $MAX_RESTART_ATTEMPTS restarts — "
+                            + "backing off ${GIVE_UP_COOLDOWN_MS / 60_000}min (or until UP / re-enable)")
+                    consecutiveRestarts++ // bump past the cap so this logs exactly once
+                }
+                return
             }
-            return
         }
         if (!Settings.canDrawOverlays(app)) {
             // Without a BAL exemption the OS silently drops the tile launch from the
