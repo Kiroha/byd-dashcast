@@ -55,6 +55,10 @@ object HotspotKeeper {
     @Volatile private var probeInFlight = false
     @Volatile private var consecutiveRestarts = 0
     @Volatile private var wasEnabled = false
+    /** Monotonic probe id. Bumped on each dispatch AND on a stuck-reset, so a stale/late probe
+     *  callback (whose generation no longer matches) is ignored instead of clobbering a newer
+     *  probe's in-flight flag or resetting the give-up counter on out-of-date state. */
+    @Volatile private var probeGeneration = 0
 
     /** True if the user enabled the persistent hotspot keep-alive ("watchdog / always on"). */
     @JvmStatic
@@ -82,22 +86,26 @@ object HotspotKeeper {
         if (probeInFlight && now - lastProbeMs > PROBE_STUCK_MS) {
             AppLogger.w(TAG, "keep-alive probe stuck ${now - lastProbeMs}ms — force-reset")
             probeInFlight = false
+            probeGeneration++ // invalidate the stuck probe's still-outstanding callback
         }
         if (probeInFlight || now - lastProbeMs < PROBE_INTERVAL_MS) return
         val app = ctx.applicationContext
         if (!tetherFiInstalled(app)) return
         lastProbeMs = now
         probeInFlight = true
+        val gen = ++probeGeneration
         // Same probe HotspotActivity uses: is TetherFi's ProxyForegroundService running?
         val cmd = "dumpsys activity services $TF_PKG" +
                 " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN"
         ShellGateway.execShellWithResult(app, cmd, object : AdbLocalClient.Callback {
             override fun onSuccess(out: String?) {
+                if (gen != probeGeneration) return // superseded by a newer probe / a stuck-reset
                 probeInFlight = false
                 if (out == null || !out.contains("UP")) restart(app)
                 else consecutiveRestarts = 0 // UP → keep-alive healthy, clear the give-up counter
             }
             override fun onError(err: String?) {
+                if (gen != probeGeneration) return // superseded by a newer probe / a stuck-reset
                 probeInFlight = false
             }
         })
