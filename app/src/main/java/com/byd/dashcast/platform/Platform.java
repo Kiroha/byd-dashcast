@@ -55,6 +55,11 @@ public final class Platform {
     private static volatile Platform INSTANCE;
     private static volatile Boolean sCachedIsDiLink5 = null;
     private static volatile Boolean sCachedClusterResizeSupported = null;
+    // Runtime/persisted single-OS verdict — set when the app can't read the prop in-process
+    // (SELinux prop context) but the shell can, or when AutoContainer reports "no
+    // AutoContainerNative". null = unknown; TRUE = confirmed single-OS. See isClusterSingleOs().
+    private static volatile Boolean sClusterSingleOsRuntime = null;
+    private static final String PREF_CLUSTER_SINGLE_OS = "cluster_single_os_detected";
 
     /**
      * Guards the one-shot cluster-resize probe so the shell is forked (and the
@@ -476,9 +481,44 @@ public final class Platform {
      * <p><b>Fail-open:</b> returns {@code false} if the prop can't be read (never gate a car we
      * can't classify). Note {@code =1} alone is NOT enough to gate — combine with
      * {@link #isDiLink3(Context)} so a real DL5.1 (also single-OS) is unaffected.
+     *
+     * <p>The in-process {@link #readProp} often returns "" for this prop on the very cars that
+     * are single-OS (the app's SELinux domain can't read the vendor prop, though the uid-2000
+     * shell can — INC-20260715-140107). So this also honours a runtime verdict recorded by
+     * {@link #noteClusterSingleOsDetected} (from a shell {@code getprop} the app ran as uid 2000)
+     * and persisted across restarts by {@link #primeClusterSingleOs}.
      */
     public static boolean isClusterSingleOs() {
-        return "1".equals(readProp("ro.build.system.fission_single_os"));
+        if ("1".equals(readProp("ro.build.system.fission_single_os"))) return true;
+        Boolean rt = sClusterSingleOsRuntime;
+        return rt != null && rt;
+    }
+
+    /**
+     * Records — and persists — that this device's cluster is single-OS (no projectable
+     * VirtualDisplay). Call ONLY once single-OS is confirmed on a DL3 via the AUTHORITATIVE,
+     * race-free read of {@code ro.build.system.fission_single_os == "1"} (in-process or a shell
+     * {@code getprop}); the caller is responsible for the {@link #isDiLink3(Context)} check so
+     * DL5.1 (also single-OS) is never marked. Do NOT call this from a transient signal such as a
+     * boot-race "no AutoContainerNative" reply — that could permanently disable a working 1-for-2.
+     */
+    public static void noteClusterSingleOsDetected(Context ctx) {
+        sClusterSingleOsRuntime = Boolean.TRUE;
+        try { prefs(ctx).edit().putBoolean(PREF_CLUSTER_SINGLE_OS, true).apply(); }
+        catch (Throwable ignore) { /* best-effort persistence */ }
+    }
+
+    /**
+     * Loads the persisted single-OS verdict into the in-memory cache. Call once at startup
+     * (ClusterService.onCreate) so the guards fire immediately on a car already known to be
+     * single-OS, without wasting an activation cycle first.
+     */
+    public static void primeClusterSingleOs(Context ctx) {
+        try {
+            if (prefs(ctx).getBoolean(PREF_CLUSTER_SINGLE_OS, false)) {
+                sClusterSingleOsRuntime = Boolean.TRUE;
+            }
+        } catch (Throwable ignore) { /* fail-open: stay unknown */ }
     }
 
     /**

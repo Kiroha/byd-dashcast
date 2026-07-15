@@ -121,6 +121,21 @@ class ClusterManager(context: Context) {
             return
         }
 
+        // DL3 single-OS fission: the cluster is rendered natively (Qt) and NO projectable
+        // Android VirtualDisplay is ever created (AutoContainer has no native backend →
+        // "no AutoContainerNative"). Running the full 30→16→35 sequence just times out after
+        // 20s, every time, and the tester sees nothing with no explanation
+        // (INC-20260715-140107 / -140551). Once single-OS is known — via the authoritative shell
+        // getprop ro.build.system.fission_single_os, cached+persisted by ClusterService.onCreate —
+        // skip straight to the timeout callback so ClusterService informs the user and stops
+        // looping. STRICT: DL3 only — a 1-for-2 DL3 (prop=0, never flagged) and any DL5
+        // (isDiLink3=false, and handled above) never reach here.
+        if (Platform.get().isDiLink3(mContext) && Platform.isClusterSingleOs()) {
+            AppLogger.w(TAG, "DL3 single-OS fission — no projectable cluster display; skipping activation")
+            mHandler.post { callback.onDisplayTimeout() }
+            return
+        }
+
         // 1. First check if the cluster VirtualDisplay is already present.
         val found = findClusterDisplay(dm)
         if (found != null && sQtInProjectionMode) {
