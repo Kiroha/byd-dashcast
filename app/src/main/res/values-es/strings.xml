@@ -781,4 +781,9 @@
         <item>Flecha congelada</item>
         <item>Otro problema del HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">¿Incluir capturas de pantalla?</string>
+    <string name="bug_shots_consent_msg">El informe puede incluir las últimas capturas del cuadro de instrumentos y de la pantalla principal. Pueden mostrar lo que había en pantalla (mapa, destino, datos personales). ¿Adjuntarlas?</string>
+    <string name="bug_shots_consent_yes">Incluir</string>
+    <string name="bug_shots_consent_no">Sin capturas</string>
+    <string name="settings_capture_shots">Capturar capturas de pantalla para informes de errores</string>
 </resources>

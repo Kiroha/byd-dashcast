@@ -823,4 +823,9 @@
         <item>Flèche figée</item>
         <item>Autre problème HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Inclure les captures d\'écran ?</string>
+    <string name="bug_shots_consent_msg">Le rapport peut inclure les dernières captures du combiné et de l\'écran principal. Elles peuvent montrer ce qui était affiché (carte, destination, infos personnelles). Les joindre ?</string>
+    <string name="bug_shots_consent_yes">Inclure</string>
+    <string name="bug_shots_consent_no">Sans captures</string>
+    <string name="settings_capture_shots">Capturer des captures d\'écran pour les rapports de bug</string>
 </resources>

@@ -75,6 +75,7 @@ class SettingsActivity : AppCompatActivity() {
     private var cbAdasWindowFix: CompoundButton? = null
     private lateinit var cbUseOwnSim: CompoundButton
     private var cbCompactAppsPanel: CompoundButton? = null
+    private var cbCaptureShots: CompoundButton? = null
     private lateinit var swLegacyPath: CompoundButton
     private lateinit var cbFissionMode: CompoundButton
     private lateinit var swFissionAutoLayout: CompoundButton
@@ -195,6 +196,7 @@ class SettingsActivity : AppCompatActivity() {
         btnVPlus = findViewById(R.id.btn_v_plus)
         flSafeZone = findViewById(R.id.fl_safe_zone)
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters)
+        cbCaptureShots = findViewById(R.id.cb_capture_shots)
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup)
         cbQuickStop = findViewById(R.id.cb_quick_stop)
         cbAdasWindowFix = findViewById(R.id.cb_adas_window_fix)
@@ -239,6 +241,9 @@ class SettingsActivity : AppCompatActivity() {
 
         // Category filters toggle
         cbShowCategoryFilters.isChecked = prefs.getBoolean(PREF_SHOW_CATEGORY_FILTERS, false)
+        // Rolling screenshot capture for bug reports (default ON; consent still required at send)
+        cbCaptureShots?.isChecked =
+            com.byd.dashcast.report.ClusterShotRecorder.isEnabled(this)
 
         // Reconnect popup toggle (default: disabled — users find it intrusive)
         cbReconnectPopup.isChecked = prefs.getBoolean(PREF_RECONNECT_POPUP, false)
@@ -363,6 +368,11 @@ class SettingsActivity : AppCompatActivity() {
         // Category filters checkbox
         cbShowCategoryFilters.setOnCheckedChangeListener { _, isChecked ->
             mPrefs.edit { putBoolean(PREF_SHOW_CATEGORY_FILTERS, isChecked) }
+        }
+
+        // Screenshot capture for bug reports (setEnabled also wipes existing shots when turned off)
+        cbCaptureShots?.setOnCheckedChangeListener { _, isChecked ->
+            com.byd.dashcast.report.ClusterShotRecorder.setEnabled(this, isChecked)
         }
 
         // Reconnect popup checkbox

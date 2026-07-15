@@ -19,6 +19,7 @@ import android.widget.ViewFlipper
 import androidx.core.content.edit
 
 import com.byd.dashcast.R
+import com.byd.dashcast.hud.HudCaptureSupport
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.util.AppLogger
 
@@ -305,22 +306,23 @@ class BugWizardActivity : Activity() {
 
         BugReportCapture.capture(this, caption, object : BugReportCapture.Callback {
             override fun onReady(file: File) {
-                if (TelegramBugReporter.isConfigured()) {
-                    mTvStatus.setText(R.string.bug_status_sending)
-                    TelegramBugReporter.send(this@BugWizardActivity, file, caption,
-                        object : TelegramBugReporter.Callback {
-                            override fun onSent() {
-                                Toast.makeText(this@BugWizardActivity,
-                                    R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
-                                finish()
-                            }
-                            override fun onFailed(message: String) {
-                                AppLogger.w(TAG, "bot upload failed: $message")
-                                shareFallback(file)
-                            }
-                        })
+                // Privacy gate (mirrors the HUD raw-recorder H3 pattern): if the rolling screenshot
+                // recorder is on, ask — per send — whether to attach the recent captures, which may
+                // show the user's screen (map, destination…). Consent is NOT persisted.
+                if (ClusterShotRecorder.isEnabled(this@BugWizardActivity)) {
+                    AlertDialog.Builder(this@BugWizardActivity)
+                        .setTitle(R.string.bug_shots_consent_title)
+                        .setMessage(R.string.bug_shots_consent_msg)
+                        .setCancelable(false)
+                        .setPositiveButton(R.string.bug_shots_consent_yes) { _, _ ->
+                            bundleShotsThenDeliver(file, caption)
+                        }
+                        .setNegativeButton(R.string.bug_shots_consent_no) { _, _ ->
+                            deliverReport(file, caption)
+                        }
+                        .show()
                 } else {
-                    shareFallback(file)
+                    deliverReport(file, caption)
                 }
             }
 
@@ -332,6 +334,72 @@ class BugWizardActivity : Activity() {
                 if (partial != null) shareFallback(partial)
             }
         })
+    }
+
+    /** Uploads [file] (a report .txt or a report+shots .zip) via the bot, else the share sheet. */
+    private fun deliverReport(file: File, caption: String) {
+        if (TelegramBugReporter.isConfigured()) {
+            mTvStatus.setText(R.string.bug_status_sending)
+            TelegramBugReporter.send(this, file, caption, object : TelegramBugReporter.Callback {
+                override fun onSent() {
+                    Toast.makeText(this@BugWizardActivity, R.string.bug_sent_ok, Toast.LENGTH_LONG).show()
+                    finish()
+                }
+                override fun onFailed(message: String) {
+                    AppLogger.w(TAG, "bot upload failed: $message")
+                    shareFallback(file)
+                }
+            })
+        } else {
+            shareFallback(file)
+        }
+    }
+
+    /**
+     * Pulls the recent screenshots off the device (via the daemon — the app can't read
+     * /data/local/tmp on A13), zips them together with the report, then delivers the zip. All the
+     * blocking I/O runs off the main thread; on any failure it falls back to sending the report
+     * alone. Consent to include the shots was already given by the caller.
+     */
+    private fun bundleShotsThenDeliver(reportFile: File, caption: String) {
+        mTvStatus.setText(R.string.bug_status_sending)
+        Thread({
+            var toSend = reportFile
+            try {
+                val work = File(cacheDir, "bugbundle_" + reportFile.nameWithoutExtension)
+                if (work.exists()) work.deleteRecursively()
+                work.mkdirs()
+                reportFile.copyTo(File(work, reportFile.name), overwrite = true)
+                val n = ClusterShotRecorder.pullShotsInto(this, work)
+                if (n > 0) {
+                    toSend = HudCaptureSupport.zipDir(work)
+                    AppLogger.i(TAG, "bug bundle: report + $n screenshot(s) → ${toSend.name}")
+                    // Shots have been captured into the zip → wipe the device-side originals now.
+                    ClusterShotRecorder.clear(this)
+                } else {
+                    AppLogger.i(TAG, "bug bundle: no screenshots available — sending report only")
+                }
+            } catch (t: Throwable) {
+                AppLogger.w(TAG, "bug bundle failed (${t.message}) — sending report only")
+                toSend = reportFile
+            }
+            val finalFile = toSend
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) {
+                    deliverReport(finalFile, caption)
+                } else if (TelegramBugReporter.isConfigured()) {
+                    // User left the wizard mid-bundle — still deliver (they had tapped send),
+                    // headless, so the report isn't lost and no finished Activity is touched.
+                    TelegramBugReporter.send(applicationContext, finalFile, caption,
+                        object : TelegramBugReporter.Callback {
+                            override fun onSent() {}
+                            override fun onFailed(message: String) {
+                                AppLogger.w(TAG, "headless bundle upload failed: $message")
+                            }
+                        })
+                }
+            }
+        }, "bug-bundle").start()
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────

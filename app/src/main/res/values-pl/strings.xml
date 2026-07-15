@@ -790,4 +790,9 @@
         <item>Zamrożona strzałka</item>
         <item>Inny problem z HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Dołączyć zrzuty ekranu?</string>
+    <string name="bug_shots_consent_msg">Raport może zawierać najnowsze zrzuty zegarów i ekranu głównego. Mogą pokazywać zawartość ekranu (mapa, cel, dane osobowe). Dołączyć je?</string>
+    <string name="bug_shots_consent_yes">Dołącz</string>
+    <string name="bug_shots_consent_no">Bez zrzutów</string>
+    <string name="settings_capture_shots">Rób zrzuty ekranu do raportów o błędach</string>
 </resources>

@@ -781,4 +781,9 @@
         <item>السهم متجمّد</item>
         <item>مشكلة HUD أخرى</item>
     </string-array>
+    <string name="bug_shots_consent_title">تضمين لقطات الشاشة؟</string>
+    <string name="bug_shots_consent_msg">يمكن أن يتضمن التقرير أحدث لقطات شاشة لعدّاد القيادة والشاشة الرئيسية. قد تُظهر محتوى الشاشة (الخريطة، الوجهة، معلومات شخصية). هل تريد إرفاقها؟</string>
+    <string name="bug_shots_consent_yes">تضمين</string>
+    <string name="bug_shots_consent_no">بدون لقطات</string>
+    <string name="settings_capture_shots">التقاط لقطات شاشة لتقارير الأخطاء</string>
 </resources>
