@@ -65,6 +65,15 @@ public final class DaemonBinderResolver {
         };
     }
 
+    /**
+     * Synchronous, non-throwing lookup of the registered mirror-daemon Binder (or null).
+     * For background callers that already run off the main thread (e.g. the screenshot
+     * recorder) and want the binder without the async {@link #fetch} callback.
+     */
+    public static IBinder getRegisteredBinderOrNull() {
+        return lookupRegisteredBinder();
+    }
+
     /** Reflective {@code ServiceManager.getService(SERVICE_KEY)}; null if absent or on any error. */
     private static IBinder lookupRegisteredBinder() {
         try {

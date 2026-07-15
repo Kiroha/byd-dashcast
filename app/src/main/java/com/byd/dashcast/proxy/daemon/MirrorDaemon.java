@@ -2,7 +2,11 @@ package com.byd.dashcast.proxy.daemon;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -22,7 +26,10 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -91,6 +98,10 @@ public class MirrorDaemon {
     public static final int TRANSACT_QUERY_SLOT        = 14;
     /** TRANSACT 15 — move a package's task back to display 0 (teardown repatriation). */
     public static final int TRANSACT_MOVE_TO_DISPLAY0  = 15;
+    /** Capture one frame of a layerStack (0=main, cluster stack=2/1) to a JPEG on disk.
+     *  Params: int layerStack, int width, int height, int quality, String outPath.
+     *  Reply: String status ("OK <path>" / "FAIL …"). Used by the bug-report screenshot recorder. */
+    public static final int TRANSACT_CAPTURE_DISPLAY   = 16;
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
@@ -337,6 +348,22 @@ public class MirrorDaemon {
                 case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
                 case TRANSACT_QUERY_SLOT:        return handleQuerySlot(data, reply);
                 case TRANSACT_MOVE_TO_DISPLAY0:  return handleMoveToDisplay0(data, reply);
+                case TRANSACT_CAPTURE_DISPLAY: {
+                    int layerStack = data.readInt();
+                    int w          = data.readInt();
+                    int h          = data.readInt();
+                    int quality    = data.readInt();
+                    String outPath = data.readString();
+                    int maxFiles   = data.readInt();
+                    int maxAgeMin  = data.readInt();
+                    String status  = captureLayerStackToJpeg(layerStack, w, h, quality, outPath,
+                            maxFiles, maxAgeMin);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeString(status);
+                    }
+                    return true;
+                }
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
@@ -469,6 +496,149 @@ public class MirrorDaemon {
             stopMirror();
             return false;
         }
+    }
+
+    // ── One-shot layerStack capture (bug-report screenshot recorder) ──────────
+
+    /**
+     * Captures ONE frame of {@code layerStack} into a JPEG at {@code outPath}, using the exact
+     * same SurfaceControl mirror primitives as {@link #setupMirror} (the only path proven to work
+     * on these BYD ROMs) but pointed at an {@link ImageReader} surface so the daemon can read the
+     * pixels back. `screencap -d N` cannot be used for the cluster: it silently falls back to
+     * display 0 on a virtual display. Runs entirely inside the uid-2000 daemon (the only process
+     * that may call SurfaceControl.createDisplay); writes to /data/local/tmp (uid-2000-writable,
+     * A13-safe). The capture display is torn down in finally, so nothing leaks.
+     *
+     * @return "OK &lt;path&gt; &lt;bytes&gt;B" on success, or "FAIL …" / "EXCEPTION …".
+     */
+    /** Serializes captures against each other WITHOUT sharing the mirror's monitor — a slow/failed
+     *  capture (up to ~1.5s waiting for a frame) must never block a visible mirror START/STOP. */
+    private static final Object sCaptureLock = new Object();
+
+    @SuppressLint({"NewApi", "WrongConstant"}) // RGBA_8888 is a PixelFormat, correct for display capture
+    private static String captureLayerStackToJpeg(int layerStack, int w, int h,
+                                                  int quality, String outPath,
+                                                  int maxFiles, int maxAgeMin) {
+      synchronized (sCaptureLock) {
+        if (w <= 0 || h <= 0 || outPath == null) return "FAIL bad-args";
+        IBinder token = null;
+        ImageReader reader = null;
+        Image image = null;
+        Bitmap bmp = null;
+        try {
+            reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2);
+            Surface surface = reader.getSurface();
+
+            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+            Method createDisplay = scClass.getDeclaredMethod("createDisplay", String.class, boolean.class);
+            createDisplay.setAccessible(true);
+            token = (IBinder) createDisplay.invoke(null, "byd_shot_capture", false);
+            if (token == null) return "FAIL createDisplay-null";
+
+            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
+            Class<?> txClass = tx.getClass();
+            Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack", IBinder.class, int.class);
+            setLayerStack.setAccessible(true);
+            setLayerStack.invoke(tx, token, layerStack);
+            Method setSurface = txClass.getDeclaredMethod("setDisplaySurface", IBinder.class, Surface.class);
+            setSurface.setAccessible(true);
+            setSurface.invoke(tx, token, surface);
+            Method setProjection = txClass.getDeclaredMethod("setDisplayProjection",
+                    IBinder.class, int.class, Rect.class, Rect.class);
+            setProjection.setAccessible(true);
+            Rect full = new Rect(0, 0, w, h);
+            setProjection.invoke(tx, token, 0, full, full);
+            tx.apply();
+
+            // Wait for SurfaceFlinger to composite one frame into the reader (up to ~1.5s).
+            for (int i = 0; i < 30 && image == null; i++) {
+                Thread.sleep(50);
+                image = reader.acquireLatestImage();
+            }
+            if (image == null) return "FAIL no-frame";
+
+            bmp = imageToBitmap(image, w, h);
+            if (bmp == null) return "FAIL decode-null";
+
+            File out = new File(outPath);
+            File dir = out.getParentFile();
+            if (dir != null && !dir.exists()) { //noinspection ResultOfMethodCallIgnored
+                dir.mkdirs(); }
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                bmp.compress(Bitmap.CompressFormat.JPEG, Math.max(1, Math.min(100, quality)), fos);
+            }
+            long bytes = out.length();
+            // Enforce the ring buffer HERE, in-process, right after the write — same channel that
+            // produced the file. (The app-side shell prune uses ADB-TCP, which can drop while this
+            // binder path keeps writing; pruning here makes the bound transport-independent, so the
+            // shots can never grow without limit — the user's hard constraint.)
+            pruneShotDir(dir, maxFiles, maxAgeMin);
+            out("captureLayerStack ok stack=" + layerStack + " " + w + "x" + h
+                    + " -> " + outPath + " (" + bytes + "B)");
+            return "OK " + outPath + " " + bytes + "B";
+        } catch (Throwable t) {
+            out("captureLayerStack EXCEPTION stack=" + layerStack + ": " + t);
+            return "EXCEPTION " + t.getClass().getSimpleName() + ": " + t.getMessage();
+        } finally {
+            if (image != null) { try { image.close(); } catch (Throwable ignore) {} }
+            if (bmp != null)   { try { bmp.recycle(); } catch (Throwable ignore) {} }
+            if (reader != null){ try { reader.close(); } catch (Throwable ignore) {} }
+            if (token != null) {
+                try {
+                    Method destroy = Class.forName("android.view.SurfaceControl")
+                            .getDeclaredMethod("destroyDisplay", IBinder.class);
+                    destroy.setAccessible(true);
+                    destroy.invoke(null, token);
+                } catch (Throwable e) {
+                    Log.w(TAG, "captureLayerStack: destroyDisplay failed: " + e.getMessage());
+                }
+            }
+        }
+      }
+    }
+
+    /**
+     * Ring-buffer prune of the shots dir: keep at most {@code maxFiles} newest JPEGs and drop any
+     * older than {@code maxAgeMin} minutes. Pure java.io in the uid-2000 daemon (no shell), so it
+     * runs on the same channel as the write and can never lag behind it.
+     */
+    private static void pruneShotDir(File dir, int maxFiles, int maxAgeMin) {
+        if (dir == null) return;
+        try {
+            File[] files = dir.listFiles((d, name) ->
+                    name.startsWith("shot_") && name.endsWith(".jpg"));
+            if (files == null || files.length == 0) return;
+            long cutoff = maxAgeMin > 0
+                    ? System.currentTimeMillis() - maxAgeMin * 60_000L : Long.MIN_VALUE;
+            // Newest first.
+            java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            for (int i = 0; i < files.length; i++) {
+                boolean overCount = maxFiles > 0 && i >= maxFiles;
+                boolean tooOld    = files[i].lastModified() < cutoff;
+                if (overCount || tooOld) { //noinspection ResultOfMethodCallIgnored
+                    files[i].delete(); }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "pruneShotDir failed: " + t.getMessage());
+        }
+    }
+
+    /** RGBA_8888 {@link Image} → {@link Bitmap}, handling the plane's row-stride padding. */
+    private static Bitmap imageToBitmap(Image image, int w, int h) {
+        Image.Plane[] planes = image.getPlanes();
+        if (planes == null || planes.length == 0) return null;
+        ByteBuffer buffer = planes[0].getBuffer();
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride   = planes[0].getRowStride();
+        int rowPadding  = rowStride - pixelStride * w;
+        int stridePx    = w + (pixelStride == 0 ? 0 : rowPadding / pixelStride);
+        Bitmap padded = Bitmap.createBitmap(stridePx, h, Bitmap.Config.ARGB_8888);
+        padded.copyPixelsFromBuffer(buffer);
+        if (stridePx == w) return padded;
+        // Crop away the stride padding on the right edge.
+        Bitmap cropped = Bitmap.createBitmap(padded, 0, 0, w, h);
+        padded.recycle();
+        return cropped;
     }
 
     private static synchronized void stopMirror() {
