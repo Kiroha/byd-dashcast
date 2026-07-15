@@ -37,6 +37,10 @@ object HotspotKeeper {
     private const val TF_ACTION_START = "START"
     private const val PROBE_INTERVAL_MS = 20_000L
     private const val RESTART_COOLDOWN_MS = 30_000L
+    /** A probe whose callback never fired (ShellGateway executor wedged / an Error escaped
+     *  AdbLocalClient's catch) is force-reset once it is this far past due, so probeInFlight
+     *  can't stick true and silently kill the keep-alive. */
+    private const val PROBE_STUCK_MS = PROBE_INTERVAL_MS * 3
 
     @Volatile private var lastProbeMs = 0L
     @Volatile private var lastRestartMs = 0L
@@ -56,6 +60,14 @@ object HotspotKeeper {
     fun maybeKeepAlive(ctx: Context) {
         if (!isEnabled(ctx)) return
         val now = SystemClock.elapsedRealtime()
+        // Staleness guard: if a prior probe's callback was lost (ShellGateway's single-thread
+        // executor wedged on a hung runShell, or an Error escaped AdbLocalClient's catch),
+        // probeInFlight would stick true forever and silently kill the keep-alive. Force-reset
+        // it once the in-flight probe is well past due (lastProbeMs marks its start).
+        if (probeInFlight && now - lastProbeMs > PROBE_STUCK_MS) {
+            AppLogger.w(TAG, "keep-alive probe stuck ${now - lastProbeMs}ms — force-reset")
+            probeInFlight = false
+        }
         if (probeInFlight || now - lastProbeMs < PROBE_INTERVAL_MS) return
         val app = ctx.applicationContext
         if (!tetherFiInstalled(app)) return
