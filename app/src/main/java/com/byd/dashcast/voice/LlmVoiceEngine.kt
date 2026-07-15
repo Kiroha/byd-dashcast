@@ -139,7 +139,9 @@ class LlmVoiceEngine(ctx: Context) {
                 .replace(Regex("(?s)^```[a-zA-Z]*\\s*"), "")
                 .replace(Regex("(?s)\\s*```\$"), "")
                 .trim()
-            AppLogger.d(TAG, "LLM raw: $stripped")
+            // Raw model output can echo the driver's spoken query + answer (conversation PII) and
+            // enters the journal/bug reports — log only its length; parsed cmd/pkg below is the signal.
+            AppLogger.d(TAG, "LLM raw: ${stripped.length} chars")
             val json = JSONObject(stripped)
             val cmd = json.optString("cmd", VoiceCommandRouter.CMD_UNKNOWN)
             // optString(name, null) equivalent, without passing null to a @NonNull fallback:
@@ -149,7 +151,9 @@ class LlmVoiceEngine(ctx: Context) {
             val reply = json.optString("reply", "")
             if ("null".equals(pkg, ignoreCase = true)) pkg = null
 
-            AppLogger.i(TAG, "LLM → cmd=$cmd pkg=$pkg reply=$reply")
+            // Do not log the reply text (the assistant's spoken answer = conversation PII); cmd/pkg
+            // are the non-PII actionable result. reply length kept as a diagnostic signal.
+            AppLogger.i(TAG, "LLM → cmd=$cmd pkg=$pkg replyLen=${reply.length}")
 
             // 3. Dispatch command (skip for "talk" — pure conversation, no app action)
             if (!"talk".equals(cmd, ignoreCase = true)) {
