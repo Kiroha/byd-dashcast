@@ -288,6 +288,12 @@ public final class BugReportCapture {
      * listener's last-known values (kept registered app-wide by ProxyKeeperService). Never throws.
      */
     private static String hudStateSnapshot() {
+        // canListenStart/canListenDrain go through callWithRetry; on a cold/down daemon the
+        // pre-flight reconnect would BLOCK this thread (an adb-local pool worker driving the
+        // offline bug report) for the bootstrap timeout — precisely the daemon-down scenario the
+        // report exists to capture. Opt this thread out of the blocking bootstrap (mirrors F6 /
+        // ShellGateway): the verbs fail fast and we fall back to the "(no HUD…)" line.
+        ProxyClient.setNonBlockingReconnect(true);
         try {
             try { ProxyClient.canListenStart(); } catch (Throwable ignore) { /* ensure registered */ }
             String s = ProxyClient.canListenDrain();
@@ -295,6 +301,8 @@ public final class BugReportCapture {
                     ? "(no HUD push-feedback captured — listener cold / not a HUD platform)\n" : s;
         } catch (Throwable t) {
             return "(HUD state unavailable: " + t + ")\n";
+        } finally {
+            ProxyClient.setNonBlockingReconnect(false); // pooled thread is reused — restore default
         }
     }
 
