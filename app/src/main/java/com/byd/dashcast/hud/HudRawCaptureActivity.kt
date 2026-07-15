@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.report.TelegramBugReporter
@@ -189,11 +190,35 @@ class HudRawCaptureActivity : AppCompatActivity() {
 
             val zip = HudCaptureSupport.zipDir(work)
             log("zip: ${zip.name} (${zip.length() / 1024} KB)")
-            uploadZip(zip, "DL3 HUD raw logcat capture — ${Build.PRODUCT} ($markCount taps)")
+            val caption = "DL3 HUD raw logcat capture — ${Build.PRODUCT} ($markCount taps)"
             runOnUiThread {
                 captureBtn.isEnabled = true
                 captureBtn.text = "▶  START (logcat brut)"
+                confirmAndUpload(zip, caption)
             }
+        }
+    }
+
+    /**
+     * The capture is a FULL device-wide logcat (all apps, all buffers) — required for the HUD RE
+     * correlation, but it can also contain other apps' log lines. Get explicit consent before it
+     * leaves the device to the shared support channel; otherwise keep the zip local. The capture
+     * itself is unchanged (still unfiltered), only the auto-upload is gated.
+     */
+    private fun confirmAndUpload(zip: File, caption: String) {
+        if (isFinishing || isDestroyed) return
+        try {
+            AlertDialog.Builder(this)
+                .setTitle("Envoyer la capture brute ?")
+                .setMessage("Ce zip contient le logcat COMPLET de l'appareil (toutes les apps, tous " +
+                        "les buffers). L'envoyer au canal support DashCast (Telegram) ?\n\n" +
+                        "Sinon il reste en local :\n${zip.absolutePath}")
+                .setCancelable(false)
+                .setPositiveButton("Envoyer") { _, _ -> bg { uploadZip(zip, caption) } }
+                .setNegativeButton("Garder local") { _, _ -> log("zip gardé en local: ${zip.absolutePath}") }
+                .show()
+        } catch (t: Throwable) {
+            log("dialog ERR (${t.message}) — zip local: ${zip.absolutePath}")
         }
     }
 
