@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
@@ -79,6 +80,11 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // Last logged (icon|road) so the NAV PARSE diagnostic (raw notification → parsed icon, captured
     // in the DashCast journal / bug report) is written once per distinct maneuver, not every second.
     private String lastLoggedNav = "";
+
+    // Throttle for the "unsupported nav app" diagnostic — the same app is logged at most once per
+    // ~30 s so a "no arrow" bug report always carries a RECENT line explaining why (e.g. Telenav).
+    private String lastUnsupportedNavPkg = "";
+    private long   lastUnsupportedLogMs;
 
     // Cache of per-source-package Resources (Maps/Waze/ReVanced). A nav app's resources
     // don't change at runtime, so build the Context + AssetManager once per package instead
@@ -441,9 +447,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn == null || !isNavPackage(sbn.getPackageName())) return;
+        if (sbn == null) return;
 
         Notification n = sbn.getNotification();
+        if (!isNavPackage(sbn.getPackageName())) {
+            maybeLogUnsupportedNav(sbn.getPackageName(), n);
+            return;
+        }
         if (n == null) return;
 
         // Only process ongoing navigation notifications.
@@ -720,6 +730,40 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     private static boolean isNavPackage(String pkg) {
         return PKG_MAPS.equals(pkg) || PKG_MAPS_REVANCED.equals(pkg) || PKG_WAZE.equals(pkg);
+    }
+
+    // Known navigation apps we do NOT support: their guidance is not exposed as a parseable
+    // notification (e.g. Telenav delivers binary NaviInfo AIDL, not text). Prefix match on the pkg.
+    private static final String[] KNOWN_UNSUPPORTED_NAV = {
+        "com.telenav",              // Telenav (EU OEM nav: .app.arp / .app.isa)
+        "com.sealnav",              // BYD Seal nav
+        "com.autonavi", "com.amap", // AMap / AutoNavi
+        "com.baidu.baidumaps",      // Baidu Maps
+        "ru.yandex.yandexnavi", "ru.yandex.yandexmaps",  // Yandex
+    };
+
+    /**
+     * Logs (throttled, once per ~30 s per app) when a notification comes from a KNOWN unsupported
+     * nav app, or any app whose notification is {@code category=navigation}. This makes a
+     * "no arrow in HUD" bug report self-explanatory — DashCast only reads Google Maps / Maps
+     * ReVanced / Waze notifications, so an EU Telenav user gets no arrow and, before this, no clue
+     * why (field report INC-20260715-161802). Written to the DashCast journal → into every report.
+     */
+    private void maybeLogUnsupportedNav(String pkg, Notification n) {
+        if (pkg == null || n == null) return;
+        boolean navCategory = Notification.CATEGORY_NAVIGATION.equals(n.category);
+        boolean knownNav = false;
+        for (String p : KNOWN_UNSUPPORTED_NAV) {
+            if (pkg.startsWith(p)) { knownNav = true; break; }
+        }
+        if (!navCategory && !knownNav) return;
+        long now = SystemClock.elapsedRealtime();
+        if (pkg.equals(lastUnsupportedNavPkg) && now - lastUnsupportedLogMs < 30_000L) return;
+        lastUnsupportedNavPkg = pkg;
+        lastUnsupportedLogMs = now;
+        AppLogger.i(TAG, "NAV UNSUPPORTED app=" + pkg
+                + (knownNav ? " (known nav app)" : " (category=navigation)")
+                + " — DashCast HUD nav only reads Google Maps / Maps ReVanced / Waze");
     }
 
     private static String charSeqToString(CharSequence cs) {
