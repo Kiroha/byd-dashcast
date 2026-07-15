@@ -523,14 +523,18 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String navKey = iconId + "|" + roadName;
         if (!navKey.equals(lastLoggedNav)) {
             lastLoggedNav = navKey;
+            // The raw notification title/text/bigText and the parsed road name are location PII
+            // (destination / current road / ETA / upcoming street) and this journal line flows
+            // into every bug report. Log only what the icon-mapping diagnostic needs — the icon
+            // source + resource name + distance — plus non-PII length/found flags.
             AppLogger.i(TAG, "NAV PARSE icon=" + iconId + " src=" + iconSrc
                     + " smallIcon='" + iconResName + "'"
-                    + " | title='" + clip(title) + "' text='" + clip(text) + "'"
-                    + (bigText.isEmpty() ? "" : " big='" + clip(bigText) + "'")
-                    + " -> dist=" + distance + " road='" + roadName + "'");
+                    + " titleLen=" + title.length() + " textLen=" + text.length()
+                    + (bigText.isEmpty() ? "" : " bigLen=" + bigText.length())
+                    + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes"));
         }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
-                + " road='" + roadName + "'"
+                + " road=" + (roadName.isEmpty() ? "no" : "yes")
                 + " remDist=" + remainDist + " remSec=" + remainSec);
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
