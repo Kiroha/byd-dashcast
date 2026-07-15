@@ -199,6 +199,22 @@ public class AdbLocalClient {
     /** Executes a shell command and returns the result via callback (background thread). */
     public static void executeShellWithResult(final Context context, final String command,
                                               final Callback callback) {
+        executeShellWithResult(context, command, callback, true);
+    }
+
+    /**
+     * Like {@link #executeShellWithResult}, but does NOT echo the full stdout into the
+     * journal — it logs only the command length + byte count. Use for large payloads such
+     * as the A13 bug-report body read-back (~1 MB), which would otherwise bloat the journal
+     * that is itself embedded in the report.
+     */
+    public static void executeShellWithResultUnlogged(final Context context, final String command,
+                                                      final Callback callback) {
+        executeShellWithResult(context, command, callback, false);
+    }
+
+    private static void executeShellWithResult(final Context context, final String command,
+                                               final Callback callback, final boolean logOutput) {
         if (blockDiLink2Resize(context, command)) {
             if (callback != null) callback.onError(
                     "blocked on DiLink 2: no cluster display (would shrink main screen)");
@@ -208,7 +224,12 @@ public class AdbLocalClient {
         sExecutor.execute(() -> {
             try (Dadb dadb = connect(appCtx)) {
                 String output = dadb.shell(command).getAllOutput().trim();
-                AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
+                if (logOutput) {
+                    AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
+                } else {
+                    AppLogger.d(TAG, "executeShellWithResult (unlogged, " + command.length()
+                            + "-char cmd) -> " + output.length() + " bytes");
+                }
                 if (callback != null) callback.onSuccess(output);
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
