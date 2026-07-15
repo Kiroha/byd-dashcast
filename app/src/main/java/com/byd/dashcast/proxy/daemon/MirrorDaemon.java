@@ -48,6 +48,19 @@ public class MirrorDaemon {
 
     private static final String TAG = "MirrorDaemon";
 
+    /** Our app's uid, resolved once in main(); onTransact rejects callers that are not the app,
+     *  system(1000), or the daemon's own uid. -1 = unresolved → fall open (never break the app). */
+    private static volatile int sAppUid = -1;
+
+    /** True if {@code uid} may drive the privileged MirrorBinder verbs. Falls OPEN when the app
+     *  uid could not be resolved, so it can never block the legitimate app→daemon path. */
+    private static boolean isAllowedCaller(int uid) {
+        if (sAppUid == -1) return true;                     // unresolved → fall open, never break
+        if (uid == 1000) return true;                       // system
+        if (uid == android.os.Process.myUid()) return true; // the daemon's own uid (shell 2000)
+        return (uid % 100000) == (sAppUid % 100000);        // our app (user-agnostic appId match)
+    }
+
     // Actions broadcast
     public static final String ACTION_DAEMON_READY  = "com.byd.dashcast.MIRROR_DAEMON_READY";
 
@@ -205,6 +218,17 @@ public class MirrorDaemon {
             final IBinder daemonBinder = new MirrorBinder();
             out("MirrorBinder created");
 
+            // Resolve our app's uid once so onTransact can reject untrusted callers (the binder is
+            // also discoverable via ServiceManager). Fall open on any failure (sAppUid stays -1),
+            // so this can never break the legitimate app→daemon path.
+            try {
+                sAppUid = context.getPackageManager()
+                        .getPackageUid(com.byd.dashcast.BuildConfig.APPLICATION_ID, 0);
+                out("app uid resolved: " + sAppUid);
+            } catch (Throwable t) {
+                out("app uid resolution failed (fall open): " + t.getMessage());
+            }
+
             // Enregistrer dans ServiceManager (accessible par uid=2000) :
             // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
             // the unregistered IApplicationThread → SecurityException).
@@ -260,6 +284,16 @@ public class MirrorDaemon {
         protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws android.os.RemoteException {
             data.enforceInterface(DESCRIPTOR);
+            // Caller-identity gate: the binder is published in the global ServiceManager and can be
+            // obtained by any process, but only the app (+ system/self) may drive these privileged
+            // input-injection / trusted-display / task verbs. enforceInterface alone is NOT auth.
+            int callingUid = Binder.getCallingUid();
+            if (!isAllowedCaller(callingUid)) {
+                Log.w(TAG, "MirrorBinder: rejected transact code=" + code + " from uid=" + callingUid);
+                if (reply != null) reply.writeException(
+                        new SecurityException("caller uid " + callingUid + " not permitted"));
+                return true; // consumed (rejected) — do not run the privileged verb
+            }
             switch (code) {
                 case TRANSACT_MIRROR_START: {
                     int layerStack    = data.readInt();
