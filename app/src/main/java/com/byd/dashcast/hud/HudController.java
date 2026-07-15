@@ -221,10 +221,14 @@ public final class HudController {
                 this::closeIfStale, STALE_MS, STALE_MS / 2, TimeUnit.MILLISECONDS);
     }
 
-    /** Cancel the staleness check (nav stopped). The scheduler thread is kept for reuse. */
+    /** Cancel the staleness check AND shut down its scheduler thread (nav stopped). armWatchdog
+     *  recreates the executor on the next nav session, so this owns the thread's lifetime — it no
+     *  longer leaks a live daemon thread for the whole process on this static singleton, nor keeps
+     *  firing after the listener service is torn down (nav-end / stale-close both route here). */
     private void stopWatchdog() {
         ScheduledFuture<?> t = watchdogTask;
         if (t != null) { t.cancel(false); watchdogTask = null; }
+        if (watchdog != null) { watchdog.shutdown(); watchdog = null; }
     }
 
     /**
