@@ -781,4 +781,9 @@
         <item>Стрелка зависла</item>
         <item>Другая проблема с HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Включить снимки экрана?</string>
+    <string name="bug_shots_consent_msg">В отчёт можно включить последние снимки приборной панели и главного экрана. Они могут показать содержимое экрана (карта, пункт назначения, личные данные). Приложить их?</string>
+    <string name="bug_shots_consent_yes">Включить</string>
+    <string name="bug_shots_consent_no">Без снимков</string>
+    <string name="settings_capture_shots">Делать снимки экрана для отчётов об ошибках</string>
 </resources>

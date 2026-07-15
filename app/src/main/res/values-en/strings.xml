@@ -794,4 +794,9 @@
         <item>Arrow frozen</item>
         <item>Other HUD issue</item>
     </string-array>
+    <string name="bug_shots_consent_title">Include screen captures?</string>
+    <string name="bug_shots_consent_msg">The report can include the most recent screenshots of the cluster and the main screen. They may show what was on screen (map, destination, personal info). Attach them?</string>
+    <string name="bug_shots_consent_yes">Include</string>
+    <string name="bug_shots_consent_no">Without captures</string>
+    <string name="settings_capture_shots">Capture screenshots for bug reports</string>
 </resources>

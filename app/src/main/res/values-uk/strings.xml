@@ -782,4 +782,9 @@
         <item>Стрілка завмерла</item>
         <item>Інша проблема з HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Додати знімки екрана?</string>
+    <string name="bug_shots_consent_msg">У звіт можна додати останні знімки приладової панелі та головного екрана. Вони можуть показати вміст екрана (карта, пункт призначення, особисті дані). Додати їх?</string>
+    <string name="bug_shots_consent_yes">Додати</string>
+    <string name="bug_shots_consent_no">Без знімків</string>
+    <string name="settings_capture_shots">Робити знімки екрана для звітів про помилки</string>
 </resources>

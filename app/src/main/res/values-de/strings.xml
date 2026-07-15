@@ -781,4 +781,9 @@
         <item>Pfeil eingefroren</item>
         <item>Anderes HUD-Problem</item>
     </string-array>
+    <string name="bug_shots_consent_title">Screenshots einschließen?</string>
+    <string name="bug_shots_consent_msg">Der Bericht kann die letzten Screenshots des Kombiinstruments und des Hauptbildschirms enthalten. Sie können den Bildschirminhalt zeigen (Karte, Ziel, persönliche Daten). Anhängen?</string>
+    <string name="bug_shots_consent_yes">Einschließen</string>
+    <string name="bug_shots_consent_no">Ohne Screenshots</string>
+    <string name="settings_capture_shots">Screenshots für Fehlerberichte aufnehmen</string>
 </resources>

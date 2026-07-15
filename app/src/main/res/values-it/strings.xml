@@ -781,4 +781,9 @@
         <item>Freccia bloccata</item>
         <item>Altro problema HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Includere le schermate?</string>
+    <string name="bug_shots_consent_msg">Il rapporto può includere le ultime schermate del quadro strumenti e dello schermo principale. Possono mostrare ciò che era a schermo (mappa, destinazione, dati personali). Allegarle?</string>
+    <string name="bug_shots_consent_yes">Includi</string>
+    <string name="bug_shots_consent_no">Senza schermate</string>
+    <string name="settings_capture_shots">Acquisisci schermate per le segnalazioni di bug</string>
 </resources>

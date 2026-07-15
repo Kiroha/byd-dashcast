@@ -781,4 +781,9 @@
         <item>Ok donmuş</item>
         <item>Diğer HUD sorunu</item>
     </string-array>
+    <string name="bug_shots_consent_title">Ekran görüntüleri eklensin mi?</string>
+    <string name="bug_shots_consent_msg">Rapor, gösterge paneli ve ana ekranın son ekran görüntülerini içerebilir. Ekrandakileri gösterebilir (harita, hedef, kişisel bilgiler). Eklensin mi?</string>
+    <string name="bug_shots_consent_yes">Ekle</string>
+    <string name="bug_shots_consent_no">Görüntüsüz</string>
+    <string name="settings_capture_shots">Hata raporları için ekran görüntüsü al</string>
 </resources>

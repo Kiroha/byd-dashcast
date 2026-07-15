@@ -781,4 +781,9 @@
         <item>Көрсеткі қатып қалған</item>
         <item>Басқа HUD ақауы</item>
     </string-array>
+    <string name="bug_shots_consent_title">Экран суреттерін қосу керек пе?</string>
+    <string name="bug_shots_consent_msg">Есепке аспаптар панелі мен негізгі экранның соңғы скриншоттарын қосуға болады. Олар экрандағы мазмұнды көрсетуі мүмкін (карта, бағыт, жеке деректер). Тіркеу керек пе?</string>
+    <string name="bug_shots_consent_yes">Қосу</string>
+    <string name="bug_shots_consent_no">Скриншотсыз</string>
+    <string name="settings_capture_shots">Қате туралы есептер үшін скриншот түсіру</string>
 </resources>

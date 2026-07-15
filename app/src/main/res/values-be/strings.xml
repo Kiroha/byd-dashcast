@@ -781,4 +781,9 @@
         <item>Стрэлка завісла</item>
         <item>Іншая праблема HUD</item>
     </string-array>
+    <string name="bug_shots_consent_title">Уключыць здымкі экрана?</string>
+    <string name="bug_shots_consent_msg">У справаздачу можна ўключыць апошнія здымкі прыборнай панэлі і галоўнага экрана. Яны могуць паказаць змесціва экрана (карта, пункт прызначэння, асабістыя дадзеныя). Дадаць іх?</string>
+    <string name="bug_shots_consent_yes">Уключыць</string>
+    <string name="bug_shots_consent_no">Без здымкаў</string>
+    <string name="settings_capture_shots">Рабіць здымкі экрана для справаздач пра памылкі</string>
 </resources>

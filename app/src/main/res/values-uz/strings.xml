@@ -782,5 +782,10 @@
         <item>Strelka qotib qolgan</item>
         <item>Boshqa HUD muammosi</item>
     </string-array>
+    <string name="bug_shots_consent_title">Ekran tasvirlari qo\'shilsinmi?</string>
+    <string name="bug_shots_consent_msg">Hisobotga asboblar paneli va asosiy ekranning so\'nggi skrinshotlari qo\'shilishi mumkin. Ular ekrandagi ma\'lumotni ko\'rsatishi mumkin (xarita, manzil, shaxsiy ma\'lumotlar). Ilova qilinsinmi?</string>
+    <string name="bug_shots_consent_yes">Qo\'shish</string>
+    <string name="bug_shots_consent_no">Skrinshotsiz</string>
+    <string name="settings_capture_shots">Xatolik hisobotlari uchun skrinshot olish</string>
 </resources>
 
