@@ -151,6 +151,14 @@ public final class ProxyKeeperService extends Service {
         if (alive) {
             mLastSeenAliveMs = SystemClock.elapsedRealtime();
             armHudListener();   // keep the HUD push-feedback listener registered app-wide
+            // Rolling screenshot recorder for the bug reporter — no-op unless projection is
+            // active AND the feature is enabled; internally throttled to ~15 s and self-cleaning.
+            // Rides this always-on heartbeat so it needs no timer of its own (like HotspotKeeper).
+            try {
+                com.byd.dashcast.report.ClusterShotRecorder.maybeCapture(ctx);
+            } catch (Throwable t) {
+                AppLogger.w(TAG, "shot recorder threw: " + t.getMessage());
+            }
             return;
         }
         long downForMs = mLastSeenAliveMs == 0 ? -1
