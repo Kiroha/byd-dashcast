@@ -1227,6 +1227,17 @@ public final class ProxyClient {
                     AppLogger.d(TAG, "ignoring stale PROXY_CONNECTED (binder already dead)");
                     return;
                 }
+                // Authenticate the daemon: adopt the broadcast binder only if it matches the one the
+                // real daemon registered in the global ServiceManager (only uid-2000/system can
+                // addService — SELinux blocks apps). A spoofed broadcast carries a fake binder that
+                // won't match. If there is NO entry (older daemon / addService failed on this ROM),
+                // fall back to the broadcast binder (prior behaviour) so this can never break the
+                // daemon path — including across the update where a pre-S2 daemon is still running.
+                IBinder registered = lookupRegisteredProxyBinder();
+                if (registered != null && registered != bp.binder) {
+                    AppLogger.w(TAG, "PROXY_CONNECTED binder ≠ ServiceManager entry — ignoring (spoofed?)");
+                    return;
+                }
                 synchronized (LOCK) {
                     // If we already hold a live binder, prefer it (avoid spurious
                     // handshake/state churn from late duplicate broadcasts).
@@ -1268,6 +1279,20 @@ public final class ProxyClient {
         // Context.RECEIVER_EXPORTED (the broadcaster is in another process / uid).
         appCtx.registerReceiver(sReceiver, filter);
         AppLogger.d(TAG, "dynamic receiver registered for " + ProxyDaemonContract.ACTION_PROXY_CONNECTED);
+    }
+
+    /** Reflective {@code ServiceManager.getService(ProxyDaemonMain.SERVICE_NAME)} — the trusted
+     *  anchor for authenticating a PROXY_CONNECTED broadcast binder. null if absent or on error. */
+    private static IBinder lookupRegisteredProxyBinder() {
+        try {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            java.lang.reflect.Method getService = sm.getDeclaredMethod("getService", String.class);
+            getService.setAccessible(true);
+            return (IBinder) getService.invoke(null,
+                    com.byd.dashcast.proxy.daemon.ProxyDaemonMain.SERVICE_NAME);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /** Issue the WHOAMI transaction to populate uid/pid/version caches. */
