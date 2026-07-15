@@ -63,7 +63,19 @@ public final class BugReportCapture {
     public static void capture(Context context, String metaHeader, Callback cb) {
         final Context app = context.getApplicationContext();
         final File outFile = newFile(app);
-        final String p = outFile.getAbsolutePath();
+
+        // Android 13+ (DL5.1 / trinket): the shell (uid 2000) is DENIED write access to the
+        // app's /sdcard/Android/data/<pkg> dir by scoped storage, so redirecting the dump
+        // there fails with EACCES and only the journal survives (INC-20260715-191229). uid 2000
+        // DOES own /data/local/tmp, so on A13 stage the dump there and `cat` it back through the
+        // same shell round-trip (the app cannot read /data/local/tmp on A13, but the shell can);
+        // finish() then writes the final report into the app's own external dir (which the app
+        // CAN write). On Android 10 (DL3/DL4) uid 2000 can still write the external dir, so keep
+        // writing straight into the final file — no extra round-trip, zero behaviour change.
+        final boolean stageInTmp = Build.VERSION.SDK_INT >= 33;
+        final String p = stageInTmp
+                ? "/data/local/tmp/" + outFile.getName()
+                : outFile.getAbsolutePath();
 
         // One-shot shell dump. logcat -t bounds the size; dumpsys grabs the
         // cluster/display/window state that matters for projection bugs.
@@ -216,27 +228,48 @@ public final class BugReportCapture {
             + " ; cat /data/local/tmp/dashcast_proxy.log 2>/dev/null | tail -200 >> " + p
             + " ; echo '=== END SHELL DUMP ===' >> " + p;
 
-        AdbLocalClient.executeShellWithResult(app, cmd, new AdbLocalClient.Callback() {
+        // A13: emit the staged body to stdout (the only way back to the app, which can't read
+        // /data/local/tmp) and delete the temp file. Every dump command above redirects into
+        // $p, so stdout is otherwise empty and `out` carries exactly the body. Uses the
+        // non-logging shell path so the ~1 MB body never lands in the journal.
+        if (stageInTmp) {
+            cmd += " ; cat " + p + " 2>/dev/null ; rm -f " + p + " 2>/dev/null";
+        }
+
+        final AdbLocalClient.Callback dumpCb = new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
-                finish(app, outFile, metaHeader, cb, null);
+                // A13: `out` is the staged body. A10: body is in outFile → let finish() read it.
+                finish(app, outFile, metaHeader, cb, null, stageInTmp ? out : null);
             }
             @Override public void onError(String err) {
                 // The shell dump failed (ADB down) — still ship the in-memory
                 // journal + metadata so the report is never empty.
                 AppLogger.w(TAG, "shell dump failed, journal-only report: " + err);
-                finish(app, outFile, metaHeader, cb, err);
+                finish(app, outFile, metaHeader, cb, err, null);
             }
-        });
+        };
+        if (stageInTmp) {
+            AdbLocalClient.executeShellWithResultUnlogged(app, cmd, dumpCb);
+        } else {
+            AdbLocalClient.executeShellWithResult(app, cmd, dumpCb);
+        }
     }
 
-    /** Appends the metadata header (top) and the in-memory journal (bottom), then reports. */
+    /**
+     * Appends the metadata header (top) and the in-memory journal (bottom), then reports.
+     *
+     * @param preReadShellBody the shell dump body already read back over the shell (A13 staged
+     *     path); when non-null it is used verbatim and {@code outFile} is NOT read (on A13 the
+     *     app cannot read that path). When null, the body is read from {@code outFile} (A10).
+     */
     private static void finish(Context app, File outFile, String metaHeader,
-                               Callback cb, String shellError) {
+                               Callback cb, String shellError, String preReadShellBody) {
         // Build the body first. This must NEVER sink the report — on any failure fall back
         // to a journal-only body so the tester still gets something to send.
         String content;
         try {
-            String shellBody = outFile.exists() ? readFile(outFile) : "";
+            String shellBody = (preReadShellBody != null) ? preReadShellBody
+                    : (outFile.exists() ? readFile(outFile) : "");
             StringBuilder sb = new StringBuilder(shellBody.length() + 8192);
             sb.append(metaHeader != null ? metaHeader : "").append("\n\n");
             sb.append("Device: ").append(deviceLine()).append('\n');
