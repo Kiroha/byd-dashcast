@@ -5,9 +5,9 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.concurrent.BoundedSerialExecutor;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,8 +50,10 @@ public final class ShellGateway {
 
     private static final String TAG = "ShellGateway";
 
-    /** Dedicated single-threaded executor so order of calls is preserved per-process. */
-    private static final Executor sExecutor = Executors.newSingleThreadExecutor(r -> {
+    /** Dedicated bounded serial executor: preserves order without retaining unlimited stale work. */
+    private static final int SHELL_QUEUE_CAPACITY = 64;
+    private static final BoundedSerialExecutor sExecutor = new BoundedSerialExecutor(
+            SHELL_QUEUE_CAPACITY, r -> {
         Thread t = new Thread(r, "shell-gateway");
         t.setDaemon(true);
         return t;
@@ -121,12 +123,14 @@ public final class ShellGateway {
             if (cb != null) cb.onError("blocked: wm command targets display 0 (head unit)");
             return;
         }
-        // Legacy override: user explicitly requested the ADB path.
-        if (DaemonConfig.isLegacyPathEnabled(ctx)) {
-            AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
-            return;
-        }
-        sExecutor.execute(() -> {
+        // The legacy path still runs on the same bounded worker. Handing it to AdbLocalClient's
+        // async pool here would drain this queue into that pool's unbounded work queue.
+        final boolean legacyPath = DaemonConfig.isLegacyPathEnabled(ctx);
+        Runnable operation = () -> {
+            if (legacyPath) {
+                runLegacyBlocking(ctx, cmd, cb);
+                return;
+            }
             // This dedicated single thread has its own legacy fallback (below), so it must
             // never pay the ~23s blocking daemon bootstrap inside callWithRetry when a binder
             // dies mid-transact — that would stall every queued overscan/pidof op. Opt out:
@@ -139,7 +143,7 @@ public final class ShellGateway {
                     // Blocking connect() here would stall ALL queued shell ops for
                     // up to 15 s on a single thread. ProxyKeeperService reconnects
                     // in the background; the next call will find the binder ready.
-                    AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
+                    runLegacyBlocking(ctx, cmd, cb);
                     return;
                 }
                 // Phase 4a/4b: try typed verb first. If it matches AND succeeds,
@@ -147,21 +151,55 @@ public final class ShellGateway {
                 // call throws, we fall through to runShell (then legacy).
                 String typed = tryTypedVerb(cmd, t0);
                 if (typed != null) {
-                    if (cb != null) cb.onSuccess(typed);
+                    deliverSuccess(cb, typed);
                     return;
                 }
                 String out = ProxyClient.runShell(cmd);
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.d(TAG, "beta runShell ok (" + dt + "ms): " + cmd);
-                if (cb != null) cb.onSuccess(out == null ? "" : out.trim());
+                deliverSuccess(cb, out == null ? "" : out.trim());
             } catch (Throwable t) {
+                if (t instanceof InterruptedException) Thread.currentThread().interrupt();
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.w(TAG, "beta runShell failed after " + dt + "ms, fallback legacy: "
                         + t.getMessage() + " [cmd=" + cmd + "]");
-                // Fallback: pure legacy with the original callback.
-                AdbLocalClient.executeShellWithResult(ctx, cmd, cb);
+                runLegacyBlocking(ctx, cmd, cb);
             }
-        });
+        };
+        try {
+            sExecutor.execute(operation);
+        } catch (RejectedExecutionException queueFull) {
+            AppLogger.e(TAG, "shell queue full (capacity=" + SHELL_QUEUE_CAPACITY
+                    + "), rejecting cmd=" + cmd);
+            deliverError(cb, "shell queue full");
+        }
+    }
+
+    private static void runLegacyBlocking(Context ctx, String cmd, AdbLocalClient.Callback cb) {
+        try {
+            deliverSuccess(cb, AdbLocalClient.executeShellWithResultBlocking(ctx, cmd));
+        } catch (Throwable t) {
+            if (t instanceof InterruptedException) Thread.currentThread().interrupt();
+            String message = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+            AppLogger.e(TAG, "legacy shell failed: " + message + " [cmd=" + cmd + "]");
+            deliverError(cb, message);
+        }
+    }
+
+    private static void deliverSuccess(AdbLocalClient.Callback cb, String output) {
+        if (cb == null) return;
+        try { cb.onSuccess(output); }
+        catch (Throwable callbackError) {
+            AppLogger.e(TAG, "shell success callback failed", callbackError);
+        }
+    }
+
+    private static void deliverError(AdbLocalClient.Callback cb, String error) {
+        if (cb == null) return;
+        try { cb.onError(error); }
+        catch (Throwable callbackError) {
+            AppLogger.e(TAG, "shell error callback failed", callbackError);
+        }
     }
 
     /**

@@ -203,6 +203,25 @@ public class AdbLocalClient {
     }
 
     /**
+     * Blocking variant reserved for an already-background, externally bounded worker such as
+     * ShellGateway. Keeping the ADB handshake and shell call on that worker prevents an async
+     * hand-off from bypassing the gateway's queue bound.
+     */
+    public static String executeShellWithResultBlocking(final Context context, final String command)
+            throws Exception {
+        if (context == null || command == null) throw new IllegalArgumentException("null ctx/cmd");
+        if (blockDiLink2Resize(context, command)) {
+            throw new IOException("blocked on DiLink 2: no cluster display");
+        }
+        final Context appCtx = context.getApplicationContext();
+        try (Dadb dadb = connect(appCtx)) {
+            String output = dadb.shell(command).getAllOutput().trim();
+            AppLogger.d(TAG, "executeShellWithResultBlocking: " + command + " -> " + output);
+            return output;
+        }
+    }
+
+    /**
      * Like {@link #executeShellWithResult}, but does NOT echo the full stdout into the
      * journal — it logs only the command length + byte count. Use for large payloads such
      * as the A13 bug-report body read-back (~1 MB), which would otherwise bloat the journal
