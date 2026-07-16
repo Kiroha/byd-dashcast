@@ -4,6 +4,7 @@ import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.daemon.CanWriteVerbs;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * CanBusController — high-level API for writing to the BYD instrument cluster HUD via CAN bus.
@@ -36,6 +37,49 @@ import java.nio.charset.StandardCharsets;
 public final class CanBusController {
 
     private CanBusController() {}
+
+    private static final CanBatchOperation.Writer LEGACY_WRITER =
+            new CanBatchOperation.Writer() {
+        @Override public void setNaviStatus(int status) throws ProxyClient.ProxyException {
+            ProxyClient.canNaviStatus(status);
+        }
+        @Override public void setInstrumentInt(int featureId, int value)
+                throws ProxyClient.ProxyException {
+            ProxyClient.canInstrumentInt(featureId, value);
+        }
+        @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+                throws ProxyClient.ProxyException {
+            ProxyClient.canInstrumentBytes(featureId, bytes);
+        }
+        @Override public void setSettingInt(int featureId, int value)
+                throws ProxyClient.ProxyException {
+            ProxyClient.canSettingInt(featureId, value);
+        }
+    };
+
+    /** Executes one pre-existing atomic write group, using one Binder RTT on protocol v19+. */
+    public static void sendBatch(List<CanBatchOperation> operations)
+            throws ProxyClient.ProxyException {
+        if (operations == null || operations.isEmpty()) return;
+        if (operations.size() > CanBatchOperation.MAX_BATCH_SIZE) {
+            throw new ProxyClient.ProxyException("CAN batch too large: " + operations.size());
+        }
+        if (ProxyClient.supportsProtocol(19)) {
+            int applied = ProxyClient.canBatch(operations);
+            if (applied != operations.size()) {
+                throw new ProxyClient.ProxyException(
+                        "CAN batch incomplete: " + applied + "/" + operations.size());
+            }
+            return;
+        }
+        try {
+            for (CanBatchOperation operation : operations) operation.execute(LEGACY_WRITER);
+        } catch (ProxyClient.ProxyException proxyError) {
+            throw proxyError;
+        } catch (Throwable error) {
+            throw new ProxyClient.ProxyException("legacy CAN batch failed", error);
+        }
+    }
 
     // ─── Turn icon constants (from OpenBYD 2.2 HudController RE, 49 values) ─
 
@@ -114,21 +158,7 @@ public final class CanBusController {
      * </ol>
      */
     public static void setNaviActive(boolean active) throws ProxyClient.ProxyException {
-        if (active) {
-            ProxyClient.canNaviStatus(CanWriteVerbs.NAVI_STATUS_ACTIVE);
-            ProxyClient.canSettingInt(CanWriteVerbs.SETTING_NAVI_SCREEN_STATUS, 3);
-        } else {
-            ProxyClient.canNaviStatus(CanWriteVerbs.NAVI_STATUS_STOPPED);
-            // Clear all HUD registers — matching OpenBYD sendAutoNaviStatus(4) clear sequence.
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, 0);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_ROAD_DISTANCE, 0);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, -1);
-            ProxyClient.canInstrumentBytes(CanWriteVerbs.INSTRUMENT_NEXT_PATHNAME, new byte[0]);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_MILEAGE, -1);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_HOUR, 0);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_MINUTE, 0);
-            ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_REMAINING_SEC, 0);
-        }
+        sendBatch(CanNavigationBatches.navigationState(active));
     }
 
     // ─── Primary guidance ─────────────────────────────────────────────────
@@ -148,9 +178,7 @@ public final class CanBusController {
      */
     public static void sendSimpleGuidance(int turnIconId, int distanceMeters)
             throws ProxyClient.ProxyException {
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, turnIconId);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_ROAD_DISTANCE, turnIconId);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_FRONT_CROSSING_DIST, distanceMeters);
+        sendBatch(CanNavigationBatches.simpleGuidance(turnIconId, distanceMeters));
     }
 
     /**
@@ -165,8 +193,7 @@ public final class CanBusController {
      */
     public static void sendSecondaryGuidance(int iconId, int distance)
             throws ProxyClient.ProxyException {
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_LEAD_MSG, iconId);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_DISTANCE_TARGET_AHEAD, distance);
+        sendBatch(CanNavigationBatches.secondaryGuidance(iconId, distance));
     }
 
     /**
@@ -201,10 +228,7 @@ public final class CanBusController {
      */
     public static void sendRestRoute(int restHour, int restMinute, long restMileage)
             throws ProxyClient.ProxyException {
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_MILEAGE, (int) restMileage);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_HOUR, restHour);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_MINUTE, restMinute);
-        ProxyClient.canInstrumentInt(CanWriteVerbs.INSTRUMENT_NAVI_REMAINING_SEC, 0);
+        sendBatch(CanNavigationBatches.restRoute(restHour, restMinute, restMileage));
     }
 
     // ─── Raw / advanced access ────────────────────────────────────────────

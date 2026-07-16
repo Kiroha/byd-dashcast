@@ -5,6 +5,9 @@ import android.os.Parcel;
 import android.os.RemoteException;
 
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
+import com.byd.dashcast.system.CanBatchOperation;
+
+import java.util.List;
 
 /**
  * Verb group: BYD CAN bus write operations via daemon uid=2000.
@@ -92,6 +95,34 @@ final class ProxyCanVerbs {
             data.writeInt(featureId);
             data.writeInt(value);
             b.transact(ProxyDaemonContract.TXN_CAN_SETTING_INT, data, reply, 0);
+            reply.readException();
+            return reply.readInt();
+        } finally {
+            reply.recycle();
+            data.recycle();
+        }
+    }
+
+    static int canBatch(List<CanBatchOperation> operations)
+            throws RemoteException, ProxyClient.ProxyException {
+        IBinder b = ProxyClient.sBinder;
+        if (b == null || !b.isBinderAlive()) throw new ProxyClient.ProxyException("not connected");
+        if (operations == null || operations.isEmpty()
+                || operations.size() > CanBatchOperation.MAX_BATCH_SIZE) {
+            throw new ProxyClient.ProxyException("invalid CAN batch size");
+        }
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ProxyDaemonContract.DESCRIPTOR);
+            data.writeInt(operations.size());
+            for (CanBatchOperation operation : operations) {
+                data.writeInt(operation.getType());
+                data.writeInt(operation.getFeatureId());
+                data.writeInt(operation.getIntValue());
+                data.writeByteArray(operation.getBytes());
+            }
+            b.transact(ProxyDaemonContract.TXN_CAN_BATCH, data, reply, 0);
             reply.readException();
             return reply.readInt();
         } finally {
