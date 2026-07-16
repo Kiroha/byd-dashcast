@@ -8,6 +8,7 @@ import android.os.Looper
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.util.concurrent.CloseableResourceSlot
 import com.byd.dashcast.data.prefs.ClusterPrefs
 
 import org.vosk.Model
@@ -48,7 +49,7 @@ class VoskTranscriber(ctx: Context) {
     private val mModelUrl: String
     private val mModelBytes: Long
 
-    @Volatile private var mModel: Model? = null
+    private val mModelSlot = CloseableResourceSlot<Model> { model -> model.close() }
     @Volatile private var mModelLoading = false
     @Volatile private var mListening = false
     @Volatile private var mPendingListen = false
@@ -90,11 +91,15 @@ class VoskTranscriber(ctx: Context) {
      */
     fun startListening() {
         synchronized(mLifecycleLock) {
+            if (mReleaseRequested) {
+                AppLogger.d(TAG, "startListening() ignored — released")
+                return
+            }
             if (mListening) {
                 AppLogger.d(TAG, "startListening() ignored — already listening")
                 return
             }
-            if (mModel == null) {
+            if (!mModelSlot.hasResource()) {
                 if (mModelLoading) {
                     mPendingListen = true
                     AppLogger.d(TAG, "startListening() — model loading, queued")
@@ -114,17 +119,13 @@ class VoskTranscriber(ctx: Context) {
 
     /** Releases the Vosk model from memory. Call from the owner's onDestroy. */
     fun release() {
-        mListenExecutor.shutdown() // V6: stop accepting new listen tasks
         synchronized(mLifecycleLock) {
+            if (mReleaseRequested) return
             mReleaseRequested = true
-            if (!mListening) {
-                val m = mModel
-                mModel = null
-                if (m != null) try { m.close() } catch (ignore: Throwable) {}
-            }
-            // If mListening=true, an active session holds the model.
-            // doListenViaServiceStream's finally block closes it once the Recognizer is done.
+            mPendingListen = false
         }
+        mListenExecutor.shutdown() // stop accepting new listen tasks after terminal state is visible
+        mModelSlot.release()       // defers close while an active Recognizer owns the model
     }
 
     /**
@@ -138,7 +139,7 @@ class VoskTranscriber(ctx: Context) {
         // trigger) cannot both pass the guard and start two simultaneous 1.3 GB downloads.
         // C1 fix: use mLifecycleLock consistently (same lock as startListening/release).
         synchronized(mLifecycleLock) {
-            if (mModelLoading) return
+            if (mReleaseRequested || mModelLoading) return
             mModelLoading = true
         }
         val modelDir = File(mCtx.getExternalFilesDir("vosk"), mModelAsset)
@@ -155,9 +156,11 @@ class VoskTranscriber(ctx: Context) {
                 AppLogger.i(TAG, "Pre-download complete: $mModelAsset")
                 broadcastProgress(100, (mModelBytes / 1024 / 1024).toInt(), (mModelBytes / 1024 / 1024).toInt())
                 sMain.post {
-                    android.widget.Toast.makeText(mCtx,
-                            "Modèle téléchargé — Jarvis prêt",
-                            android.widget.Toast.LENGTH_SHORT).show()
+                    if (!mReleaseRequested) {
+                        android.widget.Toast.makeText(mCtx,
+                                "Modèle téléchargé — Jarvis prêt",
+                                android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 mModelLoading = false
@@ -187,23 +190,34 @@ class VoskTranscriber(ctx: Context) {
                 }
                 AppLogger.i(TAG, "Opening model at " + modelDir.absolutePath)
                 val model = Model(modelDir.absolutePath)
-                mModel = model
+                if (!mModelSlot.publish(model)) {
+                    mModelLoading = false
+                    AppLogger.d(TAG, "Vosk model load completed after release — closed")
+                    return@execute
+                }
                 mModelLoading = false
                 AppLogger.i(TAG, "Vosk model ready")
                 sMain.post {
-                    android.widget.Toast.makeText(mCtx,
-                            "Jarvis prêt — réessayez votre commande",
-                            android.widget.Toast.LENGTH_SHORT).show()
+                    if (!mReleaseRequested) {
+                        android.widget.Toast.makeText(mCtx,
+                                "Jarvis prêt — réessayez votre commande",
+                                android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
                 doListenViaServiceStream()
-                if (mPendingListen) {
-                    mPendingListen = false
-                    startListening()
+                val retryPending = synchronized(mLifecycleLock) {
+                    if (!mReleaseRequested && mPendingListen) {
+                        mPendingListen = false
+                        true
+                    } else {
+                        false
+                    }
                 }
+                if (retryPending) startListening()
             } catch (e: Exception) {
                 mModelLoading = false
                 AppLogger.e(TAG, "Vosk model error: " + e.message)
-                broadcastError("Modèle indisponible : " + e.message)
+                if (!mReleaseRequested) broadcastError("Modèle indisponible : " + e.message)
             }
         }
     }
@@ -320,6 +334,7 @@ class VoskTranscriber(ctx: Context) {
     // when silence or the max window is reached.
 
     private fun doListenViaServiceStream() {
+        val modelForSession: Model
         synchronized(mLifecycleLock) {
             if (mReleaseRequested || !VoiceService.isRunning()) {
                 AppLogger.w(TAG, "doListenViaServiceStream: aborted — released or service not running")
@@ -328,6 +343,13 @@ class VoskTranscriber(ctx: Context) {
                 mListening = false
                 return
             }
+            val acquired = mModelSlot.acquire()
+            if (acquired == null) {
+                AppLogger.w(TAG, "doListenViaServiceStream: aborted — model unavailable")
+                mListening = false
+                return
+            }
+            modelForSession = acquired
             // mListening was already set true by startListening() (fast path) or is
             // still being set here by loadModelThenListen() (slow path via model load).
             mListening = true
@@ -341,10 +363,7 @@ class VoskTranscriber(ctx: Context) {
         var reco: Recognizer? = null
 
         try {
-            // mModel is guaranteed non-null on this path (set by loadModelThenListen /
-            // the fast path in startListening); Recognizer's Model param is a platform
-            // type so we forward mModel as-is, exactly as the Java did.
-            val finalReco = Recognizer(mModel, VoiceService.SAMPLE_RATE_HZ.toFloat())
+            val finalReco = Recognizer(modelForSession, VoiceService.SAMPLE_RATE_HZ.toFloat())
             reco = finalReco
 
             // v1.4.2 — feed pre-roll BEFORE installing the live consumer.
@@ -437,13 +456,9 @@ class VoskTranscriber(ctx: Context) {
             // Order matters: Recognizer must be closed before Model to avoid use-after-free.
             VoiceService.setSampleConsumer(prevConsumer)
             reco?.let { try { it.close() } catch (ignore: Throwable) {} }
+            mModelSlot.releaseUse(modelForSession)
             synchronized(mLifecycleLock) {
                 mListening = false
-                if (mReleaseRequested) {
-                    val m = mModel
-                    mModel = null
-                    if (m != null) try { m.close() } catch (ignore: Throwable) {}
-                }
             }
         }
     }
