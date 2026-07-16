@@ -4,6 +4,7 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.proxy.MirrorResourceOwner;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 
 public class FissionClient {
@@ -155,6 +156,7 @@ public class FissionClient {
             data.writeInt(svW);
             data.writeInt(svH);
             data.writeParcelable(surface, 0);
+            data.writeStrongBinder(MirrorResourceOwner.token());
             binder.transact(MirrorDaemon.TRANSACT_MIRROR_START, data, reply, 0);
             reply.readException();
             boolean ok = (reply.readInt() == 1);

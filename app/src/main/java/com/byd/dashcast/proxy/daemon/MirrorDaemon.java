@@ -26,6 +26,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import com.byd.dashcast.util.concurrent.DeathLease;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
@@ -105,6 +106,7 @@ public class MirrorDaemon {
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
+    private static DeathLease       sMirrorOwnerLease = null;
     private static volatile int     sClusterDisplayId = 2;
     /** v1.2.7 — first-event trace flag; reset on each setupMirror to log once per session. */
     private static volatile boolean sMotionFirstLogged = false;
@@ -314,9 +316,16 @@ public class MirrorDaemon {
                     int viewW         = data.readInt();
                     int viewH         = data.readInt();
                     Surface surface   = data.readParcelable(Surface.class.getClassLoader());
+                    // Additive wire field: old clients omit it; current clients provide a
+                    // process-owned token so an app crash cannot orphan the mirror display.
+                    IBinder owner = data.dataAvail() > 0 ? data.readStrongBinder() : null;
                     boolean ok;
                     try {
-                        ok = setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                        stopMirror();
+                        boolean ownerAttached = attachMirrorOwner(owner);
+                        ok = ownerAttached && setupMirror(layerStack, clusterW, clusterH,
+                                viewW, viewH, surface, owner != null);
+                        if (!ok) stopMirror();
                     } finally {
                         // readParcelable created a daemon-local wrapper. SurfaceFlinger acquired
                         // the producer reference during setupMirror; this wrapper is no longer owned.
@@ -388,8 +397,12 @@ public class MirrorDaemon {
      */
     @SuppressLint("NewApi")
     private static synchronized boolean setupMirror(int layerStack, int clusterW, int clusterH,
-                                                    int viewW, int viewH, Surface surface) {
-        stopMirror();
+                                                    int viewW, int viewH, Surface surface,
+                                                    boolean ownerRequired) {
+        if (ownerRequired && (sMirrorOwnerLease == null || !sMirrorOwnerLease.isActive())) {
+            out("setupMirror refused: client owner already dead");
+            return false;
+        }
         // v1.2.7 — reset per-session first-event trace so M7 captures the next injection chain.
         sMotionFirstLogged = false;
         sKeyFirstLogged    = false;
@@ -657,21 +670,47 @@ public class MirrorDaemon {
         return cropped;
     }
 
-    private static synchronized void stopMirror() {
-        IBinder token = sMirrorToken;
-        if (token == null) return;
-        sMirrorToken = null;
-        try {
-            Class<?> scClass = Class.forName("android.view.SurfaceControl");
-            Method destroyDisplay = scClass.getDeclaredMethod("destroyDisplay", IBinder.class);
-            destroyDisplay.setAccessible(true);
-            destroyDisplay.invoke(null, token);
-            Log.i(TAG, "stopMirror ✓");
-        } catch (Exception e) {
-            Log.w(TAG, "stopMirror: destroyDisplay failed: " + e.getMessage());
+    private static synchronized boolean attachMirrorOwner(IBinder owner) {
+        clearMirrorOwnerLease();
+        if (owner == null) {
+            out("setupMirror legacy client: no death lease");
+            return true;
         }
-        for (SlotInfo slot : sSlots.values()) slot.release();
-        sSlots.clear();
+        try {
+            DeathLease lease = DeathLease.attach(new BinderDeathOwner(owner), () -> {
+                out("mirror owner died — releasing transient mirror");
+                stopMirror();
+            });
+            sMirrorOwnerLease = lease;
+            return lease.isActive();
+        } catch (Throwable t) {
+            out("setupMirror owner link failed: " + t.getClass().getSimpleName()
+                    + ": " + t.getMessage());
+            return false;
+        }
+    }
+
+    private static void clearMirrorOwnerLease() {
+        DeathLease lease = sMirrorOwnerLease;
+        sMirrorOwnerLease = null;
+        if (lease != null) lease.close();
+    }
+
+    private static synchronized void stopMirror() {
+        clearMirrorOwnerLease();
+        IBinder token = sMirrorToken;
+        sMirrorToken = null;
+        if (token != null) {
+            try {
+                Class<?> scClass = Class.forName("android.view.SurfaceControl");
+                Method destroyDisplay = scClass.getDeclaredMethod("destroyDisplay", IBinder.class);
+                destroyDisplay.setAccessible(true);
+                destroyDisplay.invoke(null, token);
+                Log.i(TAG, "stopMirror ✓");
+            } catch (Exception e) {
+                Log.w(TAG, "stopMirror: destroyDisplay failed: " + e.getMessage());
+            }
+        }
     }
 
     // ── Input injection ───────────────────────────────────────────────────────

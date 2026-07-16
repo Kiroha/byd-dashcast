@@ -240,6 +240,7 @@ class ClusterMirrorManager {
             data.writeInt(viewW)
             data.writeInt(viewH)
             data.writeParcelable(targetSurface, 0)
+            data.writeStrongBinder(com.byd.dashcast.proxy.MirrorResourceOwner.token())
             // Synchronous call (not FLAG_ONEWAY) → daemon reply in 'reply' parcel
             daemonBinder.transact(MirrorDaemon.TRANSACT_MIRROR_START, data, reply, 0)
             reply.readException()
