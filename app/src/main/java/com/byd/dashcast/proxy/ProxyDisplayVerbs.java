@@ -61,6 +61,7 @@ final class ProxyDisplayVerbs {
             data.writeInt(flags);
             data.writeInt(1); // non-null Surface marker (readParcelable convention)
             surface.writeToParcel(data, 0);
+            data.writeStrongBinder(ProxyDisplayResourceOwner.token());
             b.transact(ProxyDaemonContract.TXN_CREATE_VIRTUAL_DISPLAY, data, reply, 0);
             reply.readException();
             return reply.readInt();
