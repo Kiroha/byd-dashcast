@@ -707,6 +707,10 @@ public final class ProxyDaemonMain {
                                     : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
                             reply.writeException(wrap);
                         }
+                    } finally {
+                        // CREATOR produced a daemon-local wrapper. DisplayManagerService/VD now
+                        // owns the producer reference; release this temporary Java/native handle.
+                        if (surface != null) surface.release();
                     }
                     return true;
                 }

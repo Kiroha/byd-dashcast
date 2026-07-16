@@ -314,7 +314,14 @@ public class MirrorDaemon {
                     int viewW         = data.readInt();
                     int viewH         = data.readInt();
                     Surface surface   = data.readParcelable(Surface.class.getClassLoader());
-                    boolean ok = setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                    boolean ok;
+                    try {
+                        ok = setupMirror(layerStack, clusterW, clusterH, viewW, viewH, surface);
+                    } finally {
+                        // readParcelable created a daemon-local wrapper. SurfaceFlinger acquired
+                        // the producer reference during setupMirror; this wrapper is no longer owned.
+                        if (surface != null) surface.release();
+                    }
                     // Reply to the client (synchronous call, not oneway)
                     if (reply != null) {
                         reply.writeNoException();
@@ -395,6 +402,7 @@ public class MirrorDaemon {
             out("setupMirror FAIL surface invalide");
             return false;
         }
+        SurfaceControl.Transaction tx = null;
         try {
             Class<?> scClass = Class.forName("android.view.SurfaceControl");
 
@@ -427,7 +435,7 @@ public class MirrorDaemon {
             //    what worked in v2.43. Static methods (openTransaction/
             //    closeTransaction) are available on this ROM but produce a black
             //    screen with no error — behavior observed in v2.45.
-            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
+            tx = new SurfaceControl.Transaction();
             Class<?> txClass = tx.getClass();
 
             Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack",
@@ -449,10 +457,6 @@ public class MirrorDaemon {
             Log.i(TAG, "setupMirror : setDisplayProjection OK");
 
             tx.apply();
-            // Free the native transaction deterministically rather than waiting for GC of the wrapper.
-            // Safe after apply(): the display config is already committed; close() only releases the
-            // builder's native SurfaceComposerClient transaction, not the applied state.
-            tx.close();
             Log.i(TAG, "setupMirror : tx.apply() OK");
 
             // 4. Post-setup verification via dumpsys SurfaceFlinger
@@ -499,6 +503,10 @@ public class MirrorDaemon {
             // null case and clears sMirrorToken atomically.
             stopMirror();
             return false;
+        } finally {
+            // Safe after apply(): close releases only this native transaction builder. Keeping it
+            // in finally also covers reflection failures between construction and apply().
+            if (tx != null) try { tx.close(); } catch (Throwable ignored) {}
         }
     }
 
