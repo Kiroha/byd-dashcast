@@ -1014,10 +1014,22 @@ public class AdbLocalClient {
                             Thread.sleep(300);
                         }
                         ProxyClient.forceStopPackage(packageName, 0);
+                        StringBuilder verification = new StringBuilder();
+                        boolean killed = verifyForceStop(packageName, verification);
                         long dt = SystemClock.elapsedRealtime() - t0;
-                        AppLogger.log(TAG, "forceStopApp typed ok (" + dt + "ms): "
+                        if (killed) {
+                            AppLogger.log(TAG, "forceStopApp typed verified (" + dt + "ms): "
                                 + packageName + " taskId=" + taskId);
-                        if (callback != null) callback.onSuccess("force-stop OK (typed)");
+                            if (callback != null) callback.onSuccess(
+                                "force-stop OK (typed, verified)");
+                        } else {
+                            String detail = verification.length() == 0
+                                ? "process still alive after force-stop"
+                                : verification.toString().trim();
+                            AppLogger.w(TAG, "forceStopApp verification failed for "
+                                + packageName + ": " + detail);
+                            if (callback != null) callback.onError(detail);
+                        }
                         return;
                     } catch (Throwable t) {
                         if (t instanceof InterruptedException) {
@@ -1058,7 +1070,12 @@ public class AdbLocalClient {
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
                     if (callback != null) {
                         if (out.contains("STOPPED") || out.isEmpty()) {
-                            callback.onSuccess("force-stop OK");
+                            StringBuilder verification = new StringBuilder();
+                            if (verifyForceStopViaAdb(dadb, packageName, verification)) {
+                                callback.onSuccess("force-stop OK (ADB, verified)");
+                            } else {
+                                callback.onError(verification.toString().trim());
+                            }
                         } else {
                             callback.onError(out);
                         }
@@ -1083,6 +1100,40 @@ public class AdbLocalClient {
         return s.isEmpty() ? "(empty)" : s;
     }
 
+    private static boolean verifyForceStopViaAdb(Dadb dadb, String pkg, StringBuilder sb) {
+        try {
+            String pids = dadb.shell("pidof " + pkg + " 2>/dev/null || true")
+                    .getAllOutput().trim();
+            if (pids.isEmpty()) {
+                sb.append("verified killed\n");
+                return true;
+            }
+            if (!pids.matches("[0-9]+(?:\\s+[0-9]+)*")) {
+                sb.append("WARN: unexpected pidof output: ").append(pids).append("\n");
+                return false;
+            }
+            AppLogger.w(TAG, "ADB force-stop ineffective for " + pkg
+                    + " (pids=" + pids + ") - escalating kill -9");
+            sb.append("WARN: still alive, pids=").append(pids).append("\n");
+            dadb.shell("kill -9 " + pids.replaceAll("\\s+", " ") + " 2>/dev/null || true");
+            Thread.sleep(200);
+            String remaining = dadb.shell("pidof " + pkg + " 2>/dev/null || true")
+                    .getAllOutput().trim();
+            if (remaining.isEmpty()) {
+                sb.append("verified killed after escalation\n");
+                return true;
+            }
+            sb.append("WARN: still alive after kill -9, pids=").append(remaining).append("\n");
+            return false;
+        } catch (Throwable error) {
+            if (error instanceof InterruptedException) Thread.currentThread().interrupt();
+            AppLogger.w(TAG, "verifyForceStopViaAdb(" + pkg + ") failed: "
+                    + error.getMessage());
+            sb.append("WARN: ADB verification failed: ").append(error.getMessage()).append("\n");
+            return false;
+        }
+    }
+
     /**
      * Phase 4d.1 verification helper — after a typed forceStopPackage call,
      * queries the daemon for surviving PIDs of {@code pkg}. Logs a WARN line
@@ -1090,7 +1141,7 @@ public class AdbLocalClient {
      * IActivityManager.forceStopPackage invocations in device logs (root cause
      * of "Waze stays on display 0 after restoreBydOnCluster typed ok" in 179).
      */
-    private static void verifyForceStop(String pkg, StringBuilder sb) {
+    private static boolean verifyForceStop(String pkg, StringBuilder sb) {
         try {
             String pids = ProxyClient.getPidsByPackage(pkg);
             if (pids != null && !pids.trim().isEmpty()) {
@@ -1117,23 +1168,28 @@ public class AdbLocalClient {
                                 + " STILL alive after kill -9 (pids=" + pids2.trim() + ")");
                         sb.append("  WARN: still alive after kill -9, pids=")
                                 .append(pids2.trim()).append("\n");
+                            return false;
                     } else {
                         AppLogger.i(TAG, "verifyForceStop: " + pkg
                                 + " killed after escalation ✓");
                         sb.append("  verified killed after escalation\n");
+                        return true;
                     }
                 } catch (Throwable escalateError) {
                     AppLogger.w(TAG, "verifyForceStop: kill -9 escalation failed for "
                             + pkg + ": " + escalateError.getMessage());
                     sb.append("  WARN: escalation failed: ")
                             .append(escalateError.getMessage()).append("\n");
+                    return false;
                 }
             } else {
                 sb.append("  verified killed\n");
+                return true;
             }
         } catch (Throwable t) {
-            // Verification must not break the teardown sequence.
+            // Verification failures are reported to the caller, which decides whether to continue.
             AppLogger.w(TAG, "verifyForceStop(" + pkg + ") threw: " + t.getMessage());
+            return false;
         }
     }
 

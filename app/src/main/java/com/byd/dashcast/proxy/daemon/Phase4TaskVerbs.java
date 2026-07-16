@@ -450,6 +450,17 @@ public final class Phase4TaskVerbs {
     }
 
     /**
+     * Moves a task using the direct task API when available, then falls back to the containing
+     * stack/root-task API used by DiLink 3/Android 10. The incident ROM exposes
+     * {@code moveStackToDisplay(int,int)} but no direct {@code moveTaskToDisplay(int,int)}.
+     */
+    public static String moveTaskToDisplayCompatible(int taskId, int displayId) {
+        return TaskMoveResult.runWithFallback(
+                () -> moveTaskToDisplay(taskId, displayId),
+                () -> moveTaskToDisplayViaStack(taskId, displayId));
+    }
+
+    /**
      * BYD Seal EU / Android 10 stack-based move:
      * 1) flip task to FREEFORM via AOSP setTaskWindowingMode (also flips the containing
      *    stack — required for subsequent resizeTask to be accepted).

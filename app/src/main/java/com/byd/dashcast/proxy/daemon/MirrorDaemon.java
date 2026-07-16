@@ -954,7 +954,7 @@ public class MirrorDaemon {
         if (taskId <= 0) {
             result = "no task for " + pkg;
         } else {
-            result = Phase4TaskVerbs.moveTaskToDisplay(taskId, 0);
+            result = Phase4TaskVerbs.moveTaskToDisplayCompatible(taskId, 0);
         }
         out("[Fission] MOVE_TO_DISPLAY0 result: " + result);
         reply.writeNoException();

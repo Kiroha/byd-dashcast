@@ -19,8 +19,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Encapsulates all background fission logic: daemon acquisition, slot lifecycle
@@ -313,16 +316,28 @@ public final class FissionOrchestrator {
      * any apps started headlessly are properly moved back to display 0 and killed.
      */
     public static void stopAutoOrchestrator() {
+        stopAutoOrchestrator(null);
+    }
+
+    /**
+     * Stops the headless orchestrator and invokes {@code onComplete} on the main thread only after
+     * every Layout package has completed move → verified force-stop → optional slot release.
+     */
+    public static void stopAutoOrchestrator(Runnable onComplete) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         sAutoStartOrchestrator = null;
         if (o != null) {
             AppLogger.i(TAG, "stopping headless auto-start orchestrator");
-            o.stopAll();
+            o.stopAll(() -> {
+                notifyLayoutChanged();
+                if (onComplete != null) onComplete.run();
+            });
             // stopAll() submitted its teardown to mExec but never shut it down; this
             // throwaway orchestrator is dropped here (never destroy()'d), so shut the
             // executor down gracefully or its worker thread leaks per headless stop.
             o.shutdown();
-            notifyLayoutChanged();
+        } else if (onComplete != null) {
+            new Handler(Looper.getMainLooper()).post(onComplete);
         }
     }
 
@@ -454,35 +469,97 @@ public final class FissionOrchestrator {
     }
 
     public void stopAll() {
-        if (!mProjecting) return;
+        stopAll(null);
+    }
+
+    public void stopAll(Runnable onComplete) {
         post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_stopping)));
         mExec.execute(() -> {
+            final List<String> packages = new ArrayList<>(mSlots.keySet());
+            if (!mProjecting && packages.isEmpty()) {
+                mMainHandler.post(() -> {
+                    mCallbacks.onStatusMessage(null);
+                    if (onComplete != null) onComplete.run();
+                });
+                return;
+            }
             mProjecting  = false;
             mMirrorReady = false;
             // When "Pre-create slots on startup" is on, keep VDs alive so they persist
             // for the next session — only kill apps and move them back to display 0.
             boolean keepVds = com.byd.dashcast.data.prefs.ClusterPrefs
                     .isFissionPrecreateSlots(mAppCtx);
-            for (String pkg : mSlots.keySet()) {
-                // Mirror stop pattern: move to display 0 first so the app relaunches cleanly.
-                if (mDaemonBinder != null) FissionClient.moveToDisplay0(mDaemonBinder, pkg);
-                if (!keepVds && mDaemonBinder != null) {
-                    try { FissionClient.releaseSlot(mDaemonBinder, pkg); } catch (Throwable ignored) {}
+            final IBinder binder = mDaemonBinder;
+            FissionTeardownPlan.run(packages, keepVds, new FissionTeardownPlan.Operations() {
+                @Override public String moveToDisplay0(String pkg) {
+                    if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
+                    String result = FissionClient.moveToDisplay0(binder, pkg);
+                    if (result == null || (!result.startsWith("OK ")
+                            && !result.startsWith("SKIP ")
+                            && !result.startsWith("no task for "))) {
+                        throw new IllegalStateException(result == null ? "empty move result" : result);
+                    }
+                    AppLogger.i(TAG, "Layout teardown move verified pkg=" + pkg + " → " + result);
+                    return result;
                 }
-                ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
-            }
+
+                @Override public boolean forceStopAndWait(String pkg) {
+                    return forceStopAndWaitForResult(pkg);
+                }
+
+                @Override public void releaseSlot(String pkg) throws Exception {
+                    if (binder == null) throw new IllegalStateException("mirror daemon unavailable");
+                    FissionClient.releaseSlot(binder, pkg);
+                }
+
+                @Override public void onStepError(String pkg, String step, Throwable error) {
+                    AppLogger.e(TAG, "Layout teardown " + step + " failed for " + pkg
+                            + ": " + error.getMessage());
+                }
+            });
             mSlots.clear();
-            if (mDaemonBinder != null) {
-                try { FissionClient.stopMirror(mDaemonBinder); } catch (Throwable ignored) {}
+            if (binder != null) {
+                try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
             }
             mDaemonBinder   = null;
             mFirstDisplayId = -1;
-            post(() -> {
+            mMainHandler.post(() -> {
                 mCallbacks.onSlotsChanged(mSlots.values());
                 mCallbacks.onDaemonBinderAcquired(null);
                 mCallbacks.onStatusMessage(null);
+                if (onComplete != null) onComplete.run();
             });
         });
+    }
+
+    /** Worker-thread only: waits for the shared removeTask + force-stop + PID verification path. */
+    private boolean forceStopAndWaitForResult(String pkg) {
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicBoolean killed = new AtomicBoolean(false);
+        AdbLocalClient.forceStopApp(mAppCtx, pkg, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String result) {
+                killed.set(true);
+                AppLogger.i(TAG, "Layout teardown force-stop verified pkg=" + pkg
+                        + " → " + result);
+                done.countDown();
+            }
+
+            @Override public void onError(String error) {
+                AppLogger.w(TAG, "Layout teardown force-stop failed pkg=" + pkg
+                        + " → " + error);
+                done.countDown();
+            }
+        });
+        try {
+            if (!done.await(20, TimeUnit.SECONDS)) {
+                AppLogger.w(TAG, "Layout teardown force-stop timeout pkg=" + pkg);
+                return false;
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        return killed.get();
     }
 
     public void releaseSlotAsync(String pkg) {

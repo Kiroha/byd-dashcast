@@ -55,16 +55,19 @@ public class FissionClient {
     }
 
     /** Move {@code pkg}'s task back to display 0 before teardown so the app relaunches cleanly. */
-    public static void moveToDisplay0(IBinder binder, String pkg) {
+    public static String moveToDisplay0(IBinder binder, String pkg) {
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
             data.writeString(pkg);
             binder.transact(MirrorDaemon.TRANSACT_MOVE_TO_DISPLAY0, data, reply, 0);
             reply.readException();
-            AppLogger.d(TAG, "MOVE_TO_DISPLAY0 pkg=" + pkg + " result=" + reply.readString());
+            String result = reply.readString();
+            AppLogger.d(TAG, "MOVE_TO_DISPLAY0 pkg=" + pkg + " result=" + result);
+            return result;
         } catch (Throwable e) {
             AppLogger.w(TAG, "MOVE_TO_DISPLAY0 pkg=" + pkg + " error: " + e.getMessage());
+            return "ERR transact: " + e.getClass().getSimpleName() + ": " + e.getMessage();
         } finally { data.recycle(); reply.recycle(); }
     }
 

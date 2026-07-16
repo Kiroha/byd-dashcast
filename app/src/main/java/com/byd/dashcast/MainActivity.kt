@@ -1303,10 +1303,15 @@ class MainActivity : AppCompatActivity(),
         ClusterPrefs.setClusterName(this, null)
         mAppListCoordinator.setCurrentPackage(null)
 
-        // Fission layout apps live on dedicated VD slots — stop them too.
-        FissionOrchestrator.stopAutoOrchestrator()
+        // Layout teardown is asynchronous but MUST complete first: each slot app is moved to
+        // display 0, removeTask+force-stopped with PID verification, then its VD is released.
+        FissionOrchestrator.stopAutoOrchestrator {
+            continueRestoreBydDashboard(capturedClusterPkg, capturedSecondPkg)
+        }
+    }
 
-        // v1.2.81 — every cluster-occupying app is moved back to display 0 AND force-stopped.
+    private fun continueRestoreBydDashboard(capturedClusterPkg: String?, capturedSecondPkg: String?) {
+        // v1.2.81 — every classic cluster app is moved back to display 0 AND force-stopped.
         mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
 
         AppLogger.log(TAG, "restoreBydDashboard() via ADB (TEST 10)")
@@ -1446,8 +1451,12 @@ class MainActivity : AppCompatActivity(),
         ClusterPrefs.setClusterName(this, null)
         mAppListCoordinator.setCurrentPackage(null)
 
-        FissionOrchestrator.stopAutoOrchestrator()
+        FissionOrchestrator.stopAutoOrchestrator {
+            continueOriginCluster(capturedClusterPkg, capturedSecondPkg)
+        }
+    }
 
+    private fun continueOriginCluster(capturedClusterPkg: String?, capturedSecondPkg: String?) {
         mSessionTracker.moveToMainDisplay(if (mServiceBound) mClusterService else null)
         AppLogger.log(TAG, "originCluster() cmd=" + ClusterPrefs.getClusterType(this))
 
