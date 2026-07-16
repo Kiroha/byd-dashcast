@@ -604,6 +604,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onDestroy() {
         mDashboardSelectionGeneration++
+        if (::mTimeoutManager.isInitialized) mTimeoutManager.destroy()
+        if (::mInsetApplicator.isInitialized) mInsetApplicator.destroy()
         try {
             mClusterService?.setListener(null)
         } catch (ignore: Throwable) {
