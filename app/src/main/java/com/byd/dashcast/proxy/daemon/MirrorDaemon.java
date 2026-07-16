@@ -449,6 +449,10 @@ public class MirrorDaemon {
             Log.i(TAG, "setupMirror : setDisplayProjection OK");
 
             tx.apply();
+            // Free the native transaction deterministically rather than waiting for GC of the wrapper.
+            // Safe after apply(): the display config is already committed; close() only releases the
+            // builder's native SurfaceComposerClient transaction, not the applied state.
+            tx.close();
             Log.i(TAG, "setupMirror : tx.apply() OK");
 
             // 4. Post-setup verification via dumpsys SurfaceFlinger
@@ -525,6 +529,7 @@ public class MirrorDaemon {
         ImageReader reader = null;
         Image image = null;
         Bitmap bmp = null;
+        SurfaceControl.Transaction tx = null;
         try {
             reader = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2);
             Surface surface = reader.getSurface();
@@ -535,7 +540,7 @@ public class MirrorDaemon {
             token = (IBinder) createDisplay.invoke(null, "byd_shot_capture", false);
             if (token == null) return "FAIL createDisplay-null";
 
-            SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
+            tx = new SurfaceControl.Transaction();
             Class<?> txClass = tx.getClass();
             Method setLayerStack = txClass.getDeclaredMethod("setDisplayLayerStack", IBinder.class, int.class);
             setLayerStack.setAccessible(true);
@@ -583,6 +588,9 @@ public class MirrorDaemon {
             if (image != null) { try { image.close(); } catch (Throwable ignore) {} }
             if (bmp != null)   { try { bmp.recycle(); } catch (Throwable ignore) {} }
             if (reader != null){ try { reader.close(); } catch (Throwable ignore) {} }
+            // Close the SurfaceControl.Transaction deterministically (it holds a native
+            // SurfaceComposerClient transaction freed only on GC otherwise); this runs on a 15s cadence.
+            if (tx != null)    { try { tx.close(); } catch (Throwable ignore) {} }
             if (token != null) {
                 try {
                     Method destroy = Class.forName("android.view.SurfaceControl")
