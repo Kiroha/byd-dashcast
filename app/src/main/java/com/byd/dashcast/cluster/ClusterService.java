@@ -34,6 +34,7 @@ import com.byd.dashcast.infrastructure.task.ChainedTaskResizer;
 import com.byd.dashcast.infrastructure.task.TaskFinder;
 import com.byd.dashcast.infrastructure.task.TaskResizer;
 import com.byd.dashcast.platform.Platform;
+import com.byd.dashcast.data.prefs.ClusterPrefs;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -142,6 +143,14 @@ public class ClusterService extends Service
 
     private static final String PKG_FORCE_FRESH_LAUNCH = "com.telenav.app.arp";
 
+    /** Set by BootReceiver when it starts us at boot: also auto-launch the configured app. */
+    public static final String EXTRA_BOOT_AUTOLAUNCH = "boot_autolaunch";
+    /** The app this service auto-launched at boot (headless), so MainActivity doesn't relaunch it
+     *  and force-stop a running nav. Null until a boot auto-launch succeeds. */
+    public static volatile String sBootLaunchedPkg = null;
+    /** Package to auto-launch once the cluster display connects (armed in onStartCommand at boot). */
+    private volatile String mBootAutoLaunchPkg = null;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
     // ─────────────────────────────────────────────────────────────────────────
@@ -218,7 +227,40 @@ public class ClusterService extends Service
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Headless boot auto-launch: BootReceiver starts us with EXTRA_BOOT_AUTOLAUNCH so the
+        // configured app is launched onto the cluster at startup WITHOUT the user opening DashCast
+        // (INC-20260716-091016). Arm it here (intent is delivered to onStartCommand); the actual
+        // launch happens in onDashboardDisplayConnected once the cluster display is up.
+        if (intent != null && intent.getBooleanExtra(EXTRA_BOOT_AUTOLAUNCH, false)) {
+            // Mirror MainActivity's guard: when a Layout auto-start is configured, IT owns startup
+            // launching (activates projection + launches every bound app). A headless single-app
+            // launch here would create a classic projection first, and the layout's ensureDaemon()
+            // would then abort with "Daemon unavailable". So skip the single-app path for layout users.
+            if (isLayoutAutoStartConfigured()) {
+                AppLogger.i(TAG, "boot auto-launch: layout auto-start owns startup — headless single-app launch skipped");
+            } else {
+                String pkg = ClusterPrefs.getAutoLaunchPkg(this);
+                if (pkg != null && !pkg.isEmpty()) {
+                    mBootAutoLaunchPkg = pkg;
+                    AppLogger.i(TAG, "boot auto-launch armed (headless) → " + pkg);
+                } else {
+                    AppLogger.i(TAG, "boot auto-launch requested but no app configured");
+                }
+            }
+        }
         return START_STICKY;
+    }
+
+    /** Same predicate as MainActivity.isLayoutAutoStartConfigured — the Layout auto-start owns
+     *  startup launching, so the headless single-app boot launch must stand down for layout users. */
+    private boolean isLayoutAutoStartConfigured() {
+        try {
+            return ClusterPrefs.isFissionAutoLayout(this)
+                    && com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
+                    && com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this) != null;
+        } catch (Throwable t) {
+            return false; // fail-open to the single-app path (never block a boot launch on a probe error)
+        }
     }
 
     @Override
@@ -1218,12 +1260,33 @@ public class ClusterService extends Service
             AppLogger.w(TAG, "wm overscan skipped: displayId=" + displayId);
         }
         if (mListener != null) mListener.onClusterDisplayConnected(display, displayId);
+
+        // Headless boot auto-launch (armed in onStartCommand): the cluster is now up, so launch the
+        // configured app onto it — no MainActivity needed. Record it as the cluster app on success
+        // so a later MainActivity open adopts it (via getLastClusterPkg / sBootLaunchedPkg) instead
+        // of relaunching (which would force-stop the running nav). Fires once.
+        if (displayId > 0 && mBootAutoLaunchPkg != null) {
+            final String pkg = mBootAutoLaunchPkg;
+            mBootAutoLaunchPkg = null;
+            AppLogger.i(TAG, "boot auto-launch → " + pkg + " on display " + displayId);
+            launchOnDashboard(pkg, new LaunchCallback() {
+                @Override public void onResult(boolean success) {
+                    AppLogger.i(TAG, "boot auto-launch result=" + success + " → " + pkg);
+                    // Mark it so a later MainActivity open adopts it (shows the mirror) instead of
+                    // relaunching — see MainActivity.onSendToDashboard's sBootLaunchedPkg guard.
+                    if (success) sBootLaunchedPkg = pkg;
+                }
+            });
+        }
     }
 
     @Override
     public void onDashboardDisplayDisconnected() {
         AppLogger.log(TAG, "Cluster display disconnected");
         mLauncher.setDashboardDisplayId(-1);
+        // Projection ended — the boot-launched app is no longer on the cluster, so drop the latch
+        // (defensive: the consume-once in MainActivity is the primary clear).
+        sBootLaunchedPkg = null;
         // On a DL3 single-OS car the "disconnect" is really "activation timed out because no
         // VirtualDisplay can exist" — tell the user projection is unavailable rather than the
         // generic "disconnected" (which reads like a transient glitch they should retry).

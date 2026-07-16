@@ -79,7 +79,12 @@ class BootReceiver : BroadcastReceiver() {
         if (autoStartEnabled) {
             AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...")
             try {
+                // EXTRA_BOOT_AUTOLAUNCH: also launch the configured app onto the cluster once it is
+                // up, headlessly — so a tester who set an auto-launch app gets it at startup without
+                // opening DashCast (INC-20260716-091016). Standalone-app only; layout auto-start
+                // still runs through MainActivity.
                 val serviceIntent = Intent(context, ClusterService::class.java)
+                    .putExtra(ClusterService.EXTRA_BOOT_AUTOLAUNCH, true)
                 context.startForegroundService(serviceIntent)
             } catch (e: Exception) {
                 AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.message)
