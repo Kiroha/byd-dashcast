@@ -8,6 +8,7 @@ import android.os.SystemClock
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.util.concurrent.WorkerLifecycleController
 import com.byd.dashcast.voice.VoiceLibsManager
 import com.byd.dashcast.voice.VoiceService
 
@@ -83,6 +84,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
 
     private val mAppCtx: Context = ctx.applicationContext
     private var mWorker: Thread? = null
+    private val mWorkerLifecycle = WorkerLifecycleController()
     @Volatile private var mAlive = false
     @Volatile private var mUnavailable = false
     @Volatile private var mLastDetectMs = 0L
@@ -124,10 +126,20 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     /** Asynchronously initialises ONNX sessions and starts the worker thread. */
     @Synchronized
     fun start() {
-        if (mAlive) {
-            AppLogger.d(TAG, "start() ignored, already running")
-            return
+        when (mWorkerLifecycle.requestStart()) {
+            WorkerLifecycleController.StartDecision.ALREADY_RUNNING -> {
+                AppLogger.d(TAG, "start() ignored, already running")
+                return
+            }
+            WorkerLifecycleController.StartDecision.RESTART_QUEUED -> {
+                AppLogger.d(TAG, "start() queued until the stopping worker exits")
+                return
+            }
+            WorkerLifecycleController.StartDecision.START_NOW -> startWorkerLocked()
         }
+    }
+
+    private fun startWorkerLocked() {
         mAlive = true
         mUnavailable = false
         mLastDetectMs = 0L
@@ -138,25 +150,29 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     }
 
     /** Stops the worker thread and releases ONNX resources. Safe to call repeatedly. */
-    @Synchronized
     fun stop() {
-        mAlive = false
-        val w = mWorker
+        val w: Thread?
+        synchronized(this) {
+            when (mWorkerLifecycle.requestStop()) {
+                WorkerLifecycleController.StopDecision.ALREADY_STOPPED -> return
+                WorkerLifecycleController.StopDecision.STOP_RUNNING,
+                WorkerLifecycleController.StopDecision.ALREADY_STOPPING -> {
+                    mAlive = false
+                    w = mWorker
+                }
+            }
+        }
         if (w != null) {
             w.interrupt() // wake from Thread.sleep() immediately; no-op if in ONNX inference
             try { w.join(3000L) } catch (ignore: InterruptedException) { Thread.currentThread().interrupt() }
-            mWorker = null
             if (w.isAlive) {
                 // Worker is still inside a native OrtSession.run (interrupt is a no-op there).
-                // Closing the sessions now would be a native use-after-free (SIGSEGV, uncatchable
-                // by the worker's try/catch). Abandon them instead — OrtSession's finalizer
-                // reclaims the native memory once the stuck worker eventually returns and is GC'd.
-                // The common case (worker exits within the 3 s join) still releases below.
-                AppLogger.w(TAG, "stop(): worker still in inference after 3s — abandoning ONNX sessions to avoid a native use-after-free")
+                // Keep its identity and sessions. Its finally block closes them when native code
+                // returns; start() can only queue one restart and can never overlap this worker.
+                AppLogger.w(TAG, "stop(): worker still in inference after 3s — waiting for owner teardown")
                 return
             }
         }
-        releaseOnnx()
     }
 
     // ─── SampleConsumer plumbing ───────────────────────────────────────────
@@ -184,11 +200,27 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
 
     private fun workerLoop() {
         try {
-            initOnnx()
-        } catch (t: Throwable) {
-            failOnnxInit(t)
-            return
+            try {
+                initOnnx()
+            } catch (t: Throwable) {
+                failOnnxInit(t)
+                return
+            }
+            runWorkerLoop()
+        } finally {
+            releaseOnnx()
+            val restart: Boolean
+            synchronized(this) {
+                mAlive = false
+                if (mWorker === Thread.currentThread()) mWorker = null
+                restart = mWorkerLifecycle.workerExited() ==
+                        WorkerLifecycleController.ExitDecision.RESTART
+                if (restart) startWorkerLocked()
+            }
         }
+    }
+
+    private fun runWorkerLoop() {
         AppLogger.i(TAG, "Worker started — $MODEL_LABEL (threshold=$DETECT_THRESHOLD)")
 
         val audioWindow = FloatArray(AUDIO_BUFFER_LEN)
@@ -331,7 +363,6 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     private fun failOnnxInit(t: Throwable) {
         AppLogger.e(TAG, "ONNX init failed: ${t.javaClass.simpleName}: ${t.message}")
         mUnavailable = true
-        releaseOnnx()
         val i = Intent(ACTION_WAKEWORD)
         i.putExtra(EXTRA_WW_UNAVAILABLE, true)
         i.putExtra(EXTRA_WW_REASON, "${t.javaClass.simpleName}: ${t.message}")
