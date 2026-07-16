@@ -793,6 +793,14 @@ public final class ProxyClient {
                 () -> ProxyProcessVerbs.findTaskIdForPackage(pkg));
     }
 
+    /** Locate a package task and the display that currently owns it. */
+    public static com.byd.dashcast.infrastructure.task.TaskLocation findTaskLocationForPackage(
+            String packageName) throws ProxyException {
+        final String pkg = packageName == null ? "" : packageName;
+        return callWithRetry("findTaskLocationForPackage",
+                () -> ProxyProcessVerbs.findTaskLocationForPackage(pkg));
+    }
+
     /**
      * Phase 7 typed verb — remove a task from the ActivityTaskManager recents
      * stack via {@code IActivityTaskManager.removeTask(int)} reflection inside

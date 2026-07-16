@@ -171,4 +171,10 @@ public final class ProxyDaemonContract {
      *  the app uid. Returns an empty array at EOF. Lets the app pull an arbitrarily large raw
      *  logcat capture in bounded chunks without overflowing a single Binder parcel. */
     public static final int TXN_READ_FILE_CHUNK         = IBinder.FIRST_CALL_TRANSACTION + 27; // 28
+
+    /** {@code String packageName} → {@code int status, int taskId, int displayId}.
+     *  Status values are defined by {@code TaskLocation.Status.wireCode}. Unlike the legacy
+     *  task-id lookup, ABSENT and UNKNOWN are distinct so a daemon/reflection failure cannot be
+     *  treated as proof that a running navigation task disappeared. */
+    public static final int TXN_FIND_TASK_LOCATION      = IBinder.FIRST_CALL_TRANSACTION + 28; // 29
 }
