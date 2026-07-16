@@ -12,9 +12,12 @@ import android.util.Log;
 
 import com.byd.dashcast.system.CanBusController;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.PackagePseudonymizer;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -87,6 +90,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ~30 s so a "no arrow" bug report always carries a RECENT line explaining why (e.g. Telenav).
     private String lastUnsupportedNavPkg = "";
     private long   lastUnsupportedLogMs;
+    private byte[] packageMarkerKey;
+
+    private static final String PACKAGE_MARKER_KEY_FILE = "nav_package_marker.key";
+    private static final int PACKAGE_MARKER_KEY_BYTES = 32;
 
     // Cache of per-source-package Resources (Maps/Waze/ReVanced). A nav app's resources
     // don't change at runtime, so build the Context + AssetManager once per package instead
@@ -767,27 +774,76 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         // For a KNOWN unsupported nav app the package comes from our own hardcoded list (below), so
         // naming it discloses nothing new and is diagnostically essential (e.g. the EU Telenav "no
         // arrow" field report). But the category=navigation branch fires for ANY installed app, so
-        // logging its raw package would leak the driver's app inventory off-device. Emit a coarse,
-        // non-reversible marker there instead — still enough to correlate a recurring unknown nav app.
+        // logging its raw package would leak the driver's app inventory off-device. Emit a keyed,
+        // per-install marker instead — enough to correlate recurring reports from this installation
+        // without enabling a global package-name dictionary lookup.
         String who = knownNav ? ("app=" + pkg + " (known nav app)")
                               : ("pkgHash=" + coarsePkgMarker(pkg) + " (category=navigation)");
         AppLogger.i(TAG, "NAV UNSUPPORTED " + who
                 + " — DashCast HUD nav only reads Google Maps / Maps ReVanced / Waze");
     }
 
-    /** Short, non-reversible marker (SHA-256, first 8 hex) for an unknown package, so a bug report can
-     *  correlate a recurring unsupported nav app WITHOUT logging the raw package (which would leak the
-     *  driver's app inventory). Falls back to a fixed token if SHA-256 is unavailable. */
-    private static String coarsePkgMarker(String pkg) {
+    /** Per-install HMAC marker for an unknown package. Falls back to a fixed token on any failure. */
+    private String coarsePkgMarker(String pkg) {
         if (pkg == null) return "?";
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] d = md.digest(pkg.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(8);
-            for (int i = 0; i < 4; i++) sb.append(String.format("%02x", d[i] & 0xff));
-            return sb.toString();
+            return PackagePseudonymizer.marker(getOrCreatePackageMarkerKey(), pkg);
         } catch (Exception e) {
-            return "hash-na";
+            AppLogger.w(TAG, "Package marker unavailable: " + e.getClass().getSimpleName());
+            return "marker-na";
+        }
+    }
+
+    /** Loads or atomically creates a non-backed-up 256-bit key scoped to this installation. */
+    private synchronized byte[] getOrCreatePackageMarkerKey() throws java.io.IOException {
+        if (packageMarkerKey != null) return packageMarkerKey;
+        File dir = getNoBackupFilesDir();
+        File keyFile = new File(dir, PACKAGE_MARKER_KEY_FILE);
+        byte[] existing = readPackageMarkerKey(keyFile);
+        if (existing != null) {
+            packageMarkerKey = existing;
+            return existing;
+        }
+        if (keyFile.exists() && !keyFile.delete()) {
+            throw new java.io.IOException("cannot replace invalid package marker key");
+        }
+
+        byte[] generated = new byte[PACKAGE_MARKER_KEY_BYTES];
+        new SecureRandom().nextBytes(generated);
+        File temp = File.createTempFile("nav_package_marker_", ".tmp", dir);
+        boolean published = false;
+        try {
+            try (FileOutputStream out = new FileOutputStream(temp)) {
+                out.write(generated);
+                out.flush();
+                out.getFD().sync();
+            }
+            published = temp.renameTo(keyFile);
+            if (!published) {
+                byte[] raced = readPackageMarkerKey(keyFile);
+                if (raced == null) throw new java.io.IOException("cannot publish package marker key");
+                generated = raced;
+            }
+        } finally {
+            if (!published) temp.delete();
+        }
+        packageMarkerKey = generated;
+        return generated;
+    }
+
+    private static byte[] readPackageMarkerKey(File keyFile) {
+        if (!keyFile.isFile() || keyFile.length() != PACKAGE_MARKER_KEY_BYTES) return null;
+        byte[] key = new byte[PACKAGE_MARKER_KEY_BYTES];
+        try (FileInputStream in = new FileInputStream(keyFile)) {
+            int offset = 0;
+            while (offset < key.length) {
+                int read = in.read(key, offset, key.length - offset);
+                if (read < 0) return null;
+                offset += read;
+            }
+            return in.read() == -1 ? key : null;
+        } catch (java.io.IOException e) {
+            return null;
         }
     }
 
