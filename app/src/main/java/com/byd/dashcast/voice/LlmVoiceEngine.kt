@@ -16,6 +16,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.util.concurrent.LifecycleGate
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -52,15 +53,10 @@ class LlmVoiceEngine(ctx: Context) {
     private val mCtx: Context = ctx.applicationContext
     private val mFallback: VoiceCommandRouter = VoiceCommandRouter(ctx)
     private val mMain = Handler(Looper.getMainLooper())
-    /** Guard: stop any previous TTS playback before starting a new one. */
-    private var mActiveMp: MediaPlayer? = null
-    // The AudioFocusRequest tied to mActiveMp. Held so a manual stop()/release() (which does
-    // NOT fire the MediaPlayer completion listener) can still abandon the MAY_DUCK grant —
-    // otherwise each interrupted/released TTS reply leaves the cabin audio permanently ducked.
-    // Accessed only on mMain (main looper), like mActiveMp.
-    private var mActiveFocusReq: AudioFocusRequest? = null
-    private var mActiveTmpFile: File? = null
-    @Volatile private var mReleased = false
+    /** Main-thread-owned, release-once TTS session. */
+    private var mActivePlayback: PlaybackSession? = null
+    private val mLifecycleGate = LifecycleGate()
+    private val mReleaseOnce = AtomicBoolean(false)
 
     init {
         // Clean up .mp3 temp files orphaned by a previous crash
@@ -75,6 +71,8 @@ class LlmVoiceEngine(ctx: Context) {
 
     /** Routes the transcript through the LLM, or falls back to regex routing. */
     fun route(text: String?) {
+        val operation = mLifecycleGate.capture()
+        if (!operation.isValid) return
         // Ignore empty or whitespace-only transcripts (nothing was heard)
         if (text == null || text.trim().isEmpty()) {
             AppLogger.d(TAG, "route() ignored — empty transcript")
@@ -83,7 +81,7 @@ class LlmVoiceEngine(ctx: Context) {
         val apiKey = readApiKey()
         if (apiKey == null || apiKey.isEmpty()) {
             AppLogger.d(TAG, "No API key — falling back to regex router")
-            mFallback.route(text)
+            if (operation.isValid) mFallback.route(text)
             return
         }
         if (!sRouteActive.compareAndSet(false, true)) {
@@ -92,7 +90,7 @@ class LlmVoiceEngine(ctx: Context) {
         }
         sLlmExecutor.execute {
             try {
-                routeOnBackground(text, apiKey)
+                routeOnBackground(text, apiKey, operation)
             } finally {
                 sRouteActive.set(false)
             }
@@ -101,36 +99,26 @@ class LlmVoiceEngine(ctx: Context) {
 
     /** Releases the fallback router (TTS engine). Call from owner's onDestroy. */
     fun release() {
+        if (!mReleaseOnce.compareAndSet(false, true)) return
+        mLifecycleGate.invalidate()
         mFallback.release()
-        mReleased = true
-        mMain.post {
-            val active = mActiveMp
-            if (active != null) {
-                try { active.stop(); active.release() } catch (ignore: Throwable) {}
-                mActiveMp = null
-                val tmp = mActiveTmpFile; mActiveTmpFile = null
-                tmp?.delete()
-            }
-            // Manual teardown doesn't fire the completion listener that abandons focus.
-            mActiveFocusReq?.let {
-                try {
-                    val am = mCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                    am.abandonAudioFocusRequest(it)
-                } catch (ignore: Throwable) {}
-            }
-            mActiveFocusReq = null
-        }
+        mMain.post { releaseActivePlayback() }
     }
 
     private fun readApiKey(): String? = readApiKey(mCtx)
 
     // ─── LLM + TTS pipeline ────────────────────────────────────────────────
 
-    private fun routeOnBackground(text: String, apiKey: String) {
-        if (mReleased) return
+    private fun routeOnBackground(
+        text: String,
+        apiKey: String,
+        operation: LifecycleGate.Token
+    ) {
+        if (!operation.isValid) return
         try {
             // 1. Chat completion → JSON command
             val chatResponse = callChat(text, apiKey) ?: throw Exception("Chat API returned null")
+            if (!operation.isValid) return
 
             // 2. Parse JSON — GPT-4o-mini sometimes wraps the response in
             // markdown code fences (```json ... ```) despite instructions.
@@ -156,22 +144,24 @@ class LlmVoiceEngine(ctx: Context) {
             AppLogger.i(TAG, "LLM → cmd=$cmd pkg=$pkg replyLen=${reply.length}")
 
             // 3. Dispatch command (skip for "talk" — pure conversation, no app action)
-            if (!"talk".equals(cmd, ignoreCase = true)) {
+            if (operation.isValid && !"talk".equals(cmd, ignoreCase = true)) {
                 dispatchCmd(cmd, pkg)
             }
 
             // 4. Synthesise reply with TTS API and play it
-            if (reply.isNotEmpty()) {
+            if (operation.isValid && reply.isNotEmpty()) {
                 val mp3 = callTts(reply, apiKey)
+                if (!operation.isValid) return
                 if (mp3 != null && mp3.isNotEmpty()) {
-                    playMp3(mp3)
+                    playMp3(mp3, operation)
                 } else {
-                    showToast(reply)
+                    showToast(reply, operation)
                 }
             }
         } catch (e: Exception) {
+            if (!operation.isValid) return
             AppLogger.w(TAG, "LLM pipeline error: ${e.message} — falling back to regex")
-            mMain.post { mFallback.route(text) }
+            mMain.post { if (operation.isValid) mFallback.route(text) }
         }
     }
 
@@ -249,75 +239,111 @@ class LlmVoiceEngine(ctx: Context) {
     }
 
     /** Writes MP3 bytes to a temp file and plays them via MediaPlayer. */
-    private fun playMp3(mp3: ByteArray) {
+    private fun playMp3(mp3: ByteArray, operation: LifecycleGate.Token) {
+        if (!operation.isValid) return
+        var pendingTemp: File? = null
         try {
             val tmp = File.createTempFile("jarvis_tts_", ".mp3", mCtx.cacheDir)
+            pendingTemp = tmp
             tmp.deleteOnExit()
             FileOutputStream(tmp).use { fos -> fos.write(mp3) }
-            mMain.post {
-                if (mReleased) { tmp.delete(); return@post }
+            val posted = mMain.post {
+                if (!operation.isValid) { tmp.delete(); return@post }
                 val am = mCtx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                // Stop any previous TTS still playing — and abandon ITS focus grant. A manual
-                // stop()/release() does NOT fire the completion listener that would normally
-                // abandon it, so without this each interrupt leaked a MAY_DUCK grant and the
-                // car's media/nav audio stayed ducked with no owner.
-                val prev = mActiveMp
-                if (prev != null) {
-                    try { prev.stop(); prev.release() } catch (ignore: Throwable) {}
-                    mActiveMp = null
-                    val prevTmp = mActiveTmpFile; mActiveTmpFile = null
-                    prevTmp?.delete()
-                    mActiveFocusReq?.let {
-                        try { am.abandonAudioFocusRequest(it) } catch (ignore: Throwable) {}
-                    }
-                    mActiveFocusReq = null
-                }
-                val focusReq = AudioFocusRequest.Builder(
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-                    .setAudioAttributes(ASSISTANT_AUDIO_ATTRS)
-                    .setAcceptsDelayedFocusGain(false)
-                    .build()
-                mActiveFocusReq = focusReq
-                val focus = am.requestAudioFocus(focusReq)
-                if (focus != AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-                    && focus != AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
-                    AppLogger.w(TAG, "Audio focus not granted ($focus) — playing anyway")
-                }
+                var focusReq: AudioFocusRequest? = null
+                var session: PlaybackSession? = null
                 try {
+                    // Stop any previous TTS still playing — and abandon ITS focus grant.
+                    releaseActivePlayback()
+                    focusReq = AudioFocusRequest.Builder(
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(ASSISTANT_AUDIO_ATTRS)
+                        .setAcceptsDelayedFocusGain(false)
+                        .build()
+                    val focus = am.requestAudioFocus(focusReq)
+                    if (focus != AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                        && focus != AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
+                        AppLogger.w(TAG, "Audio focus not granted ($focus) — playing anyway")
+                    }
+                    session = PlaybackSession(tmp, focusReq, am)
+                    mActivePlayback = session
                     val mp = MediaPlayer()
-                    mActiveMp = mp
-                    mActiveTmpFile = tmp
+                    session.player = mp
                     mp.setAudioAttributes(ASSISTANT_AUDIO_ATTRS)
                     mp.setDataSource(tmp.absolutePath)
                     mp.setOnCompletionListener { p ->
-                        p.release()
-                        if (mActiveMp === p) { mActiveMp = null; mActiveTmpFile = null }
-                        tmp.delete()
-                        am.abandonAudioFocusRequest(focusReq)
-                        if (mActiveFocusReq === focusReq) mActiveFocusReq = null
+                        releasePlayback(session, stopFirst = false)
                     }
                     mp.setOnErrorListener { p, what, _ ->
                         AppLogger.w(TAG, "MediaPlayer error what=$what")
-                        p.release()
-                        if (mActiveMp === p) { mActiveMp = null; mActiveTmpFile = null }
-                        tmp.delete()
-                        am.abandonAudioFocusRequest(focusReq)
-                        if (mActiveFocusReq === focusReq) mActiveFocusReq = null
+                        releasePlayback(session, stopFirst = false)
                         true
                     }
                     mp.setOnPreparedListener { p ->
-                        p.start()
-                        AppLogger.d(TAG, "Playing TTS audio")
+                        if (operation.isValid && mActivePlayback === session
+                                && session.player === p) {
+                            p.start()
+                            AppLogger.d(TAG, "Playing TTS audio")
+                        } else {
+                            releasePlayback(session, stopFirst = false)
+                        }
                     }
                     mp.prepareAsync()
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "MediaPlayer error: ${e.message}")
-                    am.abandonAudioFocusRequest(focusReq)
-                    if (mActiveFocusReq === focusReq) mActiveFocusReq = null
+                    if (session != null) {
+                        releasePlayback(session, stopFirst = true)
+                    } else {
+                        tmp.delete()
+                        if (focusReq != null) {
+                            try { am.abandonAudioFocusRequest(focusReq) }
+                            catch (ignore: Throwable) {}
+                        }
+                    }
                 }
             }
+            if (posted) {
+                pendingTemp = null // ownership transferred to the main-thread Runnable/session
+            } else {
+                tmp.delete()
+            }
         } catch (e: Exception) {
+            pendingTemp?.delete()
             AppLogger.w(TAG, "playMp3 error: ${e.message}")
+        }
+    }
+
+    /** Main-thread only: releases the currently tracked playback, if any. */
+    private fun releaseActivePlayback() {
+        val active = mActivePlayback ?: return
+        releasePlayback(active, stopFirst = true)
+    }
+
+    /** Main-thread only; identity checks make duplicate/late MediaPlayer callbacks harmless. */
+    private fun releasePlayback(session: PlaybackSession, stopFirst: Boolean) {
+        if (mActivePlayback === session) mActivePlayback = null
+        session.release(stopFirst)
+    }
+
+    private class PlaybackSession(
+        private val tempFile: File,
+        private val focusRequest: AudioFocusRequest,
+        private val audioManager: AudioManager
+    ) {
+        var player: MediaPlayer? = null
+        private val released = AtomicBoolean(false)
+
+        fun release(stopFirst: Boolean) {
+            if (!released.compareAndSet(false, true)) return
+            val current = player
+            player = null
+            if (current != null) {
+                if (stopFirst) try { current.stop() } catch (ignore: Throwable) {}
+                try { current.release() } catch (ignore: Throwable) {}
+            }
+            tempFile.delete()
+            try { audioManager.abandonAudioFocusRequest(focusRequest) }
+            catch (ignore: Throwable) {}
         }
     }
 
@@ -364,8 +390,10 @@ class LlmVoiceEngine(ctx: Context) {
         LocalBroadcastManager.getInstance(mCtx).sendBroadcast(i)
     }
 
-    private fun showToast(text: String) {
-        mMain.post { Toast.makeText(mCtx, text, Toast.LENGTH_LONG).show() }
+    private fun showToast(text: String, operation: LifecycleGate.Token) {
+        mMain.post {
+            if (operation.isValid) Toast.makeText(mCtx, text, Toast.LENGTH_LONG).show()
+        }
     }
 
     companion object {
