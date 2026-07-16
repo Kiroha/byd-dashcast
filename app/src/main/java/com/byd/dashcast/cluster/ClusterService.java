@@ -32,6 +32,7 @@ import com.byd.dashcast.infrastructure.task.AmTaskFinder;
 import com.byd.dashcast.infrastructure.task.ChainedTaskFinder;
 import com.byd.dashcast.infrastructure.task.ChainedTaskResizer;
 import com.byd.dashcast.infrastructure.task.TaskFinder;
+import com.byd.dashcast.infrastructure.task.TaskLocation;
 import com.byd.dashcast.infrastructure.task.TaskResizer;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
@@ -508,22 +509,27 @@ public class ClusterService extends Service
         moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
     }
 
+    public interface TaskLocationCallback {
+        void onResult(TaskLocation location);
+    }
+
     /**
-     * Async, side-effect-free presence check: reports on the main thread whether {@code packageName}
-     * currently has a running task. {@link #findRunningTaskId} must run off the main thread (its
-     * finder chain does daemon/ADB dumps), so this runs it on {@link #sMoveTaskExecutor} — the
-     * caller's thread never blocks. Reuses {@link LaunchCallback}: {@code onResult(true)} = present.
+     * Async, side-effect-free task-location query. This deliberately uses the typed daemon ATM
+     * verb instead of the legacy finder chain: transport/reflection failure must remain UNKNOWN,
+     * never collapse to ABSENT and trigger a destructive navigation relaunch.
      */
-    public void isPackageRunning(final String packageName, final LaunchCallback callback) {
+    public void findPackageLocation(final String packageName, final TaskLocationCallback callback) {
         if (callback == null) return;
         sMoveTaskExecutor.execute(() -> {
-            boolean present;
+            TaskLocation location;
             try {
-                present = findRunningTaskId(packageName) != -1;
+                location = ProxyClient.findTaskLocationForPackage(packageName);
             } catch (Throwable t) {
-                present = false;
+                AppLogger.w(TAG, "findPackageLocation unknown for " + packageName
+                        + ": " + t.getMessage());
+                location = TaskLocation.unknown();
             }
-            final boolean result = present;
+            final TaskLocation result = location;
             mMainHandler.post(() -> {
                 if (mDestroyed) return;
                 callback.onResult(result);

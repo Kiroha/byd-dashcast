@@ -63,9 +63,10 @@ public final class ProxyDaemonMain {
      *  v14 (v1.6.74-beta): adds TXN_AAOS_HAL_PROBE (automotive display proxy HAL reachability test).
      *  v15 (v1.6.89-beta): adds TXN_CAN_LISTEN_CLEAR (reset push-feedback log + last-known map).
      *  v16 (v1.6.97-beta): adds TXN_CAN_LISTEN_MARK (timestamped user ground-truth marker) + timestamps.
-     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
+    *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
+    *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "17";
+    private static final String PROTOCOL_VERSION = "18";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -816,6 +817,19 @@ public final class ProxyDaemonMain {
                     if (reply != null) {
                         reply.writeNoException();
                         reply.writeInt(taskId);
+                    }
+                    return true;
+                }
+                case TXN_FIND_TASK_LOCATION: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    com.byd.dashcast.infrastructure.task.TaskLocation location =
+                            Phase4TaskVerbs.findTaskLocationForPackage(pkg);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(location.getStatus().getWireCode());
+                        reply.writeInt(location.getTaskId());
+                        reply.writeInt(location.getDisplayId());
                     }
                     return true;
                 }

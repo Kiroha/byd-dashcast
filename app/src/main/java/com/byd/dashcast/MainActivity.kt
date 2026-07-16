@@ -38,6 +38,7 @@ import com.byd.dashcast.fission.FissionOrchestrator
 import com.byd.dashcast.fission.LayoutPrefs
 import com.byd.dashcast.ime.KeyboardBridgeActivity
 import com.byd.dashcast.infrastructure.AdbLocalClient
+import com.byd.dashcast.infrastructure.task.TaskLocation
 import com.byd.dashcast.model.AppInfo
 import com.byd.dashcast.platform.Platform
 import com.byd.dashcast.proxy.DaemonBinderResolver
@@ -110,6 +111,7 @@ class MainActivity : AppCompatActivity(),
     private val mAppRepo = AppRepository()
     private var mPendingAutoLaunchPkg: String? = null
     private var mPendingAppAfterActivation: AppInfo? = null
+    private var mDashboardSelectionGeneration = 0L
 
     private val mServiceConn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -601,6 +603,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onDestroy() {
+        mDashboardSelectionGeneration++
         try {
             mClusterService?.setListener(null)
         } catch (ignore: Throwable) {
@@ -783,6 +786,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
+        val selectionGeneration = ++mDashboardSelectionGeneration
         // DX_BYD_AUTO (Android Automotive): the instrument cluster is owned by the AAOS
         // cluster-rendering pipeline and is unreachable to us (the automotive display HIDL stub
         // is absent AND SELinux denies the HAL even to uid 2000 — proven on-car, 1.6.74). App
@@ -813,7 +817,6 @@ class MainActivity : AppCompatActivity(),
                 .show()
             return
         }
-        ClusterPrefs.incrementLaunchCount(this, app.packageName)
         val svc = mClusterService
         if (svc == null) {
             // v1.2.76 — auto-trigger activateCluster() and replay the app once the service is up.
@@ -850,23 +853,47 @@ class MainActivity : AppCompatActivity(),
             // cluster, just show the mirror — a relaunch would recreate the running nav
             // (INC-20260716-091016). But if it has since left the cluster (crash, OEM nav takeover, or
             // its task was moved away) the mirror would be blank/stale, so fall through to a normal
-            // launch instead. Presence is checked off the main thread (daemon/ADB finder chain).
-            svc.isPackageRunning(pkgName, object : ClusterService.LaunchCallback {
-                override fun onResult(present: Boolean) {
-                    if (isFinishing || isDestroyed) return
-                    if (present) {
-                        AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
-                        mCurrentDashboardPkg = pkgName
-                        startClusterMirror()
-                    } else {
-                        // Latch already cleared → this re-entry takes the normal launch path.
-                        AppLogger.i(TAG, "onSendToDashboard: boot-launched task gone from cluster — launching $pkgName")
-                        onSendToDashboard(app)
+            // launch instead. Location is checked off the main thread through the typed daemon verb.
+            val expectedDisplayId = svc.displayId
+            svc.findPackageLocation(pkgName, object : ClusterService.TaskLocationCallback {
+                override fun onResult(location: TaskLocation) {
+                    if (isFinishing || isDestroyed
+                            || selectionGeneration != mDashboardSelectionGeneration
+                            || mClusterService !== svc
+                            || svc.displayId != expectedDisplayId) return
+                    when (location.matchDisplay(expectedDisplayId)) {
+                                                TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> {
+                                                        ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
+                                                        AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
+                                                        mCurrentDashboardPkg = pkgName
+                                                        startClusterMirror()
+                                                }
+                                                TaskLocation.DisplayMatch.ON_OTHER_DISPLAY,
+                                                TaskLocation.DisplayMatch.ABSENT -> {
+                                                        // Latch already cleared → this re-entry takes the normal launch path.
+                                                        mCurrentDashboardPkg = null
+                                                        AppLogger.i(TAG, "onSendToDashboard: boot-launched task not on display "
+                                                                        + expectedDisplayId + " — launching $pkgName")
+                                                        onSendToDashboard(app)
+                                                }
+                                                TaskLocation.DisplayMatch.UNKNOWN -> {
+                                                        // Never turn an ATM/transport failure into a destructive nav relaunch.
+                                                        // Preserve the prior mirror-only behavior and let a later tap retry.
+                                                        if (ClusterService.sBootLaunchedPkg == null) {
+                                                                ClusterService.sBootLaunchedPkg = pkgName
+                                                        }
+                                                        mCurrentDashboardPkg = pkgName
+                                                        ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
+                                                        AppLogger.w(TAG, "onSendToDashboard: task location unknown — preserving boot-launched app")
+                                                        startClusterMirror()
+                        }
                     }
                 }
             })
             return
         }
+
+        ClusterPrefs.incrementLaunchCount(this, app.packageName)
 
         // Guard: if already on the cluster, just show the mirror (no moveTaskToDisplay).
         if (pkgName == mCurrentDashboardPkg) {

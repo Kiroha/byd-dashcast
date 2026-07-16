@@ -1,4 +1,5 @@
 package com.byd.dashcast.proxy.daemon;
+import com.byd.dashcast.infrastructure.task.TaskLocation;
 import java.util.Locale;
 
 import java.lang.reflect.Method;
@@ -257,14 +258,37 @@ public final class Phase4TaskVerbs {
 
     // ─── Task query ───────────────────────────────────────────────────────
 
+    /** Resolve the display containing {@code taskId} from StackInfo/RootTaskInfo. */
+    private static int findDisplayIdForTask(Object iAtm, int taskId) {
+        try {
+            for (Object info : getAtmTaskList(iAtm)) {
+                if (info == null) continue;
+                boolean containsTask = getStackOrRootTaskId(info) == taskId;
+                int[] taskIds = getChildTaskIds(info);
+                if (!containsTask && taskIds != null) {
+                    for (int id : taskIds) {
+                        if (id == taskId) {
+                            containsTask = true;
+                            break;
+                        }
+                    }
+                }
+                if (!containsTask) continue;
+                Object displayId = readFieldNoThrow(info, "displayId");
+                if (displayId instanceof Integer) return (Integer) displayId;
+            }
+        } catch (Throwable ignore) {
+            // FOUND with an unreadable display maps to UNKNOWN on the app side.
+        }
+        return TaskLocation.UNKNOWN_DISPLAY_ID;
+    }
+
     /**
-     * Lookup the taskId hosting {@code packageName} (any activity).
-     * Returns -1 if no such task exists. Reads
-     * {@code ActivityTaskManager.getService().getTasks(maxNum,…)} and inspects
-     * each {@code RecentTaskInfo.topActivity}. Enumerates all overloads of
-     * {@code getTasks} to handle BYD-specific signature variants.
+     * Locate a package task and its current display. A completed ATM query with no matching task
+     * returns ABSENT; inability to query or determine the task identity returns UNKNOWN.
      */
-    public static int findTaskIdForPackage(String packageName) {
+    public static TaskLocation findTaskLocationForPackage(String packageName) {
+        if (packageName == null || packageName.isEmpty()) return TaskLocation.unknown();
         try {
             Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
             Object iAtm = atmCls.getMethod("getService").invoke(null);
@@ -275,37 +299,58 @@ public final class Phase4TaskVerbs {
                 }
                 sGetTasks = getTasks;
             }
-            if (getTasks == null) {
-                android.util.Log.w("Phase4TaskVerbs", "findTaskIdForPackage: no getTasks on " + iAtm.getClass());
-                return -1;
+            if (getTasks == null) return TaskLocation.unknown();
+
+            Class<?>[] parameterTypes = getTasks.getParameterTypes();
+            Object[] args = new Object[parameterTypes.length];
+            for (int i = 0; i < parameterTypes.length; i++) {
+                if (parameterTypes[i] == int.class) args[i] = (i == 0 ? 64 : 0);
+                else if (parameterTypes[i] == boolean.class) args[i] = false;
+                else args[i] = null;
             }
-            Class<?>[] pt = getTasks.getParameterTypes();
-            Object[] args = new Object[pt.length];
-            for (int i = 0; i < pt.length; i++) {
-                if (pt[i] == int.class)          args[i] = (i == 0 ? 64 : 0);
-                else if (pt[i] == boolean.class) args[i] = false;
-                else                              args[i] = null;
-            }
-            Object res = getTasks.invoke(iAtm, args);
-            if (!(res instanceof java.util.List)) return -1;
-            for (Object task : (java.util.List<?>) res) {
+            Object rawTasks = getTasks.invoke(iAtm, args);
+            if (!(rawTasks instanceof java.util.List)) return TaskLocation.unknown();
+
+            for (Object task : (java.util.List<?>) rawTasks) {
                 if (task == null) continue;
                 android.content.ComponentName topActivity =
                         (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
                 android.content.ComponentName baseActivity =
                         (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
-                String pkg = (topActivity != null ? topActivity.getPackageName()
-                            : baseActivity != null ? baseActivity.getPackageName() : null);
-                if (packageName.equals(pkg)) {
-                    Object id = readFieldNoThrow(task, "taskId");
-                    if (id == null) id = readFieldNoThrow(task, "id");
-                    if (id instanceof Integer) return (Integer) id;
-                }
+                String taskPackage = topActivity != null ? topActivity.getPackageName()
+                        : baseActivity != null ? baseActivity.getPackageName() : null;
+                if (!packageName.equals(taskPackage)) continue;
+
+                Object rawTaskId = readFieldNoThrow(task, "taskId");
+                if (rawTaskId == null) rawTaskId = readFieldNoThrow(task, "id");
+                if (!(rawTaskId instanceof Integer)) return TaskLocation.unknown();
+                int taskId = (Integer) rawTaskId;
+
+                Object rawDisplayId = readFieldNoThrow(task, "displayId");
+                int displayId = rawDisplayId instanceof Integer
+                        ? (Integer) rawDisplayId
+                        : findDisplayIdForTask(iAtm, taskId);
+                return TaskLocation.found(taskId, displayId);
             }
+            return TaskLocation.absent();
         } catch (Throwable t) {
-            android.util.Log.w("Phase4TaskVerbs", "findTaskIdForPackage(" + packageName + ") failed: " + t);
+            android.util.Log.w("Phase4TaskVerbs",
+                    "findTaskLocationForPackage(" + packageName + ") failed: " + t);
+            return TaskLocation.unknown();
         }
-        return -1;
+    }
+
+    /**
+     * Lookup the taskId hosting {@code packageName} (any activity).
+     * Returns -1 if no such task exists. Reads
+     * {@code ActivityTaskManager.getService().getTasks(maxNum,…)} and inspects
+     * each {@code RecentTaskInfo.topActivity}. Enumerates all overloads of
+     * {@code getTasks} to handle BYD-specific signature variants.
+     */
+    public static int findTaskIdForPackage(String packageName) {
+        TaskLocation location = findTaskLocationForPackage(packageName);
+        return location.getStatus() == TaskLocation.Status.FOUND
+                ? location.getTaskId() : -1;
     }
 
     // ─── Task removal ─────────────────────────────────────────────────────
