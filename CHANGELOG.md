@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.129-beta (versionCode 570)
+
+Reliable Layout-mode projection teardown after 1.6.128-beta. This release fixes `INC-20260716-215316` and `INC-20260716-215226`: on the affected DiLink 3 ROM, the direct task-move API is absent even though the compatible stack-move API is available, while the previous slot release and asynchronous force-stop sequence raced native-cluster restoration. Layout shutdown now falls back through `moveStackToDisplay`, processes every package in strict move -> remove task -> verified force-stop -> slot release order, verifies process death with PID rechecks and `kill -9` escalation, and delays BYD/original-cluster restoration until all Layout applications have been handled.
+
+See the [complete English 1.6.129-beta release notes](docs/releases/1.6.129-beta.md) for the full incident analysis, implementation details, validation results, compatibility notes, and suggested vehicle checks.
+
 ### 1.6.128-beta (versionCode 569)
 
 Resource, lifecycle, IPC, and concurrency hardening after 1.6.127-beta. This release adds display-aware boot task adoption, bounded shell execution and process-group cleanup, single-flight daemon startup, service lifecycle generations, Binder death leases for mirror/VirtualDisplay resources, ordered HUD teardown and CAN batching, race-safe Vosk/WakeWord/LLM teardown, keyed package pseudonyms, Activity callback cancellation, accessibility wrapper recycling, and immutable voice broadcast snapshots. All proxy protocol changes are additive (v18/v19), and every confirmed fix is isolated in its own rollback commit.
