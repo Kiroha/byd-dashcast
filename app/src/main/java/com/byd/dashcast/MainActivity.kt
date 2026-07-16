@@ -838,6 +838,20 @@ class MainActivity : AppCompatActivity(),
         val appName = app.appName
         val pkgName = app.packageName
 
+        // Guard: the boot flow already launched this app onto the cluster headlessly
+        // (ClusterService.sBootLaunchedPkg). Adopt it and show the mirror instead of relaunching —
+        // a relaunch would force-stop the running nav (INC-20260716-091016).
+        if (pkgName == com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg
+                && (mClusterService?.displayId ?: -1) > 0) {
+            AppLogger.d(TAG, "onSendToDashboard: already boot-launched by service — show mirror only")
+            mCurrentDashboardPkg = pkgName
+            // Consume-once: from now on the normal mCurrentDashboardPkg guard governs this app, so a
+            // later switch-away-then-back correctly relaunches it (the static must not latch forever).
+            com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = null
+            startClusterMirror()
+            return
+        }
+
         // Guard: if already on the cluster, just show the mirror (no moveTaskToDisplay).
         if (pkgName == mCurrentDashboardPkg) {
             AppLogger.d(TAG, "onSendToDashboard: already on cluster — show mirror only")
