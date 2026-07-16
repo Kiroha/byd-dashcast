@@ -3,6 +3,7 @@ package com.byd.dashcast.proxy.daemon
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.file.Files
 
 class ProxyShellTest {
 
@@ -33,4 +34,26 @@ class ProxyShellTest {
         assertEquals(0, result.exit)
         assertEquals("one\ntwo", result.output)
     }
+
+    @Test
+    fun timeoutTerminatesDescendantHoldingStdoutOpen() {
+        val pidFile = Files.createTempFile("proxy-shell-child-", ".pid")
+        Files.deleteIfExists(pidFile)
+        var childPid: Long? = null
+        try {
+            val command = "sleep 10 & echo \$! > '${pidFile.toAbsolutePath()}'"
+            val result = ProxyShell.exec(command, 200, 1024)
+            assertEquals(-1, result.exit)
+
+            val pid = String(Files.readAllBytes(pidFile)).trim().toLong()
+            childPid = pid
+            assertTrue("descendant pid=$pid survived timeout", !isProcessAlive(pid))
+        } finally {
+            childPid?.let { ProcessBuilder("sh", "-c", "kill -9 $it 2>/dev/null || true").start().waitFor() }
+            Files.deleteIfExists(pidFile)
+        }
+    }
+
+    private fun isProcessAlive(pid: Long): Boolean =
+        ProcessBuilder("sh", "-c", "kill -0 $pid 2>/dev/null").start().waitFor() == 0
 }
