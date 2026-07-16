@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import com.byd.dashcast.cluster.ClusterService
 import com.byd.dashcast.data.prefs.ClusterPrefs
+import com.byd.dashcast.fission.FissionOrchestrator
+import com.byd.dashcast.fission.LayoutPrefs
+import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ProxyKeeperService
 import com.byd.dashcast.ui.settings.SettingsActivity
@@ -77,17 +80,38 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (autoStartEnabled) {
-            AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...")
-            try {
-                // EXTRA_BOOT_AUTOLAUNCH: also launch the configured app onto the cluster once it is
-                // up, headlessly — so a tester who set an auto-launch app gets it at startup without
-                // opening DashCast (INC-20260716-091016). Standalone-app only; layout auto-start
-                // still runs through MainActivity.
-                val serviceIntent = Intent(context, ClusterService::class.java)
-                    .putExtra(ClusterService.EXTRA_BOOT_AUTOLAUNCH, true)
-                context.startForegroundService(serviceIntent)
-            } catch (e: Exception) {
-                AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.message)
+            if (isLayoutAutoStartConfigured(appCtx)) {
+                // LAYOUT auto-start: the favourite Layout owns startup — it activates projection AND
+                // launches every bound app itself, headlessly (FissionOrchestrator.
+                // maybeAutoStartOnAppLaunch, the same call MainActivity.onCreate makes). Do NOT also
+                // start the classic ClusterService projection: it would trip the layout's
+                // projection-conflict check ("classic projection already active") and nothing would
+                // launch (INC-20260716-201008 — layout user got projection on but no apps). Delay a
+                // little so the daemon pre-warm connects first; the orchestrator runs on its own bg
+                // thread. MainActivity's later call to the same method no-ops (one-shot per process).
+                AppLogger.i("BootReceiver", "DashCast Auto-Boot: layout auto-start (headless)")
+                pending.incrementAndGet()
+                sMain.postDelayed({
+                    try {
+                        FissionOrchestrator.maybeAutoStartOnAppLaunch(appCtx)
+                    } catch (t: Throwable) {
+                        AppLogger.w("BootReceiver", "layout auto-start failed: " + t.message)
+                    } finally {
+                        releaseOne.run()
+                    }
+                }, 3_000L)
+            } else {
+                AppLogger.i("BootReceiver", "DashCast Auto-Boot: Starting projection automatically...")
+                try {
+                    // EXTRA_BOOT_AUTOLAUNCH: also launch the configured single app onto the cluster
+                    // once it is up, headlessly — so a tester who set an auto-launch app gets it at
+                    // startup without opening DashCast (INC-20260716-091016).
+                    val serviceIntent = Intent(context, ClusterService::class.java)
+                        .putExtra(ClusterService.EXTRA_BOOT_AUTOLAUNCH, true)
+                    context.startForegroundService(serviceIntent)
+                } catch (e: Exception) {
+                    AppLogger.e("BootReceiver", "Error starting ClusterService on boot: " + e.message)
+                }
             }
         } else {
             AppLogger.d("BootReceiver", "DashCast Auto-Boot Projection is disabled by user.")
@@ -147,6 +171,15 @@ class BootReceiver : BroadcastReceiver() {
         // Release the sentinel: all scheduling is now done. If every bg task
         // already completed (pending == 1 sentinel only), this triggers finish.
         releaseOne.run()
+    }
+
+    /** Same predicate as MainActivity.isLayoutAutoStartConfigured — the Layout owns startup. */
+    private fun isLayoutAutoStartConfigured(ctx: Context): Boolean = try {
+        ClusterPrefs.isFissionAutoLayout(ctx) &&
+            DaemonConfig.isFissionModeEnabled(ctx) &&
+            LayoutPrefs.getFavoriteLayout(ctx) != null
+    } catch (t: Throwable) {
+        false
     }
 
     companion object {
