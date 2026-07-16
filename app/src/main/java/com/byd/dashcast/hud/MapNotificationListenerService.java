@@ -13,6 +13,8 @@ import android.util.Log;
 import com.byd.dashcast.system.CanBusController;
 import com.byd.dashcast.util.AppLogger;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -761,9 +763,32 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         if (pkg.equals(lastUnsupportedNavPkg) && now - lastUnsupportedLogMs < 30_000L) return;
         lastUnsupportedNavPkg = pkg;
         lastUnsupportedLogMs = now;
-        AppLogger.i(TAG, "NAV UNSUPPORTED app=" + pkg
-                + (knownNav ? " (known nav app)" : " (category=navigation)")
+        // Privacy: the package name is written to the DashCast journal → every bug report → Telegram.
+        // For a KNOWN unsupported nav app the package comes from our own hardcoded list (below), so
+        // naming it discloses nothing new and is diagnostically essential (e.g. the EU Telenav "no
+        // arrow" field report). But the category=navigation branch fires for ANY installed app, so
+        // logging its raw package would leak the driver's app inventory off-device. Emit a coarse,
+        // non-reversible marker there instead — still enough to correlate a recurring unknown nav app.
+        String who = knownNav ? ("app=" + pkg + " (known nav app)")
+                              : ("pkgHash=" + coarsePkgMarker(pkg) + " (category=navigation)");
+        AppLogger.i(TAG, "NAV UNSUPPORTED " + who
                 + " — DashCast HUD nav only reads Google Maps / Maps ReVanced / Waze");
+    }
+
+    /** Short, non-reversible marker (SHA-256, first 8 hex) for an unknown package, so a bug report can
+     *  correlate a recurring unsupported nav app WITHOUT logging the raw package (which would leak the
+     *  driver's app inventory). Falls back to a fixed token if SHA-256 is unavailable. */
+    private static String coarsePkgMarker(String pkg) {
+        if (pkg == null) return "?";
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] d = md.digest(pkg.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(8);
+            for (int i = 0; i < 4; i++) sb.append(String.format("%02x", d[i] & 0xff));
+            return sb.toString();
+        } catch (Exception e) {
+            return "hash-na";
+        }
     }
 
     private static String charSeqToString(CharSequence cs) {
