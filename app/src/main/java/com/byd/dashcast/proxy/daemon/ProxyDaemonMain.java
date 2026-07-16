@@ -65,8 +65,9 @@ public final class ProxyDaemonMain {
      *  v16 (v1.6.97-beta): adds TXN_CAN_LISTEN_MARK (timestamped user ground-truth marker) + timestamps.
     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
     *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
+    *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "18";
+    private static final String PROTOCOL_VERSION = "19";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -911,6 +912,52 @@ public final class ProxyDaemonMain {
                         if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
                         int rc = CanWriteVerbs.settingSetInt(ctx, featureId, value);
                         if (reply != null) { reply.writeNoException(); reply.writeInt(rc); }
+                    } catch (Throwable ex) {
+                        if (reply != null) reply.writeException(wrapThrowable(ex));
+                    }
+                    return true;
+                }
+                case TXN_CAN_BATCH: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int count = data.readInt();
+                    try {
+                        if (count <= 0 || count > com.byd.dashcast.system.CanBatchOperation.MAX_BATCH_SIZE) {
+                            throw new IllegalArgumentException("invalid CAN batch size " + count);
+                        }
+                        final Context ctx = sWrappedContext;
+                        if (ctx == null) throw new IllegalStateException("wrapped context unavailable");
+                        com.byd.dashcast.system.CanBatchOperation.Writer writer =
+                                new com.byd.dashcast.system.CanBatchOperation.Writer() {
+                            @Override public void setNaviStatus(int status) throws Throwable {
+                                CanWriteVerbs.setInt(ctx,
+                                        CanWriteVerbs.INSTRUMENT_SEND_NAVI_STATUS, status);
+                            }
+                            @Override public void setInstrumentInt(int featureId, int value)
+                                    throws Throwable {
+                                CanWriteVerbs.setInt(ctx, featureId, value);
+                            }
+                            @Override public void setInstrumentBytes(int featureId, byte[] bytes)
+                                    throws Throwable {
+                                CanWriteVerbs.setBytes(ctx, featureId,
+                                        bytes == null ? new byte[0] : bytes);
+                            }
+                            @Override public void setSettingInt(int featureId, int value)
+                                    throws Throwable {
+                                CanWriteVerbs.settingSetInt(ctx, featureId, value);
+                            }
+                        };
+                        for (int i = 0; i < count; i++) {
+                            int type = data.readInt();
+                            int featureId = data.readInt();
+                            int intValue = data.readInt();
+                            byte[] bytes = data.createByteArray();
+                            com.byd.dashcast.system.CanBatchOperation.fromWire(
+                                    type, featureId, intValue, bytes).execute(writer);
+                        }
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeInt(count);
+                        }
                     } catch (Throwable ex) {
                         if (reply != null) reply.writeException(wrapThrowable(ex));
                     }

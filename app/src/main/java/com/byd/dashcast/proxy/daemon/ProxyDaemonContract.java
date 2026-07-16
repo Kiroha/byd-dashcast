@@ -177,4 +177,8 @@ public final class ProxyDaemonContract {
      *  task-id lookup, ABSENT and UNKNOWN are distinct so a daemon/reflection failure cannot be
      *  treated as proof that a running navigation task disappeared. */
     public static final int TXN_FIND_TASK_LOCATION      = IBinder.FIRST_CALL_TRANSACTION + 28; // 29
+
+    /** Ordered list of {@code CanBatchOperation} records → {@code int appliedCount}.
+     *  The daemon executes records sequentially and stops at the first thrown SDK error. */
+    public static final int TXN_CAN_BATCH               = IBinder.FIRST_CALL_TRANSACTION + 29; // 30
 }

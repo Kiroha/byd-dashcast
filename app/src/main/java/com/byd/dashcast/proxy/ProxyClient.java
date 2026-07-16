@@ -578,6 +578,14 @@ public final class ProxyClient {
     /** Protocol version reported by the daemon, or {@code null} if never handshook. */
     public static String getProtocolVersion() { return sDaemonVer; }
 
+    /** True when the connected daemon reports a numeric protocol at least {@code minimum}. */
+    public static boolean supportsProtocol(int minimum) {
+        String version = sDaemonVer;
+        if (version == null) return false;
+        try { return Integer.parseInt(version) >= minimum; }
+        catch (NumberFormatException ignored) { return false; }
+    }
+
     /**
      * Run a shell command on the daemon and return its combined stdout/stderr.
      * Blocks until the daemon completes the command.
@@ -914,6 +922,21 @@ public final class ProxyClient {
     public static int canSettingInt(int featureId, int value) throws ProxyException {
         return callWithRetry("canSettingInt",
                 () -> ProxyCanVerbs.canSettingInt(featureId, value));
+    }
+
+    /** Executes an ordered CAN write group in one Binder transaction (protocol v19+). */
+    public static int canBatch(java.util.List<com.byd.dashcast.system.CanBatchOperation> operations)
+            throws ProxyException {
+        if (!supportsProtocol(19)) throw new ProxyException("CAN batch unsupported by daemon");
+        try {
+            // Do not use callWithRetry here: a RemoteException can arrive after the daemon applied
+            // a prefix of the group. Replaying the whole batch would violate exactly-once grouping.
+            return ProxyCanVerbs.canBatch(operations);
+        } catch (RemoteException transportError) {
+            invalidateBinder("canBatch");
+            throw new ProxyException("canBatch transact: " + transportError.getMessage(),
+                    transportError);
+        }
     }
 
     /**
