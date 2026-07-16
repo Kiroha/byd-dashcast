@@ -508,6 +508,29 @@ public class ClusterService extends Service
         moveTaskToDisplayInternal(packageName, targetDisplayId, null, true);
     }
 
+    /**
+     * Async, side-effect-free presence check: reports on the main thread whether {@code packageName}
+     * currently has a running task. {@link #findRunningTaskId} must run off the main thread (its
+     * finder chain does daemon/ADB dumps), so this runs it on {@link #sMoveTaskExecutor} — the
+     * caller's thread never blocks. Reuses {@link LaunchCallback}: {@code onResult(true)} = present.
+     */
+    public void isPackageRunning(final String packageName, final LaunchCallback callback) {
+        if (callback == null) return;
+        sMoveTaskExecutor.execute(() -> {
+            boolean present;
+            try {
+                present = findRunningTaskId(packageName) != -1;
+            } catch (Throwable t) {
+                present = false;
+            }
+            final boolean result = present;
+            mMainHandler.post(() -> {
+                if (mDestroyed) return;
+                callback.onResult(result);
+            });
+        });
+    }
+
     private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
                                             final LaunchCallback callback,
                                             final boolean enforceOnly) {
