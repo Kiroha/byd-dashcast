@@ -54,6 +54,7 @@ import com.byd.dashcast.ui.main.AppActionSheet
 import com.byd.dashcast.ui.main.AppListCoordinator
 import com.byd.dashcast.ui.main.ClusterControlCoordinator
 import com.byd.dashcast.ui.main.DisplayStatePollCoordinator
+import com.byd.dashcast.ui.main.DashboardSelectionTracker
 import com.byd.dashcast.ui.main.FissionCoordinator
 import com.byd.dashcast.ui.main.FullscreenMirrorCoordinator
 import com.byd.dashcast.ui.main.InsetAutoApplicator
@@ -111,7 +112,7 @@ class MainActivity : AppCompatActivity(),
     private val mAppRepo = AppRepository()
     private var mPendingAutoLaunchPkg: String? = null
     private var mPendingAppAfterActivation: AppInfo? = null
-    private var mDashboardSelectionGeneration = 0L
+    private val mDashboardSelectionTracker = DashboardSelectionTracker()
 
     private val mServiceConn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -123,6 +124,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            restorePendingBootAdoption()
             mServiceBound = false
             mBindRequested = false // allow a new bindService if needed
             mClusterService = null
@@ -603,7 +605,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onDestroy() {
-        mDashboardSelectionGeneration++
+        restorePendingBootAdoption()
         if (::mTimeoutManager.isInitialized) mTimeoutManager.destroy()
         if (::mInsetApplicator.isInitialized) mInsetApplicator.destroy()
         try {
@@ -626,6 +628,14 @@ class MainActivity : AppCompatActivity(),
             mBindRequested = false
         }
         mMirrorCoordinator?.destroy()
+    }
+
+    private fun restorePendingBootAdoption() {
+        val pendingPkg = mDashboardSelectionTracker.takePendingForInvalidation() ?: return
+        if (ClusterService.sBootLaunchedPkg == null) {
+            ClusterService.sBootLaunchedPkg = pendingPkg
+            AppLogger.d(TAG, "restored pending boot adoption for $pendingPkg")
+        }
     }
 
     // ---- ClusterService.Listener ----
@@ -748,6 +758,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onClusterDisplayDisconnected() {
+        mDashboardSelectionTracker.takePendingForInvalidation()
         AppLogger.log(TAG, "Dashboard disconnected")
         runOnUiThread {
             mTimeoutManager.cancel()
@@ -788,7 +799,12 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
-        val selectionGeneration = ++mDashboardSelectionGeneration
+        val selection = mDashboardSelectionTracker.begin(app.packageName)
+        if (selection.isDuplicatePending) {
+            AppLogger.d(TAG, "onSendToDashboard: boot adoption already pending for " + app.packageName)
+            return
+        }
+        val selectionGeneration = selection.generation
         // DX_BYD_AUTO (Android Automotive): the instrument cluster is owned by the AAOS
         // cluster-rendering pipeline and is unreachable to us (the automotive display HIDL stub
         // is absent AND SELinux denies the HAL even to uid 2000 — proven on-car, 1.6.74). App
@@ -851,6 +867,10 @@ class MainActivity : AppCompatActivity(),
             // Consume-once up front so a re-entrant/racing tap can't take this branch twice, and so a
             // later switch-away-then-back is governed by the normal mCurrentDashboardPkg guard.
             com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = null
+            if (!mDashboardSelectionTracker.markBootPending(pkgName, selectionGeneration)) {
+                com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = pkgName
+                return
+            }
             // The boot flow launched this app headlessly onto the cluster. If it is STILL on the
             // cluster, just show the mirror — a relaunch would recreate the running nav
             // (INC-20260716-091016). But if it has since left the cluster (crash, OEM nav takeover, or
@@ -859,35 +879,40 @@ class MainActivity : AppCompatActivity(),
             val expectedDisplayId = svc.displayId
             svc.findPackageLocation(pkgName, object : ClusterService.TaskLocationCallback {
                 override fun onResult(location: TaskLocation) {
-                    if (isFinishing || isDestroyed
-                            || selectionGeneration != mDashboardSelectionGeneration
-                            || mClusterService !== svc
-                            || svc.displayId != expectedDisplayId) return
+                    if (isFinishing || isDestroyed) return
+                    if (mClusterService !== svc || svc.displayId != expectedDisplayId) {
+                        if (mDashboardSelectionTracker.completeBoot(pkgName, selectionGeneration)
+                                && ClusterService.sBootLaunchedPkg == null) {
+                            ClusterService.sBootLaunchedPkg = pkgName
+                        }
+                        return
+                    }
+                    if (!mDashboardSelectionTracker.completeBoot(pkgName, selectionGeneration)) return
                     when (location.matchDisplay(expectedDisplayId)) {
-                                                TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> {
-                                                        ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
-                                                        AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
-                                                        mCurrentDashboardPkg = pkgName
-                                                        startClusterMirror()
-                                                }
-                                                TaskLocation.DisplayMatch.ON_OTHER_DISPLAY,
-                                                TaskLocation.DisplayMatch.ABSENT -> {
-                                                        // Latch already cleared → this re-entry takes the normal launch path.
-                                                        mCurrentDashboardPkg = null
-                                                        AppLogger.i(TAG, "onSendToDashboard: boot-launched task not on display "
-                                                                        + expectedDisplayId + " — launching $pkgName")
-                                                        onSendToDashboard(app)
-                                                }
-                                                TaskLocation.DisplayMatch.UNKNOWN -> {
-                                                        // Never turn an ATM/transport failure into a destructive nav relaunch.
-                                                        // Preserve the prior mirror-only behavior and let a later tap retry.
-                                                        if (ClusterService.sBootLaunchedPkg == null) {
-                                                                ClusterService.sBootLaunchedPkg = pkgName
-                                                        }
-                                                        mCurrentDashboardPkg = pkgName
-                                                        ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
-                                                        AppLogger.w(TAG, "onSendToDashboard: task location unknown — preserving boot-launched app")
-                                                        startClusterMirror()
+                        TaskLocation.DisplayMatch.ON_EXPECTED_DISPLAY -> {
+                            ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
+                            AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
+                            mCurrentDashboardPkg = pkgName
+                            startClusterMirror()
+                        }
+                        TaskLocation.DisplayMatch.ON_OTHER_DISPLAY,
+                        TaskLocation.DisplayMatch.ABSENT -> {
+                            // Latch already cleared → this re-entry takes the normal launch path.
+                            mCurrentDashboardPkg = null
+                            AppLogger.i(TAG, "onSendToDashboard: boot-launched task not on display "
+                                    + expectedDisplayId + " — launching $pkgName")
+                            onSendToDashboard(app)
+                        }
+                        TaskLocation.DisplayMatch.UNKNOWN -> {
+                            // Never turn an ATM/transport failure into a destructive nav relaunch.
+                            // Preserve the prior mirror-only behavior and let a later tap retry.
+                            if (ClusterService.sBootLaunchedPkg == null) {
+                                ClusterService.sBootLaunchedPkg = pkgName
+                            }
+                            mCurrentDashboardPkg = pkgName
+                            ClusterPrefs.incrementLaunchCount(this@MainActivity, pkgName)
+                            AppLogger.w(TAG, "onSendToDashboard: task location unknown — preserving boot-launched app")
+                            startClusterMirror()
                         }
                     }
                 }
