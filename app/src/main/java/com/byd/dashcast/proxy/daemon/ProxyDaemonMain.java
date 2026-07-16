@@ -689,9 +689,11 @@ public final class ProxyDaemonMain {
                     android.view.Surface surface = data.readInt() != 0
                             ? android.view.Surface.CREATOR.createFromParcel(data)
                             : null;
+                        android.os.IBinder owner = data.dataAvail() > 0
+                            ? data.readStrongBinder() : null;
                     try {
                         int displayId = Phase4DisplayVerbs.createVirtualDisplay(
-                                sSystemContext, name, w, h, dpi, surface, vflag);
+                            sSystemContext, name, w, h, dpi, surface, vflag, owner);
                         if (reply != null) {
                             reply.writeNoException();
                             reply.writeInt(displayId);
