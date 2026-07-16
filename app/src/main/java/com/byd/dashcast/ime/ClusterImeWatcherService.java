@@ -440,7 +440,12 @@ public class ClusterImeWatcherService extends AccessibilityService {
                         List<AccessibilityWindowInfo> wins = all.valueAt(i);
                         if (wins == null) continue;
                         for (AccessibilityWindowInfo w : wins) {
-                            AccessibilityNodeInfo cand = pickFocusedEditableFrom(w, selfPkg);
+                            AccessibilityNodeInfo cand;
+                            try {
+                                cand = pickFocusedEditableFrom(w, selfPkg);
+                            } finally {
+                                if (w != null) w.recycle();
+                            }
                             if (cand == null) continue;
                             if (displayId != 0 && bestNonDefault == null) {
                                 bestNonDefault = cand;
@@ -463,12 +468,17 @@ public class ClusterImeWatcherService extends AccessibilityService {
                 }
                 if (windows != null) {
                     for (AccessibilityWindowInfo w : windows) {
-                        AccessibilityNodeInfo cand = pickFocusedEditableFrom(w, selfPkg);
-                        if (cand == null) continue;
+                        AccessibilityNodeInfo cand;
                         int displayId = 0;
-                        if (Build.VERSION.SDK_INT >= 30) {
-                            try { displayId = w.getDisplayId(); } catch (Throwable ignored) { }
+                        try {
+                            cand = pickFocusedEditableFrom(w, selfPkg);
+                            if (Build.VERSION.SDK_INT >= 30 && w != null) {
+                                try { displayId = w.getDisplayId(); } catch (Throwable ignored) { }
+                            }
+                        } finally {
+                            if (w != null) w.recycle();
                         }
+                        if (cand == null) continue;
                         if (displayId > 0 && bestNonDefault == null) {
                             bestNonDefault = cand;
                         } else if (bestAny == null) {
