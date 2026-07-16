@@ -13,6 +13,7 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
+import com.byd.dashcast.util.concurrent.SingleFlight;
 import com.byd.dashcast.proxy.daemon.BinderParcelable;
 import com.byd.dashcast.proxy.daemon.ProxyDaemonContract;
 
@@ -169,6 +170,8 @@ public final class ProxyClient {
      * making failure cases painfully slow.
      */
     private static final int  BROADCAST_WAIT_MS    = 15000;
+    private static final long CONNECT_JOIN_TIMEOUT_MS =
+            BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS + 1_000L;
 
     private static final Object LOCK = new Object();
 
@@ -196,6 +199,8 @@ public final class ProxyClient {
     private static BroadcastReceiver sReceiver;
     /** Set just before bootstrap; counted-down by {@link #sReceiver} on arrival. */
     private static volatile CountDownLatch sBinderLatch;
+    /** Exactly one caller owns a cold daemon bootstrap; concurrent callers join its result. */
+    private static final SingleFlight<Boolean> sConnectSingleFlight = new SingleFlight<>();
 
     // Volatile (build 195 / P1) so the public getters below stay lockless.
     private static volatile int    sDaemonUid = -1;
@@ -333,127 +338,164 @@ public final class ProxyClient {
      * @return {@code true} on success.
      */
     public static boolean connect(Context ctx) {
+        if (ctx == null) return false;
         // Cache the application context the very first time we are called from
         // any thread/site, so attemptReconnect() can bootstrap silently from
         // inside a typed verb (which has no Context parameter). Application
         // context is process-scoped → safe to hold statically.
-        if (ctx != null && sAppCtx == null) {
+        if (sAppCtx == null) {
             sAppCtx = ctx.getApplicationContext();
         }
         // Fast path: an already-live binder is reused without touching the daemon
         // process — critical to avoid the cascade of kill-and-respawn cycles that
         // froze the head unit in v1.1.6 (each respawn triggers a full
         // ActivityThread.systemMain() in app_process which is very heavy).
+        SingleFlight.Ticket<Boolean> ticket;
+        CountDownLatch binderSignal = null;
         synchronized (LOCK) {
             if (isConnected()) {
                 if (sDaemonUid < 0) handshake();
                 return true;
             }
-            // v1.6.102 — circuit-breaker for a permanently-dead self-ADB transport
-            // (e.g. D50F_LC: ADB-over-TCP off / app unprivileged). The keeper (10 s) and
-            // watchdog (30 s) both call connect(); without this each would pay a full
-            // blocking bootstrap every cycle, forever. When AdbLocalClient has classified
-            // the transport as unreachable, bail fast without bootstrapping — but still
-            // allow ONE real attempt every XPORT_RECHECK_MS so it self-heals if ADB-TCP
-            // is enabled later without restarting the app.
-            if (AdbLocalClient.isAdbTransportUnreachable()) {
-                long now = SystemClock.elapsedRealtime();
-                if (now - sLastDeadXportAttemptMs < XPORT_RECHECK_MS) {
+            ticket = sConnectSingleFlight.join();
+            if (!ticket.isLeader()) {
+                // The leader already owns receiver setup, bootstrap, metrics, and Binder wait.
+                // Drop LOCK before waiting so the broadcast receiver can publish the Binder.
+            } else {
+                // v1.6.102 — circuit-breaker for a permanently-dead self-ADB transport
+                // (e.g. D50F_LC: ADB-over-TCP off / app unprivileged). The keeper (10 s) and
+                // watchdog (30 s) both call connect(); without this each would pay a full
+                // blocking bootstrap every cycle, forever. When AdbLocalClient has classified
+                // the transport as unreachable, bail fast without bootstrapping — but still
+                // allow ONE real attempt every XPORT_RECHECK_MS so it self-heals if ADB-TCP
+                // is enabled later without restarting the app.
+                if (AdbLocalClient.isAdbTransportUnreachable()) {
+                    long now = SystemClock.elapsedRealtime();
+                    if (now - sLastDeadXportAttemptMs < XPORT_RECHECK_MS) {
+                        ticket.complete(false);
+                        return false;
+                    }
+                    sLastDeadXportAttemptMs = now;
+                }
+                // Arm the latch BEFORE registering the receiver so that a broadcast
+                // arriving immediately after registration (daemon already alive) finds
+                // a non-null latch and can count it down rather than being silently
+                // dropped. Both operations are inside LOCK so onReceive() cannot
+                // interleave, but creating the latch first is the safer ordering.
+                binderSignal = new CountDownLatch(1);
+                sBinderLatch = binderSignal;
+                try {
+                    ensureReceiverRegistered(ctx);
+                } catch (Throwable registrationError) {
+                    sBinderLatch = null;
+                    ticket.complete(false);
+                    AppLogger.e(TAG, "proxy receiver registration failed", registrationError);
                     return false;
                 }
-                sLastDeadXportAttemptMs = now;
-            }
-            // Arm the latch BEFORE registering the receiver so that a broadcast
-            // arriving immediately after registration (daemon already alive) finds
-            // a non-null latch and can count it down rather than being silently
-            // dropped. Both operations are inside LOCK so onReceive() cannot
-            // interleave, but creating the latch first is the safer ordering.
-            sBinderLatch = new CountDownLatch(1);
-            ensureReceiverRegistered(ctx);
-        }
-
-        AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
-        String bootMsg = bootstrap(ctx);
-        AppLogger.d(TAG, "bootstrap result: " + bootMsg);
-
-        // v1.2.78 — Couche 4: metric instrumentation + ERR_NO_APK fast-path.
-        // The bootstrap script returns one of:
-        //   "REBROADCAST <pid>"  → live daemon, trigger file touched
-        //   <nothing>            → cold spawn launched (app_process detached)
-        //   "ERR_NO_APK"         → PM has not indexed our APK yet (post-OTA race)
-        //   "ERR ..."            → ADB transport error
-        // The actual success/fail will be decided by the latch below, but the
-        // bootstrap-side outcome tells us WHY we are about to wait.
-        String upper = bootMsg == null ? "" : bootMsg.trim();
-        if (upper.startsWith("REBROADCAST")) {
-            ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
-        } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
-            ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_NO_APK);
-            // Force the next attemptReconnect to bypass cooldown — the PM
-            // race window is sub-second and a 1s+ wait wastes UX.
-            synchronized (LOCK) {
-                sLastReconnectAttemptMs = 0L;
-                sBackoffStep = 0;
             }
         }
 
-        // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
-        // arrives on the main thread, onReceive() tries to take LOCK to set
-        // sBinder, and would block until our await() times out. v1.1.7 hit
-        // exactly this deadlock: the broadcast was always 0 ms late because the
-        // receiver was blocked on us. CountDownLatch.await() does not release
-        // monitors the way Object.wait() does, so we have to drop LOCK manually.
-        //
-        // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
-        // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
-        // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
-        // the fallback am-start triggers quickly rather than blocking 15s.
-        // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
-        // on DiLink SoCs).
-        long waitMs = upper.startsWith("REBROADCAST") ? 5_000L : BROADCAST_WAIT_MS;
-        CountDownLatch latch;
-        synchronized (LOCK) { latch = sBinderLatch; }
-        try {
-            latch.await(waitMs, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-
-        synchronized (LOCK) {
-            // Late-arrival recovery: the receiver may have signalled just after
-            // the latch timed out — re-check rather than failing hard.
-            // 1.2.31 — isBinderAlive() (local check, 0 IPC) instead of
-            // pingBinder() (Binder roundtrip): the live binder cache is hooked
-            // via linkToDeath in the receiver above, so isBinderAlive is
-            // strictly equivalent here and avoids one IPC while holding LOCK.
-            if (sBinder == null || !sBinder.isBinderAlive()) {
-                AppLogger.w(TAG, "no live binder after " + waitMs
-                        + "ms (latch=" + (latch.getCount() == 0 ? "signalled" : "timed-out") + ")");
-                sBinder = null;
-                // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
-                if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
-                } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
-                }
+        if (!ticket.isLeader()) {
+            try {
+                return Boolean.TRUE.equals(ticket.await(CONNECT_JOIN_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (java.util.concurrent.TimeoutException timeout) {
+                AppLogger.w(TAG, "timed out joining in-flight daemon connect");
                 return false;
             }
-            handshake();
-            boolean ok = isConnected();
-            if (ok) {
-                AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
-                        + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
-                // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
-                // counted above and we shouldn't double-count it as a cold one).
-                if (!upper.startsWith("REBROADCAST")) {
-                    ProxyMetrics.inc(ctx, ProxyMetrics.K_COLD_SPAWNS);
+        }
+
+        boolean result = false;
+        try {
+            AppLogger.i(TAG, "bootstrapping daemon via AdbLocalClient");
+            String bootMsg = bootstrap(ctx);
+            AppLogger.d(TAG, "bootstrap result: " + bootMsg);
+
+            // v1.2.78 — Couche 4: metric instrumentation + ERR_NO_APK fast-path.
+            // The bootstrap script returns one of:
+            //   "REBROADCAST <pid>"  → live daemon, trigger file touched
+            //   <nothing>            → cold spawn launched (app_process detached)
+            //   "ERR_NO_APK"         → PM has not indexed our APK yet (post-OTA race)
+            //   "ERR ..."            → ADB transport error
+            // The actual success/fail will be decided by the latch below, but the
+            // bootstrap-side outcome tells us WHY we are about to wait.
+            String upper = bootMsg == null ? "" : bootMsg.trim();
+            if (upper.startsWith("REBROADCAST")) {
+                ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
+            } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
+                ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_NO_APK);
+                // Force the next attemptReconnect to bypass cooldown — the PM
+                // race window is sub-second and a 1s+ wait wastes UX.
+                synchronized (LOCK) {
+                    sLastReconnectAttemptMs = 0L;
+                    sBackoffStep = 0;
                 }
-                // v1.2.78 — reset backoff on success so the next failure starts
-                // at step 0 (1s) instead of inheriting the previous run's state.
-                sBackoffStep = 0;
             }
-            return ok;
+
+            // CRITICAL: await() must NOT be called while holding LOCK. The broadcast
+            // arrives on the main thread, onReceive() tries to take LOCK to set
+            // sBinder, and would block until our await() times out. v1.1.7 hit
+            // exactly this deadlock: the broadcast was always 0 ms late because the
+            // receiver was blocked on us. CountDownLatch.await() does not release
+            // monitors the way Object.wait() does, so we have to drop LOCK manually.
+            //
+            // v1.3.9 — REBROADCAST fast-path: when the daemon is already alive
+            // (REBROADCAST), the trigger file polling (1s) added in ProxyDaemonMain
+            // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
+            // the fallback am-start triggers quickly rather than blocking 15s.
+            // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
+            // on DiLink SoCs).
+            long waitMs = upper.startsWith("REBROADCAST") ? 5_000L : BROADCAST_WAIT_MS;
+            try {
+                binderSignal.await(waitMs, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+
+            synchronized (LOCK) {
+                // Late-arrival recovery: the receiver may have signalled just after
+                // the latch timed out — re-check rather than failing hard.
+                // 1.2.31 — isBinderAlive() (local check, 0 IPC) instead of
+                // pingBinder() (Binder roundtrip): the live binder cache is hooked
+                // via linkToDeath in the receiver above, so isBinderAlive is
+                // strictly equivalent here and avoids one IPC while holding LOCK.
+                if (sBinder == null || !sBinder.isBinderAlive()) {
+                    AppLogger.w(TAG, "no live binder after " + waitMs
+                            + "ms (latch=" + (binderSignal.getCount() == 0
+                            ? "signalled" : "timed-out") + ")");
+                    sBinder = null;
+                    // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
+                    if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
+                    } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
+                    }
+                    return false;
+                }
+                handshake();
+                result = isConnected();
+                if (result) {
+                    AppLogger.i(TAG, "daemon ready (uid=" + sDaemonUid
+                            + " pid=" + sDaemonPid + " ver=" + sDaemonVer + ")");
+                    // v1.2.78 — Couche 4: count cold spawn (REBROADCAST already
+                    // counted above and we shouldn't double-count it as a cold one).
+                    if (!upper.startsWith("REBROADCAST")) {
+                        ProxyMetrics.inc(ctx, ProxyMetrics.K_COLD_SPAWNS);
+                    }
+                    // v1.2.78 — reset backoff on success so the next failure starts
+                    // at step 0 (1s) instead of inheriting the previous run's state.
+                    sBackoffStep = 0;
+                }
+                return result;
+            }
+        } finally {
+            synchronized (LOCK) {
+                if (sBinderLatch == binderSignal) sBinderLatch = null;
+            }
+            ticket.complete(result);
         }
     }
 
