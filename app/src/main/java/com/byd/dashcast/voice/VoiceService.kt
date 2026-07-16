@@ -54,9 +54,6 @@ class VoiceService : Service() {
     private var mCaptureThread: Thread? = null
     private var mRecord: AudioRecord? = null
     @Volatile private var mErrorSignaled = false
-    // Pre-allocated level broadcast intent — reused on every 50ms tick.
-    // LocalBroadcastManager delivers synchronously so reuse is safe.
-    private val mLevelIntent = Intent(ACTION_LEVEL)
 
     // ─── Service lifecycle ─────────────────────────────────────────────────
 
@@ -193,12 +190,16 @@ class VoiceService : Service() {
             val now = SystemClock.elapsedRealtime()
             if (now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {
                 lastBroadcastAt = now
-                mLevelIntent.putExtra(EXTRA_RMS, rms)
-                mLevelIntent.putExtra(EXTRA_PEAK, peak)
-                mLevelIntent.putExtra(EXTRA_CLIP, clipCount)
-                mLevelIntent.putExtra(EXTRA_FRAMES, frameCount)
-                mLevelIntent.putExtra(EXTRA_RUN_MS, now - startedAt)
-                LocalBroadcastManager.getInstance(this).sendBroadcast(mLevelIntent)
+                // LocalBroadcastManager.sendBroadcast is asynchronous and retains the exact
+                // Intent reference in its pending queue. A fresh snapshot prevents the next
+                // 50 ms sample from overwriting extras before the main looper delivers this one.
+                val levelIntent = Intent(ACTION_LEVEL)
+                levelIntent.putExtra(EXTRA_RMS, rms)
+                levelIntent.putExtra(EXTRA_PEAK, peak)
+                levelIntent.putExtra(EXTRA_CLIP, clipCount)
+                levelIntent.putExtra(EXTRA_FRAMES, frameCount)
+                levelIntent.putExtra(EXTRA_RUN_MS, now - startedAt)
+                LocalBroadcastManager.getInstance(this).sendBroadcast(levelIntent)
             }
         }
         AppLogger.i(TAG, "Capture loop ended — frames=$frameCount clip=$clipCount")

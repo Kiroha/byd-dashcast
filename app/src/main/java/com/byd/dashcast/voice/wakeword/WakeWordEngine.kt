@@ -102,7 +102,6 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     private val mMelMap = HashMap<String, OnnxTensor>(2)
     private val mEmbMap = HashMap<String, OnnxTensor>(2)
     private val mWakeMap = HashMap<String, OnnxTensor>(2)
-    private val mScoreIntent = Intent(ACTION_WAKEWORD)
 
     // ─── perf: streaming inference state (worker-thread only) ──────────────────
     private val mMelFeed = FloatArray(AUDIO_BUFFER_LEN)                       // normalized audio fed to mel
@@ -591,15 +590,17 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private fun broadcastScore(score: Float, detected: Boolean) {
-        // Reuse mScoreIntent — LocalBroadcastManager delivers synchronously so reuse is safe.
-        mScoreIntent.putExtra(EXTRA_WW_SCORE, score)
-        mScoreIntent.putExtra(EXTRA_WW_LAST_MS, mLastDetectMs)
-        mScoreIntent.putExtra(EXTRA_WW_LABEL, MODEL_LABEL)
+        // LocalBroadcastManager retains this object until main-loop delivery, so every score needs
+        // its own snapshot. Reusing one Intent lets a later inference overwrite queued extras.
+        val scoreIntent = Intent(ACTION_WAKEWORD)
+        scoreIntent.putExtra(EXTRA_WW_SCORE, score)
+        scoreIntent.putExtra(EXTRA_WW_LAST_MS, mLastDetectMs)
+        scoreIntent.putExtra(EXTRA_WW_LABEL, MODEL_LABEL)
         // v1.2.80 — extra diag payload for the UI peak indicator.
-        mScoreIntent.putExtra(EXTRA_WW_PEAK_SCORE, mPeakScore)
-        mScoreIntent.putExtra(EXTRA_WW_PEAK_AGE_MS, if (mPeakAtMs == 0L) -1L
+        scoreIntent.putExtra(EXTRA_WW_PEAK_SCORE, mPeakScore)
+        scoreIntent.putExtra(EXTRA_WW_PEAK_AGE_MS, if (mPeakAtMs == 0L) -1L
                 else (SystemClock.elapsedRealtime() - mPeakAtMs))
-        LocalBroadcastManager.getInstance(mAppCtx).sendBroadcast(mScoreIntent)
+        LocalBroadcastManager.getInstance(mAppCtx).sendBroadcast(scoreIntent)
         // Detection beep / haptic etc. is the UI's responsibility — keep the
         // engine side-effect-free beyond the broadcast.
         if (detected) { /* no-op : flag is conveyed through ww_last_ms == now */ }
