@@ -787,5 +787,8 @@
     <string name="bug_shots_consent_yes">Qo\'shish</string>
     <string name="bug_shots_consent_no">Skrinshotsiz</string>
     <string name="settings_capture_shots">Xatolik hisobotlari uchun skrinshot olish</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD navigatsiyasi endi ishlab chiqarishda faol. Yordam berish uchun Google Maps / Waze bilan haydang va 🐞 tugmasi orqali xabar bering (navigatsiya paneli). Quyidagi vositalar (①②③) — R&amp;D, faqat so\'ralganda foydalaning.</string>
+    <string name="hud_prod_nudge">✅ Yuborildi. Ammo asl sinov endi bu — Google Maps / Waze bilan navigatsiya qiling va 🐞 «Xato haqida xabar berish» tugmasi orqali xabar bering.</string>
 </resources>
 

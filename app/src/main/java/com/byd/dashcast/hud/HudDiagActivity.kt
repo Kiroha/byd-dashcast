@@ -122,10 +122,21 @@ class HudDiagActivity : AppCompatActivity() {
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
+        // Production-steering banner (translated, 13 locales): the HUD nav feature is LIVE, so
+        // testers should DRIVE with Maps/Waze + report via the 🐞 button — not run these R&D tools.
+        root.addView(TextView(this).apply {
+            text = getString(R.string.hud_prod_banner)
+            textSize = 13f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setBackgroundColor(android.graphics.Color.argb(40, 33, 150, 243))
+        })
+
         root.addView(TextView(this).apply {
             text = "DiLink 3 HUD bench. Park first. HUD control is proven — these tools confirm it " +
                     "and decode the turn-by-turn guidance codes."
             textSize = 13f
+            setPadding(0, dp(10), 0, 0)
         })
         root.addView(TextView(this).apply {
             text = "Firmware HUD (inswver): ${firmwareLabel()}"
@@ -276,6 +287,7 @@ class HudDiagActivity : AppCompatActivity() {
                 runOnUiThread {
                     confirmBtn.isEnabled = true
                     bar.visibility = View.GONE
+                    showProdNudge()
                 }
             }
         }
@@ -391,9 +403,20 @@ class HudDiagActivity : AppCompatActivity() {
             } finally {
                 // Always restore the UI even if the zip/upload/diag work threw (bg's outer catch
                 // only logs) — otherwise the button stays disabled + spinner visible until recreate.
-                runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE }
+                runOnUiThread { benchBtn.isEnabled = true; bar.visibility = View.GONE; showProdNudge() }
             }
         }
+    }
+
+    /** After a bench/confirm upload, nudge the tester toward the LIVE feature (drive Maps/Waze +
+     *  report via 🐞) instead of these R&D tools. Translated (R.string.hud_prod_nudge). */
+    private fun showProdNudge() {
+        try {
+            AlertDialog.Builder(this)
+                .setMessage(getString(R.string.hud_prod_nudge))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        } catch (_: Throwable) { /* activity finishing — ignore */ }
     }
 
     // ── write helpers ───────────────────────────────────────────────────────

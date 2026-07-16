@@ -799,4 +799,7 @@
     <string name="bug_shots_consent_yes">Include</string>
     <string name="bug_shots_consent_no">Without captures</string>
     <string name="settings_capture_shots">Capture screenshots for bug reports</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD navigation is now LIVE in production. To help, DRIVE with Google Maps / Waze and report via the 🐞 button (nav rail). The tools below (①②③) are R&amp;D — use only when asked.</string>
+    <string name="hud_prod_nudge">✅ Sent. But the real test now is to navigate with Google Maps / Waze and report via the 🐞 Report a bug button.</string>
 </resources>

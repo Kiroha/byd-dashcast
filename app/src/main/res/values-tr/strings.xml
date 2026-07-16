@@ -786,4 +786,7 @@
     <string name="bug_shots_consent_yes">Ekle</string>
     <string name="bug_shots_consent_no">Görüntüsüz</string>
     <string name="settings_capture_shots">Hata raporları için ekran görüntüsü al</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD navigasyonu artık üretimde aktif. Yardımcı olmak için Google Maps / Waze ile sürüş yapın ve 🐞 düğmesi (navigasyon çubuğu) ile bildirin. Aşağıdaki araçlar (①②③) Ar-Ge içindir — yalnızca istendiğinde kullanın.</string>
+    <string name="hud_prod_nudge">✅ Gönderildi. Ama asıl test şimdi: Google Maps / Waze ile navigasyon yapın ve 🐞 Hata bildir düğmesiyle bildirin.</string>
 </resources>

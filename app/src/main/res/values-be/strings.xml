@@ -786,4 +786,7 @@
     <string name="bug_shots_consent_yes">Уключыць</string>
     <string name="bug_shots_consent_no">Без здымкаў</string>
     <string name="settings_capture_shots">Рабіць здымкі экрана для справаздач пра памылкі</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD-навігацыя цяпер працуе ў прадакшне. Каб дапамагчы, едзь з Google Maps / Waze і паведамляй праз кнопку 🐞 (панэль навігацыі). Інструменты ніжэй (①②③) — гэта R&amp;D, карыстайся імі толькі калі папросяць.</string>
+    <string name="hud_prod_nudge">✅ Адпраўлена. Але сапраўдны тэст цяпер — запусці навігацыю ў Google Maps / Waze і паведамі праз кнопку 🐞 Паведаміць пра памылку.</string>
 </resources>
