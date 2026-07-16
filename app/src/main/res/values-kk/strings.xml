@@ -786,4 +786,7 @@
     <string name="bug_shots_consent_yes">Қосу</string>
     <string name="bug_shots_consent_no">Скриншотсыз</string>
     <string name="settings_capture_shots">Қате туралы есептер үшін скриншот түсіру</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ HUD навигациясы енді өндірісте іске қосылды. Көмектесу үшін Google Maps / Waze-пен жүріп көріңіз де, 🐞 түймесі арқылы (навигация тақтасы) хабарлаңыз. Төмендегі құралдар (①②③) — R&amp;D үшін, тек сұралғанда ғана қолданыңыз.</string>
+    <string name="hud_prod_nudge">✅ Жіберілді. Бірақ нағыз сынақ енді — Google Maps / Waze-пен навигацияны қосып, 🐞 «Қате туралы хабарлау» түймесі арқылы хабарлаңыз.</string>
 </resources>

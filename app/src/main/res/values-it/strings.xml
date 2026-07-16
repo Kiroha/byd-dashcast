@@ -786,4 +786,7 @@
     <string name="bug_shots_consent_yes">Includi</string>
     <string name="bug_shots_consent_no">Senza schermate</string>
     <string name="settings_capture_shots">Acquisisci schermate per le segnalazioni di bug</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ La navigazione HUD è ora ATTIVA in produzione. Per aiutarci, GUIDA con Google Maps / Waze e segnala tramite il pulsante 🐞 (barra di navigazione). Gli strumenti qui sotto (①②③) sono di R&amp;D — usali solo se richiesto.</string>
+    <string name="hud_prod_nudge">✅ Inviato. Ma il vero test ora è navigare con Google Maps / Waze e segnalare tramite il pulsante 🐞 Segnala un bug.</string>
 </resources>

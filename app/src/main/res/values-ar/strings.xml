@@ -786,4 +786,7 @@
     <string name="bug_shots_consent_yes">تضمين</string>
     <string name="bug_shots_consent_no">بدون لقطات</string>
     <string name="settings_capture_shots">التقاط لقطات شاشة لتقارير الأخطاء</string>
+    <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
+    <string name="hud_prod_banner">✅ أصبحت ملاحة HUD الآن مُفعّلة في الإنتاج. للمساعدة، قُد باستخدام Google Maps / Waze وأبلغ عبر زر 🐞 (شريط التنقل). الأدوات أدناه (①②③) مخصّصة للبحث والتطوير — استخدمها فقط عند الطلب.</string>
+    <string name="hud_prod_nudge">✅ تم الإرسال. لكن الاختبار الحقيقي الآن هو التنقل باستخدام Google Maps / Waze والإبلاغ عبر زر 🐞 «الإبلاغ عن خطأ».</string>
 </resources>
