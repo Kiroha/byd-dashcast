@@ -366,7 +366,9 @@ class BugWizardActivity : Activity() {
         Thread({
             var toSend = reportFile
             try {
-                val work = File(cacheDir, "bugbundle_" + reportFile.nameWithoutExtension)
+                // Keep the "byd_bugreport_" prefix on the zip (work dir name = report base name) so
+                // the Telegram pull script's filename filter matches it exactly like the plain .txt.
+                val work = File(cacheDir, reportFile.nameWithoutExtension)
                 if (work.exists()) work.deleteRecursively()
                 work.mkdirs()
                 reportFile.copyTo(File(work, reportFile.name), overwrite = true)
