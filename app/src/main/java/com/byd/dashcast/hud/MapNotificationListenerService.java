@@ -13,6 +13,7 @@ import android.util.Log;
 import com.byd.dashcast.system.CanBusController;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.util.PackagePseudonymizer;
+import com.byd.dashcast.util.concurrent.LatestValueDispatcher;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,8 +22,6 @@ import java.security.SecureRandom;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,22 +58,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // → CanBusController.send* → ProxyClient binder round-trips + sendBroadcast)
     // run on this single-thread SERIAL executor so the system notification
     // dispatch thread never blocks on the daemon. Serial (not pooled) preserves
-    // guidance-frame order → CAN frames are never reordered. pendingNav coalesces
-    // bursts: only the latest queued nav state survives; stale frames are dropped.
+    // guidance-frame order → CAN frames are never reordered. LatestValueDispatcher
+    // keeps at most one drain task and one pending state during notification bursts.
     // appContext is the process-scoped application context (safe to retain — not
     // the service instance, so no leak).
-    private ExecutorService hudExecutor;
+    private LatestValueDispatcher<HudNavigationData> hudDispatcher;
     private volatile Context appContext;
-    private final AtomicReference<HudNavigationData> pendingNav = new AtomicReference<>();
-
-    /** Drains the newest queued nav state on the serial writer thread. */
-    private final Runnable navUpdateTask = () -> {
-        HudNavigationData d = pendingNav.getAndSet(null);
-        if (d == null) return;            // superseded by a newer frame — coalesced away
-        Context ctx = appContext;
-        if (ctx == null) return;          // service torn down between enqueue and drain
-        HudController.INSTANCE.updateNavigation(ctx, d);
-    };
 
     // Notification-level deduplication — avoid reprocessing identical notification content
     // (same pattern as OpenBYD MapNotificationListenerService lastNotification* fields).
@@ -427,22 +416,29 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     @Override
     public void onCreate() {
         super.onCreate();
-        appContext = getApplicationContext();
-        hudExecutor = Executors.newSingleThreadExecutor(r -> {
+        final Context processContext = getApplicationContext();
+        appContext = processContext;
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "hud-nav-writer");
             t.setDaemon(true);
             return t;
         });
+        hudDispatcher = new LatestValueDispatcher<>(executor,
+            data -> HudController.INSTANCE.updateNavigation(processContext, data));
     }
 
     @Override
     public void onDestroy() {
-        pendingNav.set(null);
-        ExecutorService ex = hudExecutor;
-        hudExecutor = null;
-        if (ex != null) ex.shutdownNow();
-        // appContext is the application context (process-scoped); leave it set so a
-        // task racing shutdownNow still has a valid context and NPEs are impossible.
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        hudDispatcher = null;
+        Context ctx = appContext;
+        appContext = null;
+        if (dispatcher != null && ctx != null) {
+            // close() drops queued guidance, waits behind any update already executing, then
+            // clears the HUD before gracefully terminating the writer. The Runnable captures
+            // only application Context, not this service instance.
+            dispatcher.close(() -> HudController.INSTANCE.closeNavigation(ctx));
+        }
         super.onDestroy();
     }
 
@@ -576,22 +572,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     // ─── HUD write dispatch (serial writer thread) ────────────────────────
 
     /**
-     * Queue a nav update on the serial HUD writer thread. Publishes the latest
-     * state and enqueues a drain task; if updates arrive faster than the daemon
-     * drains them, {@link #navUpdateTask} coalesces to the newest state (older
-     * frames dropped). Never blocks the notification dispatch thread. When the
-     * daemon is warm the task drains immediately → one write per update.
+     * Queue a nav update on the serial HUD writer thread. If updates arrive faster than the daemon
+     * drains them, only the newest pending state survives and at most one drain task stays queued.
      */
     private void postNavUpdate(HudNavigationData data) {
         if (data == null) return;
-        pendingNav.set(data);
-        ExecutorService ex = hudExecutor;
-        if (ex == null) return; // service torn down — nothing left to drive the HUD
-        try {
-            ex.execute(navUpdateTask);
-        } catch (RejectedExecutionException ignore) {
-            // Executor shutting down: drop this frame; teardown close resets the cluster.
-        }
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        if (dispatcher != null) dispatcher.submit(data);
     }
 
     /**
@@ -601,17 +588,15 @@ public final class MapNotificationListenerService extends NotificationListenerSe
      * rejects (service teardown) so the cluster never freezes on the last nav state.
      */
     private void postNavClose() {
-        pendingNav.set(null); // cancel any pending guidance frame (close wins)
         final Context ctx = appContext;
         if (ctx == null) return;
-        ExecutorService ex = hudExecutor;
-        if (ex == null) {
+        LatestValueDispatcher<HudNavigationData> dispatcher = hudDispatcher;
+        if (dispatcher == null) {
             HudController.INSTANCE.closeNavigation(ctx);
             return;
         }
-        try {
-            ex.execute(() -> HudController.INSTANCE.closeNavigation(ctx));
-        } catch (RejectedExecutionException ignore) {
+        if (!dispatcher.cancelPendingAndExecute(
+                () -> HudController.INSTANCE.closeNavigation(ctx))) {
             HudController.INSTANCE.closeNavigation(ctx);
         }
     }
