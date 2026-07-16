@@ -36,6 +36,7 @@ import com.byd.dashcast.infrastructure.task.TaskLocation;
 import com.byd.dashcast.infrastructure.task.TaskResizer;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
+import com.byd.dashcast.util.concurrent.LifecycleGate;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -113,6 +114,7 @@ public class ClusterService extends Service
     private Listener               mListener;
     private boolean                mProjectionActive = false;
     private volatile boolean       mDestroyed        = false;
+    private final LifecycleGate    mOperationGate    = new LifecycleGate();
     private LaunchCallback         mPendingDashboardCallback;
     private Runnable               mPendingLaunchRunnable;
 
@@ -277,10 +279,11 @@ public class ClusterService extends Service
 
     @Override
     public void onDestroy() {
+        mOperationGate.invalidate();
+        mDestroyed = true;
         super.onDestroy();
         sIsRunning = false;
         if (sInstance == this) sInstance = null;
-        mDestroyed = true;
         mListener  = null;
         // NOTE: the rolling screenshots are deliberately NOT wiped here — a tester often stops a
         // broken projection and THEN files the report, so the shots must survive the stop. They
@@ -520,7 +523,9 @@ public class ClusterService extends Service
      */
     public void findPackageLocation(final String packageName, final TaskLocationCallback callback) {
         if (callback == null) return;
+        final LifecycleGate.Token operation = mOperationGate.capture();
         sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
             TaskLocation location;
             try {
                 location = ProxyClient.findTaskLocationForPackage(packageName);
@@ -529,9 +534,10 @@ public class ClusterService extends Service
                         + ": " + t.getMessage());
                 location = TaskLocation.unknown();
             }
+            if (!operation.isValid()) return;
             final TaskLocation result = location;
             mMainHandler.post(() -> {
-                if (mDestroyed) return;
+                if (!operation.isValid()) return;
                 callback.onResult(result);
             });
         });
@@ -540,26 +546,29 @@ public class ClusterService extends Service
     private void moveTaskToDisplayInternal(final String packageName, final int targetDisplayId,
                                             final LaunchCallback callback,
                                             final boolean enforceOnly) {
+        final LifecycleGate.Token operation = mOperationGate.capture();
         if (PKG_FORCE_FRESH_LAUNCH.equals(packageName) && targetDisplayId > 0) {
             if (enforceOnly) {
                 AppLogger.d(TAG, "enforceTaskOnDisplay: skip force-fresh-launch pkg " + packageName);
                 return;
             }
             AppLogger.i(TAG, "moveTaskToDisplay: force fresh launch for " + packageName);
-            fallbackLaunch(packageName, targetDisplayId, callback);
+            fallbackLaunch(packageName, targetDisplayId, callback, operation);
             return;
         }
 
         sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
             try {
                 int taskId = findRunningTaskId(packageName);
+                if (!operation.isValid()) return;
                 if (taskId == -1) {
                     if (enforceOnly) {
                         AppLogger.d(TAG, "enforceTaskOnDisplay: no task yet for " + packageName);
                         return;
                     }
                     AppLogger.w(TAG, "moveTaskToDisplay: no task for " + packageName + " → fallback");
-                    fallbackLaunch(packageName, targetDisplayId, callback);
+                    fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
@@ -567,14 +576,15 @@ public class ClusterService extends Service
                     AppLogger.d(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
                             + ": method unavailable on ROM → "
                             + (enforceOnly ? "skip" : "fallback launch"));
-                    if (mDestroyed) return;
-                    if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback);
+                    if (!operation.isValid()) return;
+                    if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
                     return;
                 }
 
                 Class<?> atmClass  = Class.forName("android.app.ActivityTaskManager");
                 Object   iatm      = atmClass.getMethod("getService").invoke(null);
                 Class<?> iAtmClass = iatm.getClass();
+                if (!operation.isValid()) return;
                 iAtmClass.getMethod("moveTaskToDisplay", int.class, int.class)
                         .invoke(iatm, taskId, targetDisplayId);
                 AppLogger.i(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
@@ -583,7 +593,9 @@ public class ClusterService extends Service
                 if (targetDisplayId > 0) {
                     try { Thread.sleep(300); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
+                        return;
                     }
+                    if (!operation.isValid()) return;
                     // WINDOWING_MODE_FREEFORM = 5
                     try {
                         iAtmClass.getMethod("setTaskWindowingMode",
@@ -595,6 +607,7 @@ public class ClusterService extends Service
                     }
                     // Apply inset bounds post-move
                     try {
+                        if (!operation.isValid()) return;
                         int insetH = getInsetH(packageName);
                         int insetV = getInsetV(packageName);
                         int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
@@ -612,7 +625,7 @@ public class ClusterService extends Service
                 }
 
                 mMainHandler.post(() -> {
-                    if (mDestroyed) return;
+                    if (!operation.isValid()) return;
                     if (callback != null) callback.onResult(true);
                 });
 
@@ -627,16 +640,17 @@ public class ClusterService extends Service
                     AppLogger.e(TAG, (enforceOnly ? "enforceTaskOnDisplay" : "moveTaskToDisplay")
                             + " error", e);
                 }
-                if (mDestroyed) return;
-                if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback);
+                if (!operation.isValid()) return;
+                if (!enforceOnly) fallbackLaunch(packageName, targetDisplayId, callback, operation);
             }
         });
     }
 
     private void fallbackLaunch(final String packageName, final int targetDisplayId,
-                                 final LaunchCallback callback) {
+                                 final LaunchCallback callback,
+                                 final LifecycleGate.Token operation) {
         mMainHandler.post(() -> {
-            if (mDestroyed) return;
+            if (!operation.isValid()) return;
             if (targetDisplayId > 0) {
                 launchOnDashboard(packageName, callback);
             } else {
@@ -651,6 +665,8 @@ public class ClusterService extends Service
     // ─────────────────────────────────────────────────────────────────────────
 
     public void launchOnDashboard(final String packageName, final LaunchCallback callback) {
+        final LifecycleGate.Token operation = mOperationGate.capture();
+        if (!operation.isValid()) return;
         AppLogger.log(TAG, "launchOnDashboard — 2s delay → " + packageName);
         if (mPendingLaunchRunnable != null) {
             mMainHandler.removeCallbacks(mPendingLaunchRunnable);
@@ -669,6 +685,7 @@ public class ClusterService extends Service
                 // so they must be cleared here (still on main) before the executor hop.
                 mPendingLaunchRunnable    = null;
                 mPendingDashboardCallback = null;
+                if (!operation.isValid()) return;
                 // Hop the whole cascade off the main thread. cleanFissionStacks() is a
                 // synchronous binder/proxy transact, applyForLaunch() does a shell round-trip
                 // and startActivityViaIAM() bootstraps the uid-2000 proxy daemon — none of that
@@ -676,14 +693,16 @@ public class ClusterService extends Service
                 // single-thread sMoveTaskExecutor keeps this launch serialized behind any
                 // in-flight moveTaskToDisplay task-move, so no new races are introduced.
                 sMoveTaskExecutor.execute(() -> {
+                if (!operation.isValid()) return;
                 final int displayId = mDisplayHelper.getKnownClusterDisplayId();
                 AppLogger.i(TAG, "Launching on display=" + displayId + " → " + packageName);
                 if (displayId <= 0) {
                     AppLogger.w(TAG, "launchOnDashboard: cluster display not ready (id="
                             + displayId + ") — aborting launch for " + packageName);
-                    postLaunchResult(callback, false);
+                    postLaunchResult(callback, false, operation);
                     return;
                 }
+                if (!operation.isValid()) return;
                 try {
                     String cleanLog = com.byd.dashcast.proxy.ProxyClient
                             .cleanFissionStacks(displayId);
@@ -691,22 +710,27 @@ public class ClusterService extends Service
                 } catch (Throwable ce) {
                     AppLogger.w(TAG, "cleanFissionStacks failed: " + ce.getMessage());
                 }
+                if (!operation.isValid()) return;
                 boolean needsDpiSettle = com.byd.dashcast.cluster.dpi.ClusterDpiManager
                         .applyForLaunch(ClusterService.this, packageName, displayId);
                 Runnable doLaunch = () -> {
+                    if (!operation.isValid()) return;
                     try {
                         android.content.Intent launchIntent =
                                 getPackageManager().getLaunchIntentForPackage(packageName);
                         if (launchIntent == null) {
                             AppLogger.e(TAG, "No launch intent for " + packageName);
-                            postLaunchResult(callback, false);
+                            postLaunchResult(callback, false, operation);
                             return;
                         }
                         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                                 | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         android.app.ActivityOptions opts = android.app.ActivityOptions.makeBasic();
                         opts.setLaunchDisplayId(displayId);
-                        if (displayId > 0) applyClusterFreeformBounds(opts, displayId, packageName);
+                        if (displayId > 0) {
+                            applyClusterFreeformBounds(opts, displayId, packageName, operation);
+                        }
+                        if (!operation.isValid()) return;
                         // ── DAEMON-PRIMARY launch (matches DaemonConfig: the uid-2000 proxy daemon
                         // is the DEFAULT privileged path in ALL modes; the app-side path is a fallback
                         // gated by use_legacy_path). Layout mode already launches via the daemon —
@@ -722,9 +746,9 @@ public class ClusterService extends Service
                         boolean daemonTried = false;
                         if (!legacyPath && ProxyClient.isConnected()) {
                             daemonTried = true;
-                            if (daemonLaunchSync(packageName, displayId, clW, clH)) {
+                            if (daemonLaunchSync(packageName, displayId, clW, clH, operation)) {
                                 AppLogger.i(TAG, "launchOnDashboard OK (daemon) → " + packageName);
-                                postLaunchResult(callback, true);
+                                postLaunchResult(callback, true, operation);
                                 return;
                             }
                             AppLogger.w(TAG, "daemon launch failed — falling back to app-side for " + packageName);
@@ -738,6 +762,7 @@ public class ClusterService extends Service
                         // Telenav / 195856 Waze — app shown but never tracked).
                         boolean iamOk;
                         boolean iamThrew = false;
+                        if (!operation.isValid()) return;
                         try {
                             iamOk = startActivityViaIAM(launchIntent, opts, displayId);
                         } catch (Throwable iamErr) {
@@ -746,27 +771,29 @@ public class ClusterService extends Service
                             iamOk = false;
                             iamThrew = true;
                         }
+                        if (!operation.isValid()) return;
                         if (!iamOk && !daemonTried && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
                             // DL5 app-side DENIED (cross-user) and the daemon was not tried yet
                             // (use_legacy_path ON, or daemon was down at decision time) — the daemon
                             // HOLDS the cross-user permission, so it is the only path that can land it.
                             AppLogger.w(TAG, "DL5: app-side launch failed — routing via proxy daemon launchAndForce");
-                            boolean ok = daemonLaunchSync(packageName, displayId, clW, clH);
+                                boolean ok = daemonLaunchSync(
+                                    packageName, displayId, clW, clH, operation);
                             AppLogger.i(TAG, "launchOnDashboard → daemon force path (ok=" + ok + ") → " + packageName);
-                            postLaunchResult(callback, ok);
+                                postLaunchResult(callback, ok, operation);
                         } else if (iamThrew) {
                             // Non-DL5 (DL3) and EVERY app-side attempt threw — a genuine failure.
                             AppLogger.e(TAG, "launchOnDashboard failed (app-side) → " + packageName);
-                            postLaunchResult(callback, false);
+                            postLaunchResult(callback, false, operation);
                         } else {
                             // iamOk==true, OR (non-DL5 && returned false = startActivity fallback
                             // launched it — the normal DL3 path). Report success so it is tracked.
                             AppLogger.i(TAG, "launchOnDashboard OK → " + packageName);
-                            postLaunchResult(callback, true);
+                            postLaunchResult(callback, true, operation);
                         }
                     } catch (Exception e) {
                         AppLogger.e(TAG, "launchOnDashboard error for " + packageName, e);
-                        postLaunchResult(callback, false);
+                        postLaunchResult(callback, false, operation);
                     }
                 };
                 // DPI settle delay is now applied on THIS background thread (ClusterDpiManager
@@ -779,7 +806,7 @@ public class ClusterService extends Service
                         Thread.currentThread().interrupt();
                     }
                 }
-                if (mDestroyed) return;
+                if (!operation.isValid()) return;
                 doLaunch.run();
                 });
             }
@@ -790,20 +817,26 @@ public class ClusterService extends Service
     public void launchOnDashboardWithBounds(final String packageName,
             final int left, final int top, final int right, final int bottom,
             final LaunchCallback callback) {
+        final LifecycleGate.Token operation = mOperationGate.capture();
+        if (!operation.isValid()) return;
         AppLogger.log(TAG, "launchOnDashboardWithBounds 500ms → " + packageName
                 + " [" + left + "," + top + "," + right + "," + bottom + "]");
         // Keep the 500ms schedule on the main handler (preserves timing + cancel semantics),
         // then hop the whole binder/proxy/shell cascade onto the shared single-thread move-task
         // executor so the main thread never blocks and launches stay serialized behind any
         // in-flight task-move.
-        mMainHandler.postDelayed(() -> sMoveTaskExecutor.execute(() -> {
+        mMainHandler.postDelayed(() -> {
+            if (!operation.isValid()) return;
+            sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
             final int displayId = mDisplayHelper.getKnownClusterDisplayId();
             if (displayId <= 0) {
                 AppLogger.w(TAG, "launchOnDashboardWithBounds: cluster display not ready (id="
                         + displayId + ") — aborting launch for " + packageName);
-                postLaunchResult(callback, false);
+                postLaunchResult(callback, false, operation);
                 return;
             }
+            if (!operation.isValid()) return;
             if (displayId > 0) {
                 try {
                     com.byd.dashcast.proxy.ProxyClient.cleanFissionStacks(displayId);
@@ -811,15 +844,17 @@ public class ClusterService extends Service
                     AppLogger.w(TAG, "cleanFissionStacks(WithBounds) failed: " + ce.getMessage());
                 }
             }
+            if (!operation.isValid()) return;
             boolean needsDpiSettle = com.byd.dashcast.cluster.dpi.ClusterDpiManager
                     .applyForLaunch(ClusterService.this, packageName, displayId);
             Runnable doLaunchWithBounds = () -> {
+                if (!operation.isValid()) return;
                 try {
                     android.content.Intent launchIntent =
                             getPackageManager().getLaunchIntentForPackage(packageName);
                     if (launchIntent == null) {
                         AppLogger.e(TAG, "launchOnDashboardWithBounds: no intent for " + packageName);
-                        postLaunchResult(callback, false);
+                        postLaunchResult(callback, false, operation);
                         return;
                     }
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -845,7 +880,9 @@ public class ClusterService extends Service
                     // Same chain as launchOnDashboard: IAM first, then the proxy daemon's
                     // launchAndForce cascade as the DL5 fallback (shell `am start --display`
                     // provably lands the app on display 0 on some DX_BYD_AUTO ROMs).
+                    if (!operation.isValid()) return;
                     boolean iamOkWB = startActivityViaIAM(launchIntent, opts, displayId);
+                    if (!operation.isValid()) return;
                     if (!iamOkWB && AdbLocalClient.isDiLink5Safe(ClusterService.this)) {
                         AppLogger.w(TAG, "DL5: IAM fell back to startActivity (WithBounds) — routing via proxy daemon launchAndForce");
                         int wbW = right - left, wbH = bottom - top;
@@ -855,17 +892,17 @@ public class ClusterService extends Service
                         // when the DL5 daemon launch actually failed, mistracking the app.
                         boolean okWB = daemonLaunchSync(packageName, displayId,
                                 wbW > 0 ? wbW : clusterWidthOr(1920),
-                                wbH > 0 ? wbH : clusterHeightOr(720));
+                            wbH > 0 ? wbH : clusterHeightOr(720), operation);
                         AppLogger.i(TAG, "launchOnDashboardWithBounds → daemon force path (ok="
                                 + okWB + ") → " + packageName);
-                        postLaunchResult(callback, okWB);
+                        postLaunchResult(callback, okWB, operation);
                     } else {
                         AppLogger.i(TAG, "launchOnDashboardWithBounds OK display=" + displayId);
-                        postLaunchResult(callback, true);
+                        postLaunchResult(callback, true, operation);
                     }
                 } catch (Exception e) {
                     AppLogger.e(TAG, "launchOnDashboardWithBounds error", e);
-                    postLaunchResult(callback, false);
+                    postLaunchResult(callback, false, operation);
                 }
             };
             // DPI settle delay applied on this background thread (see launchOnDashboard).
@@ -876,9 +913,10 @@ public class ClusterService extends Service
                     Thread.currentThread().interrupt();
                 }
             }
-            if (mDestroyed) return;
+            if (!operation.isValid()) return;
             doLaunchWithBounds.run();
-        }), 500);
+            });
+        }, 500);
     }
 
     /**
@@ -888,10 +926,11 @@ public class ClusterService extends Service
      * by {@link #fallbackLaunch} and moveTaskToDisplayInternal so we never call back into a
      * torn-down service.
      */
-    private void postLaunchResult(final LaunchCallback callback, final boolean success) {
+    private void postLaunchResult(final LaunchCallback callback, final boolean success,
+                                  final LifecycleGate.Token operation) {
         if (callback == null) return;
         mMainHandler.post(() -> {
-            if (mDestroyed) return;
+            if (!operation.isValid()) return;
             callback.onResult(success);
         });
     }
@@ -901,7 +940,9 @@ public class ClusterService extends Service
     // ─────────────────────────────────────────────────────────────────────────
 
     private void applyClusterFreeformBounds(android.app.ActivityOptions opts,
-                                             int displayId, String packageName) {
+                                             int displayId, String packageName,
+                                             LifecycleGate.Token operation) {
+        if (!operation.isValid()) return;
         try {
             java.lang.reflect.Method setWM = android.app.ActivityOptions.class
                     .getDeclaredMethod("setLaunchWindowingMode", int.class);
@@ -939,6 +980,7 @@ public class ClusterService extends Service
             AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
         }
         if (displayId > 0) {
+            if (!operation.isValid()) return;
             if (AdbLocalClient.isDiLink5Safe(this)) {
                 AppLogger.d(TAG, "DL5: skipping wm overscan (removed in API 30+)");
             } else {
@@ -1009,9 +1051,12 @@ public class ClusterService extends Service
     // main thread because launchAndForce blocks for several seconds.
     private void launchViaDaemonForce(final String packageName, final int displayId,
                                        final int width, final int height) {
+        final LifecycleGate.Token operation = mOperationGate.capture();
         sMoveTaskExecutor.execute(() -> {
+            if (!operation.isValid()) return;
             try {
                 if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
+                if (!operation.isValid()) return;
                 String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
                 // Log the FULL cascade result, not just the first line — we need to see
                 // whether moveRootTaskToDisplay / setTaskWindowingModeFreeform / resizeTask
@@ -1026,13 +1071,15 @@ public class ClusterService extends Service
             // app on the logical cluster display (visible in our preview) but never on the
             // physical cluster panel. Probe the AAOS `start-fixed-activity` mechanism — see the
             // method for details. No-op on DL3/DL5 fission ROMs.
-            tryClusterFixedActivityExperiment(displayId, packageName);
+            if (!operation.isValid()) return;
+            tryClusterFixedActivityExperiment(displayId, packageName, operation);
             // Post-launch verification: ~1.5 s after the cascade, dump what is actually on
             // the cluster display (package / visible / windowing mode / bounds) so the next
             // bug report shows whether the app stayed put and in which mode it rendered.
             // Runs on the diagnostic executor so its 1.5 s sleep never holds the move-task
             // worker (frees it immediately for a queued eviction / task-move).
-            sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName));
+                sDiagExecutor.execute(() -> verifyClusterDisplayState(
+                    displayId, packageName, operation));
         });
     }
 
@@ -1051,11 +1098,15 @@ public class ClusterService extends Service
      * success on a launch that system_server threw away.
      */
     private boolean daemonLaunchSync(final String packageName, final int displayId,
-                                      final int width, final int height) {
+                                      final int width, final int height,
+                                      final LifecycleGate.Token operation) {
+        if (!operation.isValid()) return false;
         boolean ok;
         try {
             if (!ProxyClient.isConnected()) ProxyClient.connect(ClusterService.this);
+            if (!operation.isValid()) return false;
             String log = ProxyClient.launchAndForce(packageName, null, displayId, width, height);
+            if (!operation.isValid()) return false;
             String low = (log == null) ? "" : log.toLowerCase(java.util.Locale.ROOT);
             // The daemon polls for the task after `am start` and appends its OWN verdict:
             // "FAIL: no task discovered for <pkg>" when nothing came up. That verdict is
@@ -1083,8 +1134,9 @@ public class ClusterService extends Service
             ok = false;
         }
         // AAOS-only experiment + post-launch verify — diagnostic, off the critical path.
-        tryClusterFixedActivityExperiment(displayId, packageName);
-        sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName));
+        if (!operation.isValid()) return false;
+        tryClusterFixedActivityExperiment(displayId, packageName, operation);
+        sDiagExecutor.execute(() -> verifyClusterDisplayState(displayId, packageName, operation));
         return ok;
     }
 
@@ -1093,10 +1145,13 @@ public class ClusterService extends Service
      * cluster display's top tasks and log them to the journal. Helps determine whether
      * the launched app stays on the display and in which windowing mode / bounds.
      */
-    private void verifyClusterDisplayState(final int displayId, final String packageName) {
+    private void verifyClusterDisplayState(final int displayId, final String packageName,
+                                           final LifecycleGate.Token operation) {
+        if (!operation.isValid()) return;
         try { Thread.sleep(1500); } catch (InterruptedException ie) {
             Thread.currentThread().interrupt(); return;
         }
+        if (!operation.isValid()) return;
         // v1.6.108 — decisive pump-vs-placement capture (INC-20260705-175936). The app is known
         // to reach the cluster display at the WM level; the open question is whether the OEM
         // fission container actually forwards a FOREIGN window on the composed cluster output
@@ -1116,6 +1171,7 @@ public class ClusterService extends Service
                 + "   | head -40";
         ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
+                if (!operation.isValid()) return;
                 boolean mirrorActive = mMirrorManager != null && mMirrorManager.isMirrorActive();
                 AppLogger.i(TAG, "DL5 post-launch display " + displayId + " state ("
                         + packageName + ") — in-app mirror active=" + mirrorActive
@@ -1124,6 +1180,7 @@ public class ClusterService extends Service
                         ? "(nothing on display " + displayId + ")" : out.trim()));
             }
             @Override public void onError(String err) {
+                if (!operation.isValid()) return;
                 AppLogger.w(TAG, "DL5 post-launch verify failed: " + err);
             }
         });
@@ -1143,7 +1200,9 @@ public class ClusterService extends Service
      * for the bug report. Gated to {@code FEATURE_AUTOMOTIVE} so DL3/DL5 fission ROMs — where the
      * normal launch already works — are left completely untouched.
      */
-    private void tryClusterFixedActivityExperiment(final int displayId, final String packageName) {
+    private void tryClusterFixedActivityExperiment(final int displayId, final String packageName,
+                                                   final LifecycleGate.Token operation) {
+        if (!operation.isValid()) return;
         if (displayId <= 0 || packageName == null || packageName.isEmpty()) return;
         if (!getPackageManager().hasSystemFeature(
                 android.content.pm.PackageManager.FEATURE_AUTOMOTIVE)) {
@@ -1157,13 +1216,16 @@ public class ClusterService extends Service
             + "ACT=${COMP#*/} ; case \"$ACT\" in .*) ACT=\"$PKG$ACT\" ;; esac ; "
             + "echo \"[exp] resolved=$COMP -> start-fixed-activity $DID $PKG $ACT\" ; "
             + "cmd car_service start-fixed-activity \"$DID\" \"$PKG\" \"$ACT\" 2>&1";
+        if (!operation.isValid()) return;
         ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
+                if (!operation.isValid()) return;
                 AppLogger.i(TAG, "AAOS start-fixed-activity experiment (" + packageName
                         + " → display " + displayId + "):\n"
                         + (out == null || out.trim().isEmpty() ? "(no output)" : out.trim()));
             }
             @Override public void onError(String err) {
+                if (!operation.isValid()) return;
                 AppLogger.w(TAG, "AAOS start-fixed-activity experiment error: " + err);
             }
         });
