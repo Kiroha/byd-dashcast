@@ -843,12 +843,28 @@ class MainActivity : AppCompatActivity(),
         // a relaunch would force-stop the running nav (INC-20260716-091016).
         if (pkgName == com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg
                 && (mClusterService?.displayId ?: -1) > 0) {
-            AppLogger.d(TAG, "onSendToDashboard: already boot-launched by service — show mirror only")
-            mCurrentDashboardPkg = pkgName
-            // Consume-once: from now on the normal mCurrentDashboardPkg guard governs this app, so a
-            // later switch-away-then-back correctly relaunches it (the static must not latch forever).
+            // Consume-once up front so a re-entrant/racing tap can't take this branch twice, and so a
+            // later switch-away-then-back is governed by the normal mCurrentDashboardPkg guard.
             com.byd.dashcast.cluster.ClusterService.sBootLaunchedPkg = null
-            startClusterMirror()
+            // The boot flow launched this app headlessly onto the cluster. If it is STILL on the
+            // cluster, just show the mirror — a relaunch would recreate the running nav
+            // (INC-20260716-091016). But if it has since left the cluster (crash, OEM nav takeover, or
+            // its task was moved away) the mirror would be blank/stale, so fall through to a normal
+            // launch instead. Presence is checked off the main thread (daemon/ADB finder chain).
+            svc.isPackageRunning(pkgName, object : ClusterService.LaunchCallback {
+                override fun onResult(present: Boolean) {
+                    if (isFinishing || isDestroyed) return
+                    if (present) {
+                        AppLogger.d(TAG, "onSendToDashboard: boot-launched task present — show mirror only")
+                        mCurrentDashboardPkg = pkgName
+                        startClusterMirror()
+                    } else {
+                        // Latch already cleared → this re-entry takes the normal launch path.
+                        AppLogger.i(TAG, "onSendToDashboard: boot-launched task gone from cluster — launching $pkgName")
+                        onSendToDashboard(app)
+                    }
+                }
+            })
             return
         }
 
