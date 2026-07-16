@@ -114,6 +114,7 @@ class ClusterMirrorManager {
         }
 
         // ── SurfaceControl mirror attempt ────────────────────────────────────
+        var transaction: SurfaceControl.Transaction? = null
         return try {
             ensureMirrorMethodsCached()
 
@@ -153,6 +154,7 @@ class ClusterMirrorManager {
 
             // 4. SurfaceControl Transaction (@hide methods — cached)
             val tx = SurfaceControl.Transaction()
+            transaction = tx
 
             sCachedSetDisplayLayerStack!!.invoke(tx, mMirrorDisplayToken, layerStack)
             sCachedSetDisplaySurface!!.invoke(tx, mMirrorDisplayToken, targetSurface)
@@ -169,6 +171,9 @@ class ClusterMirrorManager {
             AppLogger.e(TAG, "SurfaceControl mirror FAILED (ACCESS_SURFACE_FLINGER?) — use startMirrorViaDaemon()", e)
             destroyMirrorToken()
             false
+        } finally {
+            // close() releases only the local native transaction builder, not the applied state.
+            try { transaction?.close() } catch (ignored: Throwable) { }
         }
     }
 

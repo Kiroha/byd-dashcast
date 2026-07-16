@@ -43,7 +43,10 @@ public class FissionClient {
             binder.transact(MirrorDaemon.TRANSACT_ATTACH_SLOT, data, reply, 0);
             reply.readException();
             if (reply.readInt() != 1) return -1;
-            reply.readParcelable(Surface.class.getClassLoader()); // daemon-owned surface, advance parcel
+            Surface surface = reply.readParcelable(Surface.class.getClassLoader());
+            // Wire-compatible legacy field: the daemon owns the SurfaceView/VD. This client-side
+            // Parcel wrapper is unused and must release its native reference immediately.
+            if (surface != null) surface.release();
             int displayId = reply.readInt();
             AppLogger.d(TAG, "ATTACH_SLOT pkg=" + pkg + " → displayId=" + displayId);
             return displayId;
