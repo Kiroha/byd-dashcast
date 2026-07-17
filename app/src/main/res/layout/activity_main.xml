@@ -847,7 +847,7 @@
                                     android:layout_height="40dp"
                                     android:background="?attr/selectableItemBackgroundBorderless"
                                     android:src="@drawable/ic_arrow_back"
-                                    android:tint="@color/md_on_surface"
+                                    app:tint="@color/md_on_surface"
                                     android:contentDescription="@string/layout_mirror_previous"/>
 
                                 <TextView
@@ -867,7 +867,7 @@
                                     android:layout_height="40dp"
                                     android:background="?attr/selectableItemBackgroundBorderless"
                                     android:src="@drawable/ic_arrow_forward"
-                                    android:tint="@color/md_on_surface"
+                                    app:tint="@color/md_on_surface"
                                     android:contentDescription="@string/layout_mirror_next"/>
                             </LinearLayout>
 

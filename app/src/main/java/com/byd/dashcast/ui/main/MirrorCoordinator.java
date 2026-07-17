@@ -441,7 +441,7 @@ public final class MirrorCoordinator {
                     event.getXPrecision(), event.getYPrecision(),
                     event.getDeviceId(), event.getEdgeFlags(),
                     InputDevice.SOURCE_TOUCHSCREEN, event.getFlags());
-                FissionOrchestrator.injectSelectedLayoutMotion(mapped);
+            FissionOrchestrator.injectSelectedLayoutMotion(mapped);
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 AppLogger.d(TAG, "Layout touch pkg=" + mLayoutMirrorPackage
                         + " view=(" + (int) event.getX() + "," + (int) event.getY() + ")"

@@ -47,6 +47,12 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <!-- Cluster Resize fills the window with md_background. Paint it once at
+         the window level instead of drawing the same full-screen root layer. -->
+    <style name="ClusterResizeTheme" parent="@style/AppTheme.NoActionBar">
+        <item name="android:windowBackground">@color/md_background</item>
+    </style>
+
     <!--
         v1.2.16 — KeyboardBridge theme. Must be *floating* so that
         Window.setLayout(wPx,hPx) + Gravity.BOTTOM|END are honoured;
