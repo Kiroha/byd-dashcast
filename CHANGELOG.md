@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.135-beta (versionCode 576)
+
+Race-safe background optimization after 1.6.134-beta. Mirror startup no longer waits for its diagnostic SurfaceFlinger dump, while the M7 evidence remains available through a bounded asynchronous audit. Screenshot capture, pull, prune, and clear operations are now ordered on one worker; successful daemon pruning suppresses redundant shell work without removing the failed-capture fallback, disabling capture cannot leave a late JPEG behind, and report bundling cannot pull a partially written file. The visible Hotspot page collects service state and clients in one snapshot, avoids rebuilding unchanged rows, rejects callbacks from paused Activity generations, and prevents duplicate shell probes across pause/resume. Voice telemetry also removes repeated singleton and clock work while hidden.
+
+See the [complete English 1.6.135-beta release notes](docs/releases/1.6.135-beta.md) for every change since 1.6.134-beta, the confirmed race analyses, fallback and compatibility guarantees, validation evidence, deferred high-risk candidates, APK identity, and suggested vehicle checks.
+
 ### 1.6.134-beta (versionCode 575)
 
 Full-application runtime optimization after 1.6.133-beta. Startup storage hygiene now runs once per process, launcher shortcut discovery collapses its normal N Binder calls into one vendor-safe query, and cluster task lookup uses the existing typed daemon ATM verb before either dumpsys fallback. The Journal now applies generation- and eviction-safe incremental updates, wake-word PCM transfer and ONNX outputs avoid the largest lock-held loops and nested output allocations, high-frequency voice diagnostics are demand-gated, screenshot cleanup avoids a redundant shell round trip, and Cluster Resize reuses its fixed gesture-exclusion rectangles. The release also includes four focused policy/copy test suites and the complete 51k-line application audit, while deliberately deferring R8, structural layout rewrites, and behavior-sensitive polling changes.
