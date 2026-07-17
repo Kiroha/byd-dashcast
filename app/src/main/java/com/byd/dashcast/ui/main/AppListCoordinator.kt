@@ -161,6 +161,7 @@ class AppListCoordinator(
     /** Updates the set of packages projected via a fission layout. */
     fun setLayoutPackages(pkgs: Set<String>?) {
         mAdapter.setLayoutPackages(pkgs)
+        updateFavoritesIndicators()
     }
 
     fun getApps(): List<AppInfo> = mAdapter.getApps()
@@ -224,12 +225,13 @@ class AppListCoordinator(
         val strip = mLlFavoritesStrip ?: return
         val curPkg = mAdapter.getCurrentPackage()
         val mainPkg = mAdapter.getMainPackage()
+        val layoutPkgs = mAdapter.getLayoutPackages()
         for (i in 0 until strip.childCount) {
             val tile = strip.getChildAt(i)
             val tag = tile.tag
             if (tag !is String) continue
             val ind = tile.findViewById<View>(R.id.view_fav_active_indicator) ?: continue
-            val active = tag == curPkg || tag == mainPkg
+            val active = AppProjectionIndicator.isActive(tag, curPkg, mainPkg, layoutPkgs)
             ind.visibility = if (active) View.VISIBLE else View.GONE
         }
     }

@@ -18,6 +18,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.byd.dashcast.R
 import com.byd.dashcast.model.AppInfo
+import com.byd.dashcast.ui.main.AppProjectionIndicator
 import java.util.Locale
 
 @SuppressLint("SetTextI18n")
@@ -261,9 +262,12 @@ class AppListAdapter(
         // the classic move-to-main/cluster buttons (their ClusterService path is unaware of
         // the fission VD slots).
         val isLayout = mLayoutPackages.contains(app.packageName)
+        val showActiveIndicator = AppProjectionIndicator.isActive(
+            app.packageName, mCurrentPackage, mMainPackage, mLayoutPackages
+        )
 
         holder.viewActiveIndicator?.visibility =
-            if (isActive || isOnMain || isLayout) View.VISIBLE else View.GONE
+            if (showActiveIndicator) View.VISIBLE else View.GONE
         // In grid mode keep tiles minimal; all actions live in the long-press bottom sheet.
         if (mIsGridMode) {
             holder.btnToMain?.visibility = View.GONE
