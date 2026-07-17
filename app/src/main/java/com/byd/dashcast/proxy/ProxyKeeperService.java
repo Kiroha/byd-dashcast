@@ -85,6 +85,7 @@ public final class ProxyKeeperService extends Service {
         mHandler = new Handler(mThread.getLooper());
         mRunning = true;
         mHandler.post(mTick);
+        ProxyWatchdog.noteKeeperStarted();
         AppLogger.i(TAG, "started (heartbeat=" + HEARTBEAT_MS + "ms)");
     }
 
@@ -101,6 +102,7 @@ public final class ProxyKeeperService extends Service {
         if (mHandler != null) mHandler.removeCallbacksAndMessages(null);
         if (mThread != null) mThread.quitSafely();
         mArmExecutor.shutdownNow();
+        ProxyWatchdog.noteKeeperStopped();
         AppLogger.i(TAG, "stopped");
         super.onDestroy();
     }
