@@ -32,7 +32,7 @@
     <string name="status_restoring_origin">Restauration cluster d\'origine…</string>
     <string name="status_dashboard_byd">Projection prête — choisissez une application</string>
     <string name="status_dashboard_app">Dashboard : %1$s</string>
-    <string name="toast_app_incompatible">%1$s : échec lancement (voir LOG)</string>
+    <string name="toast_app_launch_failed">%1$s : échec du lancement sur le cluster (voir Journal)</string>
     <string name="toast_app_already_cluster">App déjà sur le cluster</string>
     <string name="toast_restore_failed">Échec restauration : %1$s</string>
     <string name="toast_origin_failed">Échec restauration cluster d\'origine : %1$s</string>

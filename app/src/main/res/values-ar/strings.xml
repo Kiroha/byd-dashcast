@@ -28,7 +28,7 @@
     <string name="status_restoring_origin">استعادة العنقود الأصلي…</string>
     <string name="status_dashboard_byd">العرض جاهز — اختر تطبيقًا</string>
     <string name="status_dashboard_app">اللوحة: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: غير مثبت أو غير متوافق مع الشاشات المتعددة</string>
+    <string name="toast_app_launch_failed">%1$s: فشل التشغيل على لوحة العدادات (راجع السجل)</string>
     <string name="toast_app_already_cluster">التطبيق موجود بالفعل على العنقود</string>
     <string name="toast_restore_failed">فشل الاستعادة: %1$s</string>
     <string name="toast_origin_failed">فشل استعادة العنقود الأصلي: %1$s</string>

@@ -32,7 +32,7 @@
     <string name="status_restoring_origin">Restoring original cluster…</string>
     <string name="status_dashboard_byd">Projection ready — pick an app</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: not installed or incompatible with multi-display</string>
+    <string name="toast_app_launch_failed">%1$s: cluster launch failed (see Log)</string>
     <string name="toast_app_already_cluster">App already on the cluster</string>
     <string name="toast_restore_failed">Restore failed: %1$s</string>
     <string name="toast_origin_failed">Original cluster restore failed: %1$s</string>

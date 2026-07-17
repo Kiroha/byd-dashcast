@@ -981,7 +981,7 @@ class MainActivity : AppCompatActivity(),
                         mSessionTracker.add(pkgName)
                         updateControlLabel()
                     } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_incompatible, appName), Toast.LENGTH_LONG).show()
+                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
                     }
                 }
             })
@@ -1025,7 +1025,7 @@ class MainActivity : AppCompatActivity(),
                         }, 2500L)
                         mInsetApplicator.apply(pkgName)
                     } else {
-                        Toast.makeText(applicationContext, getString(R.string.toast_app_incompatible, appName), Toast.LENGTH_LONG).show()
+                        Toast.makeText(applicationContext, getString(R.string.toast_app_launch_failed, appName), Toast.LENGTH_LONG).show()
                     }
                 }
             })
