@@ -34,6 +34,8 @@ import com.byd.dashcast.ui.nav.NavRailLayouts
 import com.byd.dashcast.ui.settings.SettingsActivity
 import com.byd.dashcast.update.TetherFiUpdateChecker
 import com.byd.dashcast.util.AppLogger
+import com.byd.dashcast.util.concurrent.AsyncOperationGate
+import com.byd.dashcast.util.concurrent.GenerationGate
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import java.text.SimpleDateFormat
@@ -71,11 +73,9 @@ class HotspotActivity : AppCompatActivity() {
 
     // ── Watchdog runtime state ───────────────────────────────────────────────
     private val watchdogHandler = Handler(Looper.getMainLooper())
-    // @Volatile: set true on the main thread in watchdogTick, set false on the AdbLocalClient
-    // callback thread (onSuccess/onError) before the runOnUiThread hop. Without it a stale
-    // true read on the main thread can make a tick skip a cycle (self-heals next tick).
-    @Volatile
-    private var watchdogProbeInFlight = false
+    // Physical single-flight survives pause/resume; lifecycle generation separately decides
+    // whether the eventual callback may update this Activity or trigger a local restart.
+    private val watchdogOperationGate = AsyncOperationGate()
     private var lastRestartElapsed = -1L
     private var watchdogRestarts = 0
     private var watchdogChecks = 0
@@ -87,6 +87,10 @@ class HotspotActivity : AppCompatActivity() {
     private var upStartElapsed = -1L
     private var rxBaseline = -1L
     private var txBaseline = -1L
+    private var renderedClients: List<HClient>? = null
+    private val statsGate = GenerationGate()
+    private val watchdogGate = GenerationGate()
+    private val statsOperationGate = AsyncOperationGate()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -177,6 +181,7 @@ class HotspotActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        statsGate.invalidate()
         refreshTetherFiStatus()
         // Re-check upstream on every resume (cheap, ~10 KB JSON).
         checkForTetherFiUpdate()
@@ -194,6 +199,7 @@ class HotspotActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        statsGate.invalidate()
         statsHandler.removeCallbacks(statsTick)
         uptimeHandler.removeCallbacks(uptimeTick)
         // Also cancel the TetherFi watchdog. It self-reposts every WATCHDOG_PERIOD_MS and was
@@ -329,6 +335,7 @@ class HotspotActivity : AppCompatActivity() {
     // ── Watchdog ─────────────────────────────────────────────────────────────
 
     private fun startWatchdog() {
+        watchdogGate.invalidate()
         watchdogRestarts = 0
         watchdogChecks = 0
         lastRestartElapsed = -1L
@@ -338,8 +345,8 @@ class HotspotActivity : AppCompatActivity() {
     }
 
     private fun stopWatchdog(userInitiated: Boolean) {
+        watchdogGate.invalidate()
         watchdogHandler.removeCallbacksAndMessages(null)
-        watchdogProbeInFlight = false
         if (userInitiated) {
             tvWatchdogStatus?.text = getString(R.string.hotspot_watchdog_idle)
         }
@@ -347,7 +354,7 @@ class HotspotActivity : AppCompatActivity() {
 
     private val watchdogTick = object : Runnable {
         override fun run() {
-            if (watchdogProbeInFlight) {
+            if (watchdogOperationGate.isInFlight()) {
                 watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
                 return
             }
@@ -356,22 +363,36 @@ class HotspotActivity : AppCompatActivity() {
                 swWatchdog?.isChecked = false
                 return
             }
-            watchdogProbeInFlight = true
+            val operation = watchdogOperationGate.tryStart() ?: run {
+                watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
+                return
+            }
             watchdogChecks++
             val probeId = watchdogChecks
+            val generation = watchdogGate.capture()
             // Echo UP/DOWN so we always come back through onSuccess().
             val cmd = "dumpsys activity services $TF_PKG" +
                 " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN"
             ShellGateway.execShellWithResult(this@HotspotActivity, cmd, object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
-                    watchdogProbeInFlight = false
+                    if (!watchdogOperationGate.complete(operation)) return
+                    if (!watchdogGate.isCurrent(generation)) return
                     val up = out != null && out.contains("UP")
-                    runOnUiThread { handleWatchdogResult(probeId, up, null) }
+                    runOnUiThread {
+                        if (watchdogGate.isCurrent(generation)) {
+                            handleWatchdogResult(probeId, up, null)
+                        }
+                    }
                 }
 
                 override fun onError(err: String?) {
-                    watchdogProbeInFlight = false
-                    runOnUiThread { handleWatchdogResult(probeId, false, err) }
+                    if (!watchdogOperationGate.complete(operation)) return
+                    if (!watchdogGate.isCurrent(generation)) return
+                    runOnUiThread {
+                        if (watchdogGate.isCurrent(generation)) {
+                            handleWatchdogResult(probeId, false, err)
+                        }
+                    }
                 }
             })
             watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
@@ -441,22 +462,46 @@ class HotspotActivity : AppCompatActivity() {
 
     private val statsTick = object : Runnable {
         override fun run() {
-            // Fire a lightweight probe of our own so the stats card works even
-            // when the user has the watchdog auto-restart switch OFF.
+            val operation = statsOperationGate.tryStart()
+            if (operation == null) {
+                statsHandler.postDelayed(this, STATS_PERIOD_MS)
+                return
+            }
+            val generation = statsGate.capture()
+            // One shell round trip supplies both service state and clients. The watchdog keeps
+            // its independent probe/restart contract; this snapshot only drives visible stats.
             val cmd = "dumpsys activity services $TF_PKG" +
-                " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN"
+                " 2>/dev/null | grep -q ProxyForegroundService" +
+                " && echo '${HotspotStatsPayload.STATE_UP}'" +
+                " || echo '${HotspotStatsPayload.STATE_DOWN}'; " +
+                "echo '${HotspotStatsPayload.CLIENTS}'; " +
+                "dumpsys wifip2p 2>/dev/null; " +
+                "echo '===ARP==='; " +
+                "cat /proc/net/arp 2>/dev/null; " +
+                "echo '===NEIGH==='; " +
+                "ip neigh show 2>/dev/null"
             ShellGateway.execShellWithResult(this@HotspotActivity, cmd, object : AdbLocalClient.Callback {
                 override fun onSuccess(out: String?) {
-                    val up = out != null && out.contains("UP")
-                    runOnUiThread { onProbeTransition(up); refreshStats() }
+                    if (!statsOperationGate.complete(operation)) return
+                    if (!statsGate.isCurrent(generation)) return
+                    val snapshot = HotspotStatsPayload.parse(out)
+                    val clients = snapshot?.let { parseClients(it.clientsOutput) }
+                    runOnUiThread {
+                        if (!statsGate.isCurrent(generation)) return@runOnUiThread
+                        if (snapshot != null) onProbeTransition(snapshot.serviceUp)
+                        if (clients != null) renderClients(clients)
+                        refreshStats()
+                    }
                 }
 
                 override fun onError(err: String?) {
-                    runOnUiThread { refreshStats() }
+                    if (!statsOperationGate.complete(operation)) return
+                    if (!statsGate.isCurrent(generation)) return
+                    runOnUiThread {
+                        if (statsGate.isCurrent(generation)) refreshStats()
+                    }
                 }
             })
-            // Clients enumeration runs alongside the presence probe.
-            refreshClients()
             statsHandler.postDelayed(this, STATS_PERIOD_MS)
         }
     }
@@ -502,31 +547,14 @@ class HotspotActivity : AppCompatActivity() {
 
     // ── Clients enumeration (v1.2.44) ─────────────────────────────────────────
 
-    private fun refreshClients() {
-        // v1.2.44 — combine three reads in one ADB roundtrip; use sentinel separators.
-        val cmd = "dumpsys wifip2p 2>/dev/null; " +
-            "echo '===ARP==='; " +
-            "cat /proc/net/arp 2>/dev/null; " +
-            "echo '===NEIGH==='; " +
-            "ip neigh show 2>/dev/null"
-        ShellGateway.execShellWithResult(this, cmd, object : AdbLocalClient.Callback {
-            override fun onSuccess(out: String?) {
-                val list = parseClients(out)
-                runOnUiThread { renderClients(list) }
-            }
-
-            override fun onError(err: String?) {
-                // Keep last render on transient ADB errors.
-            }
-        })
-    }
-
     // Clients count is a plain integer (no localizable text) — String.valueOf in
     // the original Java; .toString() trips SetTextI18n on the newer Kotlin lint.
     @SuppressLint("SetTextI18n")
     private fun renderClients(clients: List<HClient>) {
         val list = llClientsList ?: return
         val count = tvClientsCount ?: return
+        if (clients == renderedClients) return
+        renderedClients = clients
         count.text = clients.size.toString()
         list.removeAllViews()
         if (clients.isEmpty()) {
@@ -581,7 +609,7 @@ class HotspotActivity : AppCompatActivity() {
 
     private fun dp(v: Int): Int = Math.round(v * resources.displayMetrics.density)
 
-    private class HClient(val mac: String, val name: String?, val ip: String?)
+    private data class HClient(val mac: String, val name: String?, val ip: String?)
 
     companion object {
         private const val TAG = "HotspotActivity"

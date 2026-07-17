@@ -27,6 +27,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
 import com.byd.dashcast.util.concurrent.DeathLease;
+import com.byd.dashcast.util.concurrent.BoundedSerialExecutor;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
@@ -34,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import android.annotation.SuppressLint;
 import java.util.concurrent.atomic.AtomicReference;
@@ -158,6 +160,14 @@ public class MirrorDaemon {
     private static volatile Method  sInjectMethod    = null;
     private static volatile Method  sSetDisplayId    = null;  // MotionEvent.setDisplayId — may be null
     private static volatile Method  sSetDisplayIdKey = null;  // KeyEvent.setDisplayId    — may be null (v1.2.11)
+
+    /** Keeps the M7 SurfaceFlinger evidence without blocking mirror startup or queuing stale dumps. */
+    private static final BoundedSerialExecutor sMirrorAuditExecutor =
+            new BoundedSerialExecutor(1, runnable -> {
+                Thread thread = new Thread(runnable, "mirror-sf-audit");
+                thread.setDaemon(true);
+                return thread;
+            });
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -474,34 +484,7 @@ public class MirrorDaemon {
 
             tx.apply();
             Log.i(TAG, "setupMirror : tx.apply() OK");
-
-            // 4. Post-setup verification via dumpsys SurfaceFlinger
-            Process p = null;
-            try {
-                p = Runtime.getRuntime().exec(
-                        new String[]{"sh", "-c",
-                                "dumpsys SurfaceFlinger 2>/dev/null"
-                                + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
-                StringBuilder sb = new StringBuilder();
-                try (java.io.BufferedReader br = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(p.getInputStream()))) {
-                    String line;
-                    while ((line = br.readLine()) != null) sb.append(line).append('\n');
-                }
-                // Audit batch 1 — also close stderr/stdin so the Process doesn't
-                // keep file descriptors open until GC (previously leaked one FD per setupMirror).
-                try { p.getErrorStream().close(); } catch (Exception ignored) { }
-                try { p.getOutputStream().close(); } catch (Exception ignored) { }
-                p.waitFor();
-                Log.i(TAG, "setupMirror SF dump :\n" + sb.toString().trim());
-                out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
-                        + (sb.length() == 0 ? "(empty — token NOT in SurfaceFlinger!)" : sb.toString().trim()));
-            } catch (Exception e) {
-                Log.d(TAG, "SF dump read failed: " + e.getMessage());
-                out("setupMirror SF dump read failed: " + e.getMessage());
-            } finally {
-                if (p != null) { try { p.destroy(); } catch (Exception ignored) { } }
-            }
+            scheduleSurfaceFlingerAudit(layerStack);
 
             Log.i(TAG, "setupMirror ✓ (Transaction) layerStack=" + layerStack
                     + " src=" + clusterW + "×" + clusterH
@@ -523,6 +506,45 @@ public class MirrorDaemon {
             // Safe after apply(): close releases only this native transaction builder. Keeping it
             // in finally also covers reflection failures between construction and apply().
             if (tx != null) try { tx.close(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static void scheduleSurfaceFlingerAudit(int layerStack) {
+        try {
+            sMirrorAuditExecutor.execute(() -> auditMirrorInSurfaceFlinger(layerStack));
+        } catch (RejectedExecutionException queueFull) {
+            out("setupMirror SF dump skipped: previous audit still queued");
+        }
+    }
+
+    private static void auditMirrorInSurfaceFlinger(int layerStack) {
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(
+                    new String[]{"sh", "-c",
+                            "dumpsys SurfaceFlinger 2>/dev/null"
+                            + " | grep -iE 'byd_myapp_mirror|layerStack=" + layerStack + "'"});
+            StringBuilder output = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) output.append(line).append('\n');
+            }
+            try { process.getErrorStream().close(); } catch (Exception ignored) { }
+            try { process.getOutputStream().close(); } catch (Exception ignored) { }
+            process.waitFor();
+            Log.i(TAG, "setupMirror SF dump :\n" + output.toString().trim());
+            out("setupMirror SF dump (layerStack=" + layerStack + "):\n"
+                    + (output.length() == 0
+                    ? "(empty — token NOT in SurfaceFlinger!)" : output.toString().trim()));
+        } catch (Exception error) {
+            if (error instanceof InterruptedException) Thread.currentThread().interrupt();
+            Log.d(TAG, "SF dump read failed: " + error.getMessage());
+            out("setupMirror SF dump read failed: " + error.getMessage());
+        } finally {
+            if (process != null) {
+                try { process.destroy(); } catch (Exception ignored) { }
+            }
         }
     }
 
