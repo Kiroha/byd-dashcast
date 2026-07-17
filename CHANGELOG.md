@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.131-beta (versionCode 572)
+
+Visible Layout activity state and switchable tactile mirrors after 1.6.130-beta. Based on `INC-20260717-153708`, Layout-launched applications now show the green active bar in both the app list and Favorites. Main can directly mirror and control a headlessly created Layout slot, select a running Layout app by tapping its tile, and cycle previous/next from an overlay that remains available in fullscreen. Video uses the slot's resolved layer stack, touch targets its display ID, multi-touch coordinates are mapped to the slot's real dimensions, and the selected task receives best-effort focus. Successful `launchAndForce` cascades also stop producing false non-OK warnings.
+
+See the [complete English 1.6.131-beta release notes](docs/releases/1.6.131-beta.md) for the incident evidence, indicator fix, slot-selection behavior, tactile mirror architecture, lifecycle details, validation results, compatibility notes, and suggested vehicle checks.
+
 ### 1.6.130-beta (versionCode 571)
 
 Reliable automatic Layout ownership and DiLink 3 application-launch recovery after 1.6.129-beta. This release fixes `INC-20260717-122902` and `INC-20260717-175749`: Automatic favourite Layout now takes priority over a standalone app's Auto-launch at start setting, a sole usable saved Layout can repair a missing favourite, returning from Settings/Layout Manager re-evaluates startup immediately, and failed attempts can retry. On affected DiLink 3 ROMs, the known `ActivityStack.getBounds()` FREEFORM-stack crash now triggers a second stack cleanup before a plain launch. The misleading "not installed or incompatible with multi-display" message is replaced by an accurate launch-failure message in all 13 locales.
