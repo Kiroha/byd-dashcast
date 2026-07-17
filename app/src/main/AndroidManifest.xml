@@ -225,7 +225,7 @@
             android:screenOrientation="landscape"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
-            android:theme="@style/AppTheme.NoActionBar"/>
+            android:theme="@style/ClusterResizeTheme"/>
 
         <!-- Full system report screen -->
         <activity
