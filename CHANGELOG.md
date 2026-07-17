@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.134-beta (versionCode 575)
+
+Full-application runtime optimization after 1.6.133-beta. Startup storage hygiene now runs once per process, launcher shortcut discovery collapses its normal N Binder calls into one vendor-safe query, and cluster task lookup uses the existing typed daemon ATM verb before either dumpsys fallback. The Journal now applies generation- and eviction-safe incremental updates, wake-word PCM transfer and ONNX outputs avoid the largest lock-held loops and nested output allocations, high-frequency voice diagnostics are demand-gated, screenshot cleanup avoids a redundant shell round trip, and Cluster Resize reuses its fixed gesture-exclusion rectangles. The release also includes four focused policy/copy test suites and the complete 51k-line application audit, while deliberately deferring R8, structural layout rewrites, and behavior-sensitive polling changes.
+
+See the [complete English 1.6.134-beta release notes](docs/releases/1.6.134-beta.md) for every optimization since 1.6.133-beta, fallback and compatibility guarantees, validation evidence, deferred candidates, APK identity, and suggested vehicle checks.
+
 ### 1.6.133-beta (versionCode 574)
 
 Leaner daemon monitoring and a clean lint baseline after 1.6.132-beta. The always-on `ProxyKeeperService` now owns daemon health checks while active, allowing the redundant foreground `ProxyWatchdog` thread and wakeup stream to be released; foreground fallback monitoring returns automatically if the keeper stops. This release also fixes the inherited `SuspiciousIndentation` and `UseAppTint` correctness errors, removes three unnecessary baseline measurements, and eliminates Cluster Resize root overdraw through a color-preserving dedicated window theme. Lint now reports zero errors and zero warnings, with only 17 documented informational layout metrics remaining.
