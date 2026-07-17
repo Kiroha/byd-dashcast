@@ -2,7 +2,7 @@
 
 > **Purpose.** Self-contained context dump so a **fresh, dedicated chat session** can resume the DiLink 5.x **instrument-cluster projection** work without the prior conversation. Covers the cluster architecture taxonomy, how DashCast projects, the service-name bug fixed in 1.6.100, the cross-user blocker, the reverse-engineering, the code map, and the ranked next steps. Cross-reference with the code (English) and the tester bug reports.
 >
-> **Author/date:** consolidated 2026-07-04, at app version **1.6.101-beta (build 542)**, branch `switch-kotlin`.
+> **Author/date:** consolidated 2026-07-04; D50F physical-routing correction added 2026-07-17 from `INC-20260717-221007`, at app version **1.6.131-beta (build 572)**, branch `switch-kotlin`.
 > **Repo:** `github.com/Kiroha/byd-dashcast` (package `com.byd.dashcast`).
 > **Sibling doc:** `docs/HUD_DILINK3_HANDOFF.md` (the windshield-HUD / nav-content track — related but distinct).
 
@@ -12,7 +12,7 @@
 
 - **GOAL:** project DashCast's content (its own mirror/dashboard, or a launched app such as a maps/nav app) onto the **instrument cluster** (the panel behind the wheel) on DiLink 5.x / recent DiLink 3 head units.
 - **The master key = `ro.build.system.fission_single_os`** + AAOS detection. It decides whether projection is even *possible* (see §2). Get this right first for any car.
-  - `fission_single_os=0` ("**1 for 2**" cluster) → a real Android VirtualDisplay exists (`fission_bg_…`) → **projection works** via the AutoContainer activation + SurfaceControl mirror / app launch.
+  - `fission_single_os=0` ("**1 for 2**" cluster) → an Android composition path exists (`fission_bg_…`). This is necessary but **does not prove physical-panel routing**: on D50F_LC, display 2/layerStack 2 can contain Znav and produce screenshots while the instrument panel remains on BYD's native renderer.
   - `fission_single_os=1` (**single-OS fission**) → the cluster is rendered natively (Qt), **no Android cluster display** → **app-window projection is IMPOSSIBLE** (only CAN nav-data reaches it).
   - **DX_BYD_AUTO = full AAOS** (Bosch/ThunderSoft/Neusoft) → app-window projection **CLOSED** (SELinux + no Java HIDL stub), proven on-car.
 - **★ Bug fixed in 1.6.100-beta:** on the **DiLink 50F_LC / 5.1** ("1for2") variant, DashCast asked the wrong service — it hardcoded `auto_container` (snake_case) for all DL5, but this variant registers it as **`AutoContainer` (PascalCase)** → activation returned "service does not exist" → projection never switched, even though the cluster display was present. Now `AdbLocalClient.autoContainerSvcName()` **probes** the registered casing. See §4.
@@ -20,6 +20,7 @@
 - **Current test car blocker:** on the DL5.1 unit that reported these, the **daemon itself is DOWN** (repeated `bootstrap timed out` — ADB-over-TCP not connecting), which blocks *everything* daemon-dependent (activation, bug-report shell dump, cross-user launch). Unblock ADB-TCP on that unit first.
 - **★ ROOT CAUSE UNIFIED (2026-07-04, 1.6.101 retest — see §6.5):** the cross-user blocker and the daemon-down blocker are **one story: DashCast runs fully UNPRIVILEGED on D50F_LC.** The app is signed with the **AOSP public testkey** (matched old DL3/DL5.0 ROMs, does NOT match the trinket production platform cert) → **D6 = 0/10 signature perms** → no direct privileged ops → forced onto the uid-2000 daemon → whose self-ADB to `127.0.0.1:5555` is dead (**D7**). The cluster hardware is fine (display present, casing fix works); the wall is signing + ADB-TCP. Cert is unobtainable for a 3rd party → plan around reviving the daemon (§6.5).
 - **1.6.102-beta hardening + diagnostics** (shipped, gated so DL3/DL5.0 untouched): fast TCP-reachability probe + sticky transport classification (`PORT_CLOSED`/`NO_LISTENER`/`KEY_UNAUTHORIZED`) + one actionable toast/log; a circuit-breaker that kills the infinite reconnect storm; a daemon-free **in-process AutoContainer transact** first-attempt (logs `ACCEPTED`/`REJECTED` from the app uid to settle the server-identity unknown on-car); a conclusive **D7** (port-closed vs no-listener vs key-unauthorized) + fixed **D17** stale verdict; and an **offline Bug Report** that always generates (internal-storage fallback). See §9/§12.
+- **★ Physical-routing incident (2026-07-17):** `INC-20260717-221007` proves DashCast successfully launches Znav into display 2 and captures that layer, but the real cluster never changes. Every tested `sendInfo(1000, code)` returned native `-1`, including codes 0/2/3/16/18. The untested compatibility handshake is `sendInfo(1000,18)` → wait 6 s → **`sendInfo(16,35)`**. The reference pixel path then creates a long-lived `remote_dashboard` VirtualDisplay on **layerStack 1**, not the persistent D50F display 2/layerStack 2. The current working tree adds a result-preserving protocol-v20 call and a strict D50F `D12` probe; production routing remains unchanged pending the on-car result.
 
 ---
 
@@ -35,12 +36,13 @@ Hard constraints on every change: **never break DL3 or DL5**, keep **lint 0 erro
 
 **Always classify the car first.** Three mutually exclusive families, keyed off `ro.build.system.fission_single_os` + `FEATURE_AUTOMOTIVE`:
 
-### (a) "1 for 2" fission — `fission_single_os=0` — PROJECTION WORKS
+### (a) "1 for 2" fission — `fission_single_os=0` — ANDROID PIXEL PATH EXISTS
 - A real Android **VirtualDisplay** is created for the cluster by `com.xdja.containerservice` (the "AutoContainer" backend).
   - DL3 1for2: display named **`fission_bg_xdjaVirtualSurface`** (Display 1).
   - DL5.1 (e.g. D50F_LC): display named **`fission_bg_XDJAScreenProjection`** (Display 2), owner `com.xdja.containerservice` (uid 1000), 1920×720, FLAG_PRESENTATION.
 - The **`AutoContainerNative`** native service is registered in ServiceManager (the AutoContainer Java service checks `ServiceManager.checkService("AutoContainerNative")`; null ⇒ "no AutoContainerNative" ⇒ no cluster VirtualDisplay).
-- DashCast **activates** the projection via the AutoContainer service (§3), then mirrors/launches onto the display.
+- DashCast **activates** the projection via the AutoContainer service (§3), then mirrors/launches onto a display.
+- **D50F correction:** the persistent display proves Android can compose cluster-sized pixels, not that the physical panel consumes that output. `INC-20260717-221007` shows display 2 on layerStack 2 populated with Znav while the real panel remains unchanged. Physical routing appears to require a separate dashboard switch plus a `remote_dashboard` bridge on layerStack 1 (§5).
 
 ### (b) Single-OS fission — `fission_single_os=1` — PROJECTION IMPOSSIBLE
 - The cluster is rendered **natively (Qt) by `fission_service[ivi]`** + `com.xdja.clusterdemo` (the "Freedom" app, `Freedom v1.9.apk`, code in `com.byd.windowmanager.*`).
@@ -63,17 +65,24 @@ Hard constraints on every change: **never break DL3 or DL5**, keep **lint 0 erro
 
 ## 3. How DashCast projects on a "1for2" car (family a)
 
-Pipeline (works on DL3 1for2 and DL5.1 D50F_LC):
+Pipeline (proven on DL3 1for2; the historical D50F assumption is now retracted):
 
 1. **Detect the cluster display** — `ClusterManager.activateClusterDisplay()` / `DashboardDisplayHelper`: enumerate `DisplayManager.getDisplays()`, pick by name (`fission` / `xdjaVirtualSurface` / `XDJAScreenProjection` / `remote_dashboard`). If present already, fast-path.
 2. **Activate the projection** via the AutoContainer service (§4). The `sendInfo(type, code, str)` control channel:
    - **DL3 sequence:** `sendInfo(1000, 30)` → wait ~3s → `sendInfo(1000, 16)` → ~3s → `sendInfo(1000, 35)` (prepare-surface / open-projection / size-handshake — the handshake triggers the VirtualDisplay creation).
-   - **DL5 short-circuit:** the PRESENTATION display persists, so activation = a single **`sendInfo(1000, 16)`** on the AutoContainer service.
+  - **DL5 historical short-circuit:** the PRESENTATION display persists, so DashCast sends a single **`sendInfo(1000, 16)`**. This is not sufficient on the tested D50F_LC firmware: the native result is `-1` and physical routing does not change.
+  - **D50F compatibility candidate:** `sendInfo(type=1000, info=18)` → wait 6000 ms → `sendInfo(type=16, info=35)`. Note the second call's **type is 16**, not 1000. No prior report tested this payload. Diagnostic `D12` now preserves and reports the real AIDL integer result.
    - Command codes (from clusterdebug RE, `sendInfo(1000, code)`): **16 = cast host pixels fullscreen ON**, 17 = half, 18 = off; 0/1 = restore/disconnect cluster video; 29/30/31 = size 8.8/12.3/10.25; 39 = built-in simple-nav; 86/87 = HUD menu (Di6.0/R). ~80 codes total.
 3. **Put content on the display:**
    - **Mirror** DashCast's own screen — `ClusterMirrorManager` (`SurfaceControl.createDisplay` + `Transaction.setDisplayLayerStack/Surface/Projection`, reflection; direct path needs ACCESS_SURFACE_FLINGER → falls back to the uid-2000 daemon `startMirrorViaDaemon`). Perf fix validated 1.6.44 (`stopMirrorViaDaemon` on stop, no residual SurfaceFlinger layer).
    - **Launch an app** on the display — `DashboardLauncher` (`ActivityOptions.setLaunchDisplayId` + `IActivityManager.startActivityAsUser`, reflection) or the daemon `Phase4TaskVerbs.launchAndForce` (`am start` + `moveTaskToDisplay`, uid 2000). ← this is where the **cross-user** issue bites (§6).
    - **Input** — `ClusterInputForwarder` injects touch/keys onto the cluster (`InputManager.injectInputEvent`, reflection; daemon path preferred).
+
+**D50F has two distinct outputs:**
+- persistent `fission_bg_XDJAScreenProjection`, display 2, layerStack 2: accepts Znav and is capturable by DashCast; this is what the incident screenshots show;
+- candidate physical route, layerStack 1: the reference implementation creates a SurfaceControl display token for layerStack 1, connects it to a 1920×720 `Surface`, then creates and keeps alive a VirtualDisplay named `remote_dashboard` on that Surface. The target app/presentation must use this new display. Destroying the bridge restores/releases its resources.
+
+Do not report physical success from `DisplayManager`, task placement, SurfaceFlinger layers, or screenshots alone. Success requires an independent signal: native switch result `0` plus direct user observation of the instrument panel.
 
 **Two ways `sendInfo` reaches the service** (`AdbLocalClient.sendInfo`):
 - **Typed daemon path** (non-DL5): `ProxyClient.autoContainerSendInfo` → daemon `binder.transact(2, …)` on the `android.os.IAutoContainer` binder (hardcodes name `AutoContainer`).
@@ -104,6 +113,7 @@ Full RE (decompiled sources at `/home/ccarre/app_byd/re_hud/src/`: `com.example.
   - OEM helper jars run via `app_process`: `CLASSPATH=/data/local/tmp/switch_dashboard.jar app_process / SwitchDashboard 16 35 ""` (fullscreen unlock; 17 35 small; 1000 18 reset) and `CLASSPATH=/data/local/tmp/fission_unlock.jar app_process / FissionUnlock 1 1920x720` (success token "SUCCESS! Fission display unlocked");
   - then `android.app.Presentation` on the cluster Display (found by name), OR `DisplayManager.createVirtualDisplay("cluster_app_host", …, flags=10)` + `am start --display <id>`, OR **MediaProjection AUTO_MIRROR** of display 0, OR a `CommunicationProcessKt` (`one_screen_helper.dex`) Binder daemon (transact 22=createDisplay, 2=mirror, 13=moveTaskToDisplay, 3/4=inject motion/key, 7=init).
   - **Reusable by DashCast:** the whole approach maps to what the DashCast daemon can do. NOTE the OEM helper jars (`switch_dashboard.jar`, `fission_unlock.jar`, `one_screen_helper.dex`) are proprietary and NOT DashCast's code — Channel D as-is depends on obtaining them + self-ADB working.
+- **2026-07-17 clean-room findings:** `SwitchDashboard` first calls an obfuscated `Injector.switchDashboard(mode)` bundled in the reference APK; only if that injector is unavailable does it fall back to reset `1000/18`, 6 s wait, then unlock `16/35`. `FissionUnlock` itself is straightforward Android plumbing: SurfaceTexture/Surface, SurfaceControl display token projected from layerStack 1, then a long-lived `remote_dashboard` VirtualDisplay (1920×720, 320 dpi, flags 11). DashCast must not copy or ship the reference APK/jars. Reimplement only public Android primitives after the switch handshake is independently proven.
 - Channels A (`sendInfo2(4, NaviInfo flatbuffer)`) and C (BYDAutoInstrumentDevice CAN) are nav-CONTENT, covered in the HUD handoff.
 
 ---
@@ -149,6 +159,16 @@ The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_2140
 - **Diagnosis:** everything is in place — DashCast just called the wrong service name. → the 1.6.100 fix. Also visible: the **daemon bootstrap loops** (`ERR bootstrap timed out`, `no live binder`, `Activate cluster timeout`) = ADB-TCP down on this unit (separate blocker).
 - Also on this car: the DL5.1/Android 13 **diagnostic crash + Bug Report regression** — `getExternalFilesDir("vosk")` throws `SecurityException: callingPackage does not match UID` (its mkdirs/AppOps check) → crashed DiagActivity via the voice panel; `BugReportCapture.newFile` aborted. **Fixed in 1.6.101** (safe accessor + `bindVoicePanel` try/catch + canonical external-path fallback). See the HUD handoff §11 for detail.
 
+### 7.1. Physical-panel correction — `INC-20260717-221007`
+
+- Device remains D50F_LC/trinket/API 33 with `fission_single_os=0`.
+- Znav task and layers are present on display 2/layerStack 2. Cluster screenshots show Znav because the recorder captures that Android layer stack.
+- The driver reports that the real instrument cluster never leaves the stock BYD panel. Therefore those screenshots are not photographs or proof of physical output.
+- Raw Binder replies for `sendInfo(type=1000, info=0/2/3/16/18)` all contain `ffffffff`, i.e. native result **`-1`**. Prior diagnostics treated any returned Parcel as success and discarded the method's integer return; that interpretation was wrong.
+- The persistent display exists independently of successful switching. Display existence, task placement, and nonblank captures only prove Android composition.
+- The lowest-cost discriminator is now the strict D50F `D12` sequence: reset `1000/18`, wait 6 s, unlock `16/35`, observe 3 s, restore `1000/18`; report all three native integer codes. It never runs while a DashCast projection is active.
+- Decision: unlock `0` means implement the clean-room layerStack-1 `remote_dashboard` bridge and launch onto its returned display ID. Unlock `-1` means raw AutoContainer is insufficient on this firmware and a clean-room equivalent of the OEM dashboard switch must be found; do not integrate the proprietary Injector.
+
 ---
 
 ## 8. Code map (cluster-projection relevant)
@@ -164,7 +184,7 @@ The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_2140
 - `cluster/dpi/*` (Kotlin) — per-app DPI on the cluster (`wm density … -d <id>`).
 - `infrastructure/AdbLocalClient.java` (~921 l, **still Java**) — local-ADB socket; `sendInfo` (typed daemon + shell relay); **`autoContainerSvcName()`** (the casing probe, §4). I just modified this in 1.6.100.
 - `proxy/daemon/Phase4TaskVerbs.java` — `launchAndForce` (daemon uid-2000 `am start` + `moveTaskToDisplay`) — the cross-user-capable launch path (§6). Also `moveAndResize`, `cleanFissionStacks`.
-- `proxy/daemon/ProxyDaemonMain.java` — the daemon (`dashcast_proxy`, uid 2000, `app_process64`, PROTOCOL_VERSION "17"). Respawns on versionCode bump.
+- `proxy/daemon/ProxyDaemonMain.java` — the daemon (`dashcast_proxy`, uid 2000, `app_process64`, PROTOCOL_VERSION "20" in the current working tree). Protocol 20 adds result-preserving AutoContainer diagnostics. Respawns on versionCode bump.
 - `proxy/ProxyClient.java` — client verbs (`autoContainerSendInfo`, `launchAndForce`, `createVirtualDisplay`, `moveAndResize`, `findTaskIdForPackage`, `removeTask`, …).
 - `platform/Platform.java` — `isDiLink3/4/5`, `isClusterSingleOs()`, AAOS detection, `readProp()`.
 - `MainActivity.kt` — `onSendToDashboard` (the "send to cluster" entry) + AAOS / single-OS gate dialogs.
@@ -208,22 +228,22 @@ The 1.6.101 retest report (`byd_report_20260704_213738` + `byd_log_20260704_2140
 ## 12. Status board & ranked next steps
 
 **PROVEN / DONE:**
-- Cluster family taxonomy (§2): 1for2 works, single-OS impossible, AAOS closed — all proven on-car.
+- Cluster family taxonomy (§2): 1for2 exposes an Android pixel path; single-OS and AAOS app-window routes remain closed. Physical consumption must still be proven per firmware.
 - AutoContainer casing fix (1.6.100) for D50F_LC / 5.1 (§4) — **retested on-car 1.6.101 → CONFIRMED working.**
 - DL5.1/A13 crash fix (1.6.101) — **confirmed gone by the tester.**
 - **Root cause pinned + unified (§6.5):** D50F_LC = unprivileged app (AOSP testkey ≠ prod cert, D6=0/10) + ADB-TCP dead (D7). The two blockers are one story. Cert unobtainable.
 - 1.6.102 hardening + diagnostics shipped (build 543, lint 0/0, APK built).
-- Mirror + activation pipeline works on 1for2 with a live daemon (long-standing).
+- DL3 1for2 mirror + activation works with a live daemon. The same claim is **not** established for D50F physical output.
 
 **OPEN / NEXT (ranked):**
-1. **Get the tester to run 1.6.102 + export the NEW Diagnostic Report.** The upgraded **D7** now reports exactly which ADB-TCP condition holds (`PORT_CLOSED` = ADB-TCP off → `adb tcpip 5555`; `NO_LISTENER` = SYN dropped; `KEY_UNAUTHORIZED` = accept the app's "Allow USB debugging" prompt). Also read the `sendInfo IN-PROC transact ACCEPTED/REJECTED` log line = does the app-uid transact work daemon-free? **Highest priority — one report now settles both unknowns.**
-2. **Revive the daemon on the DL5.1 unit** = enable ADB-TCP + authorize the app's ADB key (§6.5 path 1). uid-2000 is privileged → unlocks activation/launch/mirror/bug-report. Only full-projection path without the cert. (Needs a bench PC once; doesn't persist past reboot without root.)
-3. **Route the cluster app-launch through the uid-2000 daemon** (`Phase4TaskVerbs.launchAndForce` / `am start --display <id>`) so the cross-user permission is satisfied (§6) — for the "launch a nav app on the cluster" feature. (Only reachable once the daemon is up per #2.)
-4. **Gate messaging polish:** ensure single-OS DL3 (`fission_single_os=1`) and AAOS both show the "unsupported on this variant" dialog cleanly instead of looping on activation. (1.6.102's transport toast partly covers the ADB-TCP-dead case.)
-5. (Optional/low-odds) Channel D pixel path (bydhud-style Presentation/VirtualDisplay) — only if the OEM helper jars can be obtained and self-ADB works.
+1. **Run DL5 diagnostic `D12` on D50F with projection stopped.** Capture reset/unlock/restore integer codes and whether the physical panel visibly changes during the 3 s observation window. This tests the previously missing `1000/18 → 6 s → 16/35` handshake.
+2. **If unlock returns `0`:** implement the daemon-owned, clean-room `remote_dashboard` bridge on layerStack 1, return its display ID, launch Znav there, and hold/release all SurfaceControl/VirtualDisplay resources with the projection lifecycle.
+3. **If unlock returns `-1`:** raw AutoContainer is closed for this firmware. Continue first-party RE of the dashboard system service / exported OEM broker; do not ship the reference Injector or its APK.
+4. **Preserve physical truth in diagnostics:** screenshots from display 2 must be labelled Android layer captures, never physical-cluster proof. Keep native return parsing in every new activation probe.
+5. **Keep DL3/DL5.0 unchanged:** any eventual route must be strictly D50F-gated until physical tests prove teardown and restore.
 
 **Open questions:**
-- After the casing fix, does `service call AutoContainer 2 i32 1000 i32 16 s16 ""` actually make the D50F_LC cluster show DashCast? (bench needs the daemon up.)
-- Is the DL5.1 daemon-down purely an ADB-TCP config issue on that unit, or a broader DL5.1 bootstrap problem?
-- For launching apps on the cluster: does routing through the daemon's `am start --display 2` bypass the cross-user check in practice on DL5.1/A13?
+- Does the corrected `sendInfo(16,35)` return `0` and visibly switch the D50F panel after the 6 s reset delay?
+- Once switched, does a clean-room layerStack-1 `remote_dashboard` bridge make the panel consume a launched app, and which teardown order restores BYD reliably?
+- Is the reference Injector mandatory on this firmware, or merely a compatibility wrapper around an accessible system service?
 - Do any other DL5.x variants use `AutoContainerManager.init()+getAutoContainerManager()` (the third acquisition style) rather than a named service? (Handle if a report shows it.)

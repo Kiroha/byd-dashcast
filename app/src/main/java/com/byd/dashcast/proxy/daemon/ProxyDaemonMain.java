@@ -66,8 +66,9 @@ public final class ProxyDaemonMain {
     *  v17 (v1.6.98-beta): adds TXN_CAN_SETTING_DOUBLE (HUD angle) + TXN_READ_FILE_CHUNK (pull raw logcat).
     *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
     *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
+    *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "19";
+    private static final String PROTOCOL_VERSION = "20";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -642,6 +643,31 @@ public final class ProxyDaemonMain {
                         Phase4ProcessVerbs.autoContainerSendInfo(type, info, str);
                         if (reply != null) {
                             reply.writeNoException();
+                        }
+                    } catch (Throwable ex) {
+                        Throwable cause = ex;
+                        if (ex instanceof java.lang.reflect.InvocationTargetException && ex.getCause() != null) {
+                            cause = ex.getCause();
+                        }
+                        if (reply != null) {
+                            Exception wrap = (cause instanceof Exception)
+                                    ? (Exception) cause
+                                    : new RuntimeException(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                            reply.writeException(wrap);
+                        }
+                    }
+                    return true;
+                }
+                case TXN_AUTOCONTAINER_SEND_INFO_RESULT: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int type = data.readInt();
+                    int info = data.readInt();
+                    String str = data.readString();
+                    try {
+                        int result = Phase4ProcessVerbs.autoContainerSendInfoResult(type, info, str);
+                        if (reply != null) {
+                            reply.writeNoException();
+                            reply.writeInt(result);
                         }
                     } catch (Throwable ex) {
                         Throwable cause = ex;

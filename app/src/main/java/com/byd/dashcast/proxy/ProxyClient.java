@@ -681,6 +681,17 @@ public final class ProxyClient {
                 () -> { ProxyProcessVerbs.autoContainerSendInfo(type, info, safeStr); return null; });
     }
 
+    /** AutoContainer sendInfo preserving the OEM/native integer result code. */
+    public static int autoContainerSendInfoResult(int type, int info, String str)
+            throws ProxyException {
+        if (!supportsProtocol(20)) {
+            throw new ProxyException("AutoContainer result codes unsupported by daemon");
+        }
+        final String safeStr = str == null ? "" : str;
+        return callWithRetry("autoContainerSendInfoResult",
+                () -> ProxyProcessVerbs.autoContainerSendInfoResult(type, info, safeStr));
+    }
+
     /**
      * Phase 4d typed verb — direct {@code IActivityManager.forceStopPackage} in
      * the daemon, replacing {@code dadb.shell("am force-stop <pkg>")} forks
