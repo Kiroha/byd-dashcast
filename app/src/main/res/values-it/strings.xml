@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Anteprima locale non disponibile — display cluster ancora attivo</string>
+    <string name="layout_mirror_previous">App Layout precedente</string>
+    <string name="layout_mirror_next">App Layout successiva</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>

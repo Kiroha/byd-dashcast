@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Yerel önizleme kullanılamıyor — küme ekranı hâlâ etkin</string>
+    <string name="layout_mirror_previous">Önceki düzen uygulaması</string>
+    <string name="layout_mirror_next">Sonraki düzen uygulaması</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>

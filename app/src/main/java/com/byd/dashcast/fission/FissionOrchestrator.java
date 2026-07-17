@@ -2,10 +2,14 @@ package com.byd.dashcast.fission;
 
 import android.content.Context;
 import android.graphics.Rect;
+import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.MotionEvent;
+import android.view.Display;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
 import com.byd.dashcast.util.AppLogger;
@@ -57,11 +61,31 @@ public final class FissionOrchestrator {
         public final String pkg;
         public final String label;
         public final int    displayId;
+        public final int    layerStack;
         public       Rect   rect;
 
-        SlotState(String pkg, String label, int displayId, Rect rect) {
+        SlotState(String pkg, String label, int displayId, int layerStack, Rect rect) {
             this.pkg = pkg; this.label = label;
-            this.displayId = displayId; this.rect = new Rect(rect);
+            this.displayId = displayId; this.layerStack = layerStack; this.rect = new Rect(rect);
+        }
+    }
+
+    /** Immutable target consumed by Main's tactile Layout mirror. */
+    public static final class LayoutMirrorTarget {
+        public final String pkg;
+        public final String label;
+        public final int displayId;
+        public final int layerStack;
+        public final int width;
+        public final int height;
+
+        LayoutMirrorTarget(SlotState slot) {
+            pkg = slot.pkg;
+            label = slot.label;
+            displayId = slot.displayId;
+            layerStack = slot.layerStack;
+            width = slot.rect.width();
+            height = slot.rect.height();
         }
     }
 
@@ -105,6 +129,7 @@ public final class FissionOrchestrator {
     // (stale layout-selector label/checkmark). Siblings above are already volatile.
     private volatile int      mFirstDisplayId = -1;
     private volatile LayoutPreset mActiveLayout = null;
+    private volatile String mSelectedMirrorPackage = null;
     private volatile boolean mAutoStartAttempt = false;
 
     public FissionOrchestrator(Context context, ProjectionStateProvider projectionState,
@@ -164,6 +189,87 @@ public final class FissionOrchestrator {
         return pkg != null && getActiveLayoutPackages().contains(pkg);
     }
 
+    /** Returns the slot currently selected for Main's tactile mirror. */
+    public static LayoutMirrorTarget getSelectedLayoutMirrorTarget() {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        return o != null ? o.selectedMirrorTarget() : null;
+    }
+
+    /** Selects a running Layout app as the tactile mirror target. */
+    public static LayoutMirrorTarget selectLayoutMirrorPackage(String pkg) {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null || pkg == null || !o.mSlots.containsKey(pkg)) return null;
+        o.mSelectedMirrorPackage = pkg;
+        notifyLayoutChanged();
+        return o.selectedMirrorTarget();
+    }
+
+    /** Selects the previous/next running slot in the saved Layout's zone order. */
+    public static LayoutMirrorTarget stepLayoutMirrorSelection(int delta) {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null) return null;
+        List<String> ordered = o.orderedSlotPackages();
+        o.mSelectedMirrorPackage = LayoutSlotSelection.step(
+                o.mSelectedMirrorPackage, ordered, delta);
+        notifyLayoutChanged();
+        return o.selectedMirrorTarget();
+    }
+
+    /** Starts a mirror of the selected slot and routes daemon input to that slot display. */
+    public static LayoutMirrorTarget startSelectedLayoutMirror(
+            Surface surface, int viewWidth, int viewHeight) {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null || o.mDaemonBinder == null || surface == null || !surface.isValid()) {
+            return null;
+        }
+        LayoutMirrorTarget target = o.selectedMirrorTarget();
+        if (target == null) return null;
+        try {
+            String focus = FissionClient.focusSlot(o.mDaemonBinder, target.pkg);
+            if (focus == null || !focus.startsWith("OK ")) {
+                AppLogger.w(TAG, "Layout tactile focus best-effort for " + target.pkg
+                        + ": " + focus);
+            }
+        } catch (Exception focusError) {
+            AppLogger.w(TAG, "Layout tactile focus unavailable for " + target.pkg
+                    + ": " + focusError.getMessage());
+        }
+        try {
+            boolean ok = FissionClient.startMirror(o.mDaemonBinder,
+                    target.layerStack, target.width, target.height,
+                    target.displayId, viewWidth, viewHeight, surface);
+            if (!ok) return null;
+            o.mMirrorReady = true;
+            o.mFirstDisplayId = target.displayId;
+            AppLogger.i(TAG, "Layout tactile mirror selected pkg=" + target.pkg
+                    + " displayId=" + target.displayId + " layerStack=" + target.layerStack);
+            return target;
+        } catch (Exception error) {
+            AppLogger.e(TAG, "startSelectedLayoutMirror failed for " + target.pkg, error);
+            return null;
+        }
+    }
+
+    public static void stopSelectedLayoutMirror() {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null || o.mDaemonBinder == null) return;
+        FissionClient.stopMirror(o.mDaemonBinder);
+        o.mMirrorReady = false;
+        o.mFirstDisplayId = -1;
+    }
+
+    public static boolean injectSelectedLayoutMotion(MotionEvent event) {
+        FissionOrchestrator o = sAutoStartOrchestrator;
+        if (o == null || o.mDaemonBinder == null || event == null) return false;
+        try {
+            FissionClient.injectMotion(o.mDaemonBinder, event);
+            return true;
+        } catch (Exception error) {
+            AppLogger.e(TAG, "injectSelectedLayoutMotion failed", error);
+            return false;
+        }
+    }
+
     /**
      * Kills a single layout slot: moves the app back to display 0, releases its VD and
      * force-stops it (via {@link #releaseSlotAsync}). No-op when no layout is active.
@@ -171,6 +277,31 @@ public final class FissionOrchestrator {
     public static void killLayoutSlot(String pkg) {
         FissionOrchestrator o = sAutoStartOrchestrator;
         if (o != null && pkg != null) o.releaseSlotAsync(pkg);
+    }
+
+    private synchronized LayoutMirrorTarget selectedMirrorTarget() {
+        List<String> ordered = orderedSlotPackages();
+        mSelectedMirrorPackage = LayoutSlotSelection.resolve(mSelectedMirrorPackage, ordered);
+        SlotState slot = mSelectedMirrorPackage != null
+                ? mSlots.get(mSelectedMirrorPackage) : null;
+        return slot != null ? new LayoutMirrorTarget(slot) : null;
+    }
+
+    private List<String> orderedSlotPackages() {
+        List<String> ordered = new ArrayList<>();
+        LayoutPreset layout = mActiveLayout;
+        if (layout != null) {
+            for (LayoutPreset.SlotDef slot : layout.slots) {
+                String pkg = slot.packageName;
+                if (pkg != null && mSlots.containsKey(pkg) && !ordered.contains(pkg)) {
+                    ordered.add(pkg);
+                }
+            }
+        }
+        List<String> extras = new ArrayList<>(mSlots.keySet());
+        java.util.Collections.sort(extras);
+        for (String pkg : extras) if (!ordered.contains(pkg)) ordered.add(pkg);
+        return ordered;
     }
 
     /**
@@ -539,6 +670,7 @@ public final class FissionOrchestrator {
                 }
             });
             mSlots.clear();
+            mSelectedMirrorPackage = null;
             if (binder != null) {
                 try { FissionClient.stopMirror(binder); } catch (Throwable ignored) {}
             }
@@ -593,6 +725,8 @@ public final class FissionOrchestrator {
             }
             ShellGateway.execShell(mAppCtx, "am force-stop " + pkg);
             mSlots.remove(pkg);
+                mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+                    mSelectedMirrorPackage, orderedSlotPackages());
             mProjecting = !mSlots.isEmpty();
             post(() -> mCallbacks.onSlotsChanged(mSlots.values()));
         });
@@ -715,8 +849,11 @@ public final class FissionOrchestrator {
         String launchResult = ProxyClient.launchAndForce(pkg, null, displayId,
                 rect.width(), rect.height());
         AppLogger.i(TAG, "FISSION launchAndForce result:\n" + launchResult);
-        if (launchResult != null && !launchResult.startsWith("OK"))
-            AppLogger.w(TAG, "FISSION launchAndForce non-OK: " + launchResult);
+        if (!com.byd.dashcast.proxy.daemon.TaskLaunchRecovery.isSuccessful(launchResult)) {
+            AppLogger.w(TAG, "FISSION launchAndForce failed/incomplete: " + launchResult);
+        }
+
+        int layerStack = resolveLayerStack(displayId);
 
         // MIRROR_START on first slot
         if (isFirst && surfaceHolder != null && surfaceHolder.getSurface() != null
@@ -727,12 +864,14 @@ public final class FissionOrchestrator {
             int svH = surfaceHolder.getSurfaceFrame().height();
             if (svW <= 0 || svH <= 0) { svW = CLUSTER_W; svH = CLUSTER_H; }
             mMirrorReady = FissionClient.startMirror(mDaemonBinder,
-                    displayId, rect.width(), rect.height(),
+                    layerStack, rect.width(), rect.height(),
                     displayId, svW, svH, surfaceHolder.getSurface());
             AppLogger.i(TAG, "FISSION MIRROR_START displayId=" + displayId + " ok=" + mMirrorReady);
         }
 
-        mSlots.put(pkg, new SlotState(pkg, label, displayId, rect));
+        mSlots.put(pkg, new SlotState(pkg, label, displayId, layerStack, rect));
+        mSelectedMirrorPackage = LayoutSlotSelection.resolve(
+            mSelectedMirrorPackage, orderedSlotPackages());
         mProjecting = true;
 
         post(() -> {
@@ -823,6 +962,23 @@ public final class FissionOrchestrator {
             android.content.pm.PackageManager pm = mAppCtx.getPackageManager();
             return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
         } catch (Exception e) { return pkg; }
+    }
+
+    private int resolveLayerStack(int displayId) {
+        try {
+            DisplayManager displayManager = (DisplayManager) mAppCtx.getSystemService(
+                    Context.DISPLAY_SERVICE);
+            Display display = displayManager != null ? displayManager.getDisplay(displayId) : null;
+            if (display == null) return displayId;
+            java.lang.reflect.Method method = Display.class.getDeclaredMethod("getLayerStack");
+            method.setAccessible(true);
+            Object value = method.invoke(display);
+            if (value instanceof Integer && (Integer) value >= 0) return (Integer) value;
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "slot layerStack lookup failed for display " + displayId
+                    + ": " + error.getMessage());
+        }
+        return displayId;
     }
 
     private void post(Runnable r) {

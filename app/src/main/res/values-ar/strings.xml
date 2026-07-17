@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">المعاينة المحلية غير متاحة — شاشة العنقود لا تزال نشطة</string>
+    <string name="layout_mirror_previous">تطبيق التخطيط السابق</string>
+    <string name="layout_mirror_next">تطبيق التخطيط التالي</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>

@@ -24,6 +24,13 @@ public final class TaskLaunchRecovery {
                     && transcript.contains("NullPointerException"));
     }
 
+    public static boolean isSuccessful(String transcript) {
+        if (transcript == null || transcript.isEmpty()) return false;
+        return transcript.contains("FINISH: launchAndForce complete.")
+                && !transcript.contains("FAIL: no task discovered")
+                && !transcript.contains("EXCEPTION:");
+    }
+
     /** The failed FREEFORM attempt creates a fresh zombie stack, so cleanup must run again. */
     public static int retryOnCleanDisplay(Operations operations) {
         operations.cleanDisplay();

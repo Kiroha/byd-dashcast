@@ -3,6 +3,7 @@ package com.byd.dashcast.fission;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
+import android.view.MotionEvent;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.MirrorResourceOwner;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
@@ -194,5 +195,33 @@ public class FissionClient {
         } catch (Exception e) {
             AppLogger.w(TAG, "MIRROR_STOP error: " + e.getMessage());
         } finally { data.recycle(); }
+    }
+
+    public static void injectMotion(IBinder binder, MotionEvent event) throws Exception {
+        if (binder == null || event == null) return;
+        Parcel data = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeParcelable(event, 0);
+            binder.transact(MirrorDaemon.TRANSACT_INJECT_MOTION,
+                    data, null, IBinder.FLAG_ONEWAY);
+        } finally {
+            data.recycle();
+        }
+    }
+
+    public static String focusSlot(IBinder binder, String pkg) throws Exception {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
+            data.writeString(pkg);
+            binder.transact(MirrorDaemon.TRANSACT_FOCUS_SLOT, data, reply, 0);
+            reply.readException();
+            return reply.readString();
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
     }
 }

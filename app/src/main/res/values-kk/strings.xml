@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Жергілікті алдын ала қарау қолжетімсіз — кластер дисплейі әлі белсенді</string>
+    <string name="layout_mirror_previous">Алдыңғы орналасу қолданбасы</string>
+    <string name="layout_mirror_next">Келесі орналасу қолданбасы</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>

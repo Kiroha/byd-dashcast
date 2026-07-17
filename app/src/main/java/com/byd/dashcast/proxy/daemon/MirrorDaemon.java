@@ -103,6 +103,8 @@ public class MirrorDaemon {
      *  Params: int layerStack, int width, int height, int quality, String outPath.
      *  Reply: String status ("OK <path>" / "FAIL …"). Used by the bug-report screenshot recorder. */
     public static final int TRANSACT_CAPTURE_DISPLAY   = 16;
+    /** TRANSACT 17 — focus the task belonging to a selected tactile Layout slot. */
+    public static final int TRANSACT_FOCUS_SLOT        = 17;
 
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
@@ -364,6 +366,7 @@ public class MirrorDaemon {
                 case TRANSACT_DEACTIVATE_LAYOUT: return handleDeactivateLayout(data, reply);
                 case TRANSACT_QUERY_SLOT:        return handleQuerySlot(data, reply);
                 case TRANSACT_MOVE_TO_DISPLAY0:  return handleMoveToDisplay0(data, reply);
+                case TRANSACT_FOCUS_SLOT:        return handleFocusSlot(data, reply);
                 case TRANSACT_CAPTURE_DISPLAY: {
                     int layerStack = data.readInt();
                     int w          = data.readInt();
@@ -957,6 +960,18 @@ public class MirrorDaemon {
             result = Phase4TaskVerbs.moveTaskToDisplayCompatible(taskId, 0);
         }
         out("[Fission] MOVE_TO_DISPLAY0 result: " + result);
+        reply.writeNoException();
+        reply.writeString(result);
+        return true;
+    }
+
+    private static boolean handleFocusSlot(Parcel data, Parcel reply) {
+        String pkg = data.readString();
+        int taskId = Phase4TaskVerbs.findTaskIdForPackage(pkg);
+        String result = taskId > 0
+                ? Phase4TaskVerbs.setFocusedRootTask(taskId)
+                : "ERR no task for " + pkg;
+        out("[Fission] FOCUS_SLOT pkg=" + pkg + " taskId=" + taskId + " result=" + result);
         reply.writeNoException();
         reply.writeString(result);
         return true;

@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Vista previa local no disponible — la pantalla del clúster sigue activa</string>
+    <string name="layout_mirror_previous">Aplicación anterior del layout</string>
+    <string name="layout_mirror_next">Aplicación siguiente del layout</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
