@@ -418,8 +418,10 @@ android {
         // switchable tactile mirrors targeting each slot's real display/layer stack.)
         // 573 = 1.6.132-beta (INC-20260717-221007: D50F_LC physical-routing truth model,
         // native AutoContainer result codes, and guarded 1000/18 -> 16/35 diagnostic probe.)
-        versionCode 573
-        versionName "1.6.132-beta"
+        // 574 = 1.6.133-beta (proxy monitor consolidation, zero lint errors/warnings,
+        // and low-risk baseline/overdraw layout measurement cleanup.)
+        versionCode 574
+        versionName "1.6.133-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
