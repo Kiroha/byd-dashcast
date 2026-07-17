@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity(),
     private val mAppRepo = AppRepository()
     private var mPendingAutoLaunchPkg: String? = null
     private var mPendingAppAfterActivation: AppInfo? = null
+    private var mMissingAutoLayoutToastShown = false
     private val mDashboardSelectionTracker = DashboardSelectionTracker()
 
     private val mServiceConn = object : ServiceConnection {
@@ -230,10 +231,9 @@ class MainActivity : AppCompatActivity(),
         // then sees an active projection → aborts the whole layout with "Daemon unavailable" and
         // nothing launches (byd_log 20260705_194004). Suppress it here so the two auto-starts
         // don't race; the layout is the single source of truth for startup launching.
-        if (isLayoutAutoStartConfigured() && mPendingAutoLaunchPkg != null) {
+        if (isLayoutAutoStartRequested() && mPendingAutoLaunchPkg != null) {
             AppLogger.i(TAG, "Layout auto-start configured — suppressing single-app auto-launch of « "
                     + mPendingAutoLaunchPkg + " » (the layout owns startup launching)")
-            mPendingAutoLaunchPkg = null
         }
         if (!ClusterPrefs.isBootAutoStartEnabled(this)) {
             // Off-load the (binder-reflection) cleanup to a named daemon thread.
@@ -253,9 +253,6 @@ class MainActivity : AppCompatActivity(),
         val killOrphanSniffer = !sOrphanSnifferKillDone
         if (killOrphanSniffer) sOrphanSnifferKillDone = true
         AppStartupTasks.run(applicationContext, killOrphanSniffer)
-
-        // Auto favourite layout (one-shot per process; no-op unless enabled in Settings).
-        FissionOrchestrator.maybeAutoStartOnAppLaunch(this)
 
         // Receiver to retrieve the MirrorDaemon Binder (uid=2000)
         registerReceiver(mDaemonReadyReceiver, IntentFilter(MirrorDaemon.ACTION_DAEMON_READY))
@@ -398,6 +395,20 @@ class MainActivity : AppCompatActivity(),
 
     override fun onResume() {
         super.onResume()
+        // Re-evaluate after returning from Settings/Layout Manager, not only on process creation.
+        // This lets a newly saved/favourited layout launch immediately without restarting DashCast.
+        when (FissionOrchestrator.maybeAutoStartOnAppLaunch(this)) {
+            FissionOrchestrator.AutoStartResult.MISSING_LAYOUT -> {
+                if (!mMissingAutoLayoutToastShown) {
+                    mMissingAutoLayoutToastShown = true
+                    Toast.makeText(applicationContext, R.string.lm_save_before_favorite,
+                        Toast.LENGTH_LONG).show()
+                }
+            }
+            FissionOrchestrator.AutoStartResult.DISABLED -> mMissingAutoLayoutToastShown = false
+            FissionOrchestrator.AutoStartResult.STARTED -> mMissingAutoLayoutToastShown = false
+            else -> Unit
+        }
         // Hotspot navrail entry depends on the "use_own_sim" pref; re-evaluate on every resume.
         mNavCoordinator?.refreshHotspot()
         // v1.2.45 — Compact apps panel pref is live-applied.
@@ -559,7 +570,7 @@ class MainActivity : AppCompatActivity(),
                 mNavCoordinator?.setStatusPending()
                 val svcIntent = Intent(this, ClusterService::class.java)
                 bindService(svcIntent, mServiceConn, Context.BIND_AUTO_CREATE)
-            } else if (mPendingAutoLaunchPkg != null && !isLayoutAutoStartConfigured()) {
+            } else if (mPendingAutoLaunchPkg != null && !isLayoutAutoStartRequested()) {
                 // v1.4.24 — an explicitly configured auto-launch app activates projection at startup.
                 AppLogger.i(
                     TAG, "auto-launch app configured (" + mPendingAutoLaunchPkg +
@@ -1283,10 +1294,8 @@ class MainActivity : AppCompatActivity(),
     }
 
     /** True when the Layouts auto-start owns the startup launch. */
-    private fun isLayoutAutoStartConfigured(): Boolean =
-        ClusterPrefs.isFissionAutoLayout(this) &&
-            DaemonConfig.isFissionModeEnabled(this) &&
-            LayoutPrefs.getFavoriteLayout(this) != null
+    private fun isLayoutAutoStartRequested(): Boolean =
+        FissionOrchestrator.isAutoStartRequested(this)
 
     private fun restoreBydDashboard() {
         btnRestoreCluster.isEnabled = false
@@ -1519,6 +1528,10 @@ class MainActivity : AppCompatActivity(),
      */
     private fun tryExecutePendingAutoLaunch() {
         val targetPkg = mPendingAutoLaunchPkg ?: return
+        if (isLayoutAutoStartRequested()) {
+            AppLogger.d(TAG, "single-app auto-launch deferred: Layout auto-start owns startup")
+            return
+        }
         // Resolve from the FULL app list (favorites INCLUDED). The UI grid getApps()
         // excludes favorites into a separate strip, so a favorited auto-launch / boot-
         // projection app (e.g. a favorited Waze) was never found here and stayed
