@@ -52,6 +52,7 @@ class BugWizardActivity : Activity() {
 
     // State
     private var mCategory = -1
+    private var mHudArrowsAnswer = ""   // "yes"/"unknown" (HUD gate); "no" never reaches send
     private var mAppPkg = ""
     private var mAppLabel = ""
     private var mSending = false
@@ -129,8 +130,38 @@ class BugWizardActivity : Activity() {
 
     private fun selectCategory(cat: Int) {
         mCategory = cat
+        // HUD category: first gate on whether the car's HUD can even DISPLAY turn arrows. Some HUD
+        // firmwares can't; then DashCast can't add them either and the report is noise (it skews the
+        // debug). If the user says "no", we explain and do NOT send anything.
+        if (CAT_KEYS.getOrNull(cat) == "hud") {
+            askHudArrowCapability()
+            return
+        }
         buildAppPage()
         showStep(1)
+    }
+
+    /** Arrow-capability gate for HUD reports (see [selectCategory]). Yes/Unknown → continue the
+     *  wizard (answer recorded in the report); No → explain there is nothing to fix and finish. */
+    private fun askHudArrowCapability() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.bug_hud_gate_title))
+            .setMessage(getString(R.string.bug_hud_gate_msg))
+            .setCancelable(false)
+            .setPositiveButton(getString(R.string.bug_hud_gate_yes)) { _, _ ->
+                mHudArrowsAnswer = "yes"; buildAppPage(); showStep(1)
+            }
+            .setNeutralButton(getString(R.string.bug_hud_gate_unknown)) { _, _ ->
+                mHudArrowsAnswer = "unknown"; buildAppPage(); showStep(1)
+            }
+            .setNegativeButton(getString(R.string.bug_hud_gate_no)) { _, _ ->
+                AlertDialog.Builder(this)
+                    .setMessage(getString(R.string.bug_hud_no_arrows_msg))
+                    .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+                    .setOnCancelListener { finish() }
+                    .show()
+            }
+            .show()
     }
 
     // ── Step 1: app ──────────────────────────────────────────────────────────
@@ -297,6 +328,7 @@ class BugWizardActivity : Activity() {
         val cats = resources.getStringArray(R.array.bug_categories)
         val caption = "Category: " + cats[mCategory] +
             "\nCategoryKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } +
+            (if (mHudArrowsAnswer.isEmpty()) "" else "\nHudArrows: $mHudArrowsAnswer") +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
             (if (details.isEmpty()) "" else "\nDetails: $details") +

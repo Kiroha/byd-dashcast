@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ Die HUD-Navigation ist jetzt LIVE in Produktion. Um zu helfen, fahr mit Google Maps / Waze und melde über den 🐞-Button (Nav-Leiste). Die Tools unten (①②③) sind R&amp;D — nur auf Anfrage nutzen.</string>
     <string name="hud_prod_nudge">✅ Gesendet. Der eigentliche Test ist jetzt aber: Navigiere mit Google Maps / Waze und melde über den 🐞-Button „Fehler melden“.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD-Pfeile</string>
+    <string name="bug_hud_gate_msg">Bevor du meldest: Zeigt die werkseitige Navigation deines Autos bereits Abbiegepfeile im HUD an der Windschutzscheibe an?</string>
+    <string name="bug_hud_gate_yes">✅ Ja, sie zeigt Pfeile an</string>
+    <string name="bug_hud_gate_no">❌ Nein, nie</string>
+    <string name="bug_hud_gate_unknown">❓ Ich weiß es nicht</string>
+    <string name="bug_hud_no_arrows_msg">Dann kann die Firmware deines HUDs überhaupt keine Abbiegepfeile anzeigen — DashCast kann sie auch nicht hinzufügen. Wir können hier nichts beheben, deshalb musst du diesen Bericht nicht senden. Trotzdem danke!</string>
 </resources>

@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD-навигация теперь РАБОТАЕТ в продакшене. Чтобы помочь, поезжай с Google Maps / Waze и сообщай через кнопку 🐞 (панель навигации). Инструменты ниже (①②③) — это R&amp;D, используй их только по запросу.</string>
     <string name="hud_prod_nudge">✅ Отправлено. Но настоящий тест сейчас — запусти навигацию Google Maps / Waze и сообщи через кнопку 🐞 «Сообщить об ошибке».</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Стрелки HUD</string>
+    <string name="bug_hud_gate_msg">Прежде чем отправить отчёт: штатная навигация твоей машины уже показывает стрелки поворотов на HUD, проецируемом на лобовое стекло?</string>
+    <string name="bug_hud_gate_yes">✅ Да, стрелки показываются</string>
+    <string name="bug_hud_gate_no">❌ Нет, никогда</string>
+    <string name="bug_hud_gate_unknown">❓ Я не знаю</string>
+    <string name="bug_hud_no_arrows_msg">Значит, прошивка твоего HUD вообще не умеет показывать стрелки поворотов — DashCast их тоже не сможет добавить. С нашей стороны исправлять нечего, так что отправлять этот отчёт не нужно. Всё равно спасибо!</string>
 </resources>

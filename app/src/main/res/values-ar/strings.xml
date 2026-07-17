@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ أصبحت ملاحة HUD الآن مُفعّلة في الإنتاج. للمساعدة، قُد باستخدام Google Maps / Waze وأبلغ عبر زر 🐞 (شريط التنقل). الأدوات أدناه (①②③) مخصّصة للبحث والتطوير — استخدمها فقط عند الطلب.</string>
     <string name="hud_prod_nudge">✅ تم الإرسال. لكن الاختبار الحقيقي الآن هو التنقل باستخدام Google Maps / Waze والإبلاغ عبر زر 🐞 «الإبلاغ عن خطأ».</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">أسهم HUD</string>
+    <string name="bug_hud_gate_msg">قبل الإبلاغ: هل يعرض نظام الملاحة الأصلي المدمج في سيارتك بالفعل أسهم الاتجاه على شاشة HUD في الزجاج الأمامي؟</string>
+    <string name="bug_hud_gate_yes">✅ نعم، يعرض الأسهم</string>
+    <string name="bug_hud_gate_no">❌ لا، أبداً</string>
+    <string name="bug_hud_gate_unknown">❓ لا أعرف</string>
+    <string name="bug_hud_no_arrows_msg">إذن فإن برنامج HUD الثابت لا يستطيع عرض أسهم الاتجاه على الإطلاق — ولا يستطيع DashCast إضافتها أيضاً. لا يوجد شيء يمكننا إصلاحه من جانبنا، لذا لا داعي لإرسال هذا التقرير. شكراً لك على أي حال!</string>
 </resources>

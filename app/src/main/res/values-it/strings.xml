@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ La navigazione HUD è ora ATTIVA in produzione. Per aiutarci, GUIDA con Google Maps / Waze e segnala tramite il pulsante 🐞 (barra di navigazione). Gli strumenti qui sotto (①②③) sono di R&amp;D — usali solo se richiesto.</string>
     <string name="hud_prod_nudge">✅ Inviato. Ma il vero test ora è navigare con Google Maps / Waze e segnalare tramite il pulsante 🐞 Segnala un bug.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Frecce HUD</string>
+    <string name="bug_hud_gate_msg">Prima di segnalare: la navigazione originale della tua auto mostra già le frecce di svolta sull\'HUD del parabrezza?</string>
+    <string name="bug_hud_gate_yes">✅ Sì, mostra le frecce</string>
+    <string name="bug_hud_gate_no">❌ No, mai</string>
+    <string name="bug_hud_gate_unknown">❓ Non lo so</string>
+    <string name="bug_hud_no_arrows_msg">Allora il firmware del tuo HUD non può proprio mostrare le frecce di svolta, e nemmeno DashCast può aggiungerle. Non c\'è nulla che possiamo correggere, quindi non serve inviare questa segnalazione. Grazie comunque!</string>
 </resources>

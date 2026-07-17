@@ -804,4 +804,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD navigation is now LIVE in production. To help, DRIVE with Google Maps / Waze and report via the 🐞 button (nav rail). The tools below (①②③) are R&amp;D — use only when asked.</string>
     <string name="hud_prod_nudge">✅ Sent. But the real test now is to navigate with Google Maps / Waze and report via the 🐞 Report a bug button.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD arrows</string>
+    <string name="bug_hud_gate_msg">Before reporting: does your car\'s OWN built-in navigation already show turn arrows on the windshield HUD?</string>
+    <string name="bug_hud_gate_yes">✅ Yes, it shows arrows</string>
+    <string name="bug_hud_gate_no">❌ No, never</string>
+    <string name="bug_hud_gate_unknown">❓ I don\'t know</string>
+    <string name="bug_hud_no_arrows_msg">Then your HUD\'s firmware can\'t show turn arrows at all — DashCast can\'t add them either. There\'s nothing we can fix, so no need to send this report. Thanks anyway!</string>
 </resources>

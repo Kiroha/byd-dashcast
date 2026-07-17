@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD навигациясы енді өндірісте іске қосылды. Көмектесу үшін Google Maps / Waze-пен жүріп көріңіз де, 🐞 түймесі арқылы (навигация тақтасы) хабарлаңыз. Төмендегі құралдар (①②③) — R&amp;D үшін, тек сұралғанда ғана қолданыңыз.</string>
     <string name="hud_prod_nudge">✅ Жіберілді. Бірақ нағыз сынақ енді — Google Maps / Waze-пен навигацияны қосып, 🐞 «Қате туралы хабарлау» түймесі арқылы хабарлаңыз.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD көрсеткілері</string>
+    <string name="bug_hud_gate_msg">Хабарлама жіберер алдында: көлігіңнің өзінің кірістірілген навигациясы алдыңғы әйнектегі HUD-та бұрылыс көрсеткілерін қазірдің өзінде көрсете ме?</string>
+    <string name="bug_hud_gate_yes">✅ Иә, көрсеткілерді көрсетеді</string>
+    <string name="bug_hud_gate_no">❌ Жоқ, ешқашан</string>
+    <string name="bug_hud_gate_unknown">❓ Білмеймін</string>
+    <string name="bug_hud_no_arrows_msg">Онда сенің HUD-ыңның микробағдарламасы бұрылыс көрсеткілерін мүлдем көрсете алмайды — DashCast та оларды қоса алмайды. Біздің тарапымыздан түзететін ештеңе жоқ, сондықтан бұл хабарламаны жіберудің қажеті жоқ. Бәрібір рахмет!</string>
 </resources>
