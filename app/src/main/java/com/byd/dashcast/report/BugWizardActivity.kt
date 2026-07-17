@@ -450,6 +450,7 @@ class BugWizardActivity : Activity() {
 
     private fun dp(dp: Int): Int = Math.round(dp * resources.displayMetrics.density)
 
+    @Suppress("DEPRECATION")
     private fun labelFor(pkg: String): String {
         return try {
             val pm = packageManager

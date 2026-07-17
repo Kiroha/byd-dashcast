@@ -5,6 +5,7 @@ package com.byd.dashcast.infrastructure.task
  *
  * Implementations vary by privilege level and API availability:
  *   - [AmTaskFinder]         — ActivityManager.getRunningTasks (fast, limited to caller)
+ *   - [TypedProxyTaskFinder] — daemon IActivityTaskManager.getTasks (fast, privileged)
  *   - [ProxyTaskFinder]      — daemon dumpsys recents + activities (shell uid 2000)
  *   - [AdbLocalTaskFinder]   — AdbLocalClient shell (fallback when daemon is down)
  *   - [ChainedTaskFinder]    — tries each strategy in order until one succeeds

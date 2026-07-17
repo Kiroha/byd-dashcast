@@ -66,6 +66,7 @@ import com.byd.dashcast.dilink4.DiLink4TestRunner;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.voice.VoiceCommandRouter;
 import com.byd.dashcast.voice.VoiceService;
+import com.byd.dashcast.voice.VoiceTelemetry;
 import com.byd.dashcast.voice.VoskTranscriber;
 
 import com.google.android.material.button.MaterialButton;
@@ -3040,12 +3041,17 @@ public class DiagActivity extends AppCompatActivity {
         f.addAction(VoskTranscriber.ACTION_TRANSCRIPT);
         LocalBroadcastManager.getInstance(this).registerReceiver(voiceReceiver, f);
         voiceReceiverRegistered = true;
+        VoiceTelemetry.acquire();
     }
 
     private void unregisterVoiceReceiver() {
         if (!voiceReceiverRegistered) return;
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(voiceReceiver);
-        voiceReceiverRegistered = false;
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(voiceReceiver);
+        } finally {
+            voiceReceiverRegistered = false;
+            VoiceTelemetry.release();
+        }
     }
 
     @Override

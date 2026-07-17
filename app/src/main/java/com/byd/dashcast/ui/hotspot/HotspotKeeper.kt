@@ -157,6 +157,7 @@ object HotspotKeeper {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun tetherFiInstalled(ctx: Context): Boolean = try {
         ctx.packageManager.getPackageInfo(TF_PKG, 0)
         true

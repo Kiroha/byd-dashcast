@@ -61,6 +61,9 @@ class LogActivity : AppCompatActivity() {
     // and a count-based check would freeze the viewer forever.
     private var mLastChangeStamp = -1L
     private var mLastFilterKey: String? = null
+    private var mLastGeneration = -1L
+    private var mFirstSourceSequence = -1L
+    private var mLastSourceSequence = -1L
 
     private val mHandler = Handler(Looper.getMainLooper())
     private val mRefreshRunnable = object : Runnable {
@@ -208,15 +211,21 @@ class LogActivity : AppCompatActivity() {
         val filterKey = mFilter.lowercase(Locale.ROOT) + "|" + (mLevelFilter?.name ?: "*")
         if (currentStamp == mLastChangeStamp && filterKey == mLastFilterKey) return false
 
-        val entries = AppLogger.getEntries()
+        val initialLoad = mLastChangeStamp < 0L
+        val filterChanged = filterKey != mLastFilterKey
+        val update = if (filterChanged) {
+            AppLogger.getEntryUpdate(-1L, -1L, -1L)
+        } else {
+            AppLogger.getEntryUpdate(mLastGeneration, mFirstSourceSequence, mLastSourceSequence)
+        }
         mLastChangeStamp = currentStamp
         mLastFilterKey = filterKey
+        mLastGeneration = update.generation
+        mFirstSourceSequence = update.firstSequence
+        mLastSourceSequence = update.lastSequence
 
-        // 1.2.31 — counts per level (full buffer, ignoring text filter) read
-        // from incremental counters maintained in AppLogger → no more O(N)
-        // walk at 2 Hz just for the chip totals.
-        val cnts = AppLogger.getCountByLevel()
-        val cAll = entries.size
+        val cnts = update.countByLevel
+        val cAll = update.totalCount
         val cInfo = cnts[AppLogger.Level.INFO.ordinal]
         val cWarn = cnts[AppLogger.Level.WARN.ordinal]
         val cErr = cnts[AppLogger.Level.ERROR.ordinal]
@@ -227,8 +236,8 @@ class LogActivity : AppCompatActivity() {
 
         // Apply filter (text + level)
         val needle = mFilter.lowercase(Locale.ROOT)
-        val filtered = ArrayList<AppLogger.Entry>(entries.size)
-        for (e in entries) {
+        val filtered = ArrayList<AppLogger.Entry>(update.entries.size)
+        for (e in update.entries) {
             if (mLevelFilter != null && e.level != mLevelFilter) continue
             if (needle.isNotEmpty()) {
                 val match = containsIgnoreCase(e.tag, needle) ||
@@ -240,13 +249,15 @@ class LogActivity : AppCompatActivity() {
         }
 
         val prevSize = mAdapter.size()
-        mAdapter.setEntries(filtered)
-        mEmptyView.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        mRecycler.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE
+        val canAppend = update.appendOnly && !filterChanged
+        if (canAppend) mAdapter.appendEntries(filtered) else mAdapter.setEntries(filtered)
+        val currentSize = mAdapter.size()
+        mEmptyView.visibility = if (currentSize == 0) View.VISIBLE else View.GONE
+        mRecycler.visibility = if (currentSize == 0) View.GONE else View.VISIBLE
 
-        // Auto-scroll to bottom only when new entries were appended, not on filter changes.
-        if (filtered.isNotEmpty() && filtered.size > prevSize) {
-            mRecycler.scrollToPosition(filtered.size - 1)
+        // Auto-scroll on initial load or when matching rows were genuinely appended.
+        if (currentSize > 0 && (initialLoad || (canAppend && currentSize > prevSize))) {
+            mRecycler.scrollToPosition(currentSize - 1)
         }
         return true
     }

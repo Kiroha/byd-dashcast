@@ -3,6 +3,7 @@ package com.byd.dashcast.app
 import android.content.Context
 import com.byd.dashcast.proxy.ShellGateway
 import com.byd.dashcast.util.AppLogger
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * One-shot background tasks executed once at process start in MainActivity.onCreate().
@@ -14,6 +15,7 @@ import com.byd.dashcast.util.AppLogger
 object AppStartupTasks {
 
     private const val TAG = "AppStartupTasks"
+    private val sStarted = AtomicBoolean(false)
 
     /**
      * @param ctx               application context
@@ -21,6 +23,7 @@ object AppStartupTasks {
      */
     @JvmStatic
     fun run(ctx: Context, killOrphanSniffer: Boolean) {
+        if (!sStarted.compareAndSet(false, true)) return
         val t = Thread({
             try {
                 AppLogger.pruneOldFiles(ctx, 3)

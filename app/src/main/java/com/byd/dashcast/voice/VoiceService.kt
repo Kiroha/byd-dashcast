@@ -164,14 +164,21 @@ class VoiceService : Service() {
             frameCount++
             var sumSq = 0L
             var peak = 0
-            for (i in 0 until read) {
-                val s = frame[i].toInt()
-                val abs = if (s < 0) -s else s
-                if (abs > peak) peak = abs
-                if (abs >= 32767) clipCount++
-                sumSq += s.toLong() * s.toLong()
+            val telemetryEnabled = VoiceTelemetry.isEnabled()
+            if (telemetryEnabled) {
+                for (i in 0 until read) {
+                    val s = frame[i].toInt()
+                    val abs = if (s < 0) -s else s
+                    if (abs > peak) peak = abs
+                    if (abs >= 32767) clipCount++
+                    sumSq += s.toLong() * s.toLong()
+                }
             }
-            val rms = sqrt(sumSq.toDouble() / read.toDouble()).toInt()
+            val rms = if (telemetryEnabled) {
+                sqrt(sumSq.toDouble() / read.toDouble()).toInt()
+            } else {
+                0
+            }
 
             // v1.2.50 wake-word hook : forward the raw frame to the engine
             // if one is currently installed. Null = production behaviour =
@@ -188,7 +195,7 @@ class VoiceService : Service() {
             }
 
             val now = SystemClock.elapsedRealtime()
-            if (now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {
+            if (telemetryEnabled && now - lastBroadcastAt >= UPDATE_INTERVAL_MS) {
                 lastBroadcastAt = now
                 // LocalBroadcastManager.sendBroadcast is asynchronous and retains the exact
                 // Intent reference in its pending queue. A fresh snapshot prevents the next

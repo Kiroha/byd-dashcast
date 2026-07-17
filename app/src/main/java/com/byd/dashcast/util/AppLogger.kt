@@ -38,7 +38,8 @@ object AppLogger {
     class Entry internal constructor(
         @JvmField val level: Level,
         @JvmField val tag: String,
-        @JvmField val message: String
+        @JvmField val message: String,
+        @JvmField val sequence: Long
     ) {
         @JvmField val timestamp: Long = System.currentTimeMillis()
         @JvmField val threadName: String = Thread.currentThread().name
@@ -77,6 +78,18 @@ object AppLogger {
     // 3000 — a size-based change check then reports "no change" forever and the
     // log viewer silently freezes.
     private var sChangeStamp = 0L
+    private var sGeneration = 0L
+    private var sNextSequence = 1L
+
+    class EntryUpdate internal constructor(
+        @JvmField val generation: Long,
+        @JvmField val firstSequence: Long,
+        @JvmField val lastSequence: Long,
+        @JvmField val entries: List<Entry>,
+        @JvmField val appendOnly: Boolean,
+        @JvmField val totalCount: Int,
+        @JvmField val countByLevel: IntArray
+    )
 
     // SimpleDateFormat is not thread-safe — one instance per thread via ThreadLocal
     // avoids repeated allocations without risk of corruption.
@@ -99,8 +112,8 @@ object AppLogger {
         // dumpsys/Parcel dump isn't pinned verbatim for the process lifetime.
         val bounded = if (msg.length > MAX_MSG_CHARS)
             msg.substring(0, MAX_MSG_CHARS) + TRUNCATION_SUFFIX else msg
-        val e = Entry(level, tag, bounded)
         synchronized(LOCK) {
+            val e = Entry(level, tag, bounded, sNextSequence++)
             sEntries.addLast(e)
             sCountByLevel[level.ordinal]++
             sTotalChars += bounded.length
@@ -203,6 +216,42 @@ object AppLogger {
     fun getEntries(): List<Entry> =
         synchronized(LOCK) { Collections.unmodifiableList(ArrayList(sEntries)) }
 
+    /**
+     * Returns either the full retained buffer or only entries appended after [knownLastSequence].
+     * A delta is safe only while generation and first-retained sequence are unchanged; this
+     * detects both clear() and eviction by entry-count or character budget.
+     */
+    @JvmStatic
+    fun getEntryUpdate(
+        knownGeneration: Long,
+        knownFirstSequence: Long,
+        knownLastSequence: Long
+    ): EntryUpdate = synchronized(LOCK) {
+        val firstSequence = sEntries.peekFirst()?.sequence ?: sNextSequence
+        val lastSequence = sEntries.peekLast()?.sequence ?: (sNextSequence - 1L)
+        val appendOnly = LogUpdatePolicy.canAppend(
+            knownGeneration, knownFirstSequence, knownLastSequence,
+            sGeneration, firstSequence, lastSequence
+        )
+        val entries: List<Entry> = if (appendOnly) {
+            val delta = ArrayList<Entry>()
+            val iterator = sEntries.descendingIterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry.sequence <= knownLastSequence) break
+                delta.add(entry)
+            }
+            delta.reverse()
+            Collections.unmodifiableList(delta)
+        } else {
+            Collections.unmodifiableList(ArrayList(sEntries))
+        }
+        EntryUpdate(
+            sGeneration, firstSequence, lastSequence, entries, appendOnly,
+            sEntries.size, sCountByLevel.copyOf()
+        )
+    }
+
     /** Returns the full buffer as a formatted String (for text sharing). */
     @JvmStatic
     fun get(): String {
@@ -240,6 +289,7 @@ object AppLogger {
             sEntries.clear()
             sCountByLevel.fill(0)
             sTotalChars = 0L
+            sGeneration++
             sChangeStamp++ // clear is a mutation too — viewers must refresh
         }
     }

@@ -189,6 +189,7 @@ class VoiceCommandRouter(ctx: Context) {
      * Tries to resolve an app label to an installed package name.
      * Looks for a case-insensitive substring match in the app's human-readable label.
      */
+    @Suppress("DEPRECATION")
     private fun resolvePackage(label: String?): String? {
         if (label.isNullOrEmpty()) return null
         val pm = mCtx.packageManager

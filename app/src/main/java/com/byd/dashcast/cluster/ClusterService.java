@@ -34,6 +34,7 @@ import com.byd.dashcast.infrastructure.task.ChainedTaskResizer;
 import com.byd.dashcast.infrastructure.task.TaskFinder;
 import com.byd.dashcast.infrastructure.task.TaskLocation;
 import com.byd.dashcast.infrastructure.task.TaskResizer;
+import com.byd.dashcast.infrastructure.task.TypedProxyTaskFinder;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
 import com.byd.dashcast.util.concurrent.LifecycleGate;
@@ -169,9 +170,10 @@ public class ClusterService extends Service
         mMirrorManager  = new ClusterMirrorManager();
         mInputForwarder = new ClusterInputForwarder(this);
 
-        // Strategy wiring: ChainedTaskFinder tries AM → ProxyDaemon → AdbLocal.
+        // Strategy wiring: app AM → typed daemon ATM → daemon dumpsys → AdbLocal dumpsys.
         mTaskFinder = new ChainedTaskFinder(
                 new AmTaskFinder(this),
+                new TypedProxyTaskFinder(),
                 new com.byd.dashcast.infrastructure.task.ProxyTaskFinder(),
                 new AdbLocalTaskFinder(this));
         mTaskResizer = new ChainedTaskResizer(this);
@@ -475,7 +477,7 @@ public class ClusterService extends Service
      * Finds the taskId of the running task for {@code packageName}.
      * Must be called from a background thread.
      *
-     * Delegates to {@link ChainedTaskFinder}: AM → ProxyDaemon recents/activities → AdbLocal.
+    * Delegates to {@link ChainedTaskFinder}: AM → typed daemon ATM → daemon dumpsys → AdbLocal.
      * Returns -1 if no task is found.
      */
     public int findRunningTaskId(String packageName) {
