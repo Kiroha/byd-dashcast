@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.133-beta (versionCode 574)
+
+Leaner daemon monitoring and a clean lint baseline after 1.6.132-beta. The always-on `ProxyKeeperService` now owns daemon health checks while active, allowing the redundant foreground `ProxyWatchdog` thread and wakeup stream to be released; foreground fallback monitoring returns automatically if the keeper stops. This release also fixes the inherited `SuspiciousIndentation` and `UseAppTint` correctness errors, removes three unnecessary baseline measurements, and eliminates Cluster Resize root overdraw through a color-preserving dedicated window theme. Lint now reports zero errors and zero warnings, with only 17 documented informational layout metrics remaining.
+
+See the [complete English 1.6.133-beta release notes](docs/releases/1.6.133-beta.md) for the proxy ownership lifecycle, fallback guarantees, lint fixes, low-risk layout measurements, updated performance audit, validation evidence, compatibility notes, and suggested vehicle checks.
+
 ### 1.6.132-beta (versionCode 573)
 
 Truthful D50F_LC physical-routing diagnostics after 1.6.131-beta. Based on `INC-20260717-221007`, this release corrects the false assumption that Znav on Android display 2/layerStack 2 or in a DashCast screenshot means the physical instrument panel changed. It preserves the native `IAutoContainer.sendInfo` integer through additive proxy protocol v20, classifies `ffffffff` as rejection `-1`, and adds a strictly D50F_LC-gated `D12` probe for the previously untested `1000/18 -> 6 s -> 16/35 -> observe -> restore` handshake. Production projection, launch, mirror, and input behavior remain unchanged on DiLink 3, DiLink 4, and normal DiLink 5; the candidate layerStack-1 `remote_dashboard` bridge remains intentionally deferred until the physical car confirms the switch.
