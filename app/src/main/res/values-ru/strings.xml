@@ -448,6 +448,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Локальный предпросмотр недоступен — дисплей кластера всё ещё активен</string>
+    <string name="layout_mirror_previous">Предыдущее приложение макета</string>
+    <string name="layout_mirror_next">Следующее приложение макета</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>

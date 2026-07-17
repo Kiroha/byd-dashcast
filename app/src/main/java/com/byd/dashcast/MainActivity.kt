@@ -17,6 +17,7 @@ import android.view.TextureView
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -170,6 +171,10 @@ class MainActivity : AppCompatActivity(),
     private var mInsetOverlay: InsetOverlayView? = null
     private lateinit var frameMirror: FrameLayout
     private lateinit var clusterMirror: TextureView
+    private lateinit var mLayoutMirrorSwitcher: View
+    private lateinit var mLayoutMirrorSelected: TextView
+    private lateinit var mLayoutMirrorPrev: ImageButton
+    private lateinit var mLayoutMirrorNext: ImageButton
 
     // ── Coordinators / Controllers ────────────────────────────────────────────
     private lateinit var mAppListCoordinator: AppListCoordinator
@@ -312,7 +317,14 @@ class MainActivity : AppCompatActivity(),
 
         frameMirror = findViewById(R.id.frame_cluster_mirror)
         clusterMirror = findViewById(R.id.cluster_mirror)
+        mLayoutMirrorSwitcher = findViewById(R.id.layout_mirror_switcher)
+        mLayoutMirrorSelected = findViewById(R.id.tv_layout_mirror_selected)
+        mLayoutMirrorPrev = findViewById(R.id.btn_layout_mirror_prev)
+        mLayoutMirrorNext = findViewById(R.id.btn_layout_mirror_next)
         mInsetOverlay = findViewById(R.id.inset_overlay)
+
+        mLayoutMirrorPrev.setOnClickListener { stepLayoutMirror(-1) }
+        mLayoutMirrorNext.setOnClickListener { stepLayoutMirror(1) }
 
         // Read persisted mMainDisplayPkg early so it is available for display-connected callbacks.
         mMainDisplayPkg = ClusterPrefs.getMainPkg(this)
@@ -810,6 +822,12 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onSendToDashboard(app: AppInfo) {
+        // A running Layout app already owns a dedicated VD. A normal launch here would start a
+        // competing classic projection; instead, make this app the tactile mirror target.
+        if (FissionOrchestrator.isLayoutPackage(app.packageName)) {
+            selectLayoutMirror(app.packageName)
+            return
+        }
         val selection = mDashboardSelectionTracker.begin(app.packageName)
         if (selection.isDuplicatePending) {
             AppLogger.d(TAG, "onSendToDashboard: boot adoption already pending for " + app.packageName)
@@ -1226,6 +1244,12 @@ class MainActivity : AppCompatActivity(),
 
     /** Hides the mirror and restores the app list. */
     private fun showAppList() {
+        // The preview is permanently visible on Main. Keep a selected Layout mirror alive while
+        // the user browses apps; tile taps are the primary fast slot switcher.
+        if (FissionOrchestrator.getSelectedLayoutMirrorTarget() != null) {
+            mClusterControlCoordinator?.hidePanel()
+            return
+        }
         // DL3 keepalive: the daemon mirror (layerStack=2 fallback) must survive the periodic timeout.
         val svc = mClusterService
         val keepDaemonMirror = mServiceBound && svc != null &&
@@ -1252,18 +1276,7 @@ class MainActivity : AppCompatActivity(),
 
     /** Stops the SurfaceControl mirror and hides the panel. */
     private fun stopClusterMirror() {
-        val svc = mClusterService
-        if (mServiceBound && svc != null) {
-            val wasActive = svc.getMirrorManager().isMirrorActive()
-            // Stop the daemon mirror if active
-            val binder = mDaemonBinder
-            if (binder != null) {
-                svc.getMirrorManager().stopMirrorViaDaemon(binder)
-            }
-            // Local cleanup (direct SurfaceControl token, residual VirtualDisplay)
-            svc.getMirrorManager().stopMirror()
-            if (wasActive) AppLogger.d(TAG, "stopClusterMirror OK")
-        }
+        mMirrorCoordinator?.stopMirror()
     }
 
     private fun activateCluster() {
@@ -1783,7 +1796,39 @@ class MainActivity : AppCompatActivity(),
 
     /** Pushes the current fission-layout package set to the app list (indicators + actions). */
     private fun refreshLayoutPackages() {
-        mAppListCoordinator.setLayoutPackages(FissionOrchestrator.getActiveLayoutPackages())
+        val packages = FissionOrchestrator.getActiveLayoutPackages()
+        mAppListCoordinator.setLayoutPackages(packages)
+        updateLayoutMirrorSwitcher()
+        mMirrorCoordinator?.onLayoutTargetChanged()
+    }
+
+    private fun selectLayoutMirror(packageName: String) {
+        val target = FissionOrchestrator.selectLayoutMirrorPackage(packageName) ?: return
+        AppLogger.i(TAG, "Selected tactile Layout mirror: ${target.pkg}@${target.displayId}")
+        updateLayoutMirrorSwitcher()
+        showMirrorView()
+        mMirrorCoordinator?.onLayoutTargetChanged()
+    }
+
+    private fun stepLayoutMirror(delta: Int) {
+        val target = FissionOrchestrator.stepLayoutMirrorSelection(delta) ?: return
+        AppLogger.i(TAG, "Stepped tactile Layout mirror: ${target.pkg}@${target.displayId}")
+        updateLayoutMirrorSwitcher()
+        showMirrorView()
+        mMirrorCoordinator?.onLayoutTargetChanged()
+    }
+
+    private fun updateLayoutMirrorSwitcher() {
+        val target = FissionOrchestrator.getSelectedLayoutMirrorTarget()
+        if (target == null) {
+            mLayoutMirrorSwitcher.visibility = View.GONE
+            return
+        }
+        mLayoutMirrorSwitcher.visibility = View.VISIBLE
+        mLayoutMirrorSelected.text = target.label
+        val multiple = FissionOrchestrator.getActiveLayoutPackages().size > 1
+        mLayoutMirrorPrev.visibility = if (multiple) View.VISIBLE else View.INVISIBLE
+        mLayoutMirrorNext.visibility = if (multiple) View.VISIBLE else View.INVISIBLE
     }
 
     // ── OverflowMenuHelper.Host ───────────────────────────────────────────────

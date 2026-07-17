@@ -54,4 +54,17 @@ class TaskLaunchRecoveryTest {
         assertEquals(73, taskId)
         assertEquals(listOf("clean", "plain", "poll"), events)
     }
+
+    @Test
+    fun completedCascadeIsSuccessfulDespiteDiagnosticErrLines() {
+        val result = """
+            ERR moveStackToDisplay: already on current display
+            ERR resizeTask: not allowed
+            WATCHDOG started
+            FINISH: launchAndForce complete.
+        """.trimIndent()
+
+        assertTrue(TaskLaunchRecovery.isSuccessful(result))
+        assertFalse(TaskLaunchRecovery.isSuccessful("FAIL: no task discovered for com.waze"))
+    }
 }

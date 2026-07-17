@@ -21,6 +21,8 @@
     <string name="btn_origin_cluster">Restore Original Dashboard</string>
     <string name="mirror_placeholder">Active display on cluster ✓</string>
     <string name="mirror_unavailable">Local preview unavailable — cluster display still active</string>
+    <string name="layout_mirror_previous">Previous Layout app</string>
+    <string name="layout_mirror_next">Next Layout app</string>
     <string name="btn_cluster_split">⬛⬛ Split</string>
     <string name="cluster_control_title">Cluster control</string>
     <string name="cluster_control_hide">Hide ▼</string>

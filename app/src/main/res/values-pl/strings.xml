@@ -21,6 +21,8 @@
     <string name="btn_origin_cluster">Przywróć oryginalną tablicę rozdzielczą</string>
     <string name="mirror_placeholder">Aktywny ekran na klastrze ✓</string>
     <string name="mirror_unavailable">Lokalny podgląd niedostępny — ekran klastra nadal aktywny</string>
+    <string name="layout_mirror_previous">Poprzednia aplikacja układu</string>
+    <string name="layout_mirror_next">Następna aplikacja układu</string>
     <string name="btn_cluster_split">⬛⬛ Podział</string>
     <string name="cluster_control_title">Sterowanie klastrem</string>
     <string name="cluster_control_hide">Ukryj ▼</string>

@@ -825,6 +825,52 @@
                                 android:focusable="true"
                                 android:contentDescription="@string/main_preview_section"/>
 
+                            <!-- Active Layout tactile target. Kept inside the preview so switching
+                                 remains available when the app list is hidden in fullscreen. -->
+                            <LinearLayout
+                                android:id="@+id/layout_mirror_switcher"
+                                android:layout_width="wrap_content"
+                                android:layout_height="48dp"
+                                android:layout_gravity="top|center_horizontal"
+                                android:layout_marginTop="8dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingStart="4dp"
+                                android:paddingEnd="4dp"
+                                android:background="#D91B1D22"
+                                android:elevation="8dp"
+                                android:visibility="gone">
+
+                                <ImageButton
+                                    android:id="@+id/btn_layout_mirror_prev"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:src="@drawable/ic_arrow_back"
+                                    android:tint="@color/md_on_surface"
+                                    android:contentDescription="@string/layout_mirror_previous"/>
+
+                                <TextView
+                                    android:id="@+id/tv_layout_mirror_selected"
+                                    android:layout_width="160dp"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:maxLines="1"
+                                    android:ellipsize="end"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/md_on_surface"/>
+
+                                <ImageButton
+                                    android:id="@+id/btn_layout_mirror_next"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:src="@drawable/ic_arrow_forward"
+                                    android:tint="@color/md_on_surface"
+                                    android:contentDescription="@string/layout_mirror_next"/>
+                            </LinearLayout>
+
                             <TextView
                                 android:id="@+id/tv_mirror_placeholder"
                                 android:layout_width="match_parent"

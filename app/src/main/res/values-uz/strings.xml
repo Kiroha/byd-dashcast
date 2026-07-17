@@ -449,6 +449,8 @@
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
     <string name="mirror_unavailable">Mahalliy oldindan ko\'rish mavjud emas — klaster displeyi hali faol</string>
+    <string name="layout_mirror_previous">Oldingi tartib ilovasi</string>
+    <string name="layout_mirror_next">Keyingi tartib ilovasi</string>
     <string name="main_nav_hotspot">Hotspot</string>
     <string name="hotspot_title">Hotspot</string>
     <string name="hotspot_back">Back</string>
