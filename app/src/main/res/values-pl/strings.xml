@@ -800,4 +800,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ Nawigacja HUD działa już produkcyjnie. Aby pomóc, jedź z nawigacją Google Maps / Waze i zgłaszaj przez przycisk 🐞 (pasek nawigacji). Narzędzia poniżej (①②③) to R&amp;D — używaj tylko wtedy, gdy poprosimy.</string>
     <string name="hud_prod_nudge">✅ Wysłano. Ale prawdziwy test to teraz uruchomienie nawigacji Google Maps / Waze i zgłoszenie przez przycisk 🐞 Zgłoś błąd.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Strzałki HUD</string>
+    <string name="bug_hud_gate_msg">Zanim zgłosisz problem: czy WBUDOWANA nawigacja twojego samochodu już teraz wyświetla strzałki nawigacji na HUD na przedniej szybie?</string>
+    <string name="bug_hud_gate_yes">✅ Tak, wyświetla strzałki</string>
+    <string name="bug_hud_gate_no">❌ Nie, nigdy</string>
+    <string name="bug_hud_gate_unknown">❓ Nie wiem</string>
+    <string name="bug_hud_no_arrows_msg">W takim razie firmware twojego HUD w ogóle nie potrafi wyświetlać strzałek nawigacji — DashCast też nie może ich dodać. Nie ma tu nic do naprawienia po naszej stronie, więc nie musisz wysyłać tego zgłoszenia. Dzięki mimo wszystko!</string>
 </resources>

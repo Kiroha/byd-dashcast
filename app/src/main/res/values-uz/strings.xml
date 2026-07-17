@@ -792,5 +792,12 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD navigatsiyasi endi ishlab chiqarishda faol. Yordam berish uchun Google Maps / Waze bilan haydang va 🐞 tugmasi orqali xabar bering (navigatsiya paneli). Quyidagi vositalar (①②③) — R&amp;D, faqat so\'ralganda foydalaning.</string>
     <string name="hud_prod_nudge">✅ Yuborildi. Ammo asl sinov endi bu — Google Maps / Waze bilan navigatsiya qiling va 🐞 «Xato haqida xabar berish» tugmasi orqali xabar bering.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD strelkalari</string>
+    <string name="bug_hud_gate_msg">Xabar berishdan oldin: mashinangizning O\'ZINING o\'rnatilgan navigatsiyasi shamol oynasidagi HUD\'da burilish strelkalarini allaqachon ko\'rsatadimi?</string>
+    <string name="bug_hud_gate_yes">✅ Ha, strelkalarni ko\'rsatadi</string>
+    <string name="bug_hud_gate_no">❌ Yo\'q, hech qachon</string>
+    <string name="bug_hud_gate_unknown">❓ Bilmayman</string>
+    <string name="bug_hud_no_arrows_msg">Unda HUD\'ingning proshivkasi burilish strelkalarini umuman ko\'rsata olmaydi — DashCast ham ularni qo\'sha olmaydi. Bizning tomonimizdan tuzatadigan narsa yo\'q, shuning uchun bu hisobotni yuborishning hojati yo\'q. Baribir rahmat!</string>
 </resources>
 

@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ La navegación HUD ya está EN PRODUCCIÓN. Para ayudar, conduce con Google Maps / Waze y repórtalo con el botón 🐞 (barra de navegación). Las herramientas de abajo (①②③) son de I+D — úsalas solo cuando se te pida.</string>
     <string name="hud_prod_nudge">✅ Enviado. Pero la verdadera prueba ahora es navegar con Google Maps / Waze y reportar con el botón 🐞 Informar de un error.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Flechas del HUD</string>
+    <string name="bug_hud_gate_msg">Antes de informar: ¿la navegación integrada de tu propio coche ya muestra flechas de dirección en el HUD del parabrisas?</string>
+    <string name="bug_hud_gate_yes">✅ Sí, muestra flechas</string>
+    <string name="bug_hud_gate_no">❌ No, nunca</string>
+    <string name="bug_hud_gate_unknown">❓ No lo sé</string>
+    <string name="bug_hud_no_arrows_msg">Entonces el firmware de tu HUD no puede mostrar flechas de dirección en absoluto, y DashCast tampoco puede añadirlas. No hay nada que podamos arreglar, así que no hace falta que envíes este informe. ¡Gracias de todos modos!</string>
 </resources>

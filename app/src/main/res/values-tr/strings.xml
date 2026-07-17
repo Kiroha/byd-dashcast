@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD navigasyonu artık üretimde aktif. Yardımcı olmak için Google Maps / Waze ile sürüş yapın ve 🐞 düğmesi (navigasyon çubuğu) ile bildirin. Aşağıdaki araçlar (①②③) Ar-Ge içindir — yalnızca istendiğinde kullanın.</string>
     <string name="hud_prod_nudge">✅ Gönderildi. Ama asıl test şimdi: Google Maps / Waze ile navigasyon yapın ve 🐞 Hata bildir düğmesiyle bildirin.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">HUD okları</string>
+    <string name="bug_hud_gate_msg">Bildirmeden önce: aracının kendi dahili navigasyonu ön cam HUD\'unda dönüş oklarını zaten gösteriyor mu?</string>
+    <string name="bug_hud_gate_yes">✅ Evet, okları gösteriyor</string>
+    <string name="bug_hud_gate_no">❌ Hayır, asla</string>
+    <string name="bug_hud_gate_unknown">❓ Bilmiyorum</string>
+    <string name="bug_hud_no_arrows_msg">O halde HUD\'unun ürün yazılımı dönüş oklarını hiç gösteremiyor demektir — DashCast da onları ekleyemez. Bizim tarafımızda düzeltebileceğimiz bir şey yok, bu yüzden bu raporu göndermene gerek yok. Yine de teşekkürler!</string>
 </resources>

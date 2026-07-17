@@ -791,4 +791,11 @@
     <!-- HUD diag → production-steering banner + post-bench nudge (13 locales) -->
     <string name="hud_prod_banner">✅ HUD-навігацыя цяпер працуе ў прадакшне. Каб дапамагчы, едзь з Google Maps / Waze і паведамляй праз кнопку 🐞 (панэль навігацыі). Інструменты ніжэй (①②③) — гэта R&amp;D, карыстайся імі толькі калі папросяць.</string>
     <string name="hud_prod_nudge">✅ Адпраўлена. Але сапраўдны тэст цяпер — запусці навігацыю ў Google Maps / Waze і паведамі праз кнопку 🐞 Паведаміць пра памылку.</string>
+    <!-- HUD arrow-capability gate for the bug wizard (13 locales) -->
+    <string name="bug_hud_gate_title">Стрэлкі HUD</string>
+    <string name="bug_hud_gate_msg">Перш чым паведамляць пра праблему: ці паказвае ўласная ўбудаваная навігацыя тваёй машыны стрэлкі паваротаў на HUD на лабавым шкле?</string>
+    <string name="bug_hud_gate_yes">✅ Так, яна паказвае стрэлкі</string>
+    <string name="bug_hud_gate_no">❌ Не, ніколі</string>
+    <string name="bug_hud_gate_unknown">❓ Не ведаю</string>
+    <string name="bug_hud_no_arrows_msg">Значыць, прашыўка твайго HUD увогуле не можа паказваць стрэлкі паваротаў — DashCast таксама не можа іх дадаць. Выпраўляць тут няма чаго, таму адпраўляць гэтую справаздачу не трэба. Усё роўна дзякуй!</string>
 </resources>
