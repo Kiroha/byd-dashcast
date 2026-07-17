@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.130-beta (versionCode 571)
+
+Reliable automatic Layout ownership and DiLink 3 application-launch recovery after 1.6.129-beta. This release fixes `INC-20260717-122902` and `INC-20260717-175749`: Automatic favourite Layout now takes priority over a standalone app's Auto-launch at start setting, a sole usable saved Layout can repair a missing favourite, returning from Settings/Layout Manager re-evaluates startup immediately, and failed attempts can retry. On affected DiLink 3 ROMs, the known `ActivityStack.getBounds()` FREEFORM-stack crash now triggers a second stack cleanup before a plain launch. The misleading "not installed or incompatible with multi-display" message is replaced by an accurate launch-failure message in all 13 locales.
+
+See the [complete English 1.6.130-beta release notes](docs/releases/1.6.130-beta.md) for the full incident analysis, startup precedence, Auto-Boot requirements, WindowManager recovery, validation results, compatibility notes, and suggested vehicle checks.
+
 ### 1.6.129-beta (versionCode 570)
 
 Reliable Layout-mode projection teardown after 1.6.128-beta. This release fixes `INC-20260716-215316` and `INC-20260716-215226`: on the affected DiLink 3 ROM, the direct task-move API is absent even though the compatible stack-move API is available, while the previous slot release and asynchronous force-stop sequence raced native-cluster restoration. Layout shutdown now falls back through `moveStackToDisplay`, processes every package in strict move -> remove task -> verified force-stop -> slot release order, verifies process death with PID rechecks and `kill -9` escalation, and delays BYD/original-cluster restoration until all Layout applications have been handled.
