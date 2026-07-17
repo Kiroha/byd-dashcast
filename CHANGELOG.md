@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.132-beta (versionCode 573)
+
+Truthful D50F_LC physical-routing diagnostics after 1.6.131-beta. Based on `INC-20260717-221007`, this release corrects the false assumption that Znav on Android display 2/layerStack 2 or in a DashCast screenshot means the physical instrument panel changed. It preserves the native `IAutoContainer.sendInfo` integer through additive proxy protocol v20, classifies `ffffffff` as rejection `-1`, and adds a strictly D50F_LC-gated `D12` probe for the previously untested `1000/18 -> 6 s -> 16/35 -> observe -> restore` handshake. Production projection, launch, mirror, and input behavior remain unchanged on DiLink 3, DiLink 4, and normal DiLink 5; the candidate layerStack-1 `remote_dashboard` bridge remains intentionally deferred until the physical car confirms the switch.
+
+See the [complete English 1.6.132-beta release notes](docs/releases/1.6.132-beta.md) for the incident evidence, native-result IPC, guarded handshake sequence, false-positive removal, clean-room physical-routing architecture, validation results, compatibility guarantees, known limitation, and stationary vehicle test procedure.
+
 ### 1.6.131-beta (versionCode 572)
 
 Visible Layout activity state and switchable tactile mirrors after 1.6.130-beta. Based on `INC-20260717-153708`, Layout-launched applications now show the green active bar in both the app list and Favorites. Main can directly mirror and control a headlessly created Layout slot, select a running Layout app by tapping its tile, and cycle previous/next from an overlay that remains available in fullscreen. Video uses the slot's resolved layer stack, touch targets its display ID, multi-touch coordinates are mapped to the slot's real dimensions, and the selected task receives best-effort focus. Successful `launchAndForce` cascades also stop producing false non-OK warnings.
