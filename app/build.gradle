@@ -423,8 +423,10 @@ android {
         // 575 = 1.6.134-beta (full-application optimization audit: process-once startup
         // hygiene, batched shortcut discovery, typed task lookup, incremental Journal,
         // wake-word/voice hot-path reductions, screenshot pruning, and resize allocation cleanup.)
-        versionCode 575
-        versionName "1.6.134-beta"
+        // 576 = 1.6.135-beta (mirror diagnostics off the start critical path, race-safe
+        // screenshot ownership, lifecycle-safe Hotspot probes, and lower voice telemetry cost.)
+        versionCode 576
+        versionName "1.6.135-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
