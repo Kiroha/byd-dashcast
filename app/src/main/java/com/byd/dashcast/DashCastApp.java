@@ -56,7 +56,8 @@ public class DashCastApp extends Application {
         platformInit.setDaemon(true);
         platformInit.start();
 
-        // Foreground liveness ping for the proxy daemon.
+        // Foreground fallback monitor for the proxy daemon. It releases its
+        // HandlerThread while the stronger always-on keeper below is active.
         com.byd.dashcast.proxy.ProxyWatchdog.install(this);
         // Always-on foreground service that monitors the daemon every 10 s.
         com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this);
