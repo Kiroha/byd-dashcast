@@ -142,7 +142,7 @@ public final class SplitController {
                         AppLogger.e(TAG, "split relaunch FAILED slot=" + slot);
                         Toast.makeText(mHost.getContext(),
                                 mHost.getContext().getString(
-                                        R.string.toast_app_incompatible, splitApp),
+                                        R.string.toast_app_launch_failed, splitApp),
                                 Toast.LENGTH_SHORT).show();
                         mCurrentSplitSlot = 0;
                         mHost.onSplitStateChanged();

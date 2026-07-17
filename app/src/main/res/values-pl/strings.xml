@@ -32,7 +32,7 @@
     <string name="status_restoring_origin">Przywracanie oryginalnego klastra…</string>
     <string name="status_dashboard_byd">Projekcja gotowa — wybierz aplikację</string>
     <string name="status_dashboard_app">Tablica rozdzielcza: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: nie zainstalowano lub niezgodne z trybem wielu ekranów</string>
+    <string name="toast_app_launch_failed">%1$s: uruchomienie na zestawie wskaźników nie powiodło się (zobacz Dziennik)</string>
     <string name="toast_app_already_cluster">Aplikacja jest już na klastrze</string>
     <string name="toast_restore_failed">Przywracanie nie powiodło się: %1$s</string>
     <string name="toast_origin_failed">Przywracanie oryginalnego klastra nie powiodło się: %1$s</string>

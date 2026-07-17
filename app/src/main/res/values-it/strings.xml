@@ -31,7 +31,7 @@
     <string name="status_restoring_origin">Ripristino cluster originale…</string>
     <string name="status_dashboard_byd">Proiezione pronta — scegli un’app</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: non installato o incompatibile con multi-display</string>
+    <string name="toast_app_launch_failed">%1$s: avvio sul cluster non riuscito (vedi Registro)</string>
     <string name="toast_app_already_cluster">App già sul cluster</string>
     <string name="toast_restore_failed">Ripristino fallito: %1$s</string>
     <string name="toast_origin_failed">Ripristino cluster originale fallito: %1$s</string>

@@ -31,7 +31,7 @@
     <string name="status_restoring_origin">Відновлення штатного кластера…</string>
     <string name="status_dashboard_byd">Проекція готова — оберіть застосунок</string>
     <string name="status_dashboard_app">Панель приладів: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: не встановлено або несумісне з кількома дисплеями</string>
+    <string name="toast_app_launch_failed">%1$s: не вдалося запустити на кластері (див. журнал)</string>
     <string name="toast_app_already_cluster">Програма вже на кластері</string>
     <string name="toast_restore_failed">Не вдалося відновити: %1$s</string>
     <string name="toast_origin_failed">Не вдалося відновити штатний кластер: %1$s</string>

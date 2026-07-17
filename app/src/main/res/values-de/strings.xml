@@ -31,7 +31,7 @@
     <string name="status_restoring_origin">Original-Cluster wird wiederhergestellt…</string>
     <string name="status_dashboard_byd">Projektion bereit — App wählen</string>
     <string name="status_dashboard_app">Dashboard: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: nicht installiert oder inkompatibel mit Multi-Display</string>
+    <string name="toast_app_launch_failed">%1$s: Start auf dem Cluster fehlgeschlagen (siehe Protokoll)</string>
     <string name="toast_app_already_cluster">App bereits auf dem Cluster</string>
     <string name="toast_restore_failed">Wiederherstellung fehlgeschlagen: %1$s</string>
     <string name="toast_origin_failed">Original-Cluster-Wiederherstellung fehlgeschlagen: %1$s</string>

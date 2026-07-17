@@ -28,7 +28,7 @@
     <string name="status_restoring_origin">Аднаўленне штатнага кластара…</string>
     <string name="status_dashboard_byd">Праекцыя гатовая — абярыце дадатак</string>
     <string name="status_dashboard_app">Панэль прыбораў: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: не ўсталявана або несумяшчальна з некалькімі дысплеямі</string>
+    <string name="toast_app_launch_failed">%1$s: не ўдалося запусціць на кластары (гл. журнал)</string>
     <string name="toast_app_already_cluster">Праграма ўжо на кластары</string>
     <string name="toast_restore_failed">Не ўдалося аднавіць: %1$s</string>
     <string name="toast_origin_failed">Не ўдалося аднавіць штатны кластар: %1$s</string>

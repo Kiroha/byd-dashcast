@@ -189,9 +189,7 @@ public final class Phase4TaskVerbs {
      * <p>A null transcript keeps its historical meaning: no output ⇒ assume started.
      */
     private static boolean amStartFailed(String out) {
-        if (out == null) return false;
-        return out.contains("Error:")
-                || out.contains("Exception occurred while executing");
+        return TaskLaunchRecovery.isStartFailure(out);
     }
 
     /** Polls up to ~5 s for {@code packageName}'s task id to appear. Returns -1 if none. */
@@ -225,6 +223,26 @@ public final class Phase4TaskVerbs {
         log.append("(retrying without --windowingMode)\n$ ").append(cmd).append('\n');
         String out = execShell(cmd, 5000);
         log.append(out == null ? "(no output)" : out).append('\n');
+    }
+
+    /** A failed FREEFORM creation leaves a new empty split stack, so clean again before plain. */
+    private static int retryPlainOnCleanDisplay(StringBuilder log, int displayId,
+                                                 String cmpFlat, String packageName) {
+        return TaskLaunchRecovery.retryOnCleanDisplay(new TaskLaunchRecovery.Operations() {
+            @Override public String cleanDisplay() {
+                String cleanup = cleanFissionStacks(displayId);
+                log.append("(re-clean after FREEFORM failure)\n").append(cleanup);
+                return cleanup;
+            }
+
+            @Override public void launchPlain() {
+                startPlainOnDisplay(log, displayId, cmpFlat, packageName);
+            }
+
+            @Override public int pollTask() {
+                return pollForTaskId(packageName);
+            }
+        });
     }
 
     /**
@@ -737,6 +755,7 @@ public final class Phase4TaskVerbs {
             }
 
             boolean started = false;
+            boolean freeformStackFailure = false;
 
             // Dilink5 Dashboard pattern: -S -W --windowingMode 5 --display N pkg/cls.
             if (cmpFlat != null) {
@@ -750,10 +769,13 @@ public final class Phase4TaskVerbs {
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
                 started = !amStartFailed(out);
+                freeformStackFailure = TaskLaunchRecovery.isFreeformStackFailure(out);
             }
 
             // Fallback: bare MAIN with -p when component resolution failed.
-            if (!started) {
+            // Do not repeat the same --windowingMode launch after the known BYD framework NPE:
+            // it only recreates another poisoned split stack. Re-clean and go plain instead.
+            if (!started && !freeformStackFailure) {
                 String cmd = "am start-activity -S -W"
                         + " --windowingMode 5"
                         + " --display " + displayId
@@ -765,6 +787,7 @@ public final class Phase4TaskVerbs {
                 String out = execShell(cmd, 5000);
                 log.append(out == null ? "(no output)" : out).append('\n');
                 started = !amStartFailed(out);
+                freeformStackFailure = TaskLaunchRecovery.isFreeformStackFailure(out);
             }
 
             // Last-resort (no --windowingMode): on some DiLink 3.0 ROMs, creating a FREEFORM
@@ -774,13 +797,14 @@ public final class Phase4TaskVerbs {
             // the cluster at full size — and the FREEFORM flip further down still gets its chance.
             // EARLY trigger: both --windowingMode 5 attempts clearly threw (am printed the error).
             boolean triedPlain = false;
+            int taskId;
             if (!started) {
-                startPlainOnDisplay(log, displayId, cmpFlat, packageName);
+                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName);
                 triedPlain = true;
+            } else {
+                // Poll up to ~5 s for the task to appear.
+                taskId = pollForTaskId(packageName);
             }
-
-            // Poll up to ~5 s for the task to appear.
-            int taskId = pollForTaskId(packageName);
             log.append("findTask(post-poll) = ").append(taskId).append('\n');
 
             // LATE trigger: the freeform attempt reported "started" (no am error text) yet landed
@@ -788,8 +812,7 @@ public final class Phase4TaskVerbs {
             // where started=true skipped the old !started-gated last-resort). Retry once without the
             // windowing mode, keyed on the ACTUAL outcome (no task) rather than the am exit text.
             if (taskId <= 0 && !triedPlain) {
-                startPlainOnDisplay(log, displayId, cmpFlat, packageName);
-                taskId = pollForTaskId(packageName);
+                taskId = retryPlainOnCleanDisplay(log, displayId, cmpFlat, packageName);
                 log.append("findTask(post-fallback) = ").append(taskId).append('\n');
             }
 

@@ -28,7 +28,7 @@
     <string name="status_restoring_origin">Asl klaster tiklanmoqda…</string>
     <string name="status_dashboard_byd">Proyeksiya tayyor — ilova tanlang</string>
     <string name="status_dashboard_app">Asboblar paneli: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: oʻrnatilmagan yoki bir nechta displey bilan mos emas</string>
+    <string name="toast_app_launch_failed">%1$s: klasterda ishga tushmadi (Jurnalni koʻring)</string>
     <string name="toast_app_already_cluster">Ilova allaqachon klasterda</string>
     <string name="toast_restore_failed">Tiklab boʻlmadi: %1$s</string>
     <string name="toast_origin_failed">Asl klasterni tiklab boʻlmadi: %1$s</string>

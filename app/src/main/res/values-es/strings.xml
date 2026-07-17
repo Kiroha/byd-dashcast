@@ -28,7 +28,7 @@
     <string name="status_restoring_origin">Restaurando clúster original…</string>
     <string name="status_dashboard_byd">Proyección lista — elige una app</string>
     <string name="status_dashboard_app">Panel: %1$s</string>
-    <string name="toast_app_incompatible">%1$s: no instalado o incompatible con multi-pantalla</string>
+    <string name="toast_app_launch_failed">%1$s: fallo al iniciar en el cluster (consulta el registro)</string>
     <string name="toast_app_already_cluster">App ya está en el clúster</string>
     <string name="toast_restore_failed">Error al restaurar: %1$s</string>
     <string name="toast_origin_failed">Error al restaurar clúster original: %1$s</string>
