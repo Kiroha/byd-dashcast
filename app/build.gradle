@@ -416,8 +416,10 @@ android {
         // automatic Layout owns startup + DL3 FREEFORM-stack NPE recovery before plain launch.)
         // 572 = 1.6.131-beta (INC-20260717-153708: Layout active indicators +
         // switchable tactile mirrors targeting each slot's real display/layer stack.)
-        versionCode 572
-        versionName "1.6.131-beta"
+        // 573 = 1.6.132-beta (INC-20260717-221007: D50F_LC physical-routing truth model,
+        // native AutoContainer result codes, and guarded 1000/18 -> 16/35 diagnostic probe.)
+        versionCode 573
+        versionName "1.6.132-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
