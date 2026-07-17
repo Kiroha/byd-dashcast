@@ -60,6 +60,7 @@ object ClusterShotRecorder {
 
     @Volatile private var sLastCaptureMs = 0L
     @Volatile private var sLastPruneMs = 0L
+    @Volatile private var sLastDaemonPruneMs = 0L
 
     /** Background capture is ON by default (beta testers file the reports); a settings switch can
      *  disable it. The captures still never leave the device without send-time consent. */
@@ -90,10 +91,12 @@ object ClusterShotRecorder {
         val now = SystemClock.elapsedRealtime()
 
         val clusterId = ClusterService.getInstance()?.displayId ?: -1
-        if (clusterId > 0 && now - sLastCaptureMs >= INTERVAL_MS) {
+        if (ClusterShotSchedulePolicy.shouldCapture(
+            clusterId, now, sLastCaptureMs, INTERVAL_MS)) {
             sLastCaptureMs = now
             sExecutor.execute { captureRound(app, clusterId) }
-        } else if (now - sLastPruneMs >= PRUNE_INTERVAL_MS) {
+        } else if (ClusterShotSchedulePolicy.shouldAppPrune(
+            clusterId, now, sLastPruneMs, sLastDaemonPruneMs, PRUNE_INTERVAL_MS)) {
             sLastPruneMs = now
             sExecutor.execute { prune(app) }
         }
@@ -108,27 +111,33 @@ object ClusterShotRecorder {
             }
             val dm = ctx.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager ?: return
             val stamp = System.currentTimeMillis()
+            var daemonPruned = false
 
             // Main display (layerStack 0).
             sizeOf(dm, 0)?.let { (w, h) ->
-                capture(binder, 0, w, h, "$SHOTS_DIR/shot_d0_$stamp.jpg", "d0")
+                daemonPruned = capture(
+                    binder, 0, w, h, "$SHOTS_DIR/shot_d0_$stamp.jpg", "d0"
+                ) || daemonPruned
             }
             // Cluster display (its own layerStack — 2 on DL5.1, 1 on DL3 1for2).
             val cluster = dm.getDisplay(clusterId)
             if (cluster != null) {
                 val sz = sizeOf(dm, clusterId)
                 if (sz != null) {
-                    capture(binder, layerStackOf(cluster, clusterId), sz.first, sz.second,
-                            "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster")
+                    daemonPruned = capture(
+                        binder, layerStackOf(cluster, clusterId), sz.first, sz.second,
+                        "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster"
+                    ) || daemonPruned
                 }
             }
+            if (daemonPruned) sLastDaemonPruneMs = SystemClock.elapsedRealtime()
         } catch (t: Throwable) {
             AppLogger.w(TAG, "captureRound failed: ${t.message}")
         }
     }
 
     private fun capture(binder: android.os.IBinder, layerStack: Int, w: Int, h: Int,
-                        path: String, tag: String) {
+                        path: String, tag: String): Boolean {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
@@ -144,9 +153,12 @@ object ClusterShotRecorder {
             data.writeInt(MAX_AGE_MIN)
             binder.transact(MirrorDaemon.TRANSACT_CAPTURE_DISPLAY, data, reply, 0)
             reply.readException()
-            AppLogger.d(TAG, "capture $tag ls=$layerStack ${w}x$h -> ${reply.readString()}")
+            val result = reply.readString()
+            AppLogger.d(TAG, "capture $tag ls=$layerStack ${w}x$h -> $result")
+            return result?.startsWith("OK ") == true
         } catch (t: Throwable) {
             AppLogger.w(TAG, "capture $tag transact failed: ${t.message}")
+            return false
         } finally {
             data.recycle()
             reply.recycle()
@@ -162,15 +174,27 @@ object ClusterShotRecorder {
                 "for t in d0 cluster; do " +
                 "ls -t shot_\${t}_*.jpg 2>/dev/null | tail -n +$keepPlus1 | xargs -r rm -f; done; " +
                 "find $SHOTS_DIR -name 'shot_*.jpg' -mmin +$MAX_AGE_MIN -delete 2>/dev/null; true"
-        AdbLocalClient.executeShellWithResult(ctx, cmd, null)
+        runShellBlocking(ctx, cmd, "prune")
     }
 
     /** Deletes all captured shots. Called on projection stop, when disabled, and after a send. */
     @JvmStatic
     fun clear(ctx: Context) {
         sLastCaptureMs = 0L
-        AdbLocalClient.executeShellWithResult(ctx,
-                "rm -f $SHOTS_DIR/shot_*.jpg 2>/dev/null; true", null)
+        sLastDaemonPruneMs = 0L
+        val app = ctx.applicationContext
+        sExecutor.execute {
+            runShellBlocking(app, "rm -f $SHOTS_DIR/shot_*.jpg 2>/dev/null; true", "clear")
+        }
+    }
+
+    private fun runShellBlocking(ctx: Context, command: String, operation: String) {
+        try {
+            AdbLocalClient.executeShellWithResultBlocking(ctx, command)
+        } catch (t: Throwable) {
+            if (t is InterruptedException) Thread.currentThread().interrupt()
+            AppLogger.w(TAG, "$operation failed: ${t.message}")
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -218,6 +242,18 @@ object ClusterShotRecorder {
      */
     @JvmStatic
     fun pullShotsInto(ctx: Context, destDir: File): Int {
+        return try {
+            sExecutor.submit<Int> { pullShotsIntoNow(ctx.applicationContext, destDir) }.get()
+        } catch (ie: InterruptedException) {
+            Thread.currentThread().interrupt()
+            0
+        } catch (t: Throwable) {
+            AppLogger.w(TAG, "pull shots failed: ${t.message}")
+            0
+        }
+    }
+
+    private fun pullShotsIntoNow(ctx: Context, destDir: File): Int {
         val shots = listRemoteShots(ctx)
         if (shots.isEmpty()) return 0
         if (!destDir.exists()) destDir.mkdirs()
