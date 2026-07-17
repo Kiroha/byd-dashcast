@@ -181,4 +181,10 @@ public final class ProxyDaemonContract {
     /** Ordered list of {@code CanBatchOperation} records → {@code int appliedCount}.
      *  The daemon executes records sequentially and stops at the first thrown SDK error. */
     public static final int TXN_CAN_BATCH               = IBinder.FIRST_CALL_TRANSACTION + 29; // 30
+
+    /** {@code int type, int info, String str} → {@code int nativeResult}.
+     *  Result-preserving AutoContainer call used to distinguish an accepted command ({@code 0})
+     *  from the D50F native rejection ({@code -1}). */
+    public static final int TXN_AUTOCONTAINER_SEND_INFO_RESULT =
+            IBinder.FIRST_CALL_TRANSACTION + 30; // 31
 }

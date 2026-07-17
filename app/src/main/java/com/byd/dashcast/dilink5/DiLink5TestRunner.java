@@ -11,6 +11,7 @@ import android.os.SystemClock;
 import android.view.Display;
 
 import com.byd.dashcast.infrastructure.AdbLocalClient;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.platform.Platform;
 
@@ -101,7 +102,7 @@ public final class DiLink5TestRunner {
         list.add(new TestDef("D11", "AutoContainer sendInfo refresh probe",
                 "service call auto_container 2 i32 1000 i32 0 s16 \"\" — harmless refresh, confirms typed sendInfo path is reachable on DL5."));
         list.add(new TestDef("D12", "AutoContainer Qt standby probe",
-                "sendInfo(16) → wait → sendInfo(18) — active Qt standby + close cycle (no projection, just protocol validation)."));
+            "On D50F_LC: sendInfo(1000,18) → wait 6 s → sendInfo(16,35), preserving native result codes. Other DL5 builds keep the standby/close cycle."));
         list.add(new TestDef("D13", "IATM.setTaskWindowingMode reflection probe",
                 "Try reflective call from app uid — expected SecurityException on un-signed app; confirms whether the typed DL5 windowing path is accessible."));
         list.add(new TestDef("D14", "Window manager state dump",
@@ -733,6 +734,9 @@ public final class DiLink5TestRunner {
         } else if (lower.contains("does not exist") || lower.contains("could not find service")) {
             r.status = Status.FAIL;
             r.message = "auto_container service not found";
+        } else if (lower.contains("ffffffff")) {
+            r.status = Status.FAIL;
+            r.message = "AutoContainer native backend rejected refresh (-1)";
         } else if (lower.contains("result:") || lower.contains("parcel")) {
             r.status = Status.PASS;
             r.message = "service call accepted (no SecurityException)";
@@ -743,6 +747,14 @@ public final class DiLink5TestRunner {
     }
 
     private static void runD12(Context ctx, TestResult r) {
+        Platform platform = Platform.get();
+        String signature = (platform.rawProductName() + " " + platform.rawModel() + " "
+                + platform.rawFingerprint()).toLowerCase(Locale.ROOT);
+        if (signature.contains("d50f_lc")) {
+            runD50fDashboardHandshake(ctx, r);
+            return;
+        }
+
         String svc = AdbLocalClient.autoContainerSvcName(ctx);
         StringBuilder sb = new StringBuilder();
         AtomicReference<String> out = new AtomicReference<>("");
@@ -762,9 +774,53 @@ public final class DiLink5TestRunner {
         } else if (all.contains("does not exist") || all.contains("could not find service")) {
             r.status = Status.FAIL;
             r.message = "auto_container service not found";
+        } else if (all.contains("ffffffff")) {
+            r.status = Status.FAIL;
+            r.message = "Qt standby cycle rejected by native backend (-1)";
         } else {
             r.status = Status.PASS;
             r.message = "Qt standby cycle accepted (16 \u2192 18 \u2192 0)";
+        }
+    }
+
+    private static void runD50fDashboardHandshake(Context ctx, TestResult r) {
+        if (com.byd.dashcast.cluster.ClusterService.isRunning()) {
+            r.status = Status.SKIPPED;
+            r.message = "Stop the active projection before the D50F dashboard handshake";
+            return;
+        }
+        if (!ProxyClient.isConnected() && !ProxyClient.connect(ctx)) {
+            r.status = Status.FAIL;
+            r.message = "Proxy daemon unavailable; native sendInfo results cannot be read";
+            return;
+        }
+        if (!ProxyClient.supportsProtocol(20)) {
+            r.status = Status.FAIL;
+            r.message = "Proxy daemon is stale; reconnect it before running the D50F probe";
+            return;
+        }
+
+        try {
+            D50fDashboardProbe.Result result = D50fDashboardProbe.run(
+                    (type, info) -> ProxyClient.autoContainerSendInfoResult(type, info, ""),
+                    Thread::sleep);
+            r.detail = "sendInfo(type=1000, info=18) reset=" + result.resetCode + '\n'
+                    + "sendInfo(type=16, info=35) unlock=" + result.unlockCode + '\n'
+                    + "sendInfo(type=1000, info=18) restore=" + result.restoreCode + '\n';
+            if (result.unlockCode == 0) {
+                r.status = result.restoreCode == 0 ? Status.PASS : Status.WARN;
+                r.message = "D50F fullscreen unlock accepted; confirm the physical cluster changed for 3 s";
+            } else {
+                r.status = Status.FAIL;
+                r.message = "D50F fullscreen unlock rejected (native code " + result.unlockCode + ")";
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            r.status = Status.FAIL;
+            r.message = "D50F dashboard handshake interrupted";
+        } catch (Exception error) {
+            r.status = Status.FAIL;
+            r.message = error.getClass().getSimpleName() + ": " + error.getMessage();
         }
     }
 
