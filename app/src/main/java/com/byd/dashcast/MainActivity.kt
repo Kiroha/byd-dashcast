@@ -401,7 +401,7 @@ class MainActivity : AppCompatActivity(),
         override fun isActivityAlive(): Boolean = !isFinishing && !isDestroyed
         override fun activateCluster() = this@MainActivity.activateCluster()
         override fun restoreBydDashboard() = this@MainActivity.restoreBydDashboard()
-        override fun startActivity(i: Intent) = this@MainActivity.startActivity(i)
+        override fun startActivity(intent: Intent) = this@MainActivity.startActivity(intent)
         override fun quickSwitchToApp(pkg: String) = this@MainActivity.quickSwitchToApp(pkg)
     })
 

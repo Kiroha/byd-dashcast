@@ -195,6 +195,26 @@ class AppRepository {
         }
         val la = launcherApps
 
+        // Query all accessible shortcuts in one Binder round-trip, then group locally. The old
+        // implementation issued LauncherApps.getShortcuts() once per launchable app (~N IPCs).
+        // Some vendor launchers may require setPackage(); null keeps the exact per-package fallback.
+        val shortcutsByPackage: Map<String, List<android.content.pm.ShortcutInfo>>? =
+            if (hasShortcutPerm && la != null) {
+                try {
+                    val query = LauncherApps.ShortcutQuery()
+                    query.setQueryFlags(
+                        LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                            or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
+                            or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+                    )
+                    la.getShortcuts(query, Process.myUserHandle())
+                        ?.groupBy { it.`package` }
+                        ?.takeIf { it.isNotEmpty() }
+                } catch (ignored: Exception) {
+                    null
+                }
+            } else null
+
         val apps = ArrayList<AppInfo>(resolveInfos.size)
         for (ri in resolveInfos) {
             val pkg = ri.activityInfo.packageName
@@ -220,26 +240,27 @@ class AppRepository {
             // Load pinned/dynamic/manifest shortcuts. Permission checked once above.
             if (hasShortcutPerm && la != null) {
                 try {
-                    val query = LauncherApps.ShortcutQuery()
-                    query.setQueryFlags(
-                        LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
-                            or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
-                            or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
-                    )
-                    query.setPackage(pkg)
-                    val shortcuts = la.getShortcuts(query, Process.myUserHandle())
-                    if (shortcuts != null) {
-                        for (s in shortcuts) {
-                            val sIcon = la.getShortcutIconDrawable(s, densityDpi)
-                            val shortLabel = s.shortLabel
-                            info.shortcuts.add(
-                                AppShortcut(
-                                    s.id,
-                                    shortLabel?.toString() ?: s.id,
-                                    sIcon
-                                )
+                    val shortcuts = shortcutsByPackage?.get(pkg) ?: run {
+                        if (shortcutsByPackage != null) return@run emptyList()
+                        val query = LauncherApps.ShortcutQuery()
+                        query.setQueryFlags(
+                            LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                                or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
+                                or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+                        )
+                        query.setPackage(pkg)
+                        la.getShortcuts(query, Process.myUserHandle()) ?: emptyList()
+                    }
+                    for (s in shortcuts) {
+                        val sIcon = la.getShortcutIconDrawable(s, densityDpi)
+                        val shortLabel = s.shortLabel
+                        info.shortcuts.add(
+                            AppShortcut(
+                                s.id,
+                                shortLabel?.toString() ?: s.id,
+                                sIcon
                             )
-                        }
+                        )
                     }
                 } catch (ignored: Exception) {
                 }

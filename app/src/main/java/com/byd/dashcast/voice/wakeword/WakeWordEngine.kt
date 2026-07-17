@@ -11,6 +11,7 @@ import com.byd.dashcast.util.AppLogger
 import com.byd.dashcast.util.concurrent.WorkerLifecycleController
 import com.byd.dashcast.voice.VoiceLibsManager
 import com.byd.dashcast.voice.VoiceService
+import com.byd.dashcast.voice.VoiceTelemetry
 
 import java.io.ByteArrayOutputStream
 import java.nio.FloatBuffer
@@ -104,6 +105,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     private val mWakeMap = HashMap<String, OnnxTensor>(2)
 
     // ─── perf: streaming inference state (worker-thread only) ──────────────────
+    private val mMelRawFeed = ShortArray(AUDIO_BUFFER_LEN)                    // PCM copied under ring lock
     private val mMelFeed = FloatArray(AUDIO_BUFFER_LEN)                       // normalized audio fed to mel
     private val mMelRing = Array(MEL_RING_FRAMES) { FloatArray(32) }          // rolling normalized mel frames
     private var mMelTotalFrames = 0L                                          // committed mel frames (absolute)
@@ -182,12 +184,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         // atomic against the worker's snapshot read. 800-sample copies cost
         // well under 50 µs on any ARM target.
         synchronized(mRingLock) {
-            var w = mRingWrite
-            for (i in 0 until n) {
-                mRing[w] = pcm[i]
-                w = (w + 1) % AUDIO_BUFFER_LEN
-            }
-            mRingWrite = w
+            mRingWrite = CircularPcmCopy.fromLinear(pcm, n, mRing, mRingWrite)
             mTotalWritten += n
         }
     }
@@ -246,12 +243,8 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
                 val w = mRingWrite
                 n = Math.min(total, AUDIO_BUFFER_LEN.toLong()).toInt()
                 val start = (w - n + AUDIO_BUFFER_LEN) % AUDIO_BUFFER_LEN
-                // Under the lock: raw int16 copy only (no FP work) so onFrame's 20Hz ring
-                // writes are blocked for the minimum time. Normalization + peak run below,
-                // outside the lock — previously the full copy+divide+abs ran inside it.
-                for (i in 0 until n) {
-                    rawWindow[i] = mRing[(start + i) % AUDIO_BUFFER_LEN]
-                }
+                // Two native array copies replace 40k modulo/index operations under the lock.
+                CircularPcmCopy.toLinear(mRing, start, n, rawWindow)
             }
             if (n < MIN_AUDIO_SAMPLES) continue
 
@@ -411,10 +404,10 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         OnnxTensor.createTensor(mEnv, mEmbInput).use { embT ->
             mEmbMap.put(mEmbInputName!!, embT)
             mSessEmb!!.run(mEmbMap).use { out ->
-                val raw = out.get(0).value as Array<Array<Array<FloatArray>>>
-                // raw shape : (WAKE_WINDOW, 1, 1, 96) → copy into mWakeInput[0]
+                val raw = (out.get(0) as OnnxTensor).floatBuffer
+                // Output shape: (WAKE_WINDOW, 1, 1, 96), contiguous by batch.
                 for (b in 0 until WAKE_WINDOW) {
-                    System.arraycopy(raw[b][0][0], 0, mWakeInput[0][b], 0, 96)
+                    raw.get(mWakeInput[0][b], 0, 96)
                 }
             }
         }
@@ -423,8 +416,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         OnnxTensor.createTensor(mEnv, mWakeInput).use { wt ->
             mWakeMap.put(mWakeInputName!!, wt)
             mSessWake!!.run(mWakeMap).use { out ->
-                val raw = out.get(0).value as Array<FloatArray>
-                return raw[0][0]
+                return (out.get(0) as OnnxTensor).floatBuffer.get(0)
             }
         }
     }
@@ -501,8 +493,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
         OnnxTensor.createTensor(mEnv, mWakeInput).use { wt ->
             mWakeMap.put(mWakeInputName!!, wt)
             mSessWake!!.run(mWakeMap).use { out ->
-                val raw = out.get(0).value as Array<FloatArray>
-                return raw[0][0]
+                return (out.get(0) as OnnxTensor).floatBuffer.get(0)
             }
         }
     }
@@ -523,9 +514,12 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
             feedLen = (total - feedStartSample).toInt()
             if (feedLen < EMB_WINDOW * MEL_HOP) return // not enough audio for one window yet
             val start = Math.floorMod(feedStartSample, AUDIO_BUFFER_LEN.toLong()).toInt()
-            for (i in 0 until feedLen) {
-                mMelFeed[i] = mRing[(start + i) % AUDIO_BUFFER_LEN] / 32768f
-            }
+            CircularPcmCopy.toLinear(mRing, start, feedLen, mMelRawFeed)
+        }
+        // Float normalization is intentionally outside mRingLock so the 20 Hz AudioRecord
+        // writer only waits for two native array copies, never for per-sample arithmetic.
+        for (i in 0 until feedLen) {
+            mMelFeed[i] = mMelRawFeed[i] / 32768f
         }
         val shape = longArrayOf(1L, feedLen.toLong())
         OnnxTensor.createTensor(mEnv, FloatBuffer.wrap(mMelFeed, 0, feedLen), shape).use { input ->
@@ -590,6 +584,7 @@ class WakeWordEngine(ctx: Context) : VoiceService.SampleConsumer {
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private fun broadcastScore(score: Float, detected: Boolean) {
+        if (!detected && !VoiceTelemetry.isEnabled()) return
         // LocalBroadcastManager retains this object until main-loop delivery, so every score needs
         // its own snapshot. Reusing one Intent lets a later inference overwrite queued extras.
         val scoreIntent = Intent(ACTION_WAKEWORD)

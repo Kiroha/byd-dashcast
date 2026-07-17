@@ -30,17 +30,16 @@ class LogAdapter(ctx: Context) : RecyclerView.Adapter<LogAdapter.VH>() {
 
     @SuppressLint("NotifyDataSetChanged")
     fun setEntries(entries: List<AppLogger.Entry>) {
-        val oldSize = mEntries.size
         mEntries.clear()
         mEntries.addAll(entries)
-        val newSize = mEntries.size
-        if (newSize > oldSize) {
-            // Entries appended (append-only log with same filter) — notify only new rows.
-            notifyItemRangeInserted(oldSize, newSize - oldSize)
-        } else {
-            // Filter changed, cleared, or size shrank — full rebind needed.
-            notifyDataSetChanged()
-        }
+        notifyDataSetChanged()
+    }
+
+    fun appendEntries(entries: List<AppLogger.Entry>) {
+        if (entries.isEmpty()) return
+        val start = mEntries.size
+        mEntries.addAll(entries)
+        notifyItemRangeInserted(start, entries.size)
     }
 
     fun size(): Int = mEntries.size

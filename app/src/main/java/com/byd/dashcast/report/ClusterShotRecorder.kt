@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit
  * "app stuck on a confirm screen").
  *
  * Design constraints (all enforced here):
- *  - **Never fills memory.** After every round it keeps only the [KEEP_PER_TAG] most recent shots
- *    per display AND deletes anything older than [MAX_AGE_MIN] minutes; [clear] wipes them on stop.
+ *  - **Never fills memory.** The daemon enforces a hard global count/age bound after every JPEG;
+ *    periodic app-side pruning additionally keeps only [KEEP_PER_TAG] shots per display.
  *  - **Cluster-correct.** The cluster is a virtual display; `screencap -d N` silently falls back to
  *    display 0 on it, so the cluster frame is grabbed through the uid-2000 daemon
  *    ([MirrorDaemon.TRANSACT_CAPTURE_DISPLAY], ImageReader on the cluster layerStack).
@@ -92,7 +92,6 @@ object ClusterShotRecorder {
         val clusterId = ClusterService.getInstance()?.displayId ?: -1
         if (clusterId > 0 && now - sLastCaptureMs >= INTERVAL_MS) {
             sLastCaptureMs = now
-            sLastPruneMs = now // captureRound prunes too
             sExecutor.execute { captureRound(app, clusterId) }
         } else if (now - sLastPruneMs >= PRUNE_INTERVAL_MS) {
             sLastPruneMs = now
@@ -123,7 +122,6 @@ object ClusterShotRecorder {
                             "$SHOTS_DIR/shot_cluster_$stamp.jpg", "cluster")
                 }
             }
-            prune(ctx)
         } catch (t: Throwable) {
             AppLogger.w(TAG, "captureRound failed: ${t.message}")
         }

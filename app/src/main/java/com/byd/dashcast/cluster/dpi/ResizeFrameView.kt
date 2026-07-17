@@ -53,6 +53,7 @@ class ResizeFrameView @JvmOverloads constructor(
     private var mDownX = 0f
     private var mDownY = 0f
     private val mDownRect = Rect()
+    private val mGestureExclusionRects = List(12) { Rect() }
 
     init {
         val primary = resolveThemeColor(android.R.attr.colorPrimary, 0xFF1976D2.toInt())
@@ -285,27 +286,28 @@ class ResizeFrameView @JvmOverloads constructor(
         val r = (mFrame.right * sx).toInt()
         val b = (mFrame.bottom * sy).toInt()
         val pad = dp(48f).toInt()
-        val centers = arrayOf(
-            intArrayOf(l, t), intArrayOf(r, t), intArrayOf(l, b), intArrayOf(r, b), // corners
-            intArrayOf((l + r) / 2, t), intArrayOf((l + r) / 2, b), // top/bot mid
-            intArrayOf(l, (t + b) / 2), intArrayOf(r, (t + b) / 2) // left/right mid
-        )
+        val midX = (l + r) / 2
+        val midY = (t + b) / 2
+        mGestureExclusionRects[0].set(l - pad, t - pad, l + pad, t + pad)
+        mGestureExclusionRects[1].set(r - pad, t - pad, r + pad, t + pad)
+        mGestureExclusionRects[2].set(l - pad, b - pad, l + pad, b + pad)
+        mGestureExclusionRects[3].set(r - pad, b - pad, r + pad, b + pad)
+        mGestureExclusionRects[4].set(midX - pad, t - pad, midX + pad, t + pad)
+        mGestureExclusionRects[5].set(midX - pad, b - pad, midX + pad, b + pad)
+        mGestureExclusionRects[6].set(l - pad, midY - pad, l + pad, midY + pad)
+        mGestureExclusionRects[7].set(r - pad, midY - pad, r + pad, midY + pad)
         // Cap each strip at 200dp (Android's hard limit per edge; anything beyond
         // is silently ignored). We use 198dp for a tiny safety margin.
         val strip = dp(198f).toInt()
         val w = width
         val h = height
-        val rects = ArrayList<Rect>(centers.size + 4)
-        for (c in centers) {
-            rects.add(Rect(c[0] - pad, c[1] - pad, c[0] + pad, c[1] + pad))
-        }
         // Full-edge strips so edge swipes never steal the touch at the screen border.
-        rects.add(Rect(0, 0, strip, h)) // left
-        rects.add(Rect(w - strip, 0, w, h)) // right
-        rects.add(Rect(0, h - strip, w, h)) // bottom
-        rects.add(Rect(0, 0, w, strip)) // top
+        mGestureExclusionRects[8].set(0, 0, strip, h)
+        mGestureExclusionRects[9].set(w - strip, 0, w, h)
+        mGestureExclusionRects[10].set(0, h - strip, w, h)
+        mGestureExclusionRects[11].set(0, 0, w, strip)
         try {
-            systemGestureExclusionRects = rects
+            systemGestureExclusionRects = mGestureExclusionRects
         } catch (ignored: Throwable) {
             // Defensive: some OEMs strip the API; the activity still works,
             // just with whatever back-gesture behavior the platform decides.
