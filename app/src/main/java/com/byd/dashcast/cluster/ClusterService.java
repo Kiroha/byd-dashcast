@@ -239,7 +239,7 @@ public class ClusterService extends Service
             // launching (activates projection + launches every bound app). A headless single-app
             // launch here would create a classic projection first, and the layout's ensureDaemon()
             // would then abort with "Daemon unavailable". So skip the single-app path for layout users.
-            if (isLayoutAutoStartConfigured()) {
+            if (isLayoutAutoStartRequested()) {
                 AppLogger.i(TAG, "boot auto-launch: layout auto-start owns startup — headless single-app launch skipped");
             } else {
                 String pkg = ClusterPrefs.getAutoLaunchPkg(this);
@@ -254,13 +254,10 @@ public class ClusterService extends Service
         return START_STICKY;
     }
 
-    /** Same predicate as MainActivity.isLayoutAutoStartConfigured — the Layout auto-start owns
-     *  startup launching, so the headless single-app boot launch must stand down for layout users. */
-    private boolean isLayoutAutoStartConfigured() {
+    /** A requested Layout auto-start owns startup, so the single-app path must stand down. */
+    private boolean isLayoutAutoStartRequested() {
         try {
-            return ClusterPrefs.isFissionAutoLayout(this)
-                    && com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(this)
-                    && com.byd.dashcast.fission.LayoutPrefs.getFavoriteLayout(this) != null;
+            return com.byd.dashcast.fission.FissionOrchestrator.isAutoStartRequested(this);
         } catch (Throwable t) {
             return false; // fail-open to the single-app path (never block a boot launch on a probe error)
         }

@@ -105,6 +105,7 @@ public final class FissionOrchestrator {
     // (stale layout-selector label/checkmark). Siblings above are already volatile.
     private volatile int      mFirstDisplayId = -1;
     private volatile LayoutPreset mActiveLayout = null;
+    private volatile boolean mAutoStartAttempt = false;
 
     public FissionOrchestrator(Context context, ProjectionStateProvider projectionState,
                                 Callbacks callbacks) {
@@ -117,6 +118,14 @@ public final class FissionOrchestrator {
 
     /** One-shot per process: avoids re-activating the layout on every MainActivity return. */
     private static volatile boolean sAutoStartFired = false;
+
+    public enum AutoStartResult {
+        DISABLED,
+        ALREADY_STARTED,
+        MISSING_LAYOUT,
+        PROJECTION_CONFLICT,
+        STARTED
+    }
 
     /** Keeps the headless orchestrator reachable while its executor works. */
     @SuppressWarnings("unused")
@@ -183,16 +192,25 @@ public final class FissionOrchestrator {
      * <p>No-op when the option is off, Layouts mode is disabled, no favourite layout
      * exists, classic projection is already running, or it already fired this process.
      */
-    public static void maybeAutoStartOnAppLaunch(Context context) {
-        if (sAutoStartFired) return;
+    public static boolean isAutoStartRequested(Context context) {
+        Context appCtx = context.getApplicationContext();
+        return LayoutAutoStartPolicy.isRequested(
+                com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx),
+                com.byd.dashcast.data.prefs.ClusterPrefs.isFissionAutoLayout(appCtx));
+    }
+
+    public static synchronized AutoStartResult maybeAutoStartOnAppLaunch(Context context) {
+        if (sAutoStartFired) return AutoStartResult.ALREADY_STARTED;
         final Context appCtx = context.getApplicationContext();
-        if (!com.byd.dashcast.data.prefs.ClusterPrefs.isFissionAutoLayout(appCtx)) return;
-        if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
-        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
-        if (fav == null) return;
+        if (!isAutoStartRequested(appCtx)) return AutoStartResult.DISABLED;
+        LayoutPreset fav = LayoutPrefs.getAutoStartLayout(appCtx);
+        if (fav == null) {
+            AppLogger.w(TAG, "auto-start requested but no unambiguous saved layout has bound apps");
+            return AutoStartResult.MISSING_LAYOUT;
+        }
         if (isClassicProjectionActive()) {
             AppLogger.d(TAG, "auto-start skipped: classic projection already active");
-            return;
+            return AutoStartResult.PROJECTION_CONFLICT;
         }
         sAutoStartFired = true;
         AppLogger.i(TAG, "auto-start on app launch: projection + layout « " + fav.name + " »");
@@ -222,12 +240,14 @@ public final class FissionOrchestrator {
             }
         };
         FissionOrchestrator orch = new FissionOrchestrator(appCtx, psp, headless);
+        orch.mAutoStartAttempt = true;
         // Tear down any previous headless orchestrator before orphaning it, or its
         // fission-exec thread leaks (the static ref was overwritten without a stop()).
         FissionOrchestrator prevAuto = sAutoStartOrchestrator;
         if (prevAuto != null) { prevAuto.stopAll(); prevAuto.shutdown(); }
         sAutoStartOrchestrator = orch;
         orch.initAsync(fav, true, false);
+        return AutoStartResult.STARTED;
     }
 
     /**
@@ -269,7 +289,7 @@ public final class FissionOrchestrator {
     public static void launchFavoriteLayoutApps(Context context) {
         final Context appCtx = context.getApplicationContext();
         if (!com.byd.dashcast.proxy.DaemonConfig.isFissionModeEnabled(appCtx)) return;
-        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(appCtx);
+        LayoutPreset fav = LayoutPrefs.getAutoStartLayout(appCtx);
         if (fav == null) return;
         if (isClassicProjectionActive()) {
             AppLogger.d(TAG, "launchFavoriteLayoutApps skipped: classic projection active");
@@ -423,6 +443,7 @@ public final class FissionOrchestrator {
                         @Override public void onDisplayTimeout() {
                             AppLogger.w(TAG, "auto-layout: cluster activation timed out — aborted");
                             post(() -> mCallbacks.onStatusMessage(null));
+                            markAutoStartFailed("cluster activation timeout");
                         }
                         // No-op (matches the former Kotlin-interface default body): the auto-layout
                         // flow doesn't act on a late-arriving display. Explicit because the
@@ -753,15 +774,32 @@ public final class FissionOrchestrator {
     }
 
     private void activateFavoriteLayout() {
-        LayoutPreset fav = LayoutPrefs.getFavoriteLayout(mAppCtx);
-        if (fav == null) { post(() -> mCallbacks.onStatusMessage(null)); return; }
+        LayoutPreset fav = LayoutPrefs.getAutoStartLayout(mAppCtx);
+        if (fav == null) {
+            post(() -> mCallbacks.onStatusMessage(null));
+            markAutoStartFailed("saved favourite layout disappeared");
+            return;
+        }
         mActiveLayout = fav;
         try {
             doSwitchToLayout(fav, null);
         } catch (Exception e) {
             AppLogger.e(TAG, "activateFavoriteLayout failed", e);
             post(() -> mCallbacks.onStatusMessage(mAppCtx.getString(R.string.fo_status_autolayout_err_fmt, e.getMessage())));
+            markAutoStartFailed("layout activation failed: " + e.getMessage());
         }
+    }
+
+    private void markAutoStartFailed(String reason) {
+        if (!mAutoStartAttempt) return;
+        synchronized (FissionOrchestrator.class) {
+            if (sAutoStartOrchestrator == this) sAutoStartOrchestrator = null;
+            sAutoStartFired = false;
+        }
+        AppLogger.w(TAG, "auto-start re-armed after failure: " + reason);
+        if (!mSlots.isEmpty() || mProjecting) stopAll();
+        shutdown();
+        notifyLayoutChanged();
     }
 
     private void precreateSlots(LayoutPreset layout) {

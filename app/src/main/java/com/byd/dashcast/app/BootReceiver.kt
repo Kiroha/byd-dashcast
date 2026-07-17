@@ -80,7 +80,7 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (autoStartEnabled) {
-            if (isLayoutAutoStartConfigured(appCtx)) {
+            if (isLayoutAutoStartRequested(appCtx)) {
                 // LAYOUT auto-start: the favourite Layout owns startup — it activates projection AND
                 // launches every bound app itself, headlessly (FissionOrchestrator.
                 // maybeAutoStartOnAppLaunch, the same call MainActivity.onCreate makes). Do NOT also
@@ -173,11 +173,9 @@ class BootReceiver : BroadcastReceiver() {
         releaseOne.run()
     }
 
-    /** Same predicate as MainActivity.isLayoutAutoStartConfigured — the Layout owns startup. */
-    private fun isLayoutAutoStartConfigured(ctx: Context): Boolean = try {
-        ClusterPrefs.isFissionAutoLayout(ctx) &&
-            DaemonConfig.isFissionModeEnabled(ctx) &&
-            LayoutPrefs.getFavoriteLayout(ctx) != null
+    /** A requested automatic Layout owns startup even while its saved favourite is being repaired. */
+    private fun isLayoutAutoStartRequested(ctx: Context): Boolean = try {
+        FissionOrchestrator.isAutoStartRequested(ctx)
     } catch (t: Throwable) {
         false
     }
