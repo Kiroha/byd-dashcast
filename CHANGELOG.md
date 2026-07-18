@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.139-beta (versionCode 580)
+
+Deterministic Layout task anchoring and confirmed ADB outage diagnostics after 1.6.138-beta. Based on `INC-20260718-095242`, the single short fission watchdog is replaced by independent package guardians that adopt recreated tasks, prioritize wrong-display tasks, correct late and repeated Waze rebounds, and remain active through a bounded startup horizon. Additive proxy protocol v21 cancels guardians before move, release, or full Layout teardown. Based on `INC-20260718-102309`, a stuck MirrorDaemon launch stream no longer produces a false restart-adbd warning: startup is single-flight and fully detached, a live registered Binder suppresses only that isolated timeout, and ordinary stream timeouts require a fresh independent ADB echo failure before becoming global `ADB_UNRESPONSIVE`. Seventeen focused tests cover timing, generations, multi-task selection, teardown, Binder numbering, timeout confirmation, and shell syntax.
+
+See the [complete English 1.6.139-beta release notes](docs/releases/1.6.139-beta.md) for both incident timelines, guardian and transport architecture, protocol compatibility, D50F guarantees, validation evidence, APK identity, and suggested vehicle checks.
+
 ### 1.6.138-beta (versionCode 579)
 
 Reliable automatic OTA installation and relaunch after 1.6.137-beta. The updater now reconnects the uid-2000 ProxyDaemon instead of requiring it to be alive at one exact instant, stages the downloaded APK under `/data/local/tmp` with exact-size verification before `pm install -r`, and preserves the interactive PackageInstaller path when privileged installation is unavailable. API 31+ sessions explicitly request no user action where Android permits it, while a durable relaunch marker shared by `STATUS_SUCCESS` and `MY_PACKAGE_REPLACED` reopens DashCast after either silent or user-confirmed replacement without creating duplicate tasks. Version comparison and generated shell syntax now have focused regression coverage.
