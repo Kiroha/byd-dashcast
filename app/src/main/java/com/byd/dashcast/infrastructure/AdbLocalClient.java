@@ -8,11 +8,13 @@ import android.os.SystemClock;
 
 import com.byd.dashcast.proxy.DaemonConfig;
 import com.byd.dashcast.proxy.ProxyClient;
+import com.byd.dashcast.R;
 import com.byd.dashcast.util.AppLogger;
 
 import dadb.AdbKeyPair;
 import dadb.AdbShellResponse;
 import dadb.Dadb;
+import dadb.AdbAuthException;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,6 +64,19 @@ public class AdbLocalClient {
 
     /** Fast TCP-reachability probe budget before the ADB handshake (v1.6.102). */
     private static final int CONNECT_PROBE_MS = 1500;
+    /** Default idle-read timeout for normal shell operations. Long-running commands remain valid
+     *  while they keep producing packets; only a completely silent/wedged transport is aborted. */
+    public static final int SHELL_IDLE_TIMEOUT_MS = 60_000;
+    /** Proven healthy transports retain the legacy caller's 8 s bootstrap budget. */
+    public static final int BOOTSTRAP_IDLE_TIMEOUT_MS = 8_000;
+    /** First real command also performs the lazy ADB handshake and may wait for user approval. */
+    public static final int FIRST_OPERATION_IDLE_TIMEOUT_MS = 15_000;
+    /** A newly-generated key always triggers the system approval UI; give the driver more time. */
+    public static final int NEW_KEY_AUTH_IDLE_TIMEOUT_MS = 30_000;
+    /** Small read-only probes already have 8 s caller-side latches. */
+    public static final int PROBE_IDLE_TIMEOUT_MS = 7_000;
+    /** The all-in-one report dump can legitimately pause between expensive dumpsys sections. */
+    public static final int REPORT_IDLE_TIMEOUT_MS = 120_000;
 
     // ──────────────────────────────────────────────────────────────────────────
     // AutoContainer service name — resolved by PROBING which casing is actually
@@ -187,9 +202,11 @@ public class AdbLocalClient {
             @Override public void run() {
                 try (Dadb dadb = connect(appCtx)) {
                     AdbShellResponse r = dadb.shell(command);
+                    noteTransportSuccess();
                     AppLogger.d(TAG, "executeShell: " + command + " -> " + r.getAllOutput().trim());
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(appCtx, e);
                     AppLogger.e(TAG, "executeShell ERROR for: " + command, e);
                 }
             }
@@ -209,15 +226,25 @@ public class AdbLocalClient {
      */
     public static String executeShellWithResultBlocking(final Context context, final String command)
             throws Exception {
+        return executeShellWithResultBlocking(context, command, SHELL_IDLE_TIMEOUT_MS);
+        }
+
+        public static String executeShellWithResultBlocking(final Context context, final String command,
+                                final int socketTimeoutMs)
+            throws Exception {
         if (context == null || command == null) throw new IllegalArgumentException("null ctx/cmd");
         if (blockDiLink2Resize(context, command)) {
             throw new IOException("blocked on DiLink 2: no cluster display");
         }
         final Context appCtx = context.getApplicationContext();
-        try (Dadb dadb = connect(appCtx)) {
+        try (Dadb dadb = connect(appCtx, socketTimeoutMs)) {
             String output = dadb.shell(command).getAllOutput().trim();
+            noteTransportSuccess();
             AppLogger.d(TAG, "executeShellWithResultBlocking: " + command + " -> " + output);
             return output;
+        } catch (Exception e) {
+            noteTransportFailure(appCtx, e);
+            throw e;
         }
     }
 
@@ -229,11 +256,29 @@ public class AdbLocalClient {
      */
     public static void executeShellWithResultUnlogged(final Context context, final String command,
                                                       final Callback callback) {
-        executeShellWithResult(context, command, callback, false);
+        executeShellWithResult(context, command, callback, false, REPORT_IDLE_TIMEOUT_MS);
+    }
+
+    public static void executeShellWithResultUnlogged(final Context context, final String command,
+                                                      final Callback callback,
+                                                      final int socketTimeoutMs) {
+        executeShellWithResult(context, command, callback, false, socketTimeoutMs);
+    }
+
+    public static void executeShellWithResult(final Context context, final String command,
+                                              final Callback callback,
+                                              final int socketTimeoutMs) {
+        executeShellWithResult(context, command, callback, true, socketTimeoutMs);
     }
 
     private static void executeShellWithResult(final Context context, final String command,
                                                final Callback callback, final boolean logOutput) {
+        executeShellWithResult(context, command, callback, logOutput, SHELL_IDLE_TIMEOUT_MS);
+    }
+
+    private static void executeShellWithResult(final Context context, final String command,
+                                               final Callback callback, final boolean logOutput,
+                                               final int socketTimeoutMs) {
         if (blockDiLink2Resize(context, command)) {
             if (callback != null) callback.onError(
                     "blocked on DiLink 2: no cluster display (would shrink main screen)");
@@ -241,8 +286,9 @@ public class AdbLocalClient {
         }
         final Context appCtx = context.getApplicationContext();
         sExecutor.execute(() -> {
-            try (Dadb dadb = connect(appCtx)) {
+            try (Dadb dadb = connect(appCtx, socketTimeoutMs)) {
                 String output = dadb.shell(command).getAllOutput().trim();
+                noteTransportSuccess();
                 if (logOutput) {
                     AppLogger.d(TAG, "executeShellWithResult: " + command + " -> " + output);
                 } else {
@@ -252,6 +298,7 @@ public class AdbLocalClient {
                 if (callback != null) callback.onSuccess(output);
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                noteTransportFailure(appCtx, e);
                 AppLogger.e(TAG, "executeShellWithResult ERROR: " + command, e);
                 if (callback != null) callback.onError(
                         e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
@@ -284,7 +331,7 @@ public class AdbLocalClient {
         sLastDaemonStartMs = System.currentTimeMillis();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
-                try (Dadb dadb = connect(context)) {
+                try (Dadb dadb = connect(context, PROBE_IDLE_TIMEOUT_MS)) {
                     // Kill existing daemon if present.
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
@@ -332,8 +379,10 @@ public class AdbLocalClient {
                         String logContent = safeOut(dadb.shell("cat " + logPath + " 2>&1").getAllOutput());
                         AppLogger.e(TAG, "mirrordaemon.log = [" + logContent + "]");
                     }
+                    noteTransportSuccess();
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     AppLogger.e(TAG, "MirrorDaemon startup error", e);
                 }
             }
@@ -351,6 +400,7 @@ public class AdbLocalClient {
      *  so re-reading + RSA-parsing them on every command was pure waste — the
      *  5 s pidof poll on the legacy path paid it twice per tick. */
     private static volatile AdbKeyPair sKeyPair;
+    private static volatile boolean sFreshKeyAwaitingAuthorization = false;
 
     /**
      * Set to {@code true} the first time {@link #connect(Context)} receives
@@ -376,9 +426,13 @@ public class AdbLocalClient {
     public static final String XPORT_NO_LISTENER = "NO_LISTENER";
     /** TCP open but the ADB handshake failed — this app's RSA key is not authorized. */
     public static final String XPORT_AUTH        = "KEY_UNAUTHORIZED";
+    /** TCP and ADB handshake succeeded, but adbd stopped answering stream reads. */
+    public static final String XPORT_UNRESPONSIVE = "ADB_UNRESPONSIVE";
 
     private static volatile String  sTransportState    = null; // null = healthy / untested
     private static volatile boolean sTransportMsgShown = false;
+    /** Dadb.create() is lazy: only a successful operation proves handshake + shell health. */
+    private static volatile boolean sOperationSucceeded = false;
 
     /** {@code true} once the self-ADB transport has been classified as unreachable. */
     public static boolean isAdbTransportUnreachable() { return sTransportState != null; }
@@ -395,6 +449,10 @@ public class AdbLocalClient {
                  + "Accept the “Allow USB debugging” prompt for DashCast (tick "
                  + "“always allow from this computer”) so the uid-2000 proxy daemon can start.";
         }
+        if (XPORT_UNRESPONSIVE.equals(s)) {
+            return "ADB over TCP accepts connections but does not answer ADB commands. "
+                 + "Restart Android debugging/adbd on the head unit, then reopen DashCast.";
+        }
         return "ADB over TCP (port 5555) is not reachable on this unit. Cluster projection needs "
              + "the uid-2000 proxy daemon, which connects over local ADB. Enable ADB debugging over "
              + "TCP (e.g. `adb tcpip 5555`) and keep it enabled.";
@@ -404,11 +462,24 @@ public class AdbLocalClient {
     private static void markTransport(Context ctx, String state) {
         boolean transition = !state.equals(sTransportState);
         sTransportState = state;
-        if (transition && !sTransportMsgShown) {
+        if (transition || !sTransportMsgShown) {
             sTransportMsgShown = true;
             String msg = adbTransportDiagnosis();
             AppLogger.e(TAG, "SELF-ADB TRANSPORT UNREACHABLE [" + state + "] — " + msg);
-            toastOnce(ctx, msg);
+            String toast = msg;
+            if (ctx != null) {
+                try {
+                    if (XPORT_AUTH.equals(state)) {
+                        toast = ctx.getString(R.string.adb_transport_key_unauthorized);
+                    } else if (XPORT_UNRESPONSIVE.equals(state)) {
+                        toast = ctx.getString(R.string.adb_transport_unresponsive);
+                    } else {
+                        toast = ctx.getString(R.string.adb_transport_unreachable);
+                    }
+                }
+                catch (Throwable ignore) { /* technical English fallback above */ }
+            }
+            toastOnce(ctx, toast);
         }
     }
 
@@ -416,6 +487,20 @@ public class AdbLocalClient {
     private static void clearTransport() {
         sTransportState    = null;
         sTransportMsgShown = false;
+    }
+
+    private static void noteTransportSuccess() {
+        sOperationSucceeded = true;
+        sFreshKeyAwaitingAuthorization = false;
+        clearTransport();
+    }
+
+    private static void noteTransportFailure(Context context, Throwable error) {
+        String state = AdbTransportFailure.INSTANCE.classify(error);
+        if (state != null) {
+            sOperationSucceeded = false;
+            markTransport(context, state);
+        }
     }
 
     private static void toastOnce(Context ctx, final String msg) {
@@ -433,6 +518,10 @@ public class AdbLocalClient {
     }
 
     private static Dadb connect(Context context) throws Exception {
+        return connect(context, SHELL_IDLE_TIMEOUT_MS);
+    }
+
+    private static Dadb connect(Context context, int socketTimeoutMs) throws Exception {
         AdbKeyPair keyPair = sKeyPair;
         if (keyPair == null) {
             synchronized (sKeyLock) {
@@ -441,6 +530,7 @@ public class AdbLocalClient {
                     File publicKey  = new File(context.getFilesDir(), "adb.pub");
                     if (!privateKey.exists() || !publicKey.exists()) {
                         AdbKeyPair.generate(privateKey, publicKey);
+                        sFreshKeyAwaitingAuthorization = true;
                     }
                     sKeyPair = AdbKeyPair.read(privateKey, publicKey);
                 }
@@ -478,25 +568,37 @@ public class AdbLocalClient {
         int retries = 5;
         Exception lastE = null;
         while (retries > 0) {
+            Dadb d = null;
             try {
-                Dadb d = Dadb.create("localhost", ADB_PORT, keyPair);
+                int effectiveTimeout = AdbTimeoutPolicy.INSTANCE.effectiveIdleTimeoutMs(
+                        Math.max(1, socketTimeoutMs),
+                        sOperationSucceeded,
+                    sFreshKeyAwaitingAuthorization
+                        ? NEW_KEY_AUTH_IDLE_TIMEOUT_MS
+                        : FIRST_OPERATION_IDLE_TIMEOUT_MS);
+                d = Dadb.create(
+                    "localhost", ADB_PORT, keyPair,
+                        CONNECT_PROBE_MS, effectiveTimeout, true);
+                // Dadb.create() is lazy. Force A_CNXN/A_AUTH now so this retry loop actually
+                // surrounds the authorization handshake rather than returning an unopened client.
+                d.supportsFeature("shell_v2");
                 sPortRefused = false;   // full success: port reachable + key authorized
-                clearTransport();
+                if (!XPORT_UNRESPONSIVE.equals(sTransportState)) clearTransport();
                 return d;
             } catch (Exception e) {
+                if (d != null) {
+                    try { d.close(); } catch (Throwable ignore) { /* best-effort */ }
+                }
                 lastE = e;
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                     throw e;
                 }
-                String msg = e.getMessage();
-                if (msg != null && (msg.contains("ECONNREFUSED") || msg.contains("Connection refused"))) {
-                    sPortRefused = true;
-                    markTransport(context, XPORT_REFUSED);
-                } else {
-                    // TCP was open but the handshake failed → key almost certainly not authorized.
-                    markTransport(context, XPORT_AUTH);
-                }
+                String state = AdbTransportFailure.INSTANCE.classify(e);
+                if (XPORT_REFUSED.equals(state)) sPortRefused = true;
+                if (state != null) markTransport(context, state);
+                // Only a genuine auth rejection may self-heal via the approval popup.
+                if (!(e instanceof AdbAuthException)) throw e;
                 AppLogger.w(TAG, "ADB handshake exception (popup pending?), retrying in 2s... (" + retries + " left)");
                 try {
                     Thread.sleep(2000);
@@ -841,7 +943,11 @@ public class AdbLocalClient {
                         // fall through to legacy path
                     }
                 }
-                try (Dadb dadb = connect(context)) {
+                if (isAdbTransportUnreachable()) {
+                    if (callback != null) callback.onError(adbTransportDiagnosis());
+                    return;
+                }
+                try (Dadb dadb = connect(context, BOOTSTRAP_IDLE_TIMEOUT_MS)) {
                     // Escape shell metacharacters inside the double-quoted argument:
                     //   \  → must be first to avoid double-escaping
                     //   "  → terminates the quoted string
@@ -859,9 +965,11 @@ public class AdbLocalClient {
                     AdbShellResponse r = dadb.shell(cmd);
                     String out = r.getAllOutput().trim();
                     AppLogger.log(TAG, "sendInfo ADB(" + type + "," + infoInt + ") → " + out);
+                    noteTransportSuccess();
                     if (callback != null) callback.onSuccess(out);
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     AppLogger.e(TAG, "sendInfo ADB ERREUR", e);
                     if (callback != null) callback.onError(e.getClass().getSimpleName() + ": " + e.getMessage());
                 }

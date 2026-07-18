@@ -161,7 +161,8 @@ public final class ProxyClient {
     /** Fetched after a connect() failure to surface the daemon's first error line(s). */
     private static final String READ_LOG_CMD = "tail -n 20 " + DAEMON_LOG + " 2>/dev/null";
 
-    private static final int  BOOTSTRAP_TIMEOUT_MS = 8000;
+    /** Covers dadb's first-command authorization window (15 s) plus callback delivery. */
+    private static final int  BOOTSTRAP_TIMEOUT_MS = 16_000;
     /**
      * The daemon's {@code ActivityThread.systemMain()} call takes 5–8 s cold on
      * a DiLink 3.0 SoC (it brings up the framework runtime inside app_process),
@@ -170,6 +171,9 @@ public final class ProxyClient {
      * making failure cases painfully slow.
      */
     private static final int  BROADCAST_WAIT_MS    = 15000;
+    /** A timed-out/refused ADB command may still have spawned the daemon just before transport
+     *  failure; keep a small grace window for its already-armed Binder broadcast. */
+    private static final int  TRANSPORT_FAILURE_BINDER_GRACE_MS = 2_000;
     private static final long CONNECT_JOIN_TIMEOUT_MS =
             BOOTSTRAP_TIMEOUT_MS + BROADCAST_WAIT_MS + 1_000L;
 
@@ -177,6 +181,8 @@ public final class ProxyClient {
 
     /** Re-probe interval for a transport classified as permanently unreachable (v1.6.102). */
     private static final long XPORT_RECHECK_MS = 60_000L;
+    /** Authorization may become healthy immediately after the driver accepts the popup. */
+    private static final long XPORT_AUTH_RECHECK_MS = 2_000L;
     /** Last time the dead-transport circuit-breaker allowed a real bootstrap attempt. */
     private static volatile long sLastDeadXportAttemptMs = 0L;
 
@@ -371,7 +377,11 @@ public final class ProxyClient {
                 // is enabled later without restarting the app.
                 if (AdbLocalClient.isAdbTransportUnreachable()) {
                     long now = SystemClock.elapsedRealtime();
-                    if (now - sLastDeadXportAttemptMs < XPORT_RECHECK_MS) {
+                    long recheckMs = ProxyTransportRetryPolicy.recheckMs(
+                            AdbLocalClient.adbTransportState(),
+                            XPORT_RECHECK_MS,
+                            XPORT_AUTH_RECHECK_MS);
+                    if (now - sLastDeadXportAttemptMs < recheckMs) {
                         ticket.complete(false);
                         return false;
                     }
@@ -422,6 +432,12 @@ public final class ProxyClient {
             // The actual success/fail will be decided by the latch below, but the
             // bootstrap-side outcome tells us WHY we are about to wait.
             String upper = bootMsg == null ? "" : bootMsg.trim();
+            if (AdbLocalClient.isAdbTransportUnreachable()) {
+                // The first failure entered connect() while transport state was still null, so
+                // the entry circuit-breaker could not timestamp it. Arm the recheck window now;
+                // otherwise the very next 10 s keeper heartbeat performs a second full attempt.
+                sLastDeadXportAttemptMs = SystemClock.elapsedRealtime();
+            }
             if (upper.startsWith("REBROADCAST")) {
                 ProxyMetrics.inc(ctx, ProxyMetrics.K_REBROADCASTS);
             } else if (upper.equals("ERR_NO_APK") || upper.contains("ERR_NO_APK")) {
@@ -446,8 +462,14 @@ public final class ProxyClient {
             // will deliver the broadcast within ~1s. Use a shorter 5s timeout so
             // the fallback am-start triggers quickly rather than blocking 15s.
             // Cold-spawn still uses the full 15s (the JVM boot itself takes 5-8s
-            // on DiLink SoCs).
-            long waitMs = upper.startsWith("REBROADCAST") ? 5_000L : BROADCAST_WAIT_MS;
+            // on DiLink SoCs). A classified transport failure gets only a 2s grace
+            // in case the detached daemon started just before the socket failed.
+            long waitMs = ProxyBootstrapPolicy.binderWaitMs(
+                    upper,
+                    AdbLocalClient.isAdbTransportUnreachable(),
+                    5_000L,
+                    TRANSPORT_FAILURE_BINDER_GRACE_MS,
+                    BROADCAST_WAIT_MS);
             try {
                 binderSignal.await(waitMs, TimeUnit.MILLISECONDS);
             } catch (InterruptedException ie) {
@@ -468,7 +490,10 @@ public final class ProxyClient {
                             ? "signalled" : "timed-out") + ")");
                     sBinder = null;
                     // v1.2.78 — Couche 4: distinguish timeout vs other bootstrap fail.
-                    if (upper.startsWith("REBROADCAST") || upper.isEmpty()) {
+                    String transportState = AdbLocalClient.adbTransportState();
+                    if (AdbLocalClient.XPORT_UNRESPONSIVE.equals(transportState)
+                            || upper.contains("timed out")
+                            || upper.startsWith("REBROADCAST") || upper.isEmpty()) {
                         ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_TIMEOUT);
                     } else if (!upper.equals("ERR_NO_APK") && !upper.contains("ERR_NO_APK")) {
                         ProxyMetrics.inc(ctx, ProxyMetrics.K_FAILS_OTHER);
@@ -1407,7 +1432,7 @@ public final class ProxyClient {
         AdbLocalClient.executeShellWithResult(ctx, BOOTSTRAP_CMD, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String report) { out.set(report); latch.countDown(); }
             @Override public void onError(String error)    { out.set("ERR " + error); latch.countDown(); }
-        });
+        }, AdbLocalClient.BOOTSTRAP_IDLE_TIMEOUT_MS);
         try {
             if (!latch.await(BOOTSTRAP_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 return "ERR bootstrap timed out";

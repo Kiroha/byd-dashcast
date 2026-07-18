@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.text.InputType
 import android.util.TypedValue
@@ -181,9 +182,24 @@ class BugWizardActivity : Activity() {
     }
 
     private fun detectClusterApp() {
-        // Parse foreground activity on displayId=1 (cluster display).
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            onDetectionResult(null, null)
+            return
+        }
+        val dm = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+        val displayId = ClusterDisplaySelection.choose(
+            dm?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+                ?.map { it.displayId }?.toIntArray() ?: intArrayOf(),
+            dm?.displays?.map { it.displayId }?.toIntArray() ?: intArrayOf()
+        )
+        if (displayId < 0) {
+            onDetectionResult(null, null)
+            return
+        }
+        // Parse the foreground activity on the actual cluster display (#1 on legacy DL3,
+        // #2 on D50F_LC, and any future non-default PRESENTATION display).
         val cmd = "dumpsys activity activities" +
-            " | grep -E 'displayId=1' -A 10" +
+            " | grep -E 'Display #$displayId|displayId=$displayId' -A 15" +
             " | grep 'realActivity'" +
             " | head -1"
         AdbLocalClient.executeShellWithResult(this, cmd, object : AdbLocalClient.Callback {
@@ -195,7 +211,7 @@ class BugWizardActivity : Activity() {
             override fun onError(err: String) {
                 runOnUiThread { onDetectionResult(null, null) }
             }
-        })
+        }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)
     }
 
     private fun onDetectionResult(pkg: String?, label: String?) {

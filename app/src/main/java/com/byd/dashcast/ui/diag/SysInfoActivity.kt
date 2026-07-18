@@ -247,7 +247,11 @@ class SysInfoActivity : AppCompatActivity() {
 
         // 3b. uid=2000 probe — bypasses FLAG_PRIVATE filter.
         sb.append("\n[uid=2000 dumpsys probe — ALL displays incl. PRIVATE]\n")
-        run {
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            sb.append("[unavailable: ")
+                .append(AdbLocalClient.adbTransportDiagnosis())
+                .append("]\n")
+        } else run {
             val shellOut = arrayOfNulls<String>(1)
             val latch = CountDownLatch(1)
             AdbLocalClient.executeShellWithResult(
@@ -256,7 +260,8 @@ class SysInfoActivity : AppCompatActivity() {
                 object : AdbLocalClient.Callback {
                     override fun onSuccess(r: String?) { shellOut[0] = r; latch.countDown() }
                     override fun onError(e: String?) { shellOut[0] = "[shell error: $e]"; latch.countDown() }
-                }
+                },
+                AdbLocalClient.PROBE_IDLE_TIMEOUT_MS
             )
             try {
                 latch.await(8, TimeUnit.SECONDS)
@@ -356,6 +361,14 @@ class SysInfoActivity : AppCompatActivity() {
         for (port in ports) {
             val open = isPortOpen("127.0.0.1", port, 800)
             sb.append(String.format(Locale.US, "  127.0.0.1:%-5d %s\n", port, if (open) "OPEN    ✓" else "closed"))
+        }
+        sb.append("  transport state : ")
+            .append(AdbLocalClient.adbTransportState() ?: "OK/untested")
+            .append("\n")
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            sb.append("  diagnosis      : ")
+                .append(AdbLocalClient.adbTransportDiagnosis())
+                .append("\n")
         }
         publishUpdate(sb.toString())
 

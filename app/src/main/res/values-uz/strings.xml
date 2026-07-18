@@ -602,6 +602,9 @@
     <string name="fo_err_attach_fmt">%1$s uchun slot yaratib bo\'lmadi</string>
     <string name="fo_err_daemon">Daemon mavjud emas</string>
     <string name="fo_err_proxy">Proxy ADB Daemon ulanmagan. Uni Sozlamalarda yoqing.</string>
+    <string name="adb_transport_unresponsive">ADB ulanishni qabul qiladi, lekin buyruqlarga javob bermaydi. Android nosozliklarni tuzatish xizmatini (adbd) qayta ishga tushiring, so‘ng DashCast-ni qayta oching.</string>
+    <string name="adb_transport_key_unauthorized">ADB mavjud, ammo DashCast kaliti ruxsat etilmagan. «USB orqali nosozliklarni tuzatishga ruxsat berish» so‘rovini «Har doim ruxsat berish» bilan tasdiqlang va DashCast-ni qayta oching.</string>
+    <string name="adb_transport_unreachable">Bu avtomobilda TCP orqali ADB mavjud emas. 5555-portda TCP orqali Android nosozliklarni tuzatishni yoqing va DashCast-ni qayta oching.</string>
     <string name="fo_status_autoactivate">Tartib avtomatik faollashtirilmoqda…</string>
     <string name="fo_status_autolayout_err_fmt">Avto-tartib xatosi: %1$s</string>
     <string name="fo_status_create_fmt">%1$s uchun slot yaratilmoqda…</string>

@@ -601,6 +601,9 @@
     <string name="fo_err_attach_fmt">%1$s үшін слот жасалмады</string>
     <string name="fo_err_daemon">Демон қолжетімсіз</string>
     <string name="fo_err_proxy">Proxy ADB Daemon қосылмаған. Оны Параметрлерден қосыңыз.</string>
+    <string name="adb_transport_unresponsive">ADB қосылымды қабылдайды, бірақ командаларға жауап бермейді. Android жөндеу қызметін (adbd) қайта іске қосып, DashCast қолданбасын қайта ашыңыз.</string>
+    <string name="adb_transport_key_unauthorized">ADB қолжетімді, бірақ DashCast кілті рұқсат етілмеген. «USB арқылы жөндеуге рұқсат беру» сұрауын «Әрқашан рұқсат беру» арқылы қабылдап, DashCast қолданбасын қайта ашыңыз.</string>
+    <string name="adb_transport_unreachable">Бұл көлікте TCP арқылы ADB қолжетімсіз. 5555 портында TCP арқылы Android жөндеуін қосып, DashCast қолданбасын қайта ашыңыз.</string>
     <string name="fo_status_autoactivate">Орналасу автоматты іске қосылуда…</string>
     <string name="fo_status_autolayout_err_fmt">Авто-орналасу қатесі: %1$s</string>
     <string name="fo_status_create_fmt">%1$s үшін слот жасалуда…</string>

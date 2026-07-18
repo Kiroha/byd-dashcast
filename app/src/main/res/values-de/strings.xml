@@ -522,6 +522,9 @@
     <string name="proxy_keeper_channel_desc">Hält den Proxy-Daemon im Hintergrund verfügbar</string>
     <string name="proxy_keeper_notif_title">DashCast — Proxy aktiv</string>
     <string name="proxy_keeper_notif_text">Daemon alle 10 s geprüft</string>
+    <string name="adb_transport_unresponsive">ADB akzeptiert die Verbindung, antwortet aber nicht auf Befehle. Starten Sie Android-Debugging (adbd) neu und öffnen Sie DashCast erneut.</string>
+    <string name="adb_transport_key_unauthorized">ADB ist erreichbar, aber der DashCast-Schlüssel ist nicht autorisiert. Bestätigen Sie „USB-Debugging zulassen“ mit „Immer zulassen“ und öffnen Sie DashCast erneut.</string>
+    <string name="adb_transport_unreachable">ADB über TCP ist in diesem Fahrzeug nicht erreichbar. Aktivieren Sie Android-Debugging über TCP auf Port 5555 und öffnen Sie DashCast erneut.</string>
     <!-- v1.2.76 — Reboot button + dialog -->
     <string name="sysinfo_btn_reboot">Neu starten</string>
     <string name="sysinfo_reboot_title">Tablet neu starten?</string>

@@ -601,6 +601,9 @@
     <string name="fo_err_attach_fmt">Не удалось создать слот для %1$s</string>
     <string name="fo_err_daemon">Демон недоступен</string>
     <string name="fo_err_proxy">Proxy ADB Daemon не подключён. Включите его в настройках.</string>
+    <string name="adb_transport_unresponsive">ADB принимает подключение, но не отвечает на команды. Перезапустите отладку Android (adbd), затем снова откройте DashCast.</string>
+    <string name="adb_transport_key_unauthorized">ADB доступен, но ключ DashCast не авторизован. Подтвердите запрос «Разрешить отладку по USB» с пунктом «Всегда разрешать», затем снова откройте DashCast.</string>
+    <string name="adb_transport_unreachable">ADB по TCP недоступен на этом автомобиле. Включите отладку Android по TCP на порту 5555, затем снова откройте DashCast.</string>
     <string name="fo_status_autoactivate">Автоактивация макета…</string>
     <string name="fo_status_autolayout_err_fmt">Ошибка авто-макета: %1$s</string>
     <string name="fo_status_create_fmt">Создание слота для %1$s…</string>
