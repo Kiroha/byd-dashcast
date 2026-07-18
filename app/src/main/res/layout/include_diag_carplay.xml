@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Forces a CarPlay/AutoKit adapter app fullscreen on the MAIN head-unit screen via policy_control (immersive.full). Experimental — works on Android 10 head units, fully reversible via Restore."
+        android:text="Hides the system bars for all apps on the MAIN screen (policy_control immersive.full=*, the same mechanism as the OEM 'hide bars' toggle). It cannot resize CarPlay — if black bands remain, that is the AutoKit adapter's fixed render (use Dump state). Fully reversible via Restore."
         android:textSize="13sp"
         android:textColor="@color/md_on_surface_variant"/>
 
@@ -29,6 +29,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_carplay_dump"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_carplay_fullscreen"

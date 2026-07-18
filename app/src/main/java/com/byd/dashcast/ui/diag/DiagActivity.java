@@ -356,18 +356,23 @@ public class DiagActivity extends AppCompatActivity {
         if (panelCarPlay != null) {
             tvCarplayOutput = panelCarPlay.findViewById(R.id.tv_carplay_output);
             MaterialButton cpDetect  = panelCarPlay.findViewById(R.id.btn_carplay_detect);
+            MaterialButton cpDump    = panelCarPlay.findViewById(R.id.btn_carplay_dump);
             MaterialButton cpFull    = panelCarPlay.findViewById(R.id.btn_carplay_fullscreen);
             MaterialButton cpRestore = panelCarPlay.findViewById(R.id.btn_carplay_restore);
             if (cpDetect != null) {
                 cpDetect.setText("①  Detect CarPlay package");
                 cpDetect.setOnClickListener(v -> carplayDetect());
             }
+            if (cpDump != null) {
+                cpDump.setText("②  Dump state (read-only)");
+                cpDump.setOnClickListener(v -> carplayDump());
+            }
             if (cpFull != null) {
-                cpFull.setText("②  Save size + go fullscreen");
+                cpFull.setText("③  Hide system bars (all apps)");
                 cpFull.setOnClickListener(v -> carplaySaveAndFullscreen());
             }
             if (cpRestore != null) {
-                cpRestore.setText("③  Restore previous size");
+                cpRestore.setText("④  Restore previous state");
                 cpRestore.setOnClickListener(v -> carplayRestore());
             }
         }
@@ -469,12 +474,15 @@ public class DiagActivity extends AppCompatActivity {
 
     // ─── CarPlay fullscreen (experimental) ───────────────────────────────────
     //
-    // Diagnostic tool to force a CarPlay / AutoKit adapter app fullscreen on the
-    // MAIN head-unit screen (display 0) using the Android `policy_control`
-    // global setting (immersive.full=<pkg>). Works on Android 10 head units and
-    // is fully reversible. All shell commands run as the uid-2000 shell via
-    // ShellGateway (the only path that can write `settings put global`); callbacks
-    // arrive on a background thread, so output is posted with runOnUiThread.
+    // Diagnostic tool for the CarPlay / AutoKit adapter on the MAIN head-unit
+    // screen (display 0). It hides the system bars for all apps via the global
+    // `policy_control` setting (immersive.full=*) — the SAME mechanism the OEM
+    // "hide bars" toggle uses — instead of scoping to one package, which would
+    // clobber that toggle and make the bars reappear (the original bug). It cannot
+    // resize the mirror itself; a read-only "Dump state" reveals whether remaining
+    // black bands are the adapter's fixed render. All shell runs as the uid-2000
+    // shell via ShellGateway (the only path that can write `settings put global`);
+    // callbacks arrive on a background thread, so output is posted with runOnUiThread.
 
     private static final String CARPLAY_KEY_PKG    = "carplay_pkg";
     private static final String CARPLAY_KEY_POLICY = "carplay_saved_policy";
@@ -543,23 +551,29 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    /** Button ② — save current policy_control + bounds, then force the app fullscreen. */
+    /** Button ③ — back up the OEM policy_control, then hide the bars globally (non-destructive). */
     private void carplaySaveAndFullscreen() {
-        final String pkg = carplayPrefs().getString(CARPLAY_KEY_PKG, null);
         carplayClear();
-        if (pkg == null || pkg.isEmpty()) {
-            carplayLog("Detect the package first.");
-            return;
-        }
-        carplayLog("Target package: " + pkg);
-        // 1) Save the current global policy_control so Restore can revert it.
+        // Read + back up the current global policy_control FIRST, so Restore can revert it and
+        // so we never clobber the OEM "hide bars" toggle — which stores its state in this same
+        // global string as a wildcard. The original bug scoped the write to one package, which
+        // narrowed the wildcard and made the bars reappear for every other window.
         ShellGateway.execShellWithResult(this, "settings get global policy_control",
                 new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 String saved = out == null ? "" : out.trim();
                 carplayPrefs().edit().putString(CARPLAY_KEY_POLICY, saved).apply();
                 carplayLog("before: policy_control = " + (saved.isEmpty() ? "null" : saved));
-                carplayCaptureBounds(pkg);
+                if (isOemGlobalImmersive(saved)) {
+                    // The OEM toggle already hides the bars for every app. Overwriting it would
+                    // only narrow it and bring the bars back — so leave it untouched.
+                    carplayLog("");
+                    carplayLog("OEM already hides the bars globally (immersive wildcard present).");
+                    carplayLog("Nothing to change. If CarPlay still shows black bands, they are the "
+                            + "AutoKit adapter's fixed render size — use Dump state to confirm.");
+                    return;
+                }
+                carplayApplyFullscreen();
             }
             @Override public void onError(String err) {
                 carplayLog("error reading current policy_control: " + err);
@@ -567,26 +581,22 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    /** Informational: log the app's current task bounds before we resize it. */
-    private void carplayCaptureBounds(final String pkg) {
-        final String cmd = "dumpsys activity activities 2>/dev/null | grep -A 3 '" + pkg
-                + "' | grep -iE 'bounds|mBounds' | head -2";
-        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
-            @Override public void onSuccess(String out) {
-                String b = out == null ? "" : out.trim();
-                carplayLog("current bounds: " + (b.isEmpty() ? "(not reported)" : b));
-                carplayApplyFullscreen(pkg);
-            }
-            @Override public void onError(String err) {
-                carplayLog("bounds probe error: " + err);
-                carplayApplyFullscreen(pkg);
-            }
-        });
+    /** True when policy_control already forces the bars hidden for ALL apps (OEM-style wildcard). */
+    private static boolean isOemGlobalImmersive(String value) {
+        if (value == null) return false;
+        String s = value.toLowerCase(java.util.Locale.ROOT);
+        return s.contains("immersive.full=*") || s.contains("immersive.full=apps")
+                || (s.contains("immersive.status=*") && s.contains("immersive.navigation=*"));
     }
 
-    /** Apply immersive.full for the package, then read the value back. */
-    private void carplayApplyFullscreen(final String pkg) {
-        final String cmd = "settings put global policy_control \"immersive.full=" + pkg + "\"";
+    /**
+     * Hide the system bars for EVERY app via the same global wildcard the OEM toggle uses
+     * (immersive.full=*), then read the value back. Scoping to a single package clobbers the
+     * OEM setting and makes the bars reappear for everything else — the bug this replaces.
+     * The prior value is already saved (Restore reverts it).
+     */
+    private void carplayApplyFullscreen() {
+        final String cmd = "settings put global policy_control \"immersive.full=*\"";
         ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
             @Override public void onSuccess(String out) {
                 ShellGateway.execShellWithResult(DiagActivity.this,
@@ -595,7 +605,9 @@ public class DiagActivity extends AppCompatActivity {
                         carplayLog("after:  policy_control = "
                                 + (after == null ? "" : after.trim()));
                         carplayLog("");
-                        carplayLog("Reopen CarPlay to see it fill the screen. "
+                        carplayLog("Bars now hidden globally (OEM-style). Reopen CarPlay.");
+                        carplayLog("If black bands remain, they are the AutoKit adapter's fixed "
+                                + "render — set the resolution inside the CarPlay adapter app. "
                                 + "Reversible via Restore.");
                     }
                     @Override public void onError(String err) {
@@ -609,7 +621,36 @@ public class DiagActivity extends AppCompatActivity {
         });
     }
 
-    /** Button ③ — restore the policy_control value saved before going fullscreen. */
+    /** Button ② — read-only dump of display / window / surface state (for diagnosis). */
+    private void carplayDump() {
+        carplayClear();
+        carplayLog("Dumping display + window + surface state (read-only)…");
+        carplayLog("");
+        // Pure settings/dumpsys — no `wm` verb, so it never trips the ShellGateway display-0
+        // guard or the DL2 resize guard. Reveals the OEM policy_control value, display 0
+        // geometry, the focused CarPlay window, bar visibility, and — crucially — the AutoKit
+        // layer's activeBuffer/crop, which tells whether black bands are its fixed render.
+        final String cmd =
+                "echo '== policy_control =='; settings get global policy_control; "
+              + "echo '== display 0 =='; dumpsys window displays 2>/dev/null | "
+              +   "grep -iE 'mDisplayId=0|init=|cur=|app=|real=|rotation' | head -12; "
+              + "echo '== focus =='; dumpsys window windows 2>/dev/null | "
+              +   "grep -iE 'mCurrentFocus|mFocusedApp'; "
+              + "echo '== bars =='; dumpsys window windows 2>/dev/null | "
+              +   "grep -iE 'StatusBar|NavigationBar|mSystemUiVisibility=' | head -20; "
+              + "echo '== surfaceflinger =='; dumpsys SurfaceFlinger 2>/dev/null | "
+              +   "grep -iE 'activeBuffer=|crop=|layerStack= *0' | head -24";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                carplayLog(out == null || out.trim().isEmpty() ? "(no output)" : out.trim());
+            }
+            @Override public void onError(String err) {
+                carplayLog("dump error: " + err);
+            }
+        });
+    }
+
+    /** Button ④ — restore the policy_control value saved before hiding the bars. */
     private void carplayRestore() {
         carplayClear();
         String saved = carplayPrefs().getString(CARPLAY_KEY_POLICY, null);
