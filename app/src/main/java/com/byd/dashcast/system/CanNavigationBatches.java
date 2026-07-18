@@ -72,4 +72,19 @@ public final class CanNavigationBatches {
                 CanBatchOperation.instrumentInt(
                         CanWriteVerbs.INSTRUMENT_NAVI_REMAINING_SEC, 0));
     }
+
+    /**
+     * Wall-clock ETA ("arrive at HH:MM") — OEM parity with AmapService's EXPECTED_ARRIVE_* block.
+     * Distinct from {@link #restRoute} (remaining DURATION). The SECOND register is always 0 and
+     * latches the day/hour/minute triple, exactly like the OEM.
+     */
+    public static List<CanBatchOperation> expectedArrival(int day, int hour, int minute) {
+        return Arrays.asList(
+                CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_EXPECTED_ARRIVE_DAY, day),
+                CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_EXPECTED_ARRIVE_HOUR, hour),
+                CanBatchOperation.instrumentInt(
+                        CanWriteVerbs.INSTRUMENT_EXPECTED_ARRIVE_MINUTE, minute),
+                CanBatchOperation.instrumentInt(
+                        CanWriteVerbs.INSTRUMENT_EXPECTED_ARRIVE_SECOND, 0));
+    }
 }

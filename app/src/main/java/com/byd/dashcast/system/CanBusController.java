@@ -245,6 +245,22 @@ public final class CanBusController {
         sendBatch(CanNavigationBatches.restRoute(restHour, restMinute, restMileage));
     }
 
+    /**
+     * Update the wall-clock ETA shown on the cluster ("arrive at HH:MM").
+     *
+     * <p>OEM parity ({@code AmapService.sendNavigateInfoToCAN}, EXPECTED_ARRIVE_* family): this is
+     * the ARRIVAL CLOCK, distinct from {@link #sendRestRoute} which sends the remaining DURATION.
+     * Writes DAY, HOUR, MINUTE and SECOND=0 (the second register latches the triple).
+     *
+     * @param day    arrival day-code (1=today); a Maps/Waze notification carries no day → pass 1
+     * @param hour   arrival hour (0-23)
+     * @param minute arrival minute (0-59)
+     */
+    public static void sendExpectedArrival(int day, int hour, int minute)
+            throws ProxyClient.ProxyException {
+        sendBatch(CanNavigationBatches.expectedArrival(day, hour, minute));
+    }
+
     // ─── Raw / advanced access ────────────────────────────────────────────
 
     /**

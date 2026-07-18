@@ -118,6 +118,20 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             Pattern.compile("\\b(\\d+)[\\s\\u00A0]*(?:min|mins|мин)\\b",
                     Pattern.CASE_INSENSITIVE);
 
+    // ─── Arrival wall-clock ETA — "· 14:32", "2:05 pm" (OEM EXPECTED_ARRIVE_*) ─
+    // Best-effort: a bare HH:MM in a nav notification is the arrival clock — remaining DURATION here
+    // is always word-unit ("25 min", "1 hr"), never colon-separated. g1=hour, g2=minute, g3=am/pm.
+    private static final Pattern RX_ETA_CLOCK =
+            Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\s*(am|pm)?\\b",
+                    Pattern.CASE_INSENSITIVE);
+
+    // ─── Roundabout exit number — "3rd exit", "take the 2nd exit", "sortie 3" ─
+    private static final Pattern RX_ROUNDABOUT_EXIT =
+            Pattern.compile(
+                    "(?:(\\d+)(?:st|nd|rd|th|er|e|ème)?[\\s\\u00A0]+(?:exit|sortie)"
+                            + "|(?:exit|sortie)[\\s\\u00A0]+(\\d+))",
+                    Pattern.CASE_INSENSITIVE);
+
     // ─── Noise-notification skip strings (from OpenBYD smali) ────────────
     // Matched (lowercase) against both title and text. These appear in ongoing
     // navigation notifications that carry no maneuver data (GPS acquiring, etc.).
@@ -513,6 +527,19 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             }
         }
 
+        // 1b. Roundabout exit number (OEM parity): a generic roundabout icon carries no exit count.
+        //     If the instruction names an exit ("3rd exit" / "sortie 3"), promote it to the OEM
+        //     exit-numbered icon — CCW 25-34 / CW 35-44 (exit N = base+N). Handedness comes from the
+        //     resolved generic icon (CW is the parser's default); a notification doesn't expose it.
+        if (iconId == CanBusController.ICON_ROUNDABOUT_CW_1_LAP
+                || iconId == CanBusController.ICON_ROUNDABOUT_CCW_1_LAP) {
+            int exit = parseRoundaboutExit(lower);
+            if (exit > 0) {
+                int base = (iconId == CanBusController.ICON_ROUNDABOUT_CCW_1_LAP) ? 24 : 34;
+                iconId = base + exit;
+            }
+        }
+
         // 2. Distance to next turn — scan title then text then combined.
         int distance = parseFirstDistance(combined);
         if (distance < 0) {
@@ -528,8 +555,14 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         Integer remainSec  = parseRemainingSeconds(routeSrc);
         Integer remainDist = parseRemainingMeters(routeSrc);
 
+        // 5. Arrival wall-clock ETA (OEM EXPECTED_ARRIVE_* family) — best-effort from the summary
+        //    line; distinct from the remaining DURATION above. A notification carries no day-code.
+        int[] eta = parseEtaClock(routeSrc);
+        Integer etaHour   = eta != null ? eta[0] : null;
+        Integer etaMinute = eta != null ? eta[1] : null;
+
         HudNavigationData data = new HudNavigationData(
-                iconId, distance, roadName, remainDist, remainSec);
+                iconId, distance, roadName, remainDist, remainSec, etaHour, etaMinute);
 
         // NAV PARSE diagnostic (raw notification → parsed icon), written to the DashCast journal so
         // every bug report shows GROUND TRUTH: what the nav app's notification actually said vs the
@@ -546,7 +579,8 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                     + " smallIcon='" + iconResName + "'"
                     + " titleLen=" + title.length() + " textLen=" + text.length()
                     + (bigText.isEmpty() ? "" : " bigLen=" + bigText.length())
-                    + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes"));
+                    + " -> dist=" + distance + " road=" + (roadName.isEmpty() ? "no" : "yes")
+                    + " eta=" + (eta != null ? "yes" : "no"));
         }
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
                 + " road=" + (roadName.isEmpty() ? "no" : "yes")
@@ -718,6 +752,45 @@ public final class MapNotificationListenerService extends NotificationListenerSe
             return name != null ? name.trim() : "";
         }
         return "";
+    }
+
+    // ─── Arrival ETA clock ────────────────────────────────────────────────
+
+    /** Parses an arrival wall-clock "HH:MM" (optionally am/pm) → {hour24, minute}, or null. */
+    private static int[] parseEtaClock(String text) {
+        if (text == null) return null;
+        Matcher m = RX_ETA_CLOCK.matcher(text);
+        if (!m.find()) return null;
+        try {
+            int h   = Integer.parseInt(m.group(1));
+            int min = Integer.parseInt(m.group(2));
+            String ap = m.group(3);
+            if (ap != null) {
+                ap = ap.toLowerCase(Locale.ROOT);
+                if (ap.equals("pm") && h < 12) h += 12;
+                else if (ap.equals("am") && h == 12) h = 0;
+            }
+            if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+            return new int[] { h, min };
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // ─── Roundabout exit ──────────────────────────────────────────────────
+
+    /** Parses a roundabout exit number (1-10) from the instruction text, or 0 if none/out of range. */
+    private static int parseRoundaboutExit(String lower) {
+        if (lower == null) return 0;
+        Matcher m = RX_ROUNDABOUT_EXIT.matcher(lower);
+        if (!m.find()) return 0;
+        String g = m.group(1) != null ? m.group(1) : m.group(2);
+        try {
+            int n = Integer.parseInt(g);
+            return (n >= 1 && n <= 10) ? n : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────

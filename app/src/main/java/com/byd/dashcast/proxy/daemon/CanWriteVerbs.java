@@ -70,6 +70,17 @@ public final class CanWriteVerbs {
     /** Remaining route time in seconds (alternative to hour/minute split). */
     public static final int INSTRUMENT_NAVI_REMAINING_SEC    = 1139810334; // 0x43F0201E
 
+    // Expected-arrival WALL-CLOCK ETA family (distinct from the remaining-DURATION registers above):
+    // the OEM AmapService.sendNavigateInfoToCAN writes these to show "arrive at HH:MM" on the cluster.
+    /** ETA arrival day-code (1=today, 2=tomorrow, …). We send 1 — a notification carries no day. */
+    public static final int INSTRUMENT_EXPECTED_ARRIVE_DAY    = 1139838992; // 0x43F09010
+    /** ETA arrival hour (0-23). */
+    public static final int INSTRUMENT_EXPECTED_ARRIVE_HOUR   = 1139839000; // 0x43F09018
+    /** ETA arrival minute (0-59). */
+    public static final int INSTRUMENT_EXPECTED_ARRIVE_MINUTE = 1139839008; // 0x43F09020
+    /** ETA arrival second — always 0; latches/commits the day/hour/minute triple. */
+    public static final int INSTRUMENT_EXPECTED_ARRIVE_SECOND = 1139839016; // 0x43F09028
+
     /** Advanced lead-message icon (secondary / advanced HUD variant). */
     public static final int INSTRUMENT_NAVI_LEAD_MSG         = 1139834896; // 0x43F08010
 
