@@ -428,8 +428,10 @@ android {
         // 577 = 1.6.136-beta (HUD arrow-capability GATE in the bug wizard, to stop noise reports that skew the debug. Too many "HUD navigation" bug reports come from cars whose HUD firmware cannot display turn arrows AT ALL — DashCast can never add arrows to such a HUD, so the report is worthless. When a user picks the "HUD navigation" category (CAT_KEYS == "hud"), BugWizardActivity now first asks (translated in all 13 locales): "Does your car's OWN built-in navigation already show turn arrows on the windshield HUD?" — ✅ Yes / ❌ No / ❓ I don't know. On "No" we explain there is nothing DashCast can fix and FINISH without sending anything. On Yes/Unknown the wizard continues as before and records "HudArrows: yes|unknown" in the report caption, so a report that DOES arrive is known to come from an arrow-capable HUD (⇒ a real DashCast issue, e.g. the CAN→HUD regression tracked separately). New R.string.bug_hud_gate_* / bug_hud_no_arrows_msg in values/ FR + ar be de en es it kk pl ru tr uk uz; MissingTranslation 0. Only BugWizardActivity.kt + the 13 strings.xml; no daemon/behaviour change elsewhere; assembleRelease + lint 0/0.)
         // 578 = 1.6.137-beta (dadb 2.0 transport timeouts, typed self-ADB health,
         // bounded proxy recovery, D50F diagnostics/report fallback, and live-Binder-safe routing.)
-        versionCode 578
-        versionName "1.6.137-beta"
+        // 579 = 1.6.138-beta (OTA proxy reconnect + safe /data/local/tmp staging,
+        // PackageInstaller no-user-action request, and replacement-safe automatic relaunch.)
+        versionCode 579
+        versionName "1.6.138-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
