@@ -469,8 +469,24 @@ android {
         // resolved generic icon. HudNavigationData gained etaHour/etaMinute. No daemon protocol
         // change; on-car verification pending; honest ceiling (2nd maneuver, smooth countdown,
         // roundabout handedness, ETA day-code) unchanged per the gap analysis.)
-        versionCode 583
-        versionName "1.6.142-beta"
+        // 584 = 1.6.143-beta (P3: catch the REAL dominant cause of "no arrow on HUD" reports — no
+        // route running. On-car evidence 2026-07-18 (reports 154029/174551 on 1.6.142, with rolling
+        // screenshots): the tester answered "Waze" to the 1.6.140 nav-app gate and his HUD firmware IS
+        // arrow-capable, so both existing gates correctly let him through — yet the cluster shots show
+        // Waze parked on its idle "Dove andiamo?" screen at 0 km/h for the whole 100 s window, with
+        // ZERO nav notifications and zero NAV PARSE. A nav app posts turn-by-turn notifications only
+        // while actively guiding, so with no route started there is nothing for DashCast to translate.
+        // MapNotificationListenerService now records whether a SUPPORTED nav frame was ever parsed
+        // this process (sLastSupportedNavMs / hasSeenSupportedNav — single app process, no
+        // android:process, so the static is shared); the HUD wizard checks it after a Maps/Waze answer
+        // and, if none was seen, explains that opening the app is not enough and to start a route,
+        // letting the user bail or report anyway. Every HUD report now carries "NavSeen: yes|no".
+        // Also closes the diagnostic blind spot flagged in INC-20260718-114114: the report now dumps
+        // `settings get secure enabled_notification_listeners`, so a revoked notification grant — which
+        // looks EXACTLY like "the nav app posts nothing" — can finally be ruled out. +2 strings x13
+        // locales. No daemon protocol change; no CAN behaviour change.)
+        versionCode 584
+        versionName "1.6.143-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

@@ -95,6 +95,29 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static final String PKG_MAPS_REVANCED  = "app.revanced.android.apps.maps";
     private static final String PKG_WAZE           = "com.waze";
 
+    /**
+     * {@code elapsedRealtime} of the last SUPPORTED nav notification we successfully parsed, or 0 if
+     * we have never seen one since this process started.
+     *
+     * <p>The dominant cause of "no arrow on HUD" reports is simply that <em>no route is running</em>:
+     * a nav app posts its turn-by-turn notification only while actively guiding, so with Maps/Waze
+     * merely open there is nothing for DashCast to translate. Field evidence (2026-07-18): a tester
+     * filed "no arrow" while Waze sat on its idle "where to?" screen at 0 km/h for the whole capture.
+     * The bug reporter reads this to tell the driver to start a route first.
+     *
+     * <p>Everything runs in one app process (no {@code android:process} in the manifest), so this
+     * static is shared with {@link com.byd.dashcast.report.BugWizardActivity}.
+     */
+    private static volatile long sLastSupportedNavMs = 0L;
+
+    /**
+     * Whether a supported nav app (Google Maps / Maps ReVanced / Waze) has posted a parseable
+     * guidance notification since this process started — i.e. whether a route was actually running.
+     */
+    public static boolean hasSeenSupportedNav() {
+        return sLastSupportedNavMs != 0L;
+    }
+
     // ─── Distance: "300 m", "1.2 km", "1,2 km", "500 m", "3 км" ─
     // Mirrors OpenBYD regex: \b(\d+[.,]?\d*)[\s ]*(km|км|m|м)\b
     // Handles ASCII and Cyrillic unit suffixes, optional decimal, optional NBSP.
@@ -585,6 +608,10 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         Log.d(TAG, "nav update: icon=" + iconId + " dist=" + distance
                 + " road=" + (roadName.isEmpty() ? "no" : "yes")
                 + " remDist=" + remainDist + " remSec=" + remainSec);
+
+        // A supported nav app just gave us a parseable guidance frame ⇒ a route IS running. Recorded
+        // so the bug reporter can distinguish "DashCast is broken" from "no route was started".
+        sLastSupportedNavMs = SystemClock.elapsedRealtime();
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
         postNavUpdate(data);

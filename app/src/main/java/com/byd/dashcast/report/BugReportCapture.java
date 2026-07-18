@@ -107,6 +107,11 @@ public final class BugReportCapture {
             // Graphics: frame stats / jank — directly relevant to perceived responsiveness.
             + " ; echo '--- GFXINFO (frame stats) ---' >> " + p
             + " ; dumpsys gfxinfo com.byd.dashcast 2>/dev/null | head -60 >> " + p
+            // Notification access: the HUD nav path is notification-driven, so a revoked listener
+            // grant looks EXACTLY like "the nav app posts nothing". Dump the grant so a "no arrow"
+            // report can rule it out — it was indistinguishable in INC-20260718-114114.
+            + " ; echo '--- NOTIFICATION LISTENERS (grant) ---' >> " + p
+            + " ; settings get secure enabled_notification_listeners 2>/dev/null >> " + p
             // ── LOGS ──
             + " ; echo '--- LOGCAT (last " + LOGCAT_LINES + " lines) ---' >> " + p
             + " ; logcat -d -t " + LOGCAT_LINES + " -v threadtime >> " + p + " 2>&1"

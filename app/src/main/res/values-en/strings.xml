@@ -820,4 +820,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast can only mirror the arrows on the HUD from Google Maps or Waze. Your car\'s built-in navigation (Telenav…) sends its data in a format DashCast can\'t read — but it already shows its own arrows on the HUD. To get arrows through DashCast, start a route with Google Maps or Waze.</string>
     <string name="bug_hud_nav_understood">Got it, I\'ll use Maps or Waze</string>
     <string name="bug_hud_nav_report_anyway">Send the report anyway</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">No route is running right now. DashCast only receives turn directions while guidance is actively running: just opening Google Maps or Waze isn\'t enough. Start a route to a destination, then look at the HUD — the arrow should appear.</string>
+    <string name="bug_hud_no_route_understood">Got it, I\'ll start a route</string>
 </resources>

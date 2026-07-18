@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast HUD-та жебелерді тек Google Maps не Waze-ден ғана көрсете алады. Көлігіңнің төл навигациясы (Telenav…) деректерін DashCast оқи алмайтын форматта жібереді — бірақ ол HUD-та өзінің жебелерін әлдеқашан көрсетіп тұр. DashCast арқылы жебелер керек болса, Google Maps не Waze-мен маршрут сал.</string>
     <string name="bug_hud_nav_understood">Түсінікті, Maps не Waze пайдаланамын</string>
     <string name="bug_hud_nav_report_anyway">Есепті бәрібір жіберу</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Қазір белсенді маршрут жоқ. DashCast бұрылыс нұсқауларын тек навигация маршрут бойынша бағыттап тұрғанда ғана алады: Google Maps немесе Waze қосымшасын жай ашып қою жеткіліксіз. Бір мекенжайға маршрут салып, бағыттауды іске қос, содан соң HUD экранына қара — көрсеткі пайда болуы керек.</string>
+    <string name="bug_hud_no_route_understood">Түсінікті, маршрут саламын</string>
 </resources>

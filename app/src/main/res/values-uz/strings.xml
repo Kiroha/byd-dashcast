@@ -808,4 +808,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast HUD\'dagi strelkalarni faqat Google Maps yoki Waze\'dan aks ettira oladi. Mashinangning oʻz navigatsiyasi (Telenav…) oʻz maʼlumotlarini DashCast oʻqiy olmaydigan formatda uzatadi — lekin u allaqachon HUD\'da oʻzining strelkalarini koʻrsatib turadi. DashCast orqali strelkalar olish uchun Google Maps yoki Waze\'da navigatsiyani ishga tushir.</string>
     <string name="bug_hud_nav_understood">Tushundim, Maps yoki Waze\'dan foydalanaman</string>
     <string name="bug_hud_nav_report_anyway">Hisobotni baribir yuborish</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Hozir hech qanday marshrut faol emas. DashCast yoʻnalish koʻrsatmalarini faqat faol navigatsiya paytida oladi: Google Maps yoki Waze\'ni shunchaki ochishning oʻzi yetarli emas. Biror manzilga marshrut boshla, keyin HUD\'ga qara — strelka paydo boʻlishi kerak.</string>
+    <string name="bug_hud_no_route_understood">Tushundim, marshrut boshlayman</string>
 </resources>

@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast solo puede reflejar las flechas en el HUD desde Google Maps o Waze. La navegación original de tu coche (Telenav…) envía sus datos en un formato que DashCast no puede leer — pero ya muestra sus propias flechas en el HUD. Para ver flechas a través de DashCast, inicia una ruta con Google Maps o Waze.</string>
     <string name="bug_hud_nav_understood">Entendido, usaré Maps o Waze</string>
     <string name="bug_hud_nav_report_anyway">Enviar el informe de todos modos</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">No hay ninguna ruta en curso. DashCast solo recibe las indicaciones mientras hay una navegación activa: abrir Google Maps o Waze no basta. Inicia una ruta hacia un destino y luego mira el HUD — la flecha debería aparecer.</string>
+    <string name="bug_hud_no_route_understood">Entendido, voy a iniciar una ruta</string>
 </resources>

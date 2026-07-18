@@ -53,6 +53,7 @@ import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.byd.dashcast.proxy.DaemonConfig;
+import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.proxy.DaemonTestRunner;
 import com.byd.dashcast.proxy.DaemonTestRunner.TestDef;
 import com.byd.dashcast.proxy.DaemonTestRunner.TestResult;
@@ -106,6 +107,7 @@ public class DiagActivity extends AppCompatActivity {
     private static final int TAB_VOICE       = 13;
     private static final int TAB_AAOS        = 14;
     private static final int TAB_HUD_DL3     = 15;
+    private static final int TAB_CARPLAY     = 16;
 
     private TabLayout    tabs;
     private View         panelBeta;
@@ -121,8 +123,10 @@ public class DiagActivity extends AppCompatActivity {
     private View         panelVoice;
     private View         panelAaos;
     private View         panelHudDl3;
+    private View         panelCarPlay;
+    private TextView     tvCarplayOutput;
     private View         panelComingSoon;
-    private static final int TAB_COUNT = 16; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk,voice,aaos,hud_dl3
+    private static final int TAB_COUNT = 17; // cluster,display,adb_local,system,adas,beta,dl5,dl2,dl4,mirror,sniffer,cluster_dl5,export_apk,voice,aaos,hud_dl3,carplay
 
     // Beta panel views
     private TextView       tvBetaStatusA;
@@ -348,6 +352,25 @@ public class DiagActivity extends AppCompatActivity {
                         startActivity(new Intent(this, com.byd.dashcast.hud.HudDiagActivity.class)));
             }
         }
+        panelCarPlay = findViewById(R.id.panel_carplay);
+        if (panelCarPlay != null) {
+            tvCarplayOutput = panelCarPlay.findViewById(R.id.tv_carplay_output);
+            MaterialButton cpDetect  = panelCarPlay.findViewById(R.id.btn_carplay_detect);
+            MaterialButton cpFull    = panelCarPlay.findViewById(R.id.btn_carplay_fullscreen);
+            MaterialButton cpRestore = panelCarPlay.findViewById(R.id.btn_carplay_restore);
+            if (cpDetect != null) {
+                cpDetect.setText("①  Detect CarPlay package");
+                cpDetect.setOnClickListener(v -> carplayDetect());
+            }
+            if (cpFull != null) {
+                cpFull.setText("②  Save size + go fullscreen");
+                cpFull.setOnClickListener(v -> carplaySaveAndFullscreen());
+            }
+            if (cpRestore != null) {
+                cpRestore.setText("③  Restore previous size");
+                cpRestore.setOnClickListener(v -> carplayRestore());
+            }
+        }
         panelComingSoon = findViewById(R.id.panel_coming_soon);
 
         tabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -403,6 +426,7 @@ public class DiagActivity extends AppCompatActivity {
         boolean isVoice      = position == TAB_VOICE;
         boolean isAaos       = position == TAB_AAOS;
         boolean isHudDl3     = position == TAB_HUD_DL3;
+        boolean isCarPlay    = position == TAB_CARPLAY;
         panelBeta.setVisibility(isBeta ? View.VISIBLE : View.GONE);
         panelDl5.setVisibility(isDl5 ? View.VISIBLE : View.GONE);
         panelDl2.setVisibility(isDl2 ? View.VISIBLE : View.GONE);
@@ -416,6 +440,7 @@ public class DiagActivity extends AppCompatActivity {
         panelVoice.setVisibility(isVoice ? View.VISIBLE : View.GONE);
         if (panelAaos != null) panelAaos.setVisibility(isAaos ? View.VISIBLE : View.GONE);
         if (panelHudDl3 != null) panelHudDl3.setVisibility(isHudDl3 ? View.VISIBLE : View.GONE);
+        if (panelCarPlay != null) panelCarPlay.setVisibility(isCarPlay ? View.VISIBLE : View.GONE);
         // v1.2.46 — lazy row preparation : inflate only the catalog actually
         // about to be displayed. Each helper is a no-op once already prepared,
         // so subsequent tab switches are free.
@@ -428,8 +453,8 @@ public class DiagActivity extends AppCompatActivity {
         if (isExportApk) refreshExportApkListIfNeeded();
         if (isVoice)     onVoicePanelEntered();
         else             unregisterVoiceReceiver(); // leaving Voice → stop the ~20Hz level updates
-        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice || isAaos || isHudDl3) ? View.GONE : View.VISIBLE);
-        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice && !isAaos && !isHudDl3) {
+        panelComingSoon.setVisibility((isBeta || isDl5 || isDl2 || isDl4 || isMirror || isSniffer || isAdas || isClusterPoc || isClusterDl5 || isExportApk || isVoice || isAaos || isHudDl3 || isCarPlay) ? View.GONE : View.VISIBLE);
+        if (!isBeta && !isDl5 && !isDl2 && !isDl4 && !isMirror && !isSniffer && !isAdas && !isClusterPoc && !isClusterDl5 && !isExportApk && !isVoice && !isAaos && !isHudDl3 && !isCarPlay) {
             TextView title = panelComingSoon.findViewById(R.id.tv_coming_soon_title);
             int titleRes;
             switch (position) {
@@ -440,6 +465,183 @@ public class DiagActivity extends AppCompatActivity {
             }
             if (title != null) title.setText(titleRes);
         }
+    }
+
+    // ─── CarPlay fullscreen (experimental) ───────────────────────────────────
+    //
+    // Diagnostic tool to force a CarPlay / AutoKit adapter app fullscreen on the
+    // MAIN head-unit screen (display 0) using the Android `policy_control`
+    // global setting (immersive.full=<pkg>). Works on Android 10 head units and
+    // is fully reversible. All shell commands run as the uid-2000 shell via
+    // ShellGateway (the only path that can write `settings put global`); callbacks
+    // arrive on a background thread, so output is posted with runOnUiThread.
+
+    private static final String CARPLAY_KEY_PKG    = "carplay_pkg";
+    private static final String CARPLAY_KEY_POLICY = "carplay_saved_policy";
+    /** Adapter apps we recognise (CarPlay / Android Auto style mirroring bridges). */
+    private static final String CARPLAY_DETECT_GREP =
+            "carplay|autokit|carlink|zlink|autobox|hicar|carlife|autolink|ecarplay|carbit";
+
+    private android.content.SharedPreferences carplayPrefs() {
+        return getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    /** Reset the output area (UI thread — always called from a click handler). */
+    private void carplayClear() {
+        if (tvCarplayOutput != null) tvCarplayOutput.setText("");
+    }
+
+    /** Append one line to the CarPlay output view, marshalling onto the UI thread. */
+    private void carplayLog(final String line) {
+        if (tvCarplayOutput == null) return;
+        runOnUiThread(() -> {
+            if (tvCarplayOutput == null) return;
+            CharSequence prev = tvCarplayOutput.getText();
+            tvCarplayOutput.setText((prev == null || prev.length() == 0)
+                    ? line : prev + "\n" + line);
+        });
+    }
+
+    /** Extract the first `package:<name>` line from `pm list packages` output. */
+    private static String firstCarplayPackage(String out) {
+        if (out == null) return null;
+        for (String raw : out.split("\\n")) {
+            String line = raw.trim();
+            if (line.startsWith("package:")) {
+                String pkg = line.substring("package:".length()).trim();
+                if (!pkg.isEmpty()) return pkg;
+            }
+        }
+        return null;
+    }
+
+    /** Button ① — find the CarPlay/AutoKit adapter app + current focus, remember it. */
+    private void carplayDetect() {
+        carplayClear();
+        carplayLog("Detecting CarPlay/AutoKit adapter…");
+        final String cmd =
+                "echo '== matching packages =='; "
+              + "pm list packages 2>/dev/null | grep -iE '" + CARPLAY_DETECT_GREP + "'; "
+              + "echo '== foreground focus =='; "
+              + "dumpsys window windows 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                carplayLog(out == null || out.trim().isEmpty() ? "(no output)" : out.trim());
+                String pkg = firstCarplayPackage(out);
+                carplayLog("");
+                if (pkg != null) {
+                    carplayPrefs().edit().putString(CARPLAY_KEY_PKG, pkg).apply();
+                    carplayLog("saved detected package: " + pkg);
+                } else {
+                    carplayLog("No CarPlay/AutoKit package matched. Open your CarPlay app "
+                            + "first, then re-detect — the focused app above is then the package.");
+                }
+            }
+            @Override public void onError(String err) {
+                carplayLog("error: " + err);
+            }
+        });
+    }
+
+    /** Button ② — save current policy_control + bounds, then force the app fullscreen. */
+    private void carplaySaveAndFullscreen() {
+        final String pkg = carplayPrefs().getString(CARPLAY_KEY_PKG, null);
+        carplayClear();
+        if (pkg == null || pkg.isEmpty()) {
+            carplayLog("Detect the package first.");
+            return;
+        }
+        carplayLog("Target package: " + pkg);
+        // 1) Save the current global policy_control so Restore can revert it.
+        ShellGateway.execShellWithResult(this, "settings get global policy_control",
+                new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                String saved = out == null ? "" : out.trim();
+                carplayPrefs().edit().putString(CARPLAY_KEY_POLICY, saved).apply();
+                carplayLog("before: policy_control = " + (saved.isEmpty() ? "null" : saved));
+                carplayCaptureBounds(pkg);
+            }
+            @Override public void onError(String err) {
+                carplayLog("error reading current policy_control: " + err);
+            }
+        });
+    }
+
+    /** Informational: log the app's current task bounds before we resize it. */
+    private void carplayCaptureBounds(final String pkg) {
+        final String cmd = "dumpsys activity activities 2>/dev/null | grep -A 3 '" + pkg
+                + "' | grep -iE 'bounds|mBounds' | head -2";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                String b = out == null ? "" : out.trim();
+                carplayLog("current bounds: " + (b.isEmpty() ? "(not reported)" : b));
+                carplayApplyFullscreen(pkg);
+            }
+            @Override public void onError(String err) {
+                carplayLog("bounds probe error: " + err);
+                carplayApplyFullscreen(pkg);
+            }
+        });
+    }
+
+    /** Apply immersive.full for the package, then read the value back. */
+    private void carplayApplyFullscreen(final String pkg) {
+        final String cmd = "settings put global policy_control \"immersive.full=" + pkg + "\"";
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                ShellGateway.execShellWithResult(DiagActivity.this,
+                        "settings get global policy_control", new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String after) {
+                        carplayLog("after:  policy_control = "
+                                + (after == null ? "" : after.trim()));
+                        carplayLog("");
+                        carplayLog("Reopen CarPlay to see it fill the screen. "
+                                + "Reversible via Restore.");
+                    }
+                    @Override public void onError(String err) {
+                        carplayLog("error reading back policy_control: " + err);
+                    }
+                });
+            }
+            @Override public void onError(String err) {
+                carplayLog("error applying fullscreen: " + err);
+            }
+        });
+    }
+
+    /** Button ③ — restore the policy_control value saved before going fullscreen. */
+    private void carplayRestore() {
+        carplayClear();
+        String saved = carplayPrefs().getString(CARPLAY_KEY_POLICY, null);
+        final String value;
+        // Android clears policy_control with the literal string "null"; an empty
+        // or "null" saved value therefore maps back to that clear command.
+        if (saved == null || saved.trim().isEmpty() || "null".equalsIgnoreCase(saved.trim())) {
+            value = "null";
+        } else {
+            value = saved.trim();
+        }
+        final String cmd = "null".equals(value)
+                ? "settings put global policy_control null"
+                : "settings put global policy_control \"" + value + "\"";
+        carplayLog("Restoring policy_control → " + value);
+        ShellGateway.execShellWithResult(this, cmd, new AdbLocalClient.Callback() {
+            @Override public void onSuccess(String out) {
+                ShellGateway.execShellWithResult(DiagActivity.this,
+                        "settings get global policy_control", new AdbLocalClient.Callback() {
+                    @Override public void onSuccess(String after) {
+                        carplayLog("restored: policy_control = "
+                                + (after == null ? "" : after.trim()));
+                    }
+                    @Override public void onError(String err) {
+                        carplayLog("error reading back: " + err);
+                    }
+                });
+            }
+            @Override public void onError(String err) {
+                carplayLog("error restoring: " + err);
+            }
+        });
     }
 
     // ─── Beta Engine panel ──────────────────────────────────────────────────

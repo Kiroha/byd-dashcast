@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast, HUD\'daki okları yalnızca Google Maps veya Waze\'den yansıtabilir. Arabanın orijinal navigasyonu (Telenav…) verilerini DashCast\'in okuyamadığı bir formatta gönderiyor — ama zaten HUD\'da kendi oklarını gösteriyor. DashCast üzerinden ok görmek için Google Maps veya Waze ile yol tarifi başlat.</string>
     <string name="bug_hud_nav_understood">Anladım, Maps veya Waze kullanacağım</string>
     <string name="bug_hud_nav_report_anyway">Raporu yine de gönder</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Şu anda aktif bir rota yok. DashCast dönüş yönlerini yalnızca navigasyon aktif olarak yol tarifi verirken alır; Google Maps veya Waze\'i açmış olman yeterli değil. Bir hedefe rota başlat, sonra HUD\'a bak — okun belirmesi gerekir.</string>
+    <string name="bug_hud_no_route_understood">Anladım, bir rota başlatacağım</string>
 </resources>

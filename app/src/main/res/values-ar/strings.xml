@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">لا يستطيع DashCast عرض أسهم الاتجاهات على الـ HUD إلا من Google Maps أو Waze. أما نظام الملاحة الأصلي لسيارتك (Telenav…) فيُرسل بياناته بصيغة لا يستطيع DashCast قراءتها — لكنه يعرض أسهمه الخاصة على الـ HUD بالفعل. وللحصول على الأسهم عبر DashCast، ابدأ التوجيه باستخدام Google Maps أو Waze.</string>
     <string name="bug_hud_nav_understood">فهمت، سأستخدم Maps أو Waze</string>
     <string name="bug_hud_nav_report_anyway">إرسال التقرير على أي حال</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">لا يوجد أي مسار نشط حاليًا. لا يتلقّى DashCast تعليمات الانعطاف إلا أثناء التنقّل النشط: مجرّد فتح Google Maps أو Waze لا يكفي. ابدأ مسارًا إلى وجهة ما، ثم انظر إلى HUD — من المفترض أن يظهر السهم.</string>
+    <string name="bug_hud_no_route_understood">فهمت، سأبدأ مسارًا</string>
 </resources>
