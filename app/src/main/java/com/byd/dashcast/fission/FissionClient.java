@@ -6,6 +6,7 @@ import android.view.Surface;
 import android.view.MotionEvent;
 import com.byd.dashcast.util.AppLogger;
 import com.byd.dashcast.proxy.MirrorResourceOwner;
+import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.proxy.daemon.MirrorDaemon;
 
 public class FissionClient {
@@ -57,6 +58,9 @@ public class FissionClient {
 
     /** Move {@code pkg}'s task back to display 0 before teardown so the app relaunches cleanly. */
     public static String moveToDisplay0(IBinder binder, String pkg) {
+        boolean guardianCancelled = ProxyClient.cancelFissionWatchdog(pkg);
+        AppLogger.d(TAG, "MOVE_TO_DISPLAY0 watchdog cancelled=" + guardianCancelled
+            + " pkg=" + pkg);
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
@@ -73,6 +77,9 @@ public class FissionClient {
     }
 
     public static void releaseSlot(IBinder binder, String pkg) throws Exception {
+        boolean guardianCancelled = ProxyClient.cancelFissionWatchdog(pkg);
+        AppLogger.d(TAG, "RELEASE_SLOT watchdog cancelled=" + guardianCancelled
+            + " pkg=" + pkg);
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);
@@ -131,6 +138,8 @@ public class FissionClient {
     }
 
     public static void deactivateLayout(IBinder binder) throws Exception {
+        boolean guardiansCancelled = ProxyClient.cancelAllFissionWatchdogs();
+        AppLogger.d(TAG, "DEACTIVATE_LAYOUT watchdogs cancelled=" + guardiansCancelled);
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MirrorDaemon.DESCRIPTOR);

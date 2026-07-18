@@ -430,8 +430,10 @@ android {
         // bounded proxy recovery, D50F diagnostics/report fallback, and live-Binder-safe routing.)
         // 579 = 1.6.138-beta (OTA proxy reconnect + safe /data/local/tmp staging,
         // PackageInstaller no-user-action request, and replacement-safe automatic relaunch.)
-        versionCode 579
-        versionName "1.6.138-beta"
+        // 580 = 1.6.139-beta (per-package fission rebound guardians, teardown-safe
+        // protocol v21 cancellation, confirmed ADB timeout diagnosis, and detached MirrorDaemon start.)
+        versionCode 580
+        versionName "1.6.139-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

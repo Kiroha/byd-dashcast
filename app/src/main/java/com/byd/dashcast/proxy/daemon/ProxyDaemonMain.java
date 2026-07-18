@@ -67,8 +67,9 @@ public final class ProxyDaemonMain {
     *  v18: adds TXN_FIND_TASK_LOCATION (task identity + display with UNKNOWN semantics).
     *  v19: adds TXN_CAN_BATCH (ordered grouped HUD writes in one Binder round-trip).
     *  v20: adds TXN_AUTOCONTAINER_SEND_INFO_RESULT (preserves native sendInfo result codes).
+    *  v21: adds TXN_CANCEL_FISSION_WATCHDOG (teardown cannot race post-launch re-anchoring).
      *  Purely additive — old clients keep working unchanged. */
-    private static final String PROTOCOL_VERSION = "20";
+    private static final String PROTOCOL_VERSION = "21";
 
     /** Process name shown in {@code ps} after the JVM's {@code setArgV0} runs. */
     private static final String PROC_NAME = "dashcast_proxy";
@@ -863,6 +864,16 @@ public final class ProxyDaemonMain {
                         reply.writeInt(location.getStatus().getWireCode());
                         reply.writeInt(location.getTaskId());
                         reply.writeInt(location.getDisplayId());
+                    }
+                    return true;
+                }
+                case TXN_CANCEL_FISSION_WATCHDOG: {
+                    data.enforceInterface(DESCRIPTOR);
+                    String pkg = data.readString();
+                    boolean cancelled = Phase4TaskVerbs.cancelFissionWatchdog(pkg);
+                    if (reply != null) {
+                        reply.writeNoException();
+                        reply.writeInt(cancelled ? 1 : 0);
                     }
                     return true;
                 }
