@@ -126,9 +126,21 @@ public final class ShellGateway {
         // The legacy path still runs on the same bounded worker. Handing it to AdbLocalClient's
         // async pool here would drain this queue into that pool's unbounded work queue.
         final boolean legacyPath = DaemonConfig.isLegacyPathEnabled(ctx);
+        ShellGatewayRoutingPolicy.Route initialRoute = ShellGatewayRoutingPolicy.select(
+            legacyPath,
+            !legacyPath && ProxyClient.isConnected(),
+            AdbLocalClient.isAdbTransportUnreachable());
+        if (initialRoute == ShellGatewayRoutingPolicy.Route.FAIL_FAST) {
+            deliverError(cb, AdbLocalClient.adbTransportDiagnosis());
+            return;
+        }
         Runnable operation = () -> {
-            if (legacyPath) {
-                runLegacyBlocking(ctx, cmd, cb);
+            ShellGatewayRoutingPolicy.Route route = ShellGatewayRoutingPolicy.select(
+                    legacyPath,
+                    !legacyPath && ProxyClient.isConnected(),
+                    AdbLocalClient.isAdbTransportUnreachable());
+            if (route != ShellGatewayRoutingPolicy.Route.PROXY) {
+                runLegacyOrFailFast(ctx, cmd, cb);
                 return;
             }
             // This dedicated single thread has its own legacy fallback (below), so it must
@@ -138,14 +150,6 @@ public final class ShellGateway {
             ProxyClient.setNonBlockingReconnect(true);
             final long t0 = SystemClock.elapsedRealtime();
             try {
-                if (!ProxyClient.isConnected()) {
-                    // Daemon not reachable — fall through to legacy immediately.
-                    // Blocking connect() here would stall ALL queued shell ops for
-                    // up to 15 s on a single thread. ProxyKeeperService reconnects
-                    // in the background; the next call will find the binder ready.
-                    runLegacyBlocking(ctx, cmd, cb);
-                    return;
-                }
                 // Phase 4a/4b: try typed verb first. If it matches AND succeeds,
                 // we skip the shell entirely. If the parse fails OR the typed
                 // call throws, we fall through to runShell (then legacy).
@@ -163,7 +167,7 @@ public final class ShellGateway {
                 long dt = SystemClock.elapsedRealtime() - t0;
                 AppLogger.w(TAG, "beta runShell failed after " + dt + "ms, fallback legacy: "
                         + t.getMessage() + " [cmd=" + cmd + "]");
-                runLegacyBlocking(ctx, cmd, cb);
+                runLegacyOrFailFast(ctx, cmd, cb);
             }
         };
         try {
@@ -173,6 +177,18 @@ public final class ShellGateway {
                     + "), rejecting cmd=" + cmd);
             deliverError(cb, "shell queue full");
         }
+    }
+
+    private static void runLegacyOrFailFast(Context ctx, String cmd,
+                                            AdbLocalClient.Callback cb) {
+        // A healthy Binder does not depend on the local ADB socket after startup. Only stop at
+        // the point where a command would actually fall back to that classified-dead transport.
+        // ProxyKeeper owns periodic rechecks and clears the classification after recovery.
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            deliverError(cb, AdbLocalClient.adbTransportDiagnosis());
+            return;
+        }
+        runLegacyBlocking(ctx, cmd, cb);
     }
 
     private static void runLegacyBlocking(Context ctx, String cmd, AdbLocalClient.Callback cb) {

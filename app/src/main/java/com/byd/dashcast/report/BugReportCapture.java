@@ -77,6 +77,18 @@ public final class BugReportCapture {
                 ? "/data/local/tmp/" + outFile.getName()
                 : outFile.getAbsolutePath();
 
+        // A transport already classified as unreachable cannot produce a shell dump. Do not
+        // enqueue behind wedged ADB workers: create the guaranteed journal-only report off-main.
+        if (AdbLocalClient.isAdbTransportUnreachable()) {
+            final String diagnosis = AdbLocalClient.adbTransportDiagnosis();
+            Thread offline = new Thread(() ->
+                finish(app, outFile, metaHeader, cb, diagnosis, null),
+                "bugreport-offline");
+            offline.setDaemon(true);
+            offline.start();
+            return;
+        }
+
         // One-shot shell dump. logcat -t bounds the size; dumpsys grabs the
         // cluster/display/window state that matters for projection bugs.
         String cmd =
