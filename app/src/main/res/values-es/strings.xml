@@ -810,4 +810,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">No hay ninguna ruta en curso. DashCast solo recibe las indicaciones mientras hay una navegación activa: abrir Google Maps o Waze no basta. Inicia una ruta hacia un destino y luego mira el HUD — la flecha debería aparecer.</string>
     <string name="bug_hud_no_route_understood">Entendido, voy a iniciar una ruta</string>
+    <string name="bug_hud_no_notif_access_msg">DashCast no tiene acceso a las notificaciones. Es imprescindible: las indicaciones de giro se leen en la notificación de Google Maps o Waze. Ve a Ajustes de Android → Notificaciones → Acceso a las notificaciones, activa DashCast y vuelve a iniciar una ruta.</string>
 </resources>

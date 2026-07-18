@@ -810,4 +810,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">Es läuft gerade keine Route. DashCast bekommt die Richtungsangaben nur bei aktiver Zielführung: Google Maps oder Waze nur zu öffnen, reicht nicht. Starte eine Route zu einem Ziel und schau dann aufs HUD — der Pfeil sollte erscheinen.</string>
     <string name="bug_hud_no_route_understood">Alles klar, ich starte eine Route</string>
+    <string name="bug_hud_no_notif_access_msg">DashCast hat keinen Zugriff auf die Benachrichtigungen. Der ist unbedingt nötig: Die Richtungsangaben werden aus der Benachrichtigung von Google Maps oder Waze gelesen. Geh zu Android-Einstellungen → Benachrichtigungen → Benachrichtigungszugriff, erlaube dort DashCast und starte dann die Route neu.</string>
 </resources>

@@ -810,4 +810,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">Non c\'è nessun percorso in corso. DashCast riceve le indicazioni solo mentre la navigazione è attiva: aprire Google Maps o Waze non basta. Avvia un percorso verso una destinazione, poi guarda l\'HUD — la freccia dovrebbe comparire.</string>
     <string name="bug_hud_no_route_understood">Capito, avvio un percorso</string>
+    <string name="bug_hud_no_notif_access_msg">DashCast non ha accesso alle notifiche. È indispensabile: le indicazioni di svolta vengono lette dalla notifica di Google Maps o Waze. Vai in Impostazioni Android → Notifiche → Accesso alle notifiche e autorizza DashCast, poi avvia di nuovo un itinerario.</string>
 </resources>

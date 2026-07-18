@@ -810,4 +810,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">Зараз няма актыўнага маршруту. DashCast атрымлівае падказкі паваротаў толькі падчас актыўнага вядзення па маршруце: проста адкрыць Google Maps ці Waze недастаткова. Задай маршрут да пункта прызначэння, а потым паглядзі на HUD — стрэлка павінна з’явіцца.</string>
     <string name="bug_hud_no_route_understood">Зразумела, зараз задам маршрут</string>
+    <string name="bug_hud_no_notif_access_msg">У DashCast няма доступу да апавяшчэнняў. Гэта абавязкова: падказкі пра павароты чытаюцца з апавяшчэння Google Maps або Waze. Зайдзі ў Налады Android → Апавяшчэнні → Доступ да апавяшчэнняў, дазволь DashCast, а потым запусці маршрут яшчэ раз.</string>
 </resources>
