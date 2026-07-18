@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.137-beta (versionCode 578)
+
+Timeout-safe local ADB and bounded D50F recovery after 1.6.136-beta. DashCast now uses dadb 2.0.0 with explicit connect/read/write deadlines, typed transport states, a forced lazy handshake, authorization-aware retry windows, and circuit-breaking that prevents a silent port-5555 peer from permanently occupying all ADB workers. A live ProxyDaemon Binder remains usable during a local-ADB outage, while actual legacy fallbacks fail fast. Bug Wizard and Bug Report now remain responsive without ADB, D50F cluster display selection prefers the real PRESENTATION display instead of hard-coding display 1, and SysInfo exposes the protocol-level diagnosis. All new user-facing diagnostics are translated in all 13 supported languages.
+
+See the [complete English 1.6.137-beta release notes](docs/releases/1.6.137-beta.md) for every change since 1.6.136-beta, timeout and recovery policies, DiLink compatibility guarantees, validation evidence, known D50F limitation, APK identity, and suggested vehicle checks.
+
 ### 1.6.135-beta (versionCode 576)
 
 Race-safe background optimization after 1.6.134-beta. Mirror startup no longer waits for its diagnostic SurfaceFlinger dump, while the M7 evidence remains available through a bounded asynchronous audit. Screenshot capture, pull, prune, and clear operations are now ordered on one worker; successful daemon pruning suppresses redundant shell work without removing the failed-capture fallback, disabling capture cannot leave a late JPEG behind, and report bundling cannot pull a partially written file. The visible Hotspot page collects service state and clients in one snapshot, avoids rebuilding unchanged rows, rejects callbacks from paused Activity generations, and prevents duplicate shell probes across pause/resume. Voice telemetry also removes repeated singleton and clock work while hidden.
