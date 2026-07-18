@@ -96,33 +96,106 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     private static final String PKG_WAZE           = "com.waze";
 
     /**
-     * {@code elapsedRealtime} of the last SUPPORTED nav notification we successfully parsed, or 0 if
-     * we have never seen one since this process started.
-     *
-     * <p>The dominant cause of "no arrow on HUD" reports is simply that <em>no route is running</em>:
-     * a nav app posts its turn-by-turn notification only while actively guiding, so with Maps/Waze
-     * merely open there is nothing for DashCast to translate. Field evidence (2026-07-18): a tester
-     * filed "no arrow" while Waze sat on its idle "where to?" screen at 0 km/h for the whole capture.
-     * The bug reporter reads this to tell the driver to start a route first.
-     *
-     * <p>Everything runs in one app process (no {@code android:process} in the manifest), so this
-     * static is shared with {@link com.byd.dashcast.report.BugWizardActivity}.
+     * How recently a supported nav app must have been active for the bug reporter to accept that a
+     * route was running. Deliberately generous: the wizard is normally used AFTER the drive, so a
+     * tight window would wrongly accuse a driver who has just parked. A window (rather than a
+     * latch-forever flag) also stops one route from making every later report claim a route was live.
      */
-    private static volatile long sLastSupportedNavMs = 0L;
+    private static final long NAV_RECENT_MS = 30L * 60L * 1000L;
 
     /**
-     * Whether a supported nav app (Google Maps / Maps ReVanced / Waze) has posted a parseable
-     * guidance notification since this process started — i.e. whether a route was actually running.
+     * Per supported nav package: {@code {last guidance notification POSTED, last frame fully PARSED}}
+     * as {@code elapsedRealtime}.
+     *
+     * <p>Two separate timestamps because they answer different questions, and conflating them is
+     * exactly what made the first version of this gate harmful:
+     * <ul>
+     *   <li><b>posted</b> — the nav app IS guiding (it only posts turn-by-turn while a route runs).</li>
+     *   <li><b>parsed</b> — and DashCast understood it well enough to drive the HUD.</li>
+     * </ul>
+     * "posted but never parsed" is a DashCast <em>parser</em> bug — the single most valuable "no
+     * arrow" report there is — so it must never be gated away as "you did not start a route".
+     * Tracked per package so a Waze parse failure is not masked by an earlier Google Maps route.
+     *
+     * <p>Everything runs in one app process (no {@code android:process} in the manifest), so this is
+     * shared with {@link com.byd.dashcast.report.BugWizardActivity}.
      */
-    public static boolean hasSeenSupportedNav() {
-        return sLastSupportedNavMs != 0L;
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> sNavActivity =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** A supported nav app recently posted AND we parsed it — a route is (or just was) running. */
+    public static final String NAV_PARSED     = "parsed";
+    /** It posted guidance but nothing parsed — a real DashCast parser bug; never gate this away. */
+    public static final String NAV_PARSE_FAIL = "parse-fail";
+    /** Nothing recent at all — most likely no route was ever started. */
+    public static final String NAV_NONE       = "none";
+
+    /** Records that {@code pkg} posted a guidance notification, and whether we fully parsed it. */
+    private static void noteNavActivity(String pkg, boolean parsed) {
+        if (pkg == null) return;
+        long[] slot = sNavActivity.computeIfAbsent(pkg, k -> new long[2]);
+        slot[parsed ? 1 : 0] = SystemClock.elapsedRealtime();
+    }
+
+    /** Whether {@code pkg} is the app the driver named in the wizard ("maps"/"waze"; empty = any). */
+    private static boolean matchesNavKey(String navAppKey, String pkg) {
+        if (navAppKey == null || navAppKey.isEmpty()) return true;
+        if ("waze".equals(navAppKey)) return PKG_WAZE.equals(pkg);
+        if ("maps".equals(navAppKey)) return PKG_MAPS.equals(pkg) || PKG_MAPS_REVANCED.equals(pkg);
+        return true;
+    }
+
+    /** Newest {posted, parsed} pair across the packages matching {@code navAppKey}. */
+    private static long[] newestFor(String navAppKey) {
+        long posted = 0L, parsed = 0L;
+        for (java.util.Map.Entry<String, long[]> e : sNavActivity.entrySet()) {
+            if (!matchesNavKey(navAppKey, e.getKey())) continue;
+            posted = Math.max(posted, e.getValue()[0]);
+            parsed = Math.max(parsed, e.getValue()[1]);
+        }
+        return new long[] { posted, parsed };
+    }
+
+    /**
+     * What we have recently seen from the nav app the driver says they use — {@link #NAV_PARSED},
+     * {@link #NAV_PARSE_FAIL} or {@link #NAV_NONE}. Only {@code NAV_NONE} means "no route running".
+     */
+    public static String recentNavStatus(String navAppKey) {
+        long now = SystemClock.elapsedRealtime();
+        long[] t = newestFor(navAppKey);
+        if (t[1] != 0L && now - t[1] <= NAV_RECENT_MS) return NAV_PARSED;
+        if (t[0] != 0L && now - t[0] <= NAV_RECENT_MS) return NAV_PARSE_FAIL;
+        return NAV_NONE;
+    }
+
+    /** Compact caption line for triage, e.g. {@code "yes (3m ago)"} / {@code "parse-fail (12s ago)"}. */
+    public static String navSeenSummary(String navAppKey) {
+        long now = SystemClock.elapsedRealtime();
+        long[] t = newestFor(navAppKey);
+        if (t[1] != 0L && now - t[1] <= NAV_RECENT_MS) return "yes (" + ago(now - t[1]) + ")";
+        if (t[0] != 0L && now - t[0] <= NAV_RECENT_MS) return "parse-fail (" + ago(now - t[0]) + ")";
+        long newest = Math.max(t[0], t[1]);
+        // "stale" ≠ "never": tells triage a route ran, just not recently enough to explain this report.
+        if (newest != 0L) return "stale (" + ago(now - newest) + ")";
+        return "no";
+    }
+
+    private static String ago(long ms) {
+        long s = ms / 1000L;
+        return s < 90L ? (s + "s ago") : ((s / 60L) + "m ago");
     }
 
     // ─── Distance: "300 m", "1.2 km", "1,2 km", "500 m", "3 км" ─
     // Mirrors OpenBYD regex: \b(\d+[.,]?\d*)[\s ]*(km|км|m|м)\b
     // Handles ASCII and Cyrillic unit suffixes, optional decimal, optional NBSP.
+    // IMPERIAL + "mt" added 1.6.144: the metric-only pattern meant that in a UK/US locale (Maps and
+    // Waze post "in 500 ft" / "0.5 mi") NO frame of an entire route could ever parse, so the HUD arrow
+    // never worked there at all — and the 1.6.143 gate then told those drivers they had not started a
+    // route. Italian "300 mt" failed the same way. Alternation is longest-first so "mi"/"mt" are tried
+    // before "m"; "25 min" still cannot match (the trailing \b fails on "min" for every alternative),
+    // so remaining-time text is never misread as a distance.
     private static final Pattern RX_DIST =
-            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|m|м)\\b",
+            Pattern.compile("\\b(\\d+[.,]?\\d*)[\\s\\u00A0]*(km|км|mi|ft|yd|mt|m|м)\\b",
                     Pattern.CASE_INSENSITIVE);
 
     // ─── Road name: "onto X", "sur X", "on X" ────────────────────────────
@@ -480,6 +553,27 @@ public final class MapNotificationListenerService extends NotificationListenerSe
     }
 
     @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        // The system (re)bound us — possibly mid-route, after a process restart or a rebind.
+        // onNotificationPosted only fires on NEW posts, so an ALREADY-posted ongoing nav notification
+        // stays invisible until the nav app next changes its content: the HUD would not resume, and
+        // the bug reporter would wrongly conclude "no route is running". Replay what is already on
+        // screen through the normal pipeline. Guarded — a listener callback must never crash.
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            if (active == null) return;
+            for (StatusBarNotification sbn : active) {
+                if (sbn != null && isNavPackage(sbn.getPackageName())) {
+                    onNotificationPosted(sbn);
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "onListenerConnected rescan failed: " + t.getMessage());
+        }
+    }
+
+    @Override
     public void onListenerDisconnected() {
         super.onListenerDisconnected();
         // System unbound the listener (e.g. permission revoked, system crash).
@@ -503,6 +597,12 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                 && !Notification.CATEGORY_NAVIGATION.equals(n.category)) {
             return;
         }
+
+        // A supported nav app is posting GUIDANCE — i.e. a route IS running. Recorded here, BEFORE
+        // any parse step can bail out, so the bug reporter can tell "no route started" from "route
+        // running but DashCast failed to parse it". The latter is a real parser bug and must never be
+        // gated away as user error (it is exactly what the imperial-unit regex gap used to cause).
+        noteNavActivity(sbn.getPackageName(), false);
 
         Bundle extras = n.extras;
         if (extras == null) return;
@@ -609,9 +709,8 @@ public final class MapNotificationListenerService extends NotificationListenerSe
                 + " road=" + (roadName.isEmpty() ? "no" : "yes")
                 + " remDist=" + remainDist + " remSec=" + remainSec);
 
-        // A supported nav app just gave us a parseable guidance frame ⇒ a route IS running. Recorded
-        // so the bug reporter can distinguish "DashCast is broken" from "no route was started".
-        sLastSupportedNavMs = SystemClock.elapsedRealtime();
+        // Fully parsed into a HudNavigationData ⇒ we understood the frame, not just received it.
+        noteNavActivity(sbn.getPackageName(), true);
 
         // Offload the ProxyClient/CAN write off the notification dispatch thread.
         postNavUpdate(data);
@@ -740,9 +839,13 @@ public final class MapNotificationListenerService extends NotificationListenerSe
         String unit = m.group(2).toLowerCase(Locale.ROOT);
         try {
             float val = Float.parseFloat(m.group(1).replace(',', '.'));
-            return (unit.equals("km") || unit.equals("км"))
-                    ? Math.round(val * 1000f)
-                    : Math.round(val);
+            switch (unit) {
+                case "km": case "км": return Math.round(val * 1000f);
+                case "mi":            return Math.round(val * 1609.344f);   // statute mile
+                case "ft":            return Math.round(val * 0.3048f);
+                case "yd":            return Math.round(val * 0.9144f);
+                default:              return Math.round(val);               // m / м / mt
+            }
         } catch (NumberFormatException ignore) {
             return notFound;
         }

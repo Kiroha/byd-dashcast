@@ -56,7 +56,8 @@ class BugWizardActivity : Activity() {
     private var mCategory = -1
     private var mHudArrowsAnswer = ""   // "yes"/"unknown" (HUD gate); "no" never reaches send
     private var mHudNavApp = ""         // which nav the user relies on for HUD arrows: "maps"/"waze"/"oem"/"other"
-    private var mActiveNav = ""         // ground truth: known-unsupported nav process running now (e.g. "com.telenav.app.arp")
+    private var mActiveNav = ""         // hint only: a known-unsupported nav process is RESIDENT (Telenav always is on EU DL3)
+    private var mNavSeen = ""           // ground truth for triage: "yes (3m ago)" / "parse-fail (12s ago)" / "no"
     private var mAppPkg = ""
     private var mAppLabel = ""
     private var mSending = false
@@ -138,10 +139,13 @@ class BugWizardActivity : Activity() {
         // firmwares can't; then DashCast can't add them either and the report is noise (it skews the
         // debug). If the user says "no", we explain and do NOT send anything.
         if (CAT_KEYS.getOrNull(cat) == "hud") {
-            probeUnsupportedNav()   // ground-truth: is an unsupported OEM nav (Telenav…) running right now?
+            probeUnsupportedNav()   // hint: is a known-unsupported OEM nav resident right now?
             askHudArrowCapability()
             return
         }
+        // Not the HUD flow: drop any HUD-only answers collected on a previous pass through the wizard
+        // so they are not stapled onto an unrelated report after the user goes Back and re-picks.
+        mHudArrowsAnswer = ""; mHudNavApp = ""; mActiveNav = ""; mNavSeen = ""
         buildAppPage()
         showStep(1)
     }
@@ -207,18 +211,55 @@ class BugWizardActivity : Activity() {
      * let them bail or report anyway.
      */
     private fun continueHudAfterNavApp() {
-        if (MapNotificationListenerService.hasSeenSupportedNav()) {
-            buildAppPage(); showStep(1); return
+        // 1) No notification access. That ALONE explains "no arrow", it is fixable by the driver, and
+        //    it must NOT be reported as "you never started a route" — the first version of this gate
+        //    did exactly that, cancelling the very report its notification dump was added to diagnose.
+        if (!hasNotificationAccess()) {
+            mNavSeen = "notif-access-off"
+            AlertDialog.Builder(this)
+                .setMessage(getString(R.string.bug_hud_no_notif_access_msg))
+                .setCancelable(false)
+                .setPositiveButton(android.R.string.ok) { _, _ -> finish() }
+                .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                    buildAppPage(); showStep(1)
+                }
+                .setOnCancelListener { finish() }
+                .show()
+            return
         }
-        AlertDialog.Builder(this)
-            .setMessage(getString(R.string.bug_hud_no_route_msg))
-            .setCancelable(false)
-            .setPositiveButton(getString(R.string.bug_hud_no_route_understood)) { _, _ -> finish() }
-            .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
-                buildAppPage(); showStep(1)
-            }
-            .setOnCancelListener { finish() }
-            .show()
+
+        mNavSeen = MapNotificationListenerService.navSeenSummary(mHudNavApp)
+        when (MapNotificationListenerService.recentNavStatus(mHudNavApp)) {
+            // A route ran and we understood it → ordinary report, no interruption.
+            MapNotificationListenerService.NAV_PARSED -> { buildAppPage(); showStep(1) }
+
+            // The nav app WAS posting guidance but nothing parsed → a DashCast PARSER bug, and the
+            // most valuable "no arrow" report there is. Never gate it away: straight through.
+            MapNotificationListenerService.NAV_PARSE_FAIL -> { buildAppPage(); showStep(1) }
+
+            // Nothing recent from that app at all → most likely no route was ever started.
+            else -> AlertDialog.Builder(this)
+                .setMessage(getString(R.string.bug_hud_no_route_msg))
+                .setCancelable(false)
+                .setPositiveButton(getString(R.string.bug_hud_no_route_understood)) { _, _ -> finish() }
+                .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                    buildAppPage(); showStep(1)
+                }
+                .setOnCancelListener { finish() }
+                .show()
+        }
+    }
+
+    /**
+     * Whether DashCast currently holds notification-listener access. Fails OPEN: a probe error must
+     * never block a legitimate bug report.
+     */
+    private fun hasNotificationAccess(): Boolean = try {
+        val flat = android.provider.Settings.Secure.getString(
+            contentResolver, "enabled_notification_listeners")
+        flat != null && flat.contains(packageName)
+    } catch (t: Throwable) {
+        true
     }
 
     /** OEM/Other nav: tell the user DashCast only mirrors Maps/Waze, then let them bail (nothing to
@@ -435,11 +476,13 @@ class BugWizardActivity : Activity() {
             "\nCategoryKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } +
             (if (mHudArrowsAnswer.isEmpty()) "" else "\nHudArrows: $mHudArrowsAnswer") +
             (if (mHudNavApp.isEmpty()) "" else "\nHudNavApp: $mHudNavApp") +
-            (if (mActiveNav.isEmpty()) "" else "\nActiveNav: $mActiveNav (unsupported — no notification path)") +
-            // Ground truth for triage: did a SUPPORTED nav app actually deliver a guidance frame this
-            // session? "no" means no route was running, which alone explains a "no arrow" report.
-            (if (mHudArrowsAnswer.isEmpty()) "" else "\nNavSeen: " +
-                (if (MapNotificationListenerService.hasSeenSupportedNav()) "yes" else "no")) +
+            // Hint only — this nav is merely RESIDENT, which on EU DiLink 3 is always true of Telenav.
+            // It does NOT mean it is the app guiding; read NavSeen for that.
+            (if (mActiveNav.isEmpty()) "" else "\nActiveNav: $mActiveNav (resident, unsupported — hint only)") +
+            // Ground truth for triage: "yes" a route ran and parsed · "parse-fail" the nav app WAS
+            // guiding but DashCast could not parse it (a parser bug) · "stale" a route ran, long ago ·
+            // "no" nothing · "notif-access-off" DashCast lacks notification access.
+            (if (mNavSeen.isEmpty()) "" else "\nNavSeen: $mNavSeen") +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
             (if (details.isEmpty()) "" else "\nDetails: $details") +

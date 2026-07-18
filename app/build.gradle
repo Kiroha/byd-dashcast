@@ -485,8 +485,32 @@ android {
         // `settings get secure enabled_notification_listeners`, so a revoked notification grant — which
         // looks EXACTLY like "the nav app posts nothing" — can finally be ruled out. +2 strings x13
         // locales. No daemon protocol change; no CAN behaviour change.)
-        versionCode 584
-        versionName "1.6.143-beta"
+        // 585 = 1.6.144-beta (fixes the 1.6.143 route gate, which an adversarial pre-release review
+        // showed was net-harmful — 12 of 15 findings confirmed — plus the product bug it uncovered.
+        // 1.6.143 was NEVER published; this supersedes it.
+        // (a) IMPERIAL DISTANCES — the real prize. RX_DIST was metric-only (km|км|m|м), so in a UK/US
+        // locale where Maps/Waze post "in 500 ft" / "0.5 mi" NO frame of an entire route could ever
+        // parse: the HUD arrow never worked there AT ALL. Added mi/ft/yd (+ Italian "mt") with proper
+        // conversion; alternation is longest-first and "25 min"/"45 мин" still cannot match, so
+        // remaining-time is never misread as a distance (validated off-car, 17/17 cases).
+        // (b) The gate no longer conflates three different causes. MapNotificationListenerService now
+        // tracks, PER PACKAGE, both when a supported nav app POSTED guidance and when a frame fully
+        // PARSED. "posted but never parsed" is a DashCast parser bug — the most valuable no-arrow
+        // report there is — and is now sent straight through instead of being dismissed as "you never
+        // started a route" (which is exactly what an imperial-locale driver would have been told).
+        // (c) Missing notification access gets its own explanation instead of the false no-route
+        // message — the report the 1.6.143 notification dump existed to enable was being cancelled.
+        // (d) Recency window (30 min, generous because the wizard is used AFTER the drive) replaces
+        // the latch-forever flag, so one route no longer makes every later report claim a live route;
+        // NavSeen now carries the age and distinguishes yes / parse-fail / stale / no / notif-access-off.
+        // (e) onListenerConnected replays already-posted nav notifications, so a mid-route rebind
+        // resumes the HUD instead of looking like "no route running".
+        // (f) HUD-only answers are cleared when leaving the HUD category (they leaked onto unrelated
+        // reports via Back), and the report now records only DashCast's OWN notification grant as a
+        // boolean rather than uploading the driver's full list of notification-reading apps.
+        // No daemon protocol change; no CAN or HUD rendering change. +1 string x13 locales.)
+        versionCode 585
+        versionName "1.6.144-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

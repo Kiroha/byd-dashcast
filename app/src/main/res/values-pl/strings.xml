@@ -819,4 +819,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">Żadna trasa nie jest w tej chwili aktywna. DashCast odbiera wskazówki dojazdu tylko podczas aktywnej nawigacji: samo otwarcie Google Maps czy Waze nie wystarczy. Uruchom trasę do celu, a potem spójrz na HUD — strzałka powinna się pojawić.</string>
     <string name="bug_hud_no_route_understood">Jasne, uruchomię trasę</string>
+    <string name="bug_hud_no_notif_access_msg">DashCast nie ma dostępu do powiadomień. To niezbędne: wskazówki nawigacji są odczytywane z powiadomienia Google Maps lub Waze. Wejdź w Ustawienia Androida → Powiadomienia → Dostęp do powiadomień, zezwól aplikacji DashCast, a potem uruchom trasę jeszcze raz.</string>
 </resources>

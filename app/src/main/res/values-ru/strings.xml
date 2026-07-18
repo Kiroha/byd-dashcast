@@ -810,4 +810,5 @@
     <!-- HUD gate 3 — no route running (v1.6.143) -->
     <string name="bug_hud_no_route_msg">Сейчас маршрут не проложен. DashCast получает подсказки о поворотах только при активном ведении по маршруту: просто открыть Google Maps или Waze недостаточно. Проложи маршрут до нужного места и запусти навигацию, а потом посмотри на HUD — стрелка должна появиться.</string>
     <string name="bug_hud_no_route_understood">Понятно, сейчас проложу маршрут</string>
+    <string name="bug_hud_no_notif_access_msg">У DashCast нет доступа к уведомлениям. Без него никак: указания поворотов считываются из уведомления Google Maps или Waze. Открой Настройки Android → Уведомления → Доступ к уведомлениям, разреши его для DashCast и запусти маршрут заново.</string>
 </resources>

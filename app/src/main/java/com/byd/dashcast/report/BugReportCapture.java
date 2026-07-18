@@ -108,10 +108,12 @@ public final class BugReportCapture {
             + " ; echo '--- GFXINFO (frame stats) ---' >> " + p
             + " ; dumpsys gfxinfo com.byd.dashcast 2>/dev/null | head -60 >> " + p
             // Notification access: the HUD nav path is notification-driven, so a revoked listener
-            // grant looks EXACTLY like "the nav app posts nothing". Dump the grant so a "no arrow"
-            // report can rule it out — it was indistinguishable in INC-20260718-114114.
-            + " ; echo '--- NOTIFICATION LISTENERS (grant) ---' >> " + p
-            + " ; settings get secure enabled_notification_listeners 2>/dev/null >> " + p
+            // grant looks EXACTLY like "the nav app posts nothing". Report only OUR OWN grant as a
+            // boolean — dumping the raw setting would upload the driver's full list of
+            // notification-reading apps (an app inventory) to the support channel.
+            + " ; echo '--- NOTIFICATION ACCESS (dashcast) ---' >> " + p
+            + " ; { settings get secure enabled_notification_listeners 2>/dev/null"
+            + "     | grep -q com.byd.dashcast && echo granted || echo NOT-granted ; } >> " + p
             // ── LOGS ──
             + " ; echo '--- LOGCAT (last " + LOGCAT_LINES + " lines) ---' >> " + p
             + " ; logcat -d -t " + LOGCAT_LINES + " -v threadtime >> " + p + " 2>&1"

@@ -858,4 +858,6 @@
          actively guiding; the dominant cause of "no arrow" reports is that no route was started. -->
     <string name="bug_hud_no_route_msg">Aucun itinéraire n\'est en cours. DashCast ne reçoit les directions que pendant un guidage actif : ouvrir Google Maps ou Waze ne suffit pas. Lance un itinéraire vers une destination, puis regarde le HUD — la flèche devrait apparaître.</string>
     <string name="bug_hud_no_route_understood">Compris, je vais lancer un itinéraire</string>
+    <!-- HUD gate 3b — DashCast has no notification access: that alone explains "no arrow". -->
+    <string name="bug_hud_no_notif_access_msg">DashCast n\'a pas accès aux notifications. C\'est indispensable : les directions sont lues dans la notification de Google Maps ou Waze. Va dans Réglages Android → Notifications → Accès aux notifications et autorise DashCast, puis relance un itinéraire.</string>
 </resources>
