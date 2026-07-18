@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ لا، أبداً</string>
     <string name="bug_hud_gate_unknown">❓ لا أعرف</string>
     <string name="bug_hud_no_arrows_msg">إذن فإن برنامج HUD الثابت لا يستطيع عرض أسهم الاتجاه على الإطلاق — ولا يستطيع DashCast إضافتها أيضاً. لا يوجد شيء يمكننا إصلاحه من جانبنا، لذا لا داعي لإرسال هذا التقرير. شكراً لك على أي حال!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">أي تطبيق تستخدمه للملاحة؟</string>
+    <string name="bug_hud_nav_oem">نظام الملاحة الأصلي لسيارتي</string>
+    <string name="bug_hud_nav_unsupported_msg">لا يستطيع DashCast عرض أسهم الاتجاهات على الـ HUD إلا من Google Maps أو Waze. أما نظام الملاحة الأصلي لسيارتك (Telenav…) فيُرسل بياناته بصيغة لا يستطيع DashCast قراءتها — لكنه يعرض أسهمه الخاصة على الـ HUD بالفعل. وللحصول على الأسهم عبر DashCast، ابدأ التوجيه باستخدام Google Maps أو Waze.</string>
+    <string name="bug_hud_nav_understood">فهمت، سأستخدم Maps أو Waze</string>
+    <string name="bug_hud_nav_report_anyway">إرسال التقرير على أي حال</string>
 </resources>

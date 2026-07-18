@@ -802,5 +802,10 @@
     <string name="bug_hud_gate_no">❌ Yo\'q, hech qachon</string>
     <string name="bug_hud_gate_unknown">❓ Bilmayman</string>
     <string name="bug_hud_no_arrows_msg">Unda HUD\'ingning proshivkasi burilish strelkalarini umuman ko\'rsata olmaydi — DashCast ham ularni qo\'sha olmaydi. Bizning tomonimizdan tuzatadigan narsa yo\'q, shuning uchun bu hisobotni yuborishning hojati yo\'q. Baribir rahmat!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Navigatsiya uchun qaysi ilovadan foydalanasan?</string>
+    <string name="bug_hud_nav_oem">Mashinamning oʻz navigatsiyasi</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast HUD\'dagi strelkalarni faqat Google Maps yoki Waze\'dan aks ettira oladi. Mashinangning oʻz navigatsiyasi (Telenav…) oʻz maʼlumotlarini DashCast oʻqiy olmaydigan formatda uzatadi — lekin u allaqachon HUD\'da oʻzining strelkalarini koʻrsatib turadi. DashCast orqali strelkalar olish uchun Google Maps yoki Waze\'da navigatsiyani ishga tushir.</string>
+    <string name="bug_hud_nav_understood">Tushundim, Maps yoki Waze\'dan foydalanaman</string>
+    <string name="bug_hud_nav_report_anyway">Hisobotni baribir yuborish</string>
 </resources>
-

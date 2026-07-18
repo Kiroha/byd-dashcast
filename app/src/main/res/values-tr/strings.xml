@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ Hayır, asla</string>
     <string name="bug_hud_gate_unknown">❓ Bilmiyorum</string>
     <string name="bug_hud_no_arrows_msg">O halde HUD\'unun ürün yazılımı dönüş oklarını hiç gösteremiyor demektir — DashCast da onları ekleyemez. Bizim tarafımızda düzeltebileceğimiz bir şey yok, bu yüzden bu raporu göndermene gerek yok. Yine de teşekkürler!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Navigasyon için hangi uygulamayı kullanıyorsun?</string>
+    <string name="bug_hud_nav_oem">Arabamın orijinal navigasyonu</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast, HUD\'daki okları yalnızca Google Maps veya Waze\'den yansıtabilir. Arabanın orijinal navigasyonu (Telenav…) verilerini DashCast\'in okuyamadığı bir formatta gönderiyor — ama zaten HUD\'da kendi oklarını gösteriyor. DashCast üzerinden ok görmek için Google Maps veya Waze ile yol tarifi başlat.</string>
+    <string name="bug_hud_nav_understood">Anladım, Maps veya Waze kullanacağım</string>
+    <string name="bug_hud_nav_report_anyway">Raporu yine de gönder</string>
 </resources>

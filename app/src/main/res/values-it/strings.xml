@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ No, mai</string>
     <string name="bug_hud_gate_unknown">❓ Non lo so</string>
     <string name="bug_hud_no_arrows_msg">Allora il firmware del tuo HUD non può proprio mostrare le frecce di svolta, e nemmeno DashCast può aggiungerle. Non c\'è nulla che possiamo correggere, quindi non serve inviare questa segnalazione. Grazie comunque!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Quale app usi per la navigazione?</string>
+    <string name="bug_hud_nav_oem">La navigazione originale della mia auto</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast può riflettere le frecce sull\'HUD solo da Google Maps o Waze. La navigazione originale della tua auto (Telenav…) trasmette i suoi dati in un formato che DashCast non riesce a leggere — ma mostra già le sue frecce sull\'HUD. Per avere le frecce tramite DashCast, avvia una navigazione con Google Maps o Waze.</string>
+    <string name="bug_hud_nav_understood">Capito, userò Maps o Waze</string>
+    <string name="bug_hud_nav_report_anyway">Invia comunque la segnalazione</string>
 </resources>

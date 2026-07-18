@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ No, nunca</string>
     <string name="bug_hud_gate_unknown">❓ No lo sé</string>
     <string name="bug_hud_no_arrows_msg">Entonces el firmware de tu HUD no puede mostrar flechas de dirección en absoluto, y DashCast tampoco puede añadirlas. No hay nada que podamos arreglar, así que no hace falta que envíes este informe. ¡Gracias de todos modos!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">¿Qué app usas para la navegación?</string>
+    <string name="bug_hud_nav_oem">La navegación original de mi coche</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast solo puede reflejar las flechas en el HUD desde Google Maps o Waze. La navegación original de tu coche (Telenav…) envía sus datos en un formato que DashCast no puede leer — pero ya muestra sus propias flechas en el HUD. Para ver flechas a través de DashCast, inicia una ruta con Google Maps o Waze.</string>
+    <string name="bug_hud_nav_understood">Entendido, usaré Maps o Waze</string>
+    <string name="bug_hud_nav_report_anyway">Enviar el informe de todos modos</string>
 </resources>
