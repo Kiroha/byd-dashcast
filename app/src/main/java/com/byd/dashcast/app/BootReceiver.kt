@@ -11,6 +11,7 @@ import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ProxyKeeperService
 import com.byd.dashcast.ui.settings.SettingsActivity
+import com.byd.dashcast.update.OtaRelaunchCoordinator
 import com.byd.dashcast.util.AppLogger
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -55,6 +56,17 @@ class BootReceiver : BroadcastReceiver() {
         val pending = AtomicInteger(1)
         val releaseOne = Runnable {
             if (pending.decrementAndGet() == 0) result.finish()
+        }
+
+        if (isReplace) {
+            pending.incrementAndGet()
+            sMain.postDelayed({
+                try {
+                    OtaRelaunchCoordinator.relaunchIfPending(appCtx, "MY_PACKAGE_REPLACED")
+                } finally {
+                    releaseOne.run()
+                }
+            }, 750L)
         }
 
         if (prewarmDaemon) {
