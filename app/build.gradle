@@ -456,8 +456,21 @@ android {
         // single-register batch that writes ONLY the status, NOT SETTING_NAVI_SCREEN_STATUS which the
         // OEM writes only at start). Additive, best-effort, DL3-only, does not touch the
         // video-confirmed icon/distance path. No daemon protocol change.)
-        versionCode 582
-        versionName "1.6.141-beta"
+        // 583 = 1.6.142-beta (two more OEM-fidelity HUD gains from the AmapService gap analysis,
+        // both DL3-only, additive, and behind existing dedup — the video-confirmed icon/distance path
+        // is untouched. G2 (ETA wall-clock): the OEM writes an EXPECTED_ARRIVE_* family (0x43F09010/
+        // 18/20/28 = day/hour/minute/second) for the "arrive at HH:MM" clock, distinct from the
+        // remaining-DURATION family we already send; DashCast now parses a bare HH:MM (best-effort,
+        // RX_ETA_CLOCK) from the notification summary line and writes the ETA clock (day-code=today,
+        // a notification carries none) via CanBusController.sendExpectedArrival, deduped on hh:mm.
+        // G3 (roundabout exit): the parser only ever emitted a generic roundabout icon; it now reads
+        // an exit number ("3rd exit"/"sortie 3", RX_ROUNDABOUT_EXIT) and promotes it to the OEM
+        // exit-numbered icon (CCW 25-34 / CW 35-44, exit N = base+N), preserving handedness from the
+        // resolved generic icon. HudNavigationData gained etaHour/etaMinute. No daemon protocol
+        // change; on-car verification pending; honest ceiling (2nd maneuver, smooth countdown,
+        // roundabout handedness, ETA day-code) unchanged per the gap analysis.)
+        versionCode 583
+        versionName "1.6.142-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

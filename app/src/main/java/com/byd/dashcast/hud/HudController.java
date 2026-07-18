@@ -65,6 +65,8 @@ public final class HudController {
     private int     lastRestHour       = -1;
     private int     lastRestMinute     = -1;
     private long    lastRestMileage    = -1L;
+    private int     lastEtaHour        = -1;
+    private int     lastEtaMinute      = -1;
 
     // ─── Staleness watchdog ───────────────────────────────────────────────
     // The prod guidance path is on-change / dedup with NO periodic re-push, so if the nav app's
@@ -162,6 +164,20 @@ public final class HudController {
                 } catch (ProxyClient.ProxyException e) {
                     Log.w(TAG, "sendRestRoute failed: " + e.getMessage());
                 }
+            }
+        }
+
+        // 4b. Arrival wall-clock ETA (OEM EXPECTED_ARRIVE_* family) — "arrive at HH:MM". Distinct
+        //     from the remaining DURATION above (step 4). Day-code = today (1): a Maps/Waze
+        //     notification carries no day. Deduped on (hour, minute).
+        if (data.etaHour != null && data.etaMinute != null
+                && (data.etaHour != lastEtaHour || data.etaMinute != lastEtaMinute)) {
+            try {
+                CanBusController.sendExpectedArrival(1, data.etaHour, data.etaMinute);
+                lastEtaHour   = data.etaHour;
+                lastEtaMinute = data.etaMinute;
+            } catch (ProxyClient.ProxyException e) {
+                Log.w(TAG, "sendExpectedArrival failed: " + e.getMessage());
             }
         }
 
@@ -289,6 +305,8 @@ public final class HudController {
         lastRestHour          = -1;
         lastRestMinute        = -1;
         lastRestMileage       = -1L;
+        lastEtaHour           = -1;
+        lastEtaMinute         = -1;
     }
 
     // ─── AMap broadcast ───────────────────────────────────────────────────
