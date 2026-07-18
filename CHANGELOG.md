@@ -14,6 +14,12 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.138-beta (versionCode 579)
+
+Reliable automatic OTA installation and relaunch after 1.6.137-beta. The updater now reconnects the uid-2000 ProxyDaemon instead of requiring it to be alive at one exact instant, stages the downloaded APK under `/data/local/tmp` with exact-size verification before `pm install -r`, and preserves the interactive PackageInstaller path when privileged installation is unavailable. API 31+ sessions explicitly request no user action where Android permits it, while a durable relaunch marker shared by `STATUS_SUCCESS` and `MY_PACKAGE_REPLACED` reopens DashCast after either silent or user-confirmed replacement without creating duplicate tasks. Version comparison and generated shell syntax now have focused regression coverage.
+
+See the [complete English 1.6.138-beta release notes](docs/releases/1.6.138-beta.md) for every change since 1.6.137-beta, install-path ownership, Android/DiLink feasibility limits, first-upgrade caveat, validation evidence, APK identity, and suggested vehicle checks.
+
 ### 1.6.137-beta (versionCode 578)
 
 Timeout-safe local ADB and bounded D50F recovery after 1.6.136-beta. DashCast now uses dadb 2.0.0 with explicit connect/read/write deadlines, typed transport states, a forced lazy handshake, authorization-aware retry windows, and circuit-breaking that prevents a silent port-5555 peer from permanently occupying all ADB workers. A live ProxyDaemon Binder remains usable during a local-ADB outage, while actual legacy fallbacks fail fast. Bug Wizard and Bug Report now remain responsive without ADB, D50F cluster display selection prefers the real PRESENTATION display instead of hard-coding display 1, and SysInfo exposes the protocol-level diagnosis. All new user-facing diagnostics are translated in all 13 supported languages.
