@@ -30,9 +30,8 @@ public final class Phase4TaskVerbs {
     private static volatile Method sMoveTaskToDisplay;
     private static volatile Method sResizeTask;
 
-    /** Prevents spawning multiple fission-watchdog threads concurrently. */
-    private static final java.util.concurrent.atomic.AtomicBoolean sWatchdogActive =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    /** One current guardian generation per package; different Layout slots run independently. */
+    private static final FissionWatchdogRegistry sWatchdogs = new FissionWatchdogRegistry();
 
     // ─── Reflection helper ────────────────────────────────────────────────
 
@@ -308,54 +307,85 @@ public final class Phase4TaskVerbs {
     public static TaskLocation findTaskLocationForPackage(String packageName) {
         if (packageName == null || packageName.isEmpty()) return TaskLocation.unknown();
         try {
-            Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
-            Object iAtm = atmCls.getMethod("getService").invoke(null);
-            Method getTasks = sGetTasks;
-            if (getTasks == null) {
-                for (Method cand : iAtm.getClass().getMethods()) {
-                    if ("getTasks".equals(cand.getName())) { getTasks = cand; break; }
-                }
-                sGetTasks = getTasks;
-            }
-            if (getTasks == null) return TaskLocation.unknown();
-
-            Class<?>[] parameterTypes = getTasks.getParameterTypes();
-            Object[] args = new Object[parameterTypes.length];
-            for (int i = 0; i < parameterTypes.length; i++) {
-                if (parameterTypes[i] == int.class) args[i] = (i == 0 ? 64 : 0);
-                else if (parameterTypes[i] == boolean.class) args[i] = false;
-                else args[i] = null;
-            }
-            Object rawTasks = getTasks.invoke(iAtm, args);
-            if (!(rawTasks instanceof java.util.List)) return TaskLocation.unknown();
-
-            for (Object task : (java.util.List<?>) rawTasks) {
-                if (task == null) continue;
-                android.content.ComponentName topActivity =
-                        (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
-                android.content.ComponentName baseActivity =
-                        (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
-                String taskPackage = topActivity != null ? topActivity.getPackageName()
-                        : baseActivity != null ? baseActivity.getPackageName() : null;
-                if (!packageName.equals(taskPackage)) continue;
-
-                Object rawTaskId = readFieldNoThrow(task, "taskId");
-                if (rawTaskId == null) rawTaskId = readFieldNoThrow(task, "id");
-                if (!(rawTaskId instanceof Integer)) return TaskLocation.unknown();
-                int taskId = (Integer) rawTaskId;
-
-                Object rawDisplayId = readFieldNoThrow(task, "displayId");
-                int displayId = rawDisplayId instanceof Integer
-                        ? (Integer) rawDisplayId
-                        : findDisplayIdForTask(iAtm, taskId);
-                return TaskLocation.found(taskId, displayId);
-            }
-            return TaskLocation.absent();
+            java.util.List<TaskLocation> locations = queryTaskLocationsForPackage(packageName);
+            return locations.isEmpty() ? TaskLocation.absent() : locations.get(0);
         } catch (Throwable t) {
             android.util.Log.w("Phase4TaskVerbs",
                     "findTaskLocationForPackage(" + packageName + ") failed: " + t);
             return TaskLocation.unknown();
         }
+    }
+
+    private static TaskLocation findWatchdogTaskLocation(String packageName,
+                                                         int targetDisplayId) {
+        try {
+            return FissionWatchdogPolicy.selectTask(
+                    queryTaskLocationsForPackage(packageName), targetDisplayId);
+        } catch (Throwable error) {
+            android.util.Log.w("Phase4TaskVerbs",
+                    "WATCHDOG task query failed pkg=" + packageName + ": " + error);
+            return TaskLocation.unknown();
+        }
+    }
+
+    private static java.util.List<TaskLocation> queryTaskLocationsForPackage(String packageName)
+            throws Throwable {
+        Class<?> atmCls = Class.forName("android.app.ActivityTaskManager");
+        Object iAtm = atmCls.getMethod("getService").invoke(null);
+        Method getTasks = sGetTasks;
+        if (getTasks == null) {
+            for (Method candidate : iAtm.getClass().getMethods()) {
+                if ("getTasks".equals(candidate.getName())) {
+                    getTasks = candidate;
+                    break;
+                }
+            }
+            sGetTasks = getTasks;
+        }
+        if (getTasks == null) throw new NoSuchMethodException("getTasks");
+
+        Class<?>[] parameterTypes = getTasks.getParameterTypes();
+        Object[] args = new Object[parameterTypes.length];
+        for (int index = 0; index < parameterTypes.length; index++) {
+            if (parameterTypes[index] == int.class) args[index] = (index == 0 ? 64 : 0);
+            else if (parameterTypes[index] == boolean.class) args[index] = false;
+            else args[index] = null;
+        }
+        Object rawTasks = getTasks.invoke(iAtm, args);
+        if (!(rawTasks instanceof java.util.List)) {
+            throw new IllegalStateException("getTasks returned "
+                    + (rawTasks == null ? "null" : rawTasks.getClass().getName()));
+        }
+
+        java.util.List<TaskLocation> locations = new java.util.ArrayList<>();
+        boolean identityUnknown = false;
+        for (Object task : (java.util.List<?>) rawTasks) {
+            if (task == null) continue;
+            android.content.ComponentName topActivity =
+                    (android.content.ComponentName) readFieldNoThrow(task, "topActivity");
+            android.content.ComponentName baseActivity =
+                    (android.content.ComponentName) readFieldNoThrow(task, "baseActivity");
+            boolean packageMatches = topActivity != null
+                    && packageName.equals(topActivity.getPackageName());
+            packageMatches |= baseActivity != null
+                    && packageName.equals(baseActivity.getPackageName());
+            if (!packageMatches) continue;
+
+            Object rawTaskId = readFieldNoThrow(task, "taskId");
+            if (rawTaskId == null) rawTaskId = readFieldNoThrow(task, "id");
+            if (!(rawTaskId instanceof Integer)) {
+                identityUnknown = true;
+                continue;
+            }
+            int taskId = (Integer) rawTaskId;
+            Object rawDisplayId = readFieldNoThrow(task, "displayId");
+            int displayId = rawDisplayId instanceof Integer
+                    ? (Integer) rawDisplayId
+                    : findDisplayIdForTask(iAtm, taskId);
+            locations.add(TaskLocation.found(taskId, displayId));
+        }
+        if (identityUnknown) locations.add(TaskLocation.unknown());
+        return locations;
     }
 
     /**
@@ -871,79 +901,116 @@ public final class Phase4TaskVerbs {
             log.append("  ").append(resizeTaskRect(taskId, 0, 0, width, height)).append('\n');
             log.append("  ").append(setFocusedRootTask(taskId)).append('\n');
 
-            // Async watchdog: polls getAllStackInfos() every 500 ms for 10 s.
-            // Re-anchors if Waze's FLAG_ACTIVITY_LAUNCH_ADJACENT bounces the task to display 0.
-            final int wTaskId = taskId;
-            if (sWatchdogActive.compareAndSet(false, true)) {
-                new Thread(() -> {
-                try {
-                    int stableCount = 0;
-                    for (int iter = 0; iter < 20; iter++) {
-                        try { Thread.sleep(500); }
-                        catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt(); return;
-                        }
-                        if (iter < 4) continue; // skip first 2 s, let app settle
-                        int curDisplay = -1;
-                        try {
-                            Class<?> ac = Class.forName("android.app.ActivityTaskManager");
-                            Object ia = ac.getMethod("getService").invoke(null);
-                            // DiLink 3: getAllStackInfos / DiLink 5 Android 12: getAllRootTaskInfos
-                            java.util.List<?> ss = getAtmTaskList(ia);
-                            outer:
-                            for (Object si : ss) {
-                                int[] tids = getChildTaskIds(si);
-                                if (tids == null) continue;
-                                for (int t : tids) {
-                                    if (t == wTaskId) {
-                                        Object did = readFieldNoThrow(si, "displayId");
-                                        if (did instanceof Integer) curDisplay = (Integer) did;
-                                        break outer;
-                                    }
-                                }
-                            }
-                        } catch (Throwable pollEx) {
-                            android.util.Log.w("Phase4TaskVerbs",
-                                    "WATCHDOG poll err: " + pollEx.getMessage());
-                            continue;
-                        }
-                        if (curDisplay < 0) return; // task gone
-                        if (curDisplay == displayId) {
-                            if (++stableCount >= 3) {
-                                android.util.Log.d("Phase4TaskVerbs", "WATCHDOG: stable, done");
-                                return;
-                            }
-                            continue;
-                        }
-                        stableCount = 0;
-                        android.util.Log.i("Phase4TaskVerbs",
-                                "WATCHDOG: task " + wTaskId + " on display " + curDisplay
-                                + " — re-anchoring to " + displayId);
-                        moveTaskToDisplayViaStack(wTaskId, displayId);
-                        setTaskWindowingModeFreeform(wTaskId);
-                        resizeTaskRect(wTaskId, 0, 0, width, height);
-                        setFocusedRootTask(wTaskId);
-                        android.util.Log.i("Phase4TaskVerbs", "WATCHDOG: re-anchor done");
-                        return;
-                    }
-                    android.util.Log.d("Phase4TaskVerbs", "WATCHDOG: ended without bounce");
-                } catch (Throwable t) {
-                    android.util.Log.w("Phase4TaskVerbs",
-                            "WATCHDOG unexpected: " + t.getMessage());
-                } finally {
-                    sWatchdogActive.set(false);
-                }
-                }, "fission-watchdog").start();
-            }
-            log.append("WATCHDOG started (20×500ms, detects from T+2s)\n");
+            String watchdogStatus = startFissionWatchdog(
+                    packageName, taskId, displayId, width, height);
+            log.append(watchdogStatus).append('\n');
             log.append("FINISH: launchAndForce complete.\n");
             android.util.Log.i("Phase4TaskVerbs", "FISSION launchAndForce DONE pkg=" + packageName
-                    + " taskId=" + taskId + " displayId=" + displayId + " watchdog=running");
+                    + " taskId=" + taskId + " displayId=" + displayId
+                    + " watchdog=" + watchdogStatus);
         } catch (Throwable t) {
             log.append("EXCEPTION: ").append(t).append('\n');
             android.util.Log.e("Phase4TaskVerbs", "FISSION launchAndForce EXCEPTION: " + t);
         }
         return log.toString();
+    }
+
+    private static String startFissionWatchdog(String packageName, int initialTaskId,
+                                               int targetDisplayId, int width, int height) {
+        final long generation = sWatchdogs.start(packageName);
+        final FissionWatchdogPolicy policy = new FissionWatchdogPolicy();
+        Thread watchdog = new Thread(() -> {
+            int currentTaskId = initialTaskId;
+            int reanchorCount = 0;
+            try {
+                for (int poll = 1; poll <= FissionWatchdogPolicy.MAX_POLLS; poll++) {
+                    try {
+                        Thread.sleep(FissionWatchdogPolicy.POLL_INTERVAL_MS);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    if (!sWatchdogs.isCurrent(packageName, generation)) {
+                        android.util.Log.d("Phase4TaskVerbs",
+                                "WATCHDOG superseded pkg=" + packageName
+                                        + " generation=" + generation);
+                        return;
+                    }
+
+                        TaskLocation location = findWatchdogTaskLocation(
+                            packageName, targetDisplayId);
+                    TaskLocation.DisplayMatch match = location.matchDisplay(targetDisplayId);
+                    if (location.getStatus() == TaskLocation.Status.FOUND
+                            && location.getTaskId() != currentTaskId) {
+                        android.util.Log.i("Phase4TaskVerbs",
+                                "WATCHDOG adopted new task pkg=" + packageName
+                                        + " oldTask=" + currentTaskId
+                                        + " newTask=" + location.getTaskId());
+                        currentTaskId = location.getTaskId();
+                    }
+
+                    FissionWatchdogPolicy.Action action = policy.onPoll(poll, match);
+                    if (action == FissionWatchdogPolicy.Action.COMPLETE) {
+                        android.util.Log.d("Phase4TaskVerbs",
+                                "WATCHDOG complete pkg=" + packageName
+                                        + " task=" + currentTaskId
+                                        + " polls=" + poll
+                                        + " reanchors=" + reanchorCount
+                                        + " final=" + match);
+                        return;
+                    }
+                    if (action != FissionWatchdogPolicy.Action.REANCHOR
+                            || currentTaskId <= 0) {
+                        continue;
+                    }
+
+                    reanchorCount++;
+                    String move = moveTaskToDisplayViaStack(currentTaskId, targetDisplayId);
+                    String mode = setTaskWindowingModeFreeform(currentTaskId);
+                    String resize = resizeTaskRect(currentTaskId, 0, 0, width, height);
+                    String focus = setFocusedRootTask(currentTaskId);
+                    android.util.Log.i("Phase4TaskVerbs",
+                            "WATCHDOG re-anchor pkg=" + packageName
+                                    + " task=" + currentTaskId
+                                    + " from=" + location.getDisplayId()
+                                    + " to=" + targetDisplayId
+                                    + " poll=" + poll
+                                    + " move=[" + move + "]"
+                                    + " mode=[" + mode + "]"
+                                    + " resize=[" + resize + "]"
+                                    + " focus=[" + focus + "]");
+                }
+            } catch (Throwable error) {
+                android.util.Log.w("Phase4TaskVerbs",
+                        "WATCHDOG unexpected pkg=" + packageName + ": " + error);
+            } finally {
+                sWatchdogs.finish(packageName, generation);
+            }
+        }, "fission-watchdog-" + initialTaskId);
+        watchdog.setDaemon(true);
+        try {
+            watchdog.start();
+            return "WATCHDOG started pkg=" + packageName
+                    + " task=" + initialTaskId
+                    + " display=" + targetDisplayId
+                    + " guard=" + FissionWatchdogPolicy.INITIAL_GUARD_POLLS
+                    * FissionWatchdogPolicy.POLL_INTERVAL_MS / 1000 + "s"
+                    + " max=" + FissionWatchdogPolicy.MAX_POLLS
+                    * FissionWatchdogPolicy.POLL_INTERVAL_MS / 1000 + "s";
+        } catch (Throwable startError) {
+            sWatchdogs.finish(packageName, generation);
+            android.util.Log.w("Phase4TaskVerbs",
+                    "WATCHDOG start failed pkg=" + packageName + ": " + startError);
+            return "WATCHDOG failed pkg=" + packageName
+                    + " error=" + startError.getClass().getSimpleName();
+        }
+    }
+
+    /** Cancels the latest guardian before an intentional move/release during Layout teardown. */
+    public static boolean cancelFissionWatchdog(String packageName) {
+        return packageName == null
+                ? sWatchdogs.cancelAll() > 0
+                : sWatchdogs.cancel(packageName);
     }
 
     // ─── Stack management ─────────────────────────────────────────────────

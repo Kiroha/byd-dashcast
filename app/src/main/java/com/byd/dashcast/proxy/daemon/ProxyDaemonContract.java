@@ -187,4 +187,9 @@ public final class ProxyDaemonContract {
      *  from the D50F native rejection ({@code -1}). */
     public static final int TXN_AUTOCONTAINER_SEND_INFO_RESULT =
             IBinder.FIRST_CALL_TRANSACTION + 30; // 31
+
+    /** {@code nullable String packageName} → {@code boolean cancelled}.
+     *  Stops one package guardian, or all guardians when packageName is null. */
+    public static final int TXN_CANCEL_FISSION_WATCHDOG =
+            IBinder.FIRST_CALL_TRANSACTION + 31; // 32
 }

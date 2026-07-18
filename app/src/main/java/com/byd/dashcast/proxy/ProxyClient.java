@@ -829,6 +829,25 @@ public final class ProxyClient {
                 () -> ProxyFissionVerbs.launchAndForce(pkg, activityCls, displayId, width, height));
     }
 
+    /** Best-effort teardown guard; never reconnects or blocks teardown on an old daemon. */
+    public static boolean cancelFissionWatchdog(String packageName) {
+        if (packageName != null && packageName.isEmpty()) return false;
+        if (!isConnected() || !supportsProtocol(21)) {
+            return false;
+        }
+        try {
+            return ProxyFissionVerbs.cancelFissionWatchdog(packageName);
+        } catch (Throwable error) {
+            AppLogger.w(TAG, "cancelFissionWatchdog failed for " + packageName
+                    + ": " + error.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean cancelAllFissionWatchdogs() {
+        return cancelFissionWatchdog(null);
+    }
+
     /**
      * Phase 6 — Move an existing task to {@code displayId} and resize it to
      * the given rect (in destination-display pixels). No am-start, no

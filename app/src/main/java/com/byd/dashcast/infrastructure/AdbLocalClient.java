@@ -7,6 +7,7 @@ import android.os.Parcel;
 import android.os.SystemClock;
 
 import com.byd.dashcast.proxy.DaemonConfig;
+import com.byd.dashcast.proxy.DaemonBinderResolver;
 import com.byd.dashcast.proxy.ProxyClient;
 import com.byd.dashcast.R;
 import com.byd.dashcast.util.AppLogger;
@@ -41,7 +42,9 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("try")
 public class AdbLocalClient {
@@ -75,6 +78,9 @@ public class AdbLocalClient {
     public static final int NEW_KEY_AUTH_IDLE_TIMEOUT_MS = 30_000;
     /** Small read-only probes already have 8 s caller-side latches. */
     public static final int PROBE_IDLE_TIMEOUT_MS = 7_000;
+    /** Independent echo used to distinguish one stuck shell stream from a dead adbd. */
+    private static final int TRANSPORT_CONFIRM_IDLE_TIMEOUT_MS = 3_000;
+    private static final String TRANSPORT_CONFIRM_MARKER = "__DASHCAST_ADB_HEALTHY__";
     /** The all-in-one report dump can legitimately pause between expensive dumpsys sections. */
     public static final int REPORT_IDLE_TIMEOUT_MS = 120_000;
 
@@ -325,9 +331,14 @@ public class AdbLocalClient {
             " | xargs -r kill -9 2>/dev/null; echo killed";
 
     private static volatile long sLastDaemonStartMs = 0;
+    private static final AtomicBoolean sMirrorDaemonStartInFlight = new AtomicBoolean(false);
     public static long getLastDaemonStartMs() { return sLastDaemonStartMs; }
 
     public static void startMirrorDaemon(final Context context) {
+        if (!sMirrorDaemonStartInFlight.compareAndSet(false, true)) {
+            AppLogger.d(TAG, "MirrorDaemon start already in flight — joining existing attempt");
+            return;
+        }
         sLastDaemonStartMs = System.currentTimeMillis();
         sExecutor.execute(new Runnable() {
             @Override public void run() {
@@ -359,12 +370,7 @@ public class AdbLocalClient {
                     // → survives dadb connection close (otherwise SIGHUP possible)
                     // CLASSPATH inline (no export &&) as Commander APK does it
                     // -Xnoimage-dex2oat: avoids AOT crash at startup
-                    String cmd = "setsid sh -c 'CLASSPATH=" + apkPath
-                            + " /system/bin/app_process64 -Xnoimage-dex2oat /system/bin"
-                            + " --nice-name=byd.mirror.daemon"
-                            + " com.byd.dashcast.proxy.daemon.MirrorDaemon"
-                            + " </dev/null >" + logPath + " 2>&1' &"
-                            + " ln -sf " + logPath + " " + latestLink;
+                        String cmd = MirrorDaemonStartCommand.build(apkPath, logPath, latestLink);
                     dadb.shell(cmd);
                     AppLogger.i(TAG, "MirrorDaemon launched → " + logPath);
 
@@ -382,8 +388,18 @@ public class AdbLocalClient {
                     noteTransportSuccess();
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                    noteTransportFailure(context, e);
-                    AppLogger.e(TAG, "MirrorDaemon startup error", e);
+                    String state = AdbTransportFailure.INSTANCE.classify(e);
+                    boolean binderAlive = isMirrorDaemonBinderAlive();
+                    if (AdbTransportConfirmationPolicy.INSTANCE
+                            .shouldReportMirrorFailure(state, binderAlive)) {
+                        noteTransportFailure(context, e);
+                        AppLogger.e(TAG, "MirrorDaemon startup error", e);
+                    } else {
+                        AppLogger.w(TAG, "MirrorDaemon launch stream timed out, but Binder is live"
+                                + " — suppressing global ADB outage: " + e.getMessage());
+                    }
+                } finally {
+                    sMirrorDaemonStartInFlight.set(false);
                 }
             }
         });
@@ -431,6 +447,8 @@ public class AdbLocalClient {
 
     private static volatile String  sTransportState    = null; // null = healthy / untested
     private static volatile boolean sTransportMsgShown = false;
+    private static final AtomicBoolean sTimeoutConfirmationInFlight = new AtomicBoolean(false);
+    private static final AtomicLong sTransportSuccessGeneration = new AtomicLong();
     /** Dadb.create() is lazy: only a successful operation proves handshake + shell health. */
     private static volatile boolean sOperationSucceeded = false;
 
@@ -492,14 +510,71 @@ public class AdbLocalClient {
     private static void noteTransportSuccess() {
         sOperationSucceeded = true;
         sFreshKeyAwaitingAuthorization = false;
+        sTransportSuccessGeneration.incrementAndGet();
         clearTransport();
     }
 
     private static void noteTransportFailure(Context context, Throwable error) {
         String state = AdbTransportFailure.INSTANCE.classify(error);
-        if (state != null) {
-            sOperationSucceeded = false;
-            markTransport(context, state);
+        if (state == null) return;
+        if (XPORT_UNRESPONSIVE.equals(state)) {
+            confirmUnresponsiveTransport(context, error);
+            return;
+        }
+        sOperationSucceeded = false;
+        markTransport(context, state);
+    }
+
+    private static void confirmUnresponsiveTransport(Context context, Throwable originalError) {
+        if (!sTimeoutConfirmationInFlight.compareAndSet(false, true)) {
+            AppLogger.d(TAG, "ADB timeout confirmation already in flight — suppressing duplicate");
+            return;
+        }
+        long successGenerationAtStart = sTransportSuccessGeneration.get();
+        boolean probeSucceeded = false;
+        Throwable probeError = null;
+        try {
+            AdbKeyPair keyPair = sKeyPair;
+            if (keyPair == null) throw new IOException("ADB key unavailable for health probe");
+            try (Dadb probe = Dadb.create(
+                    "localhost", ADB_PORT, keyPair,
+                    CONNECT_PROBE_MS, TRANSPORT_CONFIRM_IDLE_TIMEOUT_MS, true)) {
+                String output = probe.shell("echo " + TRANSPORT_CONFIRM_MARKER)
+                        .getAllOutput().trim();
+                probeSucceeded = output.contains(TRANSPORT_CONFIRM_MARKER);
+            }
+        } catch (Throwable error) {
+            probeError = error;
+        } finally {
+            sTimeoutConfirmationInFlight.set(false);
+        }
+
+        String confirmedState = AdbTransportConfirmationPolicy.INSTANCE.resolve(
+                XPORT_UNRESPONSIVE, probeSucceeded, probeError);
+        if (confirmedState == null) {
+            noteTransportSuccess();
+            AppLogger.w(TAG, "ADB shell stream timed out but independent echo succeeded"
+                    + " — global outage suppressed: " + originalError.getMessage());
+            return;
+        }
+        if (!AdbTransportConfirmationPolicy.INSTANCE.shouldApplyFailure(
+                successGenerationAtStart, sTransportSuccessGeneration.get())) {
+            AppLogger.w(TAG, "ADB timeout confirmation became stale after a newer success"
+                    + " — global outage suppressed");
+            return;
+        }
+        sOperationSucceeded = false;
+        AppLogger.e(TAG, "ADB timeout confirmed by independent probe"
+                + (probeError != null ? ": " + probeError : " (unexpected echo response)"));
+        markTransport(context, confirmedState);
+    }
+
+    private static boolean isMirrorDaemonBinderAlive() {
+        try {
+            IBinder binder = DaemonBinderResolver.getRegisteredBinderOrNull();
+            return binder != null && binder.isBinderAlive();
+        } catch (Throwable ignore) {
+            return false;
         }
     }
 
@@ -596,7 +671,9 @@ public class AdbLocalClient {
                 }
                 String state = AdbTransportFailure.INSTANCE.classify(e);
                 if (XPORT_REFUSED.equals(state)) sPortRefused = true;
-                if (state != null) markTransport(context, state);
+                if (state != null && !XPORT_UNRESPONSIVE.equals(state)) {
+                    markTransport(context, state);
+                }
                 // Only a genuine auth rejection may self-heal via the approval popup.
                 if (!(e instanceof AdbAuthException)) throw e;
                 AppLogger.w(TAG, "ADB handshake exception (popup pending?), retrying in 2s... (" + retries + " left)");
@@ -632,11 +709,13 @@ public class AdbLocalClient {
                     String cmd = "appops set " + appCtx.getPackageName()
                             + " SYSTEM_ALERT_WINDOW allow";
                     AdbShellResponse r = dadb.shell(cmd + " 2>&1");
+                    noteTransportSuccess();
                     AppLogger.i(TAG, "grantOverlayPermission → " + cmd
                             + " → '" + r.getAllOutput().trim() + "'");
                     callback.onSuccess(r.getAllOutput().trim());
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(appCtx, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "grantOverlayPermission ERREUR", e);
                     callback.onError(msg);
@@ -738,10 +817,12 @@ public class AdbLocalClient {
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRestore.getAllOutput().trim()).append("\n");
 
+                    noteTransportSuccess();
                     AppLogger.log(TAG, "restoreBydOnCluster -> OK");
                     callback.onSuccess("BYD restored \u2713\n" + sb);
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "restoreBydOnCluster ERROR", e);
                     callback.onError(msg);
@@ -840,6 +921,7 @@ public class AdbLocalClient {
                         "service call " + autoContainerSvcName(context) + " 2 i32 1000 i32 0 s16 \"\" 2>&1");
                     sb.append("sendInfo(0)  : ").append(rRefresh.getAllOutput().trim()).append("\n");
 
+                    noteTransportSuccess();
                     AppLogger.log(TAG, "restoreOriginCluster -> OK (screenSize in background)");
                     // Fire callback now \u2014 UI unblocked, ClusterManager state cleaned up.
                     // screenSizeCmd is cosmetic and completes in background after 3s Qt settling.
@@ -851,10 +933,12 @@ public class AdbLocalClient {
                         AppLogger.log(TAG, "restoreOriginCluster screenSize(cmd=" + screenSizeCmd + ") sent in background");
                     } catch (Exception bg) {
                         if (bg instanceof InterruptedException) Thread.currentThread().interrupt();
+                        noteTransportFailure(context, bg);
                         AppLogger.w(TAG, "restoreOriginCluster background screenSize failed: " + bg.getMessage());
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "restoreOriginCluster ERROR", e);
                     callback.onError(msg);
@@ -1077,9 +1161,11 @@ public class AdbLocalClient {
                             + "| head -30 2>&1").getAllOutput().trim();
                     for (String line : perms.split("\n")) AppLogger.i(dTag, "  " + line);
 
+                    noteTransportSuccess();
                     AppLogger.i(dTag, "=== FIN dump ===");
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     AppLogger.e(dTag, "dumpSignatureAndPermissions ERREUR", e);
                 }
             }
@@ -1175,6 +1261,7 @@ public class AdbLocalClient {
                     
                     AdbShellResponse r = dadb.shell(cleanRecentsCmd + "am force-stop " + packageName + " 2>&1 && echo STOPPED");
                     String out = r.getAllOutput().trim();
+                    noteTransportSuccess();
                     AppLogger.log(TAG, "am force-stop " + packageName + " -> " + out);
                     if (callback != null) {
                         if (out.contains("STOPPED") || out.isEmpty()) {
@@ -1190,6 +1277,7 @@ public class AdbLocalClient {
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    noteTransportFailure(context, e);
                     String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
                     AppLogger.e(TAG, "forceStopApp ERREUR", e);
                     if (callback != null) callback.onError(msg);
