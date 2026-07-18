@@ -814,4 +814,10 @@
     <string name="bug_hud_gate_no">❌ No, never</string>
     <string name="bug_hud_gate_unknown">❓ I don\'t know</string>
     <string name="bug_hud_no_arrows_msg">Then your HUD\'s firmware can\'t show turn arrows at all — DashCast can\'t add them either. There\'s nothing we can fix, so no need to send this report. Thanks anyway!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Which app do you use for navigation?</string>
+    <string name="bug_hud_nav_oem">My car\'s built-in navigation</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast can only mirror the arrows on the HUD from Google Maps or Waze. Your car\'s built-in navigation (Telenav…) sends its data in a format DashCast can\'t read — but it already shows its own arrows on the HUD. To get arrows through DashCast, start a route with Google Maps or Waze.</string>
+    <string name="bug_hud_nav_understood">Got it, I\'ll use Maps or Waze</string>
+    <string name="bug_hud_nav_report_anyway">Send the report anyway</string>
 </resources>

@@ -810,4 +810,10 @@
     <string name="bug_hud_gate_no">❌ Nie, nigdy</string>
     <string name="bug_hud_gate_unknown">❓ Nie wiem</string>
     <string name="bug_hud_no_arrows_msg">W takim razie firmware twojego HUD w ogóle nie potrafi wyświetlać strzałek nawigacji — DashCast też nie może ich dodać. Nie ma tu nic do naprawienia po naszej stronie, więc nie musisz wysyłać tego zgłoszenia. Dzięki mimo wszystko!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Jakiej aplikacji używasz do nawigacji?</string>
+    <string name="bug_hud_nav_oem">Fabryczna nawigacja mojego samochodu</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast może odwzorowywać strzałki na HUD tylko z Google Maps lub Waze. Fabryczna nawigacja twojego samochodu (Telenav…) przesyła swoje dane w formacie, którego DashCast nie potrafi odczytać — ale i tak wyświetla własne strzałki na HUD. Żeby mieć strzałki przez DashCast, uruchom nawigację w Google Maps lub Waze.</string>
+    <string name="bug_hud_nav_understood">Jasne, użyję Maps lub Waze</string>
+    <string name="bug_hud_nav_report_anyway">Wyślij raport mimo to</string>
 </resources>

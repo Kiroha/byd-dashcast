@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ Нет, никогда</string>
     <string name="bug_hud_gate_unknown">❓ Я не знаю</string>
     <string name="bug_hud_no_arrows_msg">Значит, прошивка твоего HUD вообще не умеет показывать стрелки поворотов — DashCast их тоже не сможет добавить. С нашей стороны исправлять нечего, так что отправлять этот отчёт не нужно. Всё равно спасибо!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Каким приложением ты пользуешься для навигации?</string>
+    <string name="bug_hud_nav_oem">Штатная навигация моей машины</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast может выводить стрелки на HUD только из Google Maps или Waze. Штатная навигация твоей машины (Telenav…) передаёт данные в формате, который DashCast не может прочитать, — но она и так уже показывает свои собственные стрелки на HUD. Чтобы стрелки отображались через DashCast, запусти навигацию в Google Maps или Waze.</string>
+    <string name="bug_hud_nav_understood">Понятно, буду пользоваться Maps или Waze</string>
+    <string name="bug_hud_nav_report_anyway">Всё равно отправить отчёт</string>
 </resources>

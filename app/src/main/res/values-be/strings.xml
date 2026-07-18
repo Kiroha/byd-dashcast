@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ Не, ніколі</string>
     <string name="bug_hud_gate_unknown">❓ Не ведаю</string>
     <string name="bug_hud_no_arrows_msg">Значыць, прашыўка твайго HUD увогуле не можа паказваць стрэлкі паваротаў — DashCast таксама не можа іх дадаць. Выпраўляць тут няма чаго, таму адпраўляць гэтую справаздачу не трэба. Усё роўна дзякуй!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Якім дадаткам ты карыстаешся для навігацыі?</string>
+    <string name="bug_hud_nav_oem">Штатная навігацыя маёй машыны</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast можа адлюстроўваць стрэлкі на HUD толькі з Google Maps ці Waze. Штатная навігацыя тваёй машыны (Telenav…) перадае свае даныя ў фармаце, які DashCast не можа прачытаць — але яна ўжо паказвае свае ўласныя стрэлкі на HUD. Каб бачыць стрэлкі праз DashCast, запусці навігацыю ў Google Maps ці Waze.</string>
+    <string name="bug_hud_nav_understood">Зразумела, буду карыстацца Maps ці Waze</string>
+    <string name="bug_hud_nav_report_anyway">Усё роўна адправіць справаздачу</string>
 </resources>

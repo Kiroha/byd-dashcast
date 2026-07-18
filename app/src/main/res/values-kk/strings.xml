@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ Жоқ, ешқашан</string>
     <string name="bug_hud_gate_unknown">❓ Білмеймін</string>
     <string name="bug_hud_no_arrows_msg">Онда сенің HUD-ыңның микробағдарламасы бұрылыс көрсеткілерін мүлдем көрсете алмайды — DashCast та оларды қоса алмайды. Біздің тарапымыздан түзететін ештеңе жоқ, сондықтан бұл хабарламаны жіберудің қажеті жоқ. Бәрібір рахмет!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Навигация үшін қай қолданбаны пайдаланасың?</string>
+    <string name="bug_hud_nav_oem">Көлігімнің төл навигациясы</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast HUD-та жебелерді тек Google Maps не Waze-ден ғана көрсете алады. Көлігіңнің төл навигациясы (Telenav…) деректерін DashCast оқи алмайтын форматта жібереді — бірақ ол HUD-та өзінің жебелерін әлдеқашан көрсетіп тұр. DashCast арқылы жебелер керек болса, Google Maps не Waze-мен маршрут сал.</string>
+    <string name="bug_hud_nav_understood">Түсінікті, Maps не Waze пайдаланамын</string>
+    <string name="bug_hud_nav_report_anyway">Есепті бәрібір жіберу</string>
 </resources>

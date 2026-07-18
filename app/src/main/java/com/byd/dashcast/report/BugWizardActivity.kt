@@ -21,6 +21,7 @@ import androidx.core.content.edit
 
 import com.byd.dashcast.R
 import com.byd.dashcast.hud.HudCaptureSupport
+import com.byd.dashcast.hud.MapNotificationListenerService
 import com.byd.dashcast.infrastructure.AdbLocalClient
 import com.byd.dashcast.util.AppLogger
 
@@ -54,6 +55,8 @@ class BugWizardActivity : Activity() {
     // State
     private var mCategory = -1
     private var mHudArrowsAnswer = ""   // "yes"/"unknown" (HUD gate); "no" never reaches send
+    private var mHudNavApp = ""         // which nav the user relies on for HUD arrows: "maps"/"waze"/"oem"/"other"
+    private var mActiveNav = ""         // ground truth: known-unsupported nav process running now (e.g. "com.telenav.app.arp")
     private var mAppPkg = ""
     private var mAppLabel = ""
     private var mSending = false
@@ -135,6 +138,7 @@ class BugWizardActivity : Activity() {
         // firmwares can't; then DashCast can't add them either and the report is noise (it skews the
         // debug). If the user says "no", we explain and do NOT send anything.
         if (CAT_KEYS.getOrNull(cat) == "hud") {
+            probeUnsupportedNav()   // ground-truth: is an unsupported OEM nav (Telenav…) running right now?
             askHudArrowCapability()
             return
         }
@@ -150,10 +154,10 @@ class BugWizardActivity : Activity() {
             .setMessage(getString(R.string.bug_hud_gate_msg))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.bug_hud_gate_yes)) { _, _ ->
-                mHudArrowsAnswer = "yes"; buildAppPage(); showStep(1)
+                mHudArrowsAnswer = "yes"; askHudNavApp()
             }
             .setNeutralButton(getString(R.string.bug_hud_gate_unknown)) { _, _ ->
-                mHudArrowsAnswer = "unknown"; buildAppPage(); showStep(1)
+                mHudArrowsAnswer = "unknown"; askHudNavApp()
             }
             .setNegativeButton(getString(R.string.bug_hud_gate_no)) { _, _ ->
                 AlertDialog.Builder(this)
@@ -163,6 +167,67 @@ class BugWizardActivity : Activity() {
                     .show()
             }
             .show()
+    }
+
+    /**
+     * Second HUD gate: WHICH nav app the user relies on for arrows. DashCast can only source HUD
+     * arrows from Google Maps / Waze notifications; the OEM built-in nav (Telenav…) delivers binary
+     * AIDL we can't read — and it already draws its OWN arrows on the HUD. This closes the blind spot
+     * where an arrow-capable-firmware Telenav user truthfully answered "yes" to the first gate and
+     * passed straight through, filing a report DashCast can't act on (INC-20260718-114114). Maps/Waze
+     * → continue; OEM/Other → explain the limitation, then finish (noise avoided) or report anyway.
+     */
+    private fun askHudNavApp() {
+        val opts = arrayOf(
+            getString(R.string.bug_hud_nav_maps),
+            getString(R.string.bug_hud_nav_waze),
+            getString(R.string.bug_hud_nav_oem),
+            getString(R.string.bug_wizard_other_app))
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.bug_hud_nav_title))
+            .setCancelable(false)
+            .setItems(opts) { _, which ->
+                when (which) {
+                    0 -> { mHudNavApp = "maps"; buildAppPage(); showStep(1) }
+                    1 -> { mHudNavApp = "waze"; buildAppPage(); showStep(1) }
+                    2 -> { mHudNavApp = "oem"; explainUnsupportedNav() }
+                    else -> { mHudNavApp = "other"; explainUnsupportedNav() }
+                }
+            }
+            .show()
+    }
+
+    /** OEM/Other nav: tell the user DashCast only mirrors Maps/Waze, then let them bail (nothing to
+     *  fix) or report anyway (recorded as HudNavApp so triage sees it is an unsupported-nav case). */
+    private fun explainUnsupportedNav() {
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.bug_hud_nav_unsupported_msg))
+            .setCancelable(false)
+            .setPositiveButton(getString(R.string.bug_hud_nav_understood)) { _, _ -> finish() }
+            .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                buildAppPage(); showStep(1)
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    /**
+     * Fire-and-forget: asks the uid-2000 daemon for the process list and records any running
+     * known-unsupported nav (Telenav…). Kicked off when the HUD category is chosen so the result is
+     * ready by send time. Because such navs post NO notification, this presence probe is the only way
+     * a "no arrow" report can name the actual culprit. No new permission — reuses the same privileged
+     * shell path as [detectClusterApp].
+     */
+    private fun probeUnsupportedNav() {
+        if (AdbLocalClient.isAdbTransportUnreachable()) return
+        AdbLocalClient.executeShellWithResult(this, "ps -A 2>/dev/null",
+            object : AdbLocalClient.Callback {
+                override fun onSuccess(out: String) {
+                    val hit = MapNotificationListenerService.firstUnsupportedNavProcess(out)
+                    if (!hit.isNullOrEmpty()) runOnUiThread { mActiveNav = hit }
+                }
+                override fun onError(err: String) {}
+            }, AdbLocalClient.PROBE_IDLE_TIMEOUT_MS)
     }
 
     // ── Step 1: app ──────────────────────────────────────────────────────────
@@ -345,6 +410,8 @@ class BugWizardActivity : Activity() {
         val caption = "Category: " + cats[mCategory] +
             "\nCategoryKey: " + CAT_KEYS.getOrElse(mCategory) { "other" } +
             (if (mHudArrowsAnswer.isEmpty()) "" else "\nHudArrows: $mHudArrowsAnswer") +
+            (if (mHudNavApp.isEmpty()) "" else "\nHudNavApp: $mHudNavApp") +
+            (if (mActiveNav.isEmpty()) "" else "\nActiveNav: $mActiveNav (unsupported — no notification path)") +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
             (if (details.isEmpty()) "" else "\nDetails: $details") +

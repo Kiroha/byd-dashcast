@@ -843,4 +843,14 @@
     <string name="bug_hud_gate_no">❌ Non, jamais</string>
     <string name="bug_hud_gate_unknown">❓ Je ne sais pas</string>
     <string name="bug_hud_no_arrows_msg">Alors le firmware de ton HUD ne peut pas afficher de flèches du tout — DashCast ne peut pas les ajouter non plus. Il n\'y a rien à corriger de notre côté, donc inutile d\'envoyer ce rapport. Merci quand même !</string>
+    <!-- HUD gate 2 — which nav app the user relies on. Closes the blind spot where an arrow-capable
+         Telenav/OEM car passes the first gate: DashCast only mirrors Maps/Waze; the OEM nav already
+         draws its own HUD arrows. Google Maps / Waze are brand names (translatable=false). -->
+    <string name="bug_hud_nav_title">Quelle appli utilises-tu pour la navigation ?</string>
+    <string name="bug_hud_nav_maps" translatable="false">Google Maps</string>
+    <string name="bug_hud_nav_waze" translatable="false">Waze</string>
+    <string name="bug_hud_nav_oem">La navigation d\'origine de ma voiture</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast ne peut refléter les flèches sur le HUD que depuis Google Maps ou Waze. La navigation d\'origine de ta voiture (Telenav…) transmet ses données dans un format que DashCast ne peut pas lire — mais elle affiche déjà ses propres flèches sur le HUD. Pour des flèches via DashCast, lance un guidage avec Google Maps ou Waze.</string>
+    <string name="bug_hud_nav_understood">Compris, j\'utiliserai Maps ou Waze</string>
+    <string name="bug_hud_nav_report_anyway">Envoyer le rapport quand même</string>
 </resources>

@@ -728,13 +728,37 @@ public final class MapNotificationListenerService extends NotificationListenerSe
 
     // Known navigation apps we do NOT support: their guidance is not exposed as a parseable
     // notification (e.g. Telenav delivers binary NaviInfo AIDL, not text). Prefix match on the pkg.
-    private static final String[] KNOWN_UNSUPPORTED_NAV = {
+    // Public + single source of truth so the bug reporter can also probe the running-process list and
+    // self-diagnose a "no arrow on HUD" report even when the unsupported nav posts NO notification at
+    // all — Telenav is the archetype: it never triggers the notification-driven maybeLogUnsupportedNav
+    // below, so before the presence probe such reports were mute about the real culprit
+    // (INC-20260718-114114).
+    public static final String[] KNOWN_UNSUPPORTED_NAV = {
         "com.telenav",              // Telenav (EU OEM nav: .app.arp / .app.isa)
         "com.sealnav",              // BYD Seal nav
         "com.autonavi", "com.amap", // AMap / AutoNavi
         "com.baidu.baidumaps",      // Baidu Maps
         "ru.yandex.yandexnavi", "ru.yandex.yandexmaps",  // Yandex
     };
+
+    /**
+     * Scans a {@code ps -A}-style process listing and returns the first running process whose name
+     * matches a {@link #KNOWN_UNSUPPORTED_NAV} prefix, or {@code null} if none is running. Lets the
+     * bug reporter record which unsupported OEM nav (if any) is live when a HUD "no arrow" report is
+     * filed — because such navs post no notification, this presence probe is the only way the report
+     * can name the culprit. Matches whole whitespace-delimited tokens so a substring can't false-hit.
+     */
+    public static String firstUnsupportedNavProcess(String procListing) {
+        if (procListing == null) return null;
+        for (String line : procListing.split("\\R")) {
+            for (String tok : line.trim().split("\\s+")) {
+                for (String p : KNOWN_UNSUPPORTED_NAV) {
+                    if (tok.startsWith(p)) return tok;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * Logs (throttled, once per ~30 s per app) when a notification comes from a KNOWN unsupported

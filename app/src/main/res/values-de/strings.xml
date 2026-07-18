@@ -801,4 +801,10 @@
     <string name="bug_hud_gate_no">❌ Nein, nie</string>
     <string name="bug_hud_gate_unknown">❓ Ich weiß es nicht</string>
     <string name="bug_hud_no_arrows_msg">Dann kann die Firmware deines HUDs überhaupt keine Abbiegepfeile anzeigen — DashCast kann sie auch nicht hinzufügen. Wir können hier nichts beheben, deshalb musst du diesen Bericht nicht senden. Trotzdem danke!</string>
+    <!-- HUD gate 2 — which nav app the user relies on (v1.6.140) -->
+    <string name="bug_hud_nav_title">Welche App nutzt du für die Navigation?</string>
+    <string name="bug_hud_nav_oem">Die Original-Navigation meines Autos</string>
+    <string name="bug_hud_nav_unsupported_msg">DashCast kann die Pfeile nur von Google Maps oder Waze auf dem HUD spiegeln. Die Original-Navigation deines Autos (Telenav…) übermittelt ihre Daten in einem Format, das DashCast nicht lesen kann — aber sie zeigt ihre eigenen Pfeile bereits auf dem HUD an. Wenn du Pfeile über DashCast willst, starte eine Zielführung mit Google Maps oder Waze.</string>
+    <string name="bug_hud_nav_understood">Verstanden, ich nutze Maps oder Waze</string>
+    <string name="bug_hud_nav_report_anyway">Bericht trotzdem senden</string>
 </resources>
