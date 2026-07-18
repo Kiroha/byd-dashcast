@@ -14,6 +14,10 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.6.145-beta (versionCode 586)
+
+Fixes the experimental CarPlay diagnostic tool, which shipped in the published `1.6.144-beta` in a form that fought the head unit's own system-bar setting. Its "fullscreen" button wrote `policy_control="immersive.full=<package>"`; `policy_control` is a single global string that the OEM "hide bars" toggle also owns as `immersive.full=*`, so scoping the write to one package narrowed that wildcard and made the status and navigation bars reappear for every other window — while CarPlay itself still did not go fullscreen. The button now hides the bars for **all** apps via the same `immersive.full=*` wildcard the OEM uses, and leaves the setting untouched when it is already global-immersive (`isOemGlobalImmersive`), so it can no longer clobber the OEM state; the prior value is still saved before any write and Restore reverts it. A new read-only **Dump state** button (`settings`/`dumpsys` only, no `wm` verb, so it trips neither the display-0 guard nor the DL2 resize guard) reports display-0 geometry, the focused CarPlay window, bar visibility and the AutoKit layer's `activeBuffer`/`crop` — which reveals whether any remaining black bands are the adapter's fixed render size, something `policy_control` cannot change. Diagnostic-only; no daemon protocol change and no CAN or HUD rendering change; DL3/DL5 unaffected. `1.6.144-beta` was already published with the clobbering version because this fix was committed after that release was built.
+
 ### 1.6.144-beta (versionCode 585)
 
 Restores HUD arrows in imperial locales and lands a corrected "is a route running?" gate. (`1.6.143-beta`/584 was built but never published; it is superseded by this release, which contains it in fixed form.)

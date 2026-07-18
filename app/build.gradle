@@ -509,8 +509,22 @@ android {
         // reports via Back), and the report now records only DashCast's OWN notification grant as a
         // boolean rather than uploading the driver's full list of notification-reading apps.
         // No daemon protocol change; no CAN or HUD rendering change. +1 string x13 locales.)
-        versionCode 585
-        versionName "1.6.144-beta"
+        // 586 = 1.6.145-beta (CarPlay diag tool fix. The "fullscreen" button wrote
+        // policy_control="immersive.full=<pkg>", but that is a single global string the head unit's
+        // OEM "hide bars" toggle also owns as immersive.full=* — scoping it to one package narrowed
+        // the wildcard and made the status/navigation bars reappear for every other window while
+        // CarPlay still did not go fullscreen. It now hides the bars for ALL apps via the same
+        // immersive.full=* wildcard the OEM uses, and skips the write entirely when policy_control is
+        // already global-immersive (isOemGlobalImmersive) — no more clobbering; the prior value is
+        // still saved and Restore reverts it. Adds a read-only "Dump state" button (settings/dumpsys
+        // only, no wm verb, so it trips neither the display-0 guard nor the DL2 resize guard) that
+        // reports display-0 geometry, the focused CarPlay window, bar visibility and the AutoKit
+        // layer's activeBuffer/crop — revealing whether remaining black bands are the adapter's fixed
+        // render, which policy_control cannot change. Diag-only; no daemon protocol change; DL3/DL5
+        // unaffected. 1.6.144 shipped with the clobbering version because this fix was committed
+        // after that release was built.)
+        versionCode 586
+        versionName "1.6.145-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
