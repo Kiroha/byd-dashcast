@@ -35,6 +35,18 @@ public final class CanNavigationBatches {
         return operations;
     }
 
+    /**
+     * OEM parity: the factory nav ({@code AmapService.sendNavigateInfoToCAN}) rewrites
+     * {@code INSTRUMENT_SEND_NAVI_STATUS} = active on EVERY guidance frame — its only always-written
+     * register. A cluster that treats it as a liveness heartbeat drops the guidance widget when it
+     * stops, so re-assert it per update. Deliberately a SINGLE-register batch: unlike
+     * {@link #navigationState}, it does NOT rewrite {@code SETTING_NAVI_SCREEN_STATUS} (the OEM
+     * writes that only at nav-start), keeping the per-frame heartbeat minimal.
+     */
+    public static List<CanBatchOperation> navStatusHeartbeat() {
+        return Arrays.asList(CanBatchOperation.naviStatus(CanWriteVerbs.NAVI_STATUS_ACTIVE));
+    }
+
     public static List<CanBatchOperation> simpleGuidance(int turnIconId, int distanceMeters) {
         return Arrays.asList(
                 CanBatchOperation.instrumentInt(CanWriteVerbs.INSTRUMENT_GUIDE_SIMPLE, turnIconId),

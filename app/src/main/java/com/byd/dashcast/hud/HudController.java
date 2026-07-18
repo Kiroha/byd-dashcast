@@ -104,6 +104,17 @@ public final class HudController {
 
         ensureHudActive();
 
+        // OEM parity (B2, ref. AmapService.sendNavigateInfoToCAN): the factory nav re-writes
+        // INSTRUMENT_SEND_NAVI_STATUS=active on EVERY guidance frame — its only always-written
+        // register. ensureHudActive() asserts it just once at nav-start; a cluster that reads it as a
+        // liveness heartbeat can drop the guidance widget on a long step with no icon/distance change.
+        // Re-assert it on every update (even deduped ones) so the widget survives. Best-effort.
+        try {
+            CanBusController.sendNaviStatusHeartbeat();
+        } catch (ProxyClient.ProxyException e) {
+            Log.w(TAG, "naviStatus heartbeat failed: " + e.getMessage());
+        }
+
         // 1. Simple guidance (icon + distance).
         if (data.iconId != lastIconId || data.distanceMeters != lastDistance) {
             try {

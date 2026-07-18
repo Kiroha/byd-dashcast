@@ -161,6 +161,20 @@ public final class CanBusController {
         sendBatch(CanNavigationBatches.navigationState(active));
     }
 
+    /**
+     * Re-assert the navigation status heartbeat ({@code INSTRUMENT_SEND_NAVI_STATUS} = active).
+     *
+     * <p>OEM parity ({@code AmapService.sendNavigateInfoToCAN}): the factory nav writes this
+     * register on every guidance frame; a cluster that reads it as a liveness signal hides the
+     * guidance widget if it stops. {@link com.byd.dashcast.hud.HudController} calls this once per
+     * navigation update so the widget survives long steps where the icon/distance don't change.
+     * Unlike {@link #setNaviActive(boolean)} it writes ONLY the status register, not the
+     * nav-screen-status setting the OEM writes only at nav-start.
+     */
+    public static void sendNaviStatusHeartbeat() throws ProxyClient.ProxyException {
+        sendBatch(CanNavigationBatches.navStatusHeartbeat());
+    }
+
     // ─── Primary guidance ─────────────────────────────────────────────────
 
     /**

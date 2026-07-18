@@ -446,8 +446,18 @@ android {
         // report anyway (recorded as HudNavApp). Closes the gate blind spot where an arrow-capable
         // Telenav user truthfully answered "yes" and passed straight through. No new permission (reuses
         // BugWizardActivity's existing privileged-shell probe); +5 strings x13 locales; DL3-only path.)
-        versionCode 581
-        versionName "1.6.140-beta"
+        // 582 = 1.6.141-beta (HUD nav-status heartbeat — OEM fidelity B2. Gap analysis vs the
+        // decompiled OEM AmapService.sendNavigateInfoToCAN showed the factory nav re-writes
+        // INSTRUMENT_SEND_NAVI_STATUS (0x43E0003A) = active on EVERY guidance frame — its only
+        // always-written register — whereas DashCast asserted it just once at nav-start
+        // (ensureHudActive). A cluster that treats that register as a liveness heartbeat can drop the
+        // guidance widget on a long step with no icon/distance change. HudController.updateNavigation
+        // now re-asserts it on every update via CanBusController.sendNaviStatusHeartbeat() (a new
+        // single-register batch that writes ONLY the status, NOT SETTING_NAVI_SCREEN_STATUS which the
+        // OEM writes only at start). Additive, best-effort, DL3-only, does not touch the
+        // video-confirmed icon/distance path. No daemon protocol change.)
+        versionCode 582
+        versionName "1.6.141-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
