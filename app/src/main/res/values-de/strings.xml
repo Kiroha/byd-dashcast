@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast kann die Pfeile nur von Google Maps oder Waze auf dem HUD spiegeln. Die Original-Navigation deines Autos (Telenav…) übermittelt ihre Daten in einem Format, das DashCast nicht lesen kann — aber sie zeigt ihre eigenen Pfeile bereits auf dem HUD an. Wenn du Pfeile über DashCast willst, starte eine Zielführung mit Google Maps oder Waze.</string>
     <string name="bug_hud_nav_understood">Verstanden, ich nutze Maps oder Waze</string>
     <string name="bug_hud_nav_report_anyway">Bericht trotzdem senden</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Es läuft gerade keine Route. DashCast bekommt die Richtungsangaben nur bei aktiver Zielführung: Google Maps oder Waze nur zu öffnen, reicht nicht. Starte eine Route zu einem Ziel und schau dann aufs HUD — der Pfeil sollte erscheinen.</string>
+    <string name="bug_hud_no_route_understood">Alles klar, ich starte eine Route</string>
 </resources>

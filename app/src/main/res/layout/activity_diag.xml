@@ -320,6 +320,8 @@
                 android:text="@string/diag_tab_aaos"/>
             <com.google.android.material.tabs.TabItem
                 android:text="@string/diag_tab_hud_dl3"/>
+            <com.google.android.material.tabs.TabItem
+                android:text="@string/diag_tab_carplay"/>
         </com.google.android.material.tabs.TabLayout>
 
         <!-- Content frame: only one panel visible at a time. Filled in DiagActivity. -->
@@ -395,6 +397,11 @@
             <include
                 android:id="@+id/panel_hud_dl3"
                 layout="@layout/include_diag_hud_dl3"/>
+
+            <!-- CarPlay / AutoKit fullscreen diagnostic panel (experimental) -->
+            <include
+                android:id="@+id/panel_carplay"
+                layout="@layout/include_diag_carplay"/>
 
             <!-- All other tabs share the same "coming soon" panel — instantiated and toggled by DiagActivity -->
             <include

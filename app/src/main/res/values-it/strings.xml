@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast può riflettere le frecce sull\'HUD solo da Google Maps o Waze. La navigazione originale della tua auto (Telenav…) trasmette i suoi dati in un formato che DashCast non riesce a leggere — ma mostra già le sue frecce sull\'HUD. Per avere le frecce tramite DashCast, avvia una navigazione con Google Maps o Waze.</string>
     <string name="bug_hud_nav_understood">Capito, userò Maps o Waze</string>
     <string name="bug_hud_nav_report_anyway">Invia comunque la segnalazione</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Non c\'è nessun percorso in corso. DashCast riceve le indicazioni solo mentre la navigazione è attiva: aprire Google Maps o Waze non basta. Avvia un percorso verso una destinazione, poi guarda l\'HUD — la freccia dovrebbe comparire.</string>
+    <string name="bug_hud_no_route_understood">Capito, avvio un percorso</string>
 </resources>

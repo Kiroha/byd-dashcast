@@ -807,4 +807,7 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast может выводить стрелки на HUD только из Google Maps или Waze. Штатная навигация твоей машины (Telenav…) передаёт данные в формате, который DashCast не может прочитать, — но она и так уже показывает свои собственные стрелки на HUD. Чтобы стрелки отображались через DashCast, запусти навигацию в Google Maps или Waze.</string>
     <string name="bug_hud_nav_understood">Понятно, буду пользоваться Maps или Waze</string>
     <string name="bug_hud_nav_report_anyway">Всё равно отправить отчёт</string>
+    <!-- HUD gate 3 — no route running (v1.6.143) -->
+    <string name="bug_hud_no_route_msg">Сейчас маршрут не проложен. DashCast получает подсказки о поворотах только при активном ведении по маршруту: просто открыть Google Maps или Waze недостаточно. Проложи маршрут до нужного места и запусти навигацию, а потом посмотри на HUD — стрелка должна появиться.</string>
+    <string name="bug_hud_no_route_understood">Понятно, сейчас проложу маршрут</string>
 </resources>

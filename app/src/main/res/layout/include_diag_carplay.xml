@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CarPlay / AutoKit fullscreen diagnostic panel. Dev tool: text in English / set in code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:ignore="HardcodedText">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CarPlay fullscreen (experimental)"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/md_on_surface"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Forces a CarPlay/AutoKit adapter app fullscreen on the MAIN head-unit screen via policy_control (immersive.full). Experimental — works on Android 10 head units, fully reversible via Restore."
+        android:textSize="13sp"
+        android:textColor="@color/md_on_surface_variant"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_carplay_detect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_carplay_fullscreen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_carplay_restore"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/tv_carplay_output"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:textColor="@color/md_on_surface_variant"
+            android:textIsSelectable="true"/>
+
+    </ScrollView>
+
+</LinearLayout>

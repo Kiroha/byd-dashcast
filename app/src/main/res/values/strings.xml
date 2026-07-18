@@ -346,6 +346,7 @@
     <string name="diag_tab_voice">Voice (alpha)</string>
     <string name="diag_tab_aaos" translatable="false">AAOS</string>
     <string name="diag_tab_hud_dl3" translatable="false">HUD DL3</string>
+    <string name="diag_tab_carplay" translatable="false">CarPlay</string>
 
     <!-- Diag — Voice PoC panel (v1.2.43-beta, audio-chain validator) -->
     <string name="diag_voice_header_title">Pilotage vocal — PoC chaîne audio</string>
@@ -853,4 +854,8 @@
     <string name="bug_hud_nav_unsupported_msg">DashCast ne peut refléter les flèches sur le HUD que depuis Google Maps ou Waze. La navigation d\'origine de ta voiture (Telenav…) transmet ses données dans un format que DashCast ne peut pas lire — mais elle affiche déjà ses propres flèches sur le HUD. Pour des flèches via DashCast, lance un guidage avec Google Maps ou Waze.</string>
     <string name="bug_hud_nav_understood">Compris, j\'utiliserai Maps ou Waze</string>
     <string name="bug_hud_nav_report_anyway">Envoyer le rapport quand même</string>
+    <!-- HUD gate 3 — no route running. DashCast only receives directions while the nav app is
+         actively guiding; the dominant cause of "no arrow" reports is that no route was started. -->
+    <string name="bug_hud_no_route_msg">Aucun itinéraire n\'est en cours. DashCast ne reçoit les directions que pendant un guidage actif : ouvrir Google Maps ou Waze ne suffit pas. Lance un itinéraire vers une destination, puis regarde le HUD — la flèche devrait apparaître.</string>
+    <string name="bug_hud_no_route_understood">Compris, je vais lancer un itinéraire</string>
 </resources>

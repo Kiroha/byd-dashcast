@@ -188,12 +188,36 @@ class BugWizardActivity : Activity() {
             .setCancelable(false)
             .setItems(opts) { _, which ->
                 when (which) {
-                    0 -> { mHudNavApp = "maps"; buildAppPage(); showStep(1) }
-                    1 -> { mHudNavApp = "waze"; buildAppPage(); showStep(1) }
+                    0 -> { mHudNavApp = "maps"; continueHudAfterNavApp() }
+                    1 -> { mHudNavApp = "waze"; continueHudAfterNavApp() }
                     2 -> { mHudNavApp = "oem"; explainUnsupportedNav() }
                     else -> { mHudNavApp = "other"; explainUnsupportedNav() }
                 }
             }
+            .show()
+    }
+
+    /**
+     * Supported nav app chosen — but DashCast only receives turn data while a route is actually being
+     * guided (the nav app posts its turn-by-turn notification only then). If no supported nav
+     * notification has arrived since the app started, the driver almost certainly never started a
+     * route: that is the dominant cause of "no arrow on HUD" reports and the previous two gates let it
+     * through, because the HUD *is* arrow-capable and the app *is* supported. Field evidence
+     * (2026-07-18): a report filed with Waze idle on its "where to?" screen at 0 km/h. Explain, then
+     * let them bail or report anyway.
+     */
+    private fun continueHudAfterNavApp() {
+        if (MapNotificationListenerService.hasSeenSupportedNav()) {
+            buildAppPage(); showStep(1); return
+        }
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.bug_hud_no_route_msg))
+            .setCancelable(false)
+            .setPositiveButton(getString(R.string.bug_hud_no_route_understood)) { _, _ -> finish() }
+            .setNeutralButton(getString(R.string.bug_hud_nav_report_anyway)) { _, _ ->
+                buildAppPage(); showStep(1)
+            }
+            .setOnCancelListener { finish() }
             .show()
     }
 
@@ -412,6 +436,10 @@ class BugWizardActivity : Activity() {
             (if (mHudArrowsAnswer.isEmpty()) "" else "\nHudArrows: $mHudArrowsAnswer") +
             (if (mHudNavApp.isEmpty()) "" else "\nHudNavApp: $mHudNavApp") +
             (if (mActiveNav.isEmpty()) "" else "\nActiveNav: $mActiveNav (unsupported — no notification path)") +
+            // Ground truth for triage: did a SUPPORTED nav app actually deliver a guidance frame this
+            // session? "no" means no route was running, which alone explains a "no arrow" report.
+            (if (mHudArrowsAnswer.isEmpty()) "" else "\nNavSeen: " +
+                (if (MapNotificationListenerService.hasSeenSupportedNav()) "yes" else "no")) +
             "\nApp: " + (if (mAppPkg.isEmpty()) mAppLabel else "$mAppLabel ($mAppPkg)") +
             "\nIssue: " + mSelectedIssue +
             (if (details.isEmpty()) "" else "\nDetails: $details") +
