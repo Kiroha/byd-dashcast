@@ -523,8 +523,16 @@ android {
         // render, which policy_control cannot change. Diag-only; no daemon protocol change; DL3/DL5
         // unaffected. 1.6.144 shipped with the clobbering version because this fix was committed
         // after that release was built.)
-        versionCode 586
-        versionName "1.6.145-beta"
+        // 587 = 1.6.146-beta (INC-20260718-220538 lifecycle hardening. MirrorDaemon startup now
+        // reuses a live ServiceManager Binder only when one daemon process and its PID-bound build
+        // marker prove it came from this APK; stale OTA daemons, missing markers, duplicate PIDs,
+        // dead binders, and broadcast-only ROMs retain the conservative kill/relaunch fallback.
+        // The reuse check uses bounded dadb shell reads, never a blocking remote Binder transact.
+        // Restarting projection after stopProjectionNoAdb now re-arms ClusterService through a
+        // foreground start action, so a later Activity unbind cannot destroy an active projection.
+        // Existing DL3 single-OS, boot auto-launch, fission, DL4, and DL5 guards are preserved.)
+        versionCode 587
+        versionName "1.6.146-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
