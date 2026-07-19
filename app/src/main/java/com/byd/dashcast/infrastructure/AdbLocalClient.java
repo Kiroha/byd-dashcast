@@ -323,9 +323,9 @@ public class AdbLocalClient {
     // (also removed). No external caller across the codebase.
 
     // Grep pattern uses the [m] trick to prevent grep from matching its own cmdline.
-    // "[m]irrordaemon" matches "mirrordaemon" in process names but not in the
-    // grep cmdline (which literally contains "[m]irrordaemon").
-    private static final String DAEMON_GREP = "grep -E '[m]irrordaemon'";
+        // Character-class tricks match both runtime names without matching grep's own cmdline.
+        private static final String DAEMON_GREP =
+            "grep -E '[m]irrordaemon|[b]yd[.]mirror[.]daemon'";
     private static final String KILL_DAEMON_CMD =
             "ps -A | " + DAEMON_GREP + " | awk '{print $2}'" +
             " | xargs -r kill -9 2>/dev/null; echo killed";
@@ -343,16 +343,38 @@ public class AdbLocalClient {
         sExecutor.execute(new Runnable() {
             @Override public void run() {
                 try (Dadb dadb = connect(context, PROBE_IDLE_TIMEOUT_MS)) {
-                    // Kill existing daemon if present.
                     // IMPORTANT: the daemon renames itself to "com.byd.dashcast.mirrordaemon" via
                     // setArgV0(), not "byd.mirror.daemon" → grep on both patterns.
                     String psOut = dadb.shell(
                             "ps -A | " + DAEMON_GREP + " 2>&1").getAllOutput().trim();
+                int daemonPid = MirrorDaemonReusePolicy.singleProcessPid(psOut);
+                String versionMarker = daemonPid > 0
+                    ? dadb.shell("cat "
+                        + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE
+                        + " 2>/dev/null").getAllOutput().trim()
+                    : "";
+                    IBinder knownBinder = DaemonBinderResolver.getRegisteredBinderOrNull();
+                boolean binderAlive = knownBinder != null && knownBinder.isBinderAlive();
+                if (MirrorDaemonReusePolicy.shouldReuse(binderAlive, daemonPid,
+                    versionMarker, com.byd.dashcast.BuildConfig.VERSION_CODE)) {
+                AppLogger.i(TAG, "MirrorDaemon already active for build "
+                    + com.byd.dashcast.BuildConfig.VERSION_CODE + " pid=" + daemonPid
+                    + " — reusing Binder");
+                noteTransportSuccess();
+                return;
+                }
+                if (!psOut.isEmpty()) {
+                AppLogger.i(TAG, "MirrorDaemon identity stale, duplicate, or unavailable"
+                    + " (pid=" + daemonPid + ", marker=" + versionMarker
+                    + ", binder=" + binderAlive + ") — restarting");
+                }
                     if (!psOut.isEmpty()) {
                         dadb.shell(KILL_DAEMON_CMD);
                         AppLogger.i(TAG, "Old MirrorDaemon(s) killed.");
                         Thread.sleep(500);
                     }
+                dadb.shell("rm -f "
+                    + com.byd.dashcast.proxy.daemon.MirrorDaemon.VERSION_FILE);
                     String apkPath = context.getPackageCodePath();
                     // Prune old per-launch daemon logs, keeping the 5 most recent:
                     // one file is created per daemon start and nothing ever deleted

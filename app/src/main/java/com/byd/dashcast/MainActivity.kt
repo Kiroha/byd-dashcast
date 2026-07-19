@@ -1300,9 +1300,14 @@ class MainActivity : AppCompatActivity(),
             }
             mNavCoordinator?.setStatusPending()
         } else {
-            // Service already up → manually restart projection natively without ADB.
-            AppLogger.log(TAG, "Calling native restartProjection via ClusterService")
-            svc.restartProjection()
+            // stopProjectionNoAdb() may have removed the service's started state while this
+            // Activity kept it alive through the binding. Re-arm it before native restart so a
+            // later Activity recreation cannot destroy an active projection on unbind.
+            AppLogger.log(TAG, "Re-arming ClusterService before native projection restart")
+            val restartIntent = Intent(this, ClusterService::class.java).apply {
+                action = ClusterService.ACTION_RESTART_PROJECTION
+            }
+            startForegroundService(restartIntent)
         }
     }
 
