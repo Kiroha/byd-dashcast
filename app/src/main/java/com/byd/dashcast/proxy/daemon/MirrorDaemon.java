@@ -108,6 +108,10 @@ public class MirrorDaemon {
     /** TRANSACT 17 — focus the task belonging to a selected tactile Layout slot. */
     public static final int TRANSACT_FOCUS_SLOT        = 17;
 
+        /** PID-bound build marker used by the bounded dadb startup preflight. */
+        public static final String VERSION_FILE =
+            "/data/local/tmp/dashcast_mirrordaemon_ver";
+
     // Mirror state (shared between threads via Binder thread pool)
     private static volatile IBinder sMirrorToken     = null;
     private static DeathLease       sMirrorOwnerLease = null;
@@ -254,6 +258,8 @@ public class MirrorDaemon {
                 out("app uid resolution failed (fall open): " + t.getMessage());
             }
 
+            writeVersionFile();
+
             // Enregistrer dans ServiceManager (accessible par uid=2000) :
             // Remplace registerReceiver (interdit depuis systemMain() — AMS rejette
             // the unregistered IApplicationThread → SecurityException).
@@ -396,6 +402,16 @@ public class MirrorDaemon {
                 default:
                     return super.onTransact(code, data, reply, flags);
             }
+        }
+    }
+
+    private static void writeVersionFile() {
+        try (FileOutputStream fos = new FileOutputStream(new File(VERSION_FILE))) {
+            String identity = android.os.Process.myPid() + ":"
+                    + com.byd.dashcast.BuildConfig.VERSION_CODE;
+            fos.write(identity.getBytes());
+        } catch (Throwable t) {
+            out("version marker write failed (startup remains available): " + t.getMessage());
         }
     }
 

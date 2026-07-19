@@ -149,6 +149,9 @@ public class ClusterService extends Service
 
     /** Set by BootReceiver when it starts us at boot: also auto-launch the configured app. */
     public static final String EXTRA_BOOT_AUTOLAUNCH = "boot_autolaunch";
+        /** Re-arms a stopped-but-still-bound service before restarting native projection. */
+        public static final String ACTION_RESTART_PROJECTION =
+            "com.byd.dashcast.action.RESTART_CLUSTER_PROJECTION";
     /** The app this service auto-launched at boot (headless), so MainActivity doesn't relaunch it
      *  and force-stop a running nav. Null until a boot auto-launch succeeds. */
     public static volatile String sBootLaunchedPkg = null;
@@ -232,6 +235,9 @@ public class ClusterService extends Service
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_RESTART_PROJECTION.equals(intent.getAction())) {
+            restartProjection();
+        }
         // Headless boot auto-launch: BootReceiver starts us with EXTRA_BOOT_AUTOLAUNCH so the
         // configured app is launched onto the cluster at startup WITHOUT the user opening DashCast
         // (INC-20260716-091016). Arm it here (intent is delivered to onStartCommand); the actual
@@ -1287,11 +1293,9 @@ public class ClusterService extends Service
 
     public void restartProjection() {
         AppLogger.log(TAG, "restartProjection requested natively");
-        if (isDl3SingleOsFission()) {
-            AppLogger.w(TAG, "DL3 single-OS fission — skipping restartProjection (no projectable cluster display)");
-            return;
-        }
-        if (mDisplayHelper != null) mDisplayHelper.start();
+        mProjectionActive = true;
+        startForeground(NOTIF_ID, buildNotification(getString(R.string.notif_cluster_initializing)));
+        startNativeProjection();
     }
 
     public void stopProjectionNoAdb() {
