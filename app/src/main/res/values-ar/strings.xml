@@ -604,6 +604,7 @@
     <string name="adb_transport_unresponsive">يقبل ADB الاتصال لكنه لا يستجيب للأوامر. أعد تشغيل تصحيح أخطاء Android ‏(adbd)، ثم أعد فتح DashCast.</string>
     <string name="adb_transport_key_unauthorized">يمكن الوصول إلى ADB، لكن مفتاح DashCast غير مصرح به. وافق على طلب «السماح بتصحيح أخطاء USB» مع «السماح دائمًا»، ثم أعد فتح DashCast.</string>
     <string name="adb_transport_unreachable">لا يمكن الوصول إلى ADB عبر TCP في هذه السيارة. فعّل تصحيح أخطاء Android عبر TCP على المنفذ 5555، ثم أعد فتح DashCast.</string>
+    <string name="adb_transport_handshake">فشل تأكيد اتصال ADB مؤقتًا. سيعيد DashCast المحاولة تلقائيًا.</string>
     <string name="fo_status_autoactivate">جارٍ التفعيل التلقائي للتخطيط…</string>
     <string name="fo_status_autolayout_err_fmt">خطأ التخطيط التلقائي: %1$s</string>
     <string name="fo_status_create_fmt">جارٍ إنشاء الفتحة لـ %1$s…</string>

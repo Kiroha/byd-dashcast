@@ -51,6 +51,11 @@ class ClusterInputForwarder(context: Context) {
     private var mAvailable = false
     @Volatile private var mTouchDownTime = 0L
 
+    // v1.6.147 — one-shot marker so the unprivileged direct path reports itself exactly once
+    // per process instead of staying silent. INC-20260724-102136 was hard to diagnose precisely
+    // because every touch took this path and logged nothing at all.
+    @Volatile private var mDirectInjectLogged = false
+
     // 1.2.31 — pre-allocated pointer arrays reused across touch events. MotionEvent.obtain(...)
     // only reads the first `pointerCount` entries (AOSP copies the data → safe to reuse). Access
     // serialised via mTouchInjectLock (cluster touch driven by the UI thread AND Beta probes).
@@ -77,7 +82,11 @@ class ClusterInputForwarder(context: Context) {
                     .getDeclaredMethod("setDisplayId", Int::class.javaPrimitiveType)
                     .apply { isAccessible = true }
             } catch (ignored: Exception) {
-                // @hide API not available on this ROM — injection without displayId
+                // @hide API not available on this ROM — injection without displayId. v1.6.147:
+                // no longer swallowed silently: without it, directly-injected events carry
+                // displayId=0 and land on the head unit instead of the cluster.
+                AppLogger.w(TAG, "MotionEvent.setDisplayId unavailable — "
+                        + "direct-path injection would target display 0, not the cluster")
             }
             // v1.2.11 — same for KeyEvent so injected keys reach the cluster display.
             try {
@@ -117,7 +126,14 @@ class ClusterInputForwarder(context: Context) {
      */
     fun setDaemonBinder(binder: IBinder?) {
         mDaemonBinder = binder
-        AppLogger.i(TAG, "Daemon Binder connected — touch/key injection via uid=2000")
+        // v1.6.147 — the old message claimed "connected" even when handed null, which would have
+        // masked the very failure of INC-20260724-102136. Report what actually happened.
+        if (binder != null) {
+            AppLogger.i(TAG, "Daemon Binder connected — touch/key injection via uid=2000")
+        } else {
+            AppLogger.w(TAG, "Daemon Binder cleared — touch/key injection falls back to the "
+                    + "unprivileged direct path (events will not reach the cluster)")
+        }
     }
 
     /**
@@ -227,7 +243,16 @@ class ClusterInputForwarder(context: Context) {
                             AppLogger.d(TAG, "setDisplayId via reflection failed: " + e.message)
                         }
                     }
-                    mInjectMethod?.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC)
+                    val injected = mInjectMethod?.invoke(mInputManager, ev, INJECT_INPUT_EVENT_MODE_ASYNC)
+                    // v1.6.147 — the return value used to be discarded, so a direct path that
+                    // never reaches the cluster looked identical to a working one. Report the
+                    // outcome once per process (see mDirectInjectLogged).
+                    if (!mDirectInjectLogged) {
+                        mDirectInjectLogged = true
+                        AppLogger.w(TAG, "direct-path injection (no daemon Binder): ret=$injected "
+                                + "displayId=$mClusterDisplayId setDisplayId="
+                                + "${mSetDisplayIdMethod != null} — cluster touch likely inert")
+                    }
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "injectTouchAtMulti failed action=$actionMasked ptrs=$n disp=$mClusterDisplayId", e)
                 } finally {

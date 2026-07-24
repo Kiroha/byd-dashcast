@@ -41,7 +41,9 @@ import java.net.Socket;
  */
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -466,6 +468,15 @@ public class AdbLocalClient {
     public static final String XPORT_AUTH        = "KEY_UNAUTHORIZED";
     /** TCP and ADB handshake succeeded, but adbd stopped answering stream reads. */
     public static final String XPORT_UNRESPONSIVE = "ADB_UNRESPONSIVE";
+    /**
+     * TCP port 5555 answered but the ADB handshake did not complete — TRANSIENT.
+     *
+     * <p>Distinct from {@link #XPORT_NO_LISTENER} on purpose: the listener is proven alive by
+     * the probe, so this state must never advise enabling {@code adb tcpip 5555}. Typically a
+     * colliding transport (adbd tears down competing A_CNXN handshakes); {@link #connect} has
+     * already retried once by the time this is published.
+     */
+    public static final String XPORT_HANDSHAKE   = "HANDSHAKE_FAILED";
 
     private static volatile String  sTransportState    = null; // null = healthy / untested
     private static volatile boolean sTransportMsgShown = false;
@@ -493,6 +504,11 @@ public class AdbLocalClient {
             return "ADB over TCP accepts connections but does not answer ADB commands. "
                  + "Restart Android debugging/adbd on the head unit, then reopen DashCast.";
         }
+        if (XPORT_HANDSHAKE.equals(s)) {
+            // Port 5555 answered the TCP probe: never tell the tester to enable ADB-over-TCP.
+            return "ADB port 5555 is reachable but the ADB handshake did not complete "
+                 + "(transient — usually two connections racing). DashCast retries automatically.";
+        }
         return "ADB over TCP (port 5555) is not reachable on this unit. Cluster projection needs "
              + "the uid-2000 proxy daemon, which connects over local ADB. Enable ADB debugging over "
              + "TCP (e.g. `adb tcpip 5555`) and keep it enabled.";
@@ -513,6 +529,8 @@ public class AdbLocalClient {
                         toast = ctx.getString(R.string.adb_transport_key_unauthorized);
                     } else if (XPORT_UNRESPONSIVE.equals(state)) {
                         toast = ctx.getString(R.string.adb_transport_unresponsive);
+                    } else if (XPORT_HANDSHAKE.equals(state)) {
+                        toast = ctx.getString(R.string.adb_transport_handshake);
                     } else {
                         toast = ctx.getString(R.string.adb_transport_unreachable);
                     }
@@ -614,6 +632,28 @@ public class AdbLocalClient {
         } catch (Throwable ignore) { /* a diagnostic notice must never crash a bg thread */ }
     }
 
+    /**
+     * Process-wide gate SERIALISING the local-ADB connect + handshake.
+     *
+     * <p>ClusterService.onCreate fans out three independent local-ADB connects within ~45 ms
+     * ({@link #startMirrorDaemon}, {@link #dumpSignatureAndPermissions} and the
+     * {@code ro.build.system.fission_single_os} getprop). adbd tears down colliding transports,
+     * so the loser's handshake dies with {@code AdbConnectException("Connection handshake
+     * failed")} on a port that is perfectly alive. Only the handshake itself is gated — the
+     * shell command runs on the returned {@link Dadb} outside the critical section, so a long
+     * dumpsys never blocks another caller's connect.
+     *
+     * <p>Deadlock-free by construction: {@link #connect(Context)} delegates to
+     * {@link #connect(Context, int)} which is the ONLY acquirer, nothing inside the gated
+     * region re-enters connect(), and the gate is released in a {@code finally} that runs
+     * before the surrounding catch/retry logic (never held across a sleep).
+     */
+    private static final Semaphore sHandshakeGate = new Semaphore(1, true);
+    /** Never wedge a caller behind the gate: past this it simply proceeds unserialised. */
+    private static final long HANDSHAKE_GATE_WAIT_MS = 30_000L;
+    /** Backoff before the single silent retry of a handshake that lost a transport race. */
+    private static final long HANDSHAKE_RETRY_DELAY_MS = 400L;
+
     private static Dadb connect(Context context) throws Exception {
         return connect(context, SHELL_IDLE_TIMEOUT_MS);
     }
@@ -664,6 +704,7 @@ public class AdbLocalClient {
         // 'Allow USB debugging' popup if this app's RSA key is not yet authorized.
         int retries = 5;
         Exception lastE = null;
+        boolean handshakeRetried = false;
         while (retries > 0) {
             Dadb d = null;
             try {
@@ -673,12 +714,27 @@ public class AdbLocalClient {
                     sFreshKeyAwaitingAuthorization
                         ? NEW_KEY_AUTH_IDLE_TIMEOUT_MS
                         : FIRST_OPERATION_IDLE_TIMEOUT_MS);
-                d = Dadb.create(
-                    "localhost", ADB_PORT, keyPair,
-                        CONNECT_PROBE_MS, effectiveTimeout, true);
-                // Dadb.create() is lazy. Force A_CNXN/A_AUTH now so this retry loop actually
-                // surrounds the authorization handshake rather than returning an unopened client.
-                d.supportsFeature("shell_v2");
+                // Serialise ONLY create()+handshake (see sHandshakeGate). The inner finally
+                // releases the gate before the catch below runs, so no retry sleep and no shell
+                // command is ever executed while holding it.
+                boolean gateHeld = false;
+                try {
+                    gateHeld = sHandshakeGate.tryAcquire(
+                            HANDSHAKE_GATE_WAIT_MS, TimeUnit.MILLISECONDS);
+                    if (!gateHeld) {
+                        AppLogger.w(TAG, "ADB handshake gate busy > " + HANDSHAKE_GATE_WAIT_MS
+                                + " ms — proceeding unserialised");
+                    }
+                    d = Dadb.create(
+                        "localhost", ADB_PORT, keyPair,
+                            CONNECT_PROBE_MS, effectiveTimeout, true);
+                    // Dadb.create() is lazy. Force A_CNXN/A_AUTH now so this retry loop actually
+                    // surrounds the authorization handshake rather than returning an unopened
+                    // client.
+                    d.supportsFeature("shell_v2");
+                } finally {
+                    if (gateHeld) sHandshakeGate.release();
+                }
                 sPortRefused = false;   // full success: port reachable + key authorized
                 if (!XPORT_UNRESPONSIVE.equals(sTransportState)) clearTransport();
                 return d;
@@ -691,7 +747,24 @@ public class AdbLocalClient {
                     Thread.currentThread().interrupt();
                     throw e;
                 }
-                String state = AdbTransportFailure.INSTANCE.classify(e);
+                // The TCP probe above succeeded milliseconds ago → port 5555 IS alive. Classify
+                // WITH that fact so an ADB-level failure can never be reported as "no listener"
+                // (which used to toast "run adb tcpip 5555" for a port working 429 ms earlier).
+                String state = AdbTransportFailure.INSTANCE.classify(e, true);
+                // Transient handshake failure: retry ONCE before ANY transport verdict is
+                // published — no toast, no latched sTransportState, no circuit-breaker trip.
+                if (XPORT_HANDSHAKE.equals(state) && !handshakeRetried) {
+                    handshakeRetried = true;
+                    AppLogger.w(TAG, "ADB handshake failed right after a successful TCP probe"
+                            + " (colliding transport?) — one silent retry: " + e);
+                    try {
+                        Thread.sleep(HANDSHAKE_RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw e;
+                    }
+                    continue;   // does not consume the auth-popup retry budget
+                }
                 if (XPORT_REFUSED.equals(state)) sPortRefused = true;
                 if (state != null && !XPORT_UNRESPONSIVE.equals(state)) {
                     markTransport(context, state);

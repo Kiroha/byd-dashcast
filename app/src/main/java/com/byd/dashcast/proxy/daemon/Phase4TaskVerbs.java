@@ -1032,6 +1032,99 @@ public final class Phase4TaskVerbs {
      *
      * @return multi-line log of every stack inspected and removed.
      */
+    /** {@link #getAtmTaskList} that never throws; {@code null} means "could not be read". */
+    private static java.util.List<?> getAtmTaskListNoThrow(Object iAtm) {
+        try {
+            return getAtmTaskList(iAtm);
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    /**
+     * Re-reads the stack list and reports whether {@code sid} is STILL there.
+     *
+     * <p>{@code IActivityTaskManager.removeStack(int)} does NOT delete the stack object: it
+     * finishes the tasks <em>inside</em> the stack. On an already-empty orphan it is therefore
+     * a silent no-op that returns normally, and cleanFissionStacks used to count that as a
+     * removal — on-car it logged {@code removed=1} eleven consecutive times while the orphaned
+     * split-screen-primary stack survived every pass, and the survivor kept NPE-ing
+     * WindowManager ({@code ActivityStack.getBounds()} → {@code onConfigurationChanged:663})
+     * on the next FREEFORM cluster launch. Nothing may be counted as removed until the stack
+     * list itself confirms the disappearance.
+     *
+     * @return {@code TRUE} still present, {@code FALSE} gone, {@code null} list unreadable.
+     */
+    private static Boolean stackStillPresent(Object iAtm, int sid) {
+        java.util.List<?> fresh = getAtmTaskListNoThrow(iAtm);
+        if (fresh == null) return null;
+        for (Object si : fresh) {
+            if (si == null) continue;
+            if (getStackOrRootTaskId(si) == sid) return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
+    }
+
+    /**
+     * MANDATORY SAFETY GUARD for the {@code removeStacksInWindowingModes} escalation: that verb
+     * is display-agnostic and dissolves EVERY split-screen stack of the system. A live cluster
+     * projection legitimately sits in a SPLIT_SCREEN_PRIMARY stack on DiLink 3
+     * ({@link #moveAndResize} → setTaskWindowingModeWithBounds drives BYD's
+     * setCustomTaskWindowingModeSplitScreenPrimary with modes {5,3,0}), so escalating while any
+     * split stack still holds a task would kill the user's running projection.
+     *
+     * <p>Checks EVERY display, not just the fission one. A split stack whose child-task array
+     * cannot be read counts as NON-empty (defensive), exactly like the per-stack keep below.
+     *
+     * @return {@code true} only when every split-screen stack in the system is task-less.
+     */
+    private static boolean allSplitStacksEmpty(java.util.List<?> stacks) {
+        if (stacks == null || stacks.isEmpty()) return false;
+        for (Object si : stacks) {
+            if (si == null) continue;
+            int wm = readWindowingMode(si);
+            if (wm != WM_SPLIT_SCREEN_PRIMARY && wm != WM_SPLIT_SCREEN_SECONDARY) continue;
+            int[] tids = getChildTaskIds(si);
+            if (tids == null || tids.length != 0) return false;   // unreadable ⇒ assume live
+        }
+        return true;
+    }
+
+    /**
+     * Reflective, never-throwing call to {@code removeStacksInWindowingModes(int[])}
+     * (Android ≤11 / DiLink 3) or its Android-12+ name {@code removeRootTasksInWindowingModes}
+     * (DiLink 5). Unlike {@code removeStack(int)} this routes to
+     * {@code ActivityStackSupervisor.removeStack(stack)} and destroys the stack OBJECT — the
+     * only Q-surface verb that can dissolve a 0-task stack.
+     *
+     * <p>Callers MUST gate this on {@link #allSplitStacksEmpty}.
+     *
+     * @return the verb actually invoked, or {@code null} when absent / it threw.
+     */
+    private static String removeStacksInWindowingModesNoThrow(Object iAtm, int[] modes,
+                                                              StringBuilder log) {
+        for (String verb : new String[]{
+                "removeStacksInWindowingModes", "removeRootTasksInWindowingModes"}) {
+            for (Method cand : iAtm.getClass().getMethods()) {
+                if (!verb.equals(cand.getName())) continue;
+                Class<?>[] pt = cand.getParameterTypes();
+                if (pt.length != 1 || pt[0] != int[].class) continue;
+                try {
+                    cand.invoke(iAtm, (Object) modes);
+                    return verb;
+                } catch (Throwable rex) {
+                    Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
+                            && rex.getCause() != null) ? rex.getCause() : rex;
+                    log.append("  ERR    ").append(verb).append(": ")
+                       .append(c.getClass().getSimpleName())
+                       .append(": ").append(c.getMessage()).append('\n');
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     public static String cleanFissionStacks(int displayId) {
         StringBuilder log = new StringBuilder();
         log.append("== cleanFissionStacks display=").append(displayId).append(" ==\n");
@@ -1057,6 +1150,9 @@ public final class Phase4TaskVerbs {
             }
 
             int removed = 0, kept = 0;
+            // removeStacksInWindowingModes is system-wide: one escalation per pass is enough
+            // (it dissolves every empty split stack at once) and keeps the blast radius minimal.
+            boolean escalated = false;
             for (Object si : stacks) {
                 if (si == null) continue;
                 // DiLink 3: stackId field / DiLink 5 Android 12: taskId field
@@ -1144,7 +1240,50 @@ public final class Phase4TaskVerbs {
                        .append(" tasks=0")
                        .append(splitStack ? " (empty split-screen zombie)" : " (empty zombie)")
                        .append('\n');
-                    removed++;
+                    // removeStack(int) finishes the tasks IN a stack — on a 0-task orphan it is
+                    // a silent no-op, so the invoke returning normally proves NOTHING. Verify
+                    // against the live stack list before claiming (or counting) a removal.
+                    Boolean present = stackStillPresent(iAtm, sid);
+                    if (Boolean.FALSE.equals(present)) {
+                        log.append("  REMOVE-VERIFIED stackId=").append(sid).append('\n');
+                        removed++;
+                    } else if (present == null) {
+                        log.append("  REMOVE-UNVERIFIED stackId=").append(sid)
+                           .append(" (stack list unreadable — not counted)\n");
+                    } else {
+                        // Still there. Escalate ONCE to the only Q-surface verb that destroys
+                        // the stack OBJECT instead of its tasks — hard-gated on "no split-screen
+                        // stack anywhere holds a task" so a live projection can never be killed.
+                        if (!escalated) {
+                            escalated = true;
+                            if (allSplitStacksEmpty(getAtmTaskListNoThrow(iAtm))) {
+                                log.append("  ESCALATE removeStacksInWindowingModes{")
+                                   .append(WM_SPLIT_SCREEN_PRIMARY).append(',')
+                                   .append(WM_SPLIT_SCREEN_SECONDARY)
+                                   .append("} (all split stacks task-less)\n");
+                                String verb = removeStacksInWindowingModesNoThrow(iAtm,
+                                        new int[]{WM_SPLIT_SCREEN_PRIMARY,
+                                                  WM_SPLIT_SCREEN_SECONDARY}, log);
+                                if (verb == null) {
+                                    log.append("  ESCALATE-UNAVAILABLE (no "
+                                             + "removeStacksInWindowingModes(int[]) on ATM)\n");
+                                } else {
+                                    present = stackStillPresent(iAtm, sid);
+                                }
+                            } else {
+                                log.append("  ESCALATE-SKIPPED stackId=").append(sid)
+                                   .append(" (a split-screen stack still holds tasks — refusing"
+                                         + " to dissolve a live projection)\n");
+                            }
+                        }
+                        if (Boolean.FALSE.equals(present)) {
+                            log.append("  REMOVE-VERIFIED stackId=").append(sid)
+                               .append(" (escalated)\n");
+                            removed++;
+                        } else {
+                            log.append("  REMOVE-INEFFECTIVE stackId=").append(sid).append('\n');
+                        }
+                    }
                 } catch (Throwable rex) {
                     Throwable c = (rex instanceof java.lang.reflect.InvocationTargetException
                             && rex.getCause() != null) ? rex.getCause() : rex;

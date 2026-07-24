@@ -6,7 +6,14 @@ import com.byd.dashcast.infrastructure.AdbLocalClient;
 final class ProxyTransportRetryPolicy {
     private ProxyTransportRetryPolicy() {}
 
+    /**
+     * XPORT_AUTH self-heals as soon as the driver accepts the popup, and XPORT_HANDSHAKE is a
+     * transient transport race on a PROVEN-alive port — both get the short recheck so the
+     * circuit-breaker does not lock the daemon out for a full dead-transport cooldown.
+     */
     static long recheckMs(String transportState, long deadTransportMs, long authMs) {
-        return AdbLocalClient.XPORT_AUTH.equals(transportState) ? authMs : deadTransportMs;
+        return (AdbLocalClient.XPORT_AUTH.equals(transportState)
+                || AdbLocalClient.XPORT_HANDSHAKE.equals(transportState))
+                ? authMs : deadTransportMs;
     }
 }

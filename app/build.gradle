@@ -531,8 +531,48 @@ android {
         // Restarting projection after stopProjectionNoAdb now re-arms ClusterService through a
         // foreground start action, so a later Activity unbind cannot destroy an active projection.
         // Existing DL3 single-OS, boot auto-launch, fission, DL4, and DL5 guards are preserved.)
-        versionCode 587
-        versionName "1.6.146-beta"
+        // 588 = 1.6.147-beta (three independent regressions reported together after an ACC
+        // off/on cycle — INC-20260724-090820 + INC-20260724-102136, DiLink 3, both adversarially
+        // verified against the two captures.
+        // (a) MIRROR TOUCH DEAD. Since d3540344 the MirrorDaemon survives a relaunch, so it is
+        // REUSED and its Binder is already in ServiceManager when MainActivity starts. The push
+        // path resolved the Binder 3.4 s BEFORE ClusterService existed, evaluated
+        // `if (mServiceBound) mClusterService else null` -> null and dropped it; no
+        // ACTION_DAEMON_READY follows a reused (never re-spawned) daemon, so setDaemonBinder was
+        // never called and every touch fell back to the app-side path, which lacks INJECT_EVENTS
+        // — 40 touches computed, logged, and silently discarded. ClusterService.onCreate now
+        // PULLS the registered Binder instead of waiting to be pushed one, killing the ordering
+        // dependency. Three logs added that made this invisible: setDaemonBinder no longer claims
+        // "connected" when handed null, the direct path reports its injection result once, and a
+        // missing MotionEvent.setDisplayId is no longer swallowed.
+        // (b) APP WOULD NOT LAUNCH ON THE CLUSTER until another app was launched first (3 Waze
+        // failures, all the same NPE ActivityStack.getBounds() -> onConfigurationChanged:663).
+        // DashCast makes the zombie itself: the launch creates a FULLSCREEN stack, then
+        // InsetAutoApplicator docks it to split-screen-primary; when that task dies WM orphans
+        // the docked stack (an emptied fullscreen stack is destroyed instead). cleanFissionStacks
+        // found the orphan but IActivityTaskManager.removeStack(int) FINISHES THE TASKS IN a
+        // stack — on a 0-task orphan it is a silent no-op that returns normally, and the code
+        // counted it as removed anyway (removed=1 logged eleven times while the stack survived
+        // every pass). It now VERIFIES the removal against a re-read stack list and escalates
+        // once to removeStacksInWindowingModes (destroys the stack OBJECT), hard-gated on every
+        // split-screen stack system-wide being task-less so a live projection can never be
+        // dissolved. Recurrence of INC-20260714-215700 whose remedy never actually worked.
+        // (c) FALSE "ADB not available" TOAST while everything worked. ClusterService.onCreate
+        // fans out three local-ADB connects within ~45 ms; adbd tears down the colliding
+        // transports and dadb raises AdbConnectException, which was classified NO_LISTENER —
+        // telling the tester to run `adb tcpip 5555` for a port whose TCP probe had just passed
+        // and which served the MirrorDaemon 429 ms later. The handshake is now serialised by a
+        // bounded fair semaphore (30 s cap, then proceeds unserialised — it can never wedge a
+        // caller), retried once silently before ANY verdict is published, and a handshake failure
+        // after a PASSING probe is classified XPORT_HANDSHAKE, which never advises enabling
+        // ADB-over-TCP and takes the short circuit-breaker recheck. Deliberately NOT gated on
+        // ProxyClient.isConnected(): direct ADB is not bootstrap-only (screenshot cleanup every
+        // 30 s, and the MirrorDaemon that provides the mirror AND touch injection is spawned over
+        // it), so that gate would have muted genuine outages.
+        // The three symptoms are independent — proven: no TRANSPORT UNREACHABLE anywhere in the
+        // capture where the launches failed. +1 string x13 locales. No daemon protocol change.)
+        versionCode 588
+        versionName "1.6.147-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

@@ -525,6 +525,7 @@
     <string name="adb_transport_unresponsive">ADB acepta la conexión, pero no responde a los comandos. Reinicia la depuración de Android (adbd) y vuelve a abrir DashCast.</string>
     <string name="adb_transport_key_unauthorized">ADB está disponible, pero la clave de DashCast no está autorizada. Acepta «Permitir depuración USB» con «Permitir siempre» y vuelve a abrir DashCast.</string>
     <string name="adb_transport_unreachable">ADB por TCP no está disponible en este vehículo. Activa la depuración de Android por TCP en el puerto 5555 y vuelve a abrir DashCast.</string>
+    <string name="adb_transport_handshake">El protocolo de enlace de ADB falló temporalmente. DashCast lo reintentará automáticamente.</string>
     <!-- v1.2.76 — Reboot button + dialog -->
     <string name="sysinfo_btn_reboot">Reiniciar</string>
     <string name="sysinfo_reboot_title">¿Reiniciar la tableta?</string>

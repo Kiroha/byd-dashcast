@@ -604,6 +604,7 @@
     <string name="adb_transport_unresponsive">ADB bağlantıyı kabul ediyor ancak komutlara yanıt vermiyor. Android hata ayıklamayı (adbd) yeniden başlatın ve DashCast’i tekrar açın.</string>
     <string name="adb_transport_key_unauthorized">ADB erişilebilir, ancak DashCast anahtarı yetkilendirilmemiş. «USB hata ayıklamasına izin ver» istemini «Her zaman izin ver» ile kabul edin ve DashCast’i yeniden açın.</string>
     <string name="adb_transport_unreachable">Bu araçta TCP üzerinden ADB erişilebilir değil. 5555 bağlantı noktasında TCP üzerinden Android hata ayıklamayı etkinleştirin ve DashCast’i yeniden açın.</string>
+    <string name="adb_transport_handshake">ADB el sıkışması geçici olarak başarısız oldu. DashCast otomatik olarak yeniden deneyecek.</string>
     <string name="fo_status_autoactivate">Düzen otomatik etkinleştiriliyor…</string>
     <string name="fo_status_autolayout_err_fmt">Otomatik düzen hatası: %1$s</string>
     <string name="fo_status_create_fmt">%1$s için slot oluşturuluyor…</string>
