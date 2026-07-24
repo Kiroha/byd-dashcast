@@ -173,6 +173,19 @@ public class ClusterService extends Service
         mMirrorManager  = new ClusterMirrorManager();
         mInputForwarder = new ClusterInputForwarder(this);
 
+        // v1.6.147 — PULL the daemon Binder instead of waiting to be pushed one.
+        // When the MirrorDaemon survives an ACC off/on cycle it is REUSED, so it is already
+        // registered in ServiceManager before MainActivity binds this service. The push path in
+        // MainActivity resolves the binder first, finds mClusterService still null and drops it,
+        // and no ACTION_DAEMON_READY broadcast follows a reused (never re-spawned) daemon — so
+        // setDaemonBinder was never called and every touch fell back to the unprivileged direct
+        // path, silently reaching nothing (INC-20260724-102136). Pulling here removes the
+        // Activity-ordering dependency entirely; it is a cheap local ServiceManager lookup.
+        IBinder reusedDaemon = com.byd.dashcast.proxy.DaemonBinderResolver.getRegisteredBinderOrNull();
+        if (reusedDaemon != null) {
+            mInputForwarder.setDaemonBinder(reusedDaemon);
+        }
+
         // Strategy wiring: app AM → typed daemon ATM → daemon dumpsys → AdbLocal dumpsys.
         mTaskFinder = new ChainedTaskFinder(
                 new AmTaskFinder(this),

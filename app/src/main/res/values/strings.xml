@@ -120,6 +120,7 @@
     <string name="adb_transport_unresponsive">ADB accepte la connexion mais ne répond pas aux commandes. Redémarrez le débogage Android (adbd), puis rouvrez DashCast.</string>
     <string name="adb_transport_key_unauthorized">ADB est accessible, mais la clé de DashCast n’est pas autorisée. Acceptez la demande « Autoriser le débogage USB » avec « Toujours autoriser », puis rouvrez DashCast.</string>
     <string name="adb_transport_unreachable">ADB via TCP n’est pas accessible sur ce véhicule. Activez le débogage Android via TCP sur le port 5555, puis rouvrez DashCast.</string>
+    <string name="adb_transport_handshake">La connexion ADB n’a pas abouti (échec temporaire). DashCast réessaie automatiquement.</string>
     <string name="sysinfo_file_saved">\n\nFichier : %1$s\nCommande ADB : adb pull \"%1$s\"</string>
     <string name="hint_search_apps">Rechercher une application…</string>
     <string name="tooltip_tap_send">Appuyez sur une app pour l\'envoyer au tableau de bord</string>

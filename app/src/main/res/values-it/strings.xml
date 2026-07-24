@@ -525,6 +525,7 @@
     <string name="adb_transport_unresponsive">ADB accetta la connessione ma non risponde ai comandi. Riavvia il debug Android (adbd), quindi riapri DashCast.</string>
     <string name="adb_transport_key_unauthorized">ADB è raggiungibile, ma la chiave di DashCast non è autorizzata. Accetta «Consenti debug USB» con «Consenti sempre», quindi riapri DashCast.</string>
     <string name="adb_transport_unreachable">ADB tramite TCP non è raggiungibile su questo veicolo. Attiva il debug Android tramite TCP sulla porta 5555, quindi riapri DashCast.</string>
+    <string name="adb_transport_handshake">L’handshake ADB non è riuscito temporaneamente. DashCast riproverà automaticamente.</string>
     <!-- v1.2.76 — Reboot button + dialog -->
     <string name="sysinfo_btn_reboot">Riavvia</string>
     <string name="sysinfo_reboot_title">Riavviare il tablet?</string>

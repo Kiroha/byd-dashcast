@@ -613,6 +613,7 @@
     <string name="adb_transport_unresponsive">ADB przyjmuje połączenie, ale nie odpowiada na polecenia. Uruchom ponownie debugowanie Androida (adbd), a następnie ponownie otwórz DashCast.</string>
     <string name="adb_transport_key_unauthorized">ADB jest dostępny, ale klucz DashCast nie jest autoryzowany. Zaakceptuj komunikat „Zezwól na debugowanie USB” z opcją „Zawsze zezwalaj”, a następnie ponownie otwórz DashCast.</string>
     <string name="adb_transport_unreachable">ADB przez TCP jest niedostępny w tym pojeździe. Włącz debugowanie Androida przez TCP na porcie 5555, a następnie ponownie otwórz DashCast.</string>
+    <string name="adb_transport_handshake">Uzgadnianie połączenia ADB chwilowo się nie powiodło. DashCast ponowi próbę automatycznie.</string>
     <string name="fo_status_autoactivate">Automatyczna aktywacja layoutu…</string>
     <string name="fo_status_autolayout_err_fmt">Błąd auto-layoutu: %1$s</string>
     <string name="fo_status_create_fmt">Tworzenie slotu dla %1$s…</string>

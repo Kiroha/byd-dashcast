@@ -605,6 +605,7 @@
     <string name="adb_transport_unresponsive">ADB приймає підключення, але не відповідає на команди. Перезапустіть налагодження Android (adbd), а потім знову відкрийте DashCast.</string>
     <string name="adb_transport_key_unauthorized">ADB доступний, але ключ DashCast не авторизований. Підтвердьте запит «Дозволити налагодження USB» із «Завжди дозволяти», а потім знову відкрийте DashCast.</string>
     <string name="adb_transport_unreachable">ADB через TCP недоступний на цьому автомобілі. Увімкніть налагодження Android через TCP на порту 5555, а потім знову відкрийте DashCast.</string>
+    <string name="adb_transport_handshake">Рукостискання ADB тимчасово не вдалося. DashCast повторить спробу автоматично.</string>
     <string name="fo_status_autoactivate">Автоактивація макета…</string>
     <string name="fo_status_autolayout_err_fmt">Помилка авто-макета: %1$s</string>
     <string name="fo_status_create_fmt">Створення слота для %1$s…</string>
