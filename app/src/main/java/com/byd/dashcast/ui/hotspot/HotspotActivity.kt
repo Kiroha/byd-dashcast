@@ -48,8 +48,11 @@ import java.util.regex.Pattern
  * Hotspot screen — TetherFi-only (v1.2.42 refonte).
  *
  * Drives the open-source `com.pyamsoft.tetherfi` Wi-Fi Direct group owner +
- * SOCKS5/HTTP proxy via its single exported control surface, with an optional
- * watchdog polling `dumpsys activity services` through [AdbLocalClient].
+ * SOCKS5/HTTP proxy via its single exported control surface.
+ *
+ * v1.6.148 — this page is a CONTROLLER + VIEW only. The automatic keep-alive (probe → START)
+ * belongs to [HotspotKeeper], which owns it app-wide; the switch here just arms it and the status
+ * line is rendered from the live-stats snapshot. The three buttons remain explicit user actions.
  */
 class HotspotActivity : AppCompatActivity() {
 
@@ -71,14 +74,15 @@ class HotspotActivity : AppCompatActivity() {
     private lateinit var tvStatRx: TextView
     private lateinit var tvStatTx: TextView
 
-    // ── Watchdog runtime state ───────────────────────────────────────────────
-    private val watchdogHandler = Handler(Looper.getMainLooper())
-    // Physical single-flight survives pause/resume; lifecycle generation separately decides
-    // whether the eventual callback may update this Activity or trigger a local restart.
-    private val watchdogOperationGate = AsyncOperationGate()
-    private var lastRestartElapsed = -1L
-    private var watchdogRestarts = 0
+    // ── Keep-alive status state (v1.6.148) ───────────────────────────────────
+    // The page no longer owns a probe→START loop: [HotspotKeeper] is the single dispatcher
+    // app-wide, and the label below is rendered from the live-stats snapshot this screen already
+    // fetches every STATS_PERIOD_MS. Only the probe counter shown as "#N" lives here.
     private var watchdogChecks = 0
+
+    /** Cached TetherFi presence — see [isTetherFiInstalledCached]. */
+    private var tfInstalledCache = false
+    private var tfInstalledCheckedMs = 0L
 
     // ── Live stats runtime state (v1.2.44) ───────────────────────────────────
     private val statsHandler = Handler(Looper.getMainLooper())
@@ -89,7 +93,6 @@ class HotspotActivity : AppCompatActivity() {
     private var txBaseline = -1L
     private var renderedClients: List<HClient>? = null
     private val statsGate = GenerationGate()
-    private val watchdogGate = GenerationGate()
     private val statsOperationGate = AsyncOperationGate()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,10 +115,14 @@ class HotspotActivity : AppCompatActivity() {
         tvStatRx = findViewById(R.id.tv_stat_rx)
         tvStatTx = findViewById(R.id.tv_stat_tx)
 
-        // Restore persisted toggles so they survive across launches and feed BootReceiver.
+        // Restore persisted toggles so they survive across launches and feed BootReceiver. Each
+        // switch binds ITS OWN pref and nothing else: the top one governs the continuous keeper,
+        // the bottom one the one-shot start at vehicle boot. Set before the listeners below are
+        // attached, so restoring state is not mistaken for a user action.
         val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
         swWatchdog?.isChecked = prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_WATCHDOG, false)
-        swAutoStartBoot.isChecked = prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, false)
+        swAutoStartBoot.isChecked =
+            prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, false)
 
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
 
@@ -128,17 +135,23 @@ class HotspotActivity : AppCompatActivity() {
             getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .edit { putBoolean(SettingsActivity.PREF_HOTSPOT_WATCHDOG, checked) }
             if (checked) {
-                startWatchdog()
                 // Persist the keep-alive beyond this screen: it rides the always-on
-                // ProxyKeeperService FG heartbeat, so the hotspot stays up even after the
-                // Hotspot page / app is closed (INC-20260705-195419).
+                // ProxyKeeperService FG heartbeat, so the hotspot stays up even after the Hotspot
+                // page / app is closed (INC-20260705-195419).
                 com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this)
+                // v1.6.148 — the page does NOT start its own probe→START loop any more; it asks
+                // the single owner for one immediate pass so the user still sees an instant
+                // reaction to the toggle.
+                HotspotKeeper.runImmediatePass(this, "watchdog switch on")
+                updateWatchdogLabel(getString(R.string.hotspot_watchdog_probing))
             } else {
-                stopWatchdog(true)
+                updateWatchdogLabel(getString(R.string.hotspot_watchdog_idle))
             }
         }
 
         swAutoStartBoot.setOnCheckedChangeListener { _, checked ->
+            // Its own, independent pref: the one-shot start at vehicle boot, owned by
+            // BootReceiver. It does not arm the continuous keeper and does not touch its switch.
             getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
                 .edit { putBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, checked) }
             AppLogger.i(TAG, "hotspot autostart-boot " + if (checked) "ON" else "OFF")
@@ -185,9 +198,11 @@ class HotspotActivity : AppCompatActivity() {
         refreshTetherFiStatus()
         // Re-check upstream on every resume (cheap, ~10 KB JSON).
         checkForTetherFiUpdate()
-        // Auto-restart watchdog polling if it was on and got paused.
-        if (swWatchdog?.isChecked == true && watchdogChecks == 0) {
-            startWatchdog()
+        // v1.6.148 — no local watchdog to re-arm: HotspotKeeper keeps running app-wide on the
+        // ProxyKeeperService heartbeat. Just show "probing" until the first stats snapshot below
+        // lands (≤ STATS_PERIOD_MS) and repaints the real state.
+        if (swWatchdog?.isChecked == true) {
+            updateWatchdogLabel(getString(R.string.hotspot_watchdog_probing))
         }
         // v1.2.44 — start the live stats ticker (always on while screen visible).
         statsHandler.removeCallbacks(statsTick)
@@ -202,12 +217,8 @@ class HotspotActivity : AppCompatActivity() {
         statsGate.invalidate()
         statsHandler.removeCallbacks(statsTick)
         uptimeHandler.removeCallbacks(uptimeTick)
-        // Also cancel the TetherFi watchdog. It self-reposts every WATCHDOG_PERIOD_MS and was
-        // only stopped in onDestroy / on switch toggle, so a paused-but-alive Activity kept
-        // ADB/dumpsys-polling every 20s and auto-relaunching TetherFi in the foreground.
-        // Reset watchdogChecks so onResume's (checked && checks==0) re-arm fires.
-        stopWatchdog(false)
-        watchdogChecks = 0
+        // Nothing else to stop: the keep-alive loop is no longer owned by this Activity, so a
+        // paused page can neither poll nor relaunch TetherFi behind the user's back.
     }
 
     private fun checkForTetherFiUpdate() {
@@ -241,7 +252,6 @@ class HotspotActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        stopWatchdog(false)
         try {
             statsHandler.removeCallbacksAndMessages(null)
             uptimeHandler.removeCallbacksAndMessages(null)
@@ -252,9 +262,31 @@ class HotspotActivity : AppCompatActivity() {
 
     // ── TetherFi presence / actions ──────────────────────────────────────────
 
+    /**
+     * TetherFi presence, cached.
+     *
+     * [renderKeepAliveStatus] runs on the MAIN thread every STATS_PERIOD_MS (5 s, 4x the old
+     * watchdog rate) and used to call `PackageManager.getPackageInfo` there — a synchronous IPC on
+     * the UI thread, on a hot path, for an answer that only changes on an install or an uninstall.
+     * Re-read at most every [TF_PRESENCE_TTL_MS], which still catches "TetherFi was uninstalled
+     * while the page is open" well within a minute.
+     */
+    private fun isTetherFiInstalledCached(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (tfInstalledCheckedMs != 0L && now - tfInstalledCheckedMs < TF_PRESENCE_TTL_MS) {
+            return tfInstalledCache
+        }
+        tfInstalledCheckedMs = now
+        tfInstalledCache = getInstalledVersion(TF_PKG) != null
+        return tfInstalledCache
+    }
+
     private fun refreshTetherFiStatus() {
         val version = getInstalledVersion(TF_PKG)
         val installed = version != null
+        // onResume already paid for the lookup — seed the cache with it.
+        tfInstalledCache = installed
+        tfInstalledCheckedMs = SystemClock.elapsedRealtime()
         if (installed) {
             tvStatus.text = getString(R.string.hotspot_tf_status_installed, version)
             tvStatus.setBackgroundColor(COLOR_OK_BG)
@@ -332,98 +364,54 @@ class HotspotActivity : AppCompatActivity() {
         }
     }
 
-    // ── Watchdog ─────────────────────────────────────────────────────────────
+    // ── Keep-alive status (v1.6.148) ─────────────────────────────────────────
+    //
+    // The page's own 20 s probe→START loop is gone — it was a second dispatcher racing
+    // HotspotKeeper's identical one, with its own cooldown state machine. The 5 s live-stats
+    // snapshot ([statsTick]) already runs the same `dumpsys activity services` grep, so the label
+    // is rendered from that (one shell loop fewer, and 4× fresher) and the counters come from the
+    // keeper, so the user sees what the single process-wide owner is actually doing.
 
-    private fun startWatchdog() {
-        watchdogGate.invalidate()
-        watchdogRestarts = 0
-        watchdogChecks = 0
-        lastRestartElapsed = -1L
-        updateWatchdogLabel(getString(R.string.hotspot_watchdog_probing))
-        watchdogHandler.removeCallbacksAndMessages(null)
-        watchdogHandler.post(watchdogTick)
-    }
-
-    private fun stopWatchdog(userInitiated: Boolean) {
-        watchdogGate.invalidate()
-        watchdogHandler.removeCallbacksAndMessages(null)
-        if (userInitiated) {
-            tvWatchdogStatus?.text = getString(R.string.hotspot_watchdog_idle)
+    /** Renders the keep-alive status line from a live-stats snapshot. */
+    private fun renderKeepAliveStatus(up: Boolean, err: String?) {
+        watchdogChecks++
+        val probeId = watchdogChecks
+        // The label describes the continuous keeper, so it renders only while ITS pref is on. This
+        // gate comes FIRST: with the keeper switch off and the boot switch on, the branch below
+        // used to overwrite the "Désactivée" label with "TetherFi désinstallé — surveillance
+        // arrêtée", i.e. a stopped-watchdog notice under a switch that is already off.
+        if (swWatchdog?.isChecked != true) return
+        // TetherFi uninstalled while the page was open: same contract as before — tell the user
+        // and switch the keep-alive off. Assigning an unchanged value fires no listener, so this
+        // is naturally idempotent even though the renderer runs every 5 s.
+        if (!isTetherFiInstalledCached()) {
+            swWatchdog?.isChecked = false
+            updateWatchdogLabel(getString(R.string.hotspot_watchdog_tf_gone))
+            return
         }
-    }
-
-    private val watchdogTick = object : Runnable {
-        override fun run() {
-            if (watchdogOperationGate.isInFlight()) {
-                watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
-                return
-            }
-            if (getInstalledVersion(TF_PKG) == null) {
-                updateWatchdogLabel(getString(R.string.hotspot_watchdog_tf_gone))
-                swWatchdog?.isChecked = false
-                return
-            }
-            val operation = watchdogOperationGate.tryStart() ?: run {
-                watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
-                return
-            }
-            watchdogChecks++
-            val probeId = watchdogChecks
-            val generation = watchdogGate.capture()
-            // Echo UP/DOWN so we always come back through onSuccess().
-            val cmd = "dumpsys activity services $TF_PKG" +
-                " 2>/dev/null | grep -q ProxyForegroundService && echo UP || echo DOWN"
-            ShellGateway.execShellWithResult(this@HotspotActivity, cmd, object : AdbLocalClient.Callback {
-                override fun onSuccess(out: String?) {
-                    if (!watchdogOperationGate.complete(operation)) return
-                    if (!watchdogGate.isCurrent(generation)) return
-                    val up = out != null && out.contains("UP")
-                    runOnUiThread {
-                        if (watchdogGate.isCurrent(generation)) {
-                            handleWatchdogResult(probeId, up, null)
-                        }
-                    }
-                }
-
-                override fun onError(err: String?) {
-                    if (!watchdogOperationGate.complete(operation)) return
-                    if (!watchdogGate.isCurrent(generation)) return
-                    runOnUiThread {
-                        if (watchdogGate.isCurrent(generation)) {
-                            handleWatchdogResult(probeId, false, err)
-                        }
-                    }
-                }
-            })
-            watchdogHandler.postDelayed(this, WATCHDOG_PERIOD_MS)
-        }
-    }
-
-    private fun handleWatchdogResult(probeId: Int, up: Boolean, err: String?) {
-        // v1.2.44 — feed the live-stats session lifecycle on every probe.
-        if (err == null) onProbeTransition(up)
-        if (swWatchdog?.isChecked != true) return // user disabled
         val ts = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
         if (err != null) {
             updateWatchdogLabel(getString(R.string.hotspot_watchdog_adb_err, ts, probeId, err))
             return
         }
+        val restarts = HotspotKeeper.dispatchedStartCount()
         if (up) {
-            updateWatchdogLabel(getString(R.string.hotspot_watchdog_up, ts, probeId, watchdogRestarts))
+            updateWatchdogLabel(getString(R.string.hotspot_watchdog_up, ts, probeId, restarts))
             return
         }
-        // DOWN — apply cooldown before restarting.
-        val now = SystemClock.elapsedRealtime()
-        if (lastRestartElapsed > 0 && now - lastRestartElapsed < WATCHDOG_RESTART_COOLDOWN_MS) {
-            val wait = (WATCHDOG_RESTART_COOLDOWN_MS - (now - lastRestartElapsed)) / 1000L
-            updateWatchdogLabel(getString(R.string.hotspot_watchdog_cooldown, ts, probeId, wait.toInt()))
-            return
+        // DOWN — show how long the keeper still has to wait before its next attempt, or that an
+        // attempt is due right now. The page itself never dispatches here.
+        val waitMs = HotspotKeeper.msUntilNextAttempt()
+        if (waitMs > 0L) {
+            val wait = ((waitMs + 999L) / 1000L).toInt()
+            updateWatchdogLabel(getString(R.string.hotspot_watchdog_cooldown, ts, probeId, wait))
+        } else {
+            // "relance #N" is an ORDINAL: the attempt that is due right now is the one after the
+            // `restarts` already dispatched. Rendering the raw counter showed "relance #0" before
+            // the very first attempt.
+            updateWatchdogLabel(
+                getString(R.string.hotspot_watchdog_restart, ts, probeId, restarts + 1))
         }
-        lastRestartElapsed = now
-        watchdogRestarts++
-        updateWatchdogLabel(getString(R.string.hotspot_watchdog_restart, ts, probeId, watchdogRestarts))
-        AppLogger.i(TAG, "watchdog: TetherFi DOWN → firing START (restart #$watchdogRestarts)")
-        invokeTetherFiTile(TF_ACTION_START)
     }
 
     private fun updateWatchdogLabel(text: String) {
@@ -432,7 +420,7 @@ class HotspotActivity : AppCompatActivity() {
 
     // ── Live stats (v1.2.44) ─────────────────────────────────────────────────
 
-    /** Called from [handleWatchdogResult] on every probe (UP or DOWN). */
+    /** Called from [statsTick] on every snapshot (UP or DOWN). */
     private fun onProbeTransition(up: Boolean) {
         if (up && upStartElapsed < 0) {
             // DOWN → UP : start a new session.
@@ -468,8 +456,8 @@ class HotspotActivity : AppCompatActivity() {
                 return
             }
             val generation = statsGate.capture()
-            // One shell round trip supplies both service state and clients. The watchdog keeps
-            // its independent probe/restart contract; this snapshot only drives visible stats.
+            // One shell round trip supplies service state AND clients — and, since v1.6.148, the
+            // keep-alive status line too (the page no longer runs a second identical probe).
             val cmd = "dumpsys activity services $TF_PKG" +
                 " 2>/dev/null | grep -q ProxyForegroundService" +
                 " && echo '${HotspotStatsPayload.STATE_UP}'" +
@@ -491,6 +479,9 @@ class HotspotActivity : AppCompatActivity() {
                         if (snapshot != null) onProbeTransition(snapshot.serviceUp)
                         if (clients != null) renderClients(clients)
                         refreshStats()
+                        // A snapshot we could not parse tells us nothing about the service, so it
+                        // must not be reported as DOWN.
+                        if (snapshot != null) renderKeepAliveStatus(snapshot.serviceUp, null)
                     }
                 }
 
@@ -498,7 +489,9 @@ class HotspotActivity : AppCompatActivity() {
                     if (!statsOperationGate.complete(operation)) return
                     if (!statsGate.isCurrent(generation)) return
                     runOnUiThread {
-                        if (statsGate.isCurrent(generation)) refreshStats()
+                        if (!statsGate.isCurrent(generation)) return@runOnUiThread
+                        refreshStats()
+                        renderKeepAliveStatus(false, err)
                     }
                 }
             })
@@ -623,10 +616,6 @@ class HotspotActivity : AppCompatActivity() {
         private const val TF_ACTION_TOGGLE = "TOGGLE"
         private const val TF_RELEASE_URL = "https://github.com/pyamsoft/tetherfusenet/releases/latest"
 
-        // ── Watchdog tuning ──────────────────────────────────────────────────
-        private const val WATCHDOG_PERIOD_MS = 20_000L
-        private const val WATCHDOG_RESTART_COOLDOWN_MS = 30_000L
-
         // ── Status colors ────────────────────────────────────────────────────
         private val COLOR_OK_BG = 0xFFE6F4EA.toInt() // soft green
         private val COLOR_OK_TX = 0xFF1B5E20.toInt() // dark green
@@ -635,6 +624,9 @@ class HotspotActivity : AppCompatActivity() {
 
         private const val STATS_PERIOD_MS = 5_000L
         private const val UPTIME_TICK_MS = 1_000L
+
+        /** How long a TetherFi presence lookup stays valid — see [isTetherFiInstalledCached]. */
+        private const val TF_PRESENCE_TTL_MS = 30_000L
 
         private val P_MAC = Pattern.compile("([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})")
         private val P_NAME =

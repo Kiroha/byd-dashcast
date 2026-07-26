@@ -571,8 +571,43 @@ android {
         // it), so that gate would have muted genuine outages.
         // The three symptoms are independent — proven: no TRANSPORT UNREACHABLE anywhere in the
         // capture where the launches failed. +1 string x13 locales. No daemon protocol change.)
-        versionCode 588
-        versionName "1.6.147-beta"
+        // 589 = 1.6.148-beta (TetherFi hotspot keep-alive: one owner, and instrumentation that can
+        // finally answer the parked-car question.
+        // THE PROVEN BUG — two uncoordinated dispatchers each launched TetherFi's tile Activity on
+        // every DashCast start: HotspotKeeper's first heartbeat pass at ~T+0.8 s, and BootReceiver's
+        // own BLIND postDelayed(7 s) dispatch which never checked whether the hotspot was already
+        // on. Two popups, measured 13.9 s apart on-car (INC-20260721-184844). BootReceiver no longer
+        // builds an Intent at all: it asks the keeper for one immediate probe-then-start pass, still
+        // gated on its own PREF_HOTSPOT_AUTOSTART_BOOT and still inside the goAsync accounting. One
+        // dedupe rule, expressed on DISPATCHES (not on arms — that distinction is what an earlier
+        // attempt got wrong) and checked by BOTH entry points, closes it: hotspot already UP at
+        // ACC-on = ZERO popups (the owner's literal "check first" requirement), hotspot DOWN =
+        // exactly ONE. The launch claim carries a timestamp with a 5-min stuck-reset and the route
+        // loop re-checks it every iteration, so a wedged launch thread can neither kill the
+        // keep-alive for the life of the process nor come back later and draw a second tile.
+        // CADENCE — the old policy (5 attempts, then a 5-min blackout, forever) measured ~43
+        // attempts/h on-car AND was blacked out at the exact moment ACC came on. Replaced by a
+        // capped ladder (60/60/120/120/300 s) driven by ATTEMPTS, so it engages even when every
+        // route fails: 15 attempts in hour 1, 12/h sustained, never permanently silent.
+        // THE HEDGE — the tile is now launched via the uid-2000 shell (daemon, then local ADB, then
+        // the original in-app route), each tried at most once, called directly rather than through
+        // ShellGateway, which replays a failed command and would turn one attempt into two popups.
+        // This is a CHEAP BET, NOT A FIX: the parked-car failure (~185 dispatches over 13.8 h, AP
+        // never came up) is still not root-caused, and no "Background activity start blocked" line
+        // exists in any capture — so the tile may well have been launching all along, with TetherFi
+        // declining to raise the AP while parked.
+        // THE REAL DELIVERABLE — a +8 s confirmation re-probe whose process snapshot rides on the
+        // existing probes (no extra round trip) and reports which of the two it was: "tile DID run
+        // (TetherFi's process was created by this dispatch), TetherFi did not raise the AP" vs
+        // "tile did NOT run (launch suppressed)" vs an explicit INCONCLUSIVE when TetherFi's process
+        // predates the dispatch. pidof is diffed as a SET, so a new sub-process can no longer forge
+        // a confident verdict. The next on-car report settles the root cause.
+        // The two prefs keep their independent meanings (an earlier attempt coupled them, which made
+        // the page switch non-authoritative and let one transient PackageManager miss erase
+        // "start at vehicle boot"). No daemon protocol change; DL3/DL5 launch paths untouched.
+        // +1 string x13 locales. Build + lint 0/0, 164 unit tests green.)
+        versionCode 589
+        versionName "1.6.148-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale

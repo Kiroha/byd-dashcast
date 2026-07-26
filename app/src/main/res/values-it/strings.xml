@@ -468,7 +468,7 @@
     <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
     <string name="hotspot_tf_open_failed">Apri TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Watchdog automatico</string>
-    <string name="hotspot_watchdog_hint">Riavvia automaticamente l\'hotspot se cade (controlla ogni 20 s).</string>
+    <string name="hotspot_watchdog_hint">Riavvia automaticamente l\'hotspot se cade (controlla ogni 30 s).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi disinstallato — watchdog arrestato</string>
