@@ -224,37 +224,8 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Проксі-демон не працює. Використати застарілий шлях</string>
     <string name="settings_legacy_path_support">Спрямовує всі привілейовані команди через застарілу оболонку ADB замість проксі-демона. Увімкніть, якщо демон не відповідає або спричиняє проблеми.</string>
-    <string name="diag_tab_cluster">Кластер</string>
-    <string name="diag_tab_display">Дисплей</string>
-    <string name="diag_tab_adb_local">Локальний ADB</string>
-    <string name="diag_tab_system">Система</string>
-    <string name="diag_tab_beta_engine">Бета-рушій</string>
-    <string name="diag_coming_soon_title">Незабаром</string>
-    <string name="diag_coming_soon_subtitle">Цей розділ буде реалізовано в наступній версії. Поточні тести — на вкладці «Beta Engine».</string>
-    <string name="diag_beta_header_title">Експериментальний рушій</string>
-    <string name="diag_beta_header_subtitle">Тести Component A (демон) і Component B (системний контекст). Етап 1.</string>
-    <string name="diag_beta_pill_a_off">A · Демон: Активний</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: УВІМК</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">Натисніть «Запустити всі», щоб почати</string>
-    <string name="diag_beta_counters_running">Виконується…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">Запустити всі</string>
-    <string name="diag_beta_copy_report">Надіслати (.log)</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">Платформа DiLink 5</string>
-    <string name="diag_dl5_header_subtitle">Тести, спеціально для DiLink 5.0 / Android 12.</string>
-    <string name="diag_dl5_header_subtitle_fmt">Продукт: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">Режим: AUTO = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">Режим: AUTO = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">Режим: ПРИМУСОВО = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">Режим: ПРИМУСОВО = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">Режим: —</string>
-    <string name="diag_dl5_d8_target_label">Цільовий застосунок (тест D8 — кластер)</string>
-    <string name="diag_dl5_d8_running_toast">Тест D8 на %1$s — застосунок буде перезапущено і повернуто на головний екран.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Авто-клавіатура кластера (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Показує мостову клавіатуру при дотику до текстового поля на кластері.</string>
@@ -273,86 +244,14 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Клавіатура</string>
     <string name="keyboard_bridge_title">Віддалена клавіатура</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">Платформа DiLink 2 — Recon</string>
-    <string name="diag_dl2_header_subtitle">Набір розпізнавання лише через reflection (без локального ADB).</string>
-    <string name="diag_dl2_header_subtitle_fmt">Продукт: %1$s · бренд: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">Сигнатура: —</string>
-    <string name="diag_dl2_pill_detected">Сигнатура: DL2 виявлено</string>
-    <string name="diag_dl2_pill_other">Сигнатура: не DL2</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — Діагностика</string>
-    <string name="diag_mirror_header_subtitle">Топологія SurfaceFlinger, стан демона mirror, екран приладової панелі.</string>
-    <string name="diag_mirror_header_subtitle_fmt">Продукт: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">Платформа: —</string>
-    <string name="diag_mirror_pill_dl5">Платформа: DiLink 5</string>
-    <string name="diag_mirror_pill_other">Платформа: інша</string>
-    <string name="diag_mirror_hint">Запустіть mirror у застосунку хоча б раз перед набором, потім торкніться « Надіслати (.log) », щоб поділитися звітом через Telegram.</string>
-    <string name="diag_mirror_send_log">Надіслати (.log)</string>
 
     <!-- DiLink 4 — Виділена діагностика (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">Платформа DiLink 4 — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">Тести, спеціально для DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + шлях DL3).</string>
-    <string name="diag_dl4_header_subtitle_fmt">Продукт: %1$s · бренд: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">Сигнатура: —</string>
-    <string name="diag_dl4_pill_detected">Сигнатура: DL4 виявлено</string>
-    <string name="diag_dl4_pill_other">Сигнатура: не DL4</string>
-    <string name="diag_dl4_warning_d_tier">⚠ Рівень D1–D10 надсилає реальні команди sendInfo в AutoContainer, після чого запускає clusterdebug на екрані кластера. Видимий ефект на авто.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">Сніфер</string>
-    <string name="diag_adas_title">ADAS — вікно кластера</string>
-    <string name="diag_adas_description">Показує або приховує вікно ADAS кластера Qt (коди AutoContainer 12 / 13, загальні DiLink)</string>
-    <string name="diag_adas_btn_show">Показати ADAS (12)</string>
-    <string name="diag_adas_btn_hide">Сховати ADAS (13)</string>
-    <string name="diag_adas_last_result">Останній результат</string>
-    <string name="diag_adas_no_test">Жоден тест не виконано.\nНатисніть «Показати ADAS» або «Сховати ADAS», щоб надіслати команду в кластер.</string>
-    <string name="diag_adas_technical_details">Технічні деталі</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…надсилання…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nПОМИЛКА: %2$s</string>
-    <string name="diag_sniffer_description">Безперервний захват logcat + знімки dumpsys у файл для експорту</string>
-    <string name="diag_sniffer_pill_active">АКТИВНИЙ</string>
-    <string name="diag_sniffer_pill_inactive">НЕАКТИВНИЙ</string>
-    <string name="diag_sniffer_idle_text">Захоплення не виконується.\nНатисніть «Запустити», щоб створити новий файл BYD_RE_Sniffer_*.txt.</string>
-    <string name="diag_sniffer_btn_start">Запустити</string>
-    <string name="diag_sniffer_btn_stop">Зупинити</string>
-    <string name="diag_sniffer_btn_snapshot">Знімок</string>
-    <string name="diag_sniffer_btn_export">Експорт</string>
-    <string name="diag_sniffer_btn_clean">Очистити</string>
-    <string name="diag_sniffer_content_title">Захоплений вміст</string>
-    <string name="diag_sniffer_procedure_title">Типова процедура</string>
-    <string name="diag_sniffer_initializing">Ініціалізація…</string>
-    <string name="diag_sniffer_active_fmt">АКТИВНИЙ → %1$s\nЗахоплення триває (logcat + авто-знімки / 10 с)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ Збій ініціалізації: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">Зупинено → %1$s\nГотово до експорту.</string>
-    <string name="diag_sniffer_none">(немає)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">Попереднє захоплення зупинено → %1$s\n(%2$d KB) — експортується.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">Попереднє захоплення: %1$s (%2$d KB, локальний ADB недоступний — експортується)</string>
-    <string name="diag_sniffer_active_detail_fmt">АКТИВНИЙ → %1$s\n(%2$d KB захоплено)</string>
-    <string name="diag_sniffer_toast_started_fmt">Сніфер запущено → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">Сніфер зупинено.</string>
-    <string name="diag_sniffer_toast_need_start">Спочатку запустіть сніфер.</string>
-    <string name="diag_sniffer_toast_snapshot_added">Знімок додано.</string>
-    <string name="diag_sniffer_toast_no_file">Немає файлу сніфера для експорту.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">Помилка експорту: %1$s</string>
-    <string name="diag_sniffer_chooser_title">Експортувати Сніфер RE</string>
-    <string name="diag_sniffer_cleanup_busy">Зупиніть сніфер перед очищенням (захоплення пише у файл).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">Очистити файли DashCast</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">Видаляє всі журнали та захоплення (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) зі сховища застосунку.\n\nКлючі ADB і налаштування зберігаються.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">Очистити</string>
-    <string name="diag_sniffer_cleanup_status_fmt">Очищення: видалено файлів: %1$d · залишилося: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">Видалено файлів: %1$d — залишилося: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ Поля вимкнено на DiLink 2 (один екран).</string>
     <string name="settings_warn_no_cluster">⚠️ Кластер не виявлено — поля ігноруються (DL2?).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Немає браузера для відкриття %1$s</string>
-    <string name="diag_adas_doc_help">• Shell-команда: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Служба: Auto_container на DL3/Di4 (PascalCase), auto_container на DL5+ (snake_case)\n• Код 12 = 显示Adas (Показати ADAS) — генерується clusterdebug.SecondActivity.infoListInit()\n• Код 13 = 关闭Adas (Сховати ADAS) — те саме\n• Ідентичні варіанти: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-серія: коди 12/13 видалено (порожні слоти) — тут не підтримується</string>
-    <string name="diag_sniffer_doc_content">• Початковий заголовок: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: повний logcat threadtime + буфер events (без фільтра, нічого не втрачено)\n• Авто-знімки кожні 10 с: displays, SurfaceFlinger, процеси BYD/xdja/qt/cluster\n• Ручний знімок: додає dumpsys window + історію broadcasts\n• Стійкість: запис переживає обертання/знищення Activity (процес setsid)</string>
-    <string name="diag_sniffer_doc_workflow">1. Запустити → запис іде у фоні (setsid, переживає Activity)\n2. Відтворити баг / сценарій, що вивчається\n3. Ручний знімок у ключові моменти (напр., саме перед/після краху)\n4. Зупинити\n5. Експортувати → обрати Telegram для надсилання файлу</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Перезапустити</string>
     <string name="sysinfo_restart_started">Перезапуск…</string>
@@ -365,53 +264,10 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">Тест VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_hint">Перевіряє pipeline VirtualDisplay → MirrorDaemon у 7 кроків: створення VD, запуск застосунку на VD, дзеркалювання на поверхню кластера. Лише DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">Тест VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">Ціль: %1$s\n\nЦей набір:\n\n• V01: активувати проекцію кластера (auto_container)\n• V02: перевірити, що застосунок можна запустити\n• V03: створити VirtualDisplay 1920×720\n• V04: запустити застосунок на VD\n• V05: запустити дзеркало через MirrorDaemon\n• V06: візуально перевірити рендеринг кластера\n• V07: очистити (зупинити дзеркало, видалити VD, force-stop)\n\nЛише DiLink 5. Цільовий застосунок буде примусово зупинено.\nПродовжити?</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">Запустити тест</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">Тест VD Pipeline лише для DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">Обрати застосунок для тесту</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">Запускні застосунки не знайдено.</string>
-    <string name="diag_dl5_fission_prompt_title">Перевірка кластера</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s видно на екрані кластера?\n\n(тест екрана %2$d)</string>
-    <string name="diag_dl5_fission_prompt_yes">Так</string>
-    <string name="diag_dl5_fission_prompt_no">Ні</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">Експорт APK BYD</string>
-    <string name="diag_export_apk_header_title">Експорт APK BYD</string>
-    <string name="diag_export_apk_header_subtitle">Перелічує встановлені пакети BYD / XDJA / DiLink / cluster, витягує вибраний APK і надсилає через Telegram.</string>
-    <string name="diag_export_apk_refresh">Оновити</string>
-    <string name="diag_export_apk_counters_idle">Готово — натисніть «Оновити» для сканування.</string>
-    <string name="diag_export_apk_counters_scanning">Сканування…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK знайдено • %2$s на диску</string>
-    <string name="diag_export_apk_hint">APK копіюється в кеш застосунку, передається в Telegram, а потім автоматично видаляється через 5 хвилин. У пам\'яті автомобіля нічого не залишається.</string>
-    <string name="diag_export_apk_btn_export">Експорт</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">APK надіслано: %1$s</string>
-    <string name="diag_export_apk_chooser_title">Надіслати APK %1$s</string>
-    <string name="diag_export_apk_err_fmt">Помилка експорту APK: %1$s</string>
-    <string name="diag_export_apk_err_no_source">Шлях APK не знайдено для цього пакета.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">Голос (alpha)</string>
-    <string name="diag_voice_header_title">Голосове керування — PoC аудіо-ланцюга</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Крок 1/3: перевіряє, що мікрофон доступний застосунку на цій платформі. ML-модель ще не завантажено.</string>
-    <string name="diag_voice_btn_start">Почати прослуховування</string>
-    <string name="diag_voice_btn_stop">Зупинити</string>
-    <string name="diag_voice_state_idle">Сервіс зупинено</string>
-    <string name="diag_voice_state_running">Слухаю…</string>
-    <string name="diag_voice_state_error_fmt">Помилка: %1$s</string>
-    <string name="diag_voice_perm_denied">Доступ до мікрофона заборонено — дозвольте в налаштуваннях системи, щоб увімкнути PoC.</string>
-    <string name="diag_voice_meter_label">VU-метр у реальному часі</string>
-    <string name="diag_voice_meter_rms">RMS (середній рівень)</string>
-    <string name="diag_voice_meter_peak">Миттєвий пік</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • пік %2$d • clip %3$d • кадри %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">Цей PoC запускає foreground-сервіс, який читає мікрофон на 16 kHz mono 16-bit і показує рівень аудіо локально. Нічого не записується, не передається й не аналізується. Слово активації «Ok DashCast» з’явиться у v1.2.44 (openWakeWord), розпізнавання мови у v1.2.45 (Vosk).</string>
-    <string name="diag_voice_sample_rate_fmt">Частота дискретизації: %1$d Hz mono 16-bit • джерело VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — Голосовий PoC</string>
     <string name="diag_voice_notif_title">DashCast — прослуховування мікрофона (PoC)</string>
     <string name="diag_voice_notif_text">Рівень аудіо аналізується локально, нічого не записується.</string>
@@ -419,32 +275,9 @@
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">Голосові команди (Vosk)</string>
-    <string name="diag_voice_commands_switch">Увімкнути</string>
-    <string name="diag_voice_commands_hint">Скажіть «Hey Jarvis», потім команду: «кластер», «закрити кластер», «запустити YouTube», «діагностика», «журнали».</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">Ключ API OpenAI (необов\'язково — активує Jarvis ШІ)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">Модель розпізнавання мовлення</string>
-    <string name="diag_voice_model_small_label">Мала модель (~40 МБ)</string>
-    <string name="diag_voice_model_small_desc">Швидке завантаження, хороша точність для коротких команд.</string>
-    <string name="diag_voice_model_large_label">Велика модель (~1,3 ГБ) — висока точність</string>
-    <string name="diag_voice_model_large_desc">Краще розпізнавання, рекомендовано при Wi-Fi.</string>
-    <string name="diag_voice_model_storage_fmt">Доступно %1$d МБ</string>
-    <string name="diag_voice_model_download_btn">Завантажити</string>
-    <string name="diag_voice_model_delete_btn">Видалити</string>
-    <string name="diag_voice_model_status_downloaded">✓ Модель встановлена</string>
-    <string name="diag_voice_model_status_not_downloaded">Не встановлена</string>
-    <string name="diag_voice_model_progress_fmt">%1$d МБ / %2$d МБ (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">Розпакування…</string>
-    <string name="diag_voice_wakeword_card_title">Ключове слово (openWakeWord)</string>
-    <string name="diag_voice_wakeword_switch">Увімкнути</string>
-    <string name="diag_voice_wakeword_score_label">Sigmoid-оцінка (поріг 0,5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Модель: hey_jarvis_v0.1 (замінник для «Ok DashCast»)</string>
-    <string name="diag_voice_wakeword_last_fmt">Останнє виявлення: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime недоступний — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
@@ -488,37 +321,6 @@
     <string name="hotspot_stat_tx">Sent</string>
     <string name="settings_use_own_sim">Я використовую власну SIM-карту</string>
     <string name="settings_use_own_sim_support">Показує кнопку «Точка доступу» на панелі навігації, щоб ви могли роздавати мобільний інтернет через TetherFi (лише DiLink 3).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Кластер DL5 — Розвідка</string>
-    <string name="diag_dl5_cluster_header_subtitle">Неруйнівна перевірка: виявляє команди shell, прапорці сумісності та служби, доступні для зміни розміру кластера на DiLink 5.</string>
-    <string name="diag_dl5_cluster_run_all">Запустити розвідку</string>
-    <string name="diag_dl5_cluster_copy_report">Копіювати звіт</string>
-    <string name="diag_dl5_cluster_send_telegram">Надіслати через Telegram</string>
-    <string name="diag_dl5_cluster_counters_idle">Очікування — перевірку ще не запускали</string>
-    <string name="diag_dl5_cluster_pill_unknown">Платформа: невідомо</string>
-    <string name="diag_dl5_cluster_pill_dl5">Платформа: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Платформа: інша</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Звіт скопійовано в буфер обміну (%1$d записів)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Спочатку запустіть розвідку, потім експортуйте.</string>
-    <string name="diag_cluster_poc_title">Переміщення/масштаб кластера — дисплей fission</string>
-    <string name="diag_cluster_poc_subtitle">Інтерактивне керування застосунком (Waze, Maps, …) на довіреному дисплеї « fission_* » xdja, як це робить WindowManagement / Dilink5 Dashboard. Локальний VD не використовується: ми задіюємо системний дисплей (uid 1000), щоб уникнути сповіщення « другий екран » і повернення на дисплей 0.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Список дисплеїв</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Перезапустити демон</string>
-    <string name="diag_cluster_poc_btn_share">📤 Поділитися звітом</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Запустити на fission</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Примусова зупинка</string>
-    <string name="diag_cluster_poc_section_rect">Положення та розмір (px дисплея fission)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ Застосувати прямокутник</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Поділитися звітом кластера</string>
-    <string name="diag_cluster_poc_toast_no_report">Немає звіту. Спочатку натисніть « Список дисплеїв ».</string>
-    <string name="diag_cluster_poc_status_idle">Готово. Натисніть « Список дисплеїв », щоб побачити дисплеї, потім « Запустити на fission », щоб запустити ціль. Потім налаштуйте повзунки X/Y/Ш/В і натисніть « Застосувати прямокутник » (або увімкніть « Авто »).</string>
     <string name="proxy_keeper_channel_name">Проксі-демон</string>
     <string name="proxy_keeper_channel_desc">Підтримує проксі-демон у фоні</string>
     <string name="proxy_keeper_notif_title">DashCast — проксі активний</string>

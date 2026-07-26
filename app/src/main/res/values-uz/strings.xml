@@ -224,37 +224,8 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Proksi-demon ishlamayapti. Eski yo\'ldan foydalaning</string>
     <string name="settings_legacy_path_support">Barcha imtiyozli buyruqlarni proksi-demon o\'rniga eski ADB qobig\'i orqali yo\'naltiradi. Demon javob bermasa yoki muammo tug\'dirsa, yoqing.</string>
-    <string name="diag_tab_cluster">Klaster</string>
-    <string name="diag_tab_display">Displey</string>
-    <string name="diag_tab_adb_local">Lokal ADB</string>
-    <string name="diag_tab_system">Tizim</string>
-    <string name="diag_tab_beta_engine">Beta dvigatel</string>
-    <string name="diag_coming_soon_title">Tez orada</string>
-    <string name="diag_coming_soon_subtitle">Ushbu bo\'lim keyingi versiyada amalga oshiriladi. Joriy testlar uchun «Beta Engine» yorlig\'iga qarang.</string>
-    <string name="diag_beta_header_title">Eksperimental dvigatel</string>
-    <string name="diag_beta_header_subtitle">Component A (demon) va Component B (tizim konteksti) testlari. 1-bosqich.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon: Faol</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: YONIQ</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">Boshlash uchun «Hammasini ishga tushirish»ni bosing</string>
-    <string name="diag_beta_counters_running">Bajarilmoqda…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">Hammasini ishga tushirish</string>
-    <string name="diag_beta_copy_report">Yuborish (.log)</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">DiLink 5 platformasi</string>
-    <string name="diag_dl5_header_subtitle">DiLink 5.0 / Android 12 uchun maxsus testlar.</string>
-    <string name="diag_dl5_header_subtitle_fmt">Mahsulot: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">Rejim: AUTO = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">Rejim: AUTO = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">Rejim: MAJBURIY = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">Rejim: MAJBURIY = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">Rejim: —</string>
-    <string name="diag_dl5_d8_target_label">Maqsadli ilova (D8 testi — klaster)</string>
-    <string name="diag_dl5_d8_running_toast">%1$s da D8 testi — ilova qayta ishga tushiriladi va asosiy ekranga qaytariladi.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Klaster avto-klaviaturasi (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Klasterdagi matn maydoniga tegsangiz, ko\'prikli klaviaturani ko\'rsatadi.</string>
@@ -273,86 +244,14 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Klaviatura</string>
     <string name="keyboard_bridge_title">Masofaviy klaviatura</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">DiLink 2 platformasi — Recon</string>
-    <string name="diag_dl2_header_subtitle">Faqat reflection orqali aniqlash to\'plami (mahalliy ADB siz).</string>
-    <string name="diag_dl2_header_subtitle_fmt">Mahsulot: %1$s · brend: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">Imzo: —</string>
-    <string name="diag_dl2_pill_detected">Imzo: DL2 aniqlandi</string>
-    <string name="diag_dl2_pill_other">Imzo: DL2 emas</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — Diagnostika</string>
-    <string name="diag_mirror_header_subtitle">SurfaceFlinger topologiyasi, mirror demoni holati, klaster ekrani.</string>
-    <string name="diag_mirror_header_subtitle_fmt">Mahsulot: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">Platforma: —</string>
-    <string name="diag_mirror_pill_dl5">Platforma: DiLink 5</string>
-    <string name="diag_mirror_pill_other">Platforma: boshqa</string>
-    <string name="diag_mirror_hint">To\'plamni ishga tushirishdan oldin ilovadan mirror-ni kamida bir marta ishga tushiring, so\'ng hisobotni Telegram orqali ulashish uchun « Yuborish (.log) » tugmasini bosing.</string>
-    <string name="diag_mirror_send_log">Yuborish (.log)</string>
 
     <!-- DiLink 4 — Maxsus tashxis (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">DiLink 4 platformasi — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 uchun maxsus testlar (AutoContainer PascalCase + DL3 yo\'li).</string>
-    <string name="diag_dl4_header_subtitle_fmt">Mahsulot: %1$s · brend: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">Imzo: —</string>
-    <string name="diag_dl4_pill_detected">Imzo: DL4 aniqlandi</string>
-    <string name="diag_dl4_pill_other">Imzo: DL4 emas</string>
-    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 darajasi AutoContainer\'ga real sendInfo buyruqlarini yuboradi, so\'ng cluster ekranida clusterdebug ilovasini ishga tushiradi. Avtomobilda ko\'rinadigan ta\'sir.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">Sniffer</string>
-    <string name="diag_adas_title">ADAS — klaster oynasi</string>
-    <string name="diag_adas_description">Qt klaster ADAS oynasini ko\'rsatadi yoki yashiradi (AutoContainer kodlari 12 / 13, umumiy DiLink)</string>
-    <string name="diag_adas_btn_show">ADAS\'ni ko\'rsatish (12)</string>
-    <string name="diag_adas_btn_hide">ADAS\'ni yashirish (13)</string>
-    <string name="diag_adas_last_result">Oxirgi natija</string>
-    <string name="diag_adas_no_test">Hech bir test bajarilmadi.\nKlasterga buyruq yuborish uchun ADAS\'ni ko\'rsatish yoki ADAS\'ni yashirish tugmasini bosing.</string>
-    <string name="diag_adas_technical_details">Texnik tafsilotlar</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…yuborilmoqda…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nXATO: %2$s</string>
-    <string name="diag_sniffer_description">Uzluksiz logcat olish + eksport qilinadigan faylga dumpsys suratlar</string>
-    <string name="diag_sniffer_pill_active">FAOL</string>
-    <string name="diag_sniffer_pill_inactive">FAOL EMAS</string>
-    <string name="diag_sniffer_idle_text">Davom etayotgan olish yo\'q.\nYangi BYD_RE_Sniffer_*.txt faylini ishga tushirish uchun Boshlash tugmasini bosing.</string>
-    <string name="diag_sniffer_btn_start">Boshlash</string>
-    <string name="diag_sniffer_btn_stop">To\'xtatish</string>
-    <string name="diag_sniffer_btn_snapshot">Surat</string>
-    <string name="diag_sniffer_btn_export">Eksport</string>
-    <string name="diag_sniffer_btn_clean">Tozalash</string>
-    <string name="diag_sniffer_content_title">Olingan kontent</string>
-    <string name="diag_sniffer_procedure_title">Tipik tartib</string>
-    <string name="diag_sniffer_initializing">Ishga tushirilmoqda…</string>
-    <string name="diag_sniffer_active_fmt">FAOL → %1$s\nOlish davom etmoqda (logcat + avto suratlar / 10 s)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ Ishga tushirish muvaffaqiyatsiz: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">To\'xtatildi → %1$s\nEksportga tayyor.</string>
-    <string name="diag_sniffer_none">(yo\'q)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">Oldingi olish to\'xtatildi → %1$s\n(%2$d KB) — eksport qilish mumkin.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">Oldingi olish: %1$s (%2$d KB, mahalliy ADB mavjud emas — eksport qilish mumkin)</string>
-    <string name="diag_sniffer_active_detail_fmt">FAOL → %1$s\n(%2$d KB olindi)</string>
-    <string name="diag_sniffer_toast_started_fmt">Sniffer ishga tushirildi → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">Sniffer to\'xtatildi.</string>
-    <string name="diag_sniffer_toast_need_start">Avval snifferni ishga tushiring.</string>
-    <string name="diag_sniffer_toast_snapshot_added">Surat qo\'shildi.</string>
-    <string name="diag_sniffer_toast_no_file">Eksport qilish uchun sniffer fayli yo\'q.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">Eksport xatosi: %1$s</string>
-    <string name="diag_sniffer_chooser_title">RE Snifferni eksport qilish</string>
-    <string name="diag_sniffer_cleanup_busy">Tozalashdan oldin snifferni to\'xtating (olish faylga yozmoqda).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">DashCast fayllarini tozalash</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">Ilova xotirasidan barcha jurnallar va olishlarni (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) o\'chiradi.\n\nADB kalitlari va sozlamalar saqlanadi.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">Tozalash</string>
-    <string name="diag_sniffer_cleanup_status_fmt">Tozalash: %1$d ta fayl o\'chirildi · qolgan: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">%1$d ta fayl o\'chirildi — qolgan: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2\'da chetlar o\'chirilgan (bitta ekran).</string>
     <string name="settings_warn_no_cluster">⚠️ Klaster aniqlanmadi — chetlar e\'tiborga olinmadi (DL2?).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s ochish uchun brauzer mavjud emas</string>
-    <string name="diag_adas_doc_help">• Shell buyrug‘i: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Xizmat: Auto_container DL3/Di4 da (PascalCase), auto_container DL5+ da (snake_case)\n• Kod 12 = 显示Adas (ADAS ko‘rsatish) — clusterdebug.SecondActivity.infoListInit() tomonidan chiqariladi\n• Kod 13 = 关闭Adas (ADAS yashirish) — xuddi shu\n• Bir xil variantlar: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-seriya: 12/13 kodlari olib tashlangan (bo‘sh slotlar) — bu yerda qo‘llab-quvvatlanmaydi</string>
-    <string name="diag_sniffer_doc_content">• Boshlang‘ich sarlavha: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: to‘liq logcat threadtime + events buferi (filtrsiz, hech narsa o‘tkazib yuborilmaydi)\n• Har 10 s da avto-suratlar: displays, SurfaceFlinger, BYD/xdja/qt/cluster jarayonlari\n• Qo‘lda olingan surat: dumpsys window + broadcasts tarixini qo‘shadi\n• Davomiylik: yozuv Activity aylanishi/yo‘q qilinishidan omon qoladi (setsid jarayoni)</string>
-    <string name="diag_sniffer_doc_workflow">1. Boshlash → yozish fonda ishlaydi (setsid, Activity dan omon qoladi)\n2. Bug / o‘rganilayotgan stsenariyni takrorlash\n3. Asosiy paytlarda qo‘lda surat (mas., qulashdan oldin/keyin)\n4. To‘xtatish\n5. Eksport → faylni ulashish uchun Telegram tanlash</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Qayta ishga tushir</string>
     <string name="sysinfo_restart_started">Qayta ishga tushirilmoqda…</string>
@@ -365,53 +264,10 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">VD Pipeline testi</string>
-    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon quvurini 7 bosqichda tekshiradi: VD yaratish, VD-da ilovani ishga tushirish, klaster yuzasiga aks ettirish. Faqat DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline testi</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">Maqsad: %1$s\n\nBu to\'plam:\n\n• V01: klaster proeksiyasini faollashtirish (auto_container)\n• V02: ilova ishga tushirilishi mumkinligini tekshirish\n• V03: 1920×720 VirtualDisplay yaratish\n• V04: ilovani VD-da ishga tushirish\n• V05: MirrorDaemon orqali ko\'zguni boshlash\n• V06: klaster renderingini vizual tekshirish\n• V07: tozalash (ko\'zguni to\'xtatish, VD o\'chirish, force-stop)\n\nFaqat DiLink 5. Maqsad ilova test vaqtida majburan to\'xtatiladi.\nDavom etish?</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">Testni boshlash</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline testi faqat DiLink 5 uchun.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">Sinab ko\'rish uchun ilovani tanlang</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">Ishga tushiriladigan ilovalar topilmadi.</string>
-    <string name="diag_dl5_fission_prompt_title">Klaster tekshiruvi</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s klaster ekranida ko\'rinadimi?\n\n(displey %2$d sinovi)</string>
-    <string name="diag_dl5_fission_prompt_yes">Ha</string>
-    <string name="diag_dl5_fission_prompt_no">Yo\'q</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">BYD APK eksporti</string>
-    <string name="diag_export_apk_header_title">BYD APK eksporti</string>
-    <string name="diag_export_apk_header_subtitle">O\'rnatilgan BYD / XDJA / DiLink / cluster paketlarini ko\'rsatadi, tanlangan APK\'ni ajratib oladi va Telegram orqali yuboradi.</string>
-    <string name="diag_export_apk_refresh">Yangilash</string>
-    <string name="diag_export_apk_counters_idle">Tayyor — skanlash uchun Yangilash tugmasini bosing.</string>
-    <string name="diag_export_apk_counters_scanning">Skanlanmoqda…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK topildi • diskda %2$s</string>
-    <string name="diag_export_apk_hint">APK ilova keshiga ko\'chiriladi, Telegram orqali ulashiladi va 5 daqiqadan keyin avtomatik o\'chiriladi. Avtomobil xotirasida hech narsa qolmaydi.</string>
-    <string name="diag_export_apk_btn_export">Eksport</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">APK yuborildi: %1$s</string>
-    <string name="diag_export_apk_chooser_title">%1$s APK\'ni yuborish</string>
-    <string name="diag_export_apk_err_fmt">APK eksporti muvaffaqiyatsiz: %1$s</string>
-    <string name="diag_export_apk_err_no_source">Ushbu paket uchun APK yo\'li topilmadi.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">Ovoz (alpha)</string>
-    <string name="diag_voice_header_title">Ovozli boshqaruv — audio-zanjir PoC</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3-bosqich: mikrofon ushbu platformada ilovaga yetib borishini tekshiradi. Hozircha hech qanday ML modeli yuklanmagan.</string>
-    <string name="diag_voice_btn_start">Tinglashni boshlash</string>
-    <string name="diag_voice_btn_stop">To‘xtatish</string>
-    <string name="diag_voice_state_idle">Xizmat to‘xtatilgan</string>
-    <string name="diag_voice_state_running">Tinglanyapti…</string>
-    <string name="diag_voice_state_error_fmt">Xato: %1$s</string>
-    <string name="diag_voice_perm_denied">Mikrofonga ruxsat rad etildi — PoC ni yoqish uchun tizim sozlamalaridan ruxsat bering.</string>
-    <string name="diag_voice_meter_label">Real vaqtli VU-metr</string>
-    <string name="diag_voice_meter_rms">RMS (o‘rtacha daraja)</string>
-    <string name="diag_voice_meter_peak">Daqiqaviy cho‘qqi</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • cho‘qqi %2$d • clip %3$d • kadrlar %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">Bu PoC mikrofon 16 kHz mono 16-bit o‘qiydigan foreground xizmatni ochadi va audio darajasini lokal ko‘rsatadi. Hech narsa yozilmaydi, uzatilmaydi yoki tahlil qilinmaydi. «Ok DashCast» uyg‘otish so‘zi v1.2.44 (openWakeWord) da, nutqni tanib olish v1.2.45 (Vosk) da qo‘shiladi.</string>
-    <string name="diag_voice_sample_rate_fmt">Diskretlash chastotasi: %1$d Hz mono 16-bit • manba VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — Ovozli PoC</string>
     <string name="diag_voice_notif_title">DashCast — mikrofon tinglanyapti (PoC)</string>
     <string name="diag_voice_notif_text">Audio darajasi lokal tahlil qilinadi, hech narsa yozilmaydi.</string>
@@ -419,32 +275,9 @@
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">Ovozli buyruqlar (Vosk)</string>
-    <string name="diag_voice_commands_switch">Yoqish</string>
-    <string name="diag_voice_commands_hint">"Hey Jarvis" deb ayting, so\'ng buyrug\'ingizni: "klaster", "klasterni yoping", "YouTube ni ishga tushiring", "diagnostika", "jurnallar".</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">OpenAI API kaliti (ixtiyoriy — Jarvis Sun\'iy intellektini faollashtiradi)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">Nutqni tanish modeli</string>
-    <string name="diag_voice_model_small_label">Kichik model (~40 MB)</string>
-    <string name="diag_voice_model_small_desc">Tez yuklab olish, qisqa buyruqlar uchun yaxshi aniqlik.</string>
-    <string name="diag_voice_model_large_label">Katta model (~1,3 GB) — yuqori aniqlik</string>
-    <string name="diag_voice_model_large_desc">Yaxshiroq tanish, Wi-Fi bo\'lganida tavsiya etiladi.</string>
-    <string name="diag_voice_model_storage_fmt">%1$d MB mavjud</string>
-    <string name="diag_voice_model_download_btn">Yuklab olish</string>
-    <string name="diag_voice_model_delete_btn">O\'chirish</string>
-    <string name="diag_voice_model_status_downloaded">✓ Model o\'rnatildi</string>
-    <string name="diag_voice_model_status_not_downloaded">O\'rnatilmagan</string>
-    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">Chiqarilmoqda…</string>
-    <string name="diag_voice_wakeword_card_title">Faollashtirish soʻzi (openWakeWord)</string>
-    <string name="diag_voice_wakeword_switch">Yoqish</string>
-    <string name="diag_voice_wakeword_score_label">Sigmoid baho (chegara 0,5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Model: hey_jarvis_v0.1 («Ok DashCast» uchun oʻrindiq)</string>
-    <string name="diag_voice_wakeword_last_fmt">Oxirgi aniqlash: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime mavjud emas — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
@@ -488,37 +321,6 @@
     <string name="hotspot_stat_tx">Sent</string>
     <string name="settings_use_own_sim">Men o\'z SIM-kartamdan foydalanaman</string>
     <string name="settings_use_own_sim_support">Mobil internetingizni TetherFi orqali ulashishingiz uchun navigatsiya panelida «Hotspot» tugmasini ko\'rsatadi (faqat DiLink 3).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Klaster DL5 — Razvedka</string>
-    <string name="diag_dl5_cluster_header_subtitle">Buzmaydigan tekshiruv: DiLink 5-da klaster o\'lchamini o\'zgartirish uchun mavjud shell buyruqlari, moslik bayroqlari va xizmatlarni aniqlaydi.</string>
-    <string name="diag_dl5_cluster_run_all">Razvedkani ishga tushirish</string>
-    <string name="diag_dl5_cluster_copy_report">Hisobotni nusxalash</string>
-    <string name="diag_dl5_cluster_send_telegram">Telegram orqali yuborish</string>
-    <string name="diag_dl5_cluster_counters_idle">Bo\'sh — hali tekshiruv o\'tkazilmadi</string>
-    <string name="diag_dl5_cluster_pill_unknown">Platforma: noma\'lum</string>
-    <string name="diag_dl5_cluster_pill_dl5">Platforma: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Platforma: boshqa</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Hisobot vaqtinchalik xotiraga nusxalandi (%1$d yozuv)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Eksport qilishdan oldin avval razvedkani ishga tushiring.</string>
-    <string name="diag_cluster_poc_title">Klasterni ko\'chirish/o\'lchamini o\'zgartirish — fission displeyi</string>
-    <string name="diag_cluster_poc_subtitle">WindowManagement / Dilink5 Dashboard kabi, ishonchli xdja « fission_* » displeyida ilovani (Waze, Maps, …) interaktiv boshqarish. Mahalliy VD ishlatilmaydi: « ikkilamchi ekran » bildirishnomasi va 0 displeyga qaytishning oldini olish uchun tizim displeyidan (uid 1000) foydalanamiz.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Displeylar ro\'yxati</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Demonni qayta ishga tushirish</string>
-    <string name="diag_cluster_poc_btn_share">📤 Hisobotni ulashish</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Fission\'da ishga tushirish</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Majburiy to\'xtatish</string>
-    <string name="diag_cluster_poc_section_rect">Joylashuv va o\'lcham (fission displeyi px)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ To\'rtburchakni qo\'llash</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Klaster hisobotini ulashish</string>
-    <string name="diag_cluster_poc_toast_no_report">Hisobot yo\'q. Avval « Displeylar ro\'yxati » tugmasini bosing.</string>
-    <string name="diag_cluster_poc_status_idle">Tayyor. Displeylarni ko\'rish uchun « Displeylar ro\'yxati », so\'ng maqsadni ishga tushirish uchun « Fission\'da ishga tushirish » tugmasini bosing. So\'ngra X/Y/E/B slayderlarini sozlang va « To\'rtburchakni qo\'llash » tugmasini bosing (yoki « Auto » ni yoqing).</string>
     <string name="proxy_keeper_channel_name">Proksi demoni</string>
     <string name="proxy_keeper_channel_desc">Proksi demonini fonda mavjud saqlaydi</string>
     <string name="proxy_keeper_notif_title">DashCast — proksi faol</string>

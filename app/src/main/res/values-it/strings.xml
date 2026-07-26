@@ -224,37 +224,8 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Daemon proxy non funzionante. Usa percorso legacy</string>
     <string name="settings_legacy_path_support">Instrada tutti i comandi privilegiati attraverso la shell ADB legacy invece del daemon proxy. Attiva se il daemon non risponde o causa problemi.</string>
-    <string name="diag_tab_cluster">Cluster</string>
-    <string name="diag_tab_display">Display</string>
-    <string name="diag_tab_adb_local">ADB locale</string>
-    <string name="diag_tab_system">Sistema</string>
-    <string name="diag_tab_beta_engine">Motore Beta</string>
-    <string name="diag_coming_soon_title">Prossimamente</string>
-    <string name="diag_coming_soon_subtitle">Questa sezione sarà implementata in una prossima versione. Vedi la scheda «Beta Engine» per i test attuali.</string>
-    <string name="diag_beta_header_title">Motore sperimentale</string>
-    <string name="diag_beta_header_subtitle">Test per Component A (daemon) e Component B (contesto di sistema). Fase 1.</string>
-    <string name="diag_beta_pill_a_off">A · Daemon: Attivo</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: SÌ</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">Clicca «Esegui tutti» per iniziare</string>
-    <string name="diag_beta_counters_running">Esecuzione in corso…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">Esegui tutti</string>
-    <string name="diag_beta_copy_report">Invia (.log)</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">Piattaforma DiLink 5</string>
-    <string name="diag_dl5_header_subtitle">Test dedicati a DiLink 5.0 / Android 12.</string>
-    <string name="diag_dl5_header_subtitle_fmt">Prodotto: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">Modalità: AUTO = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">Modalità: AUTO = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">Modalità: FORZATA = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">Modalità: FORZATA = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">Modalità: —</string>
-    <string name="diag_dl5_d8_target_label">App di destinazione (test D8 — cluster)</string>
-    <string name="diag_dl5_d8_running_toast">Test D8 su %1$s — l\'app verrà riavviata e poi richiamata sullo schermo principale.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Tastiera auto del cluster (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Mostra la tastiera condivisa quando tocchi un campo di testo sul cluster.</string>
@@ -273,86 +244,14 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Tastiera</string>
     <string name="keyboard_bridge_title">Tastiera remota</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">Piattaforma DiLink 2 — Recon</string>
-    <string name="diag_dl2_header_subtitle">Suite di riconoscimento solo via reflection (senza ADB locale).</string>
-    <string name="diag_dl2_header_subtitle_fmt">Prodotto: %1$s · brand: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">Firma: —</string>
-    <string name="diag_dl2_pill_detected">Firma: DL2 rilevata</string>
-    <string name="diag_dl2_pill_other">Firma: non-DL2</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — Diagnostica</string>
-    <string name="diag_mirror_header_subtitle">Topologia SurfaceFlinger, stato del daemon mirror, schermo cluster.</string>
-    <string name="diag_mirror_header_subtitle_fmt">Prodotto: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">Piattaforma: —</string>
-    <string name="diag_mirror_pill_dl5">Piattaforma: DiLink 5</string>
-    <string name="diag_mirror_pill_other">Piattaforma: altra</string>
-    <string name="diag_mirror_hint">Avvia il mirror dall\'app almeno una volta prima della suite, poi tocca « Invia (.log) » per condividere il rapporto via Telegram.</string>
-    <string name="diag_mirror_send_log">Invia (.log)</string>
 
     <!-- DiLink 4 — Diagnostica dedicata (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">Piattaforma DiLink 4 — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">Test dedicati a DiLink 4.0 / Android 10 / API 29 (AutoContainer PascalCase + percorso DL3).</string>
-    <string name="diag_dl4_header_subtitle_fmt">Prodotto: %1$s · brand: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">Firma: —</string>
-    <string name="diag_dl4_pill_detected">Firma: DL4 rilevata</string>
-    <string name="diag_dl4_pill_other">Firma: non-DL4</string>
-    <string name="diag_dl4_warning_d_tier">⚠ Il livello D1–D10 invia comandi sendInfo reali ad AutoContainer e poi avvia clusterdebug sullo schermo cluster. Effetto visibile sull\'auto.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">Sniffer</string>
-    <string name="diag_adas_title">ADAS — finestra cluster</string>
-    <string name="diag_adas_description">Mostra o nasconde la finestra ADAS del cluster Qt (codici AutoContainer 12 / 13, generici DiLink)</string>
-    <string name="diag_adas_btn_show">Mostra ADAS (12)</string>
-    <string name="diag_adas_btn_hide">Nascondi ADAS (13)</string>
-    <string name="diag_adas_last_result">Ultimo risultato</string>
-    <string name="diag_adas_no_test">Nessun test eseguito.\nTocca Mostra ADAS o Nascondi ADAS per inviare il comando al cluster.</string>
-    <string name="diag_adas_technical_details">Dettagli tecnici</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…invio in corso…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nERRORE: %2$s</string>
-    <string name="diag_sniffer_description">Cattura logcat continua + snapshot dumpsys in un file esportabile</string>
-    <string name="diag_sniffer_pill_active">ATTIVO</string>
-    <string name="diag_sniffer_pill_inactive">INATTIVO</string>
-    <string name="diag_sniffer_idle_text">Nessuna acquisizione in corso.\nTocca Avvia per avviare un nuovo file BYD_RE_Sniffer_*.txt.</string>
-    <string name="diag_sniffer_btn_start">Avvia</string>
-    <string name="diag_sniffer_btn_stop">Ferma</string>
-    <string name="diag_sniffer_btn_snapshot">Snapshot</string>
-    <string name="diag_sniffer_btn_export">Esporta</string>
-    <string name="diag_sniffer_btn_clean">Pulisci</string>
-    <string name="diag_sniffer_content_title">Contenuto acquisito</string>
-    <string name="diag_sniffer_procedure_title">Procedura tipica</string>
-    <string name="diag_sniffer_initializing">Inizializzazione…</string>
-    <string name="diag_sniffer_active_fmt">ATTIVO → %1$s\nAcquisizione in corso (logcat + snapshot auto / 10 s)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ Init fallita: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">Fermato → %1$s\nPronto per esportare.</string>
-    <string name="diag_sniffer_none">(nessuno)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">Acquisizione precedente fermata → %1$s\n(%2$d KB) — esportabile.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">Acquisizione precedente: %1$s (%2$d KB, ADB locale non disponibile — esportabile)</string>
-    <string name="diag_sniffer_active_detail_fmt">ATTIVO → %1$s\n(%2$d KB acquisiti)</string>
-    <string name="diag_sniffer_toast_started_fmt">Sniffer avviato → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">Sniffer fermato.</string>
-    <string name="diag_sniffer_toast_need_start">Avvia prima lo sniffer.</string>
-    <string name="diag_sniffer_toast_snapshot_added">Snapshot aggiunto.</string>
-    <string name="diag_sniffer_toast_no_file">Nessun file sniffer da esportare.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">Errore di esportazione: %1$s</string>
-    <string name="diag_sniffer_chooser_title">Esporta Sniffer RE</string>
-    <string name="diag_sniffer_cleanup_busy">Ferma lo sniffer prima di pulire (l\'acquisizione sta scrivendo su un file).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">Pulisci file DashCast</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">Elimina tutti i log e le acquisizioni (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png) dalla memoria dell\'app.\n\nLe chiavi ADB e le preferenze vengono mantenute.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">Pulisci</string>
-    <string name="diag_sniffer_cleanup_status_fmt">Pulizia: %1$d file eliminati · rimanente: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">%1$d file eliminati — rimanente: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ Margini disabilitati su DiLink 2 (schermo singolo).</string>
     <string name="settings_warn_no_cluster">⚠️ Nessun cluster rilevato — margini ignorati (DL2?).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Nessun browser disponibile per aprire %1$s</string>
-    <string name="diag_adas_doc_help">• Comando shell: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Servizio: Auto_container su DL3/Di4 (PascalCase), auto_container su DL5+ (snake_case)\n• Codice 12 = 显示Adas (Mostra ADAS) — generato da clusterdebug.SecondActivity.infoListInit()\n• Codice 13 = 关闭Adas (Nascondi ADAS) — idem\n• Varianti identiche: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• Serie R: codici 12/13 rimossi (slot vuoti) — non supportato qui</string>
-    <string name="diag_sniffer_doc_content">• Header iniziale: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: logcat threadtime completo + buffer events (senza filtro, nulla perso)\n• Snapshot automatici ogni 10 s: displays, SurfaceFlinger, processi BYD/xdja/qt/cluster\n• Snapshot manuale: aggiunge dumpsys window + cronologia broadcasts\n• Persistenza: la cattura sopravvive a rotazione/distruzione dell\u2019Activity (processo setsid)</string>
-    <string name="diag_sniffer_doc_workflow">1. Avvia → la cattura gira in background (setsid, sopravvive all\u2019Activity)\n2. Riproduci il bug / scenario da studiare\n3. Snapshot manuale nei momenti chiave (es. appena prima/dopo il crash)\n4. Arresta\n5. Esporta → scegli Telegram per condividere il file</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Riavvia</string>
     <string name="sysinfo_restart_started">Riavvio in corso…</string>
@@ -365,53 +264,10 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">Test VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_hint">Valida la pipeline VirtualDisplay → MirrorDaemon in 7 passi: creazione VD, avvio app su VD, mirroring sulla superficie cluster. Solo DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">Test VD Pipeline</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">Destinazione: %1$s\n\nQuesta suite:\n\n• V01: attivare la proiezione cluster (auto_container)\n• V02: verificare che l\'app sia avviabile\n• V03: creare VirtualDisplay 1920×720\n• V04: avviare l\'app sul VD\n• V05: avviare il mirror tramite MirrorDaemon\n• V06: verificare visivamente il rendering del cluster\n• V07: pulizia (stop mirror, eliminare VD, force-stop)\n\nSolo DiLink 5. L\'app di destinazione sarà fermata durante il test.\nContinuare?</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">Avvia test</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">Test VD Pipeline solo per DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">Scegli l\'app da testare</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">Nessuna app avviabile trovata.</string>
-    <string name="diag_dl5_fission_prompt_title">Verifica cluster</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s è visibile sullo schermo del cluster?\n\n(test display %2$d)</string>
-    <string name="diag_dl5_fission_prompt_yes">Sì</string>
-    <string name="diag_dl5_fission_prompt_no">No</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">Esporta APK BYD</string>
-    <string name="diag_export_apk_header_title">Esporta APK BYD</string>
-    <string name="diag_export_apk_header_subtitle">Elenca gli APK BYD / XDJA / DiLink / cluster installati, estrae quello selezionato e lo invia tramite Telegram.</string>
-    <string name="diag_export_apk_refresh">Aggiorna</string>
-    <string name="diag_export_apk_counters_idle">Pronto — tocca Aggiorna per scansionare.</string>
-    <string name="diag_export_apk_counters_scanning">Scansione in corso…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK rilevati • %2$s su disco</string>
-    <string name="diag_export_apk_hint">L\'APK viene copiato nella cache dell\'app, condiviso via Telegram e poi eliminato automaticamente dopo 5 minuti. Nulla rimane nella memoria dell\'auto.</string>
-    <string name="diag_export_apk_btn_export">Esporta</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">APK inviato: %1$s</string>
-    <string name="diag_export_apk_chooser_title">Invia APK %1$s</string>
-    <string name="diag_export_apk_err_fmt">Esportazione APK fallita: %1$s</string>
-    <string name="diag_export_apk_err_no_source">Percorso APK non trovato per questo pacchetto.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">Voce (alpha)</string>
-    <string name="diag_voice_header_title">Controllo vocale — PoC catena audio</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">Passo 1/3: verifica che il microfono arrivi all’app su questa piattaforma. Nessun modello ML ancora caricato.</string>
-    <string name="diag_voice_btn_start">Avvia ascolto</string>
-    <string name="diag_voice_btn_stop">Ferma</string>
-    <string name="diag_voice_state_idle">Servizio fermo</string>
-    <string name="diag_voice_state_running">In ascolto…</string>
-    <string name="diag_voice_state_error_fmt">Errore: %1$s</string>
-    <string name="diag_voice_perm_denied">Permesso microfono negato — concedilo nelle impostazioni di sistema per abilitare il PoC.</string>
-    <string name="diag_voice_meter_label">VU-meter in tempo reale</string>
-    <string name="diag_voice_meter_rms">RMS (livello medio)</string>
-    <string name="diag_voice_meter_peak">Picco istantaneo</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • picco %2$d • clip %3$d • frame %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">Questo PoC avvia un servizio foreground che legge il microfono a 16 kHz mono 16-bit e mostra il livello audio localmente. Nulla viene registrato, trasmesso o analizzato. La wake word «Ok DashCast» arriverà in v1.2.44 (openWakeWord), il riconoscimento vocale in v1.2.45 (Vosk).</string>
-    <string name="diag_voice_sample_rate_fmt">Campionamento: %1$d Hz mono 16-bit • sorgente VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — PoC vocale</string>
     <string name="diag_voice_notif_title">DashCast — microfono in ascolto (PoC)</string>
     <string name="diag_voice_notif_text">Livello audio analizzato localmente, nulla viene registrato.</string>
@@ -419,31 +275,9 @@
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">Comandi vocali (Vosk)</string>
-    <string name="diag_voice_commands_switch">Attiva</string>
-    <string name="diag_voice_commands_hint">Di\' "Hey Jarvis" e poi il tuo comando: "cluster", "chiudi cluster", "avvia YouTube", "diagnostica", "log".</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">Chiave API OpenAI (opzionale — attiva Jarvis IA)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Parola di attivazione (openWakeWord)</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">Modello di riconoscimento vocale</string>
-    <string name="diag_voice_model_small_label">Modello piccolo (~40 MB)</string>
-    <string name="diag_voice_model_small_desc">Download rapido, buona precisione per comandi brevi.</string>
-    <string name="diag_voice_model_large_label">Modello grande (~1,3 GB) — alta precisione</string>
-    <string name="diag_voice_model_large_desc">Migliore riconoscimento, consigliato con Wi-Fi.</string>
-    <string name="diag_voice_model_storage_fmt">%1$d MB disponibili</string>
-    <string name="diag_voice_model_download_btn">Scarica</string>
-    <string name="diag_voice_model_delete_btn">Elimina</string>
-    <string name="diag_voice_model_status_downloaded">✓ Modello installato</string>
-    <string name="diag_voice_model_status_not_downloaded">Non installato</string>
-    <string name="diag_voice_model_progress_fmt">%1$d MB / %2$d MB (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">Estrazione in corso…</string>
-    <string name="diag_voice_wakeword_switch">Attiva</string>
-    <string name="diag_voice_wakeword_score_label">Punteggio sigmoide (soglia 0,5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Modello: hey_jarvis_v0.1 (segnaposto per «Ok DashCast»)</string>
-    <string name="diag_voice_wakeword_last_fmt">Ultimo rilevamento: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime non disponibile — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
@@ -487,37 +321,6 @@
     <string name="hotspot_stat_tx">Sent</string>
     <string name="settings_use_own_sim">Uso la mia scheda SIM</string>
     <string name="settings_use_own_sim_support">Mostra il pulsante «Hotspot» nella barra di navigazione così puoi condividere i tuoi dati mobili tramite TetherFi (solo DiLink 3).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Cluster DL5 — Ricognizione</string>
-    <string name="diag_dl5_cluster_header_subtitle">Probe non distruttivo: rileva comandi shell, flag di compatibilità e servizi disponibili per il ridimensionamento del cluster su DiLink 5.</string>
-    <string name="diag_dl5_cluster_run_all">Esegui ricognizione</string>
-    <string name="diag_dl5_cluster_copy_report">Copia report</string>
-    <string name="diag_dl5_cluster_send_telegram">Invia tramite Telegram</string>
-    <string name="diag_dl5_cluster_counters_idle">Inattivo — nessun probe eseguito</string>
-    <string name="diag_dl5_cluster_pill_unknown">Piattaforma: sconosciuta</string>
-    <string name="diag_dl5_cluster_pill_dl5">Piattaforma: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Piattaforma: altra</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Report copiato negli appunti (%1$d voci)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Esegui prima la ricognizione prima di esportare.</string>
-    <string name="diag_cluster_poc_title">Sposta/ridimensiona cluster — display fission</string>
-    <string name="diag_cluster_poc_subtitle">Controllo interattivo di un\'app (Waze, Maps, …) sul display « fission_* » xdja attendibile, come fa WindowManagement / Dilink5 Dashboard. Il VD locale viene abbandonato: ci appoggiamo al display di sistema (uid 1000) per evitare l\'avviso « schermo secondario » e il rimbalzo sul display 0.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Elenca display</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Riavvia daemon</string>
-    <string name="diag_cluster_poc_btn_share">📤 Condividi report</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Avvia su fission</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Forza arresto</string>
-    <string name="diag_cluster_poc_section_rect">Posizione e dimensione (px del display fission)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ Applica rettangolo</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Condividi report cluster</string>
-    <string name="diag_cluster_poc_toast_no_report">Nessun report. Tocca prima « Elenca display ».</string>
-    <string name="diag_cluster_poc_status_idle">Pronto. Tocca « Elenca display » per vedere i display, poi « Avvia su fission » per avviare il target. Quindi regola i cursori X/Y/L/A e premi « Applica rettangolo » (o attiva « Auto »).</string>
     <string name="proxy_keeper_channel_name">Daemon proxy</string>
     <string name="proxy_keeper_channel_desc">Mantiene il daemon proxy disponibile in background</string>
     <string name="proxy_keeper_notif_title">DashCast — proxy attivo</string>
