@@ -224,37 +224,8 @@
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_legacy_path">Прокси-демон жұмыс істемейді. Ескі жолды пайдалану</string>
     <string name="settings_legacy_path_support">Барлық артықшылықты пәрмендерді прокси-демон орнына ескі ADB қабығы арқылы бағыттайды. Демон жауап бермесе немесе мәселе тудырса, қосыңыз.</string>
-    <string name="diag_tab_cluster">Кластер</string>
-    <string name="diag_tab_display">Дисплей</string>
-    <string name="diag_tab_adb_local">Жергілікті ADB</string>
-    <string name="diag_tab_system">Жүйе</string>
-    <string name="diag_tab_beta_engine">Бета-қозғалтқыш</string>
-    <string name="diag_coming_soon_title">Жақында</string>
-    <string name="diag_coming_soon_subtitle">Бұл бөлім келесі нұсқада іске асырылады. Ағымдағы тестілер үшін «Beta Engine» қойындысын қараңыз.</string>
-    <string name="diag_beta_header_title">Эксперименттік қозғалтқыш</string>
-    <string name="diag_beta_header_subtitle">Component A (демон) және Component B (жүйелік контекст) тестілері. 1-кезең.</string>
-    <string name="diag_beta_pill_a_off">A · Демон: Белсенді</string>
-    <string name="diag_beta_pill_a_on">A · Legacy: ҚОСУЛЫ</string>
-    <string name="diag_beta_pill_b_off">B · N/A</string>
-    <string name="diag_beta_counters_idle">Бастау үшін «Барлығын іске қосу» түймесін басыңыз</string>
-    <string name="diag_beta_counters_running">Орындалуда…</string>
-    <string name="diag_beta_counters_fmt">✓ %1$d   ✗ %2$d   ⊘ %3$d</string>
-    <string name="diag_beta_run_all">Барлығын іске қосу</string>
-    <string name="diag_beta_copy_report">Жіберу (.log)</string>
 
     <!-- ═══════════════ DiLink 5 — Dedicated diagnostic (v1.1.0-beta2) ═══════════════ -->
-    <string name="diag_tab_dilink5">DiLink 5</string>
-    <string name="diag_dl5_header_title">DiLink 5 платформасы</string>
-    <string name="diag_dl5_header_subtitle">DiLink 5.0 / Android 12 үшін арналған тесттер.</string>
-    <string name="diag_dl5_header_subtitle_fmt">Өнім: %1$s · API %2$d</string>
-    <string name="diag_dl5_pill_mode_auto_on">Режим: AUTO = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_auto_off">Режим: AUTO = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_forced_on">Режим: МӘЖБҮРЛЕНГЕН = DiLink 5</string>
-    <string name="diag_dl5_pill_mode_forced_off">Режим: МӘЖБҮРЛЕНГЕН = DiLink 3</string>
-    <string name="diag_dl5_pill_mode_unknown">Режим: —</string>
-    <string name="diag_dl5_d8_target_label">Мақсатты қолданба (D8 тесті — кластер)</string>
-    <string name="diag_dl5_d8_running_toast">D8 тесті %1$s бойынша — қолданба қайта іске қосылып, негізгі экранға қайтарылады.</string>
-    <string name="diag_dl5_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
     <!-- v1.2.10 — IME a11y onboarding banner (DL5) -->
     <string name="a11y_ime_watcher_label">Кластердің авто-пернетақтасы (DashCast)</string>
     <string name="a11y_ime_watcher_summary">Кластердегі мәтін өрісін түрткенде көпір пернетақтасын көрсетеді.</string>
@@ -273,86 +244,14 @@
     <string name="btn_keyboard">⌨</string>
     <string name="btn_keyboard_desc">Пернетақта</string>
     <string name="keyboard_bridge_title">Қашықтан пернетақта</string>
-    <string name="diag_tab_adas">ADAS</string>
-    <string name="diag_tab_dilink2">DiLink 2</string>
-    <string name="diag_tab_mirror">Mirror</string>
-    <string name="diag_dl2_header_title">DiLink 2 платформасы — Recon</string>
-    <string name="diag_dl2_header_subtitle">Тек reflection арқылы тану жинағы (жергілікті ADB жоқ).</string>
-    <string name="diag_dl2_header_subtitle_fmt">Өнім: %1$s · бренд: %2$s · API %3$d</string>
-    <string name="diag_dl2_pill_unknown">Қолтаңба: —</string>
-    <string name="diag_dl2_pill_detected">Қолтаңба: DL2 анықталды</string>
-    <string name="diag_dl2_pill_other">Қолтаңба: DL2 емес</string>
-    <string name="diag_dl2_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
-    <string name="diag_mirror_header_title">Mirror — Диагностика</string>
-    <string name="diag_mirror_header_subtitle">SurfaceFlinger топологиясы, mirror демонының күйі, аспаптар тақтасы экраны.</string>
-    <string name="diag_mirror_header_subtitle_fmt">Өнім: %1$s · API %2$d</string>
-    <string name="diag_mirror_pill_unknown">Платформа: —</string>
-    <string name="diag_mirror_pill_dl5">Платформа: DiLink 5</string>
-    <string name="diag_mirror_pill_other">Платформа: басқа</string>
-    <string name="diag_mirror_hint">Жинақты іске қоспас бұрын қолданбадан mirror-ды кемінде бір рет іске қосыңыз, содан кейін есепті Telegram арқылы бөлісу үшін « Жіберу (.log) » түймесін басыңыз.</string>
-    <string name="diag_mirror_send_log">Жіберу (.log)</string>
 
     <!-- DiLink 4 — Арнайы диагностика (v1.2.28) -->
-    <string name="diag_tab_dilink4">DiLink 4</string>
-    <string name="diag_dl4_header_title">DiLink 4 платформасы — BYD-AUTO</string>
-    <string name="diag_dl4_header_subtitle">DiLink 4.0 / Android 10 / API 29 үшін арналған тесттер (AutoContainer PascalCase + DL3 жолы).</string>
-    <string name="diag_dl4_header_subtitle_fmt">Өнім: %1$s · бренд: %2$s · API %3$d</string>
-    <string name="diag_dl4_pill_unknown">Қолтаңба: —</string>
-    <string name="diag_dl4_pill_detected">Қолтаңба: DL4 анықталды</string>
-    <string name="diag_dl4_pill_other">Қолтаңба: DL4 емес</string>
-    <string name="diag_dl4_warning_d_tier">⚠ D1–D10 деңгейі AutoContainer-ге шынайы sendInfo командаларын жібереді, содан кейін кластер экранында clusterdebug-ты іске қосады. Көлікте көрінетін әсер.</string>
-    <string name="diag_dl4_counters_fmt">✓ %1$d   ✗ %2$d   ! %3$d   ⊘ %4$d</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="diag_tab_sniffer">Сниффер</string>
-    <string name="diag_adas_title">ADAS — кластер терезесі</string>
-    <string name="diag_adas_description">Qt кластерінің ADAS терезесін көрсетеді немесе жасырады (AutoContainer кодтары 12 / 13, жалпы DiLink)</string>
-    <string name="diag_adas_btn_show">ADAS көрсету (12)</string>
-    <string name="diag_adas_btn_hide">ADAS жасыру (13)</string>
-    <string name="diag_adas_last_result">Соңғы нәтиже</string>
-    <string name="diag_adas_no_test">Бірде-бір тест орындалмады.\nКластерге команда жіберу үшін «ADAS көрсету» немесе «ADAS жасыру» түймесін басыңыз.</string>
-    <string name="diag_adas_technical_details">Техникалық мәліметтер</string>
-    <string name="diag_adas_sending_fmt">$ %1$s\n…жіберілуде…</string>
-    <string name="diag_adas_error_fmt">$ %1$s\nҚАТЕ: %2$s</string>
-    <string name="diag_sniffer_description">Үздіксіз logcat түсіру + dumpsys суреттері экспорттауға болатын файлға</string>
-    <string name="diag_sniffer_pill_active">БЕЛСЕНДІ</string>
-    <string name="diag_sniffer_pill_inactive">БЕЛСЕНДІ ЕМЕС</string>
-    <string name="diag_sniffer_idle_text">Түсіру жоқ.\nЖаңа BYD_RE_Sniffer_*.txt файлын іске қосу үшін «Іске қосу» түймесін басыңыз.</string>
-    <string name="diag_sniffer_btn_start">Іске қосу</string>
-    <string name="diag_sniffer_btn_stop">Тоқтату</string>
-    <string name="diag_sniffer_btn_snapshot">Сурет</string>
-    <string name="diag_sniffer_btn_export">Экспорт</string>
-    <string name="diag_sniffer_btn_clean">Тазалау</string>
-    <string name="diag_sniffer_content_title">Түсірілген мазмұн</string>
-    <string name="diag_sniffer_procedure_title">Әдеттегі процедура</string>
-    <string name="diag_sniffer_initializing">Инициализация…</string>
-    <string name="diag_sniffer_active_fmt">БЕЛСЕНДІ → %1$s\nТүсіру жүріп жатыр (logcat + авто-суреттер / 10 с)</string>
-    <string name="diag_sniffer_init_fail_fmt">❌ Инициализация сәтсіз: %1$s</string>
-    <string name="diag_sniffer_stopped_fmt">Тоқтатылды → %1$s\nЭкспортқа дайын.</string>
-    <string name="diag_sniffer_none">(жоқ)</string>
-    <string name="diag_sniffer_previous_stopped_fmt">Алдыңғы түсіру тоқтатылды → %1$s\n(%2$d KB) — экспортталады.</string>
-    <string name="diag_sniffer_previous_no_adb_fmt">Алдыңғы түсіру: %1$s (%2$d KB, жергілікті ADB қолжетімсіз — экспортталады)</string>
-    <string name="diag_sniffer_active_detail_fmt">БЕЛСЕНДІ → %1$s\n(%2$d KB түсірілді)</string>
-    <string name="diag_sniffer_toast_started_fmt">Сниффер іске қосылды → %1$s</string>
-    <string name="diag_sniffer_toast_stopped">Сниффер тоқтатылды.</string>
-    <string name="diag_sniffer_toast_need_start">Алдымен снифферді іске қосыңыз.</string>
-    <string name="diag_sniffer_toast_snapshot_added">Сурет қосылды.</string>
-    <string name="diag_sniffer_toast_no_file">Экспорттайтын сниффер файлы жоқ.</string>
-    <string name="diag_sniffer_toast_export_error_fmt">Экспорт қатесі: %1$s</string>
-    <string name="diag_sniffer_chooser_title">RE Снифферді экспорттау</string>
-    <string name="diag_sniffer_cleanup_busy">Тазалау алдында снифферді тоқтатыңыз (түсіру файлға жазып жатыр).</string>
-    <string name="diag_sniffer_cleanup_dialog_title">DashCast файлдарын тазалау</string>
-    <string name="diag_sniffer_cleanup_dialog_msg">Қолданба жадынан барлық журналдар мен түсірулерді жояды (byd_log_*, byd_report_*, BYD_RE_Sniffer_*, cluster_live.png).\n\nADB кілттері мен теңшелімдер сақталады.</string>
-    <string name="diag_sniffer_cleanup_dialog_confirm">Тазалау</string>
-    <string name="diag_sniffer_cleanup_status_fmt">Тазалау: %1$d файл жойылды · қалғаны: %2$s</string>
-    <string name="diag_sniffer_cleanup_toast_fmt">%1$d файл жойылды — қалғаны: %2$s</string>
     <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2-де жиектер өшірілген (бір экран).</string>
     <string name="settings_warn_no_cluster">⚠️ Кластер табылмады — жиектер еленбейді (DL2?).</string>
     <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s ашуға арналған браузер жоқ</string>
-    <string name="diag_adas_doc_help">• Shell-командасы: service call &lt;svc&gt; 2 i32 1000 i32 &lt;12|13&gt; s16 \"\"\n• Қызмет: Auto_container DL3/Di4-те (PascalCase), auto_container DL5+ -де (snake_case)\n• Код 12 = 显示Adas (ADAS көрсету) — clusterdebug.SecondActivity.infoListInit() жасайды\n• Код 13 = 关闭Adas (ADAS жасыру) — сондай-ақ\n• Бірдей нұсқалар: DL3 (infoListInit), Di4 (infoListInit), DL5 (infoListInit_Di5)\n• R-сериясы: 12/13 кодтары жойылған (бос ұялар) — мұнда қолдау көрсетілмейді</string>
-    <string name="diag_sniffer_doc_content">• Бастапқы тақырып: ro.product.model, fingerprint, dumpsys display, dumpsys SurfaceFlinger, ps -A\n• Live: толық logcat threadtime + events буфері (сүзгісіз, ештеңе жоғалмайды)\n• Әр 10 с сайын авто-суреттер: displays, SurfaceFlinger, BYD/xdja/qt/cluster процестері\n• Қолмен түсірілген сурет: dumpsys window + broadcasts тарихын қосады\n• Тұрақтылық: жазба Activity бұрылуын/жойылуын асып шығады (setsid процесі)</string>
-    <string name="diag_sniffer_doc_workflow">1. Бастау → жазба фонда жүреді (setsid, Activity-ден аман қалады)\n2. Бағ-ты / зерттелетін сценарийді қайталау\n3. Кілт сәттерде қолмен сурет (мыс., құлаудан тура алдында/кейін)\n4. Тоқтату\n5. Экспорт → файлды бөлісу үшін Telegram таңдау</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Қайта іске қосу</string>
     <string name="sysinfo_restart_started">Қайта іске қосылуда…</string>
@@ -365,53 +264,10 @@
 
     <!-- Diag — Cluster DL5 Test Fission live battery (v1.2.41) -->
     <!-- v1.3.12 — VD pipeline test battery. -->
-    <string name="diag_dl5_cluster_test_vd">VD Pipeline сынағы</string>
-    <string name="diag_dl5_cluster_test_vd_hint">VirtualDisplay → MirrorDaemon конвейерін 7 қадаммен тексереді: VD жасау, VD-да қолданбаны іске қосу, кластер бетіне айналу. Тек DiLink 5.</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_title">VD Pipeline сынағы</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_msg">Мақсат: %1$s\n\nБұл топтама:\n\n• V01: кластер проекциясын белсендіру (auto_container)\n• V02: қолданбаны іске қосуға болатынын тексеру\n• V03: 1920×720 VirtualDisplay жасау\n• V04: қолданбаны VD-да іске қосу\n• V05: MirrorDaemon арқылы айналуды бастау\n• V06: кластер рендерингін визуалды тексеру\n• V07: тазалау (айналуды тоқтату, VD жою, force-stop)\n\nТек DiLink 5. Мақсатты қолданба сынақ кезінде мәжбүрлі тоқтатылады.\nЖалғастыру?</string>
-    <string name="diag_dl5_cluster_test_vd_confirm_ok">Сынақты бастау</string>
-    <string name="diag_dl5_cluster_test_vd_only_dl5">VD Pipeline сынағы тек DiLink 5 үшін.</string>
-    <string name="diag_dl5_cluster_test_vd_pick_title">Сынауға арналған қолданбаны таңдаңыз</string>
-    <string name="diag_dl5_cluster_test_vd_pick_empty">Іске қосылатын қолданбалар табылмады.</string>
-    <string name="diag_dl5_fission_prompt_title">Кластерді тексеру</string>
-    <string name="diag_dl5_fission_prompt_msg_fmt">%1$s кластер экранында көрінеді ме?\n\n(%2$d экранын сынау)</string>
-    <string name="diag_dl5_fission_prompt_yes">Иә</string>
-    <string name="diag_dl5_fission_prompt_no">Жоқ</string>
 
     <!-- Diag — Export APK panel (v1.2.42) -->
-    <string name="diag_tab_export_apk">BYD APK экспорты</string>
-    <string name="diag_export_apk_header_title">BYD APK экспорты</string>
-    <string name="diag_export_apk_header_subtitle">Орнатылған BYD / XDJA / DiLink / cluster пакеттерін тізімдейді, таңдалған APK-ны шығарып, Telegram арқылы жібереді.</string>
-    <string name="diag_export_apk_refresh">Жаңарту</string>
-    <string name="diag_export_apk_counters_idle">Дайын — сканерлеу үшін «Жаңарту» басыңыз.</string>
-    <string name="diag_export_apk_counters_scanning">Сканерлеу…</string>
-    <string name="diag_export_apk_counters_fmt">%1$d APK табылды • дискіде %2$s</string>
-    <string name="diag_export_apk_hint">APK қолданба кэшіне көшіріледі, Telegram арқылы жіберіледі, содан кейін 5 минуттан кейін автоматты түрде жойылады. Көлік жадында ештеңе сақталмайды.</string>
-    <string name="diag_export_apk_btn_export">Экспорт</string>
-    <string name="diag_export_apk_btn_exporting">…</string>
-    <string name="diag_export_apk_version_fmt">v%1$s (%2$d)</string>
-    <string name="diag_export_apk_sent_fmt">APK жіберілді: %1$s</string>
-    <string name="diag_export_apk_chooser_title">%1$s APK жіберу</string>
-    <string name="diag_export_apk_err_fmt">APK экспорты сәтсіз: %1$s</string>
-    <string name="diag_export_apk_err_no_source">Бұл пакет үшін APK жолы табылмады.</string>
 
     <!-- v1.2.43-beta — Voice PoC panel -->
-    <string name="diag_tab_voice">Дауыс (alpha)</string>
-    <string name="diag_voice_header_title">Дауыспен басқару — аудио-тізбек PoC</string>
-    <string name="diag_voice_header_subtitle" tools:ignore="TypographyFractions">1/3 қадам: микрофон осы платформада қолданбаға жетіп жатқанын тексереді. ML моделі әлі жүктелмеген.</string>
-    <string name="diag_voice_btn_start">Тыңдауды бастау</string>
-    <string name="diag_voice_btn_stop">Тоқтату</string>
-    <string name="diag_voice_state_idle">Қызмет тоқтатылған</string>
-    <string name="diag_voice_state_running">Тыңдалуда…</string>
-    <string name="diag_voice_state_error_fmt">Қате: %1$s</string>
-    <string name="diag_voice_perm_denied">Микрофонға рұқсат берілмеген — PoC-ты іске қосу үшін жүйе параметрлерінде беріңіз.</string>
-    <string name="diag_voice_meter_label">Нақты уақыттағы VU-метр</string>
-    <string name="diag_voice_meter_rms">RMS (орташа деңгей)</string>
-    <string name="diag_voice_meter_peak">Лездік шың</string>
-    <string name="diag_voice_stats_fmt">RMS %1$d • шың %2$d • clip %3$d • кадр %4$d</string>
-    <string name="diag_voice_stats_idle">—</string>
-    <string name="diag_voice_hint">Бұл PoC foreground қызметін ашады, ол микрофонды 16 kHz mono 16-bit оқиды және аудио деңгейін жергілікті көрсетеді. Ештеңе жазылмайды, жіберілмейді немесе талданбайды. «Ok DashCast» оятатын сөзі v1.2.44 нұсқасында (openWakeWord), сөз тану v1.2.45 нұсқасында (Vosk) қосылады.</string>
-    <string name="diag_voice_sample_rate_fmt">Дискретизация: %1$d Hz mono 16-bit • көзі VOICE_RECOGNITION</string>
     <string name="diag_voice_notif_channel">DashCast — Дауыстық PoC</string>
     <string name="diag_voice_notif_title">DashCast — микрофон тыңдауда (PoC)</string>
     <string name="diag_voice_notif_text">Аудио деңгейі жергілікті талданады, ештеңе жазылмайды.</string>
@@ -419,31 +275,9 @@
     <!-- Diag Voice wake-word (v1.2.50-beta, openWakeWord ONNX) -->
 
     <!-- Diag — Voice commands card (v1.4.0-beta, Vosk post-wake transcription) -->
-    <string name="diag_voice_commands_title">Дауыстық пәрмендер (Vosk)</string>
-    <string name="diag_voice_commands_switch">Қосу</string>
-    <string name="diag_voice_commands_hint">«Hey Jarvis» деп айтыңыз, содан кейін пәрменіңізді: «кластер», «кластерді жабу», «YouTube іске қосу», «диагностика», «журналдар».</string>
 
     <!-- v1.4.2-beta — LLM API key -->
-    <string name="diag_voice_apikey_label">OpenAI API кілті (міндетті емес — Jarvis ЖИ-ні іске қосады)</string>
-    <string name="diag_voice_apikey_hint">sk-…</string>    <string name="diag_voice_wakeword_card_title">Ояту сөзі (openWakeWord)</string>
     <!-- v1.4.3-beta — ASR model selection -->
-    <string name="diag_voice_model_card_title">Сөйлеуді тану үлгісі</string>
-    <string name="diag_voice_model_small_label">Шағын үлгі (~40 МБ)</string>
-    <string name="diag_voice_model_small_desc">Жылдам жүктеу, қысқа командалар үшін жақсы дәлдік.</string>
-    <string name="diag_voice_model_large_label">Үлкен үлгі (~1,3 ГБ) — жоғары дәлдік</string>
-    <string name="diag_voice_model_large_desc">Жақсырақ тану, Wi-Fi болғанда ұсынылады.</string>
-    <string name="diag_voice_model_storage_fmt">%1$d МБ қолжетімді</string>
-    <string name="diag_voice_model_download_btn">Жүктеу</string>
-    <string name="diag_voice_model_delete_btn">Жою</string>
-    <string name="diag_voice_model_status_downloaded">✓ Үлгі орнатылды</string>
-    <string name="diag_voice_model_status_not_downloaded">Орнатылмаған</string>
-    <string name="diag_voice_model_progress_fmt">%1$d МБ / %2$d МБ (%3$d%%)</string>
-    <string name="diag_voice_model_unzipping">Шығарылуда…</string>
-    <string name="diag_voice_wakeword_switch">Қосу</string>
-    <string name="diag_voice_wakeword_score_label">Sigmoid бағасы (босаға 0,5)</string>
-    <string name="diag_voice_wakeword_model_fmt">Үлгі: hey_jarvis_v0.1 («Ok DashCast» үшін орынбасар)</string>
-    <string name="diag_voice_wakeword_last_fmt">Соңғы анықтау: —</string>
-    <string name="diag_voice_wakeword_unavailable">ONNX Runtime қол жетімсіз — %1$s</string>
 
 
     <!-- Auto-aligned fallback strings (v1.2.51) -->
@@ -487,37 +321,6 @@
     <string name="hotspot_stat_tx">Sent</string>
     <string name="settings_use_own_sim">Мен өз SIM-картамды пайдаланамын</string>
     <string name="settings_use_own_sim_support">Мобильді деректеріңізді TetherFi арқылы бөлісу үшін навигация жолағында «Хотспот» түймесін көрсетеді (тек DiLink 3).</string>
-    <string name="diag_tab_cluster_dl5">Cluster DL5</string>
-    <string name="diag_dl5_cluster_header_title">Кластер DL5 — Барлау</string>
-    <string name="diag_dl5_cluster_header_subtitle">Бұзбайтын тексеру: DiLink 5-те кластер өлшемін өзгертуге қолжетімді shell пәрмендерін, үйлесімділік жалаушаларын және қызметтерді анықтайды.</string>
-    <string name="diag_dl5_cluster_run_all">Барлауды іске қосу</string>
-    <string name="diag_dl5_cluster_copy_report">Есепті көшіру</string>
-    <string name="diag_dl5_cluster_send_telegram">Telegram арқылы жіберу</string>
-    <string name="diag_dl5_cluster_counters_idle">Бос — әзірге тексеру жүргізілмеді</string>
-    <string name="diag_dl5_cluster_pill_unknown">Платформа: белгісіз</string>
-    <string name="diag_dl5_cluster_pill_dl5">Платформа: DiLink 5</string>
-    <string name="diag_dl5_cluster_pill_other">Платформа: басқа</string>
-    <string name="diag_dl5_cluster_toast_report_copied">Есеп аралық сақтағышқа көшірілді (%1$d жазба)</string>
-    <string name="diag_dl5_cluster_toast_no_results">Экспорттау алдында алдымен барлауды іске қосыңыз.</string>
-    <string name="diag_cluster_poc_title">Кластерді жылжыту/өлшемін өзгерту — fission дисплейі</string>
-    <string name="diag_cluster_poc_subtitle">WindowManagement / Dilink5 Dashboard сияқты, сенімді xdja « fission_* » дисплейінде қолданбаны (Waze, Maps, …) интерактивті басқару. Жергілікті VD пайдаланылмайды: « қосымша экран » хабарландыруын және 0 дисплейге оралуды болдырмау үшін жүйелік дисплейді (uid 1000) пайдаланамыз.</string>
-    <string name="diag_cluster_poc_btn_enumerate">📋 Дисплейлерді тізімдеу</string>
-    <string name="diag_cluster_poc_btn_restart_daemon">🔄 Демонды қайта қосу</string>
-    <string name="diag_cluster_poc_btn_share">📤 Есепті бөлісу</string>
-    <string name="diag_cluster_poc_section_app">Target</string>
-    <string name="diag_cluster_poc_label_pkg">package:</string>
-    <string name="diag_cluster_poc_btn_launch">▶ Fission-да іске қосу</string>
-    <string name="diag_cluster_poc_btn_stop">⏹ Мәжбүрлеп тоқтату</string>
-    <string name="diag_cluster_poc_section_rect">Орны мен өлшемі (fission дисплейінің px)</string>
-    <string name="diag_cluster_poc_slider_x">X (left)</string>
-    <string name="diag_cluster_poc_slider_y">Y (top)</string>
-    <string name="diag_cluster_poc_slider_w">W (width)</string>
-    <string name="diag_cluster_poc_slider_h">H (height)</string>
-    <string name="diag_cluster_poc_btn_apply">✅ Тіктөртбұрышты қолдану</string>
-    <string name="diag_cluster_poc_btn_auto_apply">Auto</string>
-    <string name="diag_cluster_poc_chooser_title">Кластер есебін бөлісу</string>
-    <string name="diag_cluster_poc_toast_no_report">Есеп жоқ. Алдымен « Дисплейлерді тізімдеу » түймесін басыңыз.</string>
-    <string name="diag_cluster_poc_status_idle">Дайын. Дисплейлерді көру үшін « Дисплейлерді тізімдеу », содан кейін нысананы іске қосу үшін « Fission-да іске қосу » түймесін басыңыз. Содан соң X/Y/Е/Б жүгірткілерін реттеп, « Тіктөртбұрышты қолдану » түймесін басыңыз (немесе « Auto » қосыңыз).</string>
     <string name="proxy_keeper_channel_name">Прокси демон</string>
     <string name="proxy_keeper_channel_desc">Прокси демонды фонда қол жетімді етеді</string>
     <string name="proxy_keeper_notif_title">DashCast — прокси белсенді</string>
