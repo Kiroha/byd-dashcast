@@ -607,8 +607,9 @@ android {
         // "start at vehicle boot"). No daemon protocol change; DL3/DL5 launch paths untouched.
         // +1 string x13 locales. Build + lint 0/0, 164 unit tests green.)
         // 590 = 1.7.0 (FIRST STABLE RELEASE since 1.5.4 — merged to main, marked Latest. MILESTONE: the codebase has crossed >50% Kotlin (Kotlin now outnumbers Java) after migrating the voice package, the report/ bug reporter, ui/nav, cluster dpi/display/mirror, infrastructure helpers and a batch of pure-logic policy classes; the Java diagnostics screen + its test runners were emptied to be rebuilt cleanly in Kotlin. 1.7.0 ships the whole 1.6.x beta series — DL5 cluster projection + signing-wall hardening, DL3 HUD turn-by-turn arrows, headless boot auto-launch, layout auto-start, screenshot recorder for bug reports, TetherFi hotspot keep-alive, CarPlay fullscreen tool, silent OTA auto-install + relaunch, keyboard-free bug wizard — plus, since 1.6.148: emptied Java diagnostics and 8 pure-logic classes migrated to Kotlin (unit-test validated). No daemon protocol change; DL3/DL5 unaffected; lint 0/0.)
-        versionCode 590
-        versionName "1.7.0"
+        // 591 = 1.8.1-beta (Kotlin migration continues on the beta channel after the 1.7.0 stable: 6 more pure-logic helper classes converted Java→Kotlin, batch #2 — AppProjectionIndicator, MirrorProjection, PackagePseudonymizer, LayoutAutoStartPolicy, FissionTeardownPlan, OtaInstallCommand. Each conversion's behaviour is validated by its existing unit test (full suite 326 tests green): OtaInstallCommand's shell transaction preserved byte-for-byte, MirrorProjection keeps @JvmField field access for MirrorCoordinator.java, FissionTeardownPlan keeps its @Throws Operations interface for the Java caller. NO functional change; no daemon protocol change; DL3/DL5 unaffected; lint 0/0. Pre-release from switch-kotlin — NOT merged to main, NOT Latest.)
+        versionCode 591
+        versionName "1.8.1-beta"
 
         // Ship only the locales the app actually translates (verified against
         // res/values-*: 12 + base en). Strips ~58 dead AndroidX/Material locale
