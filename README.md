@@ -11,9 +11,11 @@
 [![Docs](https://img.shields.io/badge/docs-kiroha.github.io-blue)](https://kiroha.github.io/byd-dashcast/)
 [![Telegram](https://img.shields.io/badge/Telegram-community-2CA5E0?logo=telegram)](https://t.me/+QPk_dmTVaNkxMjFk)
 
-Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push any installed app onto the instrument cluster display, control it via a real-time touch mirror, run multiple apps simultaneously on the cluster with the **Fission** layout engine, and interact with the car using **voice commands**.
+Android application for **BYD vehicles (DiLink 3 and DiLink 5)** to push any installed app onto the instrument cluster display, control it via a real-time touch mirror, run several apps at once on the cluster with the **Layouts** engine (internally *Fission*), draw turn-by-turn arrows on the **DiLink 3 windshield HUD**, and report problems in one tap with a keyboard-free bug wizard.
 
-> **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F) — Android 10 (API 29)
+> **v1.7.0 — first stable release since 1.5.4.** Milestone: the codebase has crossed **>50% Kotlin** (Kotlin now outnumbers Java). See [Migration status](#code-structure).
+
+> **Tested on**: BYD Seal EU 2024 — DiLink 3.0 (XDJA/Qualcomm 6125F, Android 10). Also runs on **DiLink 5** head units (Android 13); the privileged daemon path adapts to each ROM.
 
 - **Documentation**: https://kiroha.github.io/byd-dashcast/
 - **Community (Telegram)**: https://t.me/+QPk_dmTVaNkxMjFk
@@ -47,20 +49,22 @@ Android application for **BYD vehicles with DiLink 3.0** (Android 10) to push an
 | 3 | **→ Main screen** | Move an app from the cluster back to display 0 |
 | 4 | **Touch mirror** | Real-time TextureView of the cluster via `SurfaceControl` + full touch & key forwarding |
 | 5 | **Fission** | Multi-app layout engine: run several apps simultaneously on the cluster, with layout presets, per-slot app binding, auto-activation on open, and a visual editor |
-| 6 | **Voice commands** | Wake-word detection → offline speech recognition (Vosk) → LLM processing → TTS response. Models downloaded at first use via `VoiceLibsManager` |
-| 7 | **HUD overlay** | Navigation data extracted from active map notifications and rendered on the cluster (speed, direction, next instruction, ETA) |
+| 6 | **Voice commands** *(experimental)* | Wake-word → offline speech recognition (Vosk) → LLM → TTS. A proof-of-concept that lived in the diagnostics surface; not exposed in the main UI while diagnostics are being rebuilt in Kotlin |
+| 7 | **HUD turn-by-turn** *(DiLink 3)* | Forwards Google Maps / Waze guidance (maneuver arrow + distance) to the **windshield HUD over CAN** on arrow-capable firmware. Also renders a nav-data overlay on the cluster |
 | 8 | **Per-app DPI override** | Adjustable cluster display DPI per package — corrects apps that render incorrectly at 320 dpi |
 | 9 | **Restore BYD** | `sendInfo(18+0)` → Qt regains control of the cluster |
 | 10 | **Origin cluster** | `sendInfo(30+18+0)` → restores correct resolution + Qt |
 | 11 | **Settings** | Cluster screen size, auto-launch, Fission auto-layout, beta OTA channel, per-app insets |
-| 12 | **Diagnostics** | Shell probes, BYD API instantiation tests, live CAN data, display enumeration |
+| 12 | **Diagnostics** *(rebuilding)* | The Java diagnostics screen + test runners were **emptied in v1.7.0** to be rebuilt cleanly in Kotlin; a Kotlin stub keeps the menu entry. The HUD/AAOS diagnostic tools remain |
 | 13 | **System report** | Displays, system properties, BYD packages, permissions, proxy metrics, DiLink probe results |
 | 14 | **Live log** | LogActivity — DEBUG/INFO/WARN/ERROR levels, filters, auto-scroll, share |
 | 15 | **Multilingual** | French / English / German / Italian / Spanish / Polish / Turkish / Russian / Ukrainian / Arabic / Uzbek / Kazakh / Belarusian (13 languages), selected on first launch |
 | 16 | **Floating overlay** | Persistent 📺 button: tap opens mirror, long-press opens quick-switch (recent cluster apps) |
 | 17 | **Hotspot control** | Toggle and monitor Wi-Fi hotspot from within the app |
 | 18 | **Display affinity safeguards** | Moves session apps back to Display 0 when projection stops or app is killed |
-| 19 | **OTA update** | Auto-check against GitHub Releases API, silent install via `PackageInstaller` (platform key), fallback to system dialog |
+| 19 | **OTA update** | Auto-check against GitHub Releases; **silent auto-install + app relaunch** via the uid-2000 daemon (`pm install -r … && am start`), with fallback to `PackageInstaller` / the system dialog |
+| 20 | **Bug reporter** | Keyboard-free 3-step wizard (category → app → issue) that captures a bounded diagnostic snapshot and sends it to the support channel in one tap; reachable from the nav rail and the floating button |
+| 21 | **DiLink 5 support** | Cluster projection on DiLink 5 head units, with signing-wall hardening and a ROM-adaptive uid-2000 daemon path |
 
 ---
 
@@ -77,6 +81,8 @@ DashCast is organized around three runtime layers:
 ---
 
 ## Code structure
+
+> **Migration status (v1.7.0):** the codebase is **majority Kotlin** — `.kt` files now outnumber `.java`. The tree below is organised by responsibility; some entries keep their historical `.java` name even where the file is already Kotlin. Converted so far: the voice package, the bug reporter (`report/`), `ui/nav`, `cluster/{dpi,display,mirror}`, most of `infrastructure/`, the app lifecycle, and a batch of unit-tested pure-logic policy classes. Still Java (deliberately last): the `proxy` / `proxy/daemon` binder-contract core, `ClusterService`, `AdbLocalClient`, `Platform`, and the large activities.
 
 ```
 app/src/main/java/com/byd/dashcast/
