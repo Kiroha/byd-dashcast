@@ -186,7 +186,7 @@
     <string name="hotspot_tf_open_failed">Open TetherFi: %1$s</string>
     <!-- Watchdog -->
     <string name="hotspot_watchdog_title">Auto watchdog</string>
-    <string name="hotspot_watchdog_hint">Automatically restarts the hotspot if it drops (probes every 20 s).</string>
+    <string name="hotspot_watchdog_hint">Automatically restarts the hotspot if it drops (probes every 30 s).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi uninstalled — watchdog stopped</string>

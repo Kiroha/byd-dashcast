@@ -468,7 +468,7 @@
     <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
     <string name="hotspot_tf_open_failed">Открыть TetherFi: %1$s</string>
     <string name="hotspot_watchdog_title">Авто-наблюдение</string>
-    <string name="hotspot_watchdog_hint">Автоматически перезапускает точку доступа при сбое (проверка каждые 20 с).</string>
+    <string name="hotspot_watchdog_hint">Автоматически перезапускает точку доступа при сбое (проверка каждые 30 с).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi удалён — наблюдение остановлено</string>

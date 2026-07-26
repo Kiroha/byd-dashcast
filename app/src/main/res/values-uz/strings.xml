@@ -469,7 +469,7 @@
     <string name="hotspot_tf_dispatch_failed">▶ TetherFi %1$s — %2$s</string>
     <string name="hotspot_tf_open_failed">TetherFi\'ni ochish: %1$s</string>
     <string name="hotspot_watchdog_title">Avto-kuzatuv</string>
-    <string name="hotspot_watchdog_hint">Hotspot uzilsa, uni avtomatik qayta ishga tushiradi (har 20 s da tekshiradi).</string>
+    <string name="hotspot_watchdog_hint">Hotspot uzilsa, uni avtomatik qayta ishga tushiradi (har 30 s da tekshiradi).</string>
     <string name="hotspot_watchdog_idle">Off</string>
     <string name="hotspot_watchdog_probing">⏳ probing…</string>
     <string name="hotspot_watchdog_tf_gone">⛔ TetherFi o\'chirildi — kuzatuv to\'xtatildi</string>

@@ -10,6 +10,7 @@ import com.byd.dashcast.fission.LayoutPrefs
 import com.byd.dashcast.proxy.DaemonConfig
 import com.byd.dashcast.proxy.ProxyClient
 import com.byd.dashcast.proxy.ProxyKeeperService
+import com.byd.dashcast.ui.hotspot.HotspotKeeper
 import com.byd.dashcast.ui.settings.SettingsActivity
 import com.byd.dashcast.update.OtaRelaunchCoordinator
 import com.byd.dashcast.util.AppLogger
@@ -17,7 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class BootReceiver : BroadcastReceiver() {
 
-    @Suppress("DEPRECATION") // PackageManager.getPackageInfo(String, int) — fine on minSdk 28
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
 
@@ -43,7 +43,7 @@ class BootReceiver : BroadcastReceiver() {
         // We need to keep the process alive across multiple async tasks that
         // can run in parallel: (a) Phase 5 daemon pre-warm (~1.9 s connect()),
         // (b) display-affinity cleanup when auto-start is OFF,
-        // (c) TetherFi hotspot auto-start (postDelayed 8 s).
+        // (c) the TetherFi hotspot keep-alive pass (armed at +3 s, probe + launch).
         // PendingResult.finish() may only be called once, so we coordinate via
         // a shared atomic counter that triggers finish on the last completion.
         // The counter is initialised to 1 as a sentinel so that fast bg tasks
@@ -143,41 +143,30 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         // ─── v1.2.43 — Auto-start TetherFi hotspot at boot ─────────────────
-        // Fires the same TOGGLE→START intent that HotspotActivity uses, after
-        // a short delay so the Wi-Fi stack and PackageManager are fully up.
-        // Independent of the projection auto-boot above: a user can want one
-        // without the other.
+        // Independent of the projection auto-boot above: a user can want one without the other,
+        // so this stays gated on ITS OWN pref and never on the watchdog pref.
+        //
+        // v1.6.148 — PROBE-GATED. This receiver used to fire the tile Intent itself, BLIND: no
+        // state probe, no coordination with HotspotKeeper. This ROM RE-DELIVERS BOOT_COMPLETED at
+        // every ACC-on without rebooting (proven: this receiver ran 25 min into an already-running
+        // process on a 15-hour-old boot), so that blind dispatch landed ~14 s after the keeper's
+        // own first pass and the user saw TWO ProxyTileActivity popups 13.9 s apart
+        // (INC-20260721-184844). We now ask the keeper for ONE probe-then-start pass: already
+        // UP → nothing, DOWN → one launch, no shell at all → the keeper falls back to exactly the
+        // blind in-app startActivity this block used to do, so this path is never worse than the
+        // code it replaces. The keeper's dedupe rule makes the two passes safe.
         val hotspotAutoStart = prefs.getBoolean(SettingsActivity.PREF_HOTSPOT_AUTOSTART_BOOT, false)
         if (hotspotAutoStart) {
-            // Verify TetherFi is still installed (user may have uninstalled it).
-            var installed = false
-            try {
-                appCtx.packageManager.getPackageInfo("com.pyamsoft.tetherfi", 0)
-                installed = true
-            } catch (ignore: android.content.pm.PackageManager.NameNotFoundException) {
-            }
-
-            if (installed) {
-                pending.incrementAndGet()
-                sMain.postDelayed({
-                    try {
-                        val tetherIntent = Intent()
-                        tetherIntent.setClassName("com.pyamsoft.tetherfi",
-                                "com.pyamsoft.tetherfi.tile.ProxyTileActivity")
-                        tetherIntent.putExtra("key_action", "START")
-                        tetherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                or Intent.FLAG_ACTIVITY_NO_HISTORY)
-                        appCtx.startActivity(tetherIntent)
-                        AppLogger.i("BootReceiver", "TetherFi auto-start at boot: START dispatched")
-                    } catch (t: Throwable) {
-                        AppLogger.w("BootReceiver", "TetherFi auto-start failed: " + t.message)
-                    } finally {
-                        releaseOne.run()
-                    }
-                }, 7_000L)
-            } else {
-                AppLogger.i("BootReceiver", "TetherFi auto-start: pref ON but app not installed — skipped")
-            }
+            pending.incrementAndGet()
+            // 3 s — same rationale as the layout auto-start above: let the daemon pre-warm connect
+            // first, because the keeper's first launch route is a uid-2000 `am start` through that
+            // daemon. Shorter than the old 7 s: we no longer fire blind, so an early pass costs one
+            // dumpsys, not a wasted popup. runImmediatePass never throws and invokes releaseOne
+            // exactly once (run-once guard + a 12 s internal safety timeout), so the goAsync token
+            // cannot leak — and 3 s + 12 s is far inside the ~60 s a background broadcast is given.
+            sMain.postDelayed({
+                HotspotKeeper.runImmediatePass(appCtx, "boot/ACC-on", releaseOne)
+            }, 3_000L)
         }
 
         // Release the sentinel: all scheduling is now done. If every bg task

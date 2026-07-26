@@ -108,6 +108,18 @@ public final class ProxyWatchdog {
         AppLogger.i(TAG, "installed (interval=" + PING_INTERVAL_MS + "ms)");
     }
 
+    /**
+     * True while at least one DashCast Activity is resumed.
+     *
+     * <p>Read by {@code HotspotKeeper}: a resumed window is a background-activity-start
+     * exemption in its own right, so the in-app TetherFi launch route stays usable while the
+     * Hotspot page is open even when the "display over other apps" permission was never
+     * granted. Cheap and lock-free — the counter is already maintained by {@link #install}.
+     */
+    public static boolean isAppForeground() {
+        return sForegroundCount.get() > 0;
+    }
+
     /** Start the periodic ping on the background handler thread. */
     private static synchronized void startPolling() {
         if (!shouldPoll(sKeeperActive, sForegroundCount.get())) return;
