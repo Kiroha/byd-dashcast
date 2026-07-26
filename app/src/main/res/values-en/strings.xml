@@ -67,18 +67,9 @@
     <string name="share_report_title">Share report…</string>
     <string name="settings_header">Settings</string>
     <string name="settings_cluster_type_title">Cluster type</string>
-    <string name="settings_overscan_section_title">Display margins (overscan)</string>
-    <string name="settings_inset_h_label">Left / Right:</string>
-    <string name="settings_inset_v_label">Top / Bottom:</string>
-    <string name="settings_btn_apply_overscan">Apply now</string>
-    <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Applied — L/R: %1$d px, T/B: %2$d px</string>
     <string name="ota_dialog_title">Update available</string>
     <string name="ota_up_to_date">DashCast is up to date</string>
     <string name="btn_adjust">Adjust</string>
-    <string name="label_width_inset">Width Inset</string>
-    <string name="label_height_inset">Height Inset</string>
-    <string name="btn_apply">Apply</string>
     <string name="toast_grid_mode_enabled">Grid Mode Enabled</string>
     <string name="toast_list_mode_enabled">List Mode Enabled</string>
     <string name="toast_update_install_failed">Update install failed: </string>
@@ -108,9 +99,6 @@
     <string name="dialog_reconnect_msg">Relaunch %1$s on the cluster?</string>
     <string name="dialog_reconnect_yes">↺ Relaunch</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Adjust with arrows (instead of sliders)</string>
-    <string name="visual_overscan_height">↕ Height</string>
-    <string name="visual_overscan_width">↔ Width</string>
     <string name="setting_boot_auto_start">Automatically start projection on startup (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Media</string>
@@ -334,9 +322,6 @@
     <!-- DiLink 4 — Dedicated diagnostic (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Margins disabled on DiLink 2 (single screen).</string>
-    <string name="settings_warn_no_cluster">⚠️ No cluster detected — margins ignored (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">No browser available to open %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Restart</string>

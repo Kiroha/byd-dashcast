@@ -82,18 +82,9 @@
     <string name="share_report_title">Partager le rapport…</string>
     <string name="settings_header">Paramètres</string>
     <string name="settings_cluster_type_title">Type de cluster</string>
-    <string name="settings_overscan_section_title">Marges d\'affichage (overscan)</string>
-    <string name="settings_inset_h_label">Gauche / Droite :</string>
-    <string name="settings_inset_v_label">Haut / Bas :</string>
-    <string name="settings_btn_apply_overscan">Appliquer maintenant</string>
-    <string name="settings_btn_reset_overscan">Réinitialiser (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Appliqué — G/D : %1$d px, H/B : %2$d px</string>
     <string name="ota_dialog_title">Mise à jour disponible</string>
     <string name="ota_up_to_date">DashCast est à jour</string>
     <string name="btn_adjust">Ajuster</string>
-    <string name="label_width_inset">Marge Largeur</string>
-    <string name="label_height_inset">Marge Hauteur</string>
-    <string name="btn_apply">Appliquer</string>
     <string name="toast_grid_mode_enabled">Mode Grille activé</string>
     <string name="toast_list_mode_enabled">Mode Liste activé</string>
     <string name="toast_update_install_failed">Échec de l\'installation : </string>
@@ -153,9 +144,6 @@
     <string name="dialog_reconnect_msg">Relancer %1$s sur le cluster ?</string>
     <string name="dialog_reconnect_yes">↺ Relancer</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Ajuster avec des flèches (au lieu des curseurs)</string>
-    <string name="visual_overscan_height">↕ Hauteur</string>
-    <string name="visual_overscan_width">↔ Largeur</string>
     <string name="setting_boot_auto_start">Activer automatiquement la projection au démarrage (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Média</string>
@@ -379,9 +367,6 @@
     <string name="keyboard_bridge_a11y_required_toast">Activez « DashCast Cluster IME » dans Paramètres → Accessibilité pour que le clavier fonctionne sur l’instrumentation.</string>
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Marges désactivées sur DiLink 2 (un seul écran).</string>
-    <string name="settings_warn_no_cluster">⚠️ Aucun cluster détecté — marges ignorées (DL2 ?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Aucun navigateur disponible pour ouvrir %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
 

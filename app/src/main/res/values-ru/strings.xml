@@ -64,18 +64,9 @@
     <string name="share_report_title">Поделиться отчетом…</string>
     <string name="settings_header">Настройки</string>
     <string name="settings_cluster_type_title">Тип кластера</string>
-    <string name="settings_overscan_section_title">Поля дисплея (overscan)</string>
-    <string name="settings_inset_h_label">Слева / Справа:</string>
-    <string name="settings_inset_v_label">Сверху / Снизу:</string>
-    <string name="settings_btn_apply_overscan">Применить сейчас</string>
-    <string name="settings_btn_reset_overscan">Сбросить (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Применено — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Доступно обновление</string>
     <string name="ota_up_to_date">DashCast обновлён</string>
     <string name="btn_adjust">Настроить</string>
-    <string name="label_width_inset">Отступ ширины</string>
-    <string name="label_height_inset">Отступ высоты</string>
-    <string name="btn_apply">Применить</string>
     <string name="toast_grid_mode_enabled">Режим сетки включен</string>
     <string name="toast_list_mode_enabled">Режим списка включен</string>
     <string name="toast_update_install_failed">Ошибка установки: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">Перезапустить %1$s на кластере?</string>
     <string name="dialog_reconnect_yes">↺ Перезапустить</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Настроить стрелками (вместо ползунков)</string>
-    <string name="visual_overscan_height">↕ Высота</string>
-    <string name="visual_overscan_width">↔ Ширина</string>
     <string name="setting_boot_auto_start">Автоматически запускать проекцию при запуске (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навигация</string>
     <string name="category_media">🎵 Медиа</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Выделенная диагностика (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Поля отключены на DiLink 2 (один экран).</string>
-    <string name="settings_warn_no_cluster">⚠️ Кластер не обнаружен — поля проигнорированы (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Нет браузера для открытия %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Перезапустить</string>

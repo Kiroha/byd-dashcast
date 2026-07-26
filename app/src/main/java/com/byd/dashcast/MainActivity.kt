@@ -1229,17 +1229,9 @@ class MainActivity : AppCompatActivity(),
         mInsetOverlay?.setOverlayVisible(false)
         mClusterControlCoordinator?.collapseResizePanel()
 
-        // Load persisted insets for the new app into the seekbars.
-        val ccc = mClusterControlCoordinator
-        val pkg = mCurrentDashboardPkg
-        if (pkg != null && ccc != null) {
-            val p = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val defH = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H)
-            val defV = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V)
-            val curW = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH)
-            val curH = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV)
-            ccc.loadInsets(pkg, curW, curH)
-        }
+        // v1.8.2 — nothing to preload: the symmetric per-app inset seekbars are gone, and the
+        // only way to shrink a cluster app is now the hand-drawn rectangle editor, which reads
+        // its own saved rect when opened.
     }
 
     /** Hides the mirror and restores the app list. */
@@ -1426,10 +1418,9 @@ class MainActivity : AppCompatActivity(),
         if (!mServiceBound || svc == null) return
         val mirror = svc.getMirrorManager()
         overlay.setProjection(mirror.getProjScale(), mirror.getProjOffsetX().toFloat(), mirror.getProjOffsetY().toFloat())
-        overlay.setInsets(
-            mClusterControlCoordinator?.getInsetH() ?: 0,
-            mClusterControlCoordinator?.getInsetV() ?: 0
-        )
+        // v1.8.2 — the inset seekbars that fed this preview are gone; the cluster is always
+        // full-screen unless a hand-drawn rectangle says otherwise, so there is no band to draw.
+        overlay.setInsets(0, 0)
     }
 
     // ── Relaunch current cluster app ─────────────────────────────────────────
@@ -1611,12 +1602,6 @@ class MainActivity : AppCompatActivity(),
         mClusterControlCoordinator = ClusterControlCoordinator(
             panelClusterControl,
             findViewById(R.id.panel_controls_content),
-            findViewById(R.id.panel_resize),
-            findViewById(R.id.sb_resize_w),
-            findViewById(R.id.sb_resize_h),
-            findViewById(R.id.tv_resize_w_val),
-            findViewById(R.id.tv_resize_h_val),
-            findViewById(R.id.btn_resize_apply),
             findViewById(R.id.btn_panel_toggle),
             findViewById(R.id.btn_toggle_resize),
             findViewById(R.id.tv_control_app_name),

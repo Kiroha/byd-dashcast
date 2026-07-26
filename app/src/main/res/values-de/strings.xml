@@ -64,18 +64,9 @@
     <string name="share_report_title">Bericht teilen…</string>
     <string name="settings_header">Einstellungen</string>
     <string name="settings_cluster_type_title">Cluster-Typ</string>
-    <string name="settings_overscan_section_title">Anzeigeränder (Overscan)</string>
-    <string name="settings_inset_h_label">Links / Rechts:</string>
-    <string name="settings_inset_v_label">Oben / Unten:</string>
-    <string name="settings_btn_apply_overscan">Jetzt anwenden</string>
-    <string name="settings_btn_reset_overscan">Zurücksetzen (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Angewendet — L/R: %1$d px, O/U: %2$d px</string>
     <string name="ota_dialog_title">Update verfügbar</string>
     <string name="ota_up_to_date">DashCast ist aktuell</string>
     <string name="btn_adjust">Anpassen</string>
-    <string name="label_width_inset">Breitenrand</string>
-    <string name="label_height_inset">Höhenrand</string>
-    <string name="btn_apply">Anwenden</string>
     <string name="toast_grid_mode_enabled">Rastermodus aktiviert</string>
     <string name="toast_list_mode_enabled">Listenmodus aktiviert</string>
     <string name="toast_update_install_failed">Update-Installation fehlgeschlagen: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">%1$s auf dem Cluster neu starten?</string>
     <string name="dialog_reconnect_yes">↺ Neustarten</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Mit Pfeilen anpassen (statt Schiebereglern)</string>
-    <string name="visual_overscan_height">↕ Höhe</string>
-    <string name="visual_overscan_width">↔ Breite</string>
     <string name="setting_boot_auto_start">Projektion beim Systemstart automatisch starten (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navigation</string>
     <string name="category_media">🎵 Medien</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Dedizierte Diagnose (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Ränder auf DiLink 2 deaktiviert (Einzelbildschirm).</string>
-    <string name="settings_warn_no_cluster">⚠️ Kein Cluster erkannt — Ränder ignoriert (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Kein Browser verfügbar, um %1$s zu öffnen</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster-IME ✓</string>
     <string name="sysinfo_restart_action">Neu starten</string>

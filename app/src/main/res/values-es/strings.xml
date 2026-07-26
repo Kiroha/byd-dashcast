@@ -61,21 +61,12 @@
     <string name="share_report_title">Compartir informe…</string>
     <string name="settings_header">Configuración</string>
     <string name="settings_cluster_type_title">Tipo de clúster</string>
-    <string name="settings_overscan_section_title">Márgenes de pantalla (overscan)</string>
-    <string name="settings_inset_h_label">Izquierda / Derecha:</string>
-    <string name="settings_inset_v_label">Arriba / Abajo:</string>
-    <string name="settings_btn_apply_overscan">Aplicar ahora</string>
-    <string name="settings_btn_reset_overscan">Restablecer (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Aplicado — I/D: %1$d px, A/Ab: %2$d px</string>
     <string name="ota_dialog_title">Actualización disponible</string>
     <string name="ota_up_to_date">DashCast está actualizado</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
     <string name="btn_adjust">Ajustar</string>
-    <string name="label_width_inset">Margen de ancho</string>
-    <string name="label_height_inset">Margen de alto</string>
-    <string name="btn_apply">Aplicar</string>
     <string name="toast_grid_mode_enabled">Modo Cuadrícula activado</string>
     <string name="toast_list_mode_enabled">Modo Lista activado</string>
     <string name="toast_update_install_failed">Error en la instalación: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">¿Relanzar %1$s en el clúster?</string>
     <string name="dialog_reconnect_yes">↺ Relanzar</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Ajustar con flechas (en lugar de deslizadores)</string>
-    <string name="visual_overscan_height">↕ Altura</string>
-    <string name="visual_overscan_width">↔ Anchura</string>
     <string name="setting_boot_auto_start">Iniciar proyección automáticamente al inicio (Auto-Boot)</string>
     <string name="category_navigation">🗺 Navegación</string>
     <string name="category_media">🎵 Multimedia</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Diagnóstico dedicado (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Márgenes desactivados en DiLink 2 (una sola pantalla).</string>
-    <string name="settings_warn_no_cluster">⚠️ No se detectó cluster — márgenes ignorados (¿DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Ningún navegador disponible para abrir %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Reiniciar</string>

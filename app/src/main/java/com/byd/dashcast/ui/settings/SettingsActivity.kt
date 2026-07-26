@@ -40,10 +40,12 @@ import com.byd.dashcast.util.LocaleHelper
 /**
  * User-facing settings screen.
  *
- * Currently covers:
- *  1. Cluster screen type (sendInfo cmd: 29 = 8.8", 30 = 12.3" Seal EU, 31 = 10.25")
- *  2. Display overscan margins (left/right and top/bottom in pixels)
- *     Applied via: wm overscan LEFT,TOP,RIGHT,BOTTOM -d <cluster_display_id>
+ * Currently covers the cluster screen type (sendInfo cmd: 29 = 8.8", 30 = 12.3" Seal EU,
+ * 31 = 10.25") plus the OTA, boot and diagnostic toggles.
+ *
+ * v1.8.2 — the display overscan margins card was removed: it applied its value twice (task
+ * launch bounds + `wm overscan`), so the 80/50 default blacked out 40% of the cluster
+ * (INC-20260725-211405). Shrinking an app is now solely the per-app hand-drawn rectangle.
  */
 @SuppressLint("SetTextI18n")
 class SettingsActivity : AppCompatActivity() {
@@ -54,20 +56,10 @@ class SettingsActivity : AppCompatActivity() {
 
     // ── Views ────────────────────────────────────────────────────────────────
     private lateinit var rgClusterType: RadioGroup
-    private lateinit var sbInsetH: SeekBar
-    private lateinit var sbInsetV: SeekBar
-    private lateinit var tvInsetHValue: TextView
-    private lateinit var tvInsetVValue: TextView
-    private lateinit var btnApply: Button
-    private lateinit var btnReset: Button
-    private lateinit var tvResult: TextView
-    private var tvOverscanSectionTitle: View? = null
-    private var cardOverscan: View? = null
     // Note: fields below are typed as CompoundButton so the layout can use either
     // <CheckBox> or <MaterialSwitch> without breaking the cast. Both inherit
     // setChecked/isChecked/setOnCheckedChangeListener from CompoundButton.
     private lateinit var cbPrerelease: CompoundButton
-    private lateinit var cbVisualMode: CompoundButton
     private lateinit var cbBootAutoStart: CompoundButton
     private lateinit var cbShowCategoryFilters: CompoundButton
     private lateinit var cbReconnectPopup: CompoundButton
@@ -80,18 +72,10 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var cbFissionMode: CompoundButton
     private lateinit var swFissionAutoLayout: CompoundButton
     private lateinit var swFissionPrecreateSlots: CompoundButton
-    private lateinit var llSlidersMode: View
-    private lateinit var llVisualMode: View
-    private var flSafeZone: View? = null
-    private lateinit var btnHMinus: Button
-    private lateinit var btnHPlus: Button
-    private lateinit var btnVMinus: Button
-    private lateinit var btnVPlus: Button
 
     @Volatile
     private var mDestroyed = false
     private lateinit var mPrefs: SharedPreferences
-    private var mSafeZoneParams: ViewGroup.MarginLayoutParams? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,12 +90,6 @@ class SettingsActivity : AppCompatActivity() {
         loadPreferences()
         wireListeners()
         wireSettingsNavRail()
-        applyDiLink2OverscanGuard()
-
-        // Mockup top-bar Apply button: mirrors the in-card Apply action.
-        val btnApplyTop: View? = findViewById(R.id.btn_apply_top)
-        btnApplyTop?.setOnClickListener { btnApply.performClick() }
-
         // Populate dynamic version text ("0.9.2 · build 121").
         val tvVersion: TextView? = findViewById(R.id.tv_version_value)
         tvVersion?.text = BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE
@@ -176,25 +154,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun bindViews() {
         rgClusterType = findViewById(R.id.rg_cluster_type)
-        sbInsetH = findViewById(R.id.sb_inset_h)
-        sbInsetV = findViewById(R.id.sb_inset_v)
-        tvInsetHValue = findViewById(R.id.tv_inset_h_value)
-        tvInsetVValue = findViewById(R.id.tv_inset_v_value)
-        btnApply = findViewById(R.id.btn_apply_overscan)
-        btnReset = findViewById(R.id.btn_reset_overscan)
-        tvResult = findViewById(R.id.tv_overscan_result)
-        tvOverscanSectionTitle = findViewById(R.id.tv_overscan_section_title)
-        cardOverscan = findViewById(R.id.card_overscan)
         cbPrerelease = findViewById(R.id.cb_prerelease)
-        cbVisualMode = findViewById(R.id.cb_visual_mode)
         cbBootAutoStart = findViewById(R.id.cb_boot_auto_start)
-        llSlidersMode = findViewById(R.id.ll_sliders_mode)
-        llVisualMode = findViewById(R.id.ll_visual_overscan)
-        btnHMinus = findViewById(R.id.btn_h_minus)
-        btnHPlus = findViewById(R.id.btn_h_plus)
-        btnVMinus = findViewById(R.id.btn_v_minus)
-        btnVPlus = findViewById(R.id.btn_v_plus)
-        flSafeZone = findViewById(R.id.fl_safe_zone)
         cbShowCategoryFilters = findViewById(R.id.cb_show_category_filters)
         cbCaptureShots = findViewById(R.id.cb_capture_shots)
         cbReconnectPopup = findViewById(R.id.cb_reconnect_popup)
@@ -219,22 +180,8 @@ class SettingsActivity : AppCompatActivity() {
             else -> rgClusterType.check(R.id.rb_123) // 30 = Seal EU
         }
 
-        // Overscan sliders
-        val h = prefs.getInt(PREF_INSET_H, DEFAULT_INSET_H)
-        val v = prefs.getInt(PREF_INSET_V, DEFAULT_INSET_V)
-        sbInsetH.progress = h
-        sbInsetV.progress = v
-        tvInsetHValue.text = "$h px"
-        tvInsetVValue.text = "$v px"
-
         // Pre-release toggle
         cbPrerelease.isChecked = prefs.getBoolean(PREF_OTA_PRERELEASE, DEFAULT_OTA_PRERELEASE)
-
-        // Visual Mode toggle state
-        val visualMode = prefs.getBoolean(PREF_VISUAL_OVERSCAN_MODE, false)
-        cbVisualMode.isChecked = visualMode
-        updateVisualModeState(visualMode)
-        updateVisualMockup()
 
         // Auto Boot Projection toggle state
         cbBootAutoStart.isChecked = ClusterPrefs.isBootAutoStartEnabled(this)
@@ -295,75 +242,16 @@ class SettingsActivity : AppCompatActivity() {
         row123?.setOnClickListener { rgClusterType.check(R.id.rb_123) }
         row1025?.setOnClickListener { rgClusterType.check(R.id.rb_1025) }
 
-        // H slider
-        sbInsetH.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar, value: Int, fromUser: Boolean) {
-                tvInsetHValue.text = "$value px"
-                if (fromUser) saveInsets(value, sbInsetV.progress)
-            }
-            override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
-        })
-
-        // V slider
-        sbInsetV.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar, value: Int, fromUser: Boolean) {
-                tvInsetVValue.text = "$value px"
-                if (fromUser) saveInsets(sbInsetH.progress, value)
-            }
-            override fun onStartTrackingTouch(sb: SeekBar) {}
-            override fun onStopTrackingTouch(sb: SeekBar) {}
-        })
-
-        // Apply button
-        btnApply.setOnClickListener { applyOverscan() }
-
-        // Reset button
-        btnReset.setOnClickListener {
-            sbInsetH.progress = DEFAULT_INSET_H
-            sbInsetV.progress = DEFAULT_INSET_V
-            tvInsetHValue.text = "$DEFAULT_INSET_H px"
-            tvInsetVValue.text = "$DEFAULT_INSET_V px"
-            saveInsets(DEFAULT_INSET_H, DEFAULT_INSET_V)
-            applyOverscan()
-        }
-
         // Pre-release checkbox
         cbPrerelease.setOnCheckedChangeListener { _, isChecked ->
             mPrefs.edit { putBoolean(PREF_OTA_PRERELEASE, isChecked) }
             AppLogger.i("SettingsActivity", "ota_include_prerelease=$isChecked")
         }
 
-        // Visual Mode checkbox
-        cbVisualMode.setOnCheckedChangeListener { _, isChecked ->
-            mPrefs.edit { putBoolean(PREF_VISUAL_OVERSCAN_MODE, isChecked) }
-            updateVisualModeState(isChecked)
-        }
-
         // Auto Start Projection checkbox
         cbBootAutoStart.setOnCheckedChangeListener { _, isChecked ->
             ClusterPrefs.setBootAutoStartEnabled(this, isChecked)
         }
-
-        val dpadListener = View.OnClickListener { v ->
-            var h = sbInsetH.progress
-            var valV = sbInsetV.progress
-            if (v === btnHMinus) h = maxOf(0, h - 10)
-            if (v === btnHPlus) h = minOf(200, h + 10)
-            if (v === btnVMinus) valV = maxOf(0, valV - 10)
-            if (v === btnVPlus) valV = minOf(200, valV + 10)
-
-            sbInsetH.progress = h
-            sbInsetV.progress = valV
-            updateVisualMockup()
-            // To keep it real-time as requested:
-            applyOverscan()
-        }
-
-        btnHMinus.setOnClickListener(dpadListener)
-        btnHPlus.setOnClickListener(dpadListener)
-        btnVMinus.setOnClickListener(dpadListener)
-        btnVPlus.setOnClickListener(dpadListener)
 
         // Category filters checkbox
         cbShowCategoryFilters.setOnCheckedChangeListener { _, isChecked ->
@@ -424,156 +312,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateVisualModeState(visual: Boolean) {
-        llSlidersMode.visibility = if (visual) View.GONE else View.VISIBLE
-        llVisualMode.visibility = if (visual) View.VISIBLE else View.GONE
-    }
-
-    private fun updateVisualMockup() {
-        val sz = flSafeZone ?: return
-        val h = sbInsetH.progress
-        val v = sbInsetV.progress
-        var p = mSafeZoneParams
-        if (p == null) {
-            p = sz.layoutParams as ViewGroup.MarginLayoutParams
-            mSafeZoneParams = p
-        }
-        // Scale logic: Mockup is 320x120. Real cluster is 1920x720. Scale is 1/6.
-        p.leftMargin = (h / 6f).toInt()
-        p.rightMargin = (h / 6f).toInt()
-        p.topMargin = (v / 6f).toInt()
-        p.bottomMargin = (v / 6f).toInt()
-        sz.requestLayout()
-    }
-
-    // ── Logic ─────────────────────────────────────────────────────────────────
-
-    private fun saveInsets(h: Int, v: Int) {
-        mPrefs.edit {
-            putInt(PREF_INSET_H, h)
-            putInt(PREF_INSET_V, v)
-        }
-    }
-
-    /**
-     * Sends "wm overscan H,V,H,V -d <clusterId>" to the cluster display.
-     * The cluster display id is resolved dynamically via [resolveClusterDisplayId]
-     * (was hardcoded `-d 1` until build 189). If no cluster is detected
-     * (e.g. DL2 without secondary display), the call is aborted with a user-visible
-     * error — critical to prevent the BYD MTK ROM from silently applying the
-     * overscan to display 0 (the main screen), as reported in the field on 22/05/2026.
-     * The result is shown in tvResult.
-     */
-    private fun applyOverscan() {
-        val h = sbInsetH.progress
-        val v = sbInsetV.progress
-        saveInsets(h, v)
-
-        // DL2 HARD GUARD — never reach a wm command on DL2 even if the card
-        // somehow got displayed (defence in depth on top of applyDiLink2OverscanGuard
-        // and AdbLocalClient.blockDiLink2Resize). The MTK ROM silently falls back
-        // to display 0 on missing -d N → shrinks the main screen.
-        if (Platform.get().isDiLink2(this)) {
-            tvResult.visibility = View.VISIBLE
-            tvResult.setText(R.string.settings_warn_dl2_no_margins)
-            AppLogger.w("SettingsActivity", "applyOverscan aborted: DL2 platform (no cluster display)")
-            return
-        }
-
-        val clusterId = resolveClusterDisplayId()
-        if (clusterId < 0) {
-            tvResult.visibility = View.VISIBLE
-            tvResult.setText(R.string.settings_warn_no_cluster)
-            AppLogger.w(
-                "SettingsActivity",
-                "applyOverscan aborted: no cluster display found (h=$h v=$v)"
-            )
-            return
-        }
-
-        val cmd = "wm overscan $h,$v,$h,$v -d $clusterId"
-        AppLogger.i("SettingsActivity", "applyOverscan → $cmd")
-
-        ShellGateway.execShellWithResult(this, cmd, object : AdbLocalClient.Callback {
-            override fun onSuccess(report: String) {
-                runOnUiThread {
-                    if (mDestroyed) return@runOnUiThread
-                    tvResult.visibility = View.VISIBLE
-                    tvResult.text = getString(R.string.settings_overscan_applied, h, v)
-                    AppLogger.i("SettingsActivity", "overscan applied OK h=$h v=$v")
-                }
-            }
-
-            override fun onError(error: String) {
-                runOnUiThread {
-                    if (mDestroyed) return@runOnUiThread
-                    tvResult.visibility = View.VISIBLE
-                    tvResult.text = getString(R.string.settings_error_prefix_fmt, error.trim())
-                    AppLogger.e("SettingsActivity", "overscan error: $error")
-                }
-            }
-        })
-    }
-
-    /**
-     * Resolves the cluster display id dynamically.
-     *
-     * Returns the id of the first non-default display reported by [DisplayManager]
-     * (PRESENTATION category first, then any non-default). Returns `-1` when no
-     * cluster display is present (typically DL2, which has only display 0). This
-     * guard is critical: on DL2 the previous hardcoded `-d 1` was silently applied
-     * to display 0 by the BYD MTK ROM, shrinking the main screen (field report
-     * 22/05/2026).
-     */
-    private fun resolveClusterDisplayId(): Int {
-        try {
-            val dm = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager ?: return -1
-            val presentations = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
-            if (presentations != null) {
-                for (d in presentations) {
-                    if (d.displayId != Display.DEFAULT_DISPLAY) return d.displayId
-                }
-            }
-            val all = dm.displays
-            if (all != null) {
-                for (d in all) {
-                    if (d.displayId != Display.DEFAULT_DISPLAY) return d.displayId
-                }
-            }
-        } catch (t: Throwable) {
-            AppLogger.w("SettingsActivity", "resolveClusterDisplayId failed: " + t.message)
-        }
-        return -1
-    }
-
-    /**
-     * Hides the overscan margins section on DL2 (alps / k65v1 / API 28) because the
-     * platform has no cluster display — the previous hardcoded `wm overscan -d 1`
-     * was silently applied to display 0 by the MTK ROM, shrinking the main screen.
-     * Also hides on any device where no secondary display is detected at activity
-     * launch (defensive — covers DL3/DL5 in a state where the cluster is not connected).
-     */
-    private fun applyDiLink2OverscanGuard() {
-        var hide = false
-        var reason: String? = null
-        try {
-            if (Platform.get().isDiLink2(this)) {
-                hide = true
-                reason = "DL2 platform detected (alps/k65v1) — no cluster display"
-            } else if (resolveClusterDisplayId() < 0) {
-                hide = true
-                reason = "no secondary display present at launch"
-            }
-        } catch (t: Throwable) {
-            AppLogger.w("SettingsActivity", "applyDiLink2OverscanGuard probe failed: " + t.message)
-        }
-        if (hide) {
-            tvOverscanSectionTitle?.visibility = View.GONE
-            cardOverscan?.visibility = View.GONE
-            AppLogger.i("SettingsActivity", "Overscan section hidden: $reason")
-        }
-    }
-
     companion object {
         // ── SharedPreferences file (shared with MainActivity / ClusterService) ───
         // Delegates to ClusterPrefs — the single source of truth for this string.
@@ -583,12 +321,6 @@ class SettingsActivity : AppCompatActivity() {
         private const val PREF_CLUSTER_TYPE = ClusterPrefs.KEY_CLUSTER_TYPE
         private const val DEFAULT_CLUSTER_TYPE = ClusterPrefs.CLUSTER_TYPE_DEFAULT // 12.3" — Seal EU
 
-        // ── Overscan inset ───────────────────────────────────────────────────────
-        const val PREF_INSET_H = "overscan_inset_h"
-        const val PREF_INSET_V = "overscan_inset_v"
-        const val DEFAULT_INSET_H = 80
-        const val DEFAULT_INSET_V = 50
-
         // ── OTA pre-release ──────────────────────────────────────────────────────
         const val PREF_OTA_PRERELEASE = "ota_include_prerelease"
         const val DEFAULT_OTA_PRERELEASE = true
@@ -597,7 +329,6 @@ class SettingsActivity : AppCompatActivity() {
         const val PREF_BOOT_AUTO_START = ClusterPrefs.KEY_BOOT_AUTO_START
         const val PREF_SHOW_CATEGORY_FILTERS = "show_category_filters"
         const val PREF_RECONNECT_POPUP = "reconnect_popup_enabled"
-        private const val PREF_VISUAL_OVERSCAN_MODE = "visual_overscan_mode"
 
         // ── Stop Projection behaviour ──────────────────────────────────────────────
         const val PREF_QUICK_STOP = "quick_stop_enabled"
@@ -616,13 +347,11 @@ class SettingsActivity : AppCompatActivity() {
         // ── Recent cluster apps (shared between MainActivity and FloatingRemoteButton) ──
         const val PREF_RECENT_APPS = "recent_cluster_apps"
 
-        // ── Per-app inset key prefixes (shared between MainActivity and ClusterService) ──
-        const val PREF_INSET_H_PREFIX = "inset_h_"
-        const val PREF_INSET_V_PREFIX = "inset_v_"
-
         // Per-app hand-drawn cluster rectangle ("l,t,r,b"), set by ClusterResizeActivity.
-        // Takes precedence over the symmetric seekbar insets when present (the last tool
-        // used wins: ClusterControlCoordinator removes it when the seekbar Apply is used).
+        // v1.8.2 — this is now the ONLY way an app is shrunk on the cluster. The global
+        // overscan and the symmetric per-app inset seekbars are gone: they were applied twice
+        // (launch bounds + display overscan), so the 80/50 default removed 40% of the panel
+        // (INC-20260725-211405). No rectangle = the app fills the cluster.
         const val PREF_CLUSTER_RECT_PREFIX = "cluster_rect_"
     }
 }

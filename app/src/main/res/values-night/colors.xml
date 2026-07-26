@@ -2,8 +2,6 @@
 <resources>
     <!-- App Backgrounds (NIGHT MODE) -->
     <color name="bg_main">#090C10</color>
-    <color name="bg_button_secondary">#333333</color>
-
     <!-- Text (NIGHT MODE) -->
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#AAAAAA</color>
@@ -55,7 +53,6 @@
     <color name="md_surface_container_low">#13171F</color>
     <color name="md_surface_container">#191E29</color>
     <color name="md_surface_container_high">#222938</color>
-    <color name="md_surface_container_highest">#323C4E</color>
     <!-- v0.9.81 — Diag status pill colors -->
     <color name="md_status_ok">#3CD070</color>
     <color name="md_status_warn">#FFA940</color>

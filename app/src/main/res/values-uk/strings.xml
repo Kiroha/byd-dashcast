@@ -64,18 +64,9 @@
     <string name="share_report_title">Поділитися звітом…</string>
     <string name="settings_header">Налаштування</string>
     <string name="settings_cluster_type_title">Тип кластера</string>
-    <string name="settings_overscan_section_title">Поля дисплея (overscan)</string>
-    <string name="settings_inset_h_label">Ліворуч / Праворуч:</string>
-    <string name="settings_inset_v_label">Зверху / Знизу:</string>
-    <string name="settings_btn_apply_overscan">Застосувати зараз</string>
-    <string name="settings_btn_reset_overscan">Скинути (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Застосовано — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Доступне оновлення</string>
     <string name="ota_up_to_date">DashCast оновлено</string>
     <string name="btn_adjust">Налаштувати</string>
-    <string name="label_width_inset">Відступ ширини</string>
-    <string name="label_height_inset">Відступ висоти</string>
-    <string name="btn_apply">Застосувати</string>
     <string name="toast_grid_mode_enabled">Режим сітки увімкнено</string>
     <string name="toast_list_mode_enabled">Режим списку увімкнено</string>
     <string name="toast_update_install_failed">Помилка встановлення: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">Перезапустити %1$s на кластері?</string>
     <string name="dialog_reconnect_yes">↺ Перезапустити</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Налаштувати стрілками (замість повзунків)</string>
-    <string name="visual_overscan_height">↕ Висота</string>
-    <string name="visual_overscan_width">↔ Ширина</string>
     <string name="setting_boot_auto_start">Автоматично запускати проекцію під час запуску (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навігація</string>
     <string name="category_media">🎵 Медіа</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Виділена діагностика (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Поля вимкнено на DiLink 2 (один екран).</string>
-    <string name="settings_warn_no_cluster">⚠️ Кластер не виявлено — поля ігноруються (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Немає браузера для відкриття %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Перезапустити</string>
