@@ -61,21 +61,12 @@
     <string name="share_report_title">Есепті бөлісу…</string>
     <string name="settings_header">Баптаулар</string>
     <string name="settings_cluster_type_title">Кластер түрі</string>
-    <string name="settings_overscan_section_title">Дисплей жиектері (overscan)</string>
-    <string name="settings_inset_h_label">Сол / Оң:</string>
-    <string name="settings_inset_v_label">Жоғары / Төмен:</string>
-    <string name="settings_btn_apply_overscan">Қазір қолдану</string>
-    <string name="settings_btn_reset_overscan">Reset (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Қолданылды — С/О: %1$d px, Ж/Т: %2$d px</string>
     <string name="ota_dialog_title">Жаңарту қол жетімді</string>
     <string name="ota_up_to_date">DashCast жаңартылған</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Реттеу</string>
-    <string name="label_width_inset">Ені бойынша шегініс</string>
-    <string name="label_height_inset">Биіктігі бойынша шегініс</string>
-    <string name="btn_apply">Қолдану</string>
     <string name="toast_grid_mode_enabled">Тор режимі қосылды</string>
     <string name="toast_list_mode_enabled">Тізім режимі қосылды</string>
     <string name="toast_update_install_failed">Орнату қатесі: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">%1$s кластерде қайта іске қосу?</string>
     <string name="dialog_reconnect_yes">↺ Қайта іске қосу</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Көрсеткілермен реттеу (жүгірткілер орнына)</string>
-    <string name="visual_overscan_height">↕ Биіктігі</string>
-    <string name="visual_overscan_width">↔ Ені</string>
     <string name="setting_boot_auto_start">Іске қосылғанда проекцияны автоматты түрде бастау (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навигация</string>
     <string name="category_media">🎵 Медиа</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Арнайы диагностика (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ DiLink 2-де жиектер өшірілген (бір экран).</string>
-    <string name="settings_warn_no_cluster">⚠️ Кластер табылмады — жиектер еленбейді (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">%1$s ашуға арналған браузер жоқ</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Қайта іске қосу</string>

@@ -30,10 +30,8 @@ import com.byd.dashcast.infrastructure.launch.PlatformAdaptiveAppLauncher;
 import com.byd.dashcast.infrastructure.task.AdbLocalTaskFinder;
 import com.byd.dashcast.infrastructure.task.AmTaskFinder;
 import com.byd.dashcast.infrastructure.task.ChainedTaskFinder;
-import com.byd.dashcast.infrastructure.task.ChainedTaskResizer;
 import com.byd.dashcast.infrastructure.task.TaskFinder;
 import com.byd.dashcast.infrastructure.task.TaskLocation;
-import com.byd.dashcast.infrastructure.task.TaskResizer;
 import com.byd.dashcast.infrastructure.task.TypedProxyTaskFinder;
 import com.byd.dashcast.platform.Platform;
 import com.byd.dashcast.data.prefs.ClusterPrefs;
@@ -50,8 +48,6 @@ import java.util.concurrent.Executors;
  * <ul>
  *   <li>{@link #findRunningTaskId(String)} now delegates to {@link ChainedTaskFinder}
  *       (AM → ProxyDaemon → AdbLocal), removing 140 lines of inline strategy code.
- *   <li>{@link #resizeActiveTask(int, String)} now delegates to {@link ChainedTaskResizer}
- *       (reflection → shell), removing 80 lines of inline cascade code.
  *   <li>Implements {@link ProjectionStateProvider} so FissionActivity / FissionOrchestrator
  *       no longer depend on the static field {@code sIsRunning} or a direct class reference.
  * </ul>
@@ -125,7 +121,6 @@ public class ClusterService extends Service
 
     // ── Strategy objects (injected in onCreate) ─────────────────────────────
     private TaskFinder   mTaskFinder;
-    private TaskResizer  mTaskResizer;
 
     // ── Background executor for task-move operations ────────────────────────
     private static final ExecutorService sMoveTaskExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -192,7 +187,6 @@ public class ClusterService extends Service
                 new TypedProxyTaskFinder(),
                 new com.byd.dashcast.infrastructure.task.ProxyTaskFinder(),
                 new AdbLocalTaskFinder(this));
-        mTaskResizer = new ChainedTaskResizer(this);
 
         AdbLocalClient.startMirrorDaemon(this);
         createNotificationChannel();
@@ -372,97 +366,6 @@ public class ClusterService extends Service
         mDisplayHelper.start();
     }
 
-    public int getInsetH(String packageName) {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        int def = prefs.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        if (packageName == null || packageName.isEmpty()) return def;
-        return prefs.getInt(SettingsActivity.PREF_INSET_H_PREFIX + packageName, def);
-    }
-
-    public int getInsetV(String packageName) {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        int def = prefs.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        if (packageName == null || packageName.isEmpty()) return def;
-        return prefs.getInt(SettingsActivity.PREF_INSET_V_PREFIX + packageName, def);
-    }
-
-    /**
-     * Resizes the active cluster task to its per-app inset bounds.
-     *
-     * <p>Delegates to {@link ChainedTaskResizer} (reflection → shell). All DL5/ROM guards
-     * are preserved; this method is unchanged from the user's perspective.
-     */
-    public void resizeActiveTask(int taskId, String packageName) {
-        if (taskId <= 0) {
-            AppLogger.w(TAG, "resizeActiveTask: taskId<=0 for pkg=" + packageName);
-            return;
-        }
-        if (!Platform.get().isClusterTaskResizeSupported(this)) {
-            if (!sResizeUnsupportedLogged) {
-                sResizeUnsupportedLogged = true;
-                AppLogger.w(TAG, "resizeActiveTask skipped: cluster task resize not supported on ROM");
-            }
-            return;
-        }
-        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
-        if (clusterId <= 0) {
-            AppLogger.w(TAG, "resizeActiveTask aborted: no cluster display (taskId=" + taskId + ")");
-            return;
-        }
-
-        // Compute bounds (DL5 framebuffer-space fix: use real display dimensions).
-        int cw = 1920, ch = 720;
-        try {
-            android.hardware.display.DisplayManager dm =
-                    (android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE);
-            android.view.Display d = (dm != null) ? dm.getDisplay(clusterId) : null;
-            if (d != null) {
-                android.graphics.Point sz = new android.graphics.Point();
-                d.getRealSize(sz);
-                if (sz.x > 0) cw = sz.x;
-                if (sz.y > 0) ch = sz.y;
-            }
-        } catch (Throwable t) {
-            AppLogger.w(TAG, "getRealSize(" + clusterId + ") failed: " + t.getMessage());
-            if (mInputForwarder != null) {
-                int fw = mInputForwarder.getClusterWidth();
-                int fh = mInputForwarder.getClusterHeight();
-                if (fw > 0) cw = fw;
-                if (fh > 0) ch = fh;
-            }
-        }
-        // Normalize: cluster is always landscape; getRealSize() can report portrait dimensions
-        // after a portrait app triggered a VirtualDisplay rotation on DL3.
-        if (cw > 0 && ch > 0 && ch > cw) {
-            int tmp = cw; cw = ch; ch = tmp;
-            AppLogger.w(TAG, "resizeActiveTask: portrait VD detected — swapped to " + cw + "x" + ch);
-        }
-        int insetH = getInsetH(packageName);
-        int insetV = getInsetV(packageName);
-        Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
-
-        // Primary: daemon-backed FREEFORM flip + resize (uid=2000 bypasses permission check).
-        // The containing stack stays FULLSCREEN when the task is launched via startActivity,
-        // and am task resize rejects non-FREEFORM tasks. Phase4TaskVerbs.moveAndResize()
-        // calls setTaskWindowingMode(FREEFORM) on both the task and stack before resizing.
-        try {
-            String log = ProxyClient.moveAndResize(packageName, clusterId,
-                    bounds.left, bounds.top, bounds.right, bounds.bottom);
-            AppLogger.i(TAG, "resizeActiveTask via daemon: " + log);
-            return;
-        } catch (Exception daemonEx) {
-            AppLogger.w(TAG, "resizeActiveTask daemon unavailable — fallback: " + daemonEx.getMessage());
-        }
-        // Fallback: ChainedTaskResizer (reflection → shell)
-        try {
-            mTaskResizer.resize(taskId, packageName, bounds);
-        } catch (TaskResizer.ResizeException e) {
-            AppLogger.w(TAG, "resizeActiveTask final failure for " + packageName + ": " + e.getMessage());
-        }
-    }
-
     public void setListener(Listener listener) {
         mListener = listener;
         int knownId = mDisplayHelper.getKnownClusterDisplayId();
@@ -623,16 +526,15 @@ public class ClusterService extends Service
                     } catch (Exception e) {
                         AppLogger.w(TAG, "setTaskWindowingMode: " + e.getMessage());
                     }
-                    // Apply inset bounds post-move
+                    // Fill the panel post-move (v1.8.2 — no more inset margins; a per-app
+                    // hand-drawn rectangle is re-applied afterwards by InsetAutoApplicator).
                     try {
                         if (!operation.isValid()) return;
-                        int insetH = getInsetH(packageName);
-                        int insetV = getInsetV(packageName);
                         int cw = (mInputForwarder != null) ? mInputForwarder.getClusterWidth()  : 1920;
                         int ch = (mInputForwarder != null) ? mInputForwarder.getClusterHeight() :  720;
                         if (cw <= 0) cw = 1920;
                         if (ch <= 0) ch =  720;
-                        Rect bounds = new Rect(insetH, insetV, cw - insetH, ch - insetV);
+                        Rect bounds = new Rect(0, 0, cw, ch);
                         iAtmClass.getMethod("resizeTask",
                                 int.class, Rect.class, int.class)
                                 .invoke(iatm, taskId, bounds, 1 /* RESIZE_MODE_FORCED */);
@@ -985,9 +887,12 @@ public class ClusterService extends Service
             AppLogger.w(TAG, "applyClusterFreeformBounds: portrait VD detected — swapped to "
                     + sz.x + "x" + sz.y);
         }
-        int insetH = getInsetH(packageName);
-        int insetV = getInsetV(packageName);
-        Rect bounds = new Rect(insetH, insetV, sz.x - insetH, sz.y - insetV);
+        // v1.8.2 — always launch onto the FULL panel. This used to inset the launch bounds by
+        // the per-app/global margins AND then apply the same margins again as a display overscan;
+        // the two stacked, so an 80/50 setting removed 160/100 of usable area on every side pair
+        // (measured 1600x520 of a 1920x720 panel — INC-20260725-211405). Shrinking is now the sole
+        // job of the per-app hand-drawn rectangle, re-applied after launch by InsetAutoApplicator.
+        Rect bounds = new Rect(0, 0, sz.x, sz.y);
         try {
             java.lang.reflect.Method setLB = android.app.ActivityOptions.class
                     .getDeclaredMethod("setLaunchBounds", Rect.class);
@@ -996,17 +901,6 @@ public class ClusterService extends Service
             AppLogger.i(TAG, "cluster FREEFORM bounds=" + bounds + " display=" + displayId);
         } catch (Exception e) {
             AppLogger.w(TAG, "setLaunchBounds: " + e.getMessage());
-        }
-        if (displayId > 0) {
-            if (!operation.isValid()) return;
-            if (AdbLocalClient.isDiLink5Safe(this)) {
-                AppLogger.d(TAG, "DL5: skipping wm overscan (removed in API 30+)");
-            } else {
-                ShellGateway.execShell(this, "wm overscan "
-                        + insetH + "," + insetV + "," + insetH + "," + insetV
-                        + " -d " + displayId);
-                AppLogger.i(TAG, "Applied wm overscan on display " + displayId);
-            }
         }
     }
 
@@ -1313,8 +1207,13 @@ public class ClusterService extends Service
 
     public void stopProjectionNoAdb() {
         AppLogger.log(TAG, "stopProjectionNoAdb requested");
-        if (!AdbLocalClient.isDiLink5Safe(this)) {
-            ShellGateway.execShell(this, "wm overscan reset -d 1");
+        // v1.8.2 — was hardcoded "-d 1". The fission VirtualDisplay is display 1 on most DiLink 3
+        // units but not all (INC-20260721 saw it come up as display 3), and resetting the wrong
+        // display both misses the cluster and touches a display we do not own. Never display 0:
+        // the id is the one the helper resolved, and ShellGateway blocks -d 0 outright anyway.
+        int clusterId = mDisplayHelper.getKnownClusterDisplayId();
+        if (clusterId > 0 && !AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d " + clusterId);
         }
         try {
             com.byd.dashcast.cluster.dpi.ClusterDpiManager.restore(
@@ -1351,20 +1250,15 @@ public class ClusterService extends Service
         mInputForwarder.setClusterDisplay(display);
         mInputForwarder.setClusterDisplayId(displayId);
         updateNotification(getString(R.string.notif_cluster_active, displayId));
-        if (displayId > 0) {
-            if (AdbLocalClient.isDiLink5Safe(this)) {
-                AppLogger.d(TAG, "DL5: skipping display-level wm overscan (API 30+)");
-            } else {
-                final int insetH = getInsetH(null);
-                final int insetV = getInsetV(null);
-                ShellGateway.execShell(this,
-                        "wm overscan " + insetH + "," + insetV
-                        + "," + insetH + "," + insetV + " -d " + displayId);
-                AppLogger.i(TAG, "wm overscan on display " + displayId
-                        + " inset=" + insetH + "," + insetV);
-            }
-        } else {
-            AppLogger.w(TAG, "wm overscan skipped: displayId=" + displayId);
+        // v1.8.2 — the global overscan is gone: the cluster is always driven full-screen and
+        // only a per-app hand-drawn rectangle (ClusterResizeActivity) may shrink it afterwards.
+        // We RESET here rather than simply not applying, because `wm overscan` is display state
+        // that survives in WindowManager: a unit upgrading from a build that set 80,50 would
+        // otherwise keep the old inset with no UI left to clear it (INC-20260725-211405, where
+        // the 80/50 default combined with the launch bounds to eat 40% of the panel).
+        if (displayId > 0 && !AdbLocalClient.isDiLink5Safe(this)) {
+            ShellGateway.execShell(this, "wm overscan reset -d " + displayId);
+            AppLogger.i(TAG, "wm overscan reset on display " + displayId + " (full-screen cluster)");
         }
         if (mListener != null) mListener.onClusterDisplayConnected(display, displayId);
 

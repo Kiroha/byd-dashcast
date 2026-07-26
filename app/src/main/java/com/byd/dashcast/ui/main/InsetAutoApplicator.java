@@ -15,7 +15,7 @@ import com.byd.dashcast.proxy.ShellGateway;
 import com.byd.dashcast.util.concurrent.LifecycleGate;
 
 /**
- * Applies persisted per-app insets (wm overscan + resizeActiveTask) 500 ms after
+ * Re-applies a persisted per-app hand-drawn rectangle 500 ms after
  * a successful cluster launch, so the user doesn't have to press Apply every time.
  *
  * Owns the background resize thread so there is at most one concurrent resize
@@ -57,67 +57,16 @@ public final class InsetAutoApplicator {
         Context ctx = mHost.getContext().getApplicationContext();
         SharedPreferences p = ctx.getSharedPreferences(ClusterPrefs.PREFS_NAME, Context.MODE_PRIVATE);
 
-        // A hand-drawn rectangle (ClusterResizeActivity) takes precedence over the symmetric
-        // seekbar insets: re-apply it via the daemon moveAndResize path that actually works on
-        // DL3 (the inset/resizeActiveTask path is rejected with "resizeTask not allowed").
+        // v1.8.2 — a hand-drawn rectangle is now the ONLY thing that shrinks a cluster app.
+        // The symmetric per-app/global inset margins are gone: they were applied twice (as launch
+        // bounds AND as a display overscan), which removed 40% of the panel on the 80/50 default
+        // (INC-20260725-211405). No rectangle = the app fills the panel, which is the default.
         int[] rect = parseRect(p.getString(SettingsActivity.PREF_CLUSTER_RECT_PREFIX + pkg, null));
         if (rect != null) {
             AppLogger.d(TAG, "autoApplyRect pkg=" + pkg + " [" + rect[0] + "," + rect[1] + ","
                     + rect[2] + "," + rect[3] + "]");
             scheduleRectApply(pkg, rect, operation);
-            return;
         }
-
-        int defH    = p.getInt(SettingsActivity.PREF_INSET_H, SettingsActivity.DEFAULT_INSET_H);
-        int defV    = p.getInt(SettingsActivity.PREF_INSET_V, SettingsActivity.DEFAULT_INSET_V);
-        int savedH  = p.getInt(SettingsActivity.PREF_INSET_H_PREFIX + pkg, defH);
-        int savedV  = p.getInt(SettingsActivity.PREF_INSET_V_PREFIX + pkg, defV);
-        if (savedH == defH && savedV == defV) return;
-        AppLogger.d(TAG, "autoApplyInsets pkg=" + pkg + " h=" + savedH + " v=" + savedV);
-
-        mHandler.postDelayed(() -> {
-            if (!isCurrent(operation, pkg)) return;
-            ClusterService svc = mHost.getClusterServiceIfBound();
-            if (svc == null) return;
-
-            int clusterId = svc.getDisplayId();
-            if (clusterId > 0) {
-                if (AdbLocalClient.isDiLink5Safe(ctx)) {
-                    AppLogger.d(TAG, "DL5: skipping wm overscan (API 30+ removed) — resizeTask handles it");
-                } else {
-                    if (!operation.isValid()) return;
-                    ShellGateway.execShell(ctx,
-                            "wm overscan " + savedH + "," + savedV + "," + savedH + "," + savedV
-                                    + " -d " + clusterId);
-                }
-            } else {
-                AppLogger.w(TAG, "autoApplyInsets: cluster display not connected — wm overscan skipped");
-            }
-
-            Thread prev = mResizeThread;
-            if (prev != null && prev.isAlive()) {
-                AppLogger.d(TAG, "autoApplyInsets: resize thread still running, skipped for " + pkg);
-                return;
-            }
-            Thread t = new Thread(() -> {
-                if (!operation.isValid()) return;
-                int taskId = -1;
-                for (int attempt = 1; attempt <= 3; attempt++) {
-                    taskId = svc.findRunningTaskId(pkg);
-                    if (!operation.isValid()) return;
-                    if (taskId > 0) break;
-                    if (!isCurrent(operation, pkg)) return;
-                    AppLogger.d(TAG, "autoApplyInsets: taskId<=0 for " + pkg
-                            + " (attempt " + attempt + "/3) — retrying in 500 ms");
-                    try { Thread.sleep(500); }
-                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
-                }
-                if (!isCurrent(operation, pkg)) return;
-                svc.resizeActiveTask(taskId, pkg);
-            }, "auto-resize-thread");
-            mResizeThread = t;
-            t.start();
-        }, 500);
     }
 
     /**

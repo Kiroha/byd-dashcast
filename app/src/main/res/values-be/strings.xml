@@ -61,21 +61,12 @@
     <string name="share_report_title">Падзяліцца справаздачай…</string>
     <string name="settings_header">Налады</string>
     <string name="settings_cluster_type_title">Тып кластара</string>
-    <string name="settings_overscan_section_title">Палі дысплея (overscan)</string>
-    <string name="settings_inset_h_label">Злева / Справа:</string>
-    <string name="settings_inset_v_label">Зверху / Знізу:</string>
-    <string name="settings_btn_apply_overscan">Прымяніць цяпер</string>
-    <string name="settings_btn_reset_overscan">Скінуць (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ Ужыта — Л/П: %1$d px, В/Н: %2$d px</string>
     <string name="ota_dialog_title">Даступна абнаўленне</string>
     <string name="ota_up_to_date">DashCast абноўлены</string>
     <string name="btn_lang_ar">🇲🇦  العربية</string>
     <string name="btn_lang_pl">🇵🇱  Polski</string>
     <string name="btn_lang_es">🇪🇸  Español</string>
     <string name="btn_adjust">Наладзіць</string>
-    <string name="label_width_inset">Водступ шырыні</string>
-    <string name="label_height_inset">Водступ вышыні</string>
-    <string name="btn_apply">Ужыць</string>
     <string name="toast_grid_mode_enabled">Рэжым сеткі ўключаны</string>
     <string name="toast_list_mode_enabled">Рэжым спісу ўключаны</string>
     <string name="toast_update_install_failed">Памылка ўстаноўкі: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">Перазапусціць %1$s на кластары?</string>
     <string name="dialog_reconnect_yes">↺ Перазапусціць</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">Наладзіць стрэлкамі (замест паўзункоў)</string>
-    <string name="visual_overscan_height">↕ Вышыня</string>
-    <string name="visual_overscan_width">↔ Шырыня</string>
     <string name="setting_boot_auto_start">Аўтаматычна запускаць праекцыю пры запуску (Auto-Boot)</string>
     <string name="category_navigation">🗺 Навігацыя</string>
     <string name="category_media">🎵 Медыя</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — Адмысловая дыягностыка (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ Палі адключаны на DiLink 2 (адзін экран).</string>
-    <string name="settings_warn_no_cluster">⚠️ Кластар не выяўлены — палі ігнаруюцца (DL2?).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">Няма браўзера для адкрыцця %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">Перазапусціць</string>

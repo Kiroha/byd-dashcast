@@ -15,24 +15,7 @@
     <!-- ============================================================ -->
 
     <!-- Filled (M3 primary action). Pill-shaped, 56dp tall (automotive). -->
-    <style name="Widget.DashCast.Button.Filled" parent="Widget.Material3.Button">
-        <item name="android:minHeight">56dp</item>
-        <item name="android:paddingStart">32dp</item>
-        <item name="android:paddingEnd">32dp</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:letterSpacing">0.005</item>
-        <item name="cornerRadius">16dp</item>
-    </style>
-
     <!-- Tonal (secondary action) -->
-    <style name="Widget.DashCast.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
-        <item name="android:minHeight">56dp</item>
-        <item name="android:paddingStart">32dp</item>
-        <item name="android:paddingEnd">32dp</item>
-        <item name="android:textSize">16sp</item>
-        <item name="cornerRadius">16dp</item>
-    </style>
-
     <!-- Outlined -->
     <style name="Widget.DashCast.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:minHeight">56dp</item>
@@ -150,19 +133,5 @@
     </style>
 
     <!-- Pill-shaped value badge (used for overscan values) -->
-    <style name="Widget.DashCast.ValueBadge" parent="android:Widget.TextView">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textAppearance">@style/TextAppearance.Material3.LabelMedium</item>
-        <item name="android:textColor">?attr/colorOnPrimaryContainer</item>
-        <item name="android:background">@drawable/bg_value_badge</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:paddingTop">4dp</item>
-        <item name="android:paddingBottom">4dp</item>
-        <item name="android:minWidth">56dp</item>
-        <item name="android:gravity">center</item>
-    </style>
-
 </resources>
 

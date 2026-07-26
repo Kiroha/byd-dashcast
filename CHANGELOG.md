@@ -14,6 +14,18 @@ See [README.md](README.md) for the project overview and installation instruction
 
 ## Pre-releases
 
+### 1.8.2-beta (versionCode 592)
+
+The cluster fills the panel again: a projected app was losing **40% of the screen** to black borders by default, with no setting having been changed (`INC-20260725-211405`).
+
+**The defect.** A tester reported "informazioni mancanti" — the app on the cluster was cut off on all four sides. The report's own cluster capture measured it exactly: content at **1600×522 inside a 1920×720 panel**, offset by 160/100 — precisely **double** the configured 80/50 margin. Double, because the margin was applied twice by two mechanisms that were never meant to stack: `applyClusterFreeformBounds` set the task's **launch bounds** to `Rect(80,50,1840,670)`, shrinking the task to 1760×620 before the app drew anything, and a display-level **`wm overscan 80,50,80,50`** then shrank the content *again* inside that already-smaller task. It was therefore never an over-aggressive setting but double counting — and 80/50 were the **built-in defaults**, so every unit shipped this way.
+
+**The fix.** The global overscan feature is removed rather than re-tuned: halving the default would have hidden the bug, and per-app resizing with a saved size already covers the real need (including a bezel that genuinely crops — you compensate on the apps you actually project). Gone: the 80/50 default, the entire Settings card (sliders, ± buttons, visual mode, safe-zone mockup), the automatic application on cluster connect, and the symmetric per-app inset sliders that fed the same doubled path and defaulted to the same global value. Kept: the hand-drawn rectangle, now the single mechanism that shrinks anything — no rectangle means the app fills the panel. The cluster panel's **Adjust** button opens that editor directly so the one remaining mechanism keeps a visible entry point.
+
+**Two cleanups, because neither state clears itself.** (a) `DashCastApp` wipes the stored global margins, per-app insets and saved rectangles **once** on first launch: values tuned against the doubled geometry describe a panel that no longer exists, and the global would otherwise stay applied with no UI left to reach it. (b) `ClusterService` issues `wm overscan reset` on **every** cluster connect, because that state lives in WindowManager rather than in our preferences — a unit updating from a build that set 80,50 would keep the inset forever. Both target the **resolved** cluster display id, never a hardcoded `1` (a fission VirtualDisplay has been observed as display 3) and never display 0; the stop-projection path, which was hardcoded to `-d 1`, is fixed to match — on a unit where the cluster is not display 1 it was resetting the wrong display and leaving the cluster's own inset in place.
+
+Net **−1074 lines** over 29 files, including 195 unused strings across thirteen locales plus the orphaned styles, drawables and layout. No daemon protocol change; projection, mirroring, touch, Layout, CAN/HUD and OTA untouched. DiLink 5 was never affected (`wm overscan` was removed at API 30). 162 unit tests green, lint 0/0.
+
 ### 1.6.148-beta (versionCode 589)
 
 Fixes the duplicated TetherFi hotspot start, stops the keep-alive hammering, and adds the instrumentation that can settle why the hotspot does not stay up while the car is parked.

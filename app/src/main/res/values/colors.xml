@@ -6,8 +6,6 @@
 
     <!-- App Backgrounds (DAY MODE) -->
     <color name="bg_main">#F5F5F7</color>
-    <color name="bg_button_secondary">#DDDDDD</color>
-
     <!-- Text (DAY MODE) -->
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#555555</color>
@@ -61,7 +59,6 @@
     <color name="md_surface_container_low">#F4F3F8</color>
     <color name="md_surface_container">#EEEDF2</color>
     <color name="md_surface_container_high">#E8E7EC</color>
-    <color name="md_surface_container_highest">#E2E1E6</color>
     <!-- v0.9.81 — Diag status pill colors -->
     <color name="md_status_ok">#2E7D32</color>
     <color name="md_status_warn">#E65100</color>

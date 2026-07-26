@@ -61,21 +61,12 @@
     <string name="share_report_title">مشاركة التقرير…</string>
     <string name="settings_header">الإعدادات</string>
     <string name="settings_cluster_type_title">نوع العنقود</string>
-    <string name="settings_overscan_section_title">هوامش الشاشة (overscan)</string>
-    <string name="settings_inset_h_label">يسار / يمين:</string>
-    <string name="settings_inset_v_label">أعلى / أسفل:</string>
-    <string name="settings_btn_apply_overscan">تطبيق الآن</string>
-    <string name="settings_btn_reset_overscan">إعادة تعيين (80 / 50)</string>
-    <string name="settings_overscan_applied">✓ مُطبَّق — ي/ي: %1$d بكسل، أ/أ: %2$d بكسل</string>
     <string name="ota_dialog_title">تحديث متاح</string>
     <string name="ota_up_to_date">DashCast محدَّث</string>
     <string name="btn_lang_be">🇧🇾  Беларуская</string>
     <string name="btn_lang_kk">🇰🇿  Қазақша</string>
     <string name="btn_lang_uz">🇺🇿  Oʻzbekcha</string>
     <string name="btn_adjust">تعديل</string>
-    <string name="label_width_inset">هامش العرض</string>
-    <string name="label_height_inset">هامش الارتفاع</string>
-    <string name="btn_apply">تطبيق</string>
     <string name="toast_grid_mode_enabled">تم تفعيل وضع الشبكة</string>
     <string name="toast_list_mode_enabled">تم تفعيل وضع القائمة</string>
     <string name="toast_update_install_failed">فشل تثبيت التحديث: </string>
@@ -105,9 +96,6 @@
     <string name="dialog_reconnect_msg">إعادة تشغيل %1$s على العنقود؟</string>
     <string name="dialog_reconnect_yes">↺ إعادة تشغيل</string>
     <string name="favorite_prefix">⭐ </string>
-    <string name="visual_overscan_use_visual_mode">ضبط بالأسهم (بدلاً من أشرطة التمرير)</string>
-    <string name="visual_overscan_height">↕ الارتفاع</string>
-    <string name="visual_overscan_width">↔ العرض</string>
     <string name="setting_boot_auto_start">بدء العرض التلقائي عند بدء التشغيل (Auto-Boot)</string>
     <string name="category_navigation">🗺 الملاحة</string>
     <string name="category_media">🎵 وسائط</string>
@@ -248,9 +236,6 @@
     <!-- DiLink 4 — تشخيص مخصص (v1.2.28) -->
 
     <!-- v1.2.28 i18n full: ADAS / Sniffer / Settings warnings -->
-    <string name="settings_warn_dl2_no_margins">⚠️ تم تعطيل الهوامش على DiLink 2 (شاشة واحدة).</string>
-    <string name="settings_warn_no_cluster">⚠️ لم يتم اكتشاف الكلاستر — تم تجاهل الهوامش (DL2؟).</string>
-    <string name="settings_error_prefix_fmt">❌ %1$s</string>
     <string name="settings_no_browser_fmt">لا يوجد متصفح متاح لفتح %1$s</string>
     <string name="keyboard_bridge_active_toast">DashCast Cluster IME ✓</string>
     <string name="sysinfo_restart_action">إعادة التشغيل</string>

@@ -56,12 +56,62 @@ public class DashCastApp extends Application {
         platformInit.setDaemon(true);
         platformInit.start();
 
+        clearLegacyOverscanPrefs();
+
         // Foreground fallback monitor for the proxy daemon. It releases its
         // HandlerThread while the stronger always-on keeper below is active.
         com.byd.dashcast.proxy.ProxyWatchdog.install(this);
         // Always-on foreground service that monitors the daemon every 10 s.
         com.byd.dashcast.proxy.ProxyKeeperService.ensureRunning(this);
     }
+
+    /**
+     * v1.8.2 — ONE-TIME clean slate for the cluster sizing prefs.
+     *
+     * <p>The global overscan margins and the symmetric per-app inset seekbars are gone. They were
+     * applied twice — once as the task's launch bounds and once as a display-level
+     * {@code wm overscan} — so the 80/50 default cost 160/100 px per side pair: a measured
+     * 1600x520 of a 1920x720 cluster, 40% of the panel black (INC-20260725-211405).
+     *
+     * <p>Every stored value must go, not just the global one:
+     * <ul>
+     *   <li>the global keys would otherwise stay applied with no UI left to clear them;</li>
+     *   <li>per-app values were tuned while the global was ALSO shrinking the panel, so they
+     *       describe a geometry that no longer exists;</li>
+     *   <li>hand-drawn rectangles were drawn in that same doubled world.</li>
+     * </ul>
+     * Everything therefore restarts full-screen, and a rectangle re-drawn from the app action
+     * sheet is now the single mechanism that shrinks anything. The display-level overscan a
+     * previous build may have left in WindowManager is cleared separately, on every cluster
+     * connect, by {@code ClusterService.onDashboardDisplayConnected}.
+     */
+    private void clearLegacyOverscanPrefs() {
+        try {
+            android.content.SharedPreferences p = getSharedPreferences(
+                    com.byd.dashcast.data.prefs.ClusterPrefs.PREFS_NAME, MODE_PRIVATE);
+            if (p.getBoolean(PREF_OVERSCAN_RESET_DONE, false)) return;
+            android.content.SharedPreferences.Editor e = p.edit();
+            e.remove("overscan_inset_h").remove("overscan_inset_v").remove("visual_overscan_mode");
+            int perApp = 0;
+            for (String key : p.getAll().keySet()) {
+                if (key == null) continue;
+                if (key.startsWith("inset_h_") || key.startsWith("inset_v_")
+                        || key.startsWith("cluster_rect_")) {
+                    e.remove(key);
+                    perApp++;
+                }
+            }
+            e.putBoolean(PREF_OVERSCAN_RESET_DONE, true).apply();
+            AppLogger.i("DashCastApp", "cluster sizing reset to full-screen: cleared global "
+                    + "overscan + " + perApp + " per-app entries (one-time)");
+        } catch (Throwable t) {
+            // A prefs failure must never prevent the app from starting.
+            AppLogger.w("DashCastApp", "legacy overscan cleanup failed: " + t.getMessage());
+        }
+    }
+
+    /** Guard so the clean slate above runs exactly once per install, not on every launch. */
+    private static final String PREF_OVERSCAN_RESET_DONE = "overscan_cleared_v182";
 
     /**
      * Cooperative memory shedding. The Application owns exactly one process-wide
