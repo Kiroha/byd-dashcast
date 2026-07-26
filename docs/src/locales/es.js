@@ -4,26 +4,29 @@ export default {
   name: 'Español',
   title: 'DashCast — Manual de usuario',
   manualName: 'Manual de usuario',
-  meta: 'v1.4.x · BYD Seal EU · DiLink 3.0 · Android 10',
+  meta: 'v1.7.0 · BYD Seal / Dolphin / Atto 3 · DiLink 3 & DiLink 5 · Android 10–13',
   tocTitle: '📋 Índice',
 
   intro: {
     title: '0. Introducción',
     lead:
-      'DashCast muestra cualquier aplicación Android de la pantalla central de tu BYD en el cuadro de instrumentos (cluster digital). Maps, Waze, Spotify o ABRP justo detrás del volante — y con el modo Layouts, varias apps a la vez, cada una en su zona. Todo sin modificar el sistema.',
+      'DashCast muestra cualquier aplicación Android de la pantalla central de tu BYD en el cuadro de instrumentos (la pantalla digital de indicadores detrás del volante). Maps, Waze, Spotify o ABRP justo delante de ti — y con el modo Layouts, varias apps a la vez, cada una en su zona. Se instala como una app normal y no cambia nada en el sistema.',
     bullets: [
-      '✅ Compatible con BYD Seal EU (DiLink 3.0, firmware Di3.0 / 6125F).',
-      '✅ Sin modificación del sistema: DashCast se instala como una app normal.',
+      '✅ Compatible con DiLink 3 (Seal EU / 6125F) y DiLink 5 (unidades BYD más recientes).',
+      '✅ Sin modificación del sistema: DashCast se instala como cualquier otra app.',
       '✅ ADB local por TCP — sin ordenador tras la primera autorización.',
-      '✅ 13 idiomas de interfaz, elegidos en el primer arranque.',
+      '✅ 13 idiomas de interfaz, elegidos en el primer arranque, modificables en cualquier momento.',
       '✅ Espejo táctil en tiempo real: controla el cluster desde la pantalla central.',
       '✅ Modo Layouts: varias apps lado a lado en el cluster, zonas dibujadas con el dedo.',
-      '✅ Arranque automático: proyección + app (o layout favorito) al abrir DashCast.',
+      '✅ Arranque automático: proyección + app (o layout favorito) en cuanto se abre DashCast.',
       '✅ Márgenes (overscan) memorizados por aplicación.',
-      '✅ Actualizaciones OTA integradas (canal beta opcional).',
+      '✅ Flechas de navegación giro a giro en el HUD del parabrisas DiLink 3 (firmware compatible).',
+      '✅ Asistente de punto de acceso Wi-Fi integrado para DiLink 3 (usa tu propia SIM).',
+      '✅ Reporte de errores sin teclado, un toque para enviar diagnósticos al soporte.',
+      '✅ Actualizaciones OTA automáticas que se instalan en silencio y relanzan la app.',
     ],
     note:
-      '💡 Único requisito: activar la depuración ADB inalámbrica en Ajustes BYD → Desarrollador. En el primer arranque aparece el diálogo «¿Permitir depuración?» — marca «Permitir siempre» y confirma. Nunca tendrás que repetirlo.',
+      '💡 Único requisito: activar la depuración ADB inalámbrica en Ajustes BYD → Opciones de desarrollador. En el primer arranque aparece un diálogo «¿Permitir la depuración?» — marca «Permitir siempre desde este ordenador» y confirma. Nunca tendrás que volver a hacerlo.',
   },
 
   sections: [
@@ -32,7 +35,7 @@ export default {
       screen: 'screen-1',
       title: '1. Pantalla de bienvenida — elección del idioma',
       lead:
-        'En el primer arranque, DashCast muestra la cuadrícula con los 13 idiomas disponibles. Toca el tuyo: la elección se memoriza y la pantalla no vuelve a aparecer. Puedes cambiar el idioma en cualquier momento en Ajustes.',
+        'En el primer arranque, DashCast muestra una cuadrícula con los 13 idiomas disponibles. Toca el tuyo: la elección se memoriza y la pantalla no vuelve a aparecer. Puedes cambiar el idioma en cualquier momento en Ajustes.',
       mockupLabel: 'Ver pantalla 1 (Bienvenida)',
       featuresTitle: 'Detalles',
       features: [
@@ -67,7 +70,7 @@ export default {
       screen: 'screen-2',
       title: '2. Pantalla principal — Apps & Cluster',
       lead:
-        'La pantalla central de DashCast. A la izquierda: todas tus aplicaciones con búsqueda, filtros y favoritos. A la derecha: la vista previa del cluster en tiempo real, los botones Espejo a pantalla completa / Detener proyección, y el carrusel de layouts para elegir tu disposición multi-app favorita.',
+        'La pantalla de inicio de DashCast. A la izquierda: todas tus aplicaciones con búsqueda, filtros y favoritos, además de la barra de navegación lateral. A la derecha: la vista previa del cluster en tiempo real, los botones Espejo a pantalla completa / Detener proyección, y — en modo Layouts — el selector plegable «Layout del cluster».',
       mockupLabel: 'Ver pantalla 2 (Principal)',
       featuresTitle: 'Todo lo que puedes hacer',
       features: [
@@ -102,14 +105,19 @@ export default {
             'Termina la proyección limpiamente y restaura el cuadro BYD original (velocidad, indicadores, ADAS) con el tamaño definido en Ajustes.',
         },
         {
-          title: '🗂️ Carrusel de layouts',
+          title: '🗂️ Selector de layout del cluster (plegado por defecto)',
           text:
-            'Bajo los botones, cada tarjeta muestra una mini-vista de las zonas de un layout. Toca una tarjeta para hacerla layout favorito (estrella + borde azul). «Modo libre» desactiva los layouts; «＋ Gestionar» abre el editor.',
+            'En modo Layouts, un encabezado compacto «LAYOUT DEL CLUSTER» aparece bajo los botones. Tócalo para desplegarlo: «Lanzar las apps del layout», más una tarjeta por cada layout guardado (Modo libre / tus preajustes / ＋ Gestionar). Está plegado por defecto para que la vista previa en directo conserve toda su altura.',
         },
         {
           title: '📺 Botón flotante',
           text:
             'Un botón 📺 persiste sobre las demás apps: toque = abrir el espejo, pulsación larga = cambio rápido entre las últimas apps proyectadas.',
+        },
+        {
+          title: '🧭 Barra de navegación lateral',
+          text:
+            'Acceso rápido a Apps, Ajustes, Sistema, Registro, el reporte de errores y — en DiLink 3 con tu propia SIM — el asistente de Hotspot.',
         },
       ],
       howTo: {
@@ -125,7 +133,7 @@ export default {
       tipsTitle: 'Consejos',
       tips: [
         '💡 Auto-launch: elige una app (pulsación larga → Auto-launch) para que se proyecte automáticamente en cada arranque de DashCast — la proyección se activa sola.',
-        '💡 Layout favorito: la tarjeta seleccionada en el carrusel es la que activará el arranque automático (ver sección Layouts).',
+        '💡 Layout favorito: la tarjeta seleccionada en el selector «Layout del cluster» es la que activará el arranque automático (ver la sección Layouts).',
         '💡 Márgenes: si la app desborda el cluster, Ajustes → Márgenes, sliders horizontal/vertical. Memorizado por app.',
       ],
     },
@@ -152,12 +160,12 @@ export default {
         {
           title: '🚗 Arranque con el vehículo',
           text:
-            'Si está activado, DashCast arranca con el coche y restaura la última app proyectada. Si no, lánzalo desde el cajón BYD.',
+            'Si está activado, DashCast arranca con el coche y restaura la última app proyectada (o el layout favorito). Si no, lánzalo desde el cajón BYD.',
         },
         {
           title: '🗂️ Modo Layouts',
           text:
-            'Activa la proyección multi-aplicación con zonas personalizadas (requiere el Proxy ADB Daemon, gestionado automáticamente). Hace aparecer el carrusel en la pantalla principal y la pestaña Layouts.',
+            'Activa la proyección multi-aplicación con zonas personalizadas (requiere el Proxy ADB Daemon, gestionado automáticamente). Hace aparecer el selector «Layout del cluster» en la pantalla principal y la pestaña Layouts.',
         },
         {
           title: '⭐ Layout favorito automático',
@@ -167,12 +175,17 @@ export default {
         {
           title: '⚡ Pre-crear los slots al arrancar',
           text:
-            'Prepara las pantallas virtuales del layout favorito al abrir (sin lanzar las apps) — la activación del layout es luego casi instantánea.',
+            'Prepara las pantallas virtuales del layout favorito al abrir DashCast (sin lanzar las apps) — la activación del layout es luego casi instantánea.',
+        },
+        {
+          title: '📶 Usar mi propia SIM (DiLink 3)',
+          text:
+            'Controla si el asistente de Hotspot aparece en la barra de navegación. Déjalo activado si compartes internet al coche con los datos de tu propio teléfono/SIM. Ver la sección Hotspot.',
         },
         {
           title: '📦 Actualizaciones OTA',
           text:
-            'DashCast comprueba GitHub en cada arranque. Marca «Incluir pre-versiones» para el canal beta (novedades antes, menos estabilidad).',
+            'DashCast comprueba GitHub en busca de nuevas versiones en cada arranque. Las actualizaciones ahora se instalan en silencio y relanzan la app por sí mismas (ver la sección Actualizaciones). Marca «Incluir pre-versiones» para el canal beta.',
         },
         {
           title: '🌐 Idioma',
@@ -205,12 +218,12 @@ export default {
         {
           title: '✏️ Dibujar una zona',
           text:
-            'En el lienzo (réplica del cluster 1920×720), desliza el dedo para trazar un rectángulo. Se abre un diálogo: nombre, posición/dimensiones al píxel, y la app a vincular.',
+            'En el lienzo (una réplica del cluster), desliza el dedo para trazar un rectángulo. Se abre un diálogo: nombre, posición/dimensiones al píxel, y la app a vincular.',
         },
         {
           title: '🔗 Vincular una aplicación',
           text:
-            'Cada zona puede vincularse a una app: al activar el layout, la app se lanza automáticamente en su zona. Una zona sin app queda libre.',
+            'Cada zona puede vincularse a una app: al activar el layout, la app se lanza automáticamente en su zona. Una zona sin app queda libre — coloca cualquier cosa ahí más tarde.',
         },
         {
           title: '✋ Mover y redimensionar',
@@ -220,7 +233,7 @@ export default {
         {
           title: '✏️ Modificar una zona existente',
           text:
-            'Toca una zona (en el lienzo o su chip abajo): renómbrala, ajusta su geometría, cambia la app vinculada o elimínala. Pulsación larga = eliminación rápida.',
+            'Toca una zona (en el lienzo o su chip abajo): renómbrala, ajusta su geometría, cambia la app vinculada o elimínala. Pulsación larga en una zona = eliminación rápida.',
         },
         {
           title: '💾 Layouts guardados',
@@ -230,7 +243,7 @@ export default {
         {
           title: '⭐ Favorito y arranque automático',
           text:
-            'El botón «Favorito» (o un toque en la tarjeta del carrusel de la pantalla principal) designa el layout que «Layout favorito automático» activará al arrancar DashCast — proyección incluida.',
+            'El botón «Favorito» (o un toque en la tarjeta del selector de la pantalla principal) designa el layout que «Layout favorito automático» activará al arrancar DashCast — proyección incluida.',
         },
       ],
       howTo: {
@@ -248,7 +261,7 @@ export default {
       tipsTitle: 'Consejos',
       tips: [
         '💡 Combinado con «Layout favorito automático» (Ajustes), tu configuración multi-app completa se monta sola en cada arranque de DashCast.',
-        '💡 La mini-vista de cada tarjeta del carrusel muestra las zonas reales del layout — reconocible de un vistazo.',
+        '💡 La mini-vista de cada tarjeta del selector muestra las zonas reales del layout — reconocible de un vistazo.',
         '💡 ¿Una app se niega a mostrarse en su zona? Algunas apps imponen su formato; prueba una zona más cercana al 16:9.',
       ],
       note:
@@ -256,45 +269,139 @@ export default {
     },
 
     {
-      id: 'diagnostics',
-      screen: 'screen-4',
-      title: '5. Diagnóstico',
+      id: 'hud',
+      screen: 'screen-2',
+      title: '5. Flechas de navegación en el HUD (DiLink 3)',
       lead:
-        'Panel interno para las situaciones en las que la proyección no funciona como se espera. La mayoría de usuarios nunca lo necesitará — existe para soporte y depuración.',
-      mockupLabel: 'Ver pantalla 4 (Diagnóstico)',
-      featuresTitle: 'Herramientas disponibles',
+        'En los coches DiLink 3 cuyo Head-Up Display del parabrisas admite flechas de giro, DashCast puede dibujar la guía giro a giro en el HUD a partir de tu app de navegación — la flecha de la maniobra y la distancia hasta ella, directamente en el parabrisas.',
+      mockupLabel: 'Ver pantalla 2 (Principal)',
+      featuresTitle: 'Cómo funciona',
       features: [
         {
-          title: 'Tests de conexión',
+          title: '🧭 Guía desde Maps / Waze',
           text:
-            'Comprueba el túnel ADB local (localhost:5555), el estado del ClusterService y la presencia de la pantalla virtual del cluster.',
+            'DashCast lee la notificación giro a giro que tu app de navegación ya publica (Google Maps, Waze) y reenvía la maniobra + la distancia al HUD a través del bus CAN del coche. No hace falta ninguna app adicional.',
         },
         {
-          title: 'Sondas de plataforma',
+          title: '🚗 Depende del firmware',
           text:
-            'Detección DiLink (2/3/4/5), inventario de pantallas, instanciación de las API del vehículo BYD (velocidad, energía) y estado de los permisos BYDAUTO.',
+            'Solo los firmwares de HUD DiLink 3 más recientes pueden dibujar flechas. Si el tuyo no puede, las flechas simplemente no aparecerán — DashCast no puede añadir una capacidad que el hardware del HUD no tiene.',
         },
         {
-          title: 'Informe compartible',
+          title: '➡️ Glifos de dirección correctos',
           text:
-            'Genera un informe completo (sistema, pantallas, servicios, permisos, métricas del daemon) exportable como texto para el soporte.',
+            'Las maniobras recto / izquierda / derecha se corresponden con el glifo del HUD adecuado, con la distancia en cuenta atrás en directo hasta el giro.',
         },
       ],
       howTo: {
-        title: 'Cuándo usar esta pestaña',
+        title: 'Cómo obtener flechas en el HUD',
         steps: [
-          'El cluster queda negro tras tocar una app → comprueba ClusterService y la pantalla virtual.',
-          'La app indica «ADB no disponible» → botón «Probar ADB».',
-          'El soporte te pide un informe → genéralo y compártelo.',
+          'Asegúrate de conceder a DashCast el acceso a las notificaciones (lo pide en el primer uso).',
+          'Enciende el HUD del parabrisas y ponlo en un modo de visualización de navegación en el menú HUD de BYD.',
+          'Inicia una ruta en Google Maps o Waze.',
+          'La flecha de la maniobra y la distancia aparecen en el HUD a medida que te acercas a cada giro.',
         ],
       },
-      note: 'ℹ️ Los botones son tests de solo lectura, salvo indicación explícita.',
+      note:
+        'ℹ️ Las flechas del HUD son una función de DiLink 3 y dependen del firmware de tu HUD. Si no aparece nada, puede que tu HUD sea anterior a la compatibilidad con flechas — es un límite de hardware, no un fallo de DashCast.',
     },
 
     {
-      id: 'sysinfo',
+      id: 'hotspot',
+      screen: 'screen-3',
+      title: '6. Asistente de punto de acceso Wi-Fi (DiLink 3)',
+      lead:
+        'En DiLink 3, si conectas el coche a internet a través de tu propia SIM/teléfono, el asistente de Hotspot mantiene viva esa conexión compartida para que la navegación y el streaming sigan funcionando. Aparece en la barra de navegación solo cuando es relevante para ti.',
+      mockupLabel: 'Ver pantalla 3 (Ajustes)',
+      featuresTitle: 'Funciones',
+      features: [
+        {
+          title: '📶 Mantener activo',
+          text:
+            'Rearma la conexión compartida Wi-Fi cuando el coche se despierta (por ejemplo, tras encender el ACC) para que no tengas que reactivarla manualmente en cada trayecto.',
+        },
+        {
+          title: '👁️ Estado en directo',
+          text:
+            'Muestra si el punto de acceso está activo y cuántos clientes están conectados, para que puedas confirmar que el coche está realmente en línea.',
+        },
+        {
+          title: '⚙️ Se muestra solo cuando es útil',
+          text:
+            'La entrada Hotspot aparece solo en DiLink 3 y solo mientras «Usar mi propia SIM» esté activado en Ajustes. En otras configuraciones permanece oculta.',
+        },
+      ],
+      howTo: {
+        title: 'Cómo usarlo',
+        steps: [
+          'Ajustes → asegúrate de que «Usar mi propia SIM» esté activado.',
+          'Abre «Hotspot» desde la barra de navegación.',
+          'Inicia / confirma la conexión compartida — el estado muestra que está activa.',
+          'Se rearma sola la próxima vez que el coche se despierte.',
+        ],
+      },
+      note:
+        'ℹ️ Este asistente es para coches DiLink 3 con conexión compartida a través de tus propios datos. Si tu coche tiene su propio plan de datos integrado, no lo necesitas.',
+    },
+
+    {
+      id: 'bugreport',
+      screen: 'screen-6',
+      title: '7. Reportar un problema (reporte de errores)',
+      lead:
+        'Un reporte de errores sin teclado, dentro del coche. En tres toques eliges qué falló; DashCast captura una instantánea de diagnóstico acotada (registros + estado del sistema) y la envía directamente al canal de soporte — sin escribir, sin cables.',
+      mockupLabel: 'Ver pantalla 6 (Reporte)',
+      featuresTitle: 'Cómo funciona',
+      features: [
+        {
+          title: '1️⃣ Categoría',
+          text:
+            'Elige qué área está afectada: espejo, una app, sonido, conexión, bloqueo, HUD… Seis mosaicos grandes, solo tocar.',
+        },
+        {
+          title: '2️⃣ App',
+          text:
+            'DashCast detecta automáticamente la app que hay en el cluster y la ofrece, además de «Ninguna app específica» y «Otra».',
+        },
+        {
+          title: '3️⃣ Problema',
+          text:
+            'Elige el síntoma más parecido de una lista corta. Un campo de texto libre opcional te permite añadir detalles si quieres — pero nunca es obligatorio.',
+        },
+        {
+          title: '📎 Diagnóstico automático',
+          text:
+            'El reporte agrupa los registros recientes y el estado del sistema/cluster en el momento del problema — exactamente lo que el soporte necesita, capturado por ti.',
+        },
+        {
+          title: '🚀 Envío con un toque',
+          text:
+            'Si hay un canal de soporte configurado, el reporte se sube directamente; si no, DashCast abre el menú de compartir de Android para que puedas enviarlo por Telegram, correo electrónico o GitHub.',
+        },
+        {
+          title: '📺 Desde cualquier sitio',
+          text:
+            'Tanto el botón flotante 📺 como la barra de navegación abren el reporte, así puedes enviar un informe incluso mientras otra app está proyectada.',
+        },
+      ],
+      howTo: {
+        title: 'Cómo enviar un reporte',
+        steps: [
+          'Abre el reporte de errores (barra de navegación o el botón flotante).',
+          'Toca la categoría que corresponde al problema.',
+          'Confirma la app (o elige «Ninguna app específica»).',
+          'Elige el problema más parecido; añade una nota si es útil.',
+          'Toca Enviar — el diagnóstico va al soporte automáticamente.',
+        ],
+      },
+      note:
+        '🔒 El reporte contiene solo registros de DashCast y el estado técnico del dispositivo/cluster — sin contactos, sin posición GPS, sin contenido de apps.',
+    },
+
+    {
+      id: 'system',
       screen: 'screen-5',
-      title: '6. Informe del sistema',
+      title: '8. Informe del sistema',
       lead:
         'Panel de solo lectura: versiones, pantallas detectadas y estado en directo de los servicios DashCast. La primera pantalla a consultar cuando algo parece anómalo.',
       mockupLabel: 'Ver pantalla 5 (Sistema)',
@@ -303,12 +410,12 @@ export default {
         {
           title: '🖥️ Pantallas',
           text:
-            'Pantalla principal (resolución, densidad) y pantalla virtual del cluster (1920×720) con su estado en tiempo real.',
+            'Pantalla principal (resolución, densidad) y la pantalla virtual del cluster con su estado en tiempo real.',
         },
         {
           title: '⚙️ Servicios',
           text:
-            'ClusterService (proyección), MirrorDaemon (espejo), Proxy ADB Daemon (operaciones privilegiadas), AdbLocalClient (túnel ADB) — cada uno con punto verde/rojo y botón de relance si está detenido.',
+            'ClusterService (proyección), MirrorDaemon (espejo), Proxy ADB Daemon (operaciones privilegiadas), AdbLocalClient (túnel ADB) — cada uno con punto verde/rojo y botón de reinicio si está detenido.',
         },
         {
           title: '📱 Versiones',
@@ -324,16 +431,16 @@ export default {
       tipsTitle: 'Consejos',
       tips: [
         '💡 «Proxy ADB Daemon» debe estar en verde (RUN) para el modo Layouts — si no, toca su línea para relanzarlo.',
-        '💡 El informe completo es exportable desde esta pantalla para acompañar un reporte de bug.',
+        '💡 Si algo parece anómalo, comprueba esta pantalla primero y luego envía un reporte desde el reporte de errores.',
       ],
     },
 
     {
       id: 'journal',
       screen: 'screen-6',
-      title: '7. Registro',
+      title: '9. Registro',
       lead:
-        'El registro interno de DashCast: todas las acciones importantes (proyecciones, restauraciones, errores ADB, actualizaciones) quedan trazadas en continuo. Útil para entender un comportamiento inesperado o enviar un informe al soporte.',
+        'El registro interno de DashCast: todas las acciones importantes (proyecciones, restauraciones, errores ADB, actualizaciones) quedan trazadas de forma continua. Útil para entender un comportamiento inesperado; es también lo que el reporte de errores adjunta por ti.',
       mockupLabel: 'Ver pantalla 6 (Registro)',
       featuresTitle: 'Funciones',
       features: [
@@ -359,12 +466,10 @@ export default {
         },
       ],
       howTo: {
-        title: 'Enviar un informe de bug',
+        title: 'Prefiere el reporte de errores',
         steps: [
-          'Reproduce el problema.',
-          'Abre Registro → «Compartir».',
-          'Elige tu canal (Telegram, e-mail, GitHub Issues).',
-          'El archivo adjunto contiene la traza y el contexto (versión, modelo, firmware).',
+          'Para la mayoría de problemas, usa el reporte de errores (sección 7) — captura el registro más el estado del sistema automáticamente.',
+          'La pantalla Registro está aquí para cuando quieras leer la traza tú mismo o compartir solo el registro sin procesar.',
         ],
       },
       note:
@@ -373,12 +478,12 @@ export default {
   ],
 
   faq: {
-    title: '8. FAQ — Preguntas frecuentes',
+    title: '10. FAQ — Preguntas frecuentes',
     items: [
       {
         question: '❓ El cluster queda negro cuando toco una app',
         answer:
-          'Tres causas posibles: (1) ADB inalámbrico desactivado — comprueba Ajustes BYD → Desarrollador. (2) Un servicio detenido — pestaña Sistema, relanza la línea roja. (3) La app acaba de fallar — vuelve a tocar su icono.',
+          'Tres causas posibles: (1) ADB inalámbrico desactivado — comprueba Ajustes BYD → Opciones de desarrollador. (2) Un servicio detenido — pantalla Sistema, reinicia la línea roja. (3) La app acaba de fallar — vuelve a tocar su icono. ¿Sigue bloqueado? Envía un reporte desde el reporte de errores.',
       },
       {
         question: '❓ La imagen desborda / está recortada en el cluster',
@@ -393,7 +498,22 @@ export default {
       {
         question: '❓ Mi layout favorito no se lanza al arrancar',
         answer:
-          'Comprueba las tres condiciones en Ajustes: «Modo Layouts» activado, «Layout favorito automático» activado, y un layout marcado ⭐ favorito (carrusel de la pantalla principal o botón Favorito de la pestaña Layouts). En arranque en frío, cuenta 6–8 s.',
+          'Comprueba las tres condiciones en Ajustes: «Modo Layouts» activado, «Layout favorito automático» activado, y un layout marcado ⭐ favorito (selector de la pantalla principal o el botón Favorito de la pestaña Layouts). En arranque en frío, cuenta 6–8 s.',
+      },
+      {
+        question: '❓ No aparecen flechas de navegación en mi HUD',
+        answer:
+          'Las flechas del HUD son una función de DiLink 3 y necesitan un firmware de HUD capaz de dibujarlas. Asegúrate de que el acceso a las notificaciones esté concedido, de que el HUD esté encendido en un modo de visualización de navegación, y de que haya una ruta en marcha en Maps/Waze. Si no aparece nada, es probable que el firmware de tu HUD sea anterior a la compatibilidad con flechas — un límite de hardware, no un fallo.',
+      },
+      {
+        question: '❓ ¿Necesito el asistente de Hotspot?',
+        answer:
+          'Solo en DiLink 3 si conectas el coche a internet mediante la conexión compartida de tu propia SIM/teléfono. Mantiene viva esa conexión a lo largo de los despertares del coche. Si tu coche tiene su propio plan de datos, ignóralo — permanece oculto salvo que «Usar mi propia SIM» esté activado.',
+      },
+      {
+        question: '❓ ¿Cómo se instalan ahora las actualizaciones?',
+        answer:
+          'DashCast comprueba GitHub en cada arranque. Cuando se descarga una actualización, se instala en silencio y relanza la app por sí misma — sin el aviso «¿Instalar?». En un coche donde eso no sea posible, recurre al instalador normal del sistema. La primera actualización después de pasar a una versión con esta función puede que aún pregunte una vez.',
       },
       {
         question: '❓ ¿DashCast agota la batería de 12 V?',
@@ -417,7 +537,7 @@ export default {
       {
         question: '❓ Quiero contribuir o reportar un bug',
         answer:
-          'GitHub: https://github.com/Kiroha/byd-dashcast — Issues para bugs, Discussions para preguntas. Adjunta una exportación del Registro para acelerar el diagnóstico.',
+          'Usa el reporte de errores integrado en la app para el camino más rápido (adjunta el diagnóstico por ti). Para código y solicitudes de funciones: GitHub https://github.com/Kiroha/byd-dashcast — Issues para bugs, Discussions para preguntas.',
       },
     ],
   },
